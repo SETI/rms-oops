@@ -4,9 +4,8 @@
 
 import numpy as np
 
-from polymath import Boolean
-
-from . import Backplane
+from polymath       import Boolean
+from oops.backplane import Backplane
 
 #===============================================================================
 def _border_above_or_below(self, sign, backplane_key, value):
@@ -136,4 +135,27 @@ def border_outside(self, backplane_key):
 
 Backplane._define_backplane_names(globals().copy())
 
+################################################################################
+# UNIT TESTS
+################################################################################
+import unittest
+from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
+from oops.constants                    import DPR
+from oops.backplane.unittester_support import show_info
+
+
+#*******************************************************************************
+class Test_Border(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+        from oops.backplane.unittester_support import Backplane_Settings
+        if Backplane_Settings.EXERCISES_ONLY:
+            self.skipTest("")
+        pass
+
+
+########################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
 ################################################################################

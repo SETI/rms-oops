@@ -2,10 +2,9 @@
 # oops/backplanes/distance.py: Distance-related backplanes
 ################################################################################
 
-from polymath import Pair, Vector3
-
-from .         import Backplane
-from ..surface import Surface
+from polymath       import Pair, Vector3
+from oops.backplane import Backplane
+from oops.surface   import Surface
 
 #===============================================================================
 def resolution(self, event_key, axis='u'):
@@ -119,4 +118,122 @@ def _fill_surface_resolution(self, event_key):
 
 Backplane._define_backplane_names(globals().copy())
 
+################################################################################
+# UNIT TESTS
+################################################################################
+import unittest
+from oops.meshgrid                     import Meshgrid
+from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
+from oops.constants                    import DPR
+from oops.backplane.unittester_support import show_info
+
+#===========================================================================
+def exercise_surface(bp,
+                     planet=None, moon=None, ring=None,
+                     undersample=16, use_inventory=False, inventory_border=2,
+                     **options):
+    """generic unit tests for resolution.py"""
+
+    if planet is not None:
+        test = bp.resolution(planet, 'u')
+        show_info(bp, 'planet resolution along u axis (km)', test, **options)
+        test = bp.resolution(planet, 'v')
+        show_info(bp, 'planet resolution along v axis (km)', test, **options)
+        test = bp.center_resolution(planet, 'u')
+        show_info(bp, 'planet center resolution along u axis (km)', test, **options)
+        test = bp.center_resolution(planet, 'v')
+        show_info(bp, 'planet center resolution along v axis (km)', test, **options)
+        test = bp.finest_resolution(planet)
+        show_info(bp, 'planet finest resolution (km)', test, **options)
+        test = bp.coarsest_resolution(planet)
+        show_info(bp, 'planet coarsest resolution (km)', test, **options)
+
+    if moon is not None:
+        test = bp.resolution(moon, 'u')
+        show_info(bp, 'moon resolution along u axis (km)', test, **options)
+        test = bp.resolution(moon, 'v')
+        show_info(bp, 'moon resolution along v axis (km)', test, **options)
+        test = bp.center_resolution(moon, 'u')
+        show_info(bp, 'moon center resolution along u axis (km)', test, **options)
+        test = bp.center_resolution(moon, 'v')
+        show_info(bp, 'moon center resolution along v axis (km)', test, **options)
+        test = bp.finest_resolution(moon)
+        show_info(bp, 'moon finest resolution (km)', test, **options)
+        test = bp.coarsest_resolution(moon)
+        show_info(bp, 'moon coarsest resolution (km)', test, **options)
+
+    if ring is not None:
+        test = bp.resolution(ring, 'u')
+        show_info(bp, 'Ring resolution along u axis (km)', test, **options)
+        test = bp.resolution(ring, 'v')
+        show_info(bp, 'Ring resolution along v axis (km)', test, **options)
+        test = bp.center_resolution(ring, 'u')
+        show_info(bp, 'Ring center resolution along u axis (km)', test, **options)
+        test = bp.center_resolution(ring, 'v')
+        show_info(bp, 'Ring center resolution along v axis (km)', test, **options)
+        test = bp.finest_resolution(ring)
+        show_info(bp, 'Ring finest resolution (km)', test, **options)
+        test = bp.coarsest_resolution(ring)
+        show_info(bp, 'Ring coarsest resolution (km)', test, **options)
+
+#===========================================================================
+def exercise_ansa(bp,
+                  planet=None, moon=None, ring=None,
+                  undersample=16, use_inventory=False, inventory_border=2,
+                  **options):
+    """generic unit tests for resolution.py"""
+
+    if planet is not None:
+
+        ### TODO: use Body.has_rings() once Mark has created it
+        #test = bp.resolution(planet+':ansa', 'u')
+        #show_info(bp, 'Ansa resolution along u axis (km)', test, **options)
+        #test = bp.resolution(planet+':ansa', 'v')
+        #show_info(bp, 'Ansa resolution along v axis (km)', test, **options)
+        #test = bp.center_resolution(planet+':ansa', 'u')
+        #show_info(bp, 'Ansa center resolution along u axis (km)', test, **options)
+        #test = bp.center_resolution(planet+':ansa', 'v')
+        #show_info(bp, 'Ansa center resolution along v axis (km)', test, **options)
+        #test = bp.finest_resolution(planet+':ansa')
+        #show_info(bp, 'Ansa finest resolution (km)', test, **options)
+        #test = bp.coarsest_resolution(planet+':ansa')
+        #show_info(bp, 'Ansa coarsest resolution (km)', test, **options)
+        if options['printing']: print("These tests require further development.")
+
+#===========================================================================
+def exercise_limb(bp,
+                  planet=None, moon=None, ring=None,
+                  undersample=16, use_inventory=False, inventory_border=2,
+                  **options):
+    """generic unit tests for resolution.py"""
+
+    if planet is not None:
+        test = bp.resolution(planet+':limb', 'u')
+        show_info(bp, 'Limb resolution along u axis (km)', test, **options)
+        test = bp.resolution(planet+':limb', 'v')
+        show_info(bp, 'Limb resolution along v axis (km)', test, **options)
+        test = bp.resolution(planet+':limb', 'u')
+        show_info(bp, 'Limb resolution along u axis (km)', test, **options)
+        test = bp.resolution(planet+':limb', 'v')
+        show_info(bp, 'Limb resolution along v axis (km)', test, **options)
+        test = bp.finest_resolution(planet+':limb')
+        show_info(bp, 'Limb finest resolution (km)', test, **options)
+        test = bp.coarsest_resolution(planet+':limb')
+        show_info(bp, 'Limb coarsest resolution (km)', test, **options)
+
+
+#*******************************************************************************
+class Test_Resolution(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+        from oops.backplane.unittester_support import Backplane_Settings
+        if Backplane_Settings.EXERCISES_ONLY:
+            self.skipTest("")
+        pass
+
+
+########################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
 ################################################################################

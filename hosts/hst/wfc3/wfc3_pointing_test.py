@@ -7,7 +7,7 @@ import scipy.fftpack as fftpack
 import pylab
 import oops
 import ..hst as hst
-from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 import os.path
 
 # A quick-and-dirty image correlation function

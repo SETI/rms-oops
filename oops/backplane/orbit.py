@@ -4,10 +4,10 @@
 
 from polymath import Vector3, Matrix3
 
-from .           import Backplane
-from ..body      import Body
-from ..frame     import Frame
-from ..constants import TWOPI
+from oops.backplane import Backplane
+from oops.body      import Body
+from oops.frame     import Frame
+from oops.constants import TWOPI
 
 #===============================================================================
 def orbit_longitude(self, event_key, reference='obs', planet=None):
@@ -86,4 +86,49 @@ def orbit_longitude(self, event_key, reference='obs', planet=None):
 
 Backplane._define_backplane_names(globals().copy())
 
+################################################################################
+# UNIT TESTS
+################################################################################
+import unittest
+from oops.meshgrid                     import Meshgrid
+from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
+from oops.constants                    import DPR
+from oops.backplane.unittester_support import show_info
+
+#===============================================================================
+def exercise_longitude(bp,
+                       planet=None, moon=None, ring=None,
+                       undersample=16, use_inventory=False, inventory_border=2,
+                       **options):
+    """generic unit tests for orbit.py"""
+
+    if moon is not None:
+        test = bp.orbit_longitude(moon, reference='obs')
+        show_info(bp, 'moon orbit longitude wrt observer (deg)', test*DPR, **options)
+        test = bp.orbit_longitude(moon, reference='oha')
+        show_info(bp, 'moon orbit longitude wrt OHA (deg)', test*DPR, **options)
+        test = bp.orbit_longitude(moon, reference='sun')
+        show_info(bp, 'moon orbit longitude wrt Sun (deg)', test*DPR, **options)
+        test = bp.orbit_longitude(moon, reference='sha')
+        show_info(bp, 'moon orbit longitude wrt SHA (deg)', test*DPR, **options)
+        test = bp.orbit_longitude(moon, reference='aries')
+        show_info(bp, 'moon orbit longitude wrt Aries (deg)', test*DPR, **options)
+        test = bp.orbit_longitude(moon, reference='node')
+        show_info(bp, 'moon orbit longitude wrt node (deg)', test*DPR, **options)
+
+
+#*******************************************************************************
+class Test_Orbit(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+        from oops.backplane.unittester_support import Backplane_Settings
+        if Backplane_Settings.EXERCISES_ONLY:
+            self.skipTest("")
+        pass
+
+
+########################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
 ################################################################################

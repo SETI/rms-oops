@@ -4,10 +4,10 @@
 
 from polymath import Scalar, Pair, Vector3
 
-from .           import Backplane
-from ..event     import Event
-from ..path      import AliasPath
-from ..constants import TWOPI
+from oops.backplane import Backplane
+from oops.event     import Event
+from oops.path      import AliasPath
+from oops.constants import TWOPI
 
 #===============================================================================
 def ansa_radius(self, event_key, radius_type='positive', rmax=None,
@@ -283,4 +283,70 @@ def ansa_vertical_resolution(self, event_key):
 
 Backplane._define_backplane_names(globals().copy())
 
+################################################################################
+# UNIT TESTS
+################################################################################
+import unittest
+from oops.meshgrid                     import Meshgrid
+from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
+from oops.constants                    import DPR
+from oops.backplane.unittester_support import show_info
+
+#===============================================================================
+def exercise_resolution(bp,
+                        planet=None, moon=None, ring=None,
+                        undersample=16, use_inventory=False, inventory_border=2,
+                        **options):
+    """generic unit tests for orbit.py"""
+
+    ### TODO: use Body.has_rings() once Mark has created it
+    #if planet is not None:
+    #    test = bp.ansa_radial_resolution(planet+':ansa')
+    #     'Ansa radial resolution (km)', test, **options)
+    #    test = bp.ansa_vertical_resolution(planet+':ansa')
+    #    show_info(bp, 'Ansa vertical resolution (km)', test, **options)
+    if options['printing']: print("These tests require further development.")
+
+#===============================================================================
+def exercise_geometry(bp,
+                      planet=None, moon=None, ring=None,
+                      undersample=16, use_inventory=False, inventory_border=2,
+                      **options):
+    """generic unit tests for orbit.py"""
+
+    ### TODO: use Body.has_rings() once Mark has created it
+    #if planet is not None:
+    #    test = bp.ansa_radius(planet+':ansa')
+    #    show_info(bp, 'Ansa raius (km)', test,**options)
+    #    test = bp.ansa_altitude(planet+':ansa')
+    #    show_info(bp, 'Ansa altitude (km)', test,    **options)
+    #    test = bp.ansa_longitude(planet+':ansa', 'node')
+    #    show_info(bp, 'Ansa longitude wrt node (deg)', test*DPR,   **options)
+    #    test = bp.ansa_longitude(planet+':ansa', 'aries')
+    #    show_info(bp, 'Ansa longitude wrt Aries (deg)', test*DPR,  **options)
+    #    test = bp.ansa_longitude(planet+':ansa', 'obs')
+    #    show_info(bp, 'Ansa longitude wrt observer (deg)', test*DPR, **options)
+    #    test = bp.ansa_longitude(planet+':ansa', 'oha')
+    #    show_info(bp, 'Ansa longitude wrt OHA (deg)', test*DPR, **options)
+    #    test = bp.ansa_longitude(planet+':ansa', 'sun')
+    #    show_info(bp, 'Ansa longitude wrt Sun (deg)', test*DPR, **options)
+    #    test = bp.ansa_longitude(planet+':ansa', 'sha')
+    #    show_info(bp, 'Ansa longitude wrt SHA (deg)', test*DPR, **options)
+    if options['printing']: print("These tests require further development.")
+
+
+#*******************************************************************************
+class Test_Ansa(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+        from oops.backplane.unittester_support import Backplane_Settings
+        if Backplane_Settings.EXERCISES_ONLY:
+            self.skipTest("")
+        pass
+
+
+########################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
 ################################################################################

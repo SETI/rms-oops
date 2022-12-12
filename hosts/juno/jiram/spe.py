@@ -4,14 +4,12 @@
 
 import numpy as np
 import julian
-import pdstable
 import cspyce
 from polymath import *
 import os.path
-import pdsparser
 import oops
 
-from . import JIRAM
+from hosts.juno.jiram import JIRAM
 
 ################################################################################
 # Standard class methods
@@ -19,9 +17,8 @@ from . import JIRAM
 
 #===============================================================================
 def from_file(filespec, label, fast_distortion=True,
-              return_all_planets=False, **parameters):
-    """
-    A general, static method to return a Snapshot object based on a given
+                               return_all_planets=False, **parameters):
+    """A general, static method to return a Snapshot object based on a given
     JIRAM image or spectrum file.
 
     Inputs:
@@ -45,10 +42,10 @@ def from_file(filespec, label, fast_distortion=True,
     # Construct Snapshots for slit in each band
     slits = []
     for i in range(meta.nsamples):
-        item = oops.obs.Snapshot(("v","u"),
-                             meta.tstart, meta.exposure, meta.fov,
-                             "JUNO", "JUNO_JIRAM_S",
-                             data=np.reshape(data[:,i],(1,meta.nlines)) )
+        item = oops.obs.Snapshot(('v','u'),
+                                 meta.tstart, meta.exposure, meta.fov,
+                                 'JUNO', 'JUNO_JIRAM_S',
+                                 data=np.reshape(data[:,i],(1,meta.nlines)) )
 
 #        item.insert_subfield('spice_kernels',
 #                   Juno.used_kernels(item.time, 'jiram', return_all_planets))
@@ -58,25 +55,21 @@ def from_file(filespec, label, fast_distortion=True,
 
 #    return slits
 
-
     # Construct Slit1D for all bands
-    obs = oops.obs.Slit1D(("u","b"),
-                         meta.tstart, meta.exposure, meta.fov,
-                         "JUNO", "JUNO_JIRAM_S", data=data )
+    obs = oops.obs.Slit1D(('u','b'),
+                          meta.tstart, meta.exposure, meta.fov,
+                          'JUNO', 'JUNO_JIRAM_S', data=data )
 
 #    obs.insert_subfield('spice_kernels',
 #               Juno.used_kernels(item.time, 'jiram', return_all_planets))
     obs.insert_subfield('filespec', filespec)
     obs.insert_subfield('basename', os.path.basename(filespec))
 
-
     return (obs, slits)
-
 
 #===============================================================================
 def _load_data(filespec, label, meta):
-    """
-    Loads the data array from the file and splits into individual framelets.
+    """Load the data array from the file and splits into individual framelets.
 
     Input:
         filespec        Full path to the data file.
@@ -93,7 +86,7 @@ def _load_data(filespec, label, meta):
     # seems like this should be handled in a readpds-style function somewhere
     data = np.fromfile(filespec, dtype='<f4').reshape(meta.nlines,meta.nsamples)
 
-    return(data)
+    return data
 
 
 #*******************************************************************************
@@ -101,8 +94,7 @@ class Metadata(object):
 
     #===========================================================================
     def __init__(self, label):
-        """
-        Uses the label to assemble the image metadata.
+        """Use the label to assemble the image metadata.
 
         Input:
             label           The label dictionary.
@@ -147,17 +139,15 @@ class Metadata(object):
 
 #*******************************************************************************
 class SPE(object):
-    """
-    A instance-free class to hold SPE instrument parameters.
-    """
+    """A instance-free class to hold SPE instrument parameters."""
 
     initialized = False
 
     #===========================================================================
     @staticmethod
     def initialize(time, ck='reconstructed', planets=None, asof=None,
-               spk='reconstructed', gapfill=True,
-               mst_pck=True, irregulars=True):
+                         spk='reconstructed', gapfill=True,
+                         mst_pck=True, irregulars=True):
         """
         Initialize key information about the SPE instrument.
 
@@ -186,27 +176,58 @@ class SPE(object):
 
         # initialize JIRAM
         JIRAM.initialize(ck=ck, planets=planets, asof=asof,
-                     spk=spk, gapfill=gapfill,
-                     mst_pck=mst_pck, irregulars=irregulars)
+                        spk=spk, gapfill=gapfill,
+                        mst_pck=mst_pck, irregulars=irregulars)
 
         # Construct the SpiceFrame
         JIRAM.create_frame(time, 'S')
 
-
         SPE.initialized = True
-
 
     #===========================================================================
     @staticmethod
     def reset():
-        """
-        Resets the internal SPE parameters. Can be useful for
-        debugging.
+        """Reset the internal SPE parameters.
+
+        Can be useful for debugging.
         """
         SPE.initialized = False
 
         JIRAM.reset()
 
+################################################################################
+# UNIT TESTS
+################################################################################
+import unittest
+import os.path
+
+import hosts.juno.jiram as jiram
+
+from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+from oops.backplane.exercise_backplanes import exercise_backplanes
+from oops.backplane.unittester_support  import Backplane_Settings
 
 
+#*******************************************************************************
+class Test_Juno_JIRAM_SPE_Backplane_Exercises(unittest.TestCase):
 
+    #===========================================================================
+    def runTest(self):
+
+        if Backplane_Settings.NO_EXERCISES:
+            self.skipTest('')
+
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'juno/jiram')
+        file = os.path.join(root, 'JNOJIR_2000/DATA/JIR_SPE_RDR_2013282T133845_V03.DAT')
+        (obs, slits) = jiram.from_file(file)
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
+                                 planet_key='MOON')
+
+
+##############################################
+from oops.backplane.unittester_support import backplane_unittester_args
+
+if __name__ == '__main__':
+    backplane_unittester_args()
+    unittest.main(verbosity=2)
+################################################################################

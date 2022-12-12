@@ -5,14 +5,13 @@
 import re
 import numpy as np
 import julian
-import pdstable
 import cspyce
 from polymath import *
 import os.path
 import pdsparser
 import oops
 
-from . import Juno
+from hosts.juno import Juno
 
 ################################################################################
 # Standard class methods
@@ -21,8 +20,7 @@ from . import Juno
 #===============================================================================
 def from_file(filespec, fast_distortion=True,
               return_all_planets=False, **parameters):
-    """
-    A general, static method to return a Pushframe object based on a given
+    """A general, static method to return a Pushframe object based on a given
     JUNOCAM image file.
 
     Inputs:
@@ -37,7 +35,7 @@ def from_file(filespec, fast_distortion=True,
                             # defaults unless initialize() is called explicitly.
 
     # Load the PDS label
-    lbl_filespec = filespec.replace(".img", ".LBL")
+    lbl_filespec = filespec.replace('.img', '.LBL')
     recs = pdsparser.PdsLabel.load_file(lbl_filespec)
     label = pdsparser.PdsLabel.from_string(recs).as_dict()
 
@@ -52,51 +50,44 @@ def from_file(filespec, fast_distortion=True,
     Juno.load_spks(meta.tstart0, meta.tstart0 + 3600.)
 
     # Construct a Pushframe for each framelet
-
     snap = False
-
-
     obs = []
     for i in range(meta.nframelets):
         fmeta = Metadata(flabels[i])
 
         if snap:
-            item = (oops.obs.Snapshot(("v","u"),
-                                 (fmeta.tstart, fmeta.tdi_texp), fmeta.fov,
-                                 "JUNO", "JUNO_JUNOCAM",
-                                 instrument = "JUNOCAM",
-                                 filter = fmeta.filter,
-                                 data = framelets[:,:,i]))
-
-
+            item = oops.obs.Snapshot(('v','u'),
+                                     (fmeta.tstart, fmeta.tdi_texp),
+                                     fmeta.fov,
+                                     path = 'JUNO',
+                                     frame = 'JUNO_JUNOCAM',
+                                     instrument = 'JUNOCAM',
+                                     filter = fmeta.filter,
+                                     data = framelets[:,:,i])
 
         if not snap:
-            item = (oops.obs.Pushframe(("vt","u"),
-                                (fmeta.tstart, fmeta.tdi_texp, fmeta.tdi_stages),
-                                 fmeta.fov,
-                                 "JUNO", "JUNO_JUNOCAM",
-                                 instrument = "JUNOCAM",
-                                 filter = fmeta.filter,
-                                 data = framelets[:,:,i]))
-
+            item = oops.obs.Pushframe(('vt','u'),
+                                      (fmeta.tstart, fmeta.tdi_texp, fmeta.tdi_stages),
+                                      fmeta.fov,
+                                      path = 'JUNO',
+                                      frame = 'JUNO_JUNOCAM',
+                                      instrument = 'JUNOCAM',
+                                      filter = fmeta.filter,
+                                      data = framelets[:,:,i])
 
 #        item.insert_subfield('spice_kernels', \
 #                   Juno.used_kernels(item.time, 'junocam', return_all_planets))
-
-
         item.insert_subfield('filespec', filespec)
         item.insert_subfield('basename', os.path.basename(filespec))
         obs.append(item)
 
     return obs
 
-
 #===============================================================================
 def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
                spk='reconstructed', gapfill=True,
                mst_pck=True, irregulars=True):
-    """
-    Initialize key information about the JUNOCAM instrument.
+    """Initialize key information about the JUNOCAM instrument.
 
     Must be called first. After the first call, later calls to this function
     are ignored.
@@ -121,12 +112,9 @@ def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
                    spk=spk, gapfill=gapfill,
                    mst_pck=mst_pck, irregulars=irregulars)
 
-
-
 #===============================================================================
 def _load_data(filespec, label, meta):
-    """
-    Loads the data array from the file and splits into individual framelets.
+    """Load the data array from the file and splits into individual framelets.
 
     Input:
         filespec        Full path to the data file.
@@ -171,9 +159,7 @@ def _load_data(filespec, label, meta):
 
         framelet_labels.append(framelet_label)
 
-
     return (framelets, framelet_labels)
-
 
 
 #*******************************************************************************
@@ -181,8 +167,7 @@ class Metadata(object):
 
     #===========================================================================
     def __init__(self, label):
-        """
-        Uses the label to assemble the image metadata.
+        """Use the label to assemble the image metadata.
 
         Input:
             label           The label dictionary.
@@ -219,7 +204,6 @@ class Metadata(object):
         self.tstart0 = self.tstart
         self.tstop = julian.tdb_from_tai(
                        julian.tai_from_iso(label['STOP_TIME']))
-
 
         self.tdi_stages = label['JNO:TDI_STAGES_COUNT']
         self.tdi_texp = self.exposure/self.tdi_stages
@@ -279,17 +263,15 @@ class Metadata(object):
             distortion_coeff = [1,0,k1,0,k2]
 
             self.fov = oops.fov.RadialFOV(scale,
-                                            (self.nsamples, self.frlines),
-                                            coefft_uv_from_xy=distortion_coeff,
-                                            uv_los=(cx, cy))
+                                          (self.nsamples, self.frlines),
+                                          coefft_uv_from_xy=distortion_coeff,
+                                          uv_los=(cx, cy))
 
         return
 
-
     #===========================================================================
     def update_cy(self, label, cy):
-        """
-        Looks at label RATIONALE_DESC for a correction to DISTORTION_Y for
+        """Look at label RATIONALE_DESC for a correction to DISTORTION_Y for
         some methane images.
 
         Input:
@@ -301,17 +283,14 @@ class Metadata(object):
 
         """
         desc = label['RATIONALE_DESC']
-        desc = re.sub("\s+"," ", desc)                     # compress whitespace
+        desc = re.sub('\s+',' ', desc)                     # compress whitespace
         kv = desc.partition('INS-61504_DISTORTION_Y = ')   # parse keyword
         return float(kv[2].split()[0])                     # parse/convert value
 
 
-
 #*******************************************************************************
 class JUNOCAM(object):
-    """
-    A instance-free class to hold JUNOCAM instrument parameters.
-    """
+    """A instance-free class to hold JUNOCAM instrument parameters."""
 
     instrument_kernel = None
     fovs = {}
@@ -350,8 +329,8 @@ class JUNOCAM(object):
 
         # Initialize Juno
         Juno.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
-                           gapfill=gapfill,
-                           mst_pck=mst_pck, irregulars=irregulars)
+                        gapfill=gapfill,
+                        mst_pck=mst_pck, irregulars=irregulars)
         Juno.load_instruments(asof=asof)
 
         # Construct the SpiceFrame
@@ -359,15 +338,13 @@ class JUNOCAM(object):
 
         JUNOCAM.initialized = True
 
-
-
     #===========================================================================
     @staticmethod
     def reset():
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Resets the internal JUNOCAM parameters. Can be useful for
-        debugging.
+        """Reset the internal JUNOCAM parameters.
+
+        Can be useful for debugging.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         JUNOCAM.instrument_kernel = None
@@ -376,40 +353,37 @@ class JUNOCAM(object):
 
         Juno.reset()
 
-
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
-
 import unittest
 import os.path
 
-import hosts.juno.junocam as junocam
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
 from oops.backplane.exercise_backplanes import exercise_backplanes
+from oops.backplane.unittester_support  import Backplane_Settings
 
-class Test_Juno_Junocam(unittest.TestCase):
 
+#*******************************************************************************
+class Test_Juno_Junocam_Backplane_Exercises(unittest.TestCase):
+
+    #===========================================================================
     def runTest(self):
 
-        from oops.backplane import Backplane
+        if Backplane_Settings.NO_EXERCISES:
+            self.skipTest('')
 
-        root = os.path.join(TESTDATA_PARENT_DIRECTORY, "juno/junocam")
-        file = os.path.join(root, "03/JNCR_2016347_03C00192_V01.img")
-        _obs = junocam.from_file(file); body_name = "JUPITER"; obs = _obs[5]
-
-        printing = 1
-        logging = 0
-        saving = 1
-        bp = exercise_backplanes(obs, printing, logging, saving, use_inventory=True)
-#        bp = exercise_backplanes(obs, body_name, printing, logging, saving)
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'juno/junocam')
+        file = os.path.join(root, '03/JNCR_2016347_03C00192_V01.img')
+        obs = from_file(file)[5]
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
+                                 planet_key='JUPITER')
 
 
+##############################################
+from oops.backplane.unittester_support import backplane_unittester_args
 
-
-############################################
 if __name__ == '__main__':
+    backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################
-

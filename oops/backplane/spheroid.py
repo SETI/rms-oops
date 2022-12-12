@@ -4,18 +4,17 @@
 
 from __future__ import print_function
 
-from polymath import Scalar
+from polymath       import Scalar
+from oops.backplane import Backplane
+from oops.constants import PI, TWOPI
 
-from .           import Backplane
-from ..constants import PI, TWOPI
-
-
-############################################################################
+################################################################################
 # Body surface geometry, surface intercept versions
 #   longitude()
 #   latitude()
-############################################################################
+################################################################################
 
+#===============================================================================
 def longitude(self, event_key, reference='iau', direction='west',
                                minimum=0, lon_type='centric'):
     """Longitude at the surface intercept point in the image.
@@ -101,7 +100,7 @@ def longitude(self, event_key, reference='iau', direction='west',
     self.register_backplane(key, lon)
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def latitude(self, event_key, lat_type='centric'):
     """Latitude at the surface intercept point in the image.
 
@@ -147,7 +146,7 @@ def latitude(self, event_key, lat_type='centric'):
     self.register_backplane(key, lat)
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def _fill_surface_intercepts(self, event_key):
     """Internal method to fill in the surface intercept geometry backplanes.
     """
@@ -169,7 +168,7 @@ def _fill_surface_intercepts(self, event_key):
     self.register_backplane(lon_key, event.coord1)
     self.register_backplane(lat_key, event.coord2)
 
-#===========================================================================
+#===============================================================================
 def _sub_observer_longitude(self, event_key):
     """Sub-observer longitude. Used internally."""
 
@@ -185,7 +184,7 @@ def _sub_observer_longitude(self, event_key):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def _sub_observer_latitude(self, event_key):
     """Sub-observer latitude. Used internally."""
 
@@ -201,7 +200,7 @@ def _sub_observer_latitude(self, event_key):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def _sub_solar_longitude(self, event_key):
     """Sub-solar longitude. Used internally."""
 
@@ -218,7 +217,7 @@ def _sub_solar_longitude(self, event_key):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def _sub_solar_latitude(self, event_key):
     """Sub-solar latitude. Used internally."""
 
@@ -234,14 +233,15 @@ def _sub_solar_latitude(self, event_key):
 
     return self.backplanes[key]
 
-############################################################################
+################################################################################
 # Surface geometry, path intercept versions
 #   sub_observer_longitude()
 #   sub_solar_longitude()
 #   sub_observer_latitude()
 #   sub_solar_latitude()
-############################################################################
+################################################################################
 
+#===============================================================================
 def sub_observer_longitude(self, event_key, reference='iau',
                                  direction='west', minimum=0):
     """Sub-observer longitude.
@@ -282,7 +282,7 @@ def sub_observer_longitude(self, event_key, reference='iau',
     self.register_gridless_backplane(key, lon)
     return lon
 
-#===========================================================================
+#===============================================================================
 def sub_solar_longitude(self, event_key, reference='iau',
                                          direction='west', minimum=0):
     """Sub-solar longitude.
@@ -326,7 +326,7 @@ def sub_solar_longitude(self, event_key, reference='iau',
     self.register_gridless_backplane(key, lon)
     return lon
 
-#===========================================================================
+#===============================================================================
 def _sub_longitude(self, event_key, lon, reference='iau',
                                          direction='west', minimum=0):
     """Sub-solar or sub-observer longitude."""
@@ -360,7 +360,7 @@ def _sub_longitude(self, event_key, lon, reference='iau',
 
     return lon
 
-#===========================================================================
+#===============================================================================
 def sub_observer_latitude(self, event_key, lat_type='centric'):
     """Sub-observer latitude at the center of the disk.
 
@@ -388,7 +388,7 @@ def sub_observer_latitude(self, event_key, lat_type='centric'):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def sub_solar_latitude(self, event_key, lat_type='centric'):
     """Sub-solar latitude at the center of the disk.
 
@@ -416,7 +416,7 @@ def sub_solar_latitude(self, event_key, lat_type='centric'):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def lambert_law(self, event_key):
     """Lambert law model cos(incidence_angle) for the surface.
 
@@ -433,7 +433,7 @@ def lambert_law(self, event_key):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def minnaert_law(self, event_key, k, k2=None):
     """Minnaert law model for the surface.
 
@@ -456,7 +456,7 @@ def minnaert_law(self, event_key, k, k2=None):
 
     return self.backplanes[key]
 
-#===========================================================================
+#===============================================================================
 def lommel_seeliger_law(self, event_key):
     """Lommel-Seeliger law model for the surface.
 
@@ -481,4 +481,167 @@ def lommel_seeliger_law(self, event_key):
 
 Backplane._define_backplane_names(globals().copy())
 
+################################################################################
+# UNIT TESTS
+################################################################################
+import unittest
+from oops.meshgrid                     import Meshgrid
+from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
+from oops.constants                    import DPR
+from oops.backplane.unittester_support import show_info
+
+#===============================================================================
+def exercise_limb_longitude(bp,
+                            planet=None, moon=None, ring=None,
+                            undersample=16, use_inventory=False,
+                            inventory_border=2,
+                            **options):
+    """generic unit tests for spheroid.py"""
+
+    if planet is not None:
+        test = bp.longitude(planet+':limb', 'iau')
+        show_info(bp, 'Limb longitude wrt IAU (deg)', test*DPR, **options)
+        test = bp.longitude(planet+':limb', 'obs')
+        show_info(bp, 'Limb longitude wrt observer (deg)', test*DPR, **options)
+        test = bp.longitude(planet+':limb', reference='obs', minimum=-180)
+        show_info(bp, 'Limb longitude wrt observer, -180 (deg)', test*DPR, **options)
+        test = bp.longitude(planet+':limb', 'oha')
+        show_info(bp, 'Limb longitude wrt OHA (deg)', test*DPR, **options)
+        test = bp.longitude(planet+':limb', 'sun')
+        show_info(bp, 'Limb longitude wrt Sun (deg)', test*DPR, **options)
+        test = bp.longitude(planet+':limb', 'sha')
+        show_info(bp, 'Limb longitude wrt SHA (deg)', test*DPR, **options)
+
+#===============================================================================
+def exercise_limb_latitude(bp,
+                           planet=None, moon=None, ring=None,
+                           undersample=16, use_inventory=False,
+                           inventory_border=2,
+                           **options):
+    """generic unit tests for spheroid.py"""
+
+    if planet is not None:
+        test = bp.latitude(planet+':limb', lat_type='centric')
+        show_info(bp, 'Limb planetocentric latitude (deg)', test*DPR, **options)
+        test = bp.latitude(planet+':limb', lat_type='squashed')
+        show_info(bp, 'Limb squashed latitude (deg)', test*DPR, **options)
+        test = bp.latitude(planet+':limb', lat_type='graphic')
+        show_info(bp, 'Limb planetographic latitude (deg)', test*DPR, **options)
+
+#===============================================================================
+def exercise_surface_latitude(bp,
+                              planet=None, moon=None, ring=None,
+                              undersample=16, use_inventory=False,
+                              inventory_border=2,
+                              **options):
+    """generic unit tests for spheroid.py"""
+
+    if planet is not None:
+        test = bp.latitude(planet, lat_type='centric')
+        show_info(bp, 'planet latitude, planetocentric (deg)', test*DPR, **options)
+        test = bp.latitude(planet, lat_type='squashed')
+        show_info(bp, 'planet latitude, squashed (deg)', test*DPR, **options)
+        test = bp.latitude(planet, lat_type='graphic')
+        show_info(bp, 'planet latitude, planetographic (deg)', test*DPR, **options)
+        test = bp.sub_observer_latitude(planet)
+        show_info(bp, 'planet sub-observer latitude (deg)', test*DPR, **options)
+        test = bp.sub_solar_latitude(planet)
+        show_info(bp, 'planet sub-solar latitude (deg)', test*DPR, **options)
+
+    if moon is not None:
+        test = bp.latitude(moon, lat_type='centric')
+        show_info(bp, 'moon latitude, planetocentric (deg)', test*DPR, **options)
+        test = bp.latitude(moon, lat_type='squashed')
+        show_info(bp, 'moon latitude, squashed (deg)', test*DPR, **options)
+        test = bp.latitude(moon, lat_type='graphic')
+        show_info(bp, 'moon latitude, planetographic (deg)', test*DPR, **options)
+        test = bp.sub_observer_latitude(moon)
+        show_info(bp, 'moon sub-observer latitude (deg)', test*DPR, **options)
+        test = bp.sub_solar_latitude(moon)
+        show_info(bp, 'moon sub-solar latitude (deg)', test*DPR, **options)
+
+#===============================================================================
+def exercise_surface_planet_moon(bp,
+                                 planet=None, moon=None, ring=None,
+                                 undersample=16, use_inventory=False,
+                                 inventory_border=2,
+                                 **options):
+    """generic unit tests for spheroid.py"""
+
+    if planet is not None:
+        test = bp.longitude(planet)
+        show_info(bp, 'planet longitude (deg)', test*DPR, **options)
+        test = bp.longitude(planet, reference='iau')
+        show_info(bp, 'planet longitude wrt IAU frame (deg)', test*DPR, **options)
+        test = bp.longitude(planet, lon_type='centric')
+        show_info(bp, 'planet longitude centric (deg)', test*DPR, **options)
+        test = bp.longitude(planet, lon_type='graphic')
+        show_info(bp, 'planet longitude graphic (deg)', test*DPR, **options)
+        test = bp.longitude(planet, lon_type='squashed')
+        show_info(bp, 'planet longitude squashed (deg)', test*DPR, **options)
+        test = bp.longitude(planet, direction='east')
+        show_info(bp, 'planet longitude eastward (deg)', test*DPR, **options)
+        test = bp.longitude(planet, minimum=-180)
+        show_info(bp, 'planet longitude with -180 minimum (deg)', test*DPR, **options)
+        test = bp.longitude(planet, reference='iau', minimum=-180)
+        show_info(bp, 'planet longitude wrt IAU frame with -180 minimum (deg)',
+                  test*DPR, **options)
+        test = bp.longitude(planet, reference='sun')
+        show_info(bp, 'planet longitude wrt Sun (deg)', test*DPR, **options)
+        test = bp.longitude(planet, reference='sha')
+        show_info(bp, 'planet longitude wrt SHA (deg)', test*DPR, **options)
+        test = bp.longitude(planet, reference='obs')
+        show_info(bp, 'planet longitude wrt observer (deg)', test*DPR, **options)
+        test = bp.longitude(planet, reference='oha')
+        show_info(bp, 'planet longitude wrt OHA (deg)', test*DPR, **options)
+        test = bp.sub_observer_longitude(planet, reference='iau')
+        show_info(bp, 'planet sub-observer longitude wrt IAU (deg)', test*DPR, **options)
+        test = bp.sub_observer_longitude(planet, reference='sun', minimum=-180)
+        show_info(bp, 'planet sub-observer longitude wrt Sun (deg)', test*DPR, **options)
+        test = bp.sub_observer_longitude(planet, reference='obs', minimum=-180)
+        show_info(bp, 'planet sub-observer longitude wrt observer (deg)', test*DPR,
+                  **options)
+        test = bp.sub_solar_longitude(planet, reference='iau')
+        show_info(bp, 'planet sub-solar longitude wrt IAU (deg)', test*DPR, **options)
+        test = bp.sub_solar_longitude(planet, reference='obs', minimum=-180)
+        show_info(bp, 'planet sub-solar longitude wrt observer (deg)', test*DPR,
+                  **options)
+        test = bp.sub_solar_longitude(planet, reference='sun', minimum=-180)
+        show_info(bp, 'planet sub-solar longitude wrt Sun (deg)', test*DPR,
+                  **options)
+
+    if moon is not None:
+        test = bp.longitude(moon)
+        show_info(bp, 'moon longitude (deg)', test*DPR, **options)
+        test = bp.sub_observer_longitude(moon)
+        show_info(bp, 'moon sub-observer longitude (deg)', test*DPR, **options)
+        test = bp.sub_solar_longitude(moon)
+        show_info(bp, 'moon sub-solar longitude (deg)', test*DPR, **options)
+
+#===============================================================================
+def exercise_ring(bp,
+                  planet=None, moon=None, ring=None,
+                  undersample=16, use_inventory=False, inventory_border=2,
+                  **options):
+    """generic unit tests for spheroid.py"""
+
+    if ring is not None:
+        test = bp.sub_observer_longitude(ring, 'sun', minimum=-180)
+        show_info(bp, 'Ring observer-sun longitude (deg)', test*DPR, **options)
+
+
+#*******************************************************************************
+class Test_Spheroid(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+        from oops.backplane.unittester_support import Backplane_Settings
+        if Backplane_Settings.EXERCISES_ONLY:
+            self.skipTest("")
+        pass
+
+
+########################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
 ################################################################################
