@@ -15,7 +15,6 @@ import oops
 
 from oops.body import Body
 
-
 ################################################################################
 # Routines for managing the loading of C and SP kernels
 ################################################################################
@@ -253,7 +252,6 @@ class Juno(object):
         cspyce.furnsh(kdir + 'ck/juno_sc_rec_180715_180716_v01.bc')
         cspyce.furnsh(kdir + 'spk/spk_rec_180620_180812_180821.bsp')
 
-
         cspyce.furnsh(kdir + 'lsk/naif0012.tls')
         cspyce.furnsh(kdir + 'sclk/jno_sclkscet_00128.tsc')
         cspyce.furnsh(kdir + 'fk/juno_v12.tf')
@@ -265,18 +263,14 @@ class Juno(object):
         return
 
 ## TODO:
-        #-----------------------------------------
         # Find the range of months needed
-        #-----------------------------------------
         m1 = int((t0 - Juno.TDB0) // Juno.DTDB)
         m2 = int((t1 - Juno.TDB0) // Juno.DTDB) + 1
 
         m1 = max(m1, 0)         # ignore time limits outside mission duration
         m2 = min(m2, Juno.MONTHS - 1)
 
-        #-----------------------------------------
         # Load any months not already loaded
-        #-----------------------------------------
         for m in range(m1, m2+1):
           if not loaded[m]:
             for kernel in lists[m]:
@@ -285,7 +279,6 @@ class Juno(object):
                     spicedb.furnish_kernels([kernel])
                     kernel_dict[filespec] = kernel
                 loaded[m] = True
-
 
     ########################################
     # Initialize the kernel lists

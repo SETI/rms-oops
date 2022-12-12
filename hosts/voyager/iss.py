@@ -142,8 +142,8 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
 
     # Create a Snapshot
     result = oops.obs.Snapshot(('v','u'), tstart, texp, fovs[camera],
-                               spacecraft,
-                               image_frame,
+                               path = spacecraft,
+                               frame = image_frame,
                                dict = vicar_dict,           # Add the VICAR dict
                                data = vic.data_2d,          # Add the data array
                                instrument = 'ISS',
@@ -389,10 +389,6 @@ class ISS(object):
 ISS.initialize()
 
 ################################################################################
-
-
-
-################################################################################
 # UNIT TESTS
 ################################################################################
 import unittest
@@ -416,7 +412,6 @@ class Test_Voyager_ISS_Backplane_Exercises(unittest.TestCase):
         obs = from_file(file)
         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
                                  planet_key='SATURN')
-
 
 ##############################################
 from oops.backplane.unittester_support import backplane_unittester_args

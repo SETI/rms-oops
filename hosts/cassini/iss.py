@@ -10,7 +10,6 @@ import oops
 
 from hosts.cassini import Cassini
 
-
 ################################################################################
 # Standard class methods
 ################################################################################
@@ -67,7 +66,8 @@ def from_file(filespec, fast_distortion=True,
     # Create a Snapshot
     result = oops.obs.Snapshot(('v','u'), tstart, texp,
                                ISS.fovs[camera,mode, fast_distortion],
-                               'CASSINI', 'CASSINI_ISS_' + camera,
+                               path = 'CASSINI',
+                               frame = 'CASSINI_ISS_' + camera,
                                dict = vicar_dict,       # Add the VICAR dict
                                data = vic.data_2d,      # Add the data array
                                instrument = 'ISS',
@@ -391,9 +391,9 @@ class ISS(object):
             xshift = -7. * xpixel
             yshift = 4.4 * ypixel
             wac_frame_no = oops.frame.Cmatrix(rot180, wac_flipped,
-                                           frame_id='CASSINI_ISS_WAC-NO_OFFSET')
+                                              frame_id='CASSINI_ISS_WAC-NO_OFFSET')
             wac_frame = oops.frame.Navigation((xshift,yshift), wac_frame_no,
-                                              frame_id='CASSINI_ISS_WAC')
+                                               frame_id='CASSINI_ISS_WAC')
         else:
             wac_frame = oops.frame.Cmatrix(rot180, wac_flipped,
                                            frame_id='CASSINI_ISS_WAC')

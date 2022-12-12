@@ -569,7 +569,6 @@ class Test_Cassini_UVIS_Backplane_Exercises(unittest.TestCase):
 
         root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'cassini/UVIS')
 
-
         file = os.path.join(root, 'HSP2014_197_21_29.DAT')
         obs = from_file(file)
         exercise_backplanes(obs, use_inventory=True, inventory_border=4,

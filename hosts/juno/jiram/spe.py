@@ -55,7 +55,6 @@ def from_file(filespec, label, fast_distortion=True,
 
 #    return slits
 
-
     # Construct Slit1D for all bands
     obs = oops.obs.Slit1D(('u','b'),
                           meta.tstart, meta.exposure, meta.fov,
@@ -65,7 +64,6 @@ def from_file(filespec, label, fast_distortion=True,
 #               Juno.used_kernels(item.time, 'jiram', return_all_planets))
     obs.insert_subfield('filespec', filespec)
     obs.insert_subfield('basename', os.path.basename(filespec))
-
 
     return (obs, slits)
 
@@ -183,7 +181,6 @@ class SPE(object):
 
         # Construct the SpiceFrame
         JIRAM.create_frame(time, 'S')
-
 
         SPE.initialized = True
 

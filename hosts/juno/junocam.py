@@ -58,7 +58,9 @@ def from_file(filespec, fast_distortion=True,
         if snap:
             item = oops.obs.Snapshot(('v','u'),
                                      (fmeta.tstart, fmeta.tdi_texp),
-                                     fmeta.fov, 'JUNO', 'JUNO_JUNOCAM',
+                                     fmeta.fov,
+                                     path = 'JUNO',
+                                     frame = 'JUNO_JUNOCAM',
                                      instrument = 'JUNOCAM',
                                      filter = fmeta.filter,
                                      data = framelets[:,:,i])
@@ -66,7 +68,9 @@ def from_file(filespec, fast_distortion=True,
         if not snap:
             item = oops.obs.Pushframe(('vt','u'),
                                       (fmeta.tstart, fmeta.tdi_texp, fmeta.tdi_stages),
-                                      fmeta.fov, 'JUNO', 'JUNO_JUNOCAM',
+                                      fmeta.fov,
+                                      path = 'JUNO',
+                                      frame = 'JUNO_JUNOCAM',
                                       instrument = 'JUNOCAM',
                                       filter = fmeta.filter,
                                       data = framelets[:,:,i])
@@ -155,7 +159,6 @@ def _load_data(filespec, label, meta):
 
         framelet_labels.append(framelet_label)
 
-
     return (framelets, framelet_labels)
 
 
@@ -201,7 +204,6 @@ class Metadata(object):
         self.tstart0 = self.tstart
         self.tstop = julian.tdb_from_tai(
                        julian.tai_from_iso(label['STOP_TIME']))
-
 
         self.tdi_stages = label['JNO:TDI_STAGES_COUNT']
         self.tdi_texp = self.exposure/self.tdi_stages

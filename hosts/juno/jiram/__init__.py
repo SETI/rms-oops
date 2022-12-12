@@ -11,14 +11,9 @@ import pdsparser
 import oops
 
 from hosts.juno import Juno
-
-
 ################################################################################
 # Standard class methods
 ################################################################################
-
-
-#===============================================================================
 def from_file(filespec, return_all_planets=False, **parameters):
     """A general, static method to return a Snapshot object based on a given
     JIRAM image or spectrum file.
@@ -61,7 +56,6 @@ def from_file(filespec, return_all_planets=False, **parameters):
     return None
 
 
-
 #*******************************************************************************
 class Metadata(object):
 
@@ -89,7 +83,6 @@ class Metadata(object):
                        julian.tai_from_iso(label['STOP_TIME']))
 
         return
-
 
 
 #*******************************************************************************
@@ -135,9 +128,7 @@ class JIRAM(object):
                         mst_pck=mst_pck, irregulars=irregulars)
         Juno.load_instruments(asof=asof)
 
-
         JIRAM.initialized = True
-
 
     #===========================================================================
     @staticmethod
@@ -159,16 +150,15 @@ class JIRAM(object):
 
         # Define fixed frame relative to J2000 from JIRAM orientation at
         # given time
-        jiram_raw = \
-            oops.frame.SpiceFrame(spice_frame, frame_id=spice_frame+'_RAW')
+        jiram_raw = oops.frame.SpiceFrame(spice_frame,
+                                        frame_id=spice_frame+'_RAW')
         xform = jiram_raw.transform_at_time(time)
 
-        jiram_raw_j2000 = \
-            oops.frame.Cmatrix(xform.matrix, frame_id=spice_frame+'_RAW_J2000')
-        jiram_frame = \
-            oops.frame.Cmatrix(rot, jiram_raw_j2000, frame_id=spice_frame)
-
-
+        jiram_raw_j2000 = oops.frame.Cmatrix(xform.matrix,
+                                            frame_id=spice_frame+'_RAW_J2000')
+        jiram_frame = oops.frame.Cmatrix(rot,
+                                         jiram_raw_j2000,
+                                         frame_id=spice_frame)
 
     #===========================================================================
     @staticmethod

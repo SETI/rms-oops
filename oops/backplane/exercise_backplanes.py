@@ -217,7 +217,6 @@ def _exercise_backplanes(obs, printing, logging, saving, dir, refdir,
 #     test = bp.sub_solar_longitude('enceladus')
 #     show_info(bp, 'Enceladus sub-solar longitude (deg)', test * DPR)
 
-
     config.LOGGING.off()
 
 #===============================================================================

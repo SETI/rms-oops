@@ -344,8 +344,8 @@ def from_file(filespec, fast=False, **parameters):
                 vis_data = vis_data.reshape((samples, 96))
 
             vis_obs = oops.obs.Slit1D(('u','b'),
-                                tstart, vis_texp_nonzero, vis_fov,
-                                'CASSINI', vis_frame_id)
+                                       tstart, vis_texp_nonzero, vis_fov,
+                                       'CASSINI', vis_frame_id)
 
         if not ir_is_off:
             if ir_data is not None:
@@ -355,46 +355,46 @@ def from_file(filespec, fast=False, **parameters):
                 ir_fast_cadence = backplane_cadence
 
             ir_obs = oops.obs.RasterSlit1D(('ut','b'),
-                                ir_fast_cadence, ir_fov,
-                                'CASSINI', ir_frame_id)
+                                           ir_fast_cadence, ir_fov,
+                                           'CASSINI', ir_frame_id)
 
     # Single 2-D IMAGE case
     elif samples == swath_width and lines == swath_length:
         if not vis_is_off:
             vis_obs = oops.obs.Pushbroom(('vt','u','b'),
-                                vis_header_cadence, vis_fov,
-                                'CASSINI', vis_frame_id)
+                                         vis_header_cadence, vis_fov,
+                                         'CASSINI', vis_frame_id)
 
         if not ir_is_off:
             if backplane_cadence is None:
                 ir_cadence = oops.cadence.DualCadence(vis_header_cadence,
-                                ir_fast_cadence)
+                                                      ir_fast_cadence)
             else:
                 ir_cadence = oops.cadence.ReshapedCadence(backplane_cadence,
-                                (lines,samples))
+                                                         (lines,samples))
 
             ir_obs = oops.obs.RasterScan(('vslow','ufast','b'),
-                                ir_cadence, ir_fov,
-                                'CASSINI', ir_frame_id)
+                                          ir_cadence, ir_fov,
+                                          'CASSINI', ir_frame_id)
 
     # Multiple LINE case
     elif swath_length == 1 and swath_length == lines:
         if not vis_is_off:
             vis_obs = oops.obs.Slit(('vt','u','b'),
-                                frame_cadence, vis_fov,
-                                'CASSINI', vis_frame_id)
+                                     frame_cadence, vis_fov,
+                                     'CASSINI', vis_frame_id)
 
         if not ir_is_off:
             if backplane_cadence is None:
                 ir_cadence = oops.cadence.DualCadence(frame_cadence,
-                                ir_fast_cadence)
+                                                      ir_fast_cadence)
             else:
                 ir_cadence = oops.cadence.ReshapedCadence(backplane_cadence,
-                                (lines,samples))
+                                                         (lines,samples))
 
             ir_obs = oops.obs.RasterSlit(('vslow','ufast','b'),
-                                ir_cadence, ir_fov,
-                                'CASSINI', ir_frame_id)
+                                          ir_cadence, ir_fov,
+                                          'CASSINI', ir_frame_id)
 
 # 1/9/15 broken code no longer needed
 #     # Multiple 2-D IMAGE case
@@ -952,12 +952,10 @@ class Test_Cassini_VIMS_Backplane_Exercises(unittest.TestCase):
 
         root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'cassini/VIMS')
 
-
         file = os.path.join(root, 'v1690952775_1.qub')
         (obs_vis, obs_ir) = from_file(file)
         exercise_backplanes(obs_vis, use_inventory=True, inventory_border=4,
                                      planet_key='SATURN')
-
 
         file = os.path.join(root, 'v1793917030_1.qub')
         (obs_vis, obs_ir) = from_file(file)

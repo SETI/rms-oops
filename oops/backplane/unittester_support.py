@@ -188,7 +188,6 @@ def show_info(bp, title, array, **options):
             minval = array.min().as_builtin()
             maxval = array.max().as_builtin()
 
-
     # The rest of the method applies only to arrays
     if array.shape == ():
         return
