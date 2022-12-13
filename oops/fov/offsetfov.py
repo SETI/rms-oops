@@ -119,8 +119,8 @@ class OffsetFOV(FOV, Fittable):
         """
 
         xy_pair = Pair.as_pair(xy_pair, derivs)
-        return self.fov.uv_from_xy(xy_pair + self.xy_offset, tfrac, time,
-                                   derivs=derivs, **keywords)
+        return self.fov.uv_from_xyt(xy_pair + self.xy_offset, tfrac, time,
+                                    derivs=derivs, **keywords)
 
     ############################################################################
     # Fittable interface

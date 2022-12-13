@@ -237,8 +237,10 @@ class Pushframe(Observation):
         """
 
         tstep = Pair.as_pair(uv_pair).to_scalar(self._tdi_uv_index)
-        tstep_int = tstep.int(top=self.uv_shape, remask=remask)
-        (time_min, time_max) = self.cadence.time_range_at_tstep(tstep_int,
+#         tstep_int = tstep.int(top=self.uv_shape, remask=remask)
+#         (time_min, time_max) = self.cadence.time_range_at_tstep(tstep_int,
+#                                                                 remask=False)
+        (time_min, time_max) = self.cadence.time_range_at_tstep(tstep,
                                                                 remask=False)
 
         # Apply mask if necessary
