@@ -952,7 +952,8 @@ class HST(object):
         bandpass = tab.Tabulation(bandpass.x * 1.e-4, bandpass.y)
 
         # Convert units of solar F back to CGS per Angstrom
-        solar_f_mks_per_micron = solar.bandpass_f(bandpass, sun_range, model)
+        solar_f_mks_per_micron = solar.bandpass_f(bandpass, model=model,
+                                                            sun_range=sun_range)
 
         return solar_f_mks_per_micron * solar.TO_CGS * solar.TO_PER_ANGSTROM
 
