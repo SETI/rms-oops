@@ -2,19 +2,19 @@
 # polymath/__init__.py
 ################################################################################
 
-from .qube       import Qube
-from .boolean    import Boolean
-from .scalar     import Scalar
-from .vector     import Vector
-from .vector3    import Vector3
-from .pair       import Pair
-from .matrix     import Matrix
-from .matrix3    import Matrix3
-from .quaternion import Quaternion
+from polymath.qube       import Qube
+from polymath.boolean    import Boolean
+from polymath.scalar     import Scalar
+from polymath.vector     import Vector
+from polymath.vector3    import Vector3
+from polymath.pair       import Pair
+from polymath.matrix     import Matrix
+from polymath.matrix3    import Matrix3
+from polymath.quaternion import Quaternion
 
-from .polynomial import Polynomial
+from polymath.polynomial import Polynomial
 
-from .units      import Units
+from polymath.units      import Units
 
 ################################################################################
 # Extensions
@@ -24,6 +24,7 @@ from polymath.extensions import indexer
 Qube.__getitem__        = indexer.__getitem__
 Qube.__setitem__        = indexer.__setitem__
 Qube._prep_index        = indexer._prep_index
+Qube._prep_scalar_index = indexer._prep_scalar_index
 
 from polymath.extensions import item_ops
 Qube.extract_numer      = item_ops.extract_numer
@@ -39,6 +40,10 @@ Qube.split_items        = item_ops.split_items
 Qube.swap_items         = item_ops.swap_items
 Qube.chain              = item_ops.chain
 
+from polymath.extensions import iterator
+Qube.__iter__           = iterator.__iter__
+Qube.ndenumerate        = iterator.ndenumerate
+
 from polymath.extensions import mask_ops
 Qube.mask_where         = mask_ops.mask_where
 Qube.mask_where_eq      = mask_ops.mask_where_eq
@@ -50,10 +55,15 @@ Qube.mask_where_gt      = mask_ops.mask_where_gt
 Qube.mask_where_between = mask_ops.mask_where_between
 Qube.mask_where_outside = mask_ops.mask_where_outside
 Qube.clip               = mask_ops.clip
+Qube.is_below           = mask_ops.is_below
+Qube.is_above           = mask_ops.is_above
+Qube.is_outside         = mask_ops.is_outside
+Qube.is_inside          = mask_ops.is_inside
 
 from polymath.extensions import math_ops
-Qube._mean              = math_ops._mean
-Qube._sum               = math_ops._sum
+Qube._mean_or_sum       = math_ops._mean_or_sum
+Qube._check_axis        = math_ops._check_axis
+Qube._zero_sized_result = math_ops._zero_sized_result
 Qube.dot                = math_ops.dot
 Qube.norm               = math_ops.norm
 Qube.norm_sq            = math_ops.norm_sq
@@ -77,6 +87,7 @@ Qube.reshape            = shaper.reshape
 Qube.flatten            = shaper.flatten
 Qube.swap_axes          = shaper.swap_axes
 Qube.roll_axis          = shaper.roll_axis
+Qube.move_axis          = shaper.move_axis
 Qube.stack              = shaper.stack
 
 from polymath.extensions import shrinker

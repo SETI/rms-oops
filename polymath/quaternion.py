@@ -5,13 +5,13 @@
 from __future__ import division
 import numpy as np
 
-from .qube    import Qube
-from .scalar  import Scalar
-from .vector  import Vector
-from .vector3 import Vector3
-from .matrix  import Matrix
-from .matrix3 import Matrix3
-from .units   import Units
+from polymath.qube    import Qube
+from polymath.scalar  import Scalar
+from polymath.vector  import Vector
+from polymath.vector3 import Vector3
+from polymath.matrix  import Matrix
+from polymath.matrix3 import Matrix3
+from polymath.units   import Units
 
 class Quaternion(Vector):
     """A PolyMath subclass containing quaternions and supporting conversions
@@ -25,7 +25,8 @@ class Quaternion(Vector):
     BOOLS_OK = False    # True to allow booleans.
 
     UNITS_OK = False    # True to allow units; False to disallow them.
-    DERIVS_OK = True    # True to allow derivatives; False to disallow them.
+    DERIVS_OK = True    # True to allow derivatives and to allow this class to
+                        # have a denominator; False to disallow them.
 
     DEFAULT_VALUE = np.array([1.,0.,0.,0.])
 
@@ -40,12 +41,12 @@ class Quaternion(Vector):
             return arg.wod
 
         if isinstance(arg, Matrix3):
-            return Quaternion.from_matrix3(arg, recursive)
+            return Quaternion.from_matrix3(arg, recursive=recursive)
 
         if isinstance(arg, Qube):
 
-            if arg.numer == (3,):
-                return Quaternion.from_parts(0., arg, recursive)
+            if arg._numer_ == (3,):
+                return Quaternion.from_parts(0., arg, recursive=recursive)
 
             arg = Quaternion(arg, arg._mask_, example=arg)
             if recursive:
@@ -65,10 +66,11 @@ class Quaternion(Vector):
 
         # Fill in missing values
         if scalar is None:
-            scalar = Scalar(np.zeros(vector.denom), drank=vector.drank)
+            scalar = Scalar(np.zeros(vector._denom_), drank=vector._drank_)
 
         if vector is None:
-            vector = Vector3(np.zeros((3,) + scalar.denom), drank=scalar.drank)
+            vector = Vector3(np.zeros((3,) + scalar._denom_),
+                             drank=scalar._drank_)
 
         # Broadcast shapes
         scalar = Scalar.as_scalar(scalar)
@@ -77,33 +79,34 @@ class Quaternion(Vector):
         (scalar, vector) = Qube.broadcast(scalar, vector)
 
         # Validate denominators
-        if scalar.denom != vector.denom:
+        if scalar._denom_ != vector._denom_:
             raise ValueError('denominator shapes are incompatible: %s, %s' %
-                             (str(scalar.denom), str(vector.denom)))
+                             (str(scalar._denom_), str(vector._denom_)))
 
         # Align axes
-        drank = scalar.drank
-        before = len(scalar.shape) * (slice(None),)
+        drank = scalar._drank_
+        before = len(scalar._shape_) * (slice(None),)
         after  = drank * (slice(None),)
 
         s_slice = before + (0,) + after
         v_slice = before + (slice(1,4),) + after
 
-        values = np.empty(scalar.shape + (4,) + scalar.denom)
+        values = np.empty(scalar._shape_ + (4,) + scalar._denom_)
         values[s_slice] = scalar._values_
         values[v_slice] = vector._values_
 
         # Construct object
-        obj = Quaternion(values, scalar._mask_ | vector._mask_, drank=drank)
+        obj = Quaternion(values, Qube.or_(scalar._mask_, vector._mask_),
+                         drank=drank)
 
         # Fill in derivatives if necessary
         if recursive:
             new_derivs = {}
 
-            for (key, deriv) in scalar.derivs.items():
+            for (key, deriv) in scalar._derivs_.items():
                 new_derivs[key] = Quaternion.from_parts(deriv, None, False)
 
-            for (key, deriv) in vector.derivs.items():
+            for (key, deriv) in vector._derivs_.items():
                 term = Quaternion.from_parts(None, deriv, False)
                 if key in new_derivs:
                     new_derivs[key] = new_derivs[key] + term
@@ -118,8 +121,8 @@ class Quaternion(Vector):
     def to_parts(self, recursive=True):
         """The Scalar and Vector components of a Quaternion."""
 
-        return (self.extract_numer(0, 0, Scalar, recursive),
-                self.slice_numer(0, 1, 4, Vector3, recursive))
+        return (self.extract_numer(0, 0, Scalar, recursive=recursive),
+                self.slice_numer(0, 1, 4, Vector3, recursive=recursive))
 
     #===========================================================================
     @staticmethod
@@ -146,9 +149,9 @@ class Quaternion(Vector):
         """The rotation angle and unit vector defined by a Quaternion.
         """
 
-        (cos_half_angle, vector) = self.to_parts(recursive)
-        sin_half_angle = vector.norm(recursive)
-        angle = 2. * sin_half_angle.arctan2(cos_half_angle, recursive)
+        (cos_half_angle, vector) = self.to_parts(recursive=recursive)
+        sin_half_angle = vector.norm(recursive=recursive)
+        angle = 2. * sin_half_angle.arctan2(cos_half_angle, recursive=recursive)
 
         return (angle, vector/sin_half_angle)
 
@@ -158,19 +161,19 @@ class Quaternion(Vector):
 
         new_values = self._values_.copy()
 
-        if self.drank > 0:
+        if self._drank_ > 0:
             lshape = len(new_values.shape)
-            new_values = np.rollaxis(new_values, -self.drank-1, lshape)
+            new_values = np.rollaxis(new_values, -self._drank_-1, lshape)
 
         new_values[..., 1:4] *= -1
 
-        if self.drank > 0:
-            new_values = np.rollaxis(new_values, -1, -self.drank-1)
+        if self._drank_ > 0:
+            new_values = np.rollaxis(new_values, -1, -self._drank_-1)
 
         obj = Quaternion(new_values, self._mask_, example=self)
 
-        if recursive and self.derivs:
-            for (key, deriv) in self.derivs.items():
+        if recursive and self._derivs_:
+            for (key, deriv) in self._derivs_.items():
                 obj.insert_deriv(key, deriv.conj(recursive=False))
 
         return obj
@@ -191,9 +194,9 @@ class Quaternion(Vector):
                         quaternion.
         """
 
-        if self.drank:
+        if self._drank_:
             raise ValueError('unsupported denominator for to_matrix(): %s' %
-                             str(self.denom))
+                             str(self._denom_))
 
         # From http://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
         pvals = self._values_
@@ -226,7 +229,7 @@ class Quaternion(Vector):
         xz = x * z
         yz = y * z
 
-        values = np.empty(self.shape + (3,3))
+        values = np.empty(self._shape_ + (3,3))
         values[...,0,0] = 1. - (yy + zz)
         values[...,0,1] =      (xy - sz)
         values[...,0,2] =      (xz + sy)
@@ -239,7 +242,7 @@ class Quaternion(Vector):
 
         obj = Matrix3(values, pmask)
 
-        if (recursive and self.derivs) or partials:
+        if (recursive and self._derivs_) or partials:
 #           Before scaling, but assuming a unit quaternion...
 #             values[...,0,0] = 1. - 2.*(yy + zz)
 #             values[...,0,1] =      2.*(xy - sz)
@@ -251,7 +254,7 @@ class Quaternion(Vector):
 #             values[...,2,1] =      2.*(yz + sx)
 #             values[...,2,2] = 1. - 2.*(xx + yy)
 
-#             dm_dq = np.zeros(self.shape + (3,3,4))
+#             dm_dq = np.zeros(self._shape_ + (3,3,4))
 #             dm_dq[...,0,0,:] = 2*( 0,  0,-2y,-2z)
 #             dm_dq[...,0,1,:] = 2*(-z,  y,  x, -s)
 #             dm_dq[...,0,2,:] = 2*( y,  z,  s,  x)
@@ -265,7 +268,7 @@ class Quaternion(Vector):
 #           (s,x,y,z) have already been scaled by sqrt(2). Scale by another
 #           factor of sqrt(2) when done.
 
-            m = np.zeros(self.shape + (3,3,4))
+            m = np.zeros(self._shape_ + (3,3,4))
             m[...,1,1,1] = m[...,2,2,1] = -2 * x
             m[...,0,0,2] = m[...,2,2,2] = -2 * y
             m[...,0,0,3] = m[...,1,1,3] = -2 * z
@@ -297,7 +300,7 @@ class Quaternion(Vector):
 #           dq0/dp0 = (p1**2 + p2**2 + p3**2) / pnorm**3
 #           dq0/dp0 = -p0*p1 / pnorm**3
 
-            dq_dp = np.zeros(self.shape + (4,4))
+            dq_dp = np.zeros(self._shape_ + (4,4))
             for i in range(4):
                 temp = pvals.copy()
                 temp[...,i] = 0.
@@ -308,7 +311,7 @@ class Quaternion(Vector):
             dm_dp = dm_dq.chain(Quaternion(dq_dp, drank=1)) * (-np.sqrt(2) /
                                                                pnorm**3)
 
-            for (key, deriv) in self.derivs.items():
+            for (key, deriv) in self._derivs_.items():
                 obj.insert_deriv(key, dm_dp.chain(deriv))
 
         if partials:
@@ -329,9 +332,9 @@ class Quaternion(Vector):
                         CURRENTLY IMPLEMENTED.
         """
 
-        if recursive and len(matrix.derivs):
-            raise NotImplementedError('derivatives are not implemented for ' +
-                                      'from_matrix3()')
+        if recursive and len(matrix._derivs_):
+            raise NotImplementedError('Quaternion.from_matrix3 ' +      # TODO
+                                      'does not implement derivatives')
 
         # From http://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
         #
@@ -406,7 +409,7 @@ class Quaternion(Vector):
         # coupled. When derivatives are requested, a NotImplementedError is
         # raised instead.
 
-        if recursive and matrix.derivs:
+        if recursive and matrix._derivs_:
 
             # Take derivatives using the symmetric (but possibly unstable)
             # algorithm
@@ -457,7 +460,7 @@ class Quaternion(Vector):
 
             dq_dQ = Quaternion(new_values, matrix._mask_, drank=2)
 
-            for (key, deriv) in matrix.derivs.items():
+            for (key, deriv) in matrix._derivs_.items():
                 obj.insert_deriv(key, dq_dQ.chain(deriv))
 
         return obj
@@ -470,20 +473,20 @@ class Quaternion(Vector):
 
         # Use default operator for anything but a Qube subclass
         if not isinstance(arg, Qube):
-            return Qube.__mul__(self, arg, recursive)
+            return Qube.__mul__(self, arg, recursive=recursive)
 
         # Convert any 3-vector to a Quaternion
-        if arg.numer == (3,):
-            arg = Quaternion.from_parts(0., arg, recursive)
+        if arg._numer_ == (3,):
+            arg = Quaternion.from_parts(0., arg, recursive=recursive)
 
         # Send any other object to the default operator
         if type(arg) != Quaternion:
-            return Qube.__mul__(self, arg, recursive)
+            return Qube.__mul__(self, arg, recursive=recursive)
 
         # Check denominators
-        if self.drank and arg.drank:
+        if self._drank_ and arg._drank_:
             raise ValueError("dual operand denominators for '*': %s, %s" %
-                             (str(self.denom), str(arg.denom)))
+                             (str(self._denom_), str(arg._denom_)))
 
         # Align axes
         a = self
@@ -491,33 +494,35 @@ class Quaternion(Vector):
         a_values = a._values_
         b_values = b._values_
 
-        if a.drank:
-            a_values = np.rollaxis(a_values, -a.drank-1, len(a_values.shape))
-            b_values = b_values.reshape(b.shape + a.drank * (1,) + (4,))
+        if a._drank_:
+            a_values = np.rollaxis(a_values, -a._drank_-1, len(a_values.shape))
+            b_values = b_values.reshape(b._shape_ + a._drank_ * (1,) + (4,))
 
-        if b.drank:
-            a_values = a_values.reshape(a.shape + b.drank * (1,) + (4,))
-            b_values = np.rollaxis(b_values, -b.drank-1, len(b_values.shape))
+        if b._drank_:
+            a_values = a_values.reshape(a._shape_ + b._drank_ * (1,) + (4,))
+            b_values = np.rollaxis(b_values, -b._drank_-1, len(b_values.shape))
 
         new_values = Quaternion.mul_values(a_values, b_values)
 
-        if a.drank or b.drank:
-            new_values = np.rollaxis(new_values, -1, -(a.drank + b.drank + 1))
+        if a._drank_ or b._drank_:
+            new_values = np.rollaxis(new_values, -1,
+                                                 -(a._drank_ + b._drank_ + 1))
 
         # Construct object
         obj = Qube.__new__(type(self))
-        obj.__init__(new_values, a._mask_ | b._mask_, drank = a.drank + b.drank)
+        obj.__init__(new_values, Qube.or_(a._mask_, b._mask_),
+                     drank = a._drank_ + b._drank_)
 
         # Construct the derivatives if necessary
         if recursive:
             new_derivs = {}
 
-            if a.derivs:
-                for (key, a_deriv) in a.derivs.items():
+            if a._derivs_:
+                for (key, a_deriv) in a._derivs_.items():
                     new_derivs[key] = a_deriv * b.wod
 
-            if b.derivs:
-                for (key, b_deriv) in b.derivs.items():
+            if b._derivs_:
+                for (key, b_deriv) in b._derivs_.items():
                     if key in new_derivs:
                         new_derivs[key] += a.wod * b_deriv
                     else:
@@ -562,30 +567,31 @@ class Quaternion(Vector):
     def __rmul__(self, arg, recursive=True):
 
         # Convert any 3-vector to a Quaternion and try again
-        if isinstance(arg, Qube) and arg.numer == (3,):
-            arg = Quaternion.from_parts(0., arg, recursive)
-            return arg.__mul__(self, recursive)
+        if isinstance(arg, Qube) and arg._numer_ == (3,):
+            arg = Quaternion.from_parts(0., arg, recursive=recursive)
+            return arg.__mul__(self, recursive=recursive)
 
         # Send any other object to the default operator
-        return Qube.__mul__(self, arg, recursive)
+        return Qube.__mul__(self, arg, recursive=recursive)
 
     #===========================================================================
     def __truediv__(self, arg, recursive=True):
 
         # Use default operator for anything but a Qube subclass
         if not isinstance(arg, Qube):
-            return Qube.__truediv__(self, arg, recursive)
+            return Qube.__truediv__(self, arg, recursive=recursive)
 
         # Convert any 3-vector to a Quaternion
-        if arg.numer == (3,):
-            arg = Quaternion.from_parts(0., arg, recursive)
+        if arg._numer_ == (3,):
+            arg = Quaternion.from_parts(0., arg, recursive=recursive)
 
         # Send any other subclass to the default operator
         if type(arg) != Quaternion:
-            return Qube.__truediv__(self, arg, recursive)
+            return Qube.__truediv__(self, arg, recursive=recursive)
 
         # Multiply by the reciprocal
-        return self.__mul__(arg.reciprocal(recursive), recursive)
+        return self.__mul__(arg.reciprocal(recursive=recursive),
+                            recursive=recursive)
 
     #===========================================================================
     def reciprocal(self, recursive=True):
@@ -600,7 +606,8 @@ class Quaternion(Vector):
                         items.
         """
 
-        return self.conj(recursive) / self.norm_sq(recursive)
+        return (self.conj(recursive=recursive) /
+                self.norm_sq(recursive=recursive))
 
     #===========================================================================
     def identity(self):
@@ -664,9 +671,9 @@ class Quaternion(Vector):
         ai = Scalar.as_scalar(ai)
         aj = Scalar.as_scalar(aj)
         ak = Scalar.as_scalar(ak)
-        Units.require_angle(ai.units)
-        Units.require_angle(aj.units)
-        Units.require_angle(ak.units)
+        Units.require_angle(ai._units_)
+        Units.require_angle(aj._units_)
+        Units.require_angle(ak._units_)
 
         (ai,aj,ak) = Qube.broadcast(ai,aj,ak)
 
@@ -702,7 +709,7 @@ class Quaternion(Vector):
         sc = si * ck
         ss = si * sk
 
-        q = np.empty(ai.shape + (4,))
+        q = np.empty(ai._shape_ + (4,))
         if repetition:
             q[...,0] = cj*(cc - ss)
             q[...,i] = cj*(cs + sc)
@@ -719,7 +726,7 @@ class Quaternion(Vector):
 
         q *= np.sign(q[...,0])[...,np.newaxis]
 
-        return Quaternion(q, ai._mask_ | aj._mask_ | ak._mask_)
+        return Quaternion(q, Qube.or_(ai._mask_, aj._mask_, ak._mask_))
 
     #===========================================================================
     def to_euler(self, axes='rzxz'):

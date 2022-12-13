@@ -5,10 +5,10 @@
 from __future__ import division
 import numpy as np
 
-from .qube   import Qube
-from .scalar import Scalar
-from .vector import Vector
-from .units  import Units
+from polymath.qube   import Qube
+from polymath.scalar import Scalar
+from polymath.vector import Vector
+from polymath.units  import Units
 
 class Polynomial(Vector):
     """This is a Vector subclass in which the elements are interpreted as the
@@ -45,7 +45,7 @@ class Polynomial(Vector):
                     for (key,value) in args[0].derivs.items():
                         derivs[key] = Polynomial(value)
 
-                    self.derivs = derivs
+                    self._derivs_ = derivs
 
         # Otherwise use the Vector class constructor
         else:
@@ -56,7 +56,7 @@ class Polynomial(Vector):
     def order(self):
         """The order of the polynomial, i.e., the largest exponent."""
 
-        return self.item[-self.drank-1] - 1
+        return self.item[-self._drank_-1] - 1
 
     #===========================================================================
     @staticmethod
@@ -92,7 +92,7 @@ class Polynomial(Vector):
 
         derivs = {}
         if recursive:
-            for (key, value) in self.derivs.items():
+            for (key, value) in self._derivs_.items():
                 derivs[key] = self.as_vector(recursive=False)
 
         obj.insert_derivs(derivs)
@@ -114,13 +114,13 @@ class Polynomial(Vector):
             else:
                 return self.wod
 
-        new_values = np.zeros(self.shape + (order+1,))
+        new_values = np.zeros(self._shape_ + (order+1,))
         new_values[...,-self.order-1:] = self._values_
 
         result = Polynomial(new_values, self._mask_, derivs={}, example=self)
 
-        if recursive and self.derivs:
-            for (key, value) in self.derivs.items():
+        if recursive and self._derivs_:
+            for (key, value) in self._derivs_.items():
                 result.insert_deriv(key, value.at_least_order(order,
                                                               recursive=False))
 
@@ -153,10 +153,11 @@ class Polynomial(Vector):
         # y - b = a x
         # y/a - b/a = x
 
-        (a,b) = self.to_scalars(recursive)
+        (a,b) = self.to_scalars(recursive=recursive)
 
         a_inv = 1./a
-        return Polynomial(Vector.from_scalars(a_inv, -b * a_inv), recursive)
+        return Polynomial(Vector.from_scalars(a_inv, -b * a_inv),
+                          recursive=recursive)
 
     ############################################################################
     # Math operations
@@ -197,42 +198,37 @@ class Polynomial(Vector):
 
         # Support for Polynomial multiplication
         if isinstance(arg, Polynomial):
-            if self.drank != arg.drank:
+            if self._drank_ != arg._drank_:
                 raise ValueError('incompatible denominators for multiply')
 
             new_order = self.order + arg.order
-            new_shape = Qube.broadcasted_shape(self.shape, arg.shape)
+            new_shape = Qube.broadcasted_shape(self._shape_, arg._shape_)
             new_values = np.zeros(new_shape + (new_order+1,))
-
-            if np.shape(self._mask_) or np.shape(arg._mask_):
-                new_mask = np.empty(new_shape)
-                new_mask[...] = self._mask_ | arg._mask_
-            else:
-                new_mask = self._mask_ | arg._mask_
+            new_mask[...] = Qube.or_(self._mask_, arg._mask_)
 
             # It's simpler to work in order of increasing powers
-            tail_indx = self.drank * (slice(None),)
+            tail_indx = self._drank_ * (slice(None),)
             indx = (Ellipsis, slice(None,None,-1)) + tail_indx
             self_values = self._values_[indx]
             arg_values  = arg._values_[indx]
 
             # Perform the multiplication
-            kstop = arg._values_.shape[-self.drank-1]
-            dk    = self._values_.shape[-self.drank-1]
+            kstop = arg._values_.shape[-self._drank_-1]
+            dk    = self._values_.shape[-self._drank_-1]
             for k in range(kstop):
                 new_indx = (Ellipsis, slice(k,k+dk)) + tail_indx
                 arg_indx = (Ellipsis, slice(k,k+1))  + tail_indx
                 new_values[new_indx] += arg_values[arg_indx] * self_values
 
             result = Polynomial(new_values[indx], new_mask, derivs={},
-                                units=Units.mul_units(self.units,arg.units))
+                                units=Units.mul_units(self._units_,arg._units_))
 
             # Deal with derivatives
             derivs = {}
-            for (key, value) in self.derivs.items():
+            for (key, value) in self._derivs_.items():
                 derivs[key] = arg.wod * value
 
-            for (key, value) in arg.derivs.items():
+            for (key, value) in arg._derivs_.items():
                 if key in derivs:
                     derivs[key] = derivs[key] + self.wod * value
                 else:
@@ -310,14 +306,14 @@ class Polynomial(Vector):
         if self.order <= 0:
             new_values = np.zeros(self._values_.shape)
         else:
-           indx1 = (Ellipsis, slice(0,-1)) + self.drank * (slice(None,None),)
-           indx2 = (Ellipsis,)             + self.drank * (np.newaxis,)
+           indx1 = (Ellipsis, slice(0,-1)) + self._drank_ * (slice(None,None),)
+           indx2 = (Ellipsis,)             + self._drank_ * (np.newaxis,)
            new_values = self._values_[indx1] * np.arange(self.order,0,-1)[indx2]
 
         result = Polynomial(new_values, self._mask_, derivs={}, example=self)
 
-        if recursive and self.derivs:
-            for (key,value) in self.derivs.items():
+        if recursive and self._derivs_:
+            for (key,value) in self._derivs_.items():
                 result.insert_deriv(key, value.deriv(recursive=False))
 
         return result
@@ -376,7 +372,7 @@ class Polynomial(Vector):
             # a x + b = 0
             (a,b) = self.to_scalars(recursive=recursive)
             result = -b/a
-            return result.reshape((1,) + result.shape)
+            return result.reshape((1,) + result._shape_)
 
         # Quadratic case is easy
         if self.order == 2:
@@ -395,11 +391,11 @@ class Polynomial(Vector):
         coefficients = self._values_.copy()
 
         # Convert the mask to an array
-        if np.shape(self._mask_) == ():
+        if np.isscalar(self._mask_):
             if self._mask_:
-                poly_mask = np.ones(self.shape, dtype='bool')
+                poly_mask = np.ones(self._shape_, dtype='bool')
             else:
-                poly_mask = np.zeros(self.shape, dtype='bool')
+                poly_mask = np.zeros(self._shape_, dtype='bool')
         else:
             poly_mask = self._mask_.copy()
 
@@ -426,7 +422,7 @@ class Polynomial(Vector):
 
         # Shift coefficients till the leading coefficient is nonzero
         shifts = (coefficients[...,0] == 0.)
-        total_shifts = np.zeros(shifts.shape, dtype='int')
+        total_shifts = np.zeros(shifts._shape_, dtype='int')
         while np.any(shifts):
             coefficients[shifts,:-1] = coefficients[shifts,1:]
             coefficients[shifts,-1] = 0.
@@ -434,7 +430,7 @@ class Polynomial(Vector):
             shifts = (coefficients[...,0] == 0.)
 
         # Implement the NumPy solution, array-based
-        matrix = np.empty(self.shape + (self.order,self.order))
+        matrix = np.empty(self._shape_ + (self.order,self.order))
         matrix[...,:,:] = np.diag(np.ones((self.order-1,)), -1)
         matrix[...,0,:] = -coefficients[...,1:] / coefficients[...,0:1]
         roots = np.linalg.eigvals(matrix)
@@ -451,7 +447,7 @@ class Polynomial(Vector):
         for k in range(max_shifts):
             root_mask[total_shifts > k, k] = True
 
-        roots = Scalar(root_values, root_mask)
+        roots = Scalar(root_values, Qube.as_one_bool(root_mask))
         roots = roots.sort(axis=0)
 
         # Mask duplicated values
@@ -464,7 +460,7 @@ class Polynomial(Vector):
                 mask_changed = True
 
         if mask_changed:
-            roots = Scalar(root_values, root_mask)
+            roots = Scalar(root_values, Qube.as_one_bool(root_mask))
             roots = roots.sort(axis=0)
 
         # Deal with derivatives if necessary
@@ -476,7 +472,7 @@ class Polynomial(Vector):
         # dx/dt = -Sum_j dc[j]/dt x**j / Sum_j c[j] j x**(j-1)
 
         if recursive:
-            for (key, value) in self.derivs.items():
+            for (key, value) in self._derivs_.items():
                 deriv = (-value.eval(roots, recursive=False) /
                          self.deriv.eval(roots, recursive=False))
                 roots.insert_deriv(key, deriv)

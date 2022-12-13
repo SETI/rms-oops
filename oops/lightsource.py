@@ -53,7 +53,7 @@ class LightSource(object):
         self.source = None
         try:
             pair = Pair.as_pair(source)
-        except ValueError:
+        except (ValueError, TypeError):
             pass
         else:
             (ra, dec) = pair.values * RPD
@@ -66,7 +66,7 @@ class LightSource(object):
             try:
                 self.source = Vector3.as_vector3(source).unit()
                 self.source_is_moving = False
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
 
         # Interpret the source as a path
@@ -151,8 +151,9 @@ class LightSource(object):
         """
 
         if self.source_is_moving:
-            return self.source.solve_photon(event, -1, derivs, guess, antimask,
-                                                       quick, converge)[1]
+            return self.source.solve_photon(event, -1, derivs=derivs,
+                                            guess=guess, antimask=antimask,
+                                            quick=quick, converge=converge)[1]
 
         if derivs:
             new_event = event.copy()

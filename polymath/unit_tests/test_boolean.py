@@ -3,6 +3,7 @@
 ################################################################################
 
 from __future__ import division
+import numbers
 import numpy as np
 import unittest
 
@@ -25,6 +26,17 @@ class Test_Boolean(unittest.TestCase):
 
     b = Boolean(a)
     self.assertEqual(a,b)
+
+    a = np.array([True,False])
+    b = Boolean(a[0])
+    self.assertTrue(b)
+    self.assertTrue(isinstance(b.vals, bool))
+
+    a = np.array(True)      # shapeless array
+    b = Boolean(a)
+    self.assertTrue(b)
+    self.assertTrue(b.vals)
+    self.assertEqual(str(b), 'Boolean(True)')
 
     mask = (np.random.randn(N) < 0.)
     values = (np.random.randn(N) < 0.)
@@ -83,6 +95,77 @@ class Test_Boolean(unittest.TestCase):
     self.assertRaises(TypeError, Boolean, a.values, units=Units.KM)
 
     ############################################################################
+    # Other constructors
+    ############################################################################
+
+    # zeros
+    a = Boolean.zeros((2,3), dtype='int')
+    self.assertEqual(a.shape, (2,3))
+    self.assertEqual(a.vals.dtype.kind, 'b')
+    self.assertTrue(np.all(a.vals == False))
+
+    a = Boolean.zeros((2,3), dtype='float')
+    self.assertEqual(a.shape, (2,3))
+    self.assertEqual(a.vals.dtype.kind, 'b')
+    self.assertTrue(np.all(a.vals == False))
+
+    a = Boolean.zeros((2,3), dtype='bool')
+    self.assertEqual(a.shape, (2,3))
+    self.assertEqual(a.vals.dtype.kind, 'b')
+    self.assertTrue(np.all(a.vals == False))
+
+    a = Boolean.zeros((2,2), mask=[[0,1],[0,0]])
+    self.assertEqual(a.shape, (2,2))
+    self.assertTrue(np.all(a.vals == False))
+    self.assertTrue(np.all(a.mask == [[0,1],[0,0]]))
+
+    self.assertRaises(ValueError, Boolean.zeros, (2,3), numer=(3,))
+    self.assertRaises(ValueError, Boolean.zeros, (2,3), denom=(3,))
+
+    # ones
+    a = Boolean.ones((2,3), dtype='int')
+    self.assertEqual(a.shape, (2,3))
+    self.assertEqual(a.vals.dtype.kind, 'b')
+    self.assertTrue(np.all(a.vals == True))
+
+    a = Boolean.ones((2,3), dtype='float')
+    self.assertEqual(a.shape, (2,3))
+    self.assertEqual(a.vals.dtype.kind, 'b')
+    self.assertTrue(np.all(a.vals == True))
+
+    a = Boolean.ones((2,3), dtype='bool')
+    self.assertEqual(a.shape, (2,3))
+    self.assertEqual(a.vals.dtype.kind, 'b')
+    self.assertTrue(np.all(a.vals == True))
+
+    a = Boolean.ones((2,2), mask=[[0,1],[0,0]])
+    self.assertEqual(a.shape, (2,2))
+    self.assertTrue(np.all(a.vals == 1))
+    self.assertTrue(np.all(a.mask == [[0,1],[0,0]]))
+
+    self.assertRaises(ValueError, Boolean.ones, (2,3), numer=(3,))
+    self.assertRaises(ValueError, Boolean.ones, (2,3), denom=(3,))
+
+    # filled
+    a = Boolean.filled((2,3), 7)
+    self.assertEqual(a.shape, (2,3))
+    self.assertEqual(a.vals.dtype.kind, 'b')
+    self.assertTrue(np.all(a.vals == True))
+
+    a = Boolean.filled((2,3), 7.)
+    self.assertEqual(a.shape, (2,3))
+    self.assertEqual(a.vals.dtype.kind, 'b')
+    self.assertTrue(np.all(a.vals == True))
+
+    a = Boolean.filled((2,2), 7, mask=[[0,1],[0,0]])
+    self.assertEqual(a.shape, (2,2))
+    self.assertTrue(np.all(a.vals == True))
+    self.assertTrue(np.all(a.mask == [[0,1],[0,0]]))
+
+    self.assertRaises(ValueError, Boolean.ones, 7, (2,3), numer=(3,))
+    self.assertRaises(ValueError, Boolean.ones, 7, (2,3), denom=(3,))
+
+    ############################################################################
     # as_boolean
     ############################################################################
 
@@ -123,7 +206,7 @@ class Test_Boolean(unittest.TestCase):
     self.assertEqual(type(a), Boolean)
 
     ############################################################################
-    # as_int()
+    # as_int(), as_numeric(), as_index()
     ############################################################################
 
     N = 100
@@ -153,6 +236,33 @@ class Test_Boolean(unittest.TestCase):
     self.assertEqual(c, a)
     self.assertEqual(c, 0)
     self.assertEqual(type(c.values), int)
+
+    a = Boolean(False)
+    c = a.as_numeric()
+    self.assertEqual(c, a)
+    self.assertEqual(c, 0)
+    self.assertEqual(type(c.values), int)
+
+    a = Boolean(np.random.randn(N) < 0.)
+    k = a.as_index()
+    self.assertEqual(k, a)
+    self.assertEqual(a[k], 1)
+    self.assertEqual(a[~k], 0)
+    self.assertEqual(type(k), np.ndarray)
+    self.assertEqual(k.dtype, np.dtype('bool'))
+
+    a = Boolean(np.random.randn(N) < 0., np.random.randn(N) < 0.)
+    k = a.as_index()
+    self.assertTrue(np.all(k == a.vals & ~a.mask))
+    self.assertTrue(np.all(a[k]))
+    self.assertTrue(not np.any(a[~k]))
+    self.assertEqual(type(k), np.ndarray)
+    self.assertEqual(k.dtype, np.dtype('bool'))
+
+    a = Boolean(True)
+    k = a.as_index()
+    self.assertEqual(k, 1)
+    self.assertTrue(isinstance(k, numbers.Integral))
 
     ############################################################################
     # as_float()
@@ -187,7 +297,16 @@ class Test_Boolean(unittest.TestCase):
     self.assertEqual(type(c.values), float)
 
     ############################################################################
-    # ~ operator (not)
+    # sum()
+    ############################################################################
+
+    N = 100
+    a = Boolean([0,1,0,1,0])
+    self.assertEqual(a.sum(), 2)
+    self.assertEqual(a.sum(value=False), 3)
+
+    ############################################################################
+    # ~ operator (not), logical_not()
     ############################################################################
 
     a = Boolean((False, False, True, True), (False, True, True, False))
@@ -202,6 +321,9 @@ class Test_Boolean(unittest.TestCase):
     a = Boolean(np.random.randn(N) < 0.)
 
     c = ~a
+    self.assertEqual(c, np.logical_not(a.values))
+
+    c = a.logical_not()
     self.assertEqual(c, np.logical_not(a.values))
 
     self.assertFalse(a.readonly)
@@ -501,6 +623,30 @@ class Test_Boolean(unittest.TestCase):
     ############################################################################
     # Other arithmetic
     ############################################################################
+
+    a = Boolean([True,False])
+    self.assertEqual(+a, [1,0])
+    self.assertTrue(isinstance(+a, Scalar))
+    self.assertTrue(isinstance(+a[0].values, numbers.Integral))
+
+    self.assertEqual(-a, [-1,0])
+    self.assertTrue(isinstance(-a, Scalar))
+    self.assertTrue(isinstance(-a[0].values, numbers.Integral))
+
+    self.assertEqual(abs(a), [1,0])
+    self.assertTrue(isinstance(abs(a), Scalar))
+    self.assertTrue(isinstance(abs(a[0]).values, numbers.Integral))
+
+    self.assertRaises(TypeError, a.__iadd__, True)
+    self.assertRaises(TypeError, a.__isub__, True)
+    self.assertRaises(TypeError, a.__imul__, True)
+    self.assertRaises(TypeError, a.__itruediv__, True)
+    self.assertRaises(TypeError, a.__ifloordiv__, True)
+    self.assertRaises(TypeError, a.__imod__, True)
+
+    self.assertEqual(a**200, [1,0])
+    self.assertTrue(isinstance(a**2, Scalar))
+    self.assertTrue(isinstance((a**2).values[0], numbers.Integral))
 
     # Confirm True == 1 in arithmetic
     a = Boolean(True) + 1

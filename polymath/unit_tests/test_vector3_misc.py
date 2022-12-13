@@ -222,9 +222,7 @@ class Test_Vector3_misc(unittest.TestCase):
         self.assertTrue(np.all((a - aperp - aproj).vals > -eps))
         self.assertTrue(np.all((a - aperp - aproj).vals <  eps))
 
-        #* * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         # Note: the sep(reverse=True) option is not tested here
-        #* * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
         # New tests 2/1/12 (MRS)
         test = Vector3(np.arange(6).reshape(2,3))

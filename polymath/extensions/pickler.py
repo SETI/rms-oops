@@ -63,7 +63,7 @@ def set_pickle_digits(self, digits=None, deriv_digits=None):
     self._deriv_pickle_digits_ = deriv_digits
 
     # Recurse into derivatives
-    for deriv in self.derivs.values():
+    for deriv in self._derivs_.values():
         deriv._pickle_digits = deriv_digits
         deriv._deriv_pickle_digits = deriv_digits
 
@@ -244,7 +244,7 @@ def __getstate__(self):
             # If any "edges" of the mask array are all True, save the corners
             # and reduce the mask size
             corners = self.corners
-            if Qube._shape_from_corners(corners) != self.shape:
+            if Qube._shape_from_corners(corners) != self._shape_:
                 clone.MASK_ENCODING += [corners, 'CORNERS']
                 clone._mask_ = self._mask_[self._slicer].copy()
 

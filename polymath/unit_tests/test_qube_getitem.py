@@ -284,22 +284,25 @@ class Test_Qube_getitem(unittest.TestCase):
 
     a = Scalar(1)
     self.assertEqual(a, a[True])
-    self.assertEqual(a[False].shape, ())
+    self.assertEqual(a[False].shape, (0,))
+
+    self.assertEqual(a[Boolean.MASKED].shape, ())
     self.assertEqual(a[False], a.as_all_masked())
 
     a = Scalar(1,True)
     self.assertEqual(a, a[True])
     self.assertEqual(a, a[True].as_all_masked())
-    self.assertEqual(a[False].shape, ())
+    self.assertEqual(a[False].shape, (0,))
 
     a = Vector3([1,2,3])
     self.assertEqual(a, a[True])
-    self.assertEqual(a[False], a.as_all_masked())
+    self.assertEqual(a[Boolean.MASKED], a.as_all_masked())
+    self.assertEqual(a[False].shape, (0,))
 
     a = Vector3([1,2,3],True)
     self.assertEqual(a, a[True])
     self.assertEqual(a, a[True].as_all_masked())
-    self.assertEqual(a[False].shape, ())
+    self.assertEqual(a[False].shape, (0,))
 
     ############################################################################
     # Using tuples, Vectors, Pairs
