@@ -7,7 +7,7 @@ import numpy as np
 import numbers
 import sys
 
-from ..qube import Qube
+from polymath.qube import Qube
 
 SINGLE_DIGITS = 6.92
 DOUBLE_DIGITS = 15.65

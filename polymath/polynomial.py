@@ -204,7 +204,7 @@ class Polynomial(Vector):
             new_order = self.order + arg.order
             new_shape = Qube.broadcasted_shape(self._shape_, arg._shape_)
             new_values = np.zeros(new_shape + (new_order+1,))
-            new_mask[...] = Qube.or_(self._mask_, arg._mask_)
+            new_mask = Qube.or_(self._mask_, arg._mask_)
 
             # It's simpler to work in order of increasing powers
             tail_indx = self._drank_ * (slice(None),)

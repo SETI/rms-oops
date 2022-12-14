@@ -25,7 +25,10 @@ def reshape(self, shape, recursive=True):
     if shape == self._shape_:
         return self
 
-    new_values = np.asarray(self._values_).reshape(shape + self.item)
+    if shape:
+        new_values = np.asarray(self._values_).reshape(shape + self.item)
+    else:
+        new_values = np.asarray(self._values_).ravel()[0]
 
     if np.isscalar(self._mask_):
         new_mask = self._mask_
@@ -297,7 +300,6 @@ def stack(*args, **keywords):
                 int_arg = arg
                 subclass_indx = i
         elif arg.is_bool() and int_arg is None and float_arg is None:
-            _bools_found = True
             if bool_arg is None or not qubed:
                 bool_arg = arg
                 subclass_indx = i

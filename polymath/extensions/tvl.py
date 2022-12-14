@@ -31,20 +31,16 @@ def tvl_and(self, arg, builtins=None):
     if Qube.is_one_false(self._mask_):
         self_is_true = self._values_
         self_is_not_false = self._values_
-        self_is_masked = False
     else:
         self_is_true = self._values_ & self.antimask
         self_is_not_false = self._values_ | self._mask_
-        self_is_masked = self._mask_
 
     if Qube.is_one_false(arg._mask_):
         arg_is_true = arg._values_
         arg_is_not_false  = arg._values_
-        arg_is_masked = False
     else:
         arg_is_true = arg._values_ & arg.antimask
         arg_is_not_false  = arg._values_ | arg._mask_
-        arg_is_masked = arg._mask_
 
     result_is_true = self_is_true & arg_is_true
     result_is_not_false = self_is_not_false & arg_is_not_false
@@ -90,20 +86,16 @@ def tvl_or(self, arg, builtins=None):
     if Qube.is_one_false(self._mask_):
         self_is_true = self._values_
         self_is_not_false = self._values_
-        self_is_masked = False
     else:
         self_is_true = self._values_ & self.antimask
         self_is_not_false = self._values_ | self._mask_
-        self_is_masked = self._mask_
 
     if Qube.is_one_false(arg._mask_):
         arg_is_true = arg._values_
         arg_is_not_false  = arg._values_
-        arg_is_masked = False
     else:
         arg_is_true = arg._values_ & arg.antimask
         arg_is_not_false  = arg._values_ | arg._mask_
-        arg_is_masked = arg._mask_
 
     result_is_true = self_is_true | arg_is_true
     result_is_not_false = self_is_not_false | arg_is_not_false

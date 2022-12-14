@@ -28,7 +28,7 @@ def _mean_or_sum(arg, axis=None, recursive=True, _combine_as_mean=False):
     arg._check_axis(axis)
 
     if arg._size_ == 0:
-        return self._zero_sized_result(axis=axis)
+        return arg._zero_sized_result(axis=axis)
 
     # Select the NumPy function
     if _combine_as_mean:

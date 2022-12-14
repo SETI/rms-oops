@@ -8,7 +8,6 @@ import numbers
 
 from polymath.qube   import Qube
 from polymath.vector import Vector
-from polymath.units  import Units
 
 class Pair(Vector):
     """A PolyMath subclass containing coordinate pairs or 2-vectors.

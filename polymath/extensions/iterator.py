@@ -6,8 +6,6 @@ import itertools
 import numpy as np
 import sys
 
-from ..qube import Qube
-
 class QubeIterator(object):
     """Iterator across the first axis of an object."""
 
