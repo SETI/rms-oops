@@ -32,7 +32,6 @@ class Test_Scalar_sum(unittest.TestCase):
 
     self.assertTrue(Scalar(4, mask=True).sum().mask)
     self.assertEqual(type(Scalar(4, mask=True).sum()), Scalar)
-    self.assertEqual(type(Scalar(4, mask=True).sum()), Scalar)
 
     # Multiple values
     self.assertTrue(Scalar((1,2,3)).sum() == 6)

@@ -5,8 +5,8 @@
 from __future__ import division
 import numpy as np
 
-from .qube   import Qube
-from .scalar import Scalar
+from polymath.qube   import Qube
+from polymath.scalar import Scalar
 
 class Boolean(Scalar):
     """A PolyMath subclass involving booleans. Masked values are unknown,
@@ -23,7 +23,8 @@ class Boolean(Scalar):
     BOOLS_OK = True     # True to allow booleans.
 
     UNITS_OK = False    # True to allow units; False to disallow them.
-    DERIVS_OK = False   # True to allow derivatives; False to disallow them.
+    DERIVS_OK = False   # True to allow derivatives and to allow this class to
+                        # have a denominator; False to disallow them.
 
     DEFAULT_VALUE = False
 
@@ -49,7 +50,7 @@ class Boolean(Scalar):
         becomes zero.
         """
 
-        if np.shape(self._values_) == ():
+        if np.isscalar(self._values_):
             result = Scalar(int(self._values_))
         else:
             result = Scalar(self._values_.astype('int'))
@@ -65,7 +66,7 @@ class Boolean(Scalar):
         becomes zero.
         """
 
-        if np.shape(self._values_) == ():
+        if np.isscalar(self._values_):
             result = Scalar(float(self._values_))
         else:
             result = Scalar(self._values_.astype('float'))

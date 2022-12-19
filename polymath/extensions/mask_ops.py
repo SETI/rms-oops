@@ -3,9 +3,9 @@
 ################################################################################
 
 import numpy as np
-from ..qube import Qube
+from polymath.qube import Qube
 
-def mask_where(self, mask, replace=None, remask=True):
+def mask_where(self, mask, replace=None, remask=True, recursive=True):
     """A copy of this object after a mask has been applied.
 
     If the mask is empty, this object is returned unchanged.
@@ -17,17 +17,17 @@ def mask_where(self, mask, replace=None, remask=True):
                         values. These are inserted into returned object at every
                         masked location. Use None (the default) to leave values
                         unchanged.
-        remask          True to include the new mask in the object's mask;
-                        False to replace the values but leave them unmasked.
+        remask          True to leave the new values masked; False to replace
+                        the values but leave them unmasked.
+        recursive       True to mask the derivatives as well; False to leave
+                        them unmasked.
     """
 
+    if replace is None and not remask:      # nothing to do
+        return self
+
     # Convert to boolean array if necessary
-    if isinstance(mask, np.ndarray):
-        mask = mask.astype(np.bool_)
-    elif isinstance(mask, Qube):
-        mask = mask.as_mask_where_nonzero_or_masked()
-    else:
-        mask = Qube.BOOLEAN_CLASS.as_boolean(mask)._values_
+    mask = Qube._suitable_mask(mask, self._shape_)
 
     # If the mask is empty, return the object as is
     if not np.any(mask):
@@ -35,7 +35,7 @@ def mask_where(self, mask, replace=None, remask=True):
 
     # Get the replacement value as this type
     if replace is not None:
-        replace = self.as_this_type(replace, recursive=False)
+        replace = self.as_this_type(replace, recursive=True)
         if replace._shape_ not in ((), self._shape_):
             raise ValueError('shape of replacement is incompatible with ' +
                              'shape of object being masked: %s, %s' %
@@ -43,69 +43,35 @@ def mask_where(self, mask, replace=None, remask=True):
 
     # Shapeless case
     if np.isscalar(self._values_):
-        if np.shape(mask):
-            raise ValueError('object and mask have incompatible shapes: ' +
-                             '%s, %s' % (self._shape_, np.shape(mask)))
         if replace is None:
-            new_values = self._values_
+            obj = self.copy(recursive=True)
         else:
-            new_values = replace._values_
+            obj = replace.copy(recursive=True)
 
-        if remask or replace._mask_:
-            new_mask = True
-        else:
-            new_mask = self._mask_
+        if remask:
+            obj = obj.remask(True, recursive=recursive)
 
-        obj = self.clone(recursive=True)
-        obj._set_values_(new_values, new_mask)
         return obj
 
-    # Construct the new mask
-    if remask:
-        new_mask = self._mask_ | mask
-    elif np.shape(self._mask_):
-        new_mask = self._mask_.copy()
-    else:
-        new_mask = self._mask_
-
-    # Construct the new array of values
+    # Case with no replacement
     if replace is None:
-        new_values = self._values_
+        # Note that the new mask must be a copy
+        obj = self.remask_or(mask, recursive=True)
+        return obj
 
-    # If replacement is an array of values...
-    elif replace._shape_:
-        new_values = self._values_.copy()
-        new_values[mask] = replace._values_[mask]
+    # If replacement is an array or single Qube...
 
-        # Update the mask if replacement values are masked
-        if Qube.is_one_true(new_mask):
-            pass
-        elif Qube.is_one_false(replace._mask_):
-            pass
-        else:
-            if Qube.is_one_false(new_mask):
-                new_mask = np.zeros(self._shape_, dtype=np.bool_)
+    # We need a mask to apply to the given replacement value.
+    # If the replacement value has shape, use the existing mask; otherwise,
+    # use True, which will allow the replacement to broadcast as needed.
+    rep_mask = mask if replace._shape_ else True
 
-            if Qube.is_one_true(replace._mask_):
-                new_mask[mask] = True
-            else:
-                new_mask[mask] = replace._mask_[mask]
+    obj = self.copy()
+    obj[mask] = replace[rep_mask]   # handles derivatives too!
 
-    # If replacement is a single value...
-    else:
-        new_values = self._values_.copy()
-        new_values[mask] = replace._values_
+    if remask:
+        obj = obj.remask_or(mask, recursive=recursive)
 
-        # Update the mask if replacement values are masked
-        if replace._mask_:
-            if np.shape(new_mask):
-                new_mask[mask] = True
-            else:
-                new_mask = True
-
-    # Construct the new object and return
-    obj = self.clone(recursive=True)
-    obj._set_values_(new_values, new_mask)
     return obj
 
 #===============================================================================
@@ -129,11 +95,10 @@ def mask_where_eq(self, match, replace=None, remask=True):
 
     match = self.as_this_type(match, recursive=False)
 
-    mask = (self._values_ == match._values_)
-    for r in range(self._rank_):
-        mask = np.all(mask, axis=-1)
+    axes = tuple(range(-self._rank_, 0))
+    mask = np.all(self._values_ == match._values_, axis=axes)
 
-    return self.mask_where(mask, replace, remask)
+    return self.mask_where(mask, replace=replace, remask=remask)
 
 #===============================================================================
 def mask_where_ne(self, match, replace=None, remask=True):
@@ -155,11 +120,10 @@ def mask_where_ne(self, match, replace=None, remask=True):
 
     match = self.as_this_type(match, recursive=False)
 
-    mask = (self._values_ != match._values_)
-    for r in range(self._rank_):
-        mask = np.any(mask, axis=-1)
+    axes = tuple(range(-self._rank_, 0))
+    mask = np.all(self._values_ != match._values_, axis=axes)
 
-    return self.mask_where(mask, replace, remask)
+    return self.mask_where(mask, replace=replace, remask=remask)
 
 #===============================================================================
 def mask_where_le(self, limit, replace=None, remask=True):
@@ -185,7 +149,8 @@ def mask_where_le(self, limit, replace=None, remask=True):
     if isinstance(limit, Qube):
         limit = limit._values_
 
-    return self.mask_where(self._values_ <= limit, replace, remask)
+    return self.mask_where(self._values_ <= limit, replace=replace,
+                                                   remask=remask)
 
 #===============================================================================
 def mask_where_ge(self, limit, replace=None, remask=True):
@@ -211,7 +176,8 @@ def mask_where_ge(self, limit, replace=None, remask=True):
     if isinstance(limit, Qube):
         limit = limit._values_
 
-    return self.mask_where(self._values_ >= limit, replace, remask)
+    return self.mask_where(self._values_ >= limit, replace=replace,
+                                                   remask=remask)
 
 #===============================================================================
 def mask_where_lt(self, limit, replace=None, remask=True):
@@ -238,7 +204,8 @@ def mask_where_lt(self, limit, replace=None, remask=True):
     if isinstance(limit, Qube):
         limit = limit._values_
 
-    return self.mask_where(self._values_ < limit, replace, remask)
+    return self.mask_where(self._values_ < limit, replace=replace,
+                                                  remask=remask)
 
 #===============================================================================
 def mask_where_gt(self, limit, replace=None, remask=True):
@@ -264,7 +231,8 @@ def mask_where_gt(self, limit, replace=None, remask=True):
     if isinstance(limit, Qube):
         limit = limit._values_
 
-    return self.mask_where(self._values_ > limit, replace, remask)
+    return self.mask_where(self._values_ > limit, replace=replace,
+                                                  remask=remask)
 
 #===============================================================================
 def mask_where_between(self, lower, upper, mask_endpoints=False,
@@ -391,17 +359,93 @@ def clip(self, lower, upper, remask=True, inclusive=True):
                         limit unmasked; False to mask them.
     """
 
+    if self._rank_:
+        raise TypeError('clip requires an object with rank 0')
+
+    # Easy case...
+    if np.isscalar(lower) and np.isscalar(upper):
+        new_values = np.clip(self._values_, lower, upper)
+        if remask:
+            outside = Qube.is_outside(self._values_, lower, upper, inclusive)
+            mask = Qube.or_(self._mask_, outside)
+        else:
+            mask = self._mask_
+
+        # Without remasking, derivatives out of range are now all zero
+        if self._derivs_ and not remask:
+            new_derivs = {}
+            outside = Qube.is_outside(self._values_, lower, upper, inclusive)
+            for key, deriv in self._derivs_.items():
+                new_deriv = deriv.copy()
+                new_deriv[outside] = deriv.zero()
+                new_derivs[key] = new_deriv
+        else:
+            new_derivs = self._derivs_
+
+        result = Qube.__new__(type(self))
+        result.__init__(new_values, mask, derivs=new_derivs, example=self)
+        return result
+
     result = self
 
     if lower is not None:
-        result = result.mask_where(result < lower, lower, remask)
+        result = result.mask_where(result._values_ < lower, replace=lower,
+                                                            remask=remask)
 
     if upper is not None:
         if inclusive:
-            result = result.mask_where(result > upper, upper, remask)
+            result = result.mask_where(result._values_ > upper, replace=upper,
+                                                                remask=remask)
         else:
-            result = result.mask_where(result >= upper, upper, remask)
+            result = result.mask_where(result._values_ >= upper, replace=upper,
+                                                                 remask=remask)
 
     return result
+
+################################################################################
+# Convenience methods for range masks and clipping
+################################################################################
+
+@staticmethod
+def is_below(arg, high, inclusive=True):
+    """True if arg is inside a range with upper end at high, optionally
+    inclusive of high.
+    """
+
+    if inclusive:
+        return arg <= high
+    else:
+        return arg < high
+
+@staticmethod
+def is_above(arg, high, inclusive=True):
+    """True if arg is outside a range with upper end at high, optionally
+    inclusive of high.
+    """
+
+    if inclusive:
+        return arg > high
+    else:
+        return arg >= high
+
+@staticmethod
+def is_outside(arg, low, high, inclusive=True):
+    """True if arg outside the range low to high, optionally inclusive of high
+    """
+
+    if inclusive:
+        return (arg < low) | (arg > high)
+    else:
+       return (arg < low) | (arg >= high)
+
+@staticmethod
+def is_inside(arg, low, high, inclusive=True):
+    """True if arg inside the range low to high, optionally inclusive of high.
+    """
+
+    if inclusive:
+        return (arg >= low) & (arg <= high)
+    else:
+        return (arg >= low) & (arg < high)
 
 ################################################################################

@@ -163,7 +163,7 @@ def reshape_numer(self, shape, classes=(), recursive=True):
 
     # Reshape
     full_shape = self._shape_ + shape + self._denom_
-    new_values = self._values_.reshape(full_shape)
+    new_values = np.asarray(self._values_).reshape(full_shape)
 
     # Construct and cast
     obj = Qube(new_values, self._mask_, nrank=len(shape), example=self)
@@ -253,7 +253,7 @@ def reshape_denom(self, shape):
 
     # Reshape
     full_shape = self._shape_ + self._numer_ + shape
-    new_values = self._values_.reshape(full_shape)
+    new_values = np.asarray(self._values_).reshape(full_shape)
 
     # Construct and cast
     obj = Qube.__new__(type(self))
@@ -331,7 +331,7 @@ def swap_items(self, classes):
     len_shape = new_values.ndim
 
     for r in range(self._nrank_):
-        new_values = np.rollaxis(new_values, -self._drank_ - 1, len_shape)
+        new_values = np.rollaxis(new_values, -self._drank_-1, len_shape)
 
     obj = Qube(new_values, self._mask_,
                nrank=self._drank_, drank=self._nrank_, example=self)

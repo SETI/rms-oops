@@ -1,8 +1,9 @@
 ################################################################################
-# Old Scalar tests, updated by MRS 2/18/14
+# Misc. Scalar tests
 ################################################################################
 
 from __future__ import division
+import numbers
 import numpy as np
 import unittest
 
@@ -12,6 +13,107 @@ class Test_Scalar_misc(unittest.TestCase):
 
   # runTest
   def runTest(self):
+
+    # Constructors
+    a = np.array(7)         # shapeless array value
+    b = Scalar(a)
+    self.assertTrue(isinstance(b.vals, numbers.Integral))
+    self.assertTrue(b.vals == 7)
+    self.assertEqual(str(b), 'Scalar(7)')
+
+    a = Scalar([Scalar.MASKED, 4])
+    self.assertEqual(a[0], Scalar.MASKED)
+    self.assertEqual(a.vals[1], 4)
+    self.assertTrue(np.all(a.mask == (True,False)))
+
+    a = Scalar([(Scalar.MASKED, 4),(5,6)])
+    self.assertEqual(a[0,0], Scalar.MASKED)
+    self.assertEqual(a.vals[0,1], 4)
+    self.assertEqual(a.vals[1,0], 5)
+    self.assertEqual(a.vals[1,1], 6)
+    self.assertTrue(np.all(a.mask == [[True,False],[False,False]]))
+
+    # zeros
+    a = Scalar.zeros((2,3), dtype='int')
+    self.assertEqual(a.shape, (2,3))
+    self.assertEqual(a.vals.dtype.kind, 'i')
+    self.assertTrue(np.all(a.vals == 0))
+
+    a = Scalar.zeros((2,3), dtype='float')
+    self.assertEqual(a.shape, (2,3))
+    self.assertEqual(a.vals.dtype.kind, 'f')
+    self.assertTrue(np.all(a.vals == 0))
+
+    a = Scalar.zeros((2,3), dtype='bool')
+    self.assertEqual(a.shape, (2,3))
+    self.assertEqual(a.vals.dtype.kind, 'i')    # bool -> int
+    self.assertTrue(np.all(a.vals == 0))
+
+    a = Scalar.zeros((2,2), denom=(3,))
+    self.assertEqual(a.shape, (2,2))
+    self.assertEqual(a.vals.shape, (2,2,3))
+    self.assertTrue(np.all(a.vals == 0))
+
+    a = Scalar.zeros((2,2), denom=(3,), mask=[[0,1],[0,0]])
+    self.assertEqual(a.shape, (2,2))
+    self.assertEqual(a.vals.shape, (2,2,3))
+    self.assertTrue(np.all(a.vals == 0))
+    self.assertTrue(np.all(a.mask == [[0,1],[0,0]]))
+
+    self.assertRaises(ValueError, Scalar.zeros, (2,3), numer=(3,))
+
+    # ones
+    a = Scalar.ones((2,3), dtype='int')
+    self.assertEqual(a.shape, (2,3))
+    self.assertEqual(a.vals.dtype.kind, 'i')
+    self.assertTrue(np.all(a.vals == 1))
+
+    a = Scalar.ones((2,3), dtype='float')
+    self.assertEqual(a.shape, (2,3))
+    self.assertEqual(a.vals.dtype.kind, 'f')
+    self.assertTrue(np.all(a.vals == 1))
+
+    a = Scalar.ones((2,3), dtype='bool')
+    self.assertEqual(a.shape, (2,3))
+    self.assertEqual(a.vals.dtype.kind, 'i')    # bool -> int
+    self.assertTrue(np.all(a.vals == 1))
+
+    a = Scalar.ones((2,2), denom=(3,))
+    self.assertEqual(a.shape, (2,2))
+    self.assertEqual(a.vals.shape, (2,2,3))
+    self.assertTrue(np.all(a.vals == 1))
+
+    a = Scalar.ones((2,2), denom=(3,), mask=[[0,1],[0,0]])
+    self.assertEqual(a.shape, (2,2))
+    self.assertEqual(a.vals.shape, (2,2,3))
+    self.assertTrue(np.all(a.vals == 1))
+    self.assertTrue(np.all(a.mask == [[0,1],[0,0]]))
+
+    self.assertRaises(ValueError, Scalar.ones, (2,3), numer=(3,))
+
+    # filled
+    a = Scalar.filled((2,3), 7)
+    self.assertEqual(a.shape, (2,3))
+    self.assertEqual(a.vals.dtype.kind, 'i')
+    self.assertTrue(np.all(a.vals == 7))
+
+    a = Scalar.filled((2,3), 7.)
+    self.assertEqual(a.shape, (2,3))
+    self.assertEqual(a.vals.dtype.kind, 'f')
+    self.assertTrue(np.all(a.vals == 7))
+
+    a = Scalar.filled((2,2), 7, denom=(3,))
+    self.assertEqual(a.shape, (2,2))
+    self.assertEqual(a.vals.shape, (2,2,3))
+    self.assertTrue(np.all(a.vals == 7))
+
+    a = Scalar.filled((2,2), 7, denom=(3,), mask=[[0,1],[0,0]])
+    self.assertEqual(a.shape, (2,2))
+    self.assertEqual(a.vals.shape, (2,2,3))
+    self.assertTrue(np.all(a.vals == 7))
+    self.assertTrue(np.all(a.mask == [[0,1],[0,0]]))
+
+    self.assertRaises(ValueError, Scalar.filled, 7, (2,3), numer=(3,))
 
     # Arithmetic operations
     ints = Scalar((1,2,3))
@@ -35,7 +137,7 @@ class Test_Scalar_misc(unittest.TestCase):
 
     self.assertEqual(ints * 2, [2,4,6])
     self.assertEqual(ints / 2., [0.5,1,1.5])
-    #self.assertEqual(ints / 2, [0,1,1])             # now truediv
+    #self.assertEqual(ints / 2, [0,1,1])            # now truediv
     self.assertEqual(ints / 2, [0.5,1,1.5])         # now truediv
     self.assertEqual(ints + 1, [2,3,4])
     self.assertEqual(ints - 0.5, (0.5,1.5,2.5))

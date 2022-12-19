@@ -5,11 +5,11 @@
 from __future__ import division
 import numpy as np
 
-from .qube    import Qube
-from .scalar  import Scalar
-from .vector3 import Vector3
-from .matrix  import Matrix
-from .units   import Units
+from polymath.qube    import Qube
+from polymath.scalar  import Scalar
+from polymath.vector3 import Vector3
+from polymath.matrix  import Matrix
+from polymath.units   import Units
 
 class Matrix3(Matrix):
     """A Qube of 3x3 rotation matrices."""
@@ -22,7 +22,8 @@ class Matrix3(Matrix):
     BOOLS_OK = False    # True to allow booleans.
 
     UNITS_OK = False    # True to allow units; False to disallow them.
-    DERIVS_OK = True    # True to allow derivatives; False to disallow them.
+    DERIVS_OK = True    # True to allow derivatives and to allow this class to
+                        # have a denominator; False to disallow them.
 
     DEFAULT_VALUE = np.array([[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]])
 
@@ -45,7 +46,7 @@ class Matrix3(Matrix):
 
         if isinstance(arg, Qube):
             if isinstance(arg, Qube.QUATERNION_CLASS):
-                return arg.to_matrix3(recursive)
+                return arg.to_matrix3(recursive=recursive)
 
             arg = Matrix3(arg._values_, arg._mask_, example=arg)
             if recursive:
@@ -67,59 +68,59 @@ class Matrix3(Matrix):
         # Based on the SPICE source code for TWOVEC()
 
         # Make shapes and types consistent
-        unit1 = Vector3.as_vector3(vector1).unit(recursive)
-        vector2 = Vector3.as_vector3(vector2, recursive)
+        unit1 = Vector3.as_vector3(vector1).unit(recursive=recursive)
+        vector2 = Vector3.as_vector3(vector2, recursive=recursive)
         (unit1, vector2) = Qube.broadcast(unit1, vector2)
 
         # Denominators are disallowed
-        assert unit1.denom   == (), 'denominator is disallowed'
-        assert vector2.denom == (), 'denominator is disallowed'
+        assert unit1._denom_   == (), 'denominator is disallowed'
+        assert vector2._denom_ == (), 'denominator is disallowed'
 
         # Define the remaining two columns of the matrix
         axis3 = 3 - axis1 - axis2
         if (3 + axis2 - axis1) % 3 == 1:        # if (0,1), (1,2) or (2,0)
-            unit3 = unit1.ucross(vector2, recursive)
-            unit2 = unit3.ucross(unit1, recursive)
+            unit3 = unit1.ucross(vector2, recursive=recursive)
+            unit2 = unit3.ucross(unit1, recursive=recursive)
         else:
-            unit3 = vector2.ucross(unit1, recursive)
-            unit2 = unit1.ucross(unit3, recursive)
+            unit3 = vector2.ucross(unit1, recursive=recursive)
+            unit2 = unit1.ucross(unit3, recursive=recursive)
 
         # Assemble the values into an array
-        array = np.empty(unit1.shape + (3,3))
+        array = np.empty(unit1._shape_ + (3,3))
         array[...,axis1,:] = unit1._values_
         array[...,axis2,:] = unit2._values_
         array[...,axis3,:] = unit3._values_
 
         # Construct the result
-        result = Matrix3(array, unit1._mask_ | vector2._mask_)
+        result = Matrix3(array, Qube.or_(unit1._mask_, vector2._mask_))
 
         # Fill in derivatives if necessary
-        if recursive and (unit1.derivs or vector2.derivs):
+        if recursive and (unit1._derivs_ or vector2._derivs_):
 
             # Find all the derivatives and their denominator shapes
             denoms = {}
-            for (key,deriv) in unit1.derivs.items():
-                denoms[key] = deriv.denom
-            for (key,deriv) in vector2.derivs.items():
+            for (key,deriv) in unit1._derivs_.items():
+                denoms[key] = deriv._denom_
+            for (key,deriv) in vector2._derivs_.items():
                 if key in denoms:
-                    if deriv.denom != denoms[key]:
+                    if deriv._denom_ != denoms[key]:
                         raise ValueError('denominator shape mismatch: %s, %s' %
-                                         (denoms[key], deriv.denom))
+                                         (denoms[key], deriv._denom_))
                 else:
-                    denoms[key] = vector2.derivs[key].denom
+                    denoms[key] = vector2._derivs_[key].denom
 
             derivs = {}
             for (key,denom) in denoms.items():
                 drank = len(denom)
-                deriv = np.zeros(unit1.shape + (3,3) + denom)
+                deriv = np.zeros(unit1._shape_ + (3,3) + denom)
 
                 suffix = (drank + 1) * (slice(None),)
-                if key in unit1.derivs:
-                    deriv[(Ellipsis,axis1)+suffix] = unit1.derivs[key]._values_
-                if key in unit2.derivs:
-                    deriv[(Ellipsis,axis2)+suffix] = unit2.derivs[key]._values_
-                if key in unit3.derivs:
-                    deriv[(Ellipsis,axis3)+suffix] = unit3.derivs[key]._values_
+                if key in unit1._derivs_:
+                    deriv[(Ellipsis,axis1)+suffix] = unit1._derivs_[key]._values_
+                if key in unit2._derivs_:
+                    deriv[(Ellipsis,axis2)+suffix] = unit2._derivs_[key]._values_
+                if key in unit3._derivs_:
+                    deriv[(Ellipsis,axis3)+suffix] = unit3._derivs_[key]._values_
 
                 derivs[key] = Matrix3(deriv, mask=result._mask_, drank=drank)
 
@@ -144,28 +145,28 @@ class Matrix3(Matrix):
         """
 
         angle = Scalar.as_scalar(angle)
-        Units.require_angle(angle.units)
+        Units.require_angle(angle._units_)
 
         cos_angle = np.cos(angle._values_)
         sin_angle = np.sin(angle._values_)
 
-        values = np.zeros(angle.shape + (3,3))
+        values = np.zeros(angle._shape_ + (3,3))
         values[...,1,1] =  cos_angle
         values[...,1,2] =  sin_angle
         values[...,2,1] = -sin_angle
         values[...,2,2] =  cos_angle
         values[...,0,0] =  1.
 
-        obj = Matrix3(values.reshape(angle.shape + (3,3)))
+        obj = Matrix3(values.reshape(angle._shape_ + (3,3)))
 
-        if recursive and angle.derivs:
-            matrix = np.zeros(angle.shape + (3,3))
+        if recursive and angle._derivs_:
+            matrix = np.zeros(angle._shape_ + (3,3))
             matrix[...,1,1] = -sin_angle
             matrix[...,1,2] =  cos_angle
             matrix[...,2,1] = -cos_angle
             matrix[...,2,2] = -sin_angle
 
-            for (key, deriv) in angle.derivs.items():
+            for (key, deriv) in angle._derivs_.items():
                 obj.insert_deriv(key, Matrix(matrix * deriv))
 
         return obj
@@ -181,28 +182,28 @@ class Matrix3(Matrix):
         """
 
         angle = Scalar.as_scalar(angle)
-        Units.require_angle(angle.units)
+        Units.require_angle(angle._units_)
 
         cos_angle = np.cos(angle._values_)
         sin_angle = np.sin(angle._values_)
 
-        values = np.zeros(angle.shape + (3,3))
+        values = np.zeros(angle._shape_ + (3,3))
         values[...,0,0] =  cos_angle
         values[...,0,2] =  sin_angle
         values[...,2,0] = -sin_angle
         values[...,2,2] =  cos_angle
         values[...,1,1] =  1.
 
-        obj = Matrix3(values.reshape(angle.shape + (3,3)))
+        obj = Matrix3(values.reshape(angle._shape_ + (3,3)))
 
-        if recursive and angle.derivs:
-            matrix = np.zeros(angle.shape + (3,3))
+        if recursive and angle._derivs_:
+            matrix = np.zeros(angle._shape_ + (3,3))
             matrix[...,0,0] = -sin_angle
             matrix[...,0,2] =  cos_angle
             matrix[...,2,0] = -cos_angle
             matrix[...,2,2] = -sin_angle
 
-            for (key, deriv) in angle.derivs.items():
+            for (key, deriv) in angle._derivs_.items():
                 obj.insert_deriv(key, Matrix(matrix * deriv))
 
         return obj
@@ -218,28 +219,28 @@ class Matrix3(Matrix):
         """
 
         angle = Scalar.as_scalar(angle)
-        Units.require_angle(angle.units)
+        Units.require_angle(angle._units_)
 
         cos_angle = np.cos(angle._values_)
         sin_angle = np.sin(angle._values_)
 
-        values = np.zeros(angle.shape + (3,3))
+        values = np.zeros(angle._shape_ + (3,3))
         values[...,0,0] =  cos_angle
         values[...,0,1] = -sin_angle
         values[...,1,0] =  sin_angle
         values[...,1,1] =  cos_angle
         values[...,2,2] =  1.
 
-        obj = Matrix3(values.reshape(angle.shape + (3,3)))
+        obj = Matrix3(values.reshape(angle._shape_ + (3,3)))
 
-        if recursive and angle.derivs:
-            matrix = np.zeros(angle.shape + (3,3))
+        if recursive and angle._derivs_:
+            matrix = np.zeros(angle._shape_ + (3,3))
             matrix[...,0,0] = -sin_angle
             matrix[...,0,1] = -cos_angle
             matrix[...,1,0] =  cos_angle
             matrix[...,1,1] = -sin_angle
 
-            for (key, deriv) in angle.derivs.items():
+            for (key, deriv) in angle._derivs_.items():
                 obj.insert_deriv(key, Matrix(matrix * deriv))
 
         return obj
@@ -257,12 +258,12 @@ class Matrix3(Matrix):
         axis = axis % 3
 
         if axis == 2:
-            return Matrix3.z_rotation(angle, recursive)
+            return Matrix3.z_rotation(angle, recursive=recursive)
 
         if axis == 0:
-            return Matrix3.x_rotation(angle, recursive)
+            return Matrix3.x_rotation(angle, recursive=recursive)
 
-        return Matrix3.y_rotation(angle, recursive)
+        return Matrix3.y_rotation(angle, recursive=recursive)
 
     #===========================================================================
     # This matrix rotates J2000 coordinates to another inertial frame,
@@ -281,13 +282,13 @@ class Matrix3(Matrix):
         """
 
         ra = Scalar.as_scalar(ra)
-        Units.require_angle(ra.units)
+        Units.require_angle(ra._units_)
 
         cos_ra = np.cos(ra._values_)
         sin_ra = np.sin(ra._values_)
 
         dec = Scalar.as_scalar(dec)
-        Units.require_angle(dec.units)
+        Units.require_angle(dec._units_)
 
         cos_dec = np.cos(dec._values_)
         sin_dec = np.sin(dec._values_)
@@ -308,8 +309,8 @@ class Matrix3(Matrix):
         """
 
         # Rotation of a vector or matrix
-        if arg.nrank > 0:
-            return Qube.dot(self, arg, -1, 0, type(arg), recursive)
+        if arg._nrank_ > 0:
+            return Qube.dot(self, arg, -1, 0, type(arg), recursive=recursive)
 
         # Rotation of a scalar leaves it unchanged
         else:
@@ -325,8 +326,8 @@ class Matrix3(Matrix):
         """
 
         # Rotation of a vector or matrix
-        if arg.nrank > 0:
-            return Qube.dot(self, arg, -2, 0, type(arg), recursive)
+        if arg._nrank_ > 0:
+            return Qube.dot(self, arg, -2, 0, type(arg), recursive=recursive)
 
         # Rotation of a scalar leaves it unchanged
         else:
@@ -352,7 +353,7 @@ class Matrix3(Matrix):
                 Qube.raise_unsupported_op('*', self, original_arg)
 
         # Rotate a scalar, returning the scalar unchanged except for new derivs
-        if arg.nrank == 0:
+        if arg._nrank_ == 0:
             if not recursive:
                 return arg.wod
             return arg
@@ -455,9 +456,9 @@ class Matrix3(Matrix):
         ai = Scalar.as_scalar(ai)
         aj = Scalar.as_scalar(aj)
         ak = Scalar.as_scalar(ak)
-        Units.require_angle(ai.units)
-        Units.require_angle(aj.units)
-        Units.require_angle(ak.units)
+        Units.require_angle(ai._units_)
+        Units.require_angle(aj._units_)
+        Units.require_angle(ak._units_)
 
         (ai,aj,ak) = Qube.broadcast(ai,aj,ak)
 
@@ -492,7 +493,7 @@ class Matrix3(Matrix):
         sc = si * ck
         ss = si * sk
 
-        matrix = np.empty(ai.shape + (3,3))
+        matrix = np.empty(ai._shape_ + (3,3))
         if repetition:
             matrix[...,i,i] =  cj
             matrix[...,i,j] =  sj * si
@@ -514,7 +515,7 @@ class Matrix3(Matrix):
             matrix[...,k,j] =  cj * si
             matrix[...,k,k] =  cj * ci
 
-        return Matrix3(matrix, ai._mask_ | aj._mask_ | ak._mask_)
+        return Matrix3(matrix, Qube.or_(ai._mask_, aj._mask_, ak._mask_))
 
     #===========================================================================
     def to_euler(self, axes='rzxz'):
@@ -591,6 +592,47 @@ class Matrix3(Matrix):
         """Converts this Matrix3 to an equivalent Quaternion."""
 
         return Qube.QUATERNION_CLASS.from_matrix3(self)
+
+    #===========================================================================
+    def sum(self, axis=None, recursive=True, builtins=None, out=None):
+        """The sum of the unmasked values along the specified axis.
+
+        Input:
+            axis        an integer axis or a tuple of axes. The sum is
+                        determined across these axes, leaving any remaining axes
+                        in the returned value. If None (the default), then the
+                        sum is performed across all axes if the object.
+            recursive   True to include the sums of the derivatives inside the
+                        returned Scalar.
+            builtins    if True and the result is a single unmasked scalar, the
+                        result is returned as a Python int or float instead of
+                        as an instance of Qube. Default is that specified by
+                        Qube.PREFER_BUILTIN_TYPES.
+            out         Ignored. Enables "np.sum(Qube)" to work.
+        """
+
+        raise TypeError('Matrix3.sum is not supported')
+
+    #===========================================================================
+    def mean(self, axis=None, recursive=True, builtins=None,
+                   dtype=None, out=None):
+        """The mean of the unmasked values along the specified axis.
+
+        Input:
+            axis        an integer axis or a tuple of axes. The mean is
+                        determined across these axes, leaving any remaining axes
+                        in the returned value. If None (the default), then the
+                        mean is performed across all axes if the object.
+            recursive   True to include the means of the derivatives inside the
+                        returned Scalar.
+            builtins    if True and the result is a single unmasked scalar, the
+                        result is returned as a Python int or float instead of
+                        as an instance of Scalar. Default is that specified by
+                        Qube.PREFER_BUILTIN_TYPES.
+            dtype, out  Ignored. Enable "np.mean(Qube)" to work.
+        """
+
+        raise TypeError('Matrix3.mean is not supported')
 
 ################################################################################
 # Useful class constants

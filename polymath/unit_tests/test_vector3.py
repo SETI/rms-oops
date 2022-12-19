@@ -21,6 +21,107 @@ class Test_Vector3(unittest.TestCase):
         # automatic coercion of booleans
         self.assertEqual(Vector3([True,True,False]), (1.,1.,0.))
 
+        # zeros
+        a = Vector3.zeros((2,3), dtype='int')
+        self.assertEqual(a.shape, (2,3))
+        self.assertEqual(a.vals.dtype.kind, 'f')    # coerced to float
+        self.assertTrue(np.all(a.vals == 0))
+
+        a = Vector3.zeros((2,3), dtype='float')
+        self.assertEqual(a.shape, (2,3))
+        self.assertEqual(a.vals.shape, (2,3,3))
+        self.assertEqual(a.vals.dtype.kind, 'f')
+        self.assertTrue(np.all(a.vals == 0))
+
+        a = Vector3.zeros((2,3), dtype='bool')
+        self.assertEqual(a.shape, (2,3))
+        self.assertEqual(a.vals.shape, (2,3,3))
+        self.assertEqual(a.vals.dtype.kind, 'f')    # coerced to float
+        self.assertTrue(np.all(a.vals == 0))
+
+        a = Vector3.zeros((2,2), mask=[[0,1],[0,0]])
+        self.assertEqual(a.shape, (2,2))
+        self.assertEqual(a.vals.shape, (2,2,3))
+        self.assertTrue(np.all(a.vals == 0))
+        self.assertEqual(a.vals.dtype.kind, 'f')
+        self.assertTrue(np.all(a.mask == [[0,1],[0,0]]))
+
+        a = Vector3.zeros((2,2), denom=(3,3))
+        self.assertEqual(a.shape, (2,2))
+        self.assertEqual(a.vals.shape, (2,2,3,3,3))
+        self.assertTrue(np.all(a.vals == 0))
+        self.assertEqual(a.vals.dtype.kind, 'f')
+
+        self.assertRaises(ValueError, Vector3.zeros, (2,3), numer=(4,))
+
+        # ones
+        a = Vector3.ones((2,3), dtype='int')
+        self.assertEqual(a.shape, (2,3))
+        self.assertEqual(a.vals.dtype.kind, 'f')
+        self.assertTrue(np.all(a.vals == 1))
+
+        a = Vector3.ones((2,3), dtype='float')
+        self.assertEqual(a.shape, (2,3))
+        self.assertEqual(a.vals.shape, (2,3,3))
+        self.assertEqual(a.vals.dtype.kind, 'f')
+        self.assertTrue(np.all(a.vals == 1))
+
+        a = Vector3.ones((2,3), dtype='bool')
+        self.assertEqual(a.shape, (2,3))
+        self.assertEqual(a.vals.shape, (2,3,3))
+        self.assertEqual(a.vals.dtype.kind, 'f')
+        self.assertTrue(np.all(a.vals == 1))
+
+        a = Vector3.ones((2,2), mask=[[0,1],[0,0]])
+        self.assertEqual(a.shape, (2,2))
+        self.assertEqual(a.vals.shape, (2,2,3))
+        self.assertTrue(np.all(a.vals == 1))
+        self.assertEqual(a.vals.dtype.kind, 'f')
+        self.assertTrue(np.all(a.mask == [[0,1],[0,0]]))
+
+        a = Vector3.ones((2,2), denom=(3,3))
+        self.assertEqual(a.shape, (2,2))
+        self.assertEqual(a.vals.shape, (2,2,3,3,3))
+        self.assertTrue(np.all(a.vals == 1))
+        self.assertEqual(a.vals.dtype.kind, 'f')
+
+        self.assertRaises(ValueError, Vector3.zeros, (2,3), numer=(4,))
+
+        # filled
+        a = Vector3.filled((2,3), 7)
+        self.assertEqual(a.shape, (2,3))
+        self.assertEqual(a.vals.dtype.kind, 'f')
+        self.assertTrue(np.all(a.vals == 7))
+
+        a = Vector3.filled((2,3), 7.)
+        self.assertEqual(a.shape, (2,3))
+        self.assertEqual(a.vals.shape, (2,3,3))
+        self.assertEqual(a.vals.dtype.kind, 'f')
+        self.assertTrue(np.all(a.vals == 7))
+
+        a = Vector3.filled((2,2), 7., mask=[[0,1],[0,0]])
+        self.assertEqual(a.shape, (2,2))
+        self.assertEqual(a.vals.shape, (2,2,3))
+        self.assertTrue(np.all(a.vals == 7))
+        self.assertEqual(a.vals.dtype.kind, 'f')
+        self.assertTrue(np.all(a.mask == [[0,1],[0,0]]))
+
+        a = Vector3.filled((2,2), 7., denom=(3,3))
+        self.assertEqual(a.shape, (2,2))
+        self.assertEqual(a.vals.shape, (2,2,3,3,3))
+        self.assertTrue(np.all(a.vals == 7))
+        self.assertEqual(a.vals.dtype.kind, 'f')
+
+        a = Vector3.filled((2,2), (1.,2.,3.))
+        self.assertEqual(a.shape, (2,2))
+        self.assertEqual(a.vals.shape, (2,2,3))
+        self.assertTrue(np.all(a.vals[...,0] == 1))
+        self.assertTrue(np.all(a.vals[...,1] == 2))
+        self.assertTrue(np.all(a.vals[...,2] == 3))
+        self.assertEqual(a.vals.dtype.kind, 'f')
+
+        self.assertRaises(ValueError, Vector3.zeros, (2,3), numer=(4,))
+
         #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         # Most operations are inherited from Vector. These include:
         #     def to_scalar(self, axis, recursive=True)

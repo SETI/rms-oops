@@ -419,10 +419,14 @@ class Test_Qube_setitem(unittest.TestCase):
     a = Vector(np.random.randn(4,5,6,3,2), drank=1)
     a.insert_deriv('t', Vector(np.random.randn(4,5,6,3,2), drank=1))
     a.insert_deriv('v', Vector(np.random.randn(4,5,6,3,2,3), drank=2))
+    aa = a.copy()
 
     b = Vector(np.random.randn(4,5,6,3,2), drank=1)
-
-    self.assertRaises(ValueError, a.__setitem__, 0, b[0])
+    a[0] = b[0]     # derivs are missing in b
+    self.assertEqual(a.d_dt[0], Vector.zeros((), numer=(3,), denom=(2,)))
+    self.assertEqual(a.d_dv[0], Vector.zeros((), numer=(3,), denom=(2,3)))
+    self.assertEqual(a.d_dt[1], aa.d_dt[1])
+    self.assertEqual(a.d_dv[1], aa.d_dv[1])
 
     b = Vector(np.random.randn(4,5,6,3,2), drank=1)
     b.insert_deriv('t', Vector(np.random.randn(4,5,6,3,2), drank=1))

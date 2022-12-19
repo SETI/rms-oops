@@ -195,8 +195,12 @@ class PolynomialFOV(FOV):
         order = coefft.shape[0]-1
 
         (p,q) = pq.to_scalars()
-        p = p.vals[..., np.newaxis]
-        q = q.vals[..., np.newaxis]
+        if p.shape:
+            p = p.vals[..., np.newaxis]
+            q = q.vals[..., np.newaxis]
+        else:
+            p = p.vals
+            q = q.vals
 
         # Construct the powers of line and sample
         p_powers = [1.]

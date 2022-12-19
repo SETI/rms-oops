@@ -209,7 +209,7 @@ class Test_Qube_shrink(unittest.TestCase):
         aa = b.unshrink(False)
         self.assertEqual(aa.shape, ())
 
-        a = Boolean(np.arange(900).reshape(100,3,3) % 2 == 0, drank=1, mask=True)
+        a = Boolean(np.arange(900).reshape(100,3,3) % 2 == 0, mask=True)
         b = a.shrink(False)
         aa = b.unshrink(False, shape=a.shape)
         self.assertEqual(aa, a)

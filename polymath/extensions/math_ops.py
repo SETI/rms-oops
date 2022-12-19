@@ -11,34 +11,6 @@ from ..units import Units
 PYTHON2 = (sys.version_info[0] < 3)
 
 #===============================================================================
-def _mean(arg, axis=None, recursive=True):
-    """The mean of the unmasked values.
-
-    Input:
-        arg         the object for which to calculate the mean or sum.
-        axis        an integer axis or a tuple of axes. The mean is determined
-                    across these axes, leaving any remaining axes in the
-                    returned value. If None (the default), then the mean is
-                    performed across all axes of the object.
-        recursive   True to construct the mean of the derivatives.
-    """
-
-    return _mean_or_sum(arg, axis, recursive, _combine_as_mean=True)
-
-def _sum(arg, axis=None, recursive=True):
-    """The sum of the unmasked values.
-
-    Input:
-        arg         the object for which to calculate the mean or sum.
-        axis        an integer axis or a tuple of axes. The mean is determined
-                    across these axes, leaving any remaining axes in the
-                    returned value. If None (the default), then the mean is
-                    performed across all axes of the object.
-        recursive   True to construct the mean of the derivatives.
-    """
-
-    return _mean_or_sum(arg, axis, recursive, _combine_as_mean=False)
-
 def _mean_or_sum(arg, axis=None, recursive=True, _combine_as_mean=False):
     """The mean or sum of the unmasked values. Internal method.
 
@@ -53,8 +25,10 @@ def _mean_or_sum(arg, axis=None, recursive=True, _combine_as_mean=False):
                     True to combine as a mean; False to combine as a sum.
     """
 
-    if arg.size == 0 or np.all(arg._mask_):
-        return arg.masked_single()
+    arg._check_axis(axis)
+
+    if arg._size_ == 0:
+        return arg._zero_sized_result(axis=axis)
 
     # Select the NumPy function
     if _combine_as_mean:
@@ -73,13 +47,19 @@ def _mean_or_sum(arg, axis=None, recursive=True, _combine_as_mean=False):
 
     # If there's no mask, this is easy
     if not np.any(arg._mask_):
-        obj = Qube(func(arg._values_, axis=new_axis), False,
-                   example=arg)
+        obj = Qube(func(arg._values_, axis=new_axis), False, example=arg)
+
+    # Handle a fully masked object
+    elif np.all(arg._mask_):
+        obj = Qube(func(arg._values_, axis=new_axis), True, example=arg)
 
     # If we are averaging over all axes, this is fairly easy
     elif axis is None:
-        obj = Qube(func(arg._values_[arg.antimask], axis=0), False,
-                   example=arg)
+        if arg._shape_ == ():
+            obj = arg
+        else:
+            obj = Qube(func(arg._values_[arg.antimask], axis=0), False,
+                       example=arg)
 
     # At this point, we have handled the cases mask==True and mask==False,
     # so the mask must be an array. Also, there must be at least one
@@ -128,6 +108,56 @@ def _mean_or_sum(arg, axis=None, recursive=True, _combine_as_mean=False):
         obj.insert_derivs(new_derivs)
 
     return obj
+
+#===============================================================================
+def _check_axis(arg, axis):
+    """Validate the axis as None, an int, or a tuple of ints."""
+
+    if axis is None:    # can't be a problem
+        return
+
+    # Fix up the axis argument
+    if isinstance(axis, tuple):
+        axis_for_show = axis
+    elif isinstance(axis, list):
+        axis_for_show = tuple(axis)
+    else:
+        axis_for_show = axis
+        axis = (axis,)
+
+    # Check for duplicates
+    # Check for in-range values
+    selections = len(arg._shape_) * [False]
+    for i in axis:
+        try:
+            _ = selections[i]
+        except IndexError:
+            raise IndexError('axis %d is out of bounds for array of rank %d'
+                             % (i, len(arg._shape_)))
+
+        if selections[i]:
+            raise IndexError('duplicate value in axis: ' + str(axis_for_show))
+
+        selections[i] = True
+
+#===============================================================================
+def _zero_sized_result(self, axis):
+    """A zero-sized result obtained by collapsing one or more axes of an object
+    that already has size zero.
+    """
+
+    if axis is None:
+        return self.flatten().as_size_zero()
+
+    # Construct an index to obtain the correct shape
+    indx = len(self.shape) * [slice(None)]
+    if isinstance(axis, (list, tuple)):
+        for i in axis:
+            indx[i] = 0
+        else:
+            indx[i] = 0
+
+    return self[tuple(indx)]
 
 #===============================================================================
 @staticmethod
@@ -205,7 +235,7 @@ def dot(arg1, arg2, axis1=-1, axis2=0, classes=(), recursive=True):
     new_drank = arg1._drank_ + arg2._drank_
 
     obj = Qube(new_values,
-               arg1._mask_ | arg2._mask_,
+               Qube.or_(arg1._mask_, arg2._mask_),
                units=Units.mul_units(arg1._units_, arg2._units_),
                nrank=new_nrank, drank=new_drank, example=arg1)
     obj = obj.cast(classes)
@@ -410,7 +440,7 @@ def cross(arg1, arg2, axis1=-1, axis2=0, classes=(), recursive=True):
 
     # Construct the object and cast
     obj = Qube(new_values,
-               arg1._mask_ | arg2._mask_,
+               Qube.or_(arg1._mask_, arg2._mask_),
                units=Units.mul_units(arg1._units_, arg2._units_),
                nrank=new_nrank, drank=new_drank, example=arg1)
     obj = obj.cast(classes)
@@ -503,7 +533,7 @@ def outer(arg1, arg2, classes=(), recursive=True):
     new_drank = arg1._drank_ + arg2._drank_
 
     obj = Qube(new_values,
-               arg1._mask_ | arg2._mask_,
+               Qube.or_(arg1._mask_, arg2._mask_),
                units=Units.mul_units(arg1._units_, arg2._units_),
                nrank=new_nrank, drank=new_drank, example=arg1)
     obj = obj.cast(classes)
@@ -594,9 +624,7 @@ def rms(self):
     """
 
     # Evaluate the norm
-    sum_sq = self._values_**2
-    for r in range(self._rank_):
-        sum_sq = np.sum(sum_sq, axis=-1)
+    sum_sq = np.sum(self._values_**2, axis=tuple(range(-self._rank_,0)))
 
     return Qube.SCALAR_CLASS(np.sqrt(sum_sq/self.isize), self._mask_)
 

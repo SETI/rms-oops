@@ -28,20 +28,25 @@ def tvl_and(self, arg, builtins=None):
     self = Qube.BOOLEAN_CLASS.as_boolean(self)
     arg = Qube.BOOLEAN_CLASS.as_boolean(arg)
 
-    result_is_true = ((self.antimask & arg.antimask)
-                      & self._values_
-                      & arg._values_)
+    if Qube.is_one_false(self._mask_):
+        self_is_true = self._values_
+        self_is_not_false = self._values_
+    else:
+        self_is_true = self._values_ & self.antimask
+        self_is_not_false = self._values_ | self._mask_
 
-    # This would do the right thing but the alternative below is quicker
-    # self_is_false = np.logical_not(self._values_) & self.antimask
-    # arg_is_false  = np.logical_not(arg._values_) & arg.antimask
-    # result_is_false = self_is_false | arg_is_false
+    if Qube.is_one_false(arg._mask_):
+        arg_is_true = arg._values_
+        arg_is_not_false  = arg._values_
+    else:
+        arg_is_true = arg._values_ & arg.antimask
+        arg_is_not_false  = arg._values_ | arg._mask_
 
-    self_is_not_false = self._values_ | self._mask_
-    arg_is_not_false  = arg._values_  | arg._mask_
+    result_is_true = self_is_true & arg_is_true
     result_is_not_false = self_is_not_false & arg_is_not_false
 
-    result_is_masked = np.logical_not(result_is_true) & result_is_not_false
+    result_is_masked = Qube.and_(np.logical_not(result_is_true),
+                                 result_is_not_false)
 
     result = Qube.BOOLEAN_CLASS(result_is_true, result_is_masked)
 
@@ -78,19 +83,25 @@ def tvl_or(self, arg, builtins=None):
     self = Qube.BOOLEAN_CLASS.as_boolean(self)
     arg = Qube.BOOLEAN_CLASS.as_boolean(arg)
 
-    result_is_true = ((self._values_ & self.antimask) |
-                      (arg._values_  & arg.antimask))
+    if Qube.is_one_false(self._mask_):
+        self_is_true = self._values_
+        self_is_not_false = self._values_
+    else:
+        self_is_true = self._values_ & self.antimask
+        self_is_not_false = self._values_ | self._mask_
 
-    # This would do the right thing but the alternative below is quicker
-    # self_is_false = np.logical_not(self._values_) & self.antimask
-    # arg_is_false  = np.logical_not(arg._values_)  & arg.antimask
-    # result_is_false = self_is_false & arg_is_false
+    if Qube.is_one_false(arg._mask_):
+        arg_is_true = arg._values_
+        arg_is_not_false  = arg._values_
+    else:
+        arg_is_true = arg._values_ & arg.antimask
+        arg_is_not_false  = arg._values_ | arg._mask_
 
-    self_is_not_false = self._values_ | self._mask_
-    arg_is_not_false  = arg._values_  | arg._mask_
+    result_is_true = self_is_true | arg_is_true
     result_is_not_false = self_is_not_false | arg_is_not_false
 
-    result_is_masked = np.logical_not(result_is_true) & result_is_not_false
+    result_is_masked = Qube.and_(np.logical_not(result_is_true),
+                                 result_is_not_false)
 
     result = Qube.BOOLEAN_CLASS(result_is_not_false, result_is_masked)
 
@@ -129,7 +140,7 @@ def tvl_any(self, axis=None, builtins=None):
     if not self._shape_:
         args = (self,)                  # make a copy
 
-    elif np.isscalar(self._mask_):
+    elif isinstance(self._mask_, (bool, np.bool_)):
         args = (np.any(self._values_, axis=axis), self._mask_)
 
     else:
@@ -179,7 +190,7 @@ def tvl_all(self, axis=None, builtins=None):
     if not self._shape_:
         args = (self,)                  # make a copy
 
-    elif np.isscalar(self._mask_):
+    elif isinstance(self._mask_, (bool, np.bool_)):
         args = (np.all(self._values_, axis=axis), self._mask_)
 
     else:
@@ -313,15 +324,11 @@ def _tvl_op(self, arg, comparison, builtins=None):
     if isinstance(arg, Qube):
         arg_mask = arg._mask_
     elif isinstance(arg, np.ma.MaskedArray):
-        arg_mask = Qube(arg).mask
+        arg_mask = arg.mask
     else:
-        arg_mask = None
+        arg_mask = False
 
-    # Apply both masks
-    if arg_mask is None:
-        comparison._set_mask_(self._mask_)
-    else:
-        comparison._set_mask_(self._mask_ | arg_mask)
+    comparison._set_mask_(Qube.or_(self._mask_, arg_mask))
 
     return comparison
 

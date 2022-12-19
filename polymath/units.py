@@ -24,7 +24,6 @@ def gcd(a, b):
     return a
 
 #===============================================================================
-#===============================================================================
 class Units(object):
     """Units is a class defining units names and the methods for converting
     between values that include units.
