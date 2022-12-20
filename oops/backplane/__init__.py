@@ -754,9 +754,7 @@ from polymath                           import Vector3
 
 from oops.config                        import ABERRATION
 from oops.meshgrid                      import Meshgrid
-from oops.body                          import Body
 from oops.event                         import Event
-from oops.surface.ansa                  import Ansa
 
 from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
 from oops.backplane.exercise_backplanes import exercise_backplanes
@@ -1052,7 +1050,7 @@ class Test_Backplane_Empty_Events(unittest.TestCase):
         self.assertTrue(percent == 0)
 
         # Test empty ring radius for Pluto
-        test = bp.ring_radius('pluto:ring')
+        test = bp.ring_radius('pluto:ring', rmax=1.e8)
         total = np.size(test.mask)
         masked = np.sum(test.mask)
         percent = int(masked / float(total) * 100. + 0.5)

@@ -436,7 +436,7 @@ def is_outside(arg, low, high, inclusive=True):
     if inclusive:
         return (arg < low) | (arg > high)
     else:
-       return (arg < low) | (arg >= high)
+        return (arg < low) | (arg >= high)
 
 @staticmethod
 def is_inside(arg, low, high, inclusive=True):

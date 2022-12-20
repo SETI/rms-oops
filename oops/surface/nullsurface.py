@@ -2,7 +2,7 @@
 # oops/surface/nullsurface.py: NullSurface subclass of class Surface
 ################################################################################
 
-from polymath import Qube, Scalar, Vector3
+from polymath import Scalar, Vector3
 
 from .       import Surface
 from ..frame import Frame

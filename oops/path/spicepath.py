@@ -266,7 +266,7 @@ class Test_SpicePath(unittest.TestCase):
         Path.reset_registry()
         Frame.reset_registry()
 
-        _sun  = SpicePath("SUN", "SSB")
+        _     = SpicePath("SUN", "SSB")
         earth = SpicePath("EARTH", "SSB")
         moon  = SpicePath("MOON", "EARTH")
 

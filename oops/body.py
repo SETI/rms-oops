@@ -39,73 +39,88 @@ import oops.spice_support as spice_support
 
 JUPITER_ALIASES = [
     # Jupiter [new code, old code], [formal name, provisional name]
-    [[     55060], [         'S2003_J_2' ]],
-    [[     55061], [         'S2003_J_3' ]],
-    [[     55062], [         'S2003_J_4' ]],
-    [[557, 55063], [         'S2003_J_5' ]],
-    [[     55064], [         'S2003_J_9' ]],
-    [[     55065], [         'S2003_J_10']],
-    [[     55066], [         'S2003_J_12']],
-    [[558, 55067], [         'S2003_J_15']],
-    [[     55068], [         'S2003_J_16']],
-    [[550       ], ['HERSE', 'S2003_J_17']],
-    [[555, 55069], [         'S2003_J_18']],
-    [[     55070], [         'S2003_J_19']],
-    [[     55071], [         'S2003_J_23']],
-    [[551, 55072], [         'S2010_J_1' ]],
-    [[552, 55073], [         'S2010_J_2' ]],
-    [[     55074], [         'S2011_J_1' ]],
-    [[556, 55075], [         'S2011_J_2' ]],
-    [[554       ], [         'S2016_J_1' ]],
-    [[553, 55076], ['DIA',   'S2000_J_11']],
+    [[  549, 55054       ], ['KORE'         , 'S2003_J14']],
+    [[  550, 55057       ], ['HERSE'        , 'S2003_J17']],
+    [[  551, 55072       ], [                 'S2010_J1' ]],
+    [[  552, 55073       ], [                 'S2010_J2' ]],
+    [[  553, 55076       ], ['DIA'          , 'S2000_J11']],
+    [[  554              ], [                 'S2016_J1' ]],
+    [[  555, 55058, 55069], [                 'S2003_J18']],
+    [[  556, 55075       ], [                 'S2011_J2' ]],
+    [[  557, 55063       ], ['EIRENE'       , 'S2003_J5' ]],
+    [[  558, 55055, 55067], ['PHILOPHROSYNE', 'S2003_J15']],
+    [[  559              ], [                 'S2017_J1' ]],
+    [[  560, 55053, 55061], ['EUPHEME'      , 'S2003_J3' ]],
+    [[  561, 55059, 55070], [                 'S2003_J19']],
+    [[  562              ], [                 'S2016_J2' ]],
+    [[  563              ], [                 'S2017_J2' ]],
+    [[  564              ], [                 'S2017_J3' ]],
+    [[  565              ], ['PANDIA'       , 'S2017_J4' ]],
+    [[  566              ], [                 'S2017_J5' ]],
+    [[  567              ], [                 'S2017_J6' ]],
+    [[  568              ], [                 'S2017_J7' ]],
+    [[  569              ], [                 'S2017_J8' ]],
+    [[  570              ], [                 'S2017_J9' ]],
+    [[  571              ], ['ERSA'         , 'S2018_J1' ]],
+    [[  572, 55074       ], [                 'S2011_J1' ]],
+    [[55501, 55051, 55060], [                 'S2003_J2' ]],
+    [[55502, 55062       ], [                 'S2003_J4' ]],
+    [[55503, 55049, 55064], [                 'S2003_J9' ]],
+    [[55504, 55050, 55065], [                 'S2003_J10']],
+    [[55505, 55052, 55066], [                 'S2003_J12']],
+    [[55506, 55056, 55068], [                 'S2003_J16']],
+    [[55507, 55071       ], [                 'S2003_J23']],
+    [[55508              ], [                 'S2003_J24']],
 ]
 
 SATURN_ALIASES = [
     # Saturn [new code, old code], [formal name, provisional name, NAIF name]
-    [[     65035], [              'S2004_S_7' , 'S7_2004'  ]],
-    [[642, 65036], ['FORNJOT'   , 'S2004_S8'  , 'S8_2004'  ]],
-    [[640, 65037], ['FARBAUTI'  , 'S2004_S_9' , 'S9_2004'  ]],
-    [[636, 65038], ['AEGIR'     , 'S2004_S_10', 'S10_2004' ]],
-    [[637, 65039], ['BEBHIONN'  , 'S2004_S_11', 'S11_2004' ]],
-    [[     65040], [              'S2004_S_12', 'S12_2004' ]],
-    [[     65041], [              'S2004_S_13', 'S13_2004' ]],
-    [[643, 65042], ['HATI'      , 'S2004_S_14', 'S14_2004' ]],
-    [[638, 65043], ['BERGELMIR' , 'S2004_S_15', 'S15_2004' ]],
-    [[641, 65044], ['FENRIR'    , 'S2004_S_16', 'S16_2004' ]],
-    [[     65045], [              'S2004_S_17', 'S17_2004' ]],
-    [[639, 65046], ['BESTLA'    , 'S2004_S_18', 'S18_2004' ]],
-    [[644, 65047], ['HYRROKKIN' , 'S2004_S_19', 'S19_2004' ]],
-    [[     65048], [              'S2006_S_1' , 'S01_2006' ]],
-    [[645, 65049], ['KARI'      , 'S2006_S_2' , 'S02_2006' ]],
-    [[     65050], [              'S2006_S_3' , 'S03_2006' ]],
-    [[651, 65051], ['GREIP'     , 'S2006_S_4' , 'S04_2006' ]],
-    [[646, 65052], ['LOGE'      , 'S2006_S_5' , 'S05_2006' ]],
-    [[650, 65053], ['JARNSAXA'  , 'S2006_S_6' , 'S06_2006' ]],
-    [[648, 65054], ['SURTUR'    , 'S2006_S_7' , 'S07_2006' ]],
-    [[647       ], ['SKOLL'     , 'S2006_S_8' , 'S08_2006' ]],
-    [[652       ], ['TARQEQ'    , 'S2007_S_1' , 'S01_2007' ]],
-    [[     65055], [              'S2007_S_2' , 'S02_2007' ]],
-    [[     65056], [              'S2007_S_3' , 'S03_2007' ]],
-    [[653, 65060], ['AEGAEON'   , 'K07S4'                  ]],
-    [[     65066], [              'S2004_S_29', 'S2004_S29']],
-    [[     65067], [              'S2004_S_31', 'S2004_S31']],
-    [[     65068], [              'S2004_S_26', 'S2004_S26']],
-    [[     65069], [              'S2004_S_35', 'S2004_S35']],
-    [[     65070], [              'S2004_S_24', 'S2004_S24']],
-    [[     65071], [              'S2004_S_23', 'S2004_S23']],
-    [[     65072], [              'S2004_S_25', 'S2004_S25']],
-    [[     65073], [              'S2004_S_22', 'S2004_S22']],
-    [[     65074], [              'S2004_S_32', 'S2004_S32']],
-    [[     65075], [              'S2004_S_33', 'S2004_S33']],
-    [[     65076], [              'S2004_S_34', 'S2004_S34']],
-    [[     65077], [              'S2004_S_28', 'S2004_S28']],
-    [[     65078], [              'S2004_S_30', 'S2004_S30']],
-    [[     65079], [              'S2004_S_21', 'S2004_S21']],
-    [[     65080], [              'S2004_S_20', 'S2004_S20']],
-    [[     65081], [              'S2004_S_36', 'S2004_S36']],
-    [[     65082], [              'S2004_S_37', 'S2004_S37']],
-    [[     65083], [              'S2004_S_38', 'S2004_S38']],
-    [[     65084], [              'S2004_S_39', 'S2004_S39']],
+    [[  636, 65038], ['AEGIR'    , 'S10_2004' ]],
+    [[  637, 65039], ['BEBHIONN' , 'S11_2004' ]],
+    [[  638, 65043], ['BERGELMIR', 'S15_2004' ]],
+    [[  639, 65046], ['BESTLA'   , 'S18_2004' ]],
+    [[  640, 65037], ['FARBAUTI' , 'S9_2004'  ]],
+    [[  641, 65044], ['FENRIR'   , 'S16_2004' ]],
+    [[  642, 65036], ['FORNJOT'  , 'S8_2004'  ]],
+    [[  643, 65042], ['HATI'     , 'S14_2004' ]],
+    [[  644, 65047], ['HYRROKKIN', 'S19_2004' ]],
+    [[  645, 65049], ['KARI'     , 'S02_2006' ]],
+    [[  646, 65052], ['LOGE'     , 'S05_2006' ]],
+    [[  647,      ], ['SKOLL'    , 'S08_2006' ]],
+    [[  648, 65054], ['SURTUR'   , 'S07_2006' ]],
+    [[  650, 65053], ['JARNSAXA' , 'S06_2006' ]],
+    [[  651, 65051], ['GREIP'    , 'S04_2006' ]],
+    [[  652,      ], ['TARQEQ'   , 'S01_2007' ]],
+    [[  653, 65060], ['AEGAEON'  , 'K07S4'    ]],
+    [[  654, 65080], ['GRIDR'    , 'S2004_S20']],
+    [[  655, 65073], ['ANGRBODA' , 'S2004_S22']],
+    [[  656, 65071], ['SKRYMIR'  , 'S2004_S23']],
+    [[  657, 65072], ['GERD'     , 'S2004_S25']],
+    [[  658, 65068], [             'S2004_S26']],
+    [[  659, 65065], ['EGGTHER'  , 'S2004_S27']],
+    [[  660, 65066], [             'S2004_S29']],
+    [[  661, 65078], ['BELI'     , 'S2004_S30']],
+    [[  662, 65074], ['GUNNLOD'  , 'S2004_S32']],
+    [[  663, 65075], ['THIAZZI'  , 'S2004_S33']],
+    [[  664, 65076], [             'S2004_S34']],
+    [[  665, 65069], ['ALVALDI'  , 'S2004_S35']],
+    [[  666, 65083], ['GEIRROD'  , 'S2004_S38']],
+    [[65067,      ], [             'S2004_S31']],
+    [[65070,      ], [             'S2004_S24']],
+    [[65077,      ], [             'S2004_S28']],
+    [[65079,      ], [             'S2004_S21']],
+    [[65081,      ], [             'S2004_S36']],
+    [[65082,      ], [             'S2004_S37']],
+    [[65084,      ], [             'S2004_S39']],
+    [[65085, 65035], [             'S2004_S07', 'S7_2004' ]],
+    [[65086, 65040], [             'S2004_S12', 'S12_2004']],
+    [[65087, 65041], [             'S2004_S13', 'S13_2004']],
+    [[65088, 65045], [             'S2004_S17', 'S17_2004']],
+    [[65089, 65048], [             'S2006_S01', 'S01_2006']],
+    [[65090, 65050], [             'S2006_S03', 'S03_2006']],
+    [[65091, 65055], [             'S2007_S02', 'S02_2007']],
+    [[65092, 65056], [             'S2007_S03', 'S03_2007']],
+    [[65093,      ], [             'S2004_S01']],
 ]
 
 ALIASES = JUPITER_ALIASES + SATURN_ALIASES
@@ -689,6 +704,30 @@ class Body(object):
 
     #===========================================================================
     @staticmethod
+    def has_ring(bodies):
+        """Retain bodies on the list if they HAVE a defined ring."""
+
+        selection = []
+        for body in bodies:
+            if body.ring_body is not None and body not in selection:
+                selection.append(body)
+
+        return selection
+
+    #===========================================================================
+    @staticmethod
+    def has_no_ring(bodies):
+        """Retain bodies on the list if they have NO defined ring."""
+
+        selection = []
+        for body in bodies:
+            if body.ring_body is None and body not in selection:
+                selection.append(body)
+
+        return selection
+
+    #===========================================================================
+    @staticmethod
     def keywords_include_any(bodies, keywords):
         """Retain bodies that have at least one of the specified keywords."""
 
@@ -749,7 +788,7 @@ class Body(object):
     ############################################################################
 
     @staticmethod
-    def define_multipath(bodies, origin="SSB", frame="J2000", path_id=None):
+    def define_multipath(bodies, origin='SSB', frame='J2000', path_id=None):
         """Construct a multipath for the centers of the given list of bodies.
 
         The default ID of the path returned is the name of the first body with
@@ -897,18 +936,18 @@ class Body(object):
                                      asof=asof)
 
         # Define B1950 in addition to J2000
-        _ = SpiceFrame("B1950", "J2000")
+        _ = SpiceFrame('B1950', 'J2000')
 
         # SSB and Sun
-        Body.define_bodies(["SSB"], None, None, ["SUN", "BARYCENTER"], True)
-        Body.define_bodies(["SUN"], None, None, ["SUN"], True)
+        Body.define_bodies(['SSB'], None, None, ['SUN', 'BARYCENTER'], True)
+        Body.define_bodies(['SUN'], None, None, ['SUN'], True)
 
         # Mercury, Venus, Earth orbit the Sun
-        Body.define_bodies([199, 299, 399], "SUN", "SUN", ["PLANET"], True)
+        Body.define_bodies([199, 299, 399], 'SUN', 'SUN', ['PLANET'], True)
 
         # Add Earth's Moon
-        Body.define_bodies([301], "EARTH", "EARTH",
-                           ["SATELLITE", "CLASSICAL", "REGULAR"], True)
+        Body.define_bodies([301], 'EARTH', 'EARTH',
+                           ['SATELLITE', 'CLASSICAL', 'REGULAR'], True)
 
         # Define planetary systems
         if 4 in planets:
@@ -956,16 +995,16 @@ class Body(object):
                                     asof=asof)
 
         # Mars and the Mars barycenter orbit the Sun
-        Body.define_bodies([499], "SUN", "SUN", ["PLANET"], is_standard=True)
-        Body.define_bodies([4], "SUN", "SUN", ["BARYCENTER"], is_standard=True)
+        Body.define_bodies([499], 'SUN', 'SUN', ['PLANET'], is_standard=True)
+        Body.define_bodies([4], 'SUN', 'SUN', ['BARYCENTER'], is_standard=True)
 
         # Moons of Mars
-        Body.define_bodies(MARS_ALL_MOONS, "MARS", "MARS",
-                           ["SATELLITE", "CLASSICAL", "REGULAR"],
+        Body.define_bodies(MARS_ALL_MOONS, 'MARS', 'MARS',
+                           ['SATELLITE', 'CLASSICAL', 'REGULAR'],
                            is_standard=True)
 
         # Rings of Mars
-        ring = Body.define_ring("MARS", "MARS_RING_PLANE", None, [],
+        ring = Body.define_ring('MARS', 'MARS_RING_PLANE', None, [],
                                 is_standard=True)
         ring.backplane_id = 'MARS:RING'
         ring.backplane_limits = None
@@ -998,26 +1037,26 @@ class Body(object):
                                     asof=asof)
 
         # Jupiter and the Jupiter barycenter orbit the Solar System barycenter
-        Body.define_bodies([599], "SUN", "SSB", ["PLANET"], is_standard=True)
-        Body.define_bodies([5], "SUN", "SSB", ["BARYCENTER"], is_standard=True)
+        Body.define_bodies([599], 'SUN', 'SSB', ['PLANET'], is_standard=True)
+        Body.define_bodies([5], 'SUN', 'SSB', ['BARYCENTER'], is_standard=True)
 
         # Moons and rings of Jupiter
-        Body.define_bodies(JUPITER_CLASSICAL, "JUPITER", "JUPITER",
-                           ["SATELLITE", "CLASSICAL", "REGULAR"],
+        Body.define_bodies(JUPITER_CLASSICAL, 'JUPITER', 'JUPITER',
+                           ['SATELLITE', 'CLASSICAL', 'REGULAR'],
                            is_standard=True)
-        Body.define_bodies(JUPITER_REGULAR, "JUPITER", "JUPITER",
-                           ["SATELLITE", "REGULAR"], is_standard=True)
+        Body.define_bodies(JUPITER_REGULAR, 'JUPITER', 'JUPITER',
+                           ['SATELLITE', 'REGULAR'], is_standard=True)
 
         if irregulars:
-            Body.define_bodies(JUPITER_IRREGULAR, "JUPITER",
-                               "JUPITER BARYCENTER",
-                              ["SATELLITE", "IRREGULAR"], is_standard=True)
+            Body.define_bodies(JUPITER_IRREGULAR, 'JUPITER',
+                               'JUPITER BARYCENTER',
+                              ['SATELLITE', 'IRREGULAR'], is_standard=True)
 
             for (ids, names) in JUPITER_ALIASES:
-                Body.define_bodies([ids[0]], "JUPITER", "JUPITER BARYCENTER",
-                                   ["SATELLITE", "IRREGULAR"], is_standard=True)
+                Body.define_bodies([ids[0]], 'JUPITER', 'JUPITER BARYCENTER',
+                                   ['SATELLITE', 'IRREGULAR'], is_standard=True)
 
-        ring = Body.define_ring("JUPITER", "JUPITER_RING_PLANE", None, [],
+        ring = Body.define_ring('JUPITER', 'JUPITER_RING_PLANE', None, [],
                                 is_standard=True)
         ring.backplane_id = 'JUPITER:RING'
         ring.backplane_limits = None
@@ -1025,7 +1064,7 @@ class Body(object):
         unbounded_ring = ring
         Body.BODY_REGISTRY['JUPITER'].ring_body = ring
 
-        ring = Body.define_ring("JUPITER", "JUPITER_RING_SYSTEM",
+        ring = Body.define_ring('JUPITER', 'JUPITER_RING_SYSTEM',
                                 JUPITER_MAIN_RING_LIMIT, [], is_standard=True)
         ring.backplane_id = 'JUPITER:RING'
         ring.backplane_limits = (0., JUPITER_MAIN_RING_LIMIT)
@@ -1056,29 +1095,29 @@ class Body(object):
                                     asof=asof)
 
         # Saturn and the Saturn barycenter orbit the SSB
-        Body.define_bodies([699], "SUN", "SSB", ["PLANET"], is_standard=True)
-        Body.define_bodies([6], "SUN", "SSB", ["BARYCENTER"], is_standard=True)
+        Body.define_bodies([699], 'SUN', 'SSB', ['PLANET'], is_standard=True)
+        Body.define_bodies([6], 'SUN', 'SSB', ['BARYCENTER'], is_standard=True)
 
         # Moons and rings of Saturn
-        Body.define_bodies(SATURN_CLASSICAL_INNER, "SATURN", "SATURN",
-                           ["SATELLITE", "CLASSICAL", "REGULAR"],
+        Body.define_bodies(SATURN_CLASSICAL_INNER, 'SATURN', 'SATURN',
+                           ['SATELLITE', 'CLASSICAL', 'REGULAR'],
                            is_standard=True)
-        Body.define_bodies(SATURN_CLASSICAL_OUTER, "SATURN",
-                           "SATURN BARYCENTER",
-                           ["SATELLITE", "CLASSICAL", "REGULAR"],
+        Body.define_bodies(SATURN_CLASSICAL_OUTER, 'SATURN',
+                           'SATURN BARYCENTER',
+                           ['SATELLITE', 'CLASSICAL', 'REGULAR'],
                            is_standard=True)
-        Body.define_bodies(SATURN_CLASSICAL_IRREG, "SATURN",
-                           "SATURN BARYCENTER",
-                           ["SATELLITE", "CLASSICAL", "IRREGULAR"],
+        Body.define_bodies(SATURN_CLASSICAL_IRREG, 'SATURN',
+                           'SATURN BARYCENTER',
+                           ['SATELLITE', 'CLASSICAL', 'IRREGULAR'],
                            is_standard=True)
-        Body.define_bodies(SATURN_REGULAR, "SATURN", "SATURN",
-                           ["SATELLITE", "REGULAR"], is_standard=True)
+        Body.define_bodies(SATURN_REGULAR, 'SATURN', 'SATURN',
+                           ['SATELLITE', 'REGULAR'], is_standard=True)
 
         if irregulars:
-            Body.define_bodies(SATURN_IRREGULAR, "SATURN", "SATURN BARYCENTER",
-                               ["SATELLITE", "IRREGULAR"], is_standard=True)
+            Body.define_bodies(SATURN_IRREGULAR, 'SATURN', 'SATURN BARYCENTER',
+                               ['SATELLITE', 'IRREGULAR'], is_standard=True)
 
-        ring = Body.define_ring("SATURN", "SATURN_RING_PLANE", None, [],
+        ring = Body.define_ring('SATURN', 'SATURN_RING_PLANE', None, [],
                                 is_standard=True)
         ring.backplane_id = 'SATURN:RING'
         ring.backplane_limits = None
@@ -1086,43 +1125,43 @@ class Body(object):
         unbounded_ring = ring
         Body.BODY_REGISTRY['SATURN'].ring_body = ring
 
-        ring = Body.define_ring("SATURN", "SATURN_RING_SYSTEM",
+        ring = Body.define_ring('SATURN', 'SATURN_RING_SYSTEM',
                                 SATURN_F_RING_LIMIT, [], is_standard=True)
         ring.backplane_id = 'SATURN:RING'
         ring.backplane_limits = (0., SATURN_F_RING_LIMIT)
         ring.unbounded_surface = unbounded_ring
 
-        ring = Body.define_ring("SATURN", "SATURN_RINGS", SATURN_RINGS, [],
+        ring = Body.define_ring('SATURN', 'SATURN_RINGS', SATURN_RINGS, [],
                                 is_standard=True)
         ring.backplane_id = 'SATURN:RING'
         ring.backplane_limits = SATURN_RINGS
         ring.unbounded_surface = unbounded_ring
 
-        ring = Body.define_ring("SATURN", "SATURN_MAIN_RINGS",
+        ring = Body.define_ring('SATURN', 'SATURN_MAIN_RINGS',
                                 SATURN_MAIN_RINGS, [], is_standard=True)
         ring.backplane_id = 'SATURN:RING'
         ring.backplane_limits = SATURN_MAIN_RINGS
         ring.unbounded_surface = unbounded_ring
 
-        ring = Body.define_ring("SATURN", "SATURN_A_RING", SATURN_A_RING, [],
+        ring = Body.define_ring('SATURN', 'SATURN_A_RING', SATURN_A_RING, [],
                                 is_standard=True)
         ring.backplane_id = 'SATURN:RING'
         ring.backplane_limits = SATURN_A_RING
         ring.unbounded_surface = unbounded_ring
 
-        ring = Body.define_ring("SATURN", "SATURN_B_RING", SATURN_B_RING, [],
+        ring = Body.define_ring('SATURN', 'SATURN_B_RING', SATURN_B_RING, [],
                                 is_standard=True)
         ring.backplane_id = 'SATURN:RING'
         ring.backplane_limits = SATURN_B_RING
         ring.unbounded_surface = unbounded_ring
 
-        ring = Body.define_ring("SATURN", "SATURN_C_RING", SATURN_C_RING, [],
+        ring = Body.define_ring('SATURN', 'SATURN_C_RING', SATURN_C_RING, [],
                                 is_standard=True)
         ring.backplane_id = 'SATURN:RING'
         ring.backplane_limits = SATURN_C_RING
         ring.unbounded_surface = unbounded_ring
 
-        ring = Body.define_ring("SATURN", "SATURN_AB_RINGS",
+        ring = Body.define_ring('SATURN', 'SATURN_AB_RINGS',
                                 SATURN_AB_RINGS, [], is_standard=True)
         ring.backplane_id = 'SATURN:RING'
         ring.backplane_limits = SATURN_AB_RINGS
@@ -1150,21 +1189,21 @@ class Body(object):
                                     asof=asof)
 
         # Uranus and the Uranus barycenter orbit the SSB
-        Body.define_bodies([799], "SUN", "SSB", ["PLANET"], is_standard=True)
-        Body.define_bodies([7], "SUN", "SSB", ["BARYCENTER"], is_standard=True)
+        Body.define_bodies([799], 'SUN', 'SSB', ['PLANET'], is_standard=True)
+        Body.define_bodies([7], 'SUN', 'SSB', ['BARYCENTER'], is_standard=True)
 
         # Moons and rings of Uranus
-        Body.define_bodies(URANUS_CLASSICAL, "URANUS", "URANUS",
-                           ["SATELLITE", "CLASSICAL", "REGULAR"],
+        Body.define_bodies(URANUS_CLASSICAL, 'URANUS', 'URANUS',
+                           ['SATELLITE', 'CLASSICAL', 'REGULAR'],
                            is_standard=True)
-        Body.define_bodies(URANUS_INNER, "URANUS", "URANUS",
-                           ["SATELLITE", "REGULAR"], is_standard=True)
+        Body.define_bodies(URANUS_INNER, 'URANUS', 'URANUS',
+                           ['SATELLITE', 'REGULAR'], is_standard=True)
 
         if irregulars:
-            Body.define_bodies(URANUS_IRREGULAR, "URANUS", "URANUS",
-                               ["SATELLITE", "IRREGULAR"], is_standard=True)
+            Body.define_bodies(URANUS_IRREGULAR, 'URANUS', 'URANUS',
+                               ['SATELLITE', 'IRREGULAR'], is_standard=True)
 
-        ring = Body.define_ring("URANUS", "URANUS_RING_PLANE", None,
+        ring = Body.define_ring('URANUS', 'URANUS_RING_PLANE', None,
                                 [], retrograde=True, is_standard=True)
         ring.backplane_id = 'URANUS:RING'
         ring.backplane_limits = None
@@ -1172,51 +1211,51 @@ class Body(object):
         unbounded_ring = ring
         Body.BODY_REGISTRY['URANUS'].ring_body = ring
 
-        ring = Body.define_ring("URANUS", "URANUS_RING_SYSTEM",
+        ring = Body.define_ring('URANUS', 'URANUS_RING_SYSTEM',
                                 URANUS_EPSILON_LIMIT, [],
                                 retrograde=True, is_standard=True)
         ring.backplane_id = 'URANUS:RING'
         ring.backplane_limits = (0., URANUS_EPSILON_LIMIT)
         ring.unbounded_surface = unbounded_ring
 
-        ring = Body.define_ring("URANUS", "MU_RING", URANUS_MU_LIMIT,
+        ring = Body.define_ring('URANUS', 'MU_RING', URANUS_MU_LIMIT,
                                 [], retrograde=True, is_standard=True)
         ring.backplane_id = 'URANUS:RING'
         ring.backplane_limits = URANUS_MU_LIMIT
         ring.unbounded_surface = unbounded_ring
 
-        ring = Body.define_ring("URANUS", "NU_RING", URANUS_NU_LIMIT,
+        ring = Body.define_ring('URANUS', 'NU_RING', URANUS_NU_LIMIT,
                                 [], retrograde=True, is_standard=True)
         ring.backplane_id = 'URANUS:RING'
         ring.backplane_limits = URANUS_NU_LIMIT
         ring.unbounded_surface = unbounded_ring
 
-        URANUS_EPOCH = cspyce.utc2et("1977-03-10T20:00:00")
+        URANUS_EPOCH = cspyce.utc2et('1977-03-10T20:00:00')
 
-        uranus_wrt_b1950 = AliasFrame("IAU_URANUS").wrt("B1950")
+        uranus_wrt_b1950 = AliasFrame('IAU_URANUS').wrt('B1950')
         _ = RingFrame(uranus_wrt_b1950, URANUS_EPOCH, retrograde=True,
-                      frame_id="URANUS_RINGS_B1950")
+                      frame_id='URANUS_RINGS_B1950')
 
-        Body.define_orbit("URANUS", "SIX_RING", URANUS_SIX_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", [], True)
-        Body.define_orbit("URANUS", "FIVE_RING", URANUS_FIVE_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", [], True)
-        Body.define_orbit("URANUS", "FOUR_RING", URANUS_FOUR_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", [], True)
-        Body.define_orbit("URANUS", "ALPHA_RING", URANUS_ALPHA_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"], True)
-        Body.define_orbit("URANUS", "BETA_RING", URANUS_BETA_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"], True)
-        Body.define_orbit("URANUS", "ETA_RING", URANUS_ETA_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"], True)
-        Body.define_orbit("URANUS", "GAMMA_RING", URANUS_GAMMA_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"], True)
-        Body.define_orbit("URANUS", "DELTA_RING", URANUS_DELTA_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"], True)
-        Body.define_orbit("URANUS", "LAMBDA_RING", URANUS_LAMBDA_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", [], True)
-        Body.define_orbit("URANUS", "EPSILON_RING", URANUS_EPSILON_ELEMENTS,
-                          URANUS_EPOCH, "URANUS_RINGS_B1950", ["MAIN"], True)
+        Body.define_orbit('URANUS', 'SIX_RING', URANUS_SIX_ELEMENTS,
+                          URANUS_EPOCH, 'URANUS_RINGS_B1950', [], True)
+        Body.define_orbit('URANUS', 'FIVE_RING', URANUS_FIVE_ELEMENTS,
+                          URANUS_EPOCH, 'URANUS_RINGS_B1950', [], True)
+        Body.define_orbit('URANUS', 'FOUR_RING', URANUS_FOUR_ELEMENTS,
+                          URANUS_EPOCH, 'URANUS_RINGS_B1950', [], True)
+        Body.define_orbit('URANUS', 'ALPHA_RING', URANUS_ALPHA_ELEMENTS,
+                          URANUS_EPOCH, 'URANUS_RINGS_B1950', ['MAIN'], True)
+        Body.define_orbit('URANUS', 'BETA_RING', URANUS_BETA_ELEMENTS,
+                          URANUS_EPOCH, 'URANUS_RINGS_B1950', ['MAIN'], True)
+        Body.define_orbit('URANUS', 'ETA_RING', URANUS_ETA_ELEMENTS,
+                          URANUS_EPOCH, 'URANUS_RINGS_B1950', ['MAIN'], True)
+        Body.define_orbit('URANUS', 'GAMMA_RING', URANUS_GAMMA_ELEMENTS,
+                          URANUS_EPOCH, 'URANUS_RINGS_B1950', ['MAIN'], True)
+        Body.define_orbit('URANUS', 'DELTA_RING', URANUS_DELTA_ELEMENTS,
+                          URANUS_EPOCH, 'URANUS_RINGS_B1950', ['MAIN'], True)
+        Body.define_orbit('URANUS', 'LAMBDA_RING', URANUS_LAMBDA_ELEMENTS,
+                          URANUS_EPOCH, 'URANUS_RINGS_B1950', [], True)
+        Body.define_orbit('URANUS', 'EPSILON_RING', URANUS_EPSILON_ELEMENTS,
+                          URANUS_EPOCH, 'URANUS_RINGS_B1950', ['MAIN'], True)
 
         return names
 
@@ -1242,26 +1281,26 @@ class Body(object):
                                     asof=asof)
 
         # Neptune and the Neptune barycenter orbit the SSB
-        Body.define_bodies([899], "SUN", "SSB", ["PLANET"], is_standard=True)
-        Body.define_bodies([8], "SUN", "SSB", ["BARYCENTER"], is_standard=True)
+        Body.define_bodies([899], 'SUN', 'SSB', ['PLANET'], is_standard=True)
+        Body.define_bodies([8], 'SUN', 'SSB', ['BARYCENTER'], is_standard=True)
 
         # Moons and rings of Neptune
-        Body.define_bodies(NEPTUNE_CLASSICAL_INNER, "NEPTUNE", "NEPTUNE",
-                           ["SATELLITE", "CLASSICAL", "REGULAR"],
+        Body.define_bodies(NEPTUNE_CLASSICAL_INNER, 'NEPTUNE', 'NEPTUNE',
+                           ['SATELLITE', 'CLASSICAL', 'REGULAR'],
                            is_standard=True)
-        Body.define_bodies(NEPTUNE_CLASSICAL_OUTER, "NEPTUNE",
-                           "NEPTUNE BARYCENTER",
-                           ["SATELLITE", "CLASSICAL", "IRREGULAR"],
+        Body.define_bodies(NEPTUNE_CLASSICAL_OUTER, 'NEPTUNE',
+                           'NEPTUNE BARYCENTER',
+                           ['SATELLITE', 'CLASSICAL', 'IRREGULAR'],
                            is_standard=True)
-        Body.define_bodies(NEPTUNE_REGULAR, "NEPTUNE", "NEPTUNE",
-                           ["SATELLITE", "REGULAR"], is_standard=True)
+        Body.define_bodies(NEPTUNE_REGULAR, 'NEPTUNE', 'NEPTUNE',
+                           ['SATELLITE', 'REGULAR'], is_standard=True)
 
         if irregulars:
             _ = spicedb.furnish_spk(NEPTUNE_IRREGULAR,
                                     time=(start_time, stop_time), asof=asof)
 
-        Body.define_bodies(NEPTUNE_IRREGULAR, "NEPTUNE", "NEPTUNE BARYCENTER",
-                           ["SATELLITE", "IRREGULAR"], True)
+        Body.define_bodies(NEPTUNE_IRREGULAR, 'NEPTUNE', 'NEPTUNE BARYCENTER',
+                           ['SATELLITE', 'IRREGULAR'], True)
 
     #     ra  = cspyce.bodvrd('NEPTUNE', 'POLE_RA')[0]  * np.pi/180
     #     dec = cspyce.bodvrd('NEPTUNE', 'POLE_DEC')[0] * np.pi/180
@@ -1269,7 +1308,7 @@ class Body(object):
         dec = NEPTUNE_INVARIABLE_DEC
         pole = Vector3.from_ra_dec_length(ra,dec)
 
-        ring = Body.define_ring("NEPTUNE", "NEPTUNE_RING_PLANE",  None, [],
+        ring = Body.define_ring('NEPTUNE', 'NEPTUNE_RING_PLANE',  None, [],
                                 pole=pole, is_standard=True)
         ring.backplane_id = 'NEPTUNE:RING'
         ring.backplane_limits = None
@@ -1277,7 +1316,7 @@ class Body(object):
         unbounded_ring = ring
         Body.BODY_REGISTRY['NEPTUNE'].ring_body = ring
 
-        ring = Body.define_ring("NEPTUNE", "NEPTUNE_RING_SYSTEM",
+        ring = Body.define_ring('NEPTUNE', 'NEPTUNE_RING_SYSTEM',
                                 NEPTUNE_ADAMS_LIMIT, [], pole=pole,
                                 is_standard=True)
         ring.backplane_id = 'NEPTUNE:RING'
@@ -1303,32 +1342,32 @@ class Body(object):
                                     asof=asof)
 
         # The Pluto barycenter orbits the SSB
-        Body.define_bodies([9], "SUN", "SSB", ["BARYCENTER"], is_standard=True)
+        Body.define_bodies([9], 'SUN', 'SSB', ['BARYCENTER'], is_standard=True)
 
         # Pluto and all the moons orbit the Pluto system barycenter
-        Body.define_bodies([999], "SUN", "PLUTO BARYCENTER", ["PLANET"],
+        Body.define_bodies([999], 'SUN', 'PLUTO BARYCENTER', ['PLANET'],
                            is_standard=True)
-        Body.define_bodies(CHARON, "PLUTO", "PLUTO BARYCENTER",
-                           ["SATELLITE", "CLASSICAL", "REGULAR"],
+        Body.define_bodies(CHARON, 'PLUTO', 'PLUTO BARYCENTER',
+                           ['SATELLITE', 'CLASSICAL', 'REGULAR'],
                            is_standard=True)
-        Body.define_bodies(PLUTO_REGULAR, "PLUTO", "PLUTO BARYCENTER",
-                           ["SATELLITE", "REGULAR"], is_standard=True)
+        Body.define_bodies(PLUTO_REGULAR, 'PLUTO', 'PLUTO BARYCENTER',
+                           ['SATELLITE', 'REGULAR'], is_standard=True)
 
-        ring = Body.define_ring("PLUTO", "PLUTO_RING_PLANE", None, [],
-                                barycenter_name="PLUTO BARYCENTER",
+        ring = Body.define_ring('PLUTO', 'PLUTO_RING_PLANE', None, [],
+                                barycenter_name='PLUTO BARYCENTER',
                                 is_standard=True)
         ring.backplane_id = 'PLUTO:RING'
         ring.backplane_limits = None
         Body.BODY_REGISTRY['PLUTO'].ring_body = ring
 
-        ring = Body.define_ring("PLUTO", "PLUTO_INNER_RING_PLANE",
+        ring = Body.define_ring('PLUTO', 'PLUTO_INNER_RING_PLANE',
                                 PLUTO_CHARON_DISTANCE - CHARON_RADIUS, [],
-                                barycenter_name="PLUTO", is_standard=True)
+                                barycenter_name='PLUTO', is_standard=True)
         ring.backplane_id = 'PLUTO_INNER_RING_PLANE'
         ring.backplane_limits = (0., PLUTO_CHARON_DISTANCE)
 
-        barycenter = Body.BODY_REGISTRY["PLUTO BARYCENTER"]
-        barycenter.ring_frame = Body.BODY_REGISTRY["PLUTO"].ring_frame
+        barycenter = Body.BODY_REGISTRY['PLUTO BARYCENTER']
+        barycenter.ring_frame = Body.BODY_REGISTRY['PLUTO'].ring_frame
 
         return names
 
@@ -1347,7 +1386,7 @@ class Body(object):
         for spice_id in spice_ids:
 
             # Define the body's path
-            path = SpicePath(spice_id, "SSB")
+            path = SpicePath(spice_id, 'SSB')
 
             # The name of the path is the name of the body
             name = path.path_id
@@ -1393,10 +1432,10 @@ class Body(object):
                 shape.body = body
 
             # Add a planet name to any satellite or barycenter
-            if "SATELLITE" in body.keywords and parent is not None:
+            if 'SATELLITE' in body.keywords and parent is not None:
                 body.add_keywords(parent)
 
-            if "BARYCENTER" in body.keywords and parent is not None:
+            if 'BARYCENTER' in body.keywords and parent is not None:
                 body.add_keywords(parent)
 
             body.is_standard = bool(is_standard)
@@ -1422,7 +1461,7 @@ class Body(object):
                             body will be set to zero.
             keywords        the list of keywords under which this surface is to
                             be registered. Every ring is also registered under
-                            its own name and under the keyword "RING".
+                            its own name and under the keyword 'RING'.
             retrograde      True if the ring is retrograde relative to the
                             central planet's IAU-defined pole.
             barycenter_name the name of the ring's barycenter if this is not the
@@ -1471,7 +1510,7 @@ class Body(object):
         body.ring_body = body
         body.is_ring = True
 
-        body.add_keywords([parent, "RING", ring_name])
+        body.add_keywords([parent, 'RING', ring_name])
         body.add_keywords(keywords)
 
         body.is_standard = bool(is_standard)
@@ -1497,7 +1536,7 @@ class Body(object):
         body.apply_surface(orbit, elements[9], 0.)
         orbit.body = body
 
-        body.add_keywords([parent, "RING", "ORBIT", ring_name])
+        body.add_keywords([parent, 'RING', 'ORBIT', ring_name])
         body.add_keywords(keywords)
         body.is_standard = bool(is_standard)
 
@@ -1515,7 +1554,7 @@ class Body(object):
             cspyce.furnsh(spk)
 
         # Define the body's path
-        path = SpicePath(spice_id, "SSB", path_id=name)
+        path = SpicePath(spice_id, 'SSB', path_id=name)
 
         # The name of the path is the name of the body
         name = name or path.path_id
@@ -1576,48 +1615,48 @@ class Test_Body(unittest.TestCase):
         Frame.reset_registry()
         Body.reset_registry()
 
-        Body.define_solar_system("2000-01-01", "2020-01-01")
+        Body.define_solar_system('2000-01-01', '2020-01-01')
 
-        self.assertEqual(Body.lookup("DAPHNIS").barycenter.name,
-                         "SATURN")
-        self.assertEqual(Body.lookup("PHOEBE").barycenter.name,
-                         "SATURN BARYCENTER")
+        self.assertEqual(Body.lookup('DAPHNIS').barycenter.name,
+                         'SATURN')
+        self.assertEqual(Body.lookup('PHOEBE').barycenter.name,
+                         'SATURN BARYCENTER')
 
-        mars = Body.lookup("MARS")
-        moons = mars.select_children(include_all=["SATELLITE"])
+        mars = Body.lookup('MARS')
+        moons = mars.select_children(include_all=['SATELLITE'])
         self.assertEqual(len(moons), 2)     # Phobos, Deimos
 
-        saturn = Body.lookup("SATURN")
-        moons = saturn.select_children(include_all=["CLASSICAL", "IRREGULAR"])
+        saturn = Body.lookup('SATURN')
+        moons = saturn.select_children(include_all=['CLASSICAL', 'IRREGULAR'])
         self.assertEqual(len(moons), 1)     # Phoebe
 
-        moons = saturn.select_children(exclude=["IRREGULAR","RING"], radius=160)
+        moons = saturn.select_children(exclude=['IRREGULAR','RING'], radius=160)
         self.assertEqual(len(moons), 8)     # Mimas-Iapetus
 
-        rings = saturn.select_children(include_any=("RING"))
+        rings = saturn.select_children(include_any=('RING'))
         self.assertEqual(len(rings), 8)     # A, B, C, AB, Main, all, plane,
                                             # system
 
-        moons = saturn.select_children(include_all="SATELLITE",
-                                       exclude=("IRREGULAR"), radius=1000)
+        moons = saturn.select_children(include_all='SATELLITE',
+                                       exclude=('IRREGULAR'), radius=1000)
         self.assertEqual(len(moons), 1)     # Titan only
 
-        sun = Body.lookup("SUN")
-        planets = sun.select_children(include_any=["PLANET"])
+        sun = Body.lookup('SUN')
+        planets = sun.select_children(include_any=['PLANET'])
         self.assertEqual(len(planets), 9)
 
-        sun = Body.lookup("SUN")
-        planets = sun.select_children(include_any=["PLANET", "EARTH"])
+        sun = Body.lookup('SUN')
+        planets = sun.select_children(include_any=['PLANET', 'EARTH'])
         self.assertEqual(len(planets), 9)
 
-        sun = Body.lookup("SUN")
-        planets = sun.select_children(include_any=["PLANET", "EARTH"],
+        sun = Body.lookup('SUN')
+        planets = sun.select_children(include_any=['PLANET', 'EARTH'],
                                       recursive=True)
         self.assertEqual(len(planets), 10)  # 9 planets plus Earth's moon
 
-        sun = Body.lookup("SUN")
-        planets = sun.select_children(include_any=["PLANET", "JUPITER"],
-                                      exclude=["IRREGULAR", "BARYCENTER", "IO"],
+        sun = Body.lookup('SUN')
+        planets = sun.select_children(include_any=['PLANET', 'JUPITER'],
+                                      exclude=['IRREGULAR', 'BARYCENTER', 'IO'],
                                       recursive=True)
         self.assertEqual(len(planets), 16)  # 9 planets + 7 Jovian moons
 

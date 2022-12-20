@@ -12,7 +12,7 @@ from ..constants import PI, HALFPI
 class CentricEllipsoid(Surface):
     """A variant of Ellipsoid in which latitudes are planetocentric."""
 
-    COORDINATE_TYPE = "spherical"
+    COORDINATE_TYPE = 'spherical'
     IS_VIRTUAL = False
 
     #===========================================================================
@@ -343,7 +343,7 @@ class Test_CentricEllipsoid(unittest.TestCase):
         REQ  = 60268.
         RMID = 54364.
         RPOL = 50000.
-        planet = CentricEllipsoid("SSB", "J2000", (REQ, RMID, RPOL))
+        planet = CentricEllipsoid('SSB', 'J2000', (REQ, RMID, RPOL))
 
         # Coordinate/vector conversions
         NPTS = 10000

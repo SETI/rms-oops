@@ -143,9 +143,7 @@ Backplane._define_backplane_names(globals().copy())
 # UNIT TESTS
 ################################################################################
 import unittest
-from oops.meshgrid                     import Meshgrid
-from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
-from oops.constants                    import DPR
+from oops.body                         import Body
 from oops.backplane.unittester_support import show_info
 
 #===============================================================================
@@ -164,10 +162,12 @@ def exercise_observer(bp,
         show_info(bp, 'Distance observer to planet center (km)', test, **options)
         test = bp.distance(planet+':limb')
         show_info(bp, 'Distance observer to planet limb (km)', test, **options)
-        ### TODO: use Body.has_rings() once Mark has created it
-        #test = bp.distance(planet+':ansa')
-        #show_info(bp, 'Distance observer to ansa (km)', test, **options)
-        if options['printing']: print("These tests require further development.")
+
+        if Body.lookup(planet).ring_body is not None:
+            test = bp.distance(planet+':ring')
+            show_info(bp, 'Distance observer to planet:ring (km)', test, **options)
+            test = bp.distance(planet+':ansa')
+            show_info(bp, 'Distance observer to planet:ansa (km)', test, **options)
 
     if ring is not None:
         test = bp.distance(ring)
@@ -186,7 +186,7 @@ def exercise_sun(bp,
                  planet=None, moon=None, ring=None,
                  undersample=16, use_inventory=False, inventory_border=2,
                  **options):
-    """generic unit tests for distance.py"""
+    """generic unit tests for Sun distance.py"""
 
     if planet is not None:
         test = bp.distance(planet, direction='arr')
@@ -197,10 +197,13 @@ def exercise_sun(bp,
         show_info(bp, 'Distance Sun to planet center, arrival (km)', test, **options)
         test = bp.center_distance(('sun', planet), direction='dep')
         show_info(bp, 'Distance Sun to planet center, departure (km)', test, **options)
-        ### TODO: use Body.has_rings() once Mark has created it
-        #test = bp.distance(planet+':ansa', direction='arr')
-        #show_info(bp, 'Distance Sun to ansa (km)', test, **options)
-        if options['printing']: print("These tests require further development.")
+
+        if Body.lookup(planet).ring_body is not None:
+            test = bp.distance(planet+':ring', direction='arr')
+            show_info(bp, 'Distance Sun to planet:ring (km)', test, **options)
+            test = bp.distance(planet+':ansa', direction='arr')
+            show_info(bp, 'Distance Sun to planet:ansa (km)', test, **options)
+
         test = bp.distance(planet+':limb', direction='arr')
         show_info(bp, 'Distance Sun to limb (km)', test, **options)
 
@@ -220,7 +223,7 @@ def exercise_observer_light_time(bp,
                                  undersample=16, use_inventory=False,
                                  inventory_border=2,
                                  **options):
-    """generic unit tests for distance.py"""
+    """generic unit tests for light_time.py"""
 
     if planet is not None:
         test = bp.light_time(planet)
@@ -229,10 +232,13 @@ def exercise_observer_light_time(bp,
         show_info(bp, 'Light-time observer to planet via dep (sec)', test, **options)
         test = bp.light_time(planet+':limb')
         show_info(bp, 'Light-time observer to limb (sec)', test, **options)
-        ### TODO: use Body.has_rings() once Mark has created it
-        #test = bp.light_time(planet+':ansa')
-        #show_info(bp, 'Light-time observer to ansa (sec)', test, **options)
-        if options['printing']: print("These tests require further development.")
+
+        if Body.lookup(planet).ring_body:
+            test = bp.light_time(planet+':ring')
+            show_info(bp, 'Light-time observer to planet:ring (sec)', test, **options)
+            test = bp.light_time(planet+':ansa')
+            show_info(bp, 'Light-time observer to planet:ansa (sec)', test, **options)
+
         test = bp.center_light_time(planet)
         show_info(bp, 'Light-time observer to planet center (sec)', test, **options)
 
@@ -254,33 +260,36 @@ def exercise_sun_light_time(bp,
                             undersample=16, use_inventory=False,
                             inventory_border=2,
                             **options):
-    """generic unit tests for distance.py"""
+    """generic unit tests for Sun light_time.py"""
 
     if planet is not None:
         test = bp.light_time(planet)
-        show_info(bp, 'Light-time observer to planet (sec)', test, **options)
+        show_info(bp, 'Light-time Sun to planet (sec)', test, **options)
         test = bp.light_time(planet, direction='dep')
-        show_info(bp, 'Light-time observer to planet via dep (sec)', test, **options)
+        show_info(bp, 'Light-time Sun to planet via dep (sec)', test, **options)
         test = bp.light_time(planet+':limb')
-        show_info(bp, 'Light-time observer to limb (sec)', test, **options)
-        ### TODO: use Body.has_rings() once Mark has created it
-        #test = bp.light_time(planet+':ansa')
-        #show_info(bp, 'Light-time observer to ansa (sec)', test, **options)
-        if options['printing']: print("These tests require further development.")
+        show_info(bp, 'Light-time Sun to limb (sec)', test, **options)
+
+        if Body.lookup(planet).ring_body:
+            test = bp.light_time(planet+':ring')
+            show_info(bp, 'Light-time Sun to planet:ring (sec)', test, **options)
+            test = bp.light_time(planet+':ansa')
+            show_info(bp, 'Light-time Sun to planet:ansa (sec)', test, **options)
+
         test = bp.center_light_time(planet)
-        show_info(bp, 'Light-time observer to planet center (sec)', test, **options)
+        show_info(bp, 'Light-time Sun to planet center (sec)', test, **options)
 
     if ring is not None:
         test = bp.light_time(ring)
-        show_info(bp, 'Light-time observer to rings (sec)', test, **options)
+        show_info(bp, 'Light-time Sun to rings (sec)', test, **options)
         test = bp.center_light_time(ring)
-        show_info(bp, 'Light-time observer to ring center (sec)', test, **options)
+        show_info(bp, 'Light-time Sun to ring center (sec)', test, **options)
 
     if moon is not None:
         test = bp.light_time(moon)
-        show_info(bp, 'Light-time observer to moon (sec)', test, **options)
+        show_info(bp, 'Light-time Sun to moon (sec)', test, **options)
         test = bp.center_light_time(moon)
-        show_info(bp, 'Light-time observer to moon center (sec)', test, **options)
+        show_info(bp, 'Light-time Sun to moon center (sec)', test, **options)
 
 #===============================================================================
 def exercise_event_time(bp,
@@ -288,7 +297,7 @@ def exercise_event_time(bp,
                         undersample=16, use_inventory=False,
                         inventory_border=2,
                         **options):
-    """generic unit tests for distance.py"""
+    """generic unit tests for event_time.py"""
 
     test = bp.event_time(())
     show_info(bp, 'Event time at Cassini (sec, TDB)', test, **options)
@@ -300,6 +309,11 @@ def exercise_event_time(bp,
         show_info(bp, 'Event time at planet (sec, TDB)', test, **options)
         test = bp.center_time(planet)
         show_info(bp, 'Event time at planet (sec, TDB)', test, **options)
+        if Body.lookup(planet).ring_body is not None:
+            test = bp.center_time(planet+':ring')
+            show_info(bp, 'Event time at planet:ring (sec, TDB)', test, **options)
+            test = bp.center_time(planet+':ansa')
+            show_info(bp, 'Event time at planet:ansa (sec, TDB)', test, **options)
 
     if ring is not None:
         test = bp.event_time(ring)

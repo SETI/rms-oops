@@ -32,7 +32,7 @@ class Spheroid(Surface):
     exactly normal to the surface.
     """
 
-    COORDINATE_TYPE = "spherical"
+    COORDINATE_TYPE = 'spherical'
     IS_VIRTUAL = False
 
     DEBUG = False       # True for convergence testing in intercept_normal_to()
@@ -341,7 +341,7 @@ class Spheroid(Surface):
 
         # Terminate when accuracy stops improving by at least a factor of 2
         max_dp = 1.e99
-        for iter in range(SURFACE_PHOTONS.max_iterations):
+        for count in range(SURFACE_PHOTONS.max_iterations):
             denom = Vector3.ONES + p * self.unsquash_sq
 
             pos_scale = pos.element_mul(self.unsquash.element_div(denom))
@@ -357,8 +357,8 @@ class Spheroid(Surface):
             max_dp = abs(dp).max()
 
             if LOGGING.surface_iterations or Spheroid.DEBUG:
-                print(LOGGING.prefix, "Spheroid.intercept_normal_to",
-                                      iter, max_dp)
+                print(LOGGING.prefix, 'Spheroid.intercept_normal_to',
+                                      count+1, max_dp)
 
             if (np.all(Scalar.as_scalar(max_dp).mask) or
                 max_dp <= SURFACE_PHOTONS.dlt_precision or
@@ -620,7 +620,7 @@ class Test_Spheroid(unittest.TestCase):
         REQ  = 60268.
         #RPOL = 54364.
         RPOL = 50000.
-        planet = Spheroid("SSB", "J2000", (REQ, RPOL))
+        planet = Spheroid('SSB', 'J2000', (REQ, RPOL))
 
         # Coordinate/vector conversions
         NPTS = 10000

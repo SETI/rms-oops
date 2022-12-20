@@ -22,7 +22,7 @@ class RingPlane(Surface):
     coordinate.
     """
 
-    COORDINATE_TYPE = "polar"
+    COORDINATE_TYPE = 'polar'
     IS_VIRTUAL = False
 
     #===========================================================================
@@ -190,8 +190,9 @@ class RingPlane(Surface):
         if self.radii is not None:
             r_sq = pos.norm_sq(False)
             mask = (r_sq < self.radii_sq[0]) | (r_sq > self.radii_sq[1])
-            pos = pos.mask_where(mask)
-            t = t.mask_where(mask)
+            if np.any(mask):
+                pos = pos.remask_or(mask)
+            t = t.remask(pos.mask)
 
         return (pos, t)
 
@@ -218,7 +219,8 @@ class RingPlane(Surface):
         if self.radii is not None:
             r_sq = pos.norm_sq(False)
             mask = (r_sq < self.radii_sq[0]) | (r_sq > self.radii_sq[1])
-            perp = perp.mask_where(mask)
+            if np.any(mask):
+                perp = perp.remask_or(mask)
 
         return perp
 
@@ -280,7 +282,8 @@ class RingPlane(Surface):
             else:
                 mask = (a < self.radii[0]) | (a > self.radii[1])
 
-            vflat = vflat.mask_where(mask)
+            if np.any(mask):
+                vflat = vflat.remask_or(mask)
 
         return vflat
 

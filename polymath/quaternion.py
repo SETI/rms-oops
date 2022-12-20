@@ -321,7 +321,83 @@ class Quaternion(Vector):
 
     #===========================================================================
     @staticmethod
-    def from_matrix3(matrix, recursive=False):
+    def from_matrix3_experimental(matrix, recursive=True):
+        """Convert a Matrix3 to a Quaternion.
+
+        Input:
+            recursive   if True, the returned Matrix3 contains representations
+                        of the derivatives of the Quaternion. These are
+                        represented as Matrix objects, not Matrix3 objects,
+                        because they are not unitary.
+        """
+
+        #### This appears to work, but is notably less accurate than the other
+        #### method. Nevertheless, it might be worth exploring further, in part
+        #### because it might provide a pathway to supporting derivatives.
+
+        # From https://www.euclideanspace.com/maths/geometry/rotations/-
+        # conversions/matrixToQuaternion/
+        #
+        # Because modern CPUs execute sqrt and __div__ in the same amount of
+        # time, the use of four square roots is no big deal, and this avoids all
+        # the masks and loops.
+
+        qvals = np.empty(matrix.shape + (4,))
+
+        m00 = matrix.vals[...,0,0]
+        m11 = matrix.vals[...,1,1]
+        m22 = matrix.vals[...,2,2]
+
+        sign21 = np.sign(matrix.vals[...,2,1] - matrix.vals[...,1,2])
+        sign02 = np.sign(matrix.vals[...,0,2] - matrix.vals[...,2,0])
+        sign10 = np.sign(matrix.vals[...,1,0] - matrix.vals[...,0,1])
+
+        qvals[...,0] =          np.sqrt(np.maximum(0., 1 + m00 + m11 + m22))
+        qvals[...,1] = sign21 * np.sqrt(np.maximum(0., 1 + m00 - m11 - m22))
+        qvals[...,2] = sign02 * np.sqrt(np.maximum(0., 1 - m00 + m11 - m22))
+        qvals[...,3] = sign10 * np.sqrt(np.maximum(0., 1 - m00 - m11 + m22))
+
+        qvals *= 0.5
+        q = Quaternion(qvals, matrix._mask_)
+
+        if recursive and matrix._derivs_:
+
+            # TODO: what to do about divide by zero here?
+            # If one of sign21, sign02, and sign10, this will make the
+            # associated derivative zero as well; is that correct?
+            (q0, q1, q2, q3) = q.to_scalars()
+            f0 =  0.5           / q0
+            f1 = (0.5 * sign21) / q1
+            f2 = (0.5 * sign02) / q2
+            f3 = (0.5 * sign10) / q3
+
+            div_by_zero = (q0 == 0.) | (q1 == 0.) | (q2 == 0.) | (q3 == 0.)
+            if any(div_by_zero):
+                new_mask = Qube.or_(matrix._mask_, div_by_zero)
+            else:
+                new_mask = matrix._mask_
+
+            for key, deriv in matrix._derivs_.items():
+                dm00 = deriv.to_scalar(0, 0, recursive=False)
+                dm11 = deriv.to_scalar(1, 1, recursive=False)
+                dm22 = deriv.to_scalar(2, 2, recursive=False)
+
+                # Empty buffer with numerator axis first
+                new_vals = np.empty((4,) + matrix.shape + matrix.denom)
+                new_vals[0] = (f0 * ( dm00 + dm11 + dm22))._values_
+                new_vals[1] = (f1 * ( dm00 - dm11 - dm22))._values_
+                new_vals[2] = (f2 * (-dm00 + dm11 - dm22))._values_
+                new_vals[3] = (f3 * (-dm00 - dm11 + dm22))._values_
+
+                new_mask = Qube.or_(new_mask, deriv._mask_)
+                new_deriv = Quaternion(new_vals, new_mask, drank=deriv._drank_)
+                q.insert_deriv(key, new_deriv)
+
+        return q
+
+    #===========================================================================
+    @staticmethod
+    def from_matrix3(matrix, recursive=True):
         """Convert a Matrix3 to a Quaternion.
 
         Input:
@@ -332,7 +408,7 @@ class Quaternion(Vector):
                         CURRENTLY IMPLEMENTED.
         """
 
-        if recursive and len(matrix._derivs_):
+        if recursive and matrix._derivs_:
             raise NotImplementedError('Quaternion.from_matrix3 ' +      # TODO
                                       'does not implement derivatives')
 

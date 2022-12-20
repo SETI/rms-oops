@@ -100,7 +100,7 @@ class Boolean(Scalar):
         return False
 
     #===========================================================================
-    def sum(self, axis=None, value=True):
+    def sum(self, axis=None, value=True, out=None):
         """The number of items matching True or False.
 
         Input:
@@ -109,6 +109,7 @@ class Boolean(Scalar):
                         in the returned value. If None (the default), then the
                         sum is performed across all axes if the object.
             value       value to match.
+            out         Ignored. Enables "np.sum(Boolean)" to work.
         """
 
         if value:

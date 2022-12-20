@@ -709,7 +709,7 @@ class Test_SpiceFrame(unittest.TestCase):
         quickdict['quickframe_numerical_omega'] = True
         wac1b = QuickFrame(wac1, (TDB-100.,TDB+100.), quickdict)
 
-        _wac3a = QuickFrame(wac3, (TDB-100.,TDB+100.), quickdict)
+        _ = QuickFrame(wac3, (TDB-100.,TDB+100.), quickdict)
 
         # Test a single time
         time = TDB - 44.

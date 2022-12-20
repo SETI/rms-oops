@@ -485,6 +485,12 @@ class Frame(object):
         return LinkedFrame(target, newframe)
 
     #===========================================================================
+    def wrt_j2000(self, reference):
+        """This frame relative to J2000."""
+
+        return self.wrt(Frame.J2000)
+
+    #===========================================================================
     def quick_frame(self, time, quick={}):
         """A QuickFrame that approximates this frame within given time limits.
 

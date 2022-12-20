@@ -3,7 +3,7 @@
 ################################################################################
 
 import numpy as np
-from polymath import Scalar, Pair, Vector3
+from polymath import Boolean, Scalar, Pair, Vector3, Qube
 
 class FOV(object):
     """The FOV (Field of View) abstract class provides a description of the
@@ -61,14 +61,8 @@ class FOV(object):
     # Methods to be defined for each FOV subclass
     ############################################################################
 
-    def __init__(self):
-        """The constructor."""
-
-        pass
-
-    #===========================================================================
-    def xy_from_uvt(self, uv_pair, tfrac=0.5, time=None, derivs=False,
-                          **keywords):
+    def xy_from_uvt(self, uv_pair, time=None, derivs=False, remask=False,
+                                                            **keywords):
         """The (x,y) camera frame coordinates given the FOV coordinates (u,v) at
         the specified time.
 
@@ -77,23 +71,22 @@ class FOV(object):
 
         Input:
             uv_pair     (u,v) coordinate Pair in the FOV.
-            tfrac       Scalar of fractional times during the exposure, where
-                        tfrac=0 at the beginning and 1 at the end. Default is
-                        0.5.
-            time        Scalar of optional absolute time in seconds. Only one of
-                        tfrac and time can be specified; the other must be None.
+            time        Scalar of optional absolute time in seconds.
             derivs      If True, any derivatives in (u,v) get propagated into
                         the returned (x,y) Pair.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
 
         Return:         Pair of same shape as uv_pair, giving the transformed
                         (x,y) coordinates in the camera's frame.
         """
 
-        raise NotImplementedError('xy_from_uvt() is not implemented')
+        raise NotImplementedError(type(self).__name__ + '.xy_from_uvt ' +
+                                  'is not implemented')
 
     #===========================================================================
-    def uv_from_xyt(self, xy_pair, tfrac=0.5, time=None, derivs=False,
-                          **keywords):
+    def uv_from_xyt(self, xy_pair, time=None, derivs=False, remask=False,
+                                                            **keywords):
         """The (u,v) FOV coordinates given the (x,y) camera frame coordinates at
         the specified time.
 
@@ -102,25 +95,24 @@ class FOV(object):
 
         Input:
             xy_pair     (x,y) Pair in FOV coordinates.
-            tfrac       Scalar of fractional times during the exposure, where
-                        tfrac=0 at the beginning and 1 at the end. Default is
-                        0.5.
-            time        Scalar of optional absolute time in seconds. Only one of
-                        tfrac and time can be specified; the other must be None.
+            time        Scalar of optional absolute time in seconds.
             derivs      If True, any derivatives in (x,y) get propagated into
                         the returned (u,v) Pair.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
 
         Return:         Pair of same shape as xy_pair, giving the computed (u,v)
                         FOV coordinates.
         """
 
-        raise NotImplementedError('uv_from_xyt() is not implemented')
+        raise NotImplementedError(type(self).__name__ + '.uv_from_xyt ' +
+                                  'is not implemented')
 
     ############################################################################
     # Derived methods, to override only if necessary
     ############################################################################
 
-    def xy_from_uv(self, uv_pair, derivs=False, **keywords):
+    def xy_from_uv(self, uv_pair, derivs=False, remask=False, **keywords):
         """The (x,y) camera frame coordinates given the FOV coordinates (u,v),
         assuming the FOV is time-independent.
 
@@ -131,16 +123,19 @@ class FOV(object):
             uv_pair     (u,v) coordinate Pair in the FOV.
             derivs      If True, any derivatives in (u,v) get propagated into
                         the returned (x,y) Pair.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
 
         Return:         Pair of same shape as uv_pair, giving the transformed
                         (x,y) coordinates in the camera's frame.
         """
 
         assert self.IS_TIME_INDEPENDENT
-        return self.xy_from_uvt(uv_pair, derivs=derivs, **keywords)
+        return self.xy_from_uvt(uv_pair, derivs=derivs, remask=remask,
+                                                        **keywords)
 
     #===========================================================================
-    def uv_from_xy(self, xy_pair, derivs=False, **keywords):
+    def uv_from_xy(self, xy_pair, derivs=False, remask=False, **keywords):
         """The (u,v) FOV coordinates given the (x,y) camera frame coordinates,
         assuming the FOV is time-independent.
 
@@ -151,18 +146,21 @@ class FOV(object):
             xy_pair     (x,y) Pair in FOV coordinates.
             derivs      If True, any derivatives in (x,y) get propagated into
                         the returned (u,v) Pair.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
 
         Return:         Pair of same shape as xy_pair, giving the computed (u,v)
                         FOV coordinates.
         """
 
         assert self.IS_TIME_INDEPENDENT
-        return self.uv_from_xyt(xy_pair, derivs=derivs, **keywords)
+        return self.uv_from_xyt(xy_pair, derivs=derivs, remask=remask,
+                                                        **keywords)
 
     #===========================================================================
-    def area_factor(self, uv_pair, tfrac=0.5, time=None, **keywords):
+    def area_factor(self, uv_pair, time=None, remask=False, **keywords):
         """The relative area of a pixel or other sensor at (u,v) at the
-        specified time (although any dependence on tfrac should be very small).
+        specified time (although any dependence on time should be very small).
 
         Results are scaled to the nominal pixel area.
 
@@ -171,11 +169,9 @@ class FOV(object):
 
         Input:
             uv_pair     Pair of (u,v) coordinates.
-            tfrac       Scalar of fractional times during the exposure, where
-                        tfrac=0 at the beginning and 1 at the end. Default is
-                        0.5.
-            time        Scalar of optional absolute time in seconds. Only one of
-                        tfrac and time can be specified; the other must be None.
+            time        Scalar of optional absolute time in seconds.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
 
         Return:         relative area of the pixel at (u,v), as a Scalar.
         """
@@ -183,8 +179,8 @@ class FOV(object):
         # Prepare for the partial derivatives
         uv_pair = Pair.as_pair(uv_pair).wod
         uv_pair = uv_pair.with_deriv('uv', Pair.IDENTITY, 'insert')
-        xy_pair = self.xy_from_uvt(uv_pair, tfrac, time, derivs=True,
-                                   **keywords)
+        xy_pair = self.xy_from_uvt(uv_pair, time=time, derivs=True,
+                                            remask=remask, **keywords)
 
         dx_du = xy_pair.d_duv.vals[...,0,0]
         dx_dv = xy_pair.d_duv.vals[...,0,1]
@@ -245,8 +241,8 @@ class FOV(object):
         return los.to_pair((0,1))
 
     #===========================================================================
-    def los_from_uvt(self, uv_pair, tfrac=0.5, time=None, derivs=False,
-                           **keywords):
+    def los_from_uvt(self, uv_pair, time=None, derivs=False, remask=False,
+                                                             **keywords):
         """The line of sight vector in the camera's frame, given FOV
         coordinates (u,v) at the specified time.
 
@@ -259,24 +255,22 @@ class FOV(object):
 
         Input:
             uv_pair     Pair of (u,v) coordinates.
-            tfrac       Scalar of fractional times during the exposure, where
-                        tfrac=0 at the beginning and 1 at the end. Default is
-                        0.5.
-            time        Scalar of optional absolute time in seconds. Only one of
-                        tfrac and time can be specified; the other must be None.
+            time        Scalar of optional absolute time in seconds.
             derivs      If True, any derivatives in (u,v) get propagated into
                         the returned line of sight.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
 
         Return:         Vector3 direction of the line of sight in the camera's
                         frame.
         """
 
-        xy_pair = self.xy_from_uvt(uv_pair, tfrac, time, derivs=derivs,
-                                   **keywords)
+        xy_pair = self.xy_from_uvt(uv_pair, time=time, derivs=derivs,
+                                            remask=remask, **keywords)
         return self.los_from_xy(xy_pair, derivs=derivs)
 
     #===========================================================================
-    def los_from_uv(self, uv_pair, derivs=False, **keywords):
+    def los_from_uv(self, uv_pair, derivs=False, remask=False, **keywords):
         """The line of sight vector given FOV coordinates (u,v), assuming this
         FOV is time-independent.
 
@@ -289,22 +283,22 @@ class FOV(object):
 
         Input:
             uv_pair     Pair of (u,v) coordinates.
-            tfrac       Scalar of fractional times during the exposure, where
-                        tfrac=0 at the beginning and 1 at the end. Default is
-                        0.5.
             derivs      If True, any derivatives in (u,v) get propagated into
                         the returned line of sight.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
 
         Return:         Vector3 direction of the line of sight in the camera's
                         frame.
         """
 
-        xy_pair = self.xy_from_uv(uv_pair, derivs=derivs, **keywords)
+        xy_pair = self.xy_from_uv(uv_pair, derivs=derivs, remask=remask,
+                                                          **keywords)
         return self.los_from_xy(xy_pair, derivs=derivs)
 
     #===========================================================================
-    def uv_from_los_t(self, los, tfrac=0.5, time=None, derivs=False,
-                            **keywords):
+    def uv_from_los_t(self, los, time=None, derivs=False, remask=False,
+                                                          **keywords):
         """The FOV coordinates (u,v) given a line of sight vector in the
         camera's frame at the specified time.
 
@@ -318,23 +312,21 @@ class FOV(object):
         Input:
             los         Vector3 direction of the line of sight in the camera's
                         coordinate frame.
-            tfrac       Scalar of fractional times during the exposure, where
-                        tfrac=0 at the beginning and 1 at the end. Default is
-                        0.5.
-            time        Scalar of optional absolute time in seconds. Only one of
-                        tfrac and time can be specified; the other must be None.
+            time        Scalar of optional absolute time in seconds.
             derivs      If True, any derivatives in (u,v) get propagated into
                         the returned line of sight.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
 
         Return:         Pair of (u,v) coordinates in the FOV.
         """
 
         xy_pair = self.xy_from_los(los, derivs=derivs)
-        return self.uv_from_xyt(xy_pair,
-                            tfrac=tfrac, time=time, derivs=derivs, **keywords)
+        return self.uv_from_xyt(xy_pair, time=time, derivs=derivs,
+                                         remask=remask, **keywords)
 
     #===========================================================================
-    def uv_from_los(self, los, derivs=False, **keywords):
+    def uv_from_los(self, los, derivs=False, remask=False, **keywords):
         """The FOV coordinates (u,v) given a line of sight vector, assuming the
         FOV is time-independent.
 
@@ -350,25 +342,23 @@ class FOV(object):
                         coordinate frame.
             derivs      If True, any derivatives in (u,v) get propagated into
                         the returned line of sight.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
 
         Return:         Pair of (u,v) coordinates in the FOV.
         """
 
         assert self.IS_TIME_INDEPENDENT
-        return self.uv_from_los_t(los, derivs=derivs, **keywords)
+        return self.uv_from_los_t(los, derivs=derivs, remask=remask, **keywords)
 
     #===========================================================================
-    def uv_is_outside(self, uv_pair, tfrac=0.5, time=None, inclusive=True,
+    def uv_is_outside(self, uv_pair, time=None, inclusive=True,
                             uv_min=None, uv_max=None):
         """A Boolean mask identifying coordinates outside the FOV.
 
         Input:
             uv_pair     a Pair of (u,v) coordinates.
-            tfrac       Scalar of fractional times during the exposure, where
-                        tfrac=0 at the beginning and 1 at the end. Default is
-                        0.5.
-            time        Scalar of optional absolute time in seconds. Only one of
-                        tfrac and time can be specified; the other must be None.
+            time        Scalar of optional absolute time in seconds.
             inclusive   True to interpret coordinate values at the upper end of
                         each range as inside the FOV; False to interpret them as
                         outside.
@@ -398,12 +388,9 @@ class FOV(object):
         (umax, vmax) = uv_max.vals
 
         # Create the mask
-        if inclusive:
-            result = (u < umin) | ( v < vmin) | (u > umax) | (v > vmax)
-        else:
-            result = (u < umin) | (v < vmin) | (u >= umax) | (v >= vmax)
-
-        return result
+        result = (Qube.is_outside(u, umin, umax, inclusive) |
+                  Qube.is_outside(v, vmin, vmax, inclusive))
+        return Boolean(result, uv_pair.mask)
 
     #===========================================================================
     def u_or_v_is_outside(self, uv_coord, uv_index, inclusive=True,
@@ -442,25 +429,17 @@ class FOV(object):
         (umax, vmax) = uv_max.vals
 
         # Create the mask
-        if inclusive:
-            result = (uv_coord < 0) | (uv_coord > shape[uv_index])
-        else:
-            result = (uv_coord < 0) | (uv_coord >= shape[uv_index])
-
-        return result
+        result = Qube.is_outside(uv_coord, 0, shape[uv_index], inclusive)
+        return Boolean(result, uv_coord.mask)
 
     #===========================================================================
-    def xy_is_outside(self, xy_pair, tfrac=0.5, time=None, inclusive=True,
+    def xy_is_outside(self, xy_pair, time=None, inclusive=True,
                             uv_min=None, uv_max=None, **keywords):
         """A Boolean mask identifying coordinates outside the FOV.
 
         Input:
             xy_pair     a Pair of (x,y) coordinates, assuming z == 1.
-            tfrac       Scalar of fractional times during the exposure, where
-                        tfrac=0 at the beginning and 1 at the end. Default is
-                        0.5.
-            time        Scalar of optional absolute time in seconds. Only one of
-                        tfrac and time can be specified; the other must be None.
+            time        Scalar of optional absolute time in seconds.
             inclusive   True to interpret coordinate values at the upper end of
                         each range as inside the FOV; False to interpet them as
                         outside.
@@ -472,21 +451,17 @@ class FOV(object):
                         full FOV.
         """
 
-        uv = self.uv_from_xyt(xy_pair, tfrac=tfrac, time=time, derivs=False, **keywords)
+        uv = self.uv_from_xyt(xy_pair, time=time, derivs=False, **keywords)
         return self.uv_is_outside(uv, inclusive, uv_min, uv_max)
 
     #===========================================================================
-    def los_is_outside(self, los, tfrac=0.5, time=None, inclusive=True,
+    def los_is_outside(self, los, time=None, inclusive=True,
                              uv_min=None, uv_max=None, **keywords):
         """A Boolean mask identifying lines of sight outside the FOV.
 
         Input:
             los         an outward line-of-sight vector.
-            tfrac       Scalar of fractional times during the exposure, where
-                        tfrac=0 at the beginning and 1 at the end. Default is
-                        0.5.
-            time        Scalar of optional absolute time in seconds. Only one of
-                        tfrac and time can be specified; the other must be None.
+            time        Scalar of optional absolute time in seconds.
             inclusive   True to interpret coordinate values at the upper end of
                         each range as inside the FOV; False to interpet them as
                         outside.
@@ -499,7 +474,7 @@ class FOV(object):
         """
 
         xy = self.xy_from_los(derivs=False)
-        return self.xy_is_outside(xy, tfrac, inclusive=inclusive,
+        return self.xy_is_outside(xy, time=time, inclusive=inclusive,
                                   uv_min=uv_min, uv_max=uv_max, **keywords)
 
     #===========================================================================
@@ -518,9 +493,27 @@ class FOV(object):
         clipped.vals[...,1] = clipped.vals[...,1].clip(0, self.uv_shape.vals[1])
 
         if remask:
-            return Pair(clipped, uv_pair.mask | (clipped != uv_pair))
+            return Pair(clipped, Qube.or_(uv_pair.mask, (clipped != uv_pair)))
         else:
             return clipped
+
+    #===========================================================================
+    def max_inversion_error(self, steps=30):
+        """Sample the FOV and return the largest error in pixels resulting from
+        uv -> xy -> uv.
+        """
+
+        # Sample every 30th of the FOV in each direction
+        du = self.uv_shape.vals[0] / (steps-1.)
+        dv = self.uv_shape.vals[1] / (steps-1.)
+        u = np.arange(0., self.uv_shape.vals[0] + du/2., du)
+        v = np.arange(0., self.uv_shape.vals[1] + dv/2., dv)
+
+        uv = Pair.combos(u,v)
+        xy = self.xy_from_uvt(uv, derivs=False)
+        uv_test = self.uv_from_xyt(xy, derivs=False)
+
+        return (uv_test - uv).norm().max(builtins=True)
 
     ############################################################################
     # Properties and methods to support body inventories
@@ -529,24 +522,22 @@ class FOV(object):
     # rectangular.
     ############################################################################
 
-    def center_xy(self, tfrac=0.5, time=None):
-        """The (x,y) coordinate pair at the center of the (u,v) center of the
-        FOV in the camera's frame at the specified time.
+    def center_xy(self, time=None):
+        """The (x,y) coordinate pair at the (u,v) center of the FOV at the
+       specified time.
         """
 
         if hasattr(self, 'center_xy_filled'):
             return self.center_xy_filled
 
-        if self.IS_TIME_INDEPENDENT or (tfrac is not None and
-                                        (Scalar(tfrac) == 0.5).all()):
-
+        if self.IS_TIME_INDEPENDENT or time is None:
             self.center_xy_filled = self.xy_from_uvt(self.uv_shape/2.)
             return self.center_xy_filled
 
-        return self.xy_from_uvt(self.uv_shape/2., tfrac, time)
+        return self.xy_from_uvt(self.uv_shape/2., time=time)
 
     #===========================================================================
-    def center_los(self, tfrac=0.5, time=None):
+    def center_los(self, time=None):
         """The unit line of sight defining the (u,v) center of the FOV in the
         camera's frame at the specified time.
         """
@@ -554,13 +545,11 @@ class FOV(object):
         if hasattr(self, 'center_los_filled'):
             return self.center_los_filled
 
-        if self.IS_TIME_INDEPENDENT or (tfrac is not None and
-                                        (Scalar(tfrac) == 0.5).all()):
-
+        if self.IS_TIME_INDEPENDENT or time is None:
             self.center_los_filled = self.los_from_xy(self.center_xy()).unit()
             return self.center_los_filled
 
-        return self.los_from_xy(self.center_xy(tfrac, time)).unit()
+        return self.los_from_xy(self.center_xy(time=time)).unit()
 
     #===========================================================================
     @property
@@ -618,52 +607,46 @@ class FOV(object):
         return self.inner_radius_filled
 
     #===========================================================================
-    def corner00_xy(self, tfrac=0.5, time=None):
+    def corner00_xy(self, time=None):
         """The (x,y) Pair at (u,v) coordinates (0,0) at a specified time."""
 
         if hasattr(self, 'corner00_filled'):
             return self.corner00_filled
 
-        if self.IS_TIME_INDEPENDENT or (tfrac is not None and
-                                        (Scalar(tfrac) == 0.5).all()):
-
+        if self.IS_TIME_INDEPENDENT or time is None:
             self.corner00_filled = self.xy_from_uvt(Scalar.ZEROS)
             return self.corner00_filled
 
-        return self.xy_from_uvt(Scalar.ZEROS, tfrac, time)
+        return self.xy_from_uvt(Scalar.ZEROS, time=time)
 
     #===========================================================================
-    def corner01_xy(self, tfrac=0.5, time=None):
+    def corner01_xy(self, time=None):
         """The (x,y) Pair at (u,v) coordinates (0,v_max) at a specified time."""
 
         if hasattr(self, 'corner01_filled'):
             return self.corner01_filled
 
-        if self.IS_TIME_INDEPENDENT or (tfrac is not None and
-                                        (Scalar(tfrac) == 0.5).all()):
-
-            self.corner01_filled = self.xy_from_uvt([0,self.uv_shape[1]])
+        if self.IS_TIME_INDEPENDENT or time is None:
+            self.corner01_filled = self.xy_from_uvt([0, self.uv_shape[1]])
             return self.corner01_filled
 
-        return self.xy_from_uvt([0,self.uv_shape[1]], tfrac, time)
+        return self.xy_from_uvt([0, self.uv_shape[1]], time=time)
 
     #===========================================================================
-    def corner10_xy(self, tfrac=0.5, time=None):
+    def corner10_xy(self, time=None):
         """The (x,y) Pair at (u,v) coordinates (u_max,0) at a specified time."""
 
         if hasattr(self, 'corner10_filled'):
             return self.corner10_filled
 
-        if self.IS_TIME_INDEPENDENT or (tfrac is not None and
-                                        (Scalar(tfrac) == 0.5).all()):
-
-            self.corner10_filled = self.xy_from_uvt([self.uv_shape[0],0])
+        if self.IS_TIME_INDEPENDENT or time is None:
+            self.corner10_filled = self.xy_from_uvt([self.uv_shape[0], 0])
             return self.corner10_filled
 
-        return self.xy_from_uvt(Scalar.ZEROS, tfrac, time)
+        return self.xy_from_uvt(Scalar.ZEROS, time=time)
 
     #===========================================================================
-    def corner11_xy(self, tfrac=0.5, time=None):
+    def corner11_xy(self, time=None):
         """The (x,y) Pair at (u,v) coordinates (u_max,v_max) at a specified
         time.
         """
@@ -671,28 +654,21 @@ class FOV(object):
         if hasattr(self, 'corner11_filled'):
             return self.corner11_filled
 
-        if self.IS_TIME_INDEPENDENT or (tfrac is not None and
-                                        (Scalar(tfrac) == 0.5).all()):
-
+        if self.IS_TIME_INDEPENDENT or time is None:
             self.corner11_filled = self.xy_from_uvt(self.uv_shape)
             return self.corner11_filled
 
-        return self.xy_from_uvt(self.uv_shape, tfrac, time)
+        return self.xy_from_uvt(self.uv_shape, time=time)
 
     #===========================================================================
-    def sphere_falls_inside(self, center, radius, tfrac=0.5, time=None,
-                                  border=0.):
+    def sphere_falls_inside(self, center, radius, time=None, border=0.):
         """True if any piece of sphere falls inside a field of view.
 
         Input:
             center      the apparent location of the center of the sphere in the
-                        internal coordinate frame of the FOV.
+                        internal coordinate frame of the FOV, at the given time.
             radius      the radius of the sphere.
-            tfrac       Scalar of fractional times during the exposure, where
-                        tfrac=0 at the beginning and 1 at the end. Default is
-                        0.5.
-            time        optional Scalar of absolute time in seconds. Only one of
-                        tfrac and time can be specified; the other must be None.
+            time        optional Scalar of absolute time in seconds.
             border      an optional angular extension to the field of view, in
                         radians, to allow for pointing uncertainties.
         """
@@ -701,7 +677,7 @@ class FOV(object):
         sphere_center_los = Vector3.as_vector3(center, recursive=False)
 
         radius_angle = (radius / sphere_center_los.norm()).arcsin()
-        center_los = self.center_los(tfrac=tfrac, time=time)
+        center_los = self.center_los(time=time)
         center_sep = center_los.sep(sphere_center_los)
 
         if center_sep > self.outer_radius + border + radius_angle:
@@ -711,9 +687,9 @@ class FOV(object):
 
         # Find the point on the image that falls closest to the center of the
         # sphere
-        sphere_center_uv = self.uv_from_los_t(sphere_center_los, tfrac, time)
+        sphere_center_uv = self.uv_from_los_t(sphere_center_los, time=time)
         nearest_fov_uv  = self.nearest_uv(sphere_center_uv)
-        nearest_fov_los = self.los_from_uvt(nearest_fov_uv, tfrac, time)
+        nearest_fov_los = self.los_from_uvt(nearest_fov_uv, time=time)
 
         # Allow for the border region when returning True or False
         return nearest_fov_los.sep(sphere_center_los) <= radius_angle + border

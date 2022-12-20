@@ -73,14 +73,18 @@ Qube.as_diagonal        = math_ops.as_diagonal
 Qube.rms                = math_ops.rms
 
 from polymath.extensions import pickler
-Qube.set_pickle_digits  = pickler.set_pickle_digits
 Qube.__getstate__       = pickler.__getstate__
 Qube.__setstate__       = pickler.__setstate__
-Qube._interpret_digits  = pickler._interpret_digits
-Qube._encode_one_float  = pickler._encode_one_float
-Qube._encode_float_array= pickler._encode_float_array
-Qube._decode_one_float  = pickler._decode_one_float
-Qube._decode_float_array= pickler._decode_float_array
+Qube._encode_floats     = pickler._encode_floats
+Qube._decode_floats     = pickler._decode_floats
+Qube._encode_ints       = pickler._encode_ints
+Qube._decode_ints       = pickler._decode_ints
+Qube._encode_bools      = pickler._encode_bools
+Qube._decode_bools      = pickler._decode_bools
+Qube.set_pickle_digits         = pickler.set_pickle_digits
+Qube.set_default_pickle_digits = pickler.set_default_pickle_digits
+Qube._check_pickle_digits      = pickler._check_pickle_digits
+Qube._pickle_debug             = pickler._pickle_debug
 
 from polymath.extensions import shaper
 Qube.reshape            = shaper.reshape

@@ -200,12 +200,6 @@ class Qube(object):
     # Global attribute to be used for testing
     DISABLE_CACHE = False
 
-    # Default numbers of decimal digits to preserve when pickling
-    DEFAULT_PICKLE_DIGITS = 16
-    DEFAULT_DERIV_PICKLE_DIGITS = 16
-    PICKLE_VERSION = (1,0)
-    PICKLE_DEBUG = True
-
     # If this global is set to True, the shrink/unshrink methods are disabled.
     # Calculations done with and without shrinking should always produce the
     # same results, although they may be slower with shrinking disabled. Used
@@ -413,10 +407,6 @@ class Qube(object):
         # Used only for if clauses
         self._truth_if_any_ = False
         self._truth_if_all_ = False
-
-        # Guidance for pickling, filled as needed
-        self._pickle_digits = None
-        self._deriv_pickle_digits = None
 
         # Fill in the default
         if default is not None and np.shape(default) == item:
@@ -1379,15 +1369,15 @@ class Qube(object):
 
     @property
     def pickle_digits(self):
-        if self._pickle_digits is None:
-            self._pickle_digits = self.DEFAULT_PICKLE_DIGITS
-        return self._pickle_digits
+        if self._pickle_digits_ is None:
+            self._pickle_digits_ = self.DEFAULT_PICKLE_DIGITS
+        return self._pickle_digits_
 
     @property
-    def deriv_pickle_digits(self):
-        if self._deriv_pickle_digits is None:
-            self._deriv_pickle_digits = self.DEFAULT_DERIV_PICKLE_DIGITS
-        return self._deriv_pickle_digits
+    def pickle_reference(self):
+        if self._pickle_reference_ is None:
+            self._pickle_reference_ = self.DEFAULT_PICKLE_REFERENCE
+        return self._pickle_reference_
 
     #===========================================================================
     def _find_corners(self):
@@ -4041,7 +4031,7 @@ class Qube(object):
                         the result is returned as a Python boolean instead of
                         an instance of Boolean. Default is that specified by
                         Qube.PREFER_BUILTIN_TYPES.
-            out         Ignored. Enables "np.all(Qube)" to work.
+            out         Ignored. Enables "np.any(Qube)" to work.
         """
 
         self = Qube.BOOLEAN_CLASS.as_boolean(self)

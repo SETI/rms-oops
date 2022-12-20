@@ -80,7 +80,7 @@ class Cmatrix(Frame):
         ra    = Scalar.as_scalar(ra)
         dec   = Scalar.as_scalar(dec)
         clock = Scalar.as_scalar(clock)
-        mask = ra.mask | dec.mask | clock.mask
+        mask = Qube.or_(ra.mask, dec.mask, clock.mask)
 
         # The transform is fixed so save it now
         ra = constants.RPD * ra.values
@@ -142,25 +142,25 @@ class Test_Cmatrix(unittest.TestCase):
         from ..event import Event
         from ..unittester_support import TESTDATA_PARENT_DIRECTORY
 
-        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/naif0009.tls"))
-        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
-        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls'))
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/pck00010.tpc'))
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp'))
 
         Path.reset_registry()
         Frame.reset_registry()
 
-        _ = SpicePath("MARS", "SSB")
-        _ = SpiceFrame("IAU_MARS", "J2000")
+        _ = SpicePath('MARS', 'SSB')
+        _ = SpiceFrame('IAU_MARS', 'J2000')
 
         # Define a version of the IAU Mars frame always rotated by 180 degrees
         # around the Z-axis
-        mars180 = Cmatrix([[-1,0,0],[0,-1,0],[0,0,1]], "IAU_MARS")
+        mars180 = Cmatrix([[-1,0,0],[0,-1,0],[0,0,1]], 'IAU_MARS')
 
         time = Scalar(np.random.rand(100) * 1.e8)
         posvel = np.random.rand(100,6)
-        event = Event(time, (posvel[...,0:3], posvel[...,3:6]), "MARS", "J2000")
+        event = Event(time, (posvel[...,0:3], posvel[...,3:6]), 'MARS', 'J2000')
 
-        wrt_mars = event.wrt_frame("IAU_MARS")
+        wrt_mars = event.wrt_frame('IAU_MARS')
         wrt_mars180 = event.wrt_frame(mars180)
 
         # Confirm that the components are related as expected
@@ -178,13 +178,13 @@ class Test_Cmatrix(unittest.TestCase):
         for (cos,sin) in ((1,0), (0,1), (-1,0), (0,-1)):
             matrices.append([[cos,sin,0],[-sin,cos,0],[0,0,1]])
 
-        mars90s = Cmatrix(matrices, "IAU_MARS")
+        mars90s = Cmatrix(matrices, 'IAU_MARS')
 
         time = Scalar(np.random.rand(100,1) * 1.e8)
         posvel = np.random.rand(100,1,6)
-        event = Event(time, (posvel[...,0:3], posvel[...,3:6]), "MARS", "J2000")
+        event = Event(time, (posvel[...,0:3], posvel[...,3:6]), 'MARS', 'J2000')
 
-        wrt_mars = event.wrt_frame("IAU_MARS")
+        wrt_mars = event.wrt_frame('IAU_MARS')
         wrt_mars90s = event.wrt_frame(mars90s)
 
         self.assertEqual(wrt_mars.shape, (100,1))

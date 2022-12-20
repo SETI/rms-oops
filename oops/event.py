@@ -318,20 +318,21 @@ class Event(object):
     @property
     def mask(self):
         if self._mask_ is None:
-            self._mask_ = (self._time_.mask | self._state_.mask |
-                                                self.vel.mask)
+            self._mask_ = Qube.or_(self._time_.mask,
+                                   self._state_.mask,
+                                   self.vel.mask)
             if self._dep_ is not None:
-                self._mask_ = self._mask_ | self._dep_.mask
+                self._mask_ = Qube.or_(self._mask_, self._dep_.mask)
             if self._dep_ap_ is not None:
-                self._mask_ = self._mask_ | self._dep_ap_.mask
+                self._mask_ = Qube.or_(self._mask_, self._dep_ap_.mask)
             if self._dep_lt_ is not None:
-                self._mask_ = self._mask_ | self._dep_lt_.mask
+                self._mask_ = Qube.or_(self._mask_, self._dep_lt_.mask)
             if self._arr_ is not None:
-                self._mask_ = self._mask_ | self._arr_.mask
+                self._mask_ = Qube.or_(self._mask_, self._arr_.mask)
             if self._arr_ap_ is not None:
-                self._mask_ = self._mask_ | self._arr_ap_.mask
+                self._mask_ = Qube.or_(self._mask_, self._arr_ap_.mask)
             if self._arr_lt_ is not None:
-                self._mask_ = self._mask_ | self._arr_lt_.mask
+                self._mask_ = Qube.or_(self._mask_, self._arr_lt_.mask)
 
             self._antimask_ = None
 
@@ -1665,7 +1666,7 @@ class Event(object):
             return self
 
         if LOGGING.event_time_collapse:
-            print(LOGGING.prefix, "Event.collapse_time()", tmin, tmax - tmin)
+            print(LOGGING.prefix, 'Event.collapse_time()', tmin, tmax - tmin)
 
         midtime = Scalar((tmin + tmax)/2., collapsed_mask, self._time_.units)
 
