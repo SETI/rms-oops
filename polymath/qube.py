@@ -1367,18 +1367,6 @@ class Qube(object):
 
         self._cache_.clear()
 
-    @property
-    def pickle_digits(self):
-        if self._pickle_digits_ is None:
-            self._pickle_digits_ = self.DEFAULT_PICKLE_DIGITS
-        return self._pickle_digits_
-
-    @property
-    def pickle_reference(self):
-        if self._pickle_reference_ is None:
-            self._pickle_reference_ = self.DEFAULT_PICKLE_REFERENCE
-        return self._pickle_reference_
-
     #===========================================================================
     def _find_corners(self):
         """Update the corner indices such that everything outside this defined

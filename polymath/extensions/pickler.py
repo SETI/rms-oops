@@ -116,6 +116,9 @@ PICKLE_WARNINGS = False
 
 PICKLE_DEBUG = False    # If True, __setstate__ includes encoding info
 
+DEFAULT_PICKLE_DIGITS = ('double', 'double')
+DEFAULT_PICKLE_REFERENCE = ('fpzip', 'fpzip')
+
 @staticmethod
 def _pickle_debug(debug):
     global PICKLE_DEBUG
@@ -187,8 +190,8 @@ def set_pickle_digits(self, digits='double', reference='fpzip'):
     digits = _validate_pickle_digits(digits)
     reference = _validate_pickle_reference(reference)
 
-    self._pickle_digits_ = digits
-    self._pickle_reference_ = reference
+    self._pickle_digits = digits
+    self._pickle_reference = reference
 
     # Handle derivatives
     if self._derivs_:
@@ -196,15 +199,12 @@ def set_pickle_digits(self, digits='double', reference='fpzip'):
         deriv_reference = (reference[1], reference[1])
 
         for deriv in self._derivs_.values():
-            deriv._pickle_digits_    = deriv_digits
-            deriv._pickle_reference_ = deriv_reference
+            deriv._pickle_digits    = deriv_digits
+            deriv._pickle_reference = deriv_reference
 
 #===============================================================================
-DEFAULT_PICKLE_DIGITS = ('double', 'double')
-DEFAULT_PICKLE_REFERENCE = ('fpzip', 'fpzip')
-
 @staticmethod
-def set_default_pickle_digits(self, digits='double', reference='fpzip'):
+def set_default_pickle_digits(digits='double', reference='fpzip'):
     """Set the default number of decimal digits of precision in the storage of
     this floating-point values and their derivatives.
 
@@ -261,28 +261,60 @@ def set_default_pickle_digits(self, digits='double', reference='fpzip'):
     DEFAULT_PICKLE_REFERENCE = _validate_pickle_reference(reference)
 
 #===============================================================================
+def pickle_digits(self):
+    """The digits of floating-point precision to include when pickling this
+    object and its derivatives.
+
+    Returns "double", "single", or a number of digits roughly in the range 7-16.
+    """
+
+    global DEFAULT_PICKLE_DIGITS
+
+    if not hasattr(self, '_pickle_digits') or self._pickle_digits is None:
+        self._pickle_digits = DEFAULT_PICKLE_DIGITS
+
+    return self._pickle_digits
+
+#===============================================================================
+def pickle_reference(self):
+    """The reference value to use when determining the number of digits of
+    floating-point precision in this object and its derivatives.
+
+    One of "fpzip", "smallest", "largest", "mean", "median", "logmean", or a
+    number.
+    """
+
+    global DEFAULT_PICKLE_REFERENCE
+
+    if (not hasattr(self, '_pickle_reference')
+        or self._pickle_reference is None):
+            self._pickle_reference = DEFAULT_PICKLE_REFERENCE
+
+    return self._pickle_reference
+
+#===============================================================================
 def _check_pickle_digits(self):
     """Validate the pickle attributes."""
 
-    if hasattr(self, '_pickle_digits_'):
-        digits = self._pickle_digits_
+    if hasattr(self, '_pickle_digits'):
+        digits = self._pickle_digits
     else:
         digits = None
 
-    self._pickle_digits_ = _validate_pickle_digits(digits)
+    self._pickle_digits = _validate_pickle_digits(digits)
 
-    if hasattr(self, '_pickle_reference_'):
-        reference = self._pickle_reference_
+    if hasattr(self, '_pickle_reference'):
+        reference = self._pickle_reference
     else:
         reference = None
 
-    self._pickle_reference_ = _validate_pickle_reference(reference)
+    self._pickle_reference = _validate_pickle_reference(reference)
 
     for key, deriv in self._derivs_.items():
-        if not hasattr(deriv, '_pickle_digits_'):
-            deriv._pickle_digits_ = 2 * self._pickle_digits[1:]
-        if not hasattr(deriv, '_pickle_reference_'):
-            deriv._pickle_reference_ = 2 * self._pickle_reference_[1:]
+        if not hasattr(deriv, '_pickle_digits'):
+            deriv._pickle_digits = 2 * self._pickle_digits[1:]
+        if not hasattr(deriv, '_pickle_reference'):
+            deriv._pickle_reference = 2 * self._pickle_reference[1:]
 
 #===============================================================================
 def _validate_pickle_digits(digits):
@@ -846,8 +878,8 @@ def __getstate__(self):
         dtype = self.dtype()
         if dtype == 'float':
             _check_pickle_digits(clone)
-            digits = clone._pickle_digits_[0]
-            reference = clone._pickle_reference_[0]
+            digits = clone._pickle_digits[0]
+            reference = clone._pickle_reference[0]
             clone.VALS_ENCODING.append(('FLOAT', digits, reference))
             clone._values_ = _encode_floats(clone._values_,
                                                  rank=len(self._item_),
@@ -877,15 +909,15 @@ def __getstate__(self):
     # and removing its own mask. This avoids the duplication of masks.
 
     if self._derivs_:
-        deriv_digits = 2 * clone._pickle_digits_[1:]
-        deriv_reference = 2 * clone._pickle_reference_[1:]
+        deriv_digits = 2 * clone._pickle_digits[1:]
+        deriv_reference = 2 * clone._pickle_reference[1:]
 
         for key, deriv in self._derivs_.items():
             new_deriv = deriv.clone(recursive=False)
-            if not hasattr(new_deriv, '_pickle_digits_'):
-                new_deriv._pickle_digits_ = deriv_digits
-            if not hasattr(new_deriv, '_pickle_reference_'):
-                new_deriv._pickle_reference_ = deriv_reference
+            if not hasattr(new_deriv, '_pickle_digits'):
+                new_deriv._pickle_digits = deriv_digits
+            if not hasattr(new_deriv, '_pickle_reference'):
+                new_deriv._pickle_reference = deriv_reference
 
             if antimask is None:
                 new_deriv = deriv
