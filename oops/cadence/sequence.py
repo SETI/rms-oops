@@ -395,7 +395,7 @@ class Test_Sequence(unittest.TestCase):
         case_continuous(self, cadence)
 
         ############################################
-        # Discontinuous case
+        # Discontinuous case, simulating the equivalent Metronome
         # 100-107.5, 110-117.5, 120-127.5, 130-137.5
         ############################################
 
@@ -404,7 +404,7 @@ class Test_Sequence(unittest.TestCase):
         case_discontinuous(self, cadence)
 
         ############################################
-        # Non-unique case
+        # Non-unique case, simulating the equivalent Metronome
         # 100-140, 110-150, 120-160, 130-170
         ############################################
 
@@ -413,7 +413,7 @@ class Test_Sequence(unittest.TestCase):
         case_non_unique(self, cadence)
 
         ############################################
-        # Partial overlap case
+        # Partial overlap case, simulating the equivalent Metronome
         # 100-140, 130-170, 160-200, 190-230
         ############################################
 

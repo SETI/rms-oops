@@ -14,7 +14,7 @@ if 'FLUX_DENSITY' not in globals():
 
     # Read the file
     filepath = os.path.join(os.path.split(solar.__file__)[0],
-                            'sun_reference_stis_002.fits')
+                            'stis-sun_reference_stis_002.fits')
     hdulist = pyfits.open(filepath)
     try:
         table = hdulist[1].data

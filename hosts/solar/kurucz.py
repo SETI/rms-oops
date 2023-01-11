@@ -32,7 +32,7 @@ if 'FLUX_DENSITY' not in globals():
 
     # Read the file
     filepath = os.path.join(os.path.split(solar.__file__)[0],
-                            'fsunallp.2000resam125.txt')
+                            'kurucz-fsunallp.2000resam125.txt')
     array = np.fromfile(filepath, sep=' ')
     array = array.reshape(-1,3)
 

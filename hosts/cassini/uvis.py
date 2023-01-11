@@ -232,8 +232,8 @@ def get_one_qube(label, detector, resolution,
     if lines == 1:
         obs = oops.obs.Pixel(('t','b'), cadence, fov, 'CASSINI', frame_id)
     else:
-        obs = oops.obs.Slit(('v','ut','b'), 1, cadence, fov,
-                             'CASSINI', frame_id)
+        obs = oops.obs.TimedImage(('v','ut','b'), 1, cadence, fov,
+                                  'CASSINI', frame_id)
 
     obs.insert_subfield('dict', label)
     obs.insert_subfield('instrument', 'UVIS')

@@ -10,6 +10,7 @@ from hosts.juno.unittester         import *
 #from hosts.voyager.unittester     import *
 #from hosts.newhorizons.unittester import *
 #from hosts.keck.unittester        import *
+from hosts.solar.unittester        import *
 
 ########################################
 from oops.backplane.unittester_support import backplane_unittester_args

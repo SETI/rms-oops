@@ -11,7 +11,8 @@ import tabulation as tab
 if 'FLUX_DENSITY' not in globals():
 
     # Read the file
-    filepath = os.path.join(os.path.split(solar.__file__)[0], 'solar_spec.fits')
+    filepath = os.path.join(os.path.split(solar.__file__)[0],
+                            'rieke-solar_spec.fits')
     hdulist = pyfits.open(filepath)
     try:
         table = hdulist[1].data
