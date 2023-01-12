@@ -588,10 +588,10 @@ class Matrix3(Matrix):
                 Scalar(az[0] % Matrix3.TWOPI, self._mask_))
 
     #===========================================================================
-    def to_quaternion(self):
-        """Converts this Matrix3 to an equivalent Quaternion."""
+    def to_quaternion(self, recursive=True):
+        """Converts this Matrix3 to an equivalent unit Quaternion."""
 
-        return Qube.QUATERNION_CLASS.from_matrix3(self)
+        return Qube.QUATERNION_CLASS.from_matrix3(self, recursive=recursive)
 
     #===========================================================================
     def sum(self, axis=None, recursive=True, builtins=None, out=None):
@@ -633,6 +633,70 @@ class Matrix3(Matrix):
         """
 
         raise TypeError('Matrix3.mean is not supported')
+
+    #===========================================================================
+    def __getstate__experimental(self):
+        """Override of Qube.__getstate__ to save the Matrix3 as a unit
+        Quaternion instead.
+        """
+
+        #### TODO: Seems like a good idea, but needs more testing, especially
+        #### regarding derivatives.
+
+        # Prepare the clone
+        clone = self.clone(recursive=True)
+        clone._check_pickle_digits()
+        clone._mask_ = Qube.as_one_bool(clone._mask_)   # collapse mask
+
+        # Don't bother using special processing on small objects
+        if self._size_ < 30 or clone._mask_ is True:
+            return Qube.__getstate__(self)
+
+        # Because a Matrix3 can be represented by a unit Quaternion, we can
+        # obtain excellent compression by converting it.
+        quaternion = clone.to_quaternion(recursive=True)
+
+        # Also, because a quaternion and its negative define the same rotation,
+        # we can force the first element to be positive and then we don't need
+        # to save it, because the rotation can be derived from the remaining
+        # components.
+
+        sign = np.sign(quaternion._values_[..., 0])
+        quaternion *= sign
+        clone._values_ = quaternion._values_[..., 1:]
+
+        # Replace the Matrix3 derivatives with the Quaternion derivatives
+        clone._derivs_ = quaternion._derivs_
+
+        clone.CONVERTED_TO_QUATERNION = True
+        return Qube.__getstate__(clone)
+
+    #===========================================================================
+    def __setstate__experimental(self, state):
+        """Override of Qube.__setstate__ to convert from unit Quaternion back to
+        Matrix3.
+        """
+
+        # Apply default _setstate_
+        Qube.__setstate__(self, state)
+
+        if not hasattr(self, 'CONVERTED_TO_QUATERNION'):
+            return
+
+        # Expand the Quaternion values and fill in missing scalar
+        qvals = np.empty(self._shape_ + (4,))
+        qvals[..., 1:] = self._values_
+        qvals[..., 0] = np.sqrt(1. - np.sum(self._values_**2, axis=-1))
+
+        # Convert the quaternion and derivatives to Matrix3
+        q = Qube.QUATERNION_CLASS(qvals, derivs=state['_derivs_'])
+        matrix3 = q.to_matrix3()
+
+        self._values_ = matrix3._values_
+        self._derivs_ = matrix3._derivs_
+        delattr(self, 'CONVERTED_TO_QUATERNION')
+
+        return
 
 ################################################################################
 # Useful class constants

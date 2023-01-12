@@ -57,7 +57,7 @@ def from_file(filespec, fast_distortion=True,
 
         if snap:
             item = oops.obs.Snapshot(('v','u'),
-                                     (fmeta.tstart, fmeta.tdi_texp),
+                                     fmeta.tstart, fmeta.tdi_texp,
                                      fmeta.fov,
                                      path = 'JUNO',
                                      frame = 'JUNO_JUNOCAM',
@@ -66,8 +66,11 @@ def from_file(filespec, fast_distortion=True,
                                      data = framelets[:,:,i])
 
         if not snap:
+            lines = fmeta.fov.uv_shape.vals[0]
+            cadence = oops.cadence.TDICadence(lines, fmeta.tstart,
+                                              fmeta.tdi_texp, fmeta.tdi_stages)
             item = oops.obs.Pushframe(('vt','u'),
-                                      (fmeta.tstart, fmeta.tdi_texp, fmeta.tdi_stages),
+                                      cadence,
                                       fmeta.fov,
                                       path = 'JUNO',
                                       frame = 'JUNO_JUNOCAM',

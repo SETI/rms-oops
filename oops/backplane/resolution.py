@@ -122,9 +122,7 @@ Backplane._define_backplane_names(globals().copy())
 # UNIT TESTS
 ################################################################################
 import unittest
-from oops.meshgrid                     import Meshgrid
-from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
-from oops.constants                    import DPR
+from oops.body import Body
 from oops.backplane.unittester_support import show_info
 
 #===========================================================================
@@ -185,20 +183,20 @@ def exercise_ansa(bp,
 
     if planet is not None:
 
-        ### TODO: use Body.has_rings() once Mark has created it
-        #test = bp.resolution(planet+':ansa', 'u')
-        #show_info(bp, 'Ansa resolution along u axis (km)', test, **options)
-        #test = bp.resolution(planet+':ansa', 'v')
-        #show_info(bp, 'Ansa resolution along v axis (km)', test, **options)
-        #test = bp.center_resolution(planet+':ansa', 'u')
-        #show_info(bp, 'Ansa center resolution along u axis (km)', test, **options)
-        #test = bp.center_resolution(planet+':ansa', 'v')
-        #show_info(bp, 'Ansa center resolution along v axis (km)', test, **options)
-        #test = bp.finest_resolution(planet+':ansa')
-        #show_info(bp, 'Ansa finest resolution (km)', test, **options)
-        #test = bp.coarsest_resolution(planet+':ansa')
-        #show_info(bp, 'Ansa coarsest resolution (km)', test, **options)
-        if options['printing']: print("These tests require further development.")
+        if planet is not None and Body.lookup(planet).ring_body is not None:
+            test = bp.resolution(planet+':ansa', 'u')
+            show_info(bp, 'Ansa resolution along u axis (km)', test, **options)
+            test = bp.resolution(planet+':ansa', 'v')
+            show_info(bp, 'Ansa resolution along v axis (km)', test, **options)
+            test = bp.center_resolution(planet+':ansa', 'u')
+            show_info(bp, 'Ansa center resolution along u axis (km)', test, **options)
+            test = bp.center_resolution(planet+':ansa', 'v')
+            show_info(bp, 'Ansa center resolution along v axis (km)', test, **options)
+            test = bp.finest_resolution(planet+':ansa')
+            show_info(bp, 'Ansa finest resolution (km)', test, **options)
+            test = bp.coarsest_resolution(planet+':ansa')
+            show_info(bp, 'Ansa coarsest resolution (km)', test, **options)
+
 
 #===========================================================================
 def exercise_limb(bp,

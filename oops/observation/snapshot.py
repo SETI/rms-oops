@@ -3,15 +3,15 @@
 ################################################################################
 
 import numpy as np
-from polymath import Scalar, Pair, Vector, Vector3
+from polymath import Scalar, Pair, Vector, Vector3, Qube
 
-from .                   import Observation
-from ..body              import Body
-from ..cadence.metronome import Metronome
-from ..event             import Event
-from ..frame             import Frame
-from ..path              import Path
-from ..path.multipath    import MultiPath
+from oops.observation       import Observation
+from oops.body              import Body
+from oops.cadence.metronome import Metronome
+from oops.event             import Event
+from oops.frame             import Frame
+from oops.path              import Path
+from oops.path.multipath    import MultiPath
 
 class Snapshot(Observation):
     """A Snapshot is an Observation consisting of a 2-D image made up of pixels
@@ -100,7 +100,7 @@ class Snapshot(Observation):
         self.__init__(*state[:-1], **state[-1])
 
     #===========================================================================
-    def uvt(self, indices, remask=False):
+    def uvt(self, indices, remask=False, derivs=True):
         """Coordinates (u,v) and time t for indices into the data array.
 
         This method supports non-integer index values.
@@ -108,6 +108,7 @@ class Snapshot(Observation):
         Input:
             indices     a Scalar or Vector of array indices.
             remask      True to mask values outside the field of view.
+            derivs      True to include derivatives in the returned values.
 
         Return:         (uv, time)
             uv          a Pair defining the values of (u,v) within the FOV that
@@ -116,24 +117,22 @@ class Snapshot(Observation):
                         with the array indices.
         """
 
-        indices = Vector.as_vector(indices)
+        indices = Vector.as_vector(indices, recursive=derivs)
         uv = indices.to_pair((self.u_axis, self.v_axis))
         time = self._scalar_midtime
 
         if remask:
             is_outside = self.uv_is_outside(uv, inclusive=True)
-            if is_outside.any_true_or_masked():
-                uv = uv.mask_where(is_outside)
-
-                time_vals = np.empty(uv.shape)
-                time_vals[...] = self.midtime
-                time = Scalar(time_vals, is_outside)
+            if np.any(is_outside.vals):
+                uv = uv.remask_or(is_outside.vals)
+                time = Scalar.filled(uv.shape, self.midtime, mask=uv.mask)
 
         return (uv, time)
 
     #===========================================================================
     def uvt_range(self, indices, remask=False):
-        """Ranges of FOV coordinates and time for integer array indices.
+        """Ranges of (u,v) spatial coordinates and time for integer array
+        indices.
 
         Input:
             indices     a Scalar or Vector of array indices.
@@ -149,33 +148,19 @@ class Snapshot(Observation):
             time_max    a Scalar defining the maximum time value.
         """
 
-        indices = Vector.as_vector(indices)
-        uv = indices.to_pair((self.u_axis,self.v_axis))
+        indices = Vector.as_vector(indices, recursive=False)
+        uv = indices.to_pair((self.u_axis, self.v_axis))
         uv_min = uv.int(top=self.uv_shape, remask=remask)
 
         # Times can be returned "shapeless" unless a mask is needed
-        time_min = self._scalar_time[0]
-        time_max = self._scalar_time[1]
-
-        if remask:
-            is_outside = self.uv_is_outside(uv, inclusive=True)
-            if is_outside.any_true_or_masked():
-                uv_min = uv_min.mask_where(is_outside)
-
-                time_min_vals = np.empty(uv_min.shape)
-                time_max_vals = np.empty(uv_min.shape)
-
-                time_min_vals.fill(self.time[0])
-                time_max_vals.fill(self.time[1])
-
-                time_min = Scalar(time_min_vals, is_outside)
-                time_max = Scalar(time_max_vals, is_outside)
+        time_min = Scalar.filled(uv.shape, self.time[0], mask=uv_min.mask)
+        time_max = Scalar.filled(uv.shape, self.time[1], mask=uv_min.mask)
 
         return (uv_min, uv_min + Pair.INT11, time_min, time_max)
 
     #===========================================================================
     def uv_range_at_tstep(self, tstep, remask=False):
-        """A tuple defining the range of FOV (u,v) coordinates active at a
+        """A tuple defining the range of spatial (u,v) pixels active at a
         particular time step.
 
         Input:
@@ -189,19 +174,17 @@ class Snapshot(Observation):
                         coordinates active at this time step (exclusive).
         """
 
-        tstep = Scalar.as_scalar(tstep)
+        uv_min = Pair.INT00     # without a mask, return shapeless pairs
+        uv_max = Pair.as_pair(self.fov.uv_shape)
 
+        # If the object needs a mask, expand it and mask it
+        tstep = Scalar.as_scalar(tstep, recursive=False)
         if remask or np.any(tstep.mask):
-            is_outside = (tstep.vals < 0) | (tstep.vals > 1)
-            new_mask = is_outside.vals | tstep.mask
-            if np.any(new_mask):
-                zero_vals = np.zeros(tstep.shape + (2,), dtype='int')
-                zeros = Pair(zero_vals, new_mask)
+            new_mask = Qube.or_(tstep.mask, (tstep.vals < 0) | (tstep.vals > 1))
+            uv_min = Pair.zeros(tstep.shape, dtype='int', mask=new_mask)
+            uv_max = Pair.filled(tstep.shape, self.uv_shape, mask=new_mask)
 
-                return (zeros, zeros + self.uv_shape)
-
-        # Without a mask, it's OK to return shapeless values
-        return (Pair.INT00, self.uv_shape)
+        return (uv_min, uv_max)
 
     #===========================================================================
     def time_range_at_uv(self, uv_pair, remask=False):
@@ -220,17 +203,12 @@ class Snapshot(Observation):
 
         if remask or np.any(uv_pair.mask):
             is_outside = self.uv_is_outside(uv_pair, inclusive=True)
-            new_mask = is_outside.vals | uv_pair.mask
-            if np.any(new_mask):
-                time_min_vals = np.empty(uv_pair.shape)
-                time_max_vals = np.empty(uv_pair.shape)
-
-                time_min_vals.fill(self.time[0])
-                time_max_vals.fill(self.time[1])
-
-                time_min = Scalar(time_min_vals, is_outside)
-                time_max = Scalar(time_max_vals, is_outside)
-
+            new_mask = Qube.or_(is_outside.vals, uv_pair.mask)
+            if new_mask is not False:
+                time_min = Scalar.filled(uv_pair.shape, self.time[0],
+                                                        mask=new_mask)
+                time_max = Scalar.filled(uv_pair.shape, self.time[1],
+                                                        mask=new_mask)
                 return (time_min, time_max)
 
         # Without a mask, it's OK to return shapeless values
@@ -256,8 +234,9 @@ class Snapshot(Observation):
                         specified time.
         """
 
-        return Observation.uv_range_at_time_0d(self, time, remask=remask,
-                                               scalar_time=self._scalar_time)
+        return Observation.uv_range_at_time_0d(self, time,
+                                                     uv_shape=self.fov.uv_shape,
+                                                     remask=remask)
 
     #===========================================================================
     def time_shift(self, dtime):
@@ -270,8 +249,9 @@ class Snapshot(Observation):
         Return:         a (shallow) copy of the object with a new time.
         """
 
-        obs = Snapshot(self.axes, self.time[0] + dtime, self.texp,
-                       self.fov, self.path, self.frame)
+        obs = Snapshot(axes=self.axes, tstart=self.time[0] + dtime,
+                       texp=self.texp, fov=self.fov, path=self.path,
+                       frame=self.frame)
 
         for key in self.subfields.keys():
             obs.insert_subfield(key, self.subfields[key])
@@ -315,7 +295,8 @@ class Snapshot(Observation):
         """
 
         # Limit iterations to 1 for Snapshot
-        return super(Snapshot, self).uv_from_ra_and_dec(ra, dec, tfrac, time,
+        return super(Snapshot, self).uv_from_ra_and_dec(ra, dec,
+                                                        tfrac=tfrac, time=time,
                                                         apparent=apparent,
                                                         derivs=derivs,
                                                         iters=1, quick=quick)
@@ -356,7 +337,7 @@ class Snapshot(Observation):
 
             time = self.time[0] + tfrac * (self.time[1] - self.time[0])
 
-        return super(Snapshot, self).uv_from_path(path, None, time,
+        return super(Snapshot, self).uv_from_path(path, tfrac=tfrac, time=time,
                                                   derivs=False, guess=None,
                                                   quick={}, converge={})
 
@@ -410,9 +391,9 @@ class Snapshot(Observation):
         if not underside:
             normal = surface.normal(surface_event.pos)
             mask = (normal.dot(surface_event.dep_ap, recursive=False) < 0.)
-            neg_arr_ap = neg_arr_ap.mask_where(mask)
+            neg_arr_ap = neg_arr_ap.remask_or(mask)
 
-        return self.fov.uv_from_los_t(neg_arr_ap, None, time, derivs=derivs)
+        return self.fov.uv_from_los_t(neg_arr_ap, time=time, derivs=derivs)
 
     #===========================================================================
     def inventory(self, bodies, tfrac=0.5, time=None, expand=0.,
@@ -433,7 +414,7 @@ class Snapshot(Observation):
             time        Scalar of optional absolute time in seconds.
             expand      an optional angle in radians by which to extend the
                         limits of the field of view. This can be used to
-                        accommodate pointing uncertainties. XXX NOT IMPLEMENTED XXX
+                        accommodate pointing uncertainties.
             return_type 'list' returns the inventory as a list of names.
                         'flags' returns the inventory as an array of boolean
                                 flag values in the same order as bodies.
@@ -526,7 +507,7 @@ class Snapshot(Observation):
         falls_inside = np.empty(nbodies, dtype='bool')
         for i in range(nbodies):
             falls_inside[i] = fov.sphere_falls_inside(centers[i], radii[i],
-                                                      tfrac=tfrac, time=time)
+                                                      time=obs_time, border=expand)
 
         # This array equals True for each body completely hidden by another
         is_hidden = np.zeros(nbodies, dtype='bool')
@@ -566,7 +547,8 @@ class Snapshot(Observation):
 
         u_scale = fov.uv_scale.vals[0]
         v_scale = fov.uv_scale.vals[1]
-        body_uv = fov.uv_from_los_t(arrival_event.neg_arr_ap, tfrac).vals
+        body_uv = fov.uv_from_los_t(arrival_event.neg_arr_ap,
+                                    time=obs_time).vals
         for i in range(nbodies):
             body_data = {}
             body_data['name'] = body_names[i]
@@ -615,7 +597,7 @@ class Test_Snapshot(unittest.TestCase):
 
     def runTest(self):
 
-        from ..fov.flatfov import FlatFOV
+        from oops.fov.flatfov import FlatFOV
 
         fov = FlatFOV((0.001,0.001), (10,20))
         obs = Snapshot(('u','v'), tstart=98., texp=2.,

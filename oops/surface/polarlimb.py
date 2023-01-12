@@ -20,7 +20,7 @@ class PolarLimb(Surface):
                 sight.
     """
 
-    COORDINATE_TYPE = "polar"
+    COORDINATE_TYPE = 'polar'
     IS_VIRTUAL = True
     DEBUG = False   # True for convergence testing in intercept()
 
@@ -43,7 +43,7 @@ class PolarLimb(Surface):
                         range are masked.
         """
 
-        assert ground.COORDINATE_TYPE == "spherical"
+        assert ground.COORDINATE_TYPE == 'spherical'
         self.ground = ground
         self.origin = ground.origin
         self.frame  = ground.frame
@@ -86,8 +86,8 @@ class PolarLimb(Surface):
         """
 
         if derivs:
-            raise NotImplementedError("PolarLimb.coords_from_vector3() " +
-                                      "does not implement derivatives")
+            raise NotImplementedError('PolarLimb.coords_from_vector3 ' +  # TODO
+                                      'does not implement derivatives')
 
         pos = Vector3.as_vector3(pos, False)
         obs = Vector3.as_vector3(obs, False)
@@ -126,8 +126,8 @@ class PolarLimb(Surface):
         """
 
         if derivs:
-            raise NotImplementedError("PolarLimb.vector3_from_coords() " +
-                                      "does not implement derivatives")
+            raise NotImplementedError('PolarLimb.vector3_from_coords ' +  # TODO
+                                      'does not implement derivatives')
 
         (z, clock) = coords[:2]
         (cept, track) = self.limb.intercept_from_z_clock(z, clock, obs,
@@ -170,10 +170,11 @@ class PolarLimb(Surface):
         """
 
         if derivs:
-            raise NotImplementedError("PolarLimb.intercept() " +
-                                      "does not implement derivatives")
+            raise NotImplementedError('PolarLimb.intercept ' +    # TODO
+                                      'does not implement derivatives')
 
-        return self.limb.intercept(obs, los, derivs, guess, groundtrack)
+        return self.limb.intercept(obs, los, derivs=derivs, guess=guess,
+                                             groundtrack=groundtrack)
 
     #===========================================================================
     def normal(self, pos, time=None, derivs=False):
@@ -226,7 +227,7 @@ class Test_PolarLimb(unittest.TestCase):
         RMID = 54364.
         RPOL = 50000.
 
-        ground = Spheroid("SSB", "J2000", (REQ, RPOL))
+        ground = Spheroid('SSB', 'J2000', (REQ, RPOL))
         limb = Limb(ground)
 
         obs = Vector3([4*REQ,0,0])
@@ -250,7 +251,7 @@ class Test_PolarLimb(unittest.TestCase):
 
         ####################
 
-        ground = Ellipsoid("SSB", "J2000", (REQ, RMID, RPOL))
+        ground = Ellipsoid('SSB', 'J2000', (REQ, RMID, RPOL))
         limb = Limb(ground)
 
         obs = Vector3([4*REQ,0,0])

@@ -24,7 +24,9 @@ class Test_Matrix3_quaternion(unittest.TestCase):
     DEL = 3.e-14
     for i in range(N):
         # The sign of the whole quaternion might be reversed.
-        self.assertTrue(min((q[i] - q2[i]).rms(), (q[i] + q2[i]).rms()) < DEL)
+        t  = q.vals  * np.sign( q.vals[...,0])[:,np.newaxis]
+        t2 = q2.vals * np.sign(q2.vals[...,0])[:,np.newaxis]
+        self.assertTrue(np.max(np.abs(t - t2)) < DEL)
 
     ########################
     # Test derivatives
@@ -36,12 +38,14 @@ class Test_Matrix3_quaternion(unittest.TestCase):
 
     m = Matrix3.as_matrix3(q, recursive=True)
     self.assertTrue(hasattr(m, 'd_dt'))
-    q2 = Matrix3.to_quaternion(m)
+    q2 = Matrix3.to_quaternion(m, recursive=False)
 
     DEL = 1.e-14
     for i in range(N):
         # The sign of the whole quaternion might be reversed.
-        self.assertTrue(min((q[i] - q2[i]).rms(), (q[i] + q2[i]).rms()) < DEL)
+        t  = q.vals  * np.sign( q.vals[...,0])[:,np.newaxis]
+        t2 = q2.vals * np.sign(q2.vals[...,0])[:,np.newaxis]
+        self.assertTrue(np.max(np.abs(t - t2)) < DEL)
 
     EPS = 1.e-6
     dq = q.d_dt * EPS

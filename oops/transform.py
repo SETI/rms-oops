@@ -382,7 +382,6 @@ class Test_Transform(unittest.TestCase):
 
         # Additional imports needed for testing
         from oops.frame import Frame, Wayframe
-        from oops.frame.spinframe import SpinFrame
 
         # Fake out the FRAME REGISTRY with something that has .shape = ()
         Frame.WAYFRAME_REGISTRY["TEST"] = Wayframe("J2000")

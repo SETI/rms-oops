@@ -206,8 +206,6 @@ Backplane._define_backplane_names(globals().copy())
 # UNIT TESTS
 ################################################################################
 import unittest
-from oops.meshgrid                     import Meshgrid
-from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
 from oops.backplane.unittester_support import show_info
 
 #===========================================================================

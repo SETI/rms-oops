@@ -51,20 +51,18 @@ class GapFOV(FOV):
         self.__init__(*state)
 
     #===========================================================================
-    def xy_from_uvt(self, uv_pair, tfrac=0.5, time=None, derivs=False,
-                          **keywords):
+    def xy_from_uvt(self, uv_pair, time=None, derivs=False, remask=False,
+                                                            **keywords):
         """The (x,y) camera frame coordinates given the FOV coordinates (u,v) at
         the specified time.
 
         Input:
             uv_pair     (u,v) coordinate Pair in the FOV.
-            tfrac       Scalar of fractional times during the exposure, where
-                        tfrac=0 at the beginning and 1 at the end. Default is
-                        0.5.
-            time        Scalar of optional absolute time in seconds. Only one of
-                        tfrac and time can be specified; the other must be None.
+            time        Scalar of optional absolute time in seconds.
             derivs      If True, any derivatives in (u,v) get propagated into
                         the returned (x,y) Pair.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
             **keywords  Additional keywords arguments are passed directly to the
                         reference FOV.
 
@@ -77,21 +75,18 @@ class GapFOV(FOV):
         uv_frac = uv_pair - uv_int
         uv = uv_int + uv_frac.element_mul(self.uv_size)
 
-        return self.fov.xy_from_uvt(uv, tfrac, time, derivs=derivs, **keywords)
+        return self.fov.xy_from_uvt(uv, time=time, derivs=derivs, remask=remask,
+                                                                  **keywords)
 
     #===========================================================================
-    def uv_from_xyt(self, xy_pair, tfrac=0.5, time=None, derivs=False,
-                          remask=False, **keywords):
+    def uv_from_xyt(self, xy_pair, time=None, derivs=False, remask=False,
+                                                            **keywords):
         """The (u,v) FOV coordinates given the (x,y) camera frame coordinates at
         the specified time.
 
         Input:
             xy_pair     (x,y) Pair in FOV coordinates.
-            tfrac       Scalar of fractional times during the exposure, where
-                        tfrac=0 at the beginning and 1 at the end. Default is
-                        0.5.
-            time        Scalar of optional absolute time in seconds. Only one of
-                        tfrac and time can be specified; the other must be None.
+            time        Scalar of optional absolute time in seconds.
             derivs      If True, any derivatives in (x,y) get propagated into
                         the returned (u,v) Pair.
             remask      True to mask (x,y) locations that fall in the gaps
@@ -104,8 +99,8 @@ class GapFOV(FOV):
         """
 
         xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
-        uv_pair = self.fov.uv_from_xyt(xy_pair,
-                            tfrac=tfrac, time=time, derivs=derivs, **keywords)
+        uv_pair = self.fov.uv_from_xyt(xy_pair, time=time, derivs=derivs,
+                                                remask=remask, **keywords)
         uv_int = uv_pair.int(top=self.uv_shape, recursive=derivs)
         uv_frac = (uv_pair - uv_int).element_mul(self.uv_size_inv)
 

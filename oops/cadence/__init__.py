@@ -17,47 +17,53 @@ class Cadence(object):
                         the start and end.
         is_unique       True if no times inside the cadence are associated with
                         more than one time step.
-        min_tstride     minimum time interval between one tstep and the next.
-        max_tstride     maximum time interval between one tstep and the next.
+        min_tstride     minimum absolute value of the time interval between one
+                        tstep and the next.
+        max_tstride     maximum absolute value of the time interval between one
+                        tstep and the next.
     """
 
     ############################################################################
     # Methods to be defined for each Cadence subclass
     ############################################################################
 
-    def __init__(self):
-        """A constructor."""
-
-        pass
-
-    #===========================================================================
     def time_at_tstep(self, tstep, remask=False, derivs=False, inclusive=True):
         """The time associated with the given time step.
 
         This method supports non-integer time step values.
+
+        In multidimensional cadences, indexing beyond the dimensions of the
+        cadence returns the time at the nearest edge of the cadence's shape.
 
         Input:
             tstep       a Scalar or Pair of time step index values.
             remask      True to mask values outside the time limits.
             derivs      True to include derivatives of tstep in the returned
                         time.
-            inclusive   True to treat the exact maximum size of the cadence as
-                        part of the cadence; False to exclude it.
+            inclusive   True to treat the end time of the cadence as part of the
+                        cadence; False to exclude it.
 
         Return:         a Scalar of times in seconds TDB.
         """
 
-        raise NotImplementedError("time_at_tstep() is not implemented")
+        raise NotImplementedError(type(self).__name__ + '.time_at_tstep '
+                                  'is not implemented')
 
     #===========================================================================
-    def time_range_at_tstep(self, tstep, remask=False, inclusive=True):
-        """The range of times for the given integer time step.
+    def time_range_at_tstep(self, tstep, remask=False, inclusive=True,
+                                         shift=True):
+        """The range of times for the given time step.
+
+        In multidimensional cadences, indexing beyond the dimensions of the
+        cadence returns the time range at the nearest edge.
 
         Input:
-            tstep       a Scalar or Pair of time step index values.
+            tstep       a Pair of time step index values.
             remask      True to mask values outside the time limits.
-            inclusive   True to treat the exact maximum size of the cadence as
-                        part of the cadence; False to exclude it.
+            inclusive   True to treat the end time of the cadence as part of the
+                        cadence; False to exclude it.
+            shift       True to shift the end of the last time step (with
+                        index==shape) into the previous time step.
 
         Return:         (time_min, time_max)
             time_min    a Scalar defining the minimum time associated with the
@@ -65,26 +71,55 @@ class Cadence(object):
             time_max    a Scalar defining the maximum time value.
         """
 
-        raise NotImplementedError("time_range_at_tstep() " +
-                                  "is not implemented")
+        raise NotImplementedError(type(self).__name__ + '.time_range_at_tstep '
+                                  'is not implemented')
 
     #===========================================================================
-    def tstep_at_time(self, time, remask=False, derivs=False):
+    def tstep_at_time(self, time, remask=False, derivs=False, inclusive=True):
         """Time step for the given time.
 
-        This method supports non-integer time values and returns non-integer
-        time steps.
+        This method returns non-integer time steps via interpolation.
+
+        In multidimensional cadences, times before first time step refer to the
+        first; times after the last time step refer to the last.
 
         Input:
             time        a Scalar of times in seconds TDB.
             remask      True to mask time values not sampled within the cadence.
             derivs      True to include derivatives of time in the returned
                         tstep.
+            inclusive   True to treat the end time of the cadence as part of the
+                        cadence; False to exclude it.
 
         Return:         a Scalar or Pair of time step indices.
         """
 
-        raise NotImplementedError("tstep_at_time() is not implemented")
+        raise NotImplementedError(type(self).__name__ + '.tstep_at_time '
+                                  'is not implemented')
+
+    #===========================================================================
+    def tstep_range_at_time(self, time, remask=False, inclusive=True):
+        """Integer range of time steps active at the given time.
+
+        Input:
+            time        a Scalar of times in seconds TDB.
+            remask      True to mask time values not sampled within the cadence.
+            inclusive   True to treat the end time of the cadence as part of the
+                        cadence; False to exclude it.
+
+        Return:         (tstep_min, tstep_max)
+            tstep_min   minimum Scalar or Pair time step containing the given
+                        time.
+            tstep_max   maximum Scalar or Pair time step containing the given
+                        time (inclusive).
+
+        All returned indices will be in the allowed range for the cadence,
+        inclusive, regardless of mask. If the time is not inside the cadence,
+        tstep_max < tstep_min.
+        """
+
+        raise NotImplementedError(type(self).__name__ + '.tstep_range_at_time '
+                                  'is not implemented')
 
     #===========================================================================
     def time_is_outside(self, time, inclusive=True):
@@ -119,13 +154,15 @@ class Cadence(object):
             secs        the number of seconds to shift the time later.
         """
 
-        raise NotImplementedError("time_shift() is not implemented")
+        raise NotImplementedError(type(self).__name__ + '.time_shift '
+                                  'is not implemented')
 
     #===========================================================================
     def as_continuous(self):
         """Construct a shallow copy of this Cadence, forced to be continuous."""
 
-        raise NotImplementedError("as_continuous() is not implemented")
+        raise NotImplementedError(type(self).__name__ + '.as_continuous '
+                                  'is not implemented')
 
     ############################################################################
     # Methods probably not requiring overrides
@@ -147,29 +184,66 @@ class Cadence(object):
         return self.time_is_outside(time, inclusive=inclusive).logical_not()
 
     #===========================================================================
-    def tstride_at_tstep(self, tstep, remask=False):
-        """The time intervals for the given time steps.
+    def tstride_at_tstep(self, tstep, sign=1, remask=False):
+        """The time interval(s) between the times of adjacent time steps.
 
         Input:
-            tstep       a Scalar time step index or a Pair of time step
-                        indices.
-            remask      True to mask values outside the time limits.
+            tstep       a Scalar or Pair time step index, which need not be
+                        integral.
+            sign        +1 for the time interval to the next time step;
+                        -1 for the time interval since the previous time step.
+            remask      True to mask time tsteps that are out of range.
 
         Return:         a Scalar or Pair of strides in seconds.
         """
 
-        if len(self.shape) == 1:
-            return (self.time_at_tstep(tstep + 1, remask=remask) -
-                    self.time_at_tstep(tstep, remask=remask))
-        elif len(self.shape) == 2:
-            now = self.time_at_tstep(tstep)
-            return Pair.from_scalars(self.time_at_tstep(tstep + (1,0),
-                                                        remask=remask) - now,
-                                     self.time_at_tstep(tstep + (0,1),
-                                                        remask=remask) - now)
+        if remask:
+            time = self.time_at_tstep(tstep, remask=True)
+            new_mask = time.mask
         else:
-            raise NotImplementedError("tstride_at_tstep() is not " +
-                                    "implemented for cadences larger than 2-D")
+            new_mask = False
+
+        if len(self.shape) == 1:
+            tstep = Scalar.as_scalar(tstep, recursive=False)
+
+            if sign < 0:
+                tstep -= 1
+
+            tstep = tstep.clip(0, self.shape[0]-1, remask=False)
+
+            time0 = self.time_at_tstep(tstep  , remask=False)
+            time1 = self.time_at_tstep(tstep+1, remask=False)
+
+            tstride = time1 - time0
+            tstride = tstride.remask_or(new_mask)
+            return tstride
+
+        if len(self.shape) == 2:
+            tstep = Pair.as_pair(tstep, recursive=False).copy()
+            (u,v) = tstep.to_scalars()                      # shared memory
+
+            if sign < 0:
+                u -= 1
+                v -= 1
+
+            u[u < 0] = 0
+            v[v < 0] = 0
+
+            utop = self.shape[0] - 1
+            vtop = self.shape[1] - 1
+            u[u > utop] = utop
+            v[v > vtop] = vtop
+
+            time0  = self.time_at_tstep(tstep, remask=False)
+            time1u = self.time_at_tstep(tstep+(1,0), remask=False)
+            time1v = self.time_at_tstep(tstep+(0,1), remask=False)
+            tstride = Pair.from_scalars(time1u - time0, time1v - time0)
+            tstride = tstride.remask(tstep.mask)
+            return tstride
+
+        raise NotImplementedError(type(self).__name__ + '.tstride_at_tstep '
+                                  'is not implemented for %d-D cadences'
+                                  % len(self.shape))
 
 ################################################################################
 # UNIT TESTS

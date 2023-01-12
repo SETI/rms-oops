@@ -5,19 +5,18 @@
 import numpy as np
 from polymath import Scalar, Pair, Vector
 
-from .                   import Observation
-from ..cadence.metronome import Metronome
-from ..frame             import Frame
-from ..path              import Path
+from oops.observation          import Observation
+from oops.cadence.metronome    import Metronome
+from oops.frame                import Frame
+from oops.path                 import Path
 
 class Slit1D(Observation):
     """A subclass of Observation consisting of a 1-D slit measurement with no
-    time-dependence. However, it may still have additional axes (e.g., bands.
+    time-dependence. However, it may still have additional axes (e.g., bands).
     """
 
     #===========================================================================
-    def __init__(self, axes, tstart, texp, fov, path, frame,
-                       **subfields):
+    def __init__(self, axes, tstart, texp, fov, path, frame, **subfields):
         """Constructor for a Slit1D observation.
 
         Input:
@@ -112,7 +111,7 @@ class Slit1D(Observation):
         self.__init__(*state[:-1], **state[-1])
 
     #===========================================================================
-    def uvt(self, indices, remask=False):
+    def uvt(self, indices, remask=False, derivs=True):
         """Coordinates (u,v) and time t for indices into the data array.
 
         This method supports non-integer index values.
@@ -120,6 +119,7 @@ class Slit1D(Observation):
         Input:
             indices     a Scalar or Vector of array indices.
             remask      True to mask values outside the field of view.
+            derivs      True to include derivatives in the returned values.
 
         Return:         (uv, time)
             uv          a Pair defining the values of (u,v) within the FOV that
@@ -130,34 +130,34 @@ class Slit1D(Observation):
 
         # Interpret a 1-D index or a multi-D index
         slit_coord = Observation.scalar_from_indices(indices,
-                                                     self._along_slit_index)
+                                                     self._along_slit_index,
+                                                     derivs=derivs)
         slit_coord = self.scalar_from_indices(indices, self._along_slit_index)
 
         if remask:
             is_outside = ((slit_coord.vals < 0) |
                           (slit_coord.vals > self._along_slit_len))
-            slit_coord = slit_coord.mask_where(is_outside)
+            slit_coord = slit_coord.remask_or(is_outside)
 
         # Create the (u,v) Pair
         uv_vals = np.empty(slit_coord.shape + (2,))
         uv_vals[..., self._along_slit_uv_axis] = slit_coord.vals
         uv_vals[..., self._cross_slit_uv_axis] = 0.5
-        uv = Pair(uv_vals, slit_coord.mask)
+        uv = Pair(uv_vals, mask=slit_coord.mask)
 
         # Create time Scalar; shapeless is OK unless there's a mask
         time = self._scalar_midtime
 
         # Apply mask to time if necessary
         if remask and np.any(slit_coord.mask):
-            time_vals = np.empty(slit_coord.shape)
-            time_vals.fill(self.midtime)
-            time = Scalar(time_vals, slit_coord.mask)   # shared mask
+            time = Scalar.filled(uv.shape, self.midtime, mask=slit_coord.mask)
 
         return (uv, time)
 
     #===========================================================================
     def uvt_range(self, indices, remask=False):
-        """Ranges of FOV coordinates and time for integer array indices.
+        """Ranges of (u,v) spatial coordinates and time for integer array
+        indices.
 
         Input:
             indices     a Scalar or Vector of array indices.
@@ -184,48 +184,11 @@ class Slit1D(Observation):
         uv_min_vals[..., self._along_slit_uv_axis] = slit_int.vals
         uv_min = Pair(uv_min_vals, slit_int.mask)
 
-        # Time can be returned "shapeless" unless a mask is needed
-        if remask and np.any(slit_int.mask):
-            time_min_vals = np.empty(uv_min.shape)
-            time_max_vals = np.empty(uv_min.shape)
-
-            time_min_vals.fill(self.time[0])
-            time_max_vals.fill(self.time[1])
-
-            time_min = Scalar(time_min_vals, uv_min.mask)   # mask is shared
-            time_max = Scalar(time_max_vals, uv_min.mask)   # mask is shared
-        else:
-            time_min = self._scalar_time[0]
-            time_max = self._scalar_time[1]
+        # Time
+        time_min = Scalar.filled(uv_min.shape, self.time[0], mask=uv_min.mask)
+        time_max = Scalar.filled(uv_min.shape, self.time[1], mask=uv_min.mask)
 
         return (uv_min, uv_min + Pair.INT11, time_min, time_max)
-
-    #===========================================================================
-    def uv_range_at_tstep(self, tstep, remask=False):
-        """The range of integer spatial (u,v) coordinates active at the given
-        time step.
-
-        Input:
-            tstep       a Scalar time step index.
-            remask      True to mask values outside the time interval.
-
-        Return:         a tuple (uv_min, uv_max)
-            uv_min      a Pair defining the minimum integer values of FOV (u,v)
-                        coordinates active at this time step.
-            uv_min      a Pair defining the maximum integer values of FOV (u,v)
-                        coordinates active at this time step (exclusive).
-        """
-
-        if remask:
-            is_outside = (tstep.vals < 0) | (tstep.vals > 1)
-            if np.any(is_outside):
-                zero_vals = np.zeros(tstep.shape + (2,), dtype='int')
-                zeros = Pair(zero_vals, tstep.mask)
-
-                return (zeros, zeros + self.uv_shape)
-
-        # Without any mask, it's OK to return "shapeless" values
-        return (Pair.INT00, Pair(self.uv_shape))
 
     #===========================================================================
     def time_range_at_uv(self, uv_pair, remask=False):
@@ -244,23 +207,7 @@ class Slit1D(Observation):
                         time of each (u,v) pair, as seconds TDB.
         """
 
-        if remask:
-            is_outside = self.uv_is_outside(uv_pair, inclusive=True)
-            new_mask = is_outside.vals | uv_pair.mask
-            if np.any(new_mask):
-                time_min_vals = np.empty(uv_pair.shape)
-                time_max_vals = np.empty(uv_pair.shape)
-
-                time_min_vals.fill(self.time[0])
-                time_max_vals.fill(self.time[1])
-
-                time_min = Scalar(time_min_vals, is_outside)
-                time_max = Scalar(time_max_vals, is_outside)
-
-                return (time_min, time_max)
-
-        # Without any mask, it's OK to return "shapeless" values
-        return self._scalar_time
+        return self.time_range_at_uv_0d(uv_pair, remask=remask)
 
     #===========================================================================
     def uv_range_at_time(self, time, remask=False):
@@ -277,8 +224,9 @@ class Slit1D(Observation):
                         specified time.
         """
 
-        return Observation.uv_range_at_time_0d(self, time, remask=remask,
-                                               scalar_time=self._scalar_time)
+        return Observation.uv_range_at_time_0d(self, time,
+                                               uv_shape=self.fov.uv_shape,
+                                               remask=remask)
 
     #===========================================================================
     def time_shift(self, dtime):
@@ -291,8 +239,8 @@ class Slit1D(Observation):
         Return:         a (shallow) copy of the object with a new time.
         """
 
-        obs = Slit1D(self.axes, self.tstart + dtime, self.texp,
-                     self.fov, self.path, self.frame)
+        obs = Slit1D(axes=self.axes, tstart=self.tstart + dtime, texp=self.texp,
+                     fov=self.fov, path=self.path, frame=self.frame)
 
         for key in self.subfields.keys():
             obs.insert_subfield(key, self.subfields[key])
@@ -309,7 +257,7 @@ class Test_Slit1D(unittest.TestCase):
 
     def runTest(self):
 
-        from ..fov.flatfov import FlatFOV
+        from oops.fov.flatfov import FlatFOV
 
         fov = FlatFOV((0.001,0.001), (20,1))
         obs = Slit1D(('u'), tstart=0., texp=10., fov=fov, path='SSB', frame='J2000')
