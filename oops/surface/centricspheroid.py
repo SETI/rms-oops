@@ -12,7 +12,7 @@ from ..constants import HALFPI
 class CentricSpheroid(Surface):
     """A variant of Spheroid in which latitudes are planetocentric."""
 
-    COORDINATE_TYPE = "spherical"
+    COORDINATE_TYPE = 'spherical'
     IS_VIRTUAL = False
 
     #===========================================================================

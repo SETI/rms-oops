@@ -264,7 +264,6 @@ def stack(*args, **keywords):
     # Only use class Qube if no suitable subclass was found
     floats_found = False
     ints_found = False
-    _bools_found = False
 
     float_arg = None
     int_arg = None

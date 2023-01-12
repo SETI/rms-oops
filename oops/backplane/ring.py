@@ -832,9 +832,7 @@ Backplane._define_backplane_names(globals().copy())
 # UNIT TESTS
 ################################################################################
 import unittest
-from oops.meshgrid                     import Meshgrid
-from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
-from oops.constants                    import DPR
+from oops.constants import DPR
 from oops.backplane.unittester_support import show_info
 
 #===========================================================================
@@ -927,23 +925,21 @@ def exercise_radial_longitude_azimuth(bp,
         show_info(bp, 'Ring sub-solar longitude wrt observer (deg)', test*DPR,
                   **options)
 
-    if planet is not None:
-        ### TODO: use Body.has_rings() once Mark has created it
-        #test = bp.ring_azimuth(planet+':ring', 'obs')
-        #show_info(bp, 'Ring azimuth wrt observer (deg)', test*DPR, **options)
-        #test = bp.ring_azimuth(planet+':ring', 'obs')
-        #show_info(bp, 'Ring azimuth wrt observer, unmasked (deg)', test*DPR, **options)
-        #compare = bp.ring_longitude(planet+':ring', 'obs')
-        #diff = test - compare
-        #show_info(bp, 'Ring azimuth minus longitude wrt observer, unmasked (deg)',
-        #          diff*DPR, **options)
-        #test = bp.ring_azimuth(planet+':ring', reference='sun')
-        #show_info(bp, 'Ring azimuth wrt Sun, unmasked (deg)', test*DPR, **options)
-        #compare = bp.ring_longitude(planet+':ring', 'sun')
-        #iff = test - compare
-        #show_info(bp, 'Ring azimuth minus longitude wrt Sun, unmasked (deg)',
-        #          diff*DPR, **options)
-        if options['printing']: print("These tests require further development.")
+    if planet is not None and Body.lookup(planet).ring_body is not None:
+        test = bp.ring_azimuth(planet+':ring', 'obs')
+        show_info(bp, 'Planet:ring azimuth wrt observer (deg)', test*DPR, **options)
+        test = bp.ring_azimuth(planet+':ring', 'obs')
+        show_info(bp, 'Planet:ring azimuth wrt observer, unmasked (deg)', test*DPR, **options)
+        compare = bp.ring_longitude(planet+':ring', 'obs')
+        diff = test - compare
+        show_info(bp, 'Planet:ring azimuth minus longitude wrt observer, unmasked (deg)',
+                  diff*DPR, **options)
+        test = bp.ring_azimuth(planet+':ring', reference='sun')
+        show_info(bp, 'Planet:ring azimuth wrt Sun, unmasked (deg)', test*DPR, **options)
+        compare = bp.ring_longitude(planet+':ring', 'sun')
+        diff = test - compare
+        show_info(bp, 'Planet:ring azimuth minus longitude wrt Sun, unmasked (deg)',
+                  diff*DPR, **options)
 
 #===========================================================================
 def exercise_photometry(bp,
@@ -995,24 +991,22 @@ def exercise_photometry(bp,
         test = bp.ring_center_emission_angle(ring, 'prograde')
         show_info(bp, 'Ring center emission angle, prograde (deg)', test*DPR, **options)
 
-    if planet is not None:
-        ### TODO: use Body.has_rings() once Mark has created it
-        #test = bp.ring_elevation(planet+':ring', reference='sun')
-        #show_info(bp, 'Ring elevation wrt Sun, unmasked (deg)', test*DPR, **options)
-        #compare = bp.ring_incidence_angle(planet+':ring', 'north')
-        #diff = test + compare
-        #show_info(bp,
-        #          'Ring elevation wrt Sun plus north incidence, unmasked (deg)',
-        #          diff*DPR, **options)
-        #test = bp.ring_elevation(planet+':ring', reference='obs')
-        #show_info(bp, 'Ring elevation wrt observer, unmasked (deg)', test*DPR,
-        #          **options)
-        #compare = bp.ring_emission_angle(planet+':ring', 'north')
-        #diff = test + compare
-        #show_info(bp,
-        #          'Ring elevation wrt observer plus north emission, unmasked (deg)',
-        #          diff*DPR, **options)
-        if options['printing']: print("These tests require further development.")
+    if planet is not None and Body.lookup(planet).ring_body is not None:
+            test = bp.ring_elevation(planet+':ring', reference='sun')
+            show_info(bp, 'Ring elevation wrt Sun, unmasked (deg)', test*DPR, **options)
+            compare = bp.ring_incidence_angle(planet+':ring', 'north')
+            diff = test + compare
+            show_info(bp,
+                      'Ring elevation wrt Sun plus north incidence, unmasked (deg)',
+                      diff*DPR, **options)
+            test = bp.ring_elevation(planet+':ring', reference='obs')
+            show_info(bp, 'Ring elevation wrt observer, unmasked (deg)', test*DPR,
+                      **options)
+            compare = bp.ring_emission_angle(planet+':ring', 'north')
+            diff = test + compare
+            show_info(bp,
+                      'Ring elevation wrt observer plus north emission, unmasked (deg)',
+                      diff*DPR, **options)
 
 
 #*******************************************************************************

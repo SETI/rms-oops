@@ -361,9 +361,9 @@ def from_file(filespec, fast=False, **parameters):
     # Single 2-D IMAGE case
     elif samples == swath_width and lines == swath_length:
         if not vis_is_off:
-            vis_obs = oops.obs.Pushbroom(('vt','u','b'),
-                                         vis_header_cadence, vis_fov,
-                                         'CASSINI', vis_frame_id)
+            vis_obs = oops.obs.TimedImage(('vt','u','b'),
+                                          vis_header_cadence, vis_fov,
+                                          'CASSINI', vis_frame_id)
 
         if not ir_is_off:
             if backplane_cadence is None:
@@ -373,16 +373,16 @@ def from_file(filespec, fast=False, **parameters):
                 ir_cadence = oops.cadence.ReshapedCadence(backplane_cadence,
                                                          (lines,samples))
 
-            ir_obs = oops.obs.RasterScan(('vslow','ufast','b'),
-                                          ir_cadence, ir_fov,
-                                          'CASSINI', ir_frame_id)
+            ir_obs = oops.obs.TimedImage(('vslow','ufast','b'),
+                                         ir_cadence, ir_fov,
+                                         'CASSINI', ir_frame_id)
 
     # Multiple LINE case
     elif swath_length == 1 and swath_length == lines:
         if not vis_is_off:
-            vis_obs = oops.obs.Slit(('vt','u','b'),
-                                     frame_cadence, vis_fov,
-                                     'CASSINI', vis_frame_id)
+            vis_obs = oops.obs.TimedImage(('vt','u','b'),
+                                          frame_cadence, vis_fov,
+                                          'CASSINI', vis_frame_id)
 
         if not ir_is_off:
             if backplane_cadence is None:
@@ -392,9 +392,9 @@ def from_file(filespec, fast=False, **parameters):
                 ir_cadence = oops.cadence.ReshapedCadence(backplane_cadence,
                                                          (lines,samples))
 
-            ir_obs = oops.obs.RasterSlit(('vslow','ufast','b'),
-                                          ir_cadence, ir_fov,
-                                          'CASSINI', ir_frame_id)
+            ir_obs = oops.obs.TimedImage(('vslow','ufast','b'),
+                                         ir_cadence, ir_fov,
+                                         'CASSINI', ir_frame_id)
 
 # 1/9/15 broken code no longer needed
 #     # Multiple 2-D IMAGE case
@@ -408,7 +408,7 @@ def from_file(filespec, fast=False, **parameters):
 #                                 vis_data.shape[-1])
 #
 #             # Define the first 2-D pushbroom observation
-#             vis_first_obs = oops.obs.Pushbroom(('t', 'vt','u','b'), (1.,1.),
+#             vis_first_obs = oops.obs.TimedImage(('t', 'vt','u','b'), (1.,1.),
 #                                 vis_header_cadence, vis_fov,
 #                                 'CASSINI', vis_frame_id)
 #
@@ -427,7 +427,7 @@ def from_file(filespec, fast=False, **parameters):
 #                                           ir_data.shape[-1])
 #
 #             # Define the first 2-D raster-scan observation
-#             ir_first_obs = oops.obs.RasterScan(('vslow','ufast','b'),
+#             ir_first_obs = oops.obs.TimedImage(('vslow','ufast','b'),
 #                                 (1., ir_det_size),
 #                                 ir_first_cadence, ir_fov,
 #                                 'CASSINI', ir_frame_id)
@@ -453,7 +453,7 @@ def from_file(filespec, fast=False, **parameters):
 #                                           ir_data.shape[-1])
 #
 #             # Define the first 2-D raster-scan observation
-#             ir_first_obs = oops.obs.RasterScan(('vslow','ufast','b'),
+#             ir_first_obs = oops.obs.TimedImage(('vslow','ufast','b'),
 #                                 (1., ir_det_size),
 #                                 ir_first_cadence, ir_fov,
 #                                 'CASSINI', ir_frame_id)

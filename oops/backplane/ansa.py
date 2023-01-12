@@ -287,8 +287,7 @@ Backplane._define_backplane_names(globals().copy())
 # UNIT TESTS
 ################################################################################
 import unittest
-from oops.meshgrid                     import Meshgrid
-from oops.unittester_support           import TESTDATA_PARENT_DIRECTORY
+from oops.body                         import Body
 from oops.constants                    import DPR
 from oops.backplane.unittester_support import show_info
 
@@ -299,13 +298,11 @@ def exercise_resolution(bp,
                         **options):
     """generic unit tests for orbit.py"""
 
-    ### TODO: use Body.has_rings() once Mark has created it
-    #if planet is not None:
-    #    test = bp.ansa_radial_resolution(planet+':ansa')
-    #     'Ansa radial resolution (km)', test, **options)
-    #    test = bp.ansa_vertical_resolution(planet+':ansa')
-    #    show_info(bp, 'Ansa vertical resolution (km)', test, **options)
-    if options['printing']: print("These tests require further development.")
+    if planet is not None and Body.lookup(planet).ring_body is not None:
+        test = bp.ansa_radial_resolution(planet+':ansa')
+        show_info(bp, 'Ansa radial resolution (km)', test, **options)
+        test = bp.ansa_vertical_resolution(planet+':ansa')
+        show_info(bp, 'Ansa vertical resolution (km)', test, **options)
 
 #===============================================================================
 def exercise_geometry(bp,
@@ -314,25 +311,23 @@ def exercise_geometry(bp,
                       **options):
     """generic unit tests for orbit.py"""
 
-    ### TODO: use Body.has_rings() once Mark has created it
-    #if planet is not None:
-    #    test = bp.ansa_radius(planet+':ansa')
-    #    show_info(bp, 'Ansa raius (km)', test,**options)
-    #    test = bp.ansa_altitude(planet+':ansa')
-    #    show_info(bp, 'Ansa altitude (km)', test,    **options)
-    #    test = bp.ansa_longitude(planet+':ansa', 'node')
-    #    show_info(bp, 'Ansa longitude wrt node (deg)', test*DPR,   **options)
-    #    test = bp.ansa_longitude(planet+':ansa', 'aries')
-    #    show_info(bp, 'Ansa longitude wrt Aries (deg)', test*DPR,  **options)
-    #    test = bp.ansa_longitude(planet+':ansa', 'obs')
-    #    show_info(bp, 'Ansa longitude wrt observer (deg)', test*DPR, **options)
-    #    test = bp.ansa_longitude(planet+':ansa', 'oha')
-    #    show_info(bp, 'Ansa longitude wrt OHA (deg)', test*DPR, **options)
-    #    test = bp.ansa_longitude(planet+':ansa', 'sun')
-    #    show_info(bp, 'Ansa longitude wrt Sun (deg)', test*DPR, **options)
-    #    test = bp.ansa_longitude(planet+':ansa', 'sha')
-    #    show_info(bp, 'Ansa longitude wrt SHA (deg)', test*DPR, **options)
-    if options['printing']: print("These tests require further development.")
+    if planet is not None and Body.lookup(planet).ring_body is not None:
+        test = bp.ansa_radius(planet+':ansa')
+        show_info(bp, 'Ansa radius (km)', test,**options)
+        test = bp.ansa_altitude(planet+':ansa')
+        show_info(bp, 'Ansa altitude (km)', test,    **options)
+        test = bp.ansa_longitude(planet+':ansa', 'node')
+        show_info(bp, 'Ansa longitude wrt node (deg)', test*DPR,   **options)
+        test = bp.ansa_longitude(planet+':ansa', 'aries')
+        show_info(bp, 'Ansa longitude wrt Aries (deg)', test*DPR,  **options)
+        test = bp.ansa_longitude(planet+':ansa', 'obs')
+        show_info(bp, 'Ansa longitude wrt observer (deg)', test*DPR, **options)
+        test = bp.ansa_longitude(planet+':ansa', 'oha')
+        show_info(bp, 'Ansa longitude wrt OHA (deg)', test*DPR, **options)
+        test = bp.ansa_longitude(planet+':ansa', 'sun')
+        show_info(bp, 'Ansa longitude wrt Sun (deg)', test*DPR, **options)
+        test = bp.ansa_longitude(planet+':ansa', 'sha')
+        show_info(bp, 'Ansa longitude wrt SHA (deg)', test*DPR, **options)
 
 
 #*******************************************************************************

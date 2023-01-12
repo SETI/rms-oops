@@ -1,10 +1,9 @@
 ################################################################################
-# oops/calibration/point.py: Subclass PointSource of class Calibration
+# oops/calibration/pointsource.py: Subclass PointSource of class Calibration
 ################################################################################
 
 from polymath import Scalar
-
-from . import Calibration
+from oops.calibration import Calibration
 
 class PointSource(Calibration):
     """PointSource is a Calibration subclass in which every pixel is multiplied
@@ -12,6 +11,8 @@ class PointSource(Calibration):
     pixel in the field of view. This compensates for the fact that larger pixels
     collect more photons. It is the appropriate calibration to use for point
     sources.
+
+    DEPRECATED. Use RawCounts.
     """
 
     ############################################################################
@@ -65,6 +66,19 @@ class PointSource(Calibration):
         """
 
         return value * (self.fov.area_factor(uv_pair) / self.factor)
+
+    #===========================================================================
+    def extended_from_dn(self, dn, uv_pair):
+        return self.value_from_dn(dn, uv_pair)
+
+    def dn_from_extended(self, value, uv_pair):
+        return self.dn_from_value(value, uv_pair)
+
+    def point_from_dn(self, dn, uv_pair):
+        return self.value_from_dn(dn, uv_pair)
+
+    def dn_from_point(self, value, uv_pair):
+        return self.dn_from_value(value, uv_pair)
 
 ################################################################################
 # UNIT TESTS

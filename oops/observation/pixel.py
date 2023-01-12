@@ -5,17 +5,17 @@
 import numpy as np
 from polymath import Scalar, Pair, Vector3
 
-from .         import Observation
-from ..cadence import Cadence
-from ..event   import Event
-from ..frame   import Frame
-from ..path    import Path
+from oops.observation import Observation
+from oops.cadence     import Cadence
+from oops.event       import Event
+from oops.frame       import Frame
+from oops.path        import Path
 
 class Pixel(Observation):
     """A subclass of Observation consisting of one or more measurements obtained
     from a single rectangular pixel.
 
-    Generalization to other pixel shapes is TDB. 7/24/12 MRS
+    Generalization to other FOV shapes is TODO.
     """
 
     #===========================================================================
@@ -99,7 +99,7 @@ class Pixel(Observation):
         self.__init__(*state[:-1], **state[-1])
 
     #===========================================================================
-    def uvt(self, indices, remask=False):
+    def uvt(self, indices, remask=False, derivs=True):
         """Coordinates (u,v) and time t for indices into the data array.
 
         This method supports non-integer index values.
@@ -107,6 +107,7 @@ class Pixel(Observation):
         Input:
             indices     a Scalar or Vector of array indices.
             remask      True to mask values outside the field of view.
+            derivs      True to include derivatives in the returned values.
 
         Return:         (uv, time)
             uv          a Pair defining the values of (u,v) within the FOV that
@@ -115,29 +116,22 @@ class Pixel(Observation):
                         with the array indices.
         """
 
-        if self.t_axis < 0:
-            return (Pair.HALF, self._scalar_midtime)
-
         # Works for a 1-D index or a multi-D index
-        tstep = Observation.scalar_from_indices(indices, self.t_axis)
-        tstep = self.scalar_from_indices(indices, self.t_axis)
+        tstep = Observation.scalar_from_indices(indices, self.t_axis,
+                                                derivs=derivs)
+
+        if tstep is None:       # if t_axis < 0
+            uv = Pair.filled(indices.shape, 0.5)
+            return (uv, self._scalar_midtime)
 
         time = self.cadence.time_at_tstep(tstep, remask=remask)
-        uv = Pair.HALF
-
-        # Return shapeless UV unless time is masked
-        if remask and np.any(time.mask):
-            uv_vals = np.empty(tstep.shape + (2,))
-            uv_vals.fill(0.5)
-            uv = Pair(uv_vals, time.mask)   # shared mask
-        else:
-            uv = Pair.HALF
-
+        uv = Pair.filled(time.shape, 0.5, mask=time.mask)
         return (uv, time)
 
     #===========================================================================
     def uvt_range(self, indices, remask=False):
-        """Ranges of coordinates and time for integer array indices.
+        """Ranges of (u,v) spatial coordinates and time for integer array
+        indices.
 
         Input:
             indices     a Vector of array indices.
@@ -153,57 +147,17 @@ class Pixel(Observation):
         """
 
         if self.t_axis < 0:
-            return (Pair.INT00, Pair.INT11) + self._scalar_time
+            return (Pair.INT00, self.fov.uv_shape) + self._scalar_time
 
         # Works for a 1-D index or a multi-D index
         tstep = Observation.scalar_from_indices(indices, self.t_axis)
         (time_min,
          time_max) = self.cadence.time_range_at_tstep(tstep, remask=remask)
 
-        # Return shapeless UV unless time is masked
-        if remask and np.any(time_min.mask):
-            uv_min_vals = np.zeros(indices.shape + (2,), dtype='int')
-            uv_max_vals = np.ones(indices.shape + (2,), dtype='int')
-            uv_min = Pair(uv_min_vals, time_min.mask)   # shared mask
-            uv_max = Pair(uv_max_vals, time_min.mask)   # shared mask
-        else:
-            uv_min = Pair.INT00
-            uv_max = Pair.INT11
+        # uv pair
+        uv_min = Pair.zeros(indices.shape, dtype='int', mask=time_min.mask)
 
-        return (uv_min, uv_max, time_min, time_max)
-
-    #===========================================================================
-    def uv_range_at_tstep(self, tstep, remask=False):
-        """A tuple defining the range of FOV (u,v) coordinates active at a
-        particular time step.
-
-        Input:
-            tstep       a Scalar or Pair time step index.
-            remask      True to mask values outside the time interval.
-
-        Return:         a tuple (uv_min, uv_max)
-            uv_min      a Pair defining the minimum values of FOV (u,v)
-                        coordinates active at this time step.
-            uv_min      a Pair defining the maximum values of FOV (u,v)
-                        coordinates active at this time step (exclusive).
-        """
-
-        if remask:
-            tstep = Scalar.as_scalar(tstep)
-            is_outside = ((tstep.vals < 0) |
-                          (tstep.vals > self.cadence.shape[0]))
-            new_mask = is_outside | tstep.mask
-            if np.any(new_mask):
-                uv_min_vals = np.zeros(tstep.shape + (2,), dtype='int')
-                uv_max_vals = np.ones(tstep.shape + (2,), dtype='int')
-
-                uv_min = Pair(uv_min_vals, new_mask)
-                uv_max = Pair(uv_max_vals, uv_min.mask)     # OK to share mask?
-
-                return (uv_min, uv_max)
-
-        # Without remask, OK to return shapeless values
-        return (Pair.INT00, self.INT11)
+        return (uv_min, uv_min + self.fov.uv_shape, time_min, time_max)
 
     #===========================================================================
     def time_range_at_uv(self, uv_pair, remask=False):
@@ -222,27 +176,7 @@ class Pixel(Observation):
                         time of each (u,v) pair, as seconds TDB.
         """
 
-        if remask:
-            uv_pair = Pair.as_pair(uv_pair)
-            is_outside = ((uv_pair.vals[...,0] < 0) |
-                          (uv_pair.vals[...,1] < 0) |
-                          (uv_pair.vals[...,0] > 1) |
-                          (uv_pair.vals[...,1] > 1))
-            new_mask = is_outside | uv_pair.mask
-            if np.any(new_mask):
-                time_min_vals = np.empty(uv_pair.shape)
-                time_max_vals = np.empty(uv_pair.shape)
-
-                time_min_vals.fill(self.time[0])
-                time_max_vals.fill(self.time[1])
-
-                time_min = Scalar(time_min_vals, is_outside)
-                time_max = Scalar(time_max_vals, is_outside)
-
-                return (time_min, time_max)
-
-        # Without a mask, it's OK to return shapeless values
-        return self._scalar_time
+        return self.time_range_at_uv_0d(uv_pair, remask=remask)
 
     #===========================================================================
     def uv_range_at_time(self, time, remask=False):
@@ -263,8 +197,9 @@ class Pixel(Observation):
                         specified time.
         """
 
-        return Observation.uv_range_at_time_0d(self, time, remask=remask,
-                                               scalar_time=self._scalar_time)
+        return Observation.uv_range_at_time_0d(self, time,
+                                               uv_shape=self.uv_shape,
+                                               remask=remask)
 
     #===========================================================================
     def time_shift(self, dtime):
@@ -277,8 +212,8 @@ class Pixel(Observation):
         Return:         a (shallow) copy of the object with a new time.
         """
 
-        obs = Pixel(self.axes, self.cadence.time_shift(dtime),
-                    self.fov, self.path, self.frame)
+        obs = Pixel(axes=self.axes, cadence=self.cadence.time_shift(dtime),
+                    fov=self.fov, path=self.path, frame=self.frame)
 
         for key in self.subfields.keys():
             obs.insert_subfield(key, self.subfields[key])
@@ -370,8 +305,8 @@ class Test_Pixel(unittest.TestCase):
 
     def runTest(self):
 
-        from ..cadence.metronome import Metronome
-        from ..fov.flatfov import FlatFOV
+        from oops.cadence.metronome import Metronome
+        from oops.fov.flatfov import FlatFOV
 
         fov = FlatFOV((0.001,0.001), (1,1))
         cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
@@ -387,7 +322,7 @@ class Test_Pixel(unittest.TestCase):
 
         self.assertFalse(np.any(uv.mask))
         self.assertFalse(np.any(time.mask))
-        self.assertEqual(time, cadence.tstride * indices)
+        self.assertEqual(time, cadence.time_at_tstep(indices))
         self.assertEqual(uv, (0.5,0.5))
 
         # uvt() with remask == True
@@ -409,7 +344,7 @@ class Test_Pixel(unittest.TestCase):
         self.assertEqual(uv_min, (0,0))
         self.assertEqual(uv_max, (1,1))
 
-        self.assertEqual(time_min, indices_ * cadence.tstride)
+        self.assertEqual(time_min, cadence.time_range_at_tstep(indices_)[0])
         self.assertEqual(time_max, time_min + cadence.texp)
 
         # uvt_range() with remask == False, new indices
@@ -476,7 +411,7 @@ class Test_Pixel(unittest.TestCase):
         self.assertFalse(uv.mask)
         self.assertFalse(np.any(time.mask))
         self.assertEqual(time.without_mask(),
-                         cadence.tstride * indices.to_scalar(1))
+                         cadence.time_at_tstep(indices.to_scalar(1)))
         self.assertEqual(uv, (0.5,0.5))
 
         # uvt() with remask == True
@@ -498,7 +433,7 @@ class Test_Pixel(unittest.TestCase):
         self.assertEqual(uv_min, (0,0))
         self.assertEqual(uv_max, (1,1))
 
-        self.assertEqual(time_min, indices_.to_scalar(1) * cadence.tstride)
+        self.assertEqual(time_min, cadence.time_range_at_tstep(indices.to_scalar(1))[0])
         self.assertEqual(time_max, time_min + cadence.texp)
 
         # uvt_range() with remask == False, new indices
@@ -513,7 +448,7 @@ class Test_Pixel(unittest.TestCase):
         self.assertEqual(uv_min, (0,0))
         self.assertEqual(uv_max, (1,1))
 
-        self.assertEqual(time_min, indices.to_scalar(1) * cadence.tstride)
+        self.assertEqual(time_min, cadence.time_range_at_tstep(indices.to_scalar(1))[0])
         self.assertEqual(time_max, time_min + cadence.texp)
 
         # uvt_range() with remask == True, new indices

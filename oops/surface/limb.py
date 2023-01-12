@@ -29,7 +29,7 @@ class Limb(Surface):
                 that used by the spheroid and ellipsoid surface.
     """
 
-    COORDINATE_TYPE = "limb"
+    COORDINATE_TYPE = 'limb'
     IS_VIRTUAL = True
     DEBUG = False   # True for convergence testing in intercept()
 
@@ -46,7 +46,7 @@ class Limb(Surface):
                         this range are masked.
         """
 
-        assert ground.COORDINATE_TYPE == "spherical"
+        assert ground.COORDINATE_TYPE == 'spherical'
         self.ground = ground
         self.origin = ground.origin
         self.frame  = ground.frame
@@ -117,9 +117,9 @@ class Limb(Surface):
             # Mask based on elevation limits if necessary
             if self.limits is not None:
                 zmask = (z.vals < self.limits[0]) | (z.vals > self.limits[1])
-                lon = lon.mask_where(zmask)
-                lat = lat.mask_where(zmask)
                 z = z.mask_where(zmask, replace=0.)
+                lon = lon.remask(z.mask)
+                lat = lat.remask(z.mask)
 
             results = (lon, lat, z)
 
@@ -225,7 +225,7 @@ class Limb(Surface):
 
         max_abs_dt = 1.e99
         ground_guess = False
-        for iter in range(SURFACE_PHOTONS.max_iterations):
+        for count in range(SURFACE_PHOTONS.max_iterations):
             pos = obs + t * los
             pos.insert_deriv('pos', Vector3.IDENTITY)
 
@@ -244,7 +244,7 @@ class Limb(Surface):
             max_abs_dt = abs(dt).max()
 
             if LOGGING.surface_iterations or Limb.DEBUG:
-                print(LOGGING.prefix, "Limb.intercept", iter, max_abs_dt)
+                print(LOGGING.prefix, 'Limb.intercept', count+1, max_abs_dt)
 
             if (max_abs_dt <= SURFACE_PHOTONS.dlt_precision or
                 max_abs_dt >= prev_max_abs_dt):
@@ -302,8 +302,8 @@ class Limb(Surface):
         """The ground point defined by the clock angle."""
 
         if derivs:
-            raise NotImplementedError("Limb.groundtrack_from_clock() " +
-                                      "does not implement derivatives")
+            raise NotImplementedError('Limb.groundtrack_from_clock ' +  # TODO
+                                      'does not implement derivatives')
 
         clock = Scalar.as_scalar(clock, False)
 
@@ -397,8 +397,8 @@ class Limb(Surface):
         """The z and clock values at an intercept point."""
 
         if derivs:
-            raise NotImplementedError("Limb.z_clock_from_intercept() " +
-                                      "does not implement derivatives")
+            raise NotImplementedError('Limb.z_clock_from_intercept ' +  # TODO
+                                      'does not implement derivatives')
 
         cept = Vector3.as_vector3(cept, False)
         obs  = Vector3.as_vector3(obs,  False)
@@ -434,8 +434,8 @@ class Limb(Surface):
         """The intercept point defined by z and clock."""
 
         if derivs:
-            raise NotImplementedError("Limb.intercept_from_z_clock() " +
-                                      "does not implement derivatives")
+            raise NotImplementedError('Limb.intercept_from_z_clock ' +  # TODO
+                                      'does not implement derivatives')
 
         z = Scalar.as_scalar(z, False)
         z = z.mask_where(z.mask, replace=0.)
@@ -498,7 +498,7 @@ class Limb(Surface):
 
         prev_max_abs_dv = 1.e99
         MAX_ITERS = 20
-        for iter in range(MAX_ITERS):
+        for count in range(MAX_ITERS):
 
             v.insert_deriv('v', dv_dv, override=True)
             u = (aa * v**2 + bb).sqrt() - cc * v
@@ -516,8 +516,8 @@ class Limb(Surface):
             max_abs_dv = abs(dv).max()
 
             if LOGGING.surface_iterations or Limb.DEBUG:
-                print(LOGGING.prefix, "Limb.intercept_from_z_clock",
-                                      iter, max_abs_dv)
+                print(LOGGING.prefix, 'Limb.intercept_from_z_clock',
+                                      count+1, max_abs_dv)
 
             # Break when convergence stops, even if the target precision was not
             # reached. This is OK because the ground track is perpendicular to
@@ -618,7 +618,7 @@ class Test_Limb(unittest.TestCase):
 
         NPTS = 1000
 
-        ground = Spheroid("SSB", "J2000", (REQ, RPOL))
+        ground = Spheroid('SSB', 'J2000', (REQ, RPOL))
         limb = Limb(ground)
 
         obs = Vector3([4*REQ,0,0])
@@ -641,7 +641,6 @@ class Test_Limb(unittest.TestCase):
                             limb.ground.req).median() < 1.e-10)
 
         matrix = Matrix3.twovec(-obs, 2, Vector3.ZAXIS, 0)
-        rotated = matrix * track
         (x,y,_) = (matrix * track).to_scalars()
         self.assertTrue(abs(y.arctan2(x) % TWOPI - clock).median() < 1.e-10)
 
@@ -694,7 +693,7 @@ class Test_Limb(unittest.TestCase):
 
         ####################
 
-        ground = Ellipsoid("SSB", "J2000", (REQ, RMID, RPOL))
+        ground = Ellipsoid('SSB', 'J2000', (REQ, RMID, RPOL))
         limb = Limb(ground)
 
         obs = Vector3([4*REQ,0,0])
@@ -718,7 +717,6 @@ class Test_Limb(unittest.TestCase):
                             limb.ground.req).median() < 1.e-10)
 
         matrix = Matrix3.twovec(-obs, 2, Vector3.ZAXIS, 0)
-        rotated = matrix * track
         (x,y,_) = (matrix * track).to_scalars()
         self.assertTrue(abs(y.arctan2(x) % TWOPI - clock).median() < 1.e-10)
 
@@ -769,7 +767,7 @@ class Test_Limb(unittest.TestCase):
 
         ####################
 
-        ground = CentricSpheroid("SSB", "J2000", (REQ, RPOL))
+        ground = CentricSpheroid('SSB', 'J2000', (REQ, RPOL))
         limb = Limb(ground)
 
         obs = Vector3([4*REQ,0,0])
@@ -800,7 +798,7 @@ class Test_Limb(unittest.TestCase):
 
         ####################
 
-        ground = GraphicSpheroid("SSB", "J2000", (REQ, RPOL))
+        ground = GraphicSpheroid('SSB', 'J2000', (REQ, RPOL))
         limb = Limb(ground)
 
         obs = Vector3([4*REQ,0,0])
@@ -831,7 +829,7 @@ class Test_Limb(unittest.TestCase):
 
         ####################
 
-        ground = CentricEllipsoid("SSB", "J2000", (REQ, RMID, RPOL))
+        ground = CentricEllipsoid('SSB', 'J2000', (REQ, RMID, RPOL))
         limb = Limb(ground)
 
         obs = Vector3([4*REQ,0,0])
@@ -862,7 +860,7 @@ class Test_Limb(unittest.TestCase):
 
         ####################
 
-        ground = GraphicEllipsoid("SSB", "J2000", (REQ, RMID, RPOL))
+        ground = GraphicEllipsoid('SSB', 'J2000', (REQ, RMID, RPOL))
         limb = Limb(ground)
 
         obs = Vector3([4*REQ,0,0])

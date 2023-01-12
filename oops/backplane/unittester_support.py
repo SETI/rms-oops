@@ -2,10 +2,7 @@
 # oops/backplane/unittester_support.py
 ################################################################################
 
-import unittest
-import re
 import os
-import sys
 import numbers
 import numpy as np
 
@@ -210,7 +207,7 @@ def show_info(bp, title, array, **options):
 
         filename = _construct_filename(bp, array, title, refdir)
         reference = _read_image(filename)
-        assert reference is not None, f'Reference directory not found: {reference}'
+        assert reference is not None, f'Reference file is missing: {filename}'
 
         _compare_backplanes(image, reference)
 

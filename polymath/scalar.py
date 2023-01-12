@@ -748,7 +748,7 @@ class Scalar(Qube):
         return self * (self * a + b) + c
 
     #===========================================================================
-    def max(self, axis=None, builtins=None):
+    def max(self, axis=None, builtins=None, out=None):
         """The maximum of the unmasked values.
 
         Input:
@@ -760,6 +760,7 @@ class Scalar(Qube):
                         the result is returned as a Python int or float instead
                         of an instance of Scalar. Default is the value specified
                         by Qube.PREFER_BUILTIN_TYPES.
+            out         Ignored. Enables "np.max(Scalar)" to work.
         """
 
         if self._drank_:
@@ -814,7 +815,7 @@ class Scalar(Qube):
         return result
 
     #===========================================================================
-    def min(self, axis=None, builtins=None):
+    def min(self, axis=None, builtins=None, out=None):
         """The minimum of the unmasked values.
 
         Input:
@@ -826,6 +827,7 @@ class Scalar(Qube):
                         the result is returned as a Python int or float instead
                         of an instance of Scalar. Default is the value specified
                         by Qube.PREFER_BUILTIN_TYPES.
+            out         Ignored. Enables "np.min(Scalar)" to work.
         """
 
         if self._drank_:

@@ -30,7 +30,7 @@ class OrbitPlane(Surface):
     However, coordinates and intercepts are calculated at all locations.
     """
 
-    COORDINATE_TYPE = "polar"
+    COORDINATE_TYPE = 'polar'
     IS_VIRTUAL = False
 
     #===========================================================================
@@ -95,14 +95,14 @@ class OrbitPlane(Surface):
             if path_id is None:
                 frame_id = None
             else:
-                frame_id = path_id + "_INCLINATION"
+                frame_id = path_id + '_INCLINATION'
 
-            self.inclined_frame = InclinedFrame(elements[6],  # inclination
-                                                elements[7],  # ascending node
-                                                elements[8],  # regression rate
-                                                self.epoch,
-                                                self.internal_frame,
-                                                True,         # despin
+            self.inclined_frame = InclinedFrame(inc = elements[6],
+                                                node = elements[7],
+                                                rate = elements[8],
+                                                epoch = self.epoch,
+                                                reference = self.internal_frame,
+                                                despin = True,
                                                 frame_id = frame_id)
             self.internal_frame = self.inclined_frame
         else:
@@ -128,14 +128,14 @@ class OrbitPlane(Surface):
             if path_id is None:
                 new_path_id = None
             else:
-                new_path_id = path_id + "_ECCENTRICITY"
+                new_path_id = path_id + '_ECCENTRICITY'
 
-            self.peri_path = CirclePath(elements[0] * elements[3],  # a*e
-                                        elements[4] + PI,           # apocenter
-                                        elements[5],                # precession
-                                        self.epoch,                 # epoch
-                                        self.internal_origin,       # origin
-                                        self.internal_frame,        # reference
+            self.peri_path = CirclePath(radius = elements[0] * elements[3],# a*e
+                                        lon = elements[4] + PI,     # apocenter
+                                        rate = elements[5],         # precession
+                                        epoch = self.epoch,
+                                        origin = self.internal_origin,
+                                        frame = self.internal_frame,
                                         path_id = new_path_id)
             self.internal_origin = self.peri_path
 
@@ -145,13 +145,13 @@ class OrbitPlane(Surface):
             if path_id is None:
                 frame_id = None
             else:
-                frame_id = path_id + "_PERICENTER"
+                frame_id = path_id + '_PERICENTER'
 
-            self.spin_frame = SpinFrame(elements[4],                # pericenter
-                                        elements[5],                # precession
-                                        self.epoch,                 # epoch
-                                        2,                          # z-axis
-                                        self.internal_frame,        # reference
+            self.spin_frame = SpinFrame(offset = elements[4],       # pericenter
+                                        rate = elements[5],         # precession
+                                        epoch = self.epoch,
+                                        axis = 2,
+                                        reference = self.internal_frame,
                                         frame_id = frame_id)
             self.internal_frame = self.spin_frame
 
@@ -159,9 +159,11 @@ class OrbitPlane(Surface):
             self.peri_path = None
             self.spin_frame = None
 
-        self.ringplane = RingPlane(self.internal_origin,
-                                   self.internal_frame,
-                                   radii=None, gravity=None, elevation=0.)
+        self.ringplane = RingPlane(origin = self.internal_origin,
+                                   frame = self.internal_frame,
+                                   radii = None,
+                                   gravity = None,
+                                   elevation = 0.)
 
         # The primary origin and frame for the orbit
         self.origin = self.internal_origin.waypoint
@@ -193,7 +195,7 @@ class OrbitPlane(Surface):
         """
 
         return self.ringplane.coords_from_vector3(pos, obs, axes=axes,
-                                                       derivs=derivs)
+                                                            derivs=derivs)
 
     #===========================================================================
     def vector3_from_coords(self, coords, obs=None, time=None, derivs=False):
@@ -379,7 +381,7 @@ class Test_OrbitPlane(unittest.TestCase):
         # Circular orbit, no derivatives, forward
         elements = (1, 0, 1)
         epoch = 0
-        orbit = OrbitPlane(elements, epoch, "SSB", "J2000", "TEST")
+        orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000', 'TEST')
 
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
         (r,l,z) = orbit.coords_from_vector3(pos, None, axes=3, derivs=False)
@@ -446,12 +448,12 @@ class Test_OrbitPlane(unittest.TestCase):
         prec = 0.1
         elements = (1, 0, 1, ae, 0, prec)
         epoch = 0
-        orbit = OrbitPlane(elements, epoch, "SSB", "J2000", "TEST")
+        orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000', 'TEST')
         eps = 1.e-6
         delta = 1.e-5
 
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-        event = Event(0., pos, "SSB", "J2000")
+        event = Event(0., pos, 'SSB', 'J2000')
         (r,l,z) = orbit.coords_of_event(event, derivs=False)
 
         r_true = Scalar([1. + ae, 2. + ae, 1 - ae, np.sqrt(1. + ae**2)])
@@ -472,7 +474,7 @@ class Test_OrbitPlane(unittest.TestCase):
         prec = 0.1
         elements = (1, 0, 1, ae, 0, prec)
         epoch = 0
-        orbit = OrbitPlane(elements, epoch, "SSB", "J2000")
+        orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000')
         eps = 1.e-6
         delta = 3.e-5
 
@@ -480,10 +482,10 @@ class Test_OrbitPlane(unittest.TestCase):
 
         for v in ([0,0,0], [0.1,0,0], [0,0.1,0], [0,0,0.1]):
             vel = Vector3(v)
-            event = Event(0., (pos, vel), "SSB", "J2000")
+            event = Event(0., (pos, vel), 'SSB', 'J2000')
             (r,l,z) = orbit.coords_of_event(event, derivs=True)
 
-            event = Event(eps, (pos + vel*eps, vel), "SSB", "J2000")
+            event = Event(eps, (pos + vel*eps, vel), 'SSB', 'J2000')
             (r1,l1,z1) = orbit.coords_of_event(event, derivs=False)
             dr_dt_test = (r1 - r) / eps
             dl_dt_test = (l1 - l) / eps
@@ -529,13 +531,13 @@ class Test_OrbitPlane(unittest.TestCase):
 
         elements = (1, 0, 1, 0, 0, 0, inc, node, regr)
         epoch = 0
-        orbit = OrbitPlane(elements, epoch, "SSB", "J2000")
+        orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000')
         eps = 1.e-6
         delta = 1.e-5
 
         dz = 0.1
         pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,dz)])
-        event = Event(0., pos, "SSB", "J2000")
+        event = Event(0., pos, 'SSB', 'J2000')
         (r,l,z) = orbit.coords_of_event(event, derivs=False)
 
         r_true = Scalar([cosi, 2*cosi, cosi, np.sqrt(1 + (dz*sini)**2)])
@@ -560,7 +562,7 @@ class Test_OrbitPlane(unittest.TestCase):
 
         elements = (1, 0, 1, 0, 0, 0, inc, node, regr)
         epoch = 0
-        orbit = OrbitPlane(elements, epoch, "SSB", "J2000")
+        orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000')
         eps = 1.e-6
         delta = 1.e-5
 
@@ -569,10 +571,10 @@ class Test_OrbitPlane(unittest.TestCase):
 
         for v in ([0,0,0], [0.1,0,0], [0,0.1,0], [0,0,0.1]):
             vel = Vector3(v)
-            event = Event(0., (pos, vel), "SSB", "J2000")
+            event = Event(0., (pos, vel), 'SSB', 'J2000')
             (r,l,z) = orbit.coords_of_event(event, derivs=True)
 
-            event = Event(eps, (pos + vel*eps, vel), "SSB", "J2000")
+            event = Event(eps, (pos + vel*eps, vel), 'SSB', 'J2000')
             (r1,l1,z1) = orbit.coords_of_event(event, derivs=False)
             dr_dt_test = (r1 - r) / eps
             dl_dt_test = ((l1 - l + PI) % TWOPI - PI) / eps
@@ -608,7 +610,7 @@ class Test_OrbitPlane(unittest.TestCase):
         # From/to mean anomaly
         elements = (1, 0, 1, 0.1, 0, 0.1)
         epoch = 0
-        orbit = OrbitPlane(elements, epoch, "SSB", "J2000", "TEST")
+        orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000', 'TEST')
 
         l = np.arange(361) * RPD
         anoms = orbit.to_mean_anomaly(l)

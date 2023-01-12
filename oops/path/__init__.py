@@ -365,14 +365,14 @@ class Path(object):
 
         while True:
             Path.TEMPORARY_PATH_ID += 1
-            path_id = "TEMPORARY_" + str(Path.TEMPORARY_PATH_ID)
+            path_id = 'TEMPORARY_' + str(Path.TEMPORARY_PATH_ID)
 
             if path_id not in Path.WAYPOINT_REGISTRY:
                 return path_id
 
     #===========================================================================
     def is_registered(self):
-        """True if this frame is registered."""
+        """True if this path is registered."""
 
         return (self.path_id in Path.WAYPOINT_REGISTRY)
 
@@ -852,6 +852,12 @@ class Path(object):
             return newpath
         else:
             return RotatedPath(newpath, frame)
+
+    #===========================================================================
+    def wrt_ssb(self):
+        """This path relative to the SSB, in the J2000 frame."""
+
+        return self.wrt(Path.SSB, Frame.J2000)
 
     #===========================================================================
     def quick_path(self, time, quick={}):
@@ -1461,12 +1467,10 @@ class QuickPath(Path):
 
         if interval[1] > self.t1:
             count1 = int((interval[1] - self.t1) // self.dt) + 1 + self.extras
-            _new_t1 = self.t1 + count1 * self.dt
             times  = np.arange(count1) * self.dt + self.t1 + self.dt
             event1 = self.slowpath.event_at_time(times, quick=False)
         else:
             count1 = 0
-            _new_t1 = self.t1
 
         # Allocate the new arrays
         old_size = self.times.size
@@ -1534,22 +1538,22 @@ class Test_Path(unittest.TestCase):
 
         Path.USE_QUICKPATHS = False
 
-        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp'))
 
         # Registry tests
         Path.reset_registry()
         Frame.reset_registry()
 
-        self.assertEqual(Path.WAYPOINT_REGISTRY["SSB"], Path.SSB)
+        self.assertEqual(Path.WAYPOINT_REGISTRY['SSB'], Path.SSB)
 
         # LinkedPath tests
-        _sun = SpicePath("SUN", "SSB")
-        earth = SpicePath("EARTH", "SUN")
+        _ = SpicePath('SUN', 'SSB')
+        earth = SpicePath('EARTH', 'SUN')
 
-        moon = SpicePath("MOON", "EARTH")
+        moon = SpicePath('MOON', 'EARTH')
         linked = LinkedPath(moon, earth)
 
-        direct = SpicePath("MOON", "SUN")
+        direct = SpicePath('MOON', 'SUN')
 
         times = np.arange(-3.e8, 3.01e8, 0.5e7)
 
@@ -1561,8 +1565,8 @@ class Test_Path(unittest.TestCase):
         self.assertTrue(((linked_event.vel - direct_event.vel).norm() <= eps).all())
 
         # RelativePath
-        relative = RelativePath(linked, SpicePath("MARS", "SUN"))
-        direct = SpicePath("MOON", "MARS")
+        relative = RelativePath(linked, SpicePath('MARS', 'SUN'))
+        direct = SpicePath('MOON', 'MARS')
 
         direct_event = direct.event_at_time(times)
         relative_event = relative.event_at_time(times)
@@ -1573,7 +1577,7 @@ class Test_Path(unittest.TestCase):
 
         # ReversedPath
         reversed = ReversedPath(relative)
-        direct = SpicePath("MARS", "MOON")
+        direct = SpicePath('MARS', 'MOON')
 
         direct_event = direct.event_at_time(times)
         reversed_event = reversed.event_at_time(times)
@@ -1583,8 +1587,8 @@ class Test_Path(unittest.TestCase):
         self.assertTrue(((reversed_event.vel - direct_event.vel).norm() <= eps).all())
 
         # RotatedPath
-        rotated = RotatedPath(reversed, SpiceFrame("B1950"))
-        direct = SpicePath("MARS", "MOON", "B1950")
+        rotated = RotatedPath(reversed, SpiceFrame('B1950'))
+        direct = SpicePath('MARS', 'MOON', 'B1950')
 
         direct_event = direct.event_at_time(times)
         rotated_event = rotated.event_at_time(times)
@@ -1594,14 +1598,14 @@ class Test_Path(unittest.TestCase):
         self.assertTrue(((rotated_event.vel - direct_event.vel).norm() <= eps).all())
 
         # QuickPath tests
-        moon = SpicePath("MOON", "EARTH")
+        moon = SpicePath('MOON', 'EARTH')
         quick = QuickPath(moon, (-5.,5.), QUICK.dictionary)
 
         # Perfect precision is impossible
         try:
             quick = QuickPath(moon, np.arange(0.,100.,0.0001),
-                              dict(QUICK.dictionary, **{"path_self_check":0.}))
-            self.assertTrue(False, "No ValueError raised for PRECISION = 0.")
+                              dict(QUICK.dictionary, **{'path_self_check':0.}))
+            self.assertTrue(False, 'No ValueError raised for PRECISION = 0.')
         except ValueError:
             pass
 

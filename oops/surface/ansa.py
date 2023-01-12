@@ -23,7 +23,7 @@ class Ansa(Surface):
                 away from the observer and negative values closer.
     """
 
-    COORDINATE_TYPE = "cylindrical"
+    COORDINATE_TYPE = 'cylindrical'
     IS_VIRTUAL = True
 
     #===========================================================================
@@ -272,7 +272,7 @@ class Test_Ansa(unittest.TestCase):
 
         np.random.seed(7742)
 
-        surface = Ansa("SSB", "J2000")
+        surface = Ansa('SSB', 'J2000')
 
         # intercept()
         obs = Vector3( np.random.rand(10,3) * 1.e5)

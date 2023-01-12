@@ -145,7 +145,7 @@ class Test_TrackerFrame(unittest.TestCase):
 
     def runTest(self):
 
-        _tracker = TrackerFrame("J2000", "MARS", "EARTH", 0., frame_id="TEST")
+        _ = TrackerFrame("J2000", "MARS", "EARTH", 0., frame_id="TEST")
         mars = AliasPath("MARS")
 
         obs_event = Event(0., Vector3.ZERO, "EARTH", "J2000")

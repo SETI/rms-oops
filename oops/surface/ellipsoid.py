@@ -33,7 +33,7 @@ class Ellipsoid(Surface):
     exactly normal to the surface.
     """
 
-    COORDINATE_TYPE = "spherical"
+    COORDINATE_TYPE = 'spherical'
     IS_VIRTUAL = False
 
     DEBUG = False       # True for convergence testing in intercept_normal_to()
@@ -222,10 +222,10 @@ class Ellipsoid(Surface):
 
         bsign_sqrtd_div2 = b_div2.sign() * d_div4.sqrt()
 #         t = (bsign_sqrtd_div2 - b_div2) / a
-        t = -c / (b_div2 + bsign_sqrtd_div2)     # more accurate!
+        t = -c / (b_div2 + bsign_sqrtd_div2)    # more accurate!
 
         pos = obs + t*los
-#         pos = self._apply_exclusion(pos)  ### why was this here?? -MRS
+        pos = self._apply_exclusion(pos)
         return (pos, t)
 
     #===========================================================================
@@ -353,7 +353,7 @@ class Ellipsoid(Surface):
 
         # Terminate when accuracy stops improving by at least a factor of 2
         max_dp = 1.e99
-        for iter in range(SURFACE_PHOTONS.max_iterations):
+        for count in range(SURFACE_PHOTONS.max_iterations):
             denom = Vector3.ONES + p * self.unsquash_sq
 
             pos_scale = pos.element_mul(self.unsquash.element_div(denom))
@@ -369,12 +369,12 @@ class Ellipsoid(Surface):
             max_dp = abs(dt).max()
 
             if LOGGING.surface_iterations or Ellipsoid.DEBUG:
-                print(LOGGING.prefix, "Surface.spheroid.intercept_normal_to",
-                                      iter, max_dp)
+                print(LOGGING.prefix, 'Surface.spheroid.intercept_normal_to',
+                                      count+1, max_dp)
 
-            if (np.all(Scalar.as_scalar(max_dp).mask) or
-                max_dp <= SURFACE_PHOTONS.dlt_precision or
-                max_dp >= prev_max_dp * 0.5):
+            if (np.all(Scalar.as_scalar(max_dp).mask)
+                or max_dp <= SURFACE_PHOTONS.dlt_precision
+                or max_dp >= prev_max_dp * 0.5):
                     break
 
         denom = Vector3.ONES + p * self.unsquash_sq
@@ -622,7 +622,7 @@ class Test_Ellipsoid(unittest.TestCase):
         REQ  = 60268.
         RMID = 54364.
         RPOL = 50000.
-        planet = Ellipsoid("SSB", "J2000", (REQ, RMID, RPOL))
+        planet = Ellipsoid('SSB', 'J2000', (REQ, RMID, RPOL))
 
         # Coordinate/vector conversions
         NPTS = 10000
