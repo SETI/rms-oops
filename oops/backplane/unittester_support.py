@@ -107,8 +107,7 @@ def _construct_filename(bp, array, title, dir):
             if item != ():
                 id = id + '_' + str(item)
         id = _convert_filename(id)
-#        filename = filename + '[' + id + ']'
-        filename = filename + '--' + id
+        filename = filename + '[' + id + ']'
 
     filename = filename + '.png'
 
