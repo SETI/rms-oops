@@ -992,21 +992,21 @@ def exercise_photometry(bp,
         show_info(bp, 'Ring center emission angle, prograde (deg)', test*DPR, **options)
 
     if planet is not None and Body.lookup(planet).ring_body is not None:
-            test = bp.ring_elevation(planet+':ring', reference='sun')
-            show_info(bp, 'Ring elevation wrt Sun, unmasked (deg)', test*DPR, **options)
-            compare = bp.ring_incidence_angle(planet+':ring', 'north')
-            diff = test + compare
-            show_info(bp,
-                      'Ring elevation wrt Sun plus north incidence, unmasked (deg)',
-                      diff*DPR, **options)
-            test = bp.ring_elevation(planet+':ring', reference='obs')
-            show_info(bp, 'Ring elevation wrt observer, unmasked (deg)', test*DPR,
-                      **options)
-            compare = bp.ring_emission_angle(planet+':ring', 'north')
-            diff = test + compare
-            show_info(bp,
-                      'Ring elevation wrt observer plus north emission, unmasked (deg)',
-                      diff*DPR, **options)
+        test = bp.ring_elevation(planet+':ring', reference='sun')
+        show_info(bp, 'Ring elevation wrt Sun, unmasked (deg)', test*DPR, **options)
+        compare = bp.ring_incidence_angle(planet+':ring', 'north')
+        diff = test + compare
+        show_info(bp,
+                  'Ring elevation wrt Sun plus north incidence, unmasked (deg)',
+                  diff*DPR, **options)
+        test = bp.ring_elevation(planet+':ring', reference='obs')
+        show_info(bp, 'Ring elevation wrt observer, unmasked (deg)', test*DPR,
+                  **options)
+        compare = bp.ring_emission_angle(planet+':ring', 'north')
+        diff = test + compare
+        show_info(bp,
+                  'Ring elevation wrt observer plus north emission, unmasked (deg)',
+                  diff*DPR, **options)
 
 
 #*******************************************************************************

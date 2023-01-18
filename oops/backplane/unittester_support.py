@@ -108,6 +108,9 @@ def _construct_filename(bp, array, title, dir):
                 id = id + '_' + str(item)
         id = _convert_filename(id)
         filename = filename + '[' + id + ']'
+#        filename = filename + '--' + id    # proposed; see issue #40
+                                            # would require regeneration of
+                                            # reference backplanes
 
     filename = filename + '.png'
 

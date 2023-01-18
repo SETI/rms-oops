@@ -181,21 +181,19 @@ def exercise_ansa(bp,
                   **options):
     """generic unit tests for resolution.py"""
 
-    if planet is not None:
-
-        if planet is not None and Body.lookup(planet).ring_body is not None:
-            test = bp.resolution(planet+':ansa', 'u')
-            show_info(bp, 'Ansa resolution along u axis (km)', test, **options)
-            test = bp.resolution(planet+':ansa', 'v')
-            show_info(bp, 'Ansa resolution along v axis (km)', test, **options)
-            test = bp.center_resolution(planet+':ansa', 'u')
-            show_info(bp, 'Ansa center resolution along u axis (km)', test, **options)
-            test = bp.center_resolution(planet+':ansa', 'v')
-            show_info(bp, 'Ansa center resolution along v axis (km)', test, **options)
-            test = bp.finest_resolution(planet+':ansa')
-            show_info(bp, 'Ansa finest resolution (km)', test, **options)
-            test = bp.coarsest_resolution(planet+':ansa')
-            show_info(bp, 'Ansa coarsest resolution (km)', test, **options)
+    if planet is not None and Body.lookup(planet).ring_body is not None:
+        test = bp.resolution(planet+':ansa', 'u')
+        show_info(bp, 'Ansa resolution along u axis (km)', test, **options)
+        test = bp.resolution(planet+':ansa', 'v')
+        show_info(bp, 'Ansa resolution along v axis (km)', test, **options)
+        test = bp.center_resolution(planet+':ansa', 'u')
+        show_info(bp, 'Ansa center resolution along u axis (km)', test, **options)
+        test = bp.center_resolution(planet+':ansa', 'v')
+        show_info(bp, 'Ansa center resolution along v axis (km)', test, **options)
+        test = bp.finest_resolution(planet+':ansa')
+        show_info(bp, 'Ansa finest resolution (km)', test, **options)
+        test = bp.coarsest_resolution(planet+':ansa')
+        show_info(bp, 'Ansa coarsest resolution (km)', test, **options)
 
 
 #===========================================================================
