@@ -366,9 +366,19 @@ from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
 from oops.backplane.exercise_backplanes import exercise_backplanes
 from oops.backplane.unittester_support  import Backplane_Settings
 
-
 #*******************************************************************************
 class Test_Juno_Junocam_Backplane_Exercises(unittest.TestCase):
+
+    #===========================================================================
+    def setUp(self):
+        from oops.body import Body
+
+#        Body.reset_registry()
+#        Body.define_solar_system('1990-01-01', '2020-01-01')
+
+    #===========================================================================
+    def tearDown(self):
+        pass
 
     #===========================================================================
     def runTest(self):
