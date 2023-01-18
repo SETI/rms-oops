@@ -61,14 +61,14 @@ def _scale_image(array, minval, maxval):
     return bytes
 
 #===============================================================================
-def _compare_backplanes(array, reference, margin=0.05):
+def _compare_backplanes(array, reference, array_name, reference_name, margin=0.05):
     """Compare a backplane array to the reference array."""
 
     array = Scalar.as_scalar(array)
     reference = Scalar.as_scalar(reference)
 
     diff = abs(array - reference)
-    assert diff.max() <= reference.max()*margin
+    assert diff.max() <= reference.max()*margin, f'File: {array_name}, Reference: {reference_name}'
 
 #===============================================================================
 def _convert_filename(filename):
@@ -201,18 +201,18 @@ def show_info(bp, title, array, **options):
     if saving:
         os.makedirs(dir, exist_ok=True)
 
-        filename = _construct_filename(bp, array, title, dir)
-        _save_image(image, filename)
+        image_filename = _construct_filename(bp, array, title, dir)
+        _save_image(image, image_filename)
 
     # Compare with reference array if refdir is known
     if refdir is not None:
         assert os.path.exists(refdir), f'Reference directory not found: {refdir}'
 
-        filename = _construct_filename(bp, array, title, refdir)
-        reference = _read_image(filename)
-        assert reference is not None, f'Reference file is missing: {filename}'
+        reference_filename = _construct_filename(bp, array, title, refdir)
+        reference = _read_image(reference_filename)
+        assert reference is not None, f'Reference file is missing: {reference_filename}'
 
-        _compare_backplanes(image, reference)
+        _compare_backplanes(image, reference, image_filename, reference_filename)
 
 
 #*******************************************************************************
