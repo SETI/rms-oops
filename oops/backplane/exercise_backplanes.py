@@ -27,7 +27,7 @@ def _exercise_backplanes(obs, printing, logging, saving, dir, refdir,
     if printing:
         print()
 
-    meshgrid = Meshgrid.for_fov(obs.fov, undersample=undersample, swap=True)
+    meshgrid = Meshgrid.for_fov(obs.fov, origin=0.5, undersample=undersample, swap=True)
 
     if use_inventory:
         bp = Backplane(obs, meshgrid, inventory={})

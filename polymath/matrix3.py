@@ -73,8 +73,10 @@ class Matrix3(Matrix):
         (unit1, vector2) = Qube.broadcast(unit1, vector2)
 
         # Denominators are disallowed
-        assert unit1._denom_   == (), 'denominator is disallowed'
-        assert vector2._denom_ == (), 'denominator is disallowed'
+        if unit1._denom_:
+            raise ValueError('vector1 denominator is not allowed')
+        if vector2._denom_:
+            raise ValueError('vector2 denominator is not allowed')
 
         # Define the remaining two columns of the matrix
         axis3 = 3 - axis1 - axis2

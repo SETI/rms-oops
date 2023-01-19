@@ -2,18 +2,17 @@
 # oops/surface/nullsurface.py: NullSurface subclass of class Surface
 ################################################################################
 
-from polymath import Scalar, Vector3
-
-from .       import Surface
-from ..frame import Frame
-from ..path  import Path
+from polymath     import Scalar, Vector3
+from oops.frame   import Frame
+from oops.path    import Path
+from oops.surface import Surface
 
 class NullSurface(Surface):
     """A subclass of Surface of describing an infinitesimal surface centered on
     the specified path, and using the specified coordinate frame.
     """
 
-    COORDINATE_TYPE = "rectangular"
+    COORDINATE_TYPE = 'rectangular'
 
     #===========================================================================
     def __init__(self, origin, frame):
@@ -30,8 +29,15 @@ class NullSurface(Surface):
         self.origin = Path.as_waypoint(origin)
         self.frame  = Frame.as_wayframe(frame)
 
+        self.unmasked = self
+
+        # Unique key for intercept calculations
+        self.intercept_key = ('null', self.origin.waypoint,
+                                      self.frame.wayframe)
+
     def __getstate__(self):
-        return (self.origin, self.frame)
+        return (Path.as_primary_path(self.origin),
+                Frame.as_primary_frame(self.frame))
 
     def __setstate__(self, state):
         self.__init__(*state)
@@ -55,6 +61,10 @@ class NullSurface(Surface):
                         three Scalars, one for each coordinate.
         """
 
+        if axes not in (2, 3):
+            raise ValueError('Surface.coords_from_vector3 ' +
+                             'axes values must equal 2 or 3')
+
         # Simple rectangular coordinates
         pos = Vector3.as_vector3(pos, derivs)
         return pos.to_scalars(derivs)[:axes]
@@ -77,6 +87,10 @@ class NullSurface(Surface):
         Note that the coordinates can all have different shapes, but they must
         be broadcastable to a single shape.
         """
+
+        if len(coords) not in (2, 3):
+            raise ValueError('Surface.vector3_from_coords requires 2 or 3 '
+                             'coords')
 
         # Convert to Scalars and strip units, if any
         x = Scalar.as_scalar(coords[0], derivs)

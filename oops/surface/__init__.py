@@ -2,16 +2,13 @@
 # oops/surface/__init__.py: Abstract class Surface
 ################################################################################
 
-from __future__ import print_function
-
 import numpy as np
-from polymath import Scalar, Vector3, Qube
-
-from ..config import SURFACE_PHOTONS, LOGGING
-from ..event  import Event
-from ..frame  import Frame
-from ..path   import Path
-import oops.constants as constants
+from polymath       import Qube, Scalar, Vector3
+from oops.config    import SURFACE_PHOTONS, LOGGING
+from oops.constants import C
+from oops.event     import Event
+from oops.frame     import Frame
+from oops.path      import Path
 
 class Surface(object):
     """Surface is an abstract class describing a 2-D object that moves and
@@ -21,8 +18,15 @@ class Surface(object):
     below that surface.
 
     Required attributes:
-        origin      the waypoint of the path defining the surface's center.
-        frame       the wayframe of the frame in which the surface is defined.
+        origin          the waypoint of the path defining the surface's center.
+        frame           the wayframe of the frame in which the surface is
+                        defined.
+        unmasked        an un-masked version of this surface. If the surface has
+                        no mask, this returns self.
+        intercept_key   a unique, immutable key that defines the surface. Note
+                        that some surface classes are identical except for a
+                        mask or coordinate definition; these classes should
+                        return the same intercept key.
     """
 
     # Class constants to override where derivs are undefined
@@ -43,6 +47,11 @@ class Surface(object):
 
     # A time-dependent path is one whose 3-D shape varies with time.
     IS_TIME_DEPENDENT = False
+
+    # True for any surface that has an interior
+    HAS_INTERIOR = False
+
+    DEBUG = False           # True to log iteration convergence steps
 
     ########################################
     # Each subclass must override...
@@ -73,7 +82,8 @@ class Surface(object):
                         three Scalars, one for each coordinate.
         """
 
-        pass
+        raise NotImplementedError(type(self).__name__ + '.coords_from_vector3 '
+                                  + 'is not implemented')
 
     #===========================================================================
     def vector3_from_coords(self, coords, obs=None, time=None, derivs=False):
@@ -96,7 +106,8 @@ class Surface(object):
         be broadcastable to a single shape.
         """
 
-        pass
+        raise NotImplementedError(type(self).__name__ + '.vector3_from_coords '
+                                  + 'is not implemented')
 
     #===========================================================================
     def intercept(self, obs, los, time=None, derivs=False, guess=None):
@@ -118,7 +129,8 @@ class Surface(object):
                             intercept = obs + t * los
         """
 
-        pass
+        raise NotImplementedError(type(self).__name__ + '.intercept '
+                                  + 'is not implemented')
 
     #===========================================================================
     def normal(self, pos, time=None, derivs=False):
@@ -135,7 +147,8 @@ class Surface(object):
                         that pass through the position. Lengths are arbitrary.
         """
 
-        pass
+        raise NotImplementedError(type(self).__name__ + '.normal '
+                                  + 'is not implemented')
 
     ########################################
     # Optional Methods...
@@ -212,6 +225,26 @@ class Surface(object):
 
         return Vector3.ZERO
 
+    #===========================================================================
+    def position_is_inside(self, pos, obs=None, time=None):
+        """Where positions are inside the surface.
+
+        Input:
+            pos         a Vector3 of positions relative to the surface.
+            obs         a Vector3 of observer positions. Ignored for solid
+                        surfaces but needed for virtual surfaces.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        unless the surface is time-variable.
+
+        Return:         Boolean True where positions are inside the surface
+        """
+
+        if self.HAS_INTERIOR:
+            raise NotImplementedError(type(self).__name__
+                                    + '.position_is_inside is not implemented')
+
+        return Boolean.FALSE
+
     ############################################################################
     # Support for surfaces derived from other surfaces. E.g., surfaces using
     # different coordinates or with boundaries applied.
@@ -255,6 +288,36 @@ class Surface(object):
         return self.coords_from_vector3(pos_wrt_surface, obs=obs_wrt_surface,
                                         time=event.time, axes=axes,
                                         derivs=True)
+
+    #===========================================================================
+    def apply_coords_to_event(self, event, obs=None, axes=3, derivs=True):
+        """A shallow copy of this event with attributes coord1, coord2, coord3
+        added, along with any mask.
+
+        Input:
+            event       an event occurring at or near the surface.
+            obs         observing event, which may occur at a different time.
+            axes        2 or 3, indicating whether to return a tuple of two or
+                        three Scalar objects.
+            derivs      If True, then all derivatives are carried forward into
+                        the event; if False, only time derivatives are included.
+
+        Return:         clone of event with new attributes coord1, coord2,
+                        coord3.
+        """
+
+        coords = self.coords_of_event(event, obs=obs, axes=axes, derivs=derivs)
+
+        event = event.copy(omit=('coord1', 'coord2', 'coord3'))
+        event.insert_subfield('coord1', coords[0])
+        event.insert_subfield('coord2', coords[1])
+        if axes > 2:
+            event.insert_subfield('coord3', coords[2])
+
+        if np.any(coords[0].mask):
+            event = event.mask_where(coords[0].mask)
+
+        return event
 
     #===========================================================================
     def event_at_coords(self, time, coords, obs=None, derivs=False):
@@ -361,7 +424,7 @@ class Surface(object):
 
             converge    an optional dictionary of parameters to override the
                         configured default convergence parameters. The default
-                        configuration is defined in config.py.
+                        configuration is defined in config.py/SURFACE_PHOTONS.
 
         Return:         a tuple (surface_event, link_event).
 
@@ -393,16 +456,17 @@ class Surface(object):
             in both events.
 
         Convergence parameters are as follows:
-            iters       the maximum number of iterations of Newton's method to
-                        perform. It should almost never need to be > 5.
-            precision   iteration stops when the largest change in light travel
-                        time between one iteration and the next falls below this
-                        threshold (in seconds).
-            limit       the maximum allowed absolute value of the change in
-                        light travel time from the nominal range calculated
-                        initially. Changes in light travel with absolute values
-                        larger than this limit are clipped. This prevents the
-                        divergence of the solution in some cases.
+            max_iterations  the maximum number of iterations of Newton's method
+                            to perform. It should almost never need to be > 6.
+            dlt_precision   iteration stops when the largest change in light
+                            travel time between one iteration and the next falls
+                            below this threshold (in seconds).
+            dlt_limit       the maximum allowed absolute value of the change in
+                            light travel time from the nominal range calculated
+                            initially. Changes in light travel with absolute
+                            values larger than this limit are clipped. This
+                            prevents the divergence of the solution in some
+                            cases.
         """
 
         # Handle derivatives
@@ -429,7 +493,7 @@ class Surface(object):
             quick['frame_time_extension'] = limit
 
         # Interpret the sign
-        signed_c = sign * constants.C
+        signed_c = sign * C
         if sign < 0.:
             surface_key = 'dep'
             link_key = 'arr'
@@ -459,8 +523,7 @@ class Surface(object):
         # Prepare for iteration, avoiding any derivatives for now
         link_time = link.time
         obs_wrt_ssb = link_wrt_ssb.state
-        los_wrt_ssb = (link_wrt_ssb.get_subfield(link_key).unit()
-                       * constants.C)
+        los_wrt_ssb = (link_wrt_ssb.get_subfield(link_key).unit() * C)
 
         # Make an initial guess at the light travel time
         if guess is not None:
@@ -473,12 +536,13 @@ class Surface(object):
             surface_time = link_time + lt
 
         # Set light travel time limits to avoid a diverging solution
-        lt_min = lt.min(builtins=True) - limit
-        lt_max = lt.max(builtins=True) + limit
+        lt_min = lt.min(builtins=True, masked= limit) - limit
+        lt_max = lt.max(builtins=True, masked=-limit) + limit
 
         # Iterate to solve for lt. Convergence is rapid because all speeds are
         # non-relativistic.
         max_dlt = np.inf
+        converged = False
         for count in range(iters):
 
             # Quicken the path and frame evaluations on first iteration
@@ -511,24 +575,31 @@ class Surface(object):
 
             # Test for convergence
             prev_max_dlt = max_dlt
-            max_dlt = abs(dlt).max()
+            max_dlt = abs(dlt).max(builtins=True, masked=-1.)
 
             if LOGGING.surface_iterations:
-                print(LOGGING.prefix, 'Surface._solve_photon_by_los', end='')
-                print(count+1, max_dlt)
+                print(max_dlt)
+                LOGGING.convergence('Surface._solve_photon_by_los',
+                                    'iter=%d; change=%.6g' % (count+1, max_dlt))
 
-            if (max_dlt <= precision
-                or max_dlt >= prev_max_dlt
-                or max_dlt == Scalar.MASKED):
-                    break
+            if max_dlt <= precision:
+                converged = True
+                break
+
+            if max_dlt >= prev_max_dlt:
+                break
 
             # Re-evaluate the surface time
             surface_time = link_time + lt
 
         #### END OF LOOP
 
+        if not converged:
+            LOGGING.warn('Surface._solve_photon_by_los did not converge;',
+                         'iter=%d; change=%.6g' % (count+1, max_dlt))
+
         # If the link is entirely masked now, return masked results
-        if max_dlt == Scalar.MASKED:
+        if max_dlt < 0.:
             return self._fully_masked_result(unshrunk_link, link_key,
                                              coords=True)
 
@@ -543,6 +614,7 @@ class Surface(object):
         surface_time = link_time + lt
 
         # Create the surface event in its own frame
+        los_wrt_surface = los_wrt_surface.remask(surface_time.mask)
         surface_event = Event(surface_time, pos_wrt_surface,
                               self.origin, self.frame)
         surface_event.insert_subfield('perp',
@@ -709,16 +781,17 @@ class Surface(object):
             in both events.
 
         Convergence parameters are as follows:
-            iters       the maximum number of iterations of Newton's method to
-                        perform. It should almost never need to be > 5.
-            precision   iteration stops when the largest change in light travel
-                        time between one iteration and the next falls below this
-                        threshold (in seconds).
-            limit       the maximum allowed absolute value of the change in
-                        light travel time from the nominal range calculated
-                        initially. Changes in light travel with absolute values
-                        larger than this limit are clipped. This prevents the
-                        divergence of the solution in some cases.
+            max_iterations  the maximum number of iterations of Newton's method
+                            to perform. It should almost never need to be > 6.
+            dlt_precision   iteration stops when the largest change in light
+                            travel time between one iteration and the next falls
+                            below this threshold (in seconds).
+            dlt_limit       the maximum allowed absolute value of the change in
+                            light travel time from the nominal range calculated
+                            initially. Changes in light travel with absolute
+                            values larger than this limit are clipped. This
+                            prevents the divergence of the solution in some
+                            cases.
         """
 
         # Handle derivatives
@@ -745,7 +818,7 @@ class Surface(object):
             quick['frame_time_extension'] = limit
 
         # Interpret the sign
-        signed_c = sign * constants.C
+        signed_c = sign * C
         if sign < 0.:
             surface_key = 'dep'
             link_key = 'arr'
@@ -787,8 +860,8 @@ class Surface(object):
             surface_time = link_time + lt
 
         # Set light travel time limits to avoid a diverging solution
-        lt_min = lt.min(builtins=True) - limit
-        lt_max = lt.max(builtins=True) + limit
+        lt_min = lt.min(builtins=True, masked= limit) - limit
+        lt_max = lt.max(builtins=True, masked=-limit) + limit
 
         # For a non-virtual surface, pos_wrt_origin is fixed
         if not self.IS_VIRTUAL:
@@ -799,6 +872,7 @@ class Surface(object):
         # Iterate to solve for lt. Convergence is rapid because all speeds are
         # non-relativistic.
         max_dlt = np.inf
+        converged = False
         for count in range(iters+1):
 
             # Quicken the path and frame evaluations on first iteration
@@ -836,24 +910,30 @@ class Surface(object):
 
             # Test for convergence
             prev_max_dlt = max_dlt
-            max_dlt = abs(dlt).max()
+            max_dlt = abs(dlt).max(builtins=True, masked=-1.)
 
             if LOGGING.surface_iterations:
-                print(LOGGING.prefix, 'Surface._solve_photon_by_coords', end='')
-                print(count+1, max_dlt)
+                LOGGING.convergence('Surface._solve_photon_by_coords',
+                                    'iter=%d; change=%.6g' % (count+1, max_dlt))
 
-            if (max_dlt <= precision
-                or max_dlt >= prev_max_dlt
-                or max_dlt == Scalar.MASKED):
-                    break
+            if max_dlt <= precision:
+                converged = True
+                break
+
+            if max_dlt >= prev_max_dlt:
+                break
 
             # Re-evaluate the surface time
             surface_time = link_time + lt
 
         #### END OF LOOP
 
+        if not converged:
+            LOGGING.warn('Surface._solve_photon_by_coords did not converge;',
+                         'iter=%d; change=%.6g' % (count+1, max_dlt))
+
         # If the link is entirely masked now
-        if max_dlt == Scalar.MASKED:
+        if max_dlt < 0.:
             return self._fully_masked_result(unshrunk_link, link_key)
 
         # Update the mask on light time to hide intercepts outside the defined
@@ -996,16 +1076,17 @@ class Surface(object):
             intercept point.
 
         Convergence parameters are as follows:
-            iters       the maximum number of iterations of Newton's method to
-                        perform. It should almost never need to be > 5.
-            precision   iteration stops when the largest change in light travel
-                        time between one iteration and the next falls below this
-                        threshold (in seconds).
-            limit       the maximum allowed absolute value of the change in
-                        light travel time from the nominal range calculated
-                        initially. Changes in light travel with absolute values
-                        larger than this limit are clipped. This prevents the
-                        divergence of the solution in some cases.
+            max_iterations  the maximum number of iterations of Newton's method
+                            to perform. It should almost never need to be > 6.
+            dlt_precision   iteration stops when the largest change in light
+                            travel time between one iteration and the next falls
+                            below this threshold (in seconds).
+            dlt_limit       the maximum allowed absolute value of the change in
+                            light travel time from the nominal range calculated
+                            initially. Changes in light travel with absolute
+                            values larger than this limit are clipped. This
+                            prevents the divergence of the solution in some
+                            cases.
         """
 
         #### TODO: full testing!!
@@ -1039,7 +1120,7 @@ class Surface(object):
             quick['frame_time_extension'] = limit
 
         # Interpret the sign
-        signed_c = sign * constants.C
+        signed_c = sign * C
         if sign < 0.:
             surface_key = 'dep'
             link_key = 'arr'
@@ -1067,7 +1148,7 @@ class Surface(object):
 
         obs_wrt_ssb_now = link_wrt_ssb.state
         los_wrt_ssb = link_wrt_ssb.get_subfield(link_key)
-        los_wrt_ssb = los_wrt_ssb.unit() * constants.C  # scale factor is lt
+        los_wrt_ssb = los_wrt_ssb.unit() * C    # scale factor is lt
 
         # Make an initial guess at the light travel time
         origin_wrt_ssb = self.origin.wrt(Path.SSB, Frame.J2000)
@@ -1093,6 +1174,7 @@ class Surface(object):
         # Iterate to solve for lt. Convergence is rapid because all speeds are
         # non-relativistic
         max_dlt = np.inf
+        converged = False
         for count in range(iters):
 
             # Evaluate the observer position relative to the current surface
@@ -1118,25 +1200,31 @@ class Surface(object):
 
             # Test for convergence
             prev_max_dlt = max_dlt
-            max_dlt = abs(dlt).max()
+            max_dlt = abs(dlt).max(builtins=True, masked=-1.)
 
             if LOGGING.surface_iterations:
-                print(LOGGING.prefix, 'Surface._solve_normal_for_photon_event',
-                                      end='')
-                print(count+1, max_dlt)
+                LOGGING.convergence('Surface._solve_normal_for_photon_event',
+                                    'iter=%d; change=%.6g' % (count+1, max_dlt))
 
-            if (max_dlt <= precision
-                or max_dlt >= prev_max_dlt
-                or max_dlt == Scalar.MASKED):
-                    break
+            if max_dlt <= precision:
+                converged = True
+                break
+
+            if max_dlt >= prev_max_dlt:
+                break
 
             # Re-evaluate the surface time
             surface_time = link_time + lt
 
         #### END OF LOOP
 
+        if not converged:
+            LOGGING.warn('Surface._solve_normal_for_photon_event ' +
+                         'did not converge;',
+                         'iter=%d; change=%.6g' % (count+1, max_dlt))
+
         # If the link is entirely masked now, return masked results
-        if max_dlt == Scalar.MASKED:
+        if max_dlt < 0.:
             return self._fully_masked_result(unshrunk_link, link_key,
                                              coords=True)
 
@@ -1286,16 +1374,17 @@ class Surface(object):
             in both events.
 
         Convergence parameters are as follows:
-            iters       the maximum number of iterations of Newton's method to
-                        perform. It should almost never need to be > 5.
-            precision   iteration stops when the largest change in light travel
-                        time between one iteration and the next falls below this
-                        threshold (in seconds).
-            limit       the maximum allowed absolute value of the change in
-                        light travel time from the nominal range calculated
-                        initially. Changes in light travel with absolute values
-                        larger than this limit are clipped. This prevents the
-                        divergence of the solution in some cases.
+            max_iterations  the maximum number of iterations of Newton's method
+                            to perform. It should almost never need to be > 6.
+            dlt_precision   iteration stops when the largest change in light
+                            travel time between one iteration and the next falls
+                            below this threshold (in seconds).
+            dlt_limit       the maximum allowed absolute value of the change in
+                            light travel time from the nominal range calculated
+                            initially. Changes in light travel with absolute
+                            values larger than this limit are clipped. This
+                            prevents the divergence of the solution in some
+                            cases.
         """
 
         #### TODO: full testing!!
@@ -1375,6 +1464,7 @@ class Surface(object):
         # Iterate to solve for lt. Convergence is rapid because all speeds are
         # non-relativistic.
         max_dlt = np.inf
+        converged = False
         for count in range(iters):
 
             # Locate position relative to origin in SSB/J2000
@@ -1396,25 +1486,31 @@ class Surface(object):
 
             # Test for convergence
             prev_max_dlt = max_dlt
-            max_dlt = abs(dlt).max()
+            max_dlt = abs(dlt).max(builtins=True, masked=-1.)
 
             if LOGGING.surface_iterations:
-                print(LOGGING.prefix, 'Surface._solve_photon_normal_at_surface',
-                                      end='')
-                print(count+1, max_dlt)
+                LOGGING.convergence('Surface._solve_photon_normal_at_surface',
+                                    'iter=%d; change=%.6g' % (count+1, max_dlt))
 
-            if (max_dlt <= precision
-                or max_dlt >= prev_max_dlt
-                or max_dlt == Scalar.MASKED):
-                    break
+            if max_dlt <= precision:
+                converged = True
+                break
+
+            if max_dlt >= prev_max_dlt:
+                break
 
             # Re-evaluate the path time
             path_time = surface_time + lt
 
         #### END OF LOOP
 
+        if not converged:
+            LOGGING.warn('Surface._solve_photon_normal_at_surface ' +
+                         'did not converge;',
+                         'iter=%d; change=%.6g' % (count+1, max_dlt))
+
         # If the link is entirely masked now, return masked results
-        if max_dlt == Scalar.MASKED:
+        if max_dlt < 0.:
             return self._fully_masked_result(unshrunk_remote, remote_key,
                                              coords=True)
 

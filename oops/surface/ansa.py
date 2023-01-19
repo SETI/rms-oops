@@ -3,13 +3,11 @@
 ################################################################################
 
 import numpy as np
-from polymath import Scalar, Vector3
-
-from .           import Surface
-from .ringplane  import RingPlane
-from ..frame     import Frame
-from ..path      import Path
-from ..constants import PI, HALFPI, TWOPI
+from polymath               import Scalar, Vector3
+from oops.frame             import Frame
+from oops.path              import Path
+from oops.surface           import Surface
+from oops.surface.ringplane import RingPlane
 
 class Ansa(Surface):
     """This surface is defined as the locus of points where a radius vector from
@@ -27,7 +25,7 @@ class Ansa(Surface):
     IS_VIRTUAL = True
 
     #===========================================================================
-    def __init__(self, origin, frame, gravity=None, ringplane=None):
+    def __init__(self, origin, frame, gravity=None, ringplane=None, radii=None):
         """Constructor for an Ansa Surface.
 
         Input:
@@ -43,21 +41,44 @@ class Ansa(Surface):
 
             ringplane   used by static method for_ringplane(); otherwise it
                         should be ignored.
+
+            radii       the nominal inner and outer radii of the ring, in km.
+                        None for a ring with no radial limits.
         """
 
         self.origin  = Path.as_waypoint(origin)
         self.frame   = Frame.as_wayframe(frame)
         self.gravity = gravity
 
+        if radii is None:
+            self.radii = None
+        else:
+            self.radii = np.asfarray(radii)
+
         self._state_ringplane = ringplane
         if ringplane is None:
             self.ringplane = RingPlane(self.origin, self.frame,
-                                       gravity=self.gravity)
+                                       radii=self.radii, gravity=self.gravity)
         else:
             self.ringplane = ringplane
 
+        # Save the unmasked version of this surface
+        if self.radii is None:
+            self.unmasked = self
+        else:
+            self.unmasked = Ansa(self.origin, self.frame,
+                                 gravity=self.gravity,
+                                 ringplane=self.ringplane,
+                                 radii=None)
+
+        # Unique key for intercept calculations
+        self.intercept_key = ('ansa', self.origin.waypoint,
+                                      self.frame.wayframe)
+
     def __getstate__(self):
-        return (self.origin, self.frame, self.gravity, self._state_ringplane)
+        return (Path.as_primary_path(self.origin),
+                Frame.as_primary_frame(self.frame),
+                self.gravity, self._state_ringplane, tuple(self.radii))
 
     def __setstate__(self, state):
         self.__init__(*state)
@@ -73,7 +94,7 @@ class Ansa(Surface):
         """
 
         return Ansa(ringplane.origin, ringplane.frame, ringplane.gravity,
-                    ringplane)
+                    ringplane, ringplane.radii)
 
     #===========================================================================
     def coords_from_vector3(self, pos, obs, time=None, axes=2, derivs=False):
@@ -93,6 +114,9 @@ class Ansa(Surface):
                         three Scalars, one for each coordinate.
         """
 
+        if axes not in (2, 3):
+            raise ValueError('Surface.coords_from_vector3 axes not 2 or 3')
+
         pos = Vector3.as_vector3(pos, derivs)
         obs = Vector3.as_vector3(obs, derivs)
         (pos_x, pos_y, pos_z) = pos.to_scalars()
@@ -105,9 +129,16 @@ class Ansa(Surface):
         lon = pos_y.arctan2(pos_x) - obs_y.arctan2(obs_x)
 
         # Put it in the range -pi to pi
-        lon = ((lon + PI) % TWOPI) - PI
+        lon = ((lon + Scalar.PI) % Scalar.TWOPI) - Scalar.PI
         sign = lon.sign()
         r = rabs * sign
+
+        # Apply mask as needed
+        if self.radii is not None:
+            mask = r.tvl_lt(self.radii[0]) | r.tvl_gt(self.radii[1])
+            if mask.any():
+                r = r.remask_or(mask.vals)
+                pos_z = pos_z.remask(r.mask)
 
         # Fill in the third coordinate if necessary
         if axes > 2:
@@ -116,6 +147,9 @@ class Ansa(Surface):
 
             phi = (rabs / obs_xy).arccos()
             theta = sign*lon - phi
+            if self.radii is not None:
+                theta.remask(r.mask)
+
             return (r, pos_z, theta)
 
         return (r, pos_z)
@@ -139,6 +173,10 @@ class Ansa(Surface):
         Note that the coordinates can all have different shapes, but they must
         be broadcastable to a single shape.
         """
+
+        if len(coords) not in (2, 3):
+            raise ValueError('Surface.vector3_from_coords requires 2 or 3 '
+                             'coords')
 
         # Given (r,z, theta) and the observer position, solve for position.
         #   pos = (|r| cos(a), |r| sin(a), z)
@@ -173,8 +211,6 @@ class Ansa(Surface):
         #
         # Theta is an angular offset from phi, with smaller values closer to the
         # observer and larger angles further away.
-
-        assert len(coords) in {2,3}
 
         r = Scalar.as_scalar(coords[0], derivs)
         z = Scalar.as_scalar(coords[1], derivs)
@@ -265,6 +301,7 @@ class Ansa(Surface):
 ################################################################################
 
 import unittest
+from oops.constants import PI, HALFPI
 
 class Test_Ansa(unittest.TestCase):
 

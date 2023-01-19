@@ -3,12 +3,11 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Scalar, Vector3, Matrix3
-
-from .           import Frame
-from ..path      import Path
-from ..transform import Transform
-import oops.constants as constants
+from polymath       import Matrix3, Qube, Scalar, Vector3
+from oops.frame     import Frame
+from oops.path      import Path
+from oops.transform import Transform
+from oops.constants import RPD
 
 class Cmatrix(Frame):
     """Frame subclass in which the frame is defined by a fixed rotation matrix.
@@ -51,7 +50,7 @@ class Cmatrix(Frame):
 
     # Unpickled frames will always have temporary IDs to avoid conflicts
     def __getstate__(self):
-        return (self.cmatrix, self.reference)
+        return (self.cmatrix, Frame.as_primary_frame(self.reference))
 
     def __setstate__(self, state):
         self.__init__(*state)
@@ -83,9 +82,9 @@ class Cmatrix(Frame):
         mask = Qube.or_(ra.mask, dec.mask, clock.mask)
 
         # The transform is fixed so save it now
-        ra = constants.RPD * ra.values
-        dec = constants.RPD * dec.values
-        twist = constants.RPD * (180. - clock.values)
+        ra = RPD * ra.values
+        dec = RPD * dec.values
+        twist = RPD * (180. - clock.values)
 
         cosr = np.cos(ra)
         sinr = np.sin(ra)
@@ -137,10 +136,10 @@ class Test_Cmatrix(unittest.TestCase):
         import os
         import cspyce
 
-        from .spiceframe import SpiceFrame
-        from ..path.spicepath import SpicePath
-        from ..event import Event
-        from ..unittester_support import TESTDATA_PARENT_DIRECTORY
+        from oops.event              import Event
+        from oops.frame.spiceframe   import SpiceFrame
+        from oops.path.spicepath     import SpicePath
+        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls'))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/pck00010.tpc'))

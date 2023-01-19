@@ -2,202 +2,226 @@
 # oops/backplanes/lighting.py: Lighting geometry backplanes
 ################################################################################
 
-from polymath       import Boolean, Scalar
+from polymath       import Boolean, Scalar, Vector3
 from oops.backplane import Backplane
 
-#===============================================================================
-def incidence_angle(self, event_key):
+def incidence_angle(self, event_key, apparent=True):
     """Incidence angle of the arriving photons at the local surface.
 
     Input:
         event_key       key defining the surface event.
+        apparent        True for the apparent angle in the surface frame;
+                        False for the actual.
     """
 
     event_key = self.standardize_event_key(event_key)
-    key = ('incidence_angle', event_key)
-    if key not in self.backplanes:
-        event = self.get_surface_event_with_arr(event_key)
-        incidence = event.incidence_angle()
+    key = ('incidence_angle', event_key, apparent)
+    if key in self.backplanes:
+        return self.backplanes[key]
 
-        # Ring incidence angles are always 0-90 degrees
-        if event.surface.COORDINATE_TYPE == 'polar':
+    event = self.get_surface_event(event_key, arrivals=True)
+    incidence = event.incidence_angle(apparent=apparent)
 
-            # flip is True wherever incidence angle has to be changed
-            flip = Boolean.as_boolean(incidence > Scalar.HALFPI)
-            self.register_backplane(('ring_flip', event_key), flip)
+    # Ring incidence angles should always be 0 to pi/2
+    if event.surface.COORDINATE_TYPE == 'polar':
 
-            # Now flip incidence angles where necessary
-            incidence = Scalar.PI * flip + (1. - 2.*flip) * incidence
+        # Save this as the "prograde" ring incidence angle
+        ring_key = ('ring_incidence_angle', event_key, 'prograde', apparent)
+        self.register_backplane(ring_key, incidence)
 
-        self.register_backplane(key, incidence)
+        # _ring_flip is True wherever incidence angle has to be replaced by
+        # PI - incidence. This is needed by the emission_angle backplane.
+        flip = Boolean.as_boolean(incidence > Scalar.HALFPI)
+        flip_key = ('_ring_flip', event_key)
+        self.register_backplane(flip_key, flip)
 
-    return self.backplanes[key]
+        # Now flip incidence angles where necessary
+        if flip.any():
+            incidence = Scalar.PI * flip + (1 - 2*flip) * incidence
+
+    return self.register_backplane(key, incidence)
 
 #===============================================================================
-def emission_angle(self, event_key):
+def emission_angle(self, event_key, apparent=True):
     """Emission angle of the departing photons at the local surface.
 
     Input:
         event_key       key defining the surface event.
+        apparent        True for the apparent angle in the surface frame;
+                        False for the actual.
     """
 
     event_key = self.standardize_event_key(event_key)
-    key = ('emission_angle', event_key)
-    if key not in self.backplanes:
-        event = self.get_surface_event(event_key)
-        emission = event.emission_angle()
+    key = ('emission_angle', event_key, apparent)
+    if key in self.backplanes:
+        return self.backplanes[key]
 
-        # Ring emission angles are always measured from the lit side normal
-        if event.surface.COORDINATE_TYPE == 'polar':
+    event = self.get_surface_event(event_key)
+    emission = event.emission_angle(apparent=apparent)
 
-            # Get the flip flag
-            _ = self.incidence_angle(event_key)
-            flip = self.backplanes[('ring_flip', event_key)]
+    # Ring emission angles are always measured from the lit side normal
+    if event.surface.COORDINATE_TYPE == 'polar':
 
-            # Flip emission angles where necessary
-            emission = Scalar.PI * flip + (1. - 2.*flip) * emission
+        # Save this as the "prograde" ring incidence angle
+        ring_key = ('ring_emission_angle', event_key, 'prograde', apparent)
+        self.register_backplane(ring_key, emission)
 
-        self.register_backplane(key, emission)
+        # Get the "ring flip" flag
+        _ = self.incidence_angle(event_key)
+        flip_key = ('_ring_flip', event_key)
+        flip = self.backplanes[flip_key]
 
-    return self.backplanes[key]
+        # Now flip emission angles where necessary
+        if flip.any():
+            emission = Scalar.PI * flip + (1 - 2*flip) * emission
+
+    return self.register_backplane(key, emission)
 
 #===============================================================================
-def phase_angle(self, event_key):
+def phase_angle(self, event_key, apparent=True):
     """Phase angle between the arriving and departing photons.
 
     Input:
         event_key       key defining the surface event.
+        apparent        True for the apparent angle in the surface frame;
+                        False for the actual.
     """
 
     event_key = self.standardize_event_key(event_key)
-    key = ('phase_angle', event_key)
-    if key not in self.backplanes:
-        event = self.get_surface_event_with_arr(event_key)
-        self.register_backplane(key, event.phase_angle())
+    key = ('phase_angle', event_key, apparent)
+    if key in self.backplanes:
+        return self.backplanes[key]
 
-    return self.backplanes[key]
+    event = self.get_surface_event(event_key, arrivals=True)
+    return self.register_backplane(key, event.phase_angle(apparent=apparent))
 
 #===============================================================================
-def scattering_angle(self, event_key):
+def scattering_angle(self, event_key, apparent=True):
     """Scattering angle between the arriving and departing photons.
 
     Input:
         event_key       key defining the surface event.
+        apparent        True for the apparent angle in the surface frame;
+                        False for the actual.
     """
 
     event_key = self.standardize_event_key(event_key)
-    key = ('scattering_angle', event_key)
-    if key not in self.backplanes:
-        self.register_backplane(key, Scalar.PI -
-                                     self.phase_angle(event_key))
+    key = ('scattering_angle', event_key, apparent)
+    if key in self.backplanes:
+        return self.backplanes[key]
 
-    return self.backplanes[key]
+    return self.register_backplane(key, Scalar.PI -
+                                   self.phase_angle(event_key, apparent))
 
 #===============================================================================
-def center_incidence_angle(self, event_key):
-    """Incidence angle of the arriving photons at the body's central path.
+def center_incidence_angle(self, event_key, apparent=True):
+    """Gridless incidence angle of the arriving photons at the body's central
+    path.
 
     This uses the z-axis of the body's frame to define the local normal.
 
     Input:
         event_key       key defining the event on the body's path.
+        apparent        True for the apparent angle in the body frame;
+                        False for the actual.
     """
 
-    event_key = self.standardize_event_key(event_key)
-    key = ('center_incidence_angle', event_key)
-    if key not in self.backplanes:
-        event = self.get_gridless_event_with_arr(event_key)
-
-        # Sign on event.arr is negative because photon is incoming
-        latitude = (event.neg_arr_ap.to_scalar(2) /
-                    event.arr_ap.norm()).arcsin()
-        incidence = Scalar.HALFPI - latitude
-
-        # Ring incidence angles are always 0-90 degrees
-        if event.surface.COORDINATE_TYPE == 'polar':
-
-            # The flip is True wherever incidence angle has to be changed
-            flip = Boolean.as_boolean(incidence > Scalar.HALFPI)
-            self.register_gridless_backplane(('ring_center_flip',
-                                              event_key), flip)
-
-            # Now flip incidence angles where necessary
-            if flip.any():
-                incidence = Scalar.PI * flip + (1. - 2.*flip) * incidence
-
-        self.register_gridless_backplane(key, incidence)
-
-    return self.backplanes[key]
+    gridless_key = self.gridless_event_key(event_key)
+    return self.incidence_angle(gridless_key, apparent=apparent)
 
 #===============================================================================
-def center_emission_angle(self, event_key):
-    """Emission angle of the departing photons at the body's central path.
+def center_emission_angle(self, event_key, apparent=True):
+    """Gridless emission angle of the departing photons at the body's central
+    path.
 
     This uses the z-axis of the body's frame to define the local normal.
 
     Input:
         event_key       key defining the event on the body's path.
+        apparent        True for the apparent angle in the body frame;
+                        False for the actual.
     """
 
-    event_key = self.standardize_event_key(event_key)
-    key = ('center_emission_angle', event_key)
-    if key not in self.backplanes:
-        event = self.get_gridless_event(event_key)
-
-        latitude = (event.dep_ap.to_scalar(2) /
-                    event.dep_ap.norm()).arcsin()
-        emission = Scalar.HALFPI - latitude
-
-        # Ring emission angles are always measured from the lit side normal
-        if event.surface.COORDINATE_TYPE == 'polar':
-
-            # Get the flip flag
-            _ = self.center_incidence_angle(event_key)
-            flip = self.backplanes[('ring_center_flip', event_key)]
-
-            # Flip emission angles where necessary
-            if flip.any():
-                emission = Scalar.PI * flip + (1. - 2.*flip) * emission
-
-        self.register_gridless_backplane(key, emission)
-
-    return self.backplanes[key]
+    gridless_key = self.gridless_event_key(event_key)
+    return self.emission_angle(gridless_key, apparent=apparent)
 
 #===============================================================================
-def center_phase_angle(self, event_key):
-    """Phase angle as measured at the body's central path.
+def center_phase_angle(self, event_key, apparent=True):
+    """Gridless phase angle as measured at the body's central path.
 
     Input:
         event_key       key defining the event on the body's path.
+        apparent        True for the apparent angle in the body frame;
+                        False for the actual.
     """
 
-    event_key = self.standardize_event_key(event_key)
-    key = ('center_phase_angle', event_key)
-    if key not in self.backplanes:
-        event = self.get_gridless_event_with_arr(event_key)
-        self.register_gridless_backplane(key, event.phase_angle())
-
-    return self.backplanes[key]
+    gridless_key = self.gridless_event_key(event_key)
+    return self.phase_angle(gridless_key, apparent=apparent)
 
 #===============================================================================
-def center_scattering_angle(self, event_key):
-    """Scattering angle as measured at the body's central path.
+def center_scattering_angle(self, event_key, apparent=True):
+    """Gridless scattering angle as measured at the body's central path.
 
     Input:
         event_key       key defining the event on the body's path.
+        apparent        True for the apparent angle in the body frame;
+                        False for the actual.
     """
 
-    event_key = self.standardize_event_key(event_key)
-    key = ('center_scattering_angle', event_key)
-    if key not in self.backplanes:
-        angle = Scalar.PI - self.center_phase_angle(event_key)
-        self.register_gridless_backplane(key, angle)
-
-    return self.backplanes[key]
+    gridless_key = self.gridless_event_key(event_key)
+    return self.scattering_angle(gridless_key, apparent=apparent)
 
 ################################################################################
 
+# Add these functions to the Backplane module
 Backplane._define_backplane_names(globals().copy())
+
+################################################################################
+# GOLD MASTER TESTS
+################################################################################
+
+from oops.backplane.gold_master import register_test_suite
+from oops.constants import DPR
+
+def lighting_test_suite(bpt):
+
+    bp = bpt.backplane
+    for name in bpt.body_names + bpt.ring_names:
+
+        phase = bp.phase_angle(name) * DPR
+        bpt.gmtest(phase,
+                   name + ' phase angle (deg)',
+                   limit=0.001, radius=1)
+        bpt.compare(phase + bp.scattering_angle(name) * DPR,
+                    180.,
+                    name + ' phase plus scattering angle (deg)',
+                    limit=1.e-15)
+
+        phase = bp.center_phase_angle(name) * DPR
+        bpt.gmtest(phase,
+                   name + ' center phase angle (deg)',
+                   limit=0.001)
+        bpt.compare(phase + bp.center_scattering_angle(name) * DPR,
+                    180.,
+                    name + ' center phase plus scattering angle (deg)',
+                    limit=1.e-15)
+
+        bpt.gmtest(bp.incidence_angle(name) * DPR,
+                   name + ' incidence angle (deg)',
+                   limit=0.001, radius=1)
+        bpt.gmtest(bp.emission_angle(name) * DPR,
+                   name + ' emission angle (deg)',
+                   limit=0.001, radius=1)
+
+        if name in bpt.ring_names:
+            bpt.gmtest(bp.center_incidence_angle(name) * DPR,
+                       name + ' center incidence angle (deg)',
+                       limit=0.001)
+            bpt.gmtest(bp.center_emission_angle(name) * DPR,
+                       name + ' center emission angle (deg)',
+                       limit=0.001)
+
+register_test_suite('lighting', lighting_test_suite)
 
 ################################################################################
 # UNIT TESTS

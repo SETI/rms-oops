@@ -2,16 +2,13 @@
 # oops/event.py: Event class
 ################################################################################
 
-from __future__ import print_function
-
 import numpy as np
 
-from polymath import Qube, Scalar, Vector3
-
+from polymath       import Qube, Scalar, Vector3
+from oops.config    import EVENT_CONFIG, LOGGING
+from oops.constants import C_INVERSE
 from oops.frame     import Frame
 from oops.transform import Transform
-from oops.config    import EVENT_CONFIG, LOGGING, ABERRATION
-import oops.constants as constants
 
 class Event(object):
     """An Event is defined by a time, position and velocity. It always has these
@@ -167,7 +164,8 @@ class Event(object):
 
         self._state_ = state.as_readonly()
 
-        assert 't' in self._state_.derivs
+        if 't' not in self._state_.derivs:
+            raise ValueError('Event state requires a time derivative')
 
         self._pos_ = self._state_.without_deriv('t')
 
@@ -402,6 +400,16 @@ class Event(object):
         self._antimask_ = None
         self._wod_ = None
 
+    def has_arrivals(self):
+        """True if arrival photons have been defined for this event."""
+
+        return self._arr_ is not None or self._arr_ap_ is not None
+
+    def has_departures(self):
+        """True if departure photons have been defined for this event."""
+
+        return self._dep_ is not None or self._dep_ap_ is not None
+
     ############################################################################
     # Special properties: Photon arrival vectors
     #
@@ -416,8 +424,8 @@ class Event(object):
     @property
     def arr(self):
         if self._arr_ is None:
-          if self._arr_ap_ is not None:
-            _ = self.actual_arr(derivs=True)    # fill internal attribute
+            if self._arr_ap_ is not None:
+                _ = self.actual_arr(derivs=True)    # fill internal attribute
 
         return self._arr_                   # returns None if still undefined
 
@@ -432,9 +440,6 @@ class Event(object):
         self._shape_ = Qube.broadcasted_shape(self.shape, arr)
 
         self._arr_ = arr
-        if ABERRATION.old:
-            self._arr_ap_ = arr
-
         if (self._ssb_ is not None) and (self._ssb_._arr_ is None):
             self._ssb_._arr_ = self.xform_to_j2000.rotate(self._arr_)
 
@@ -442,21 +447,14 @@ class Event(object):
 
     @property
     def arr_ap(self):
-        if ABERRATION.old:
-            return self._arr_
-
         if self._arr_ap_ is None:
-          if self._arr_ is not None:
-            _ = self.apparent_arr(derivs=True)  # fill internal attribute
+            if self._arr_ is not None:
+                _ = self.apparent_arr(derivs=True)  # fill internal attribute
 
         return self._arr_ap_                # returns None if still undefined
 
     @arr_ap.setter
     def arr_ap(self, value):
-        if ABERRATION.old:
-            self.arr = value
-            return
-
         if (self._arr_ap_ is not None) or (self._arr_ is not None):
             raise ValueError('arriving photons were already defined in ' +
                              str(self))
@@ -466,7 +464,6 @@ class Event(object):
         self._shape_ = Qube.broadcasted_shape(self.shape, arr_ap)
 
         self._arr_ap_ = arr_ap
-
         if (self._ssb_ is not None) and (self._ssb_._arr_ap_ is None):
             self._ssb_._arr_ap_ = self.xform_to_j2000.rotate(self._arr_ap_)
 
@@ -479,7 +476,6 @@ class Event(object):
     @arr_j2000.setter
     def arr_j2000(self, value):
         ssb_event = self.ssb
-
         if self is ssb_event:
             self.arr = value
         else:
@@ -491,19 +487,11 @@ class Event(object):
 
     @property
     def arr_ap_j2000(self):
-        if ABERRATION.old:
-            return self.arr_j2000
-
         return self.ssb.arr_ap
 
     @arr_ap_j2000.setter
     def arr_ap_j2000(self, value):
-        if ABERRATION.old:
-            self.arr_j2000 = value
-            return
-
         ssb_event = self.ssb
-
         if self is ssb_event:
             self.arr_ap = value
         else:
@@ -528,7 +516,6 @@ class Event(object):
         self._shape_ = Qube.broadcasted_shape(self.shape, arr_lt)
 
         self._arr_lt_ = arr_lt
-
         if (self._ssb_ is not None) and (self._ssb_._arr_lt_ is None):
             self._ssb_._arr_lt_ = self._arr_lt_
 
@@ -546,8 +533,8 @@ class Event(object):
 
     @property
     def neg_arr(self):
-        if self._neg_arr_ is None:
-          self._neg_arr_ = -self.arr
+        if self._neg_arr_ is None and self.arr is not None:
+            self._neg_arr_ = -self.arr
 
         return self._neg_arr_
 
@@ -561,20 +548,13 @@ class Event(object):
 
     @property
     def neg_arr_ap(self):
-        if ABERRATION.old:
-            return self.neg_arr
-
-        if self._neg_arr_ap_ is None:
-          self._neg_arr_ap_ = -self.arr_ap
+        if self._neg_arr_ap_ is None and self.arr_ap is not None:
+            self._neg_arr_ap_ = -self.arr_ap
 
         return self._neg_arr_ap_
 
     @neg_arr_ap.setter
     def neg_arr_ap(self, value):
-        if ABERRATION.old:
-            self.neg_arr = value
-            return
-
         value = Vector3.as_vector3(value).as_readonly()
         self.arr_ap = -value
         self._neg_arr_ap_ = value
@@ -598,17 +578,10 @@ class Event(object):
 
     @property
     def neg_arr_ap_j2000(self):
-        if ABERRATION.old:
-            return self.neg_arr_j2000
-
         return self.ssb.neg_arr_ap
 
     @neg_arr_ap_j2000.setter
     def neg_arr_ap_j2000(self, value):
-        if ABERRATION.old:
-            self.neg_arr_j2000 = value
-            return
-
         value = Vector3.as_vector3(value).as_readonly()
         self.ssb.arr_ap = -value
         self.ssb._neg_arr_ap_ = value
@@ -632,8 +605,8 @@ class Event(object):
     @property
     def dep(self):
         if self._dep_ is None:
-          if self._dep_ap_ is not None:
-            _ = self.actual_dep(derivs=True)    # fill internal attribute
+            if self._dep_ap_ is not None:
+                _ = self.actual_dep(derivs=True)    # fill internal attribute
 
         return self._dep_                   # returns None if still undefined
 
@@ -648,9 +621,6 @@ class Event(object):
         self._shape_ = Qube.broadcasted_shape(self.shape, dep)
 
         self._dep_ = dep
-        if ABERRATION.old:
-            self._dep_ap_ = dep
-
         if (self._ssb_ is not None) and (self._ssb_._dep_ is None):
             self._ssb_._dep_ = self.xform_to_j2000.rotate(self._dep_)
 
@@ -658,20 +628,14 @@ class Event(object):
 
     @property
     def dep_ap(self):
-        if ABERRATION.old:
-            return self._dep_
-
         if self._dep_ap_ is None:
-          if self._dep_ is not None:
-            _ = self.apparent_dep(derivs=True)  # fill internal attribute
+            if self._dep_ is not None:
+                _ = self.apparent_dep(derivs=True)  # fill internal attribute
 
         return self._dep_ap_
 
     @dep_ap.setter
     def dep_ap(self, value):
-        if ABERRATION.old:
-            return self._dep_
-
         if (self._dep_ap_ is not None) or (self._dep_ is not None):
             raise ValueError('departing photons were already defined in ' +
                              str(self))
@@ -706,19 +670,11 @@ class Event(object):
 
     @property
     def dep_ap_j2000(self):
-        if ABERRATION.old:
-            return self.dep_j2000
-
         return self.ssb.dep_ap
 
     @dep_ap_j2000.setter
     def dep_ap_j2000(self, value):
-        if ABERRATION.old:
-            self.dep_j2000 = value
-            return
-
         ssb_event = self.ssb
-
         if self is ssb_event:
             self.dep_ap = value
         else:
@@ -1102,6 +1058,9 @@ class Event(object):
     def with_time_derivs(self):
         """A clone of this event containing unit time derivatives d_dt in the
         frame of the event.
+
+        Note that the time derivatives of the line of sight are always included
+        automatically, based on the time-dependence of the transform to J2000.
         """
 
         if 't' in self._time_.derivs:
@@ -1339,8 +1298,8 @@ class Event(object):
                         default configuration is defined in config.py.
         """
 
-        assert self._frame_ == Frame.J2000
-        assert self._origin_ == Event.PATH_CLASS.SSB
+        if self._frame_ != Frame.J2000 or self._origin_ != Event.PATH_CLASS.SSB:
+            raise ValueError('Event.from_ssb requires a SSB/J2000 event')
 
         event = self.wrt(path, frame, derivs=True, quick=quick)
         event._ssb_ = self
@@ -1666,7 +1625,7 @@ class Event(object):
             return self
 
         if LOGGING.event_time_collapse:
-            print(LOGGING.prefix, 'Event.collapse_time()', tmin, tmax - tmin)
+            LOGGING.diagnostic('Event.collapse_time()', tmin, tmax - tmin)
 
         midtime = Scalar((tmin + tmax)/2., collapsed_mask, self._time_.units)
 
@@ -1773,13 +1732,13 @@ class Event(object):
         #
         # alpha' is the apparent angle.
 
-        beta = constants.C_INVERSE * vel_ssb.norm()
+        beta = C_INVERSE * vel_ssb.norm()
         ray_ssb_norm = ray_ssb.norm()
-        cos_angle = (constants.C_INVERSE * vel_ssb.dot(ray_ssb)
+        cos_angle = (C_INVERSE * vel_ssb.dot(ray_ssb)
                      / (ray_ssb_norm * beta))
         factor = 1. - beta * (cos_angle - beta) * (0.5 + 0.375 * beta**2)
 
-        return ray_ssb - (factor * constants.C_INVERSE) * ray_ssb_norm * vel_ssb
+        return ray_ssb - (factor * C_INVERSE) * ray_ssb_norm * vel_ssb
 
     #===========================================================================
     def actual_ray_ssb(self, ray_ap_ssb, derivs=False, quick={}):
@@ -1809,16 +1768,16 @@ class Event(object):
             vel_ssb = vel_ssb.wod
 
         # Invert the function above
-        beta_ssb = constants.C_INVERSE * vel_ssb
+        beta_ssb = C_INVERSE * vel_ssb
         beta = beta_ssb.norm()
-        vel_inv = constants.C_INVERSE / beta
+        vel_inv = C_INVERSE / beta
         bb = beta * (0.5 + 0.375 * beta**2)
         f1 = 1. + bb * beta
 
         # Iterate solution
         ITERS = 4
         ray_ssb = ray_ap_ssb
-        for iter in range(ITERS):
+        for count in range(ITERS):
             ray_ssb_norm = ray_ssb.norm()
             cos_angle = vel_inv * vel_ssb.dot(ray_ssb) / ray_ssb_norm
             factor = f1 - bb * cos_angle
@@ -1840,7 +1799,7 @@ class Event(object):
         """
 
         # If the apparent vector is already cached, return it
-        if not ABERRATION.old and self._arr_ap_ is not None:
+        if self._arr_ap_ is not None:
             if derivs:
                 return self._arr_ap_
             else:
@@ -1853,18 +1812,16 @@ class Event(object):
 
         # Convert to this event's frame
         if self._frame_ != Frame.J2000:
-            arr_ap = self._xform_to_j2000_.unrotate(arr_ap_ssb, derivs=True)
+            self._arr_ap_ = self._xform_to_j2000_.unrotate(arr_ap_ssb,
+                                                           derivs=True)
         else:
-            arr_ap = arr_ap_ssb
+            self._arr_ap_ = arr_ap_ssb
 
         # Cache the result
-        if not ABERRATION.old:
-            self._arr_ap_ = arr_ap
-
         if derivs:
-            return arr_ap
+            return self._arr_ap_
         else:
-            return arr_ap.wod
+            return self._arr_ap_.wod
 
     #===========================================================================
     def actual_arr(self, derivs=False, quick={}):
@@ -1880,7 +1837,7 @@ class Event(object):
         """
 
         # If the apparent vector is already cached, return it
-        if not ABERRATION.old and self._arr_ is not None:
+        if self._arr_ is not None:
             if derivs:
                 return self._arr_
             else:
@@ -1893,18 +1850,15 @@ class Event(object):
 
         # Convert to this event's frame
         if self._frame_ != Frame.J2000:
-            arr = self._xform_to_j2000_.unrotate(arr_ssb, derivs=True)
+            self._arr_ = self._xform_to_j2000_.unrotate(arr_ssb, derivs=True)
         else:
-            arr = arr_ssb
+            self._arr_ = arr_ssb
 
         # Cache the result
-        if not ABERRATION.old:
-            self._arr_ = arr
-
         if derivs:
-            return arr
+            return self._arr_
         else:
-            return arr.wod
+            return self._arr_.wod
 
     #===========================================================================
     def apparent_dep(self, derivs=False, quick={}):
@@ -1920,7 +1874,7 @@ class Event(object):
         """
 
         # If the apparent vector is already cached, return it
-        if not ABERRATION.old and self._dep_ap_ is not None:
+        if self._dep_ap_ is not None:
             if derivs:
                 return self._dep_ap_
             else:
@@ -1933,18 +1887,16 @@ class Event(object):
 
         # Convert to this event's frame
         if self._frame_ != Frame.J2000:
-            dep_ap = self._xform_to_j2000_.unrotate(dep_ap_ssb, derivs=True)
+            self._dep_ap_ = self._xform_to_j2000_.unrotate(dep_ap_ssb,
+                                                           derivs=True)
         else:
-            dep_ap = dep_ap_ssb
+            self._dep_ap_ = dep_ap_ssb
 
         # Cache the result
-        if not ABERRATION.old:
-            self._dep_ap_ = dep_ap
-
         if derivs:
-            return dep_ap
+            return self._dep_ap_
         else:
-            return dep_ap.wod
+            return self._dep_ap_.wod
 
     #===========================================================================
     def actual_dep(self, derivs=False, quick={}):
@@ -1960,7 +1912,7 @@ class Event(object):
         """
 
         # If the apparent vector is already cached, return it
-        if not ABERRATION.old and self._dep_ is not None:
+        if self._dep_ is not None:
             if derivs:
                 return self._dep_
             else:
@@ -1973,18 +1925,15 @@ class Event(object):
 
         # Convert to this event's frame
         if self._frame_ != Frame.J2000:
-            dep = self._xform_to_j2000_.unrotate(dep_ssb, derivs=True)
+            self._dep_ = self._xform_to_j2000_.unrotate(dep_ssb, derivs=True)
         else:
-            dep = dep_ssb
+            self._dep_ = dep_ssb
 
         # Cache the result
-        if not ABERRATION.old:
-            self._dep_ = dep
-
         if derivs:
-            return dep
+            return self._dep_
         else:
-            return dep.wod
+            return self._dep_.wod
 
     #===========================================================================
     def incidence_angle(self, apparent=False, derivs=False, quick={}):
@@ -2017,7 +1966,7 @@ class Event(object):
         else:
             arr = shrunk.arr
 
-        result = np.pi - shrunk.perp.sep(arr, derivs)
+        result = Scalar.PI - shrunk.perp.sep(arr, derivs)
         return result.unshrink(self.antimask, self.shape)
 
     #===========================================================================
@@ -2087,7 +2036,7 @@ class Event(object):
             dep = shrunk.dep
             arr = shrunk.arr
 
-        result = np.pi - dep.sep(arr, derivs)
+        result = Scalar.PI - dep.sep(arr, derivs)
         return result.unshrink(self.antimask, self.shape)
 
     #===========================================================================
@@ -2113,7 +2062,9 @@ class Event(object):
         """
 
         # Validate the inputs
-        assert subfield in {'arr', 'dep'}
+        if subfield not in ('arr', 'dep'):
+            raise ValueError('invalid input value for apparent: '
+                             + repr(apparent))
 
         # Identify the frame
         if frame == 'J2000' or frame == Frame.J2000:
@@ -2129,11 +2080,6 @@ class Event(object):
                 ray = event.neg_arr
             else:
                 ray = event.dep
-        elif ABERRATION.old:
-            if subfield == 'arr':
-                ray = -event.apparent_arr(derivs=derivs, quick=quick)
-            else:
-                ray = event.apparent_dep(derivs=derivs, quick=quick)
         else:
             if subfield == 'arr':
                 ray = event.neg_arr_ap
@@ -2151,6 +2097,7 @@ class Event(object):
 ################################################################################
 
 import unittest
+from oops.constants import RPD, C
 
 class Test_Event(unittest.TestCase):
 
@@ -2184,7 +2131,7 @@ class Test_Event(unittest.TestCase):
         # Test against the approximation sin(delta) = beta * sin(angle)
         # where angle_prime = angle + delta
         BETA = 0.001
-        angles = np.arange(181.) * constants.RPD
+        angles = np.arange(181.) * RPD
         exact_prime = aberrate(angles, BETA)
         delta = exact_prime - angles
         for k in range(181):
@@ -2199,7 +2146,7 @@ class Test_Event(unittest.TestCase):
 
         BETA = 0.001
         DEL = 3.e-9
-        SPEED = BETA * constants.C      # largest speed we care about is 300 km/s
+        SPEED = BETA * C        # largest speed we care about is 300 km/s
         HALFPI = np.pi/2
 
         # Incoming aberration in the forward direction
@@ -2254,24 +2201,24 @@ class Test_Event(unittest.TestCase):
 
             # Note the sign change on pobj, because we consider the photon's
             # direction, not the direction to the target
-            pobj = np.array([-np.cos(angle * constants.RPD),
-                             -np.sin(angle * constants.RPD), 0.])
+            pobj = np.array([-np.cos(angle * RPD),
+                             -np.sin(angle * RPD), 0.])
             appobj = cspyce.stelab(pobj, vobs)
             cspyce_arr_ap.append(np.arctan2(-appobj[1], -appobj[0]))
 
-            pobj = np.array([np.cos(angle * constants.RPD),
-                             np.sin(angle * constants.RPD), 0.])
+            pobj = np.array([np.cos(angle * RPD),
+                             np.sin(angle * RPD), 0.])
             appobj = cspyce.stlabx(pobj, vobs)
             cspyce_dep_ap.append(np.arctan2(appobj[1], appobj[0]))
 
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.XAXIS), 'SSB', 'J2000')
-        ray = Vector3.from_scalars(np.cos(angles * constants.RPD),
-                                   np.sin(angles * constants.RPD), 0.)
+        ray = Vector3.from_scalars(np.cos(angles * RPD),
+                                   np.sin(angles * RPD), 0.)
         ev.arr = ray
         ev.dep = ray
 
-        exact_arr_ap = aberrate(angles * constants.RPD, BETA)
-        exact_dep_ap = aberrate(angles * constants.RPD, BETA)
+        exact_arr_ap = aberrate(angles * RPD, BETA)
+        exact_dep_ap = aberrate(angles * RPD, BETA)
 
         for k in range(181):
             arr_ap = np.arctan2(ev.arr_ap[k].vals[1], ev.arr_ap[k].vals[0])

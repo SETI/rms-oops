@@ -10,8 +10,6 @@ from polymath.qube   import Qube
 from polymath.scalar import Scalar
 from polymath.vector import Vector
 
-TWOPI = 2. * np.pi
-
 class Vector3(Vector):
     """A vector with a fixed length of three."""
 
@@ -122,7 +120,7 @@ class Vector3(Vector):
         (x,y,z) = self.to_scalars(recursive=recursive)
         length = self.norm(recursive=recursive)
 
-        ra = y.arctan2(x) % TWOPI
+        ra = y.arctan2(x) % Scalar.TWOPI
         dec = (z/length).arcsin()
 
         return (ra, dec, length)
@@ -162,7 +160,7 @@ class Vector3(Vector):
         (x,y,z) = self.to_scalars(recursive=recursive)
         radius = (x**2 + y**2).sqrt(recursive=recursive)
 
-        longitude = y.arctan2(x, recursive=recursive) % TWOPI
+        longitude = y.arctan2(x, recursive=recursive) % Scalar.TWOPI
 
         return (radius, longitude, z)
 

@@ -239,10 +239,12 @@ class Metronome(Cadence):
 
                 # Mask times when integration is not happening
                 if inclusive:       # extra care needed at end time
-                    new_mask |= ((time_frac >= self.texp)
-                                 & (time.vals != self.time[1]))
+                    not_integrating = ((time_frac >= self.texp) &
+                                       (time.vals != self.time[1]))
                 else:
-                    new_mask |= (time_frac >= self.texp)
+                    not_integrating = (time_frac >= self.texp)
+
+                new_mask = Qube.or_(new_mask, not_integrating)
 
         else:
             # For overlapping cases...
@@ -251,9 +253,9 @@ class Metronome(Cadence):
                                                    inclusive=inclusive,
                                                    clip=True)
             # The new mask only applies if _both_ min and max are masked;
-            # Otherwise, it is just a time near the beginning or end, and
+            # Otherwise, it is just a time near the beginning or end, and is
             # associated with fewer time steps, not no time steps.
-            new_mask &= tstep_min.mask
+            new_mask = Qube.and_(new_mask, tstep_min.mask)
 
         # Masked tstep ranges must have zero length
         tstep_max[new_mask] = tstep_min[new_mask]

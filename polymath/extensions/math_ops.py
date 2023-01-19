@@ -5,8 +5,8 @@
 import numpy as np
 import numbers
 import sys
-from ..qube import Qube
-from ..units import Units
+from polymath.qube import Qube
+from polymath.units import Units
 
 PYTHON2 = (sys.version_info[0] < 3)
 
@@ -474,7 +474,8 @@ def cross_3x3(a,b):
     """
 
     (a,b) = np.broadcast_arrays(a,b)
-    assert a.shape[-1] == b.shape[-1] == 3
+    if not (a.shape[-1] == b.shape[-1] == 3):
+        raise ValueError('cross_3x3 requires 3x3 arrays')
 
     new_values = np.empty(a.shape)
     new_values[...,0] = a[...,1] * b[...,2] - a[...,2] * b[...,1]
@@ -489,7 +490,8 @@ def cross_2x2(a, b):
     """
 
     (a,b) = np.broadcast_arrays(a,b)
-    assert a.shape[-1] == b.shape[-1] == 2
+    if not (a.shape[-1] == b.shape[-1] == 2):
+        raise ValueError('cross_2x2 requires 2x2 arrays')
 
     return a[...,0] * b[...,1] - a[...,1] * b[...,0]
 

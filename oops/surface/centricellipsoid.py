@@ -3,11 +3,11 @@
 ################################################################################
 
 import numpy as np
-from polymath import Scalar, Vector3
-
-from .           import Surface
-from .ellipsoid  import Ellipsoid
-from ..constants import PI, HALFPI
+from polymath               import Scalar, Vector3
+from oops.frame             import Frame
+from oops.path              import Path
+from oops.surface           import Surface
+from oops.surface.ellipsoid import Ellipsoid
 
 class CentricEllipsoid(Surface):
     """A variant of Ellipsoid in which latitudes are planetocentric."""
@@ -47,9 +47,17 @@ class CentricEllipsoid(Surface):
         self.unsquash_y_sq = self.ellipsoid.unsquash_y**2
 
         self.radii = self.ellipsoid.radii
+        self.exclusion = float(exclusion)
+
+        self.unmasked = self
+
+        # Unique key for intercept calculations
+        self.intercept_key = self.ellipsoid.intercept_key
 
     def __getstate__(self):
-        return (self.origin, self.frame, self.radii, self.exclusion)
+        return (Path.as_primary_path(self.origin),
+                Frame.as_primary_frame(self.frame),
+                tuple(self.radii), self.exclusion)
 
     def __setstate__(self, state):
         self.__init__(*state)
@@ -330,13 +338,11 @@ class CentricEllipsoid(Surface):
 ################################################################################
 
 import unittest
+from oops.constants import PI, HALFPI
 
 class Test_CentricEllipsoid(unittest.TestCase):
 
     def runTest(self):
-
-        from ..frame import Frame
-        from ..path import Path
 
         np.random.seed(9123)
 

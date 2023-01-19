@@ -3,7 +3,7 @@
 ################################################################################
 
 import numpy as np
-from ..qube import Qube
+from polymath.qube import Qube
 
 def extract_numer(self, axis, index, classes=(), recursive=True):
     """An object extracted from one numerator axis.
@@ -302,6 +302,7 @@ def split_items(self, nrank, classes):
     Derivatives are removed.
 
     Input:
+        nrank       number of numerator axes to retain.
         classes     either a single subclass of Qube or a list or tuple of
                     subclasses. The returned object will be an instance of the
                     first suitable subclass in the list.

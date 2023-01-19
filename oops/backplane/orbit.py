@@ -2,16 +2,14 @@
 # oops/backplanes/orbit.py: Orbit backplanes
 ################################################################################
 
-from polymath import Vector3, Matrix3
+from polymath import Scalar, Vector3, Matrix3
 
 from oops.backplane import Backplane
 from oops.body      import Body
 from oops.frame     import Frame
-from oops.constants import TWOPI
 
-#===============================================================================
 def orbit_longitude(self, event_key, reference='obs', planet=None):
-    """Longitude on an orbit path relative to the central planet.
+    """Gridless longitude on an orbit path relative to the central planet.
 
     Input:
         event_key       key defining the event on the orbit path.
@@ -27,17 +25,18 @@ def orbit_longitude(self, event_key, reference='obs', planet=None):
                         default, which is the parent of the targeted body.
     """
 
-    assert reference in {'aries', 'node', 'obs', 'oha', 'sun', 'sha'}
+    if reference not in ('aries', 'node', 'obs', 'oha', 'sun', 'sha'):
+        raise ValueError('invalid longitude reference: ' + repr(reference))
 
     # Determine/validate the planet
     event_key = self.standardize_event_key(event_key)
     if planet is None:
-        (body,_) = self.get_body_and_modifier(event_key)
+        (body,_) = self.get_body_and_modifier(event_key[1])
         planet = body.parent.name
 
     # Get the event
-    if reference in {'sun', 'sha'}:
-        orbit_event = self.get_gridless_event_with_arr(event_key)
+    if reference in ('sun', 'sha'):
+        orbit_event = self.get_gridless_event(event_key, arrivals=True)
     else:
         orbit_event = self.get_gridless_event(event_key)
 
@@ -78,13 +77,45 @@ def orbit_longitude(self, event_key, reference='obs', planet=None):
     ref_lon_wrt_orbit = y.arctan2(x,recursive=False)
 
     # Convert to an orbit with respect to the reference direction
-    orbit_lon_wrt_ref = (-ref_lon_wrt_orbit) % TWOPI
-    self.register_gridless_backplane(key, orbit_lon_wrt_ref)
-    return orbit_lon_wrt_ref
+    orbit_lon_wrt_ref = (-ref_lon_wrt_orbit) % Scalar.TWOPI
+    return self.register_backplane(key, orbit_lon_wrt_ref)
 
 ################################################################################
 
+# Add these functions to the Backplane module
 Backplane._define_backplane_names(globals().copy())
+
+################################################################################
+# GOLD MASTER TESTS
+################################################################################
+
+from oops.backplane.gold_master import register_test_suite
+from oops.constants import DPR
+
+def orbit_test_suite(bpt):
+
+    bp = bpt.backplane
+    for (_, name) in bpt.planet_moon_pairs:
+        bpt.gmtest(bp.orbit_longitude(name, reference='obs') * DPR,
+                   name + ' orbit longitude wrt observer (deg)',
+                   method='mod360', limit=0.001)
+        bpt.gmtest(bp.orbit_longitude(name, reference='oha') * DPR,
+                   name + ' orbit longitude wrt OHA (deg)',
+                   method='mod360', limit=0.001)
+        bpt.gmtest(bp.orbit_longitude(name, reference='sun') * DPR,
+                   name + ' orbit longitude wrt Sun (deg)',
+                   method='mod360', limit=0.001)
+        bpt.gmtest(bp.orbit_longitude(name, reference='sha') * DPR,
+                   name + ' orbit longitude wrt SHA (deg)',
+                   method='mod360', limit=0.001)
+        bpt.gmtest(bp.orbit_longitude(name, reference='aries') * DPR,
+                   name + ' orbit longitude wrt Aries (deg)',
+                   method='mod360', limit=0.001)
+        bpt.gmtest(bp.orbit_longitude(name, reference='node') * DPR,
+                   name + ' orbit longitude wrt node (deg)',
+                   method='mod360', limit=0.001)
+
+register_test_suite('orbit', orbit_test_suite)
 
 ################################################################################
 # UNIT TESTS

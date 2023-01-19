@@ -2,16 +2,14 @@
 # oops/fov/barrelfov.py: Barrel distortion subclass of FOV
 ################################################################################
 
-from __future__ import print_function
-
 import numpy as np
-import warnings
+import sys
 
 from polymath         import Scalar, Pair
+from oops.config      import LOGGING
 from oops.fov         import FOV
 from oops.fov.flatfov import FlatFOV
 
-import sys
 EPSILON = sys.float_info.epsilon/2.         # actual machine precision
 
 class BarrelFOV(FOV):
@@ -110,8 +108,10 @@ class BarrelFOV(FOV):
             self.dcoefft_uv_from_xy = (self.coefft_uv_from_xy *
                                        np.arange(order))
 
-        assert (self.coefft_xy_from_uv is not None or
-                self.coefft_uv_from_xy is not None)
+        if (self.coefft_xy_from_uv is None and
+            self.coefft_uv_from_xy is None):
+                raise ValueError('at least one of coefft_xy_from_uv and '
+                                 + 'coefft_uv_from_xy must be specified')
 
         self.uv_scale = Pair.as_pair(uv_scale).as_readonly()
         self.uv_shape = Pair.as_pair(uv_shape).as_readonly()
@@ -345,11 +345,12 @@ class BarrelFOV(FOV):
             # Perform one step of Newton's Method
             dr = (f.wod - f_test) / df_dr
                 # Note that df_dr should never be zero, so this is safe
-            new_max_dr = abs(dr).max(builtins=True)
+            new_max_dr = abs(dr).max(builtins=True, masked=-1.)
 
-            if BarrelFOV.DEBUG:
-                print('BarrelFOV._solve_ratio: iter=%d; change=%.6g'
-                      % (count+1, new_max_dr))
+            if LOGGING.fov_iterations or BarrelFOV.DEBUG:
+                LOGGING.convergence('BarrelFOV._solve_ratio:',
+                                    'iter=%d; change=%.6g' % (count+1,
+                                                              new_max_dr))
 
             # Quit when convergence stops
             if new_max_dr <= eps[count]:
@@ -358,15 +359,14 @@ class BarrelFOV(FOV):
                 break
 
             if new_max_dr >= max_dr:
-                iters = count + 1
                 break
 
             r += dr
             max_dr = new_max_dr
 
         if not converged:
-            warnings.warn(('convergence stopped at %.6g in iteration %d of ' +
-                           'BarrelFOV._solve_ratio') % (max_dr, iters))
+            LOGGING.warn('BarrelFOV._solve_ratio did not converge;',
+                         'iter=%d; change=%.6g' % (count+1, max_dt))
 
         # Prepare ratio r/f
         ratio = 1. / f_over_r       # f_over_r can't be zero
@@ -435,7 +435,7 @@ class Test_BarrelFOV(unittest.TestCase):
                 xy = fov.xy_from_uv(uv, derivs=True)
                 uv_test = fov.uv_from_xy(xy, derivs=True)
             t1 = time.time()
-            print('time = %.2f ms' % ((t1-t0)/iters*1000.))
+            LOGGING.print('time = %.2f ms' % ((t1-t0)/iters*1000.))
         else:
             xy = fov.xy_from_uv(uv, derivs=True)
             uv_test = fov.uv_from_xy(xy, derivs=False)

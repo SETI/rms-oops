@@ -4,21 +4,21 @@
 
 # Import the Frame class and its core components into a common name space
 
-from .                 import (Frame, Wayframe, AliasFrame, LinkedFrame,
-                               RelativeFrame, ReversedFrame, QuickFrame)
-from .cmatrix          import Cmatrix
-from .inclinedframe    import InclinedFrame
-from .laplaceframe     import LaplaceFrame
-from .navigation       import Navigation
-from .poleframe        import PoleFrame
-from .postargframe     import PosTargFrame
-from .ringframe        import RingFrame
-from .rotation         import Rotation
-from .spiceframe       import SpiceFrame
-from .spicetype1frame  import SpiceType1Frame
-from .spinframe        import SpinFrame
-from .synchronousframe import SynchronousFrame
-from .trackerframe     import TrackerFrame
-from .twovectorframe   import TwoVectorFrame
+from oops.frame import (Frame, Wayframe, AliasFrame, LinkedFrame,
+                        RelativeFrame, ReversedFrame, QuickFrame)
+from oops.frame.cmatrix          import Cmatrix
+from oops.frame.inclinedframe    import InclinedFrame
+from oops.frame.laplaceframe     import LaplaceFrame
+from oops.frame.navigation       import Navigation
+from oops.frame.poleframe        import PoleFrame
+from oops.frame.postargframe     import PosTargFrame
+from oops.frame.ringframe        import RingFrame
+from oops.frame.rotation         import Rotation
+from oops.frame.spiceframe       import SpiceFrame
+from oops.frame.spicetype1frame  import SpiceType1Frame
+from oops.frame.spinframe        import SpinFrame
+from oops.frame.synchronousframe import SynchronousFrame
+from oops.frame.trackerframe     import TrackerFrame
+from oops.frame.twovectorframe   import TwoVectorFrame
 
 ################################################################################

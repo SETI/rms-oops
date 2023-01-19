@@ -57,7 +57,7 @@ def shrink(self, antimask):
     antimask_rank = antimask.ndim
     extras = self_rank - antimask_rank
     if extras < 0:
-        self = self.broadcast_into_shape(antimask.shape, recursive=False)
+        self = self.broadcast_to(antimask.shape, recursive=False)
         self_rank = antimask_rank
         extras = 0
 
@@ -71,7 +71,7 @@ def shrink(self, antimask):
                        for k in range(len(after))])
     new_shape = before + new_after
     if self._shape_ != new_shape:
-        self = self.broadcast_into_shape(new_shape, recursive=False)
+        self = self.broadcast_to(new_shape, recursive=False)
     if antimask.shape != new_after:
         antimask = np.broadcast_to(antimask, new_after)
 
@@ -143,7 +143,7 @@ def unshrink(self, antimask, shape=()):
 
     # If the new object is entirely masked, return a shapeless masked object
     if not np.any(antimask) or np.all(self._mask_):
-        return self.masked_single()
+        return self.masked_single().broadcast_to(shape)
 
     # If this object is shapeless, return it as is
     if not self._shape_:
@@ -170,7 +170,7 @@ def unshrink(self, antimask, shape=()):
     # ...where single values can be handled by broadcasting...
     else:
         item = Scalar(self._values_)
-        new_values = item.broadcast_into_shape(new_shape)._values_
+        new_values = item.broadcast_to(new_shape)._values_
 
     # Create the new mask array
     new_mask = np.ones(new_shape, dtype=np.bool_)

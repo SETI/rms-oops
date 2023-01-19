@@ -2,16 +2,12 @@
 # oops/surface/spheroid.py: Spheroid subclass of class Surface
 ################################################################################
 
-from __future__ import print_function
-
 import numpy as np
-from polymath import Scalar, Vector3, Matrix
-
-from .           import Surface
-from ..frame     import Frame
-from ..path      import Path
-from ..config    import SURFACE_PHOTONS, LOGGING
-from ..constants import HALFPI, TWOPI
+from polymath     import Matrix, Scalar, Vector3
+from oops.config  import SURFACE_PHOTONS, LOGGING
+from oops.frame   import Frame
+from oops.path    import Path
+from oops.surface import Surface
 
 class Spheroid(Surface):
     """A spheroidal surface centered on the given path and fixed with respect to
@@ -34,6 +30,7 @@ class Spheroid(Surface):
 
     COORDINATE_TYPE = 'spherical'
     IS_VIRTUAL = False
+    HAS_INTERIOR = True
 
     DEBUG = False       # True for convergence testing in intercept_normal_to()
 
@@ -63,7 +60,9 @@ class Spheroid(Surface):
             self.radii = np.array((radii[0], radii[0], radii[1]))
         else:
             self.radii = np.array((radii[0], radii[1], radii[2]))
-            assert radii[0] == radii[1]
+            if radii[0] != radii[1]:
+                raise ValueError('first two radii do not match: %s, %s'
+                                 % (radii[0], radii[1]))
 
         self.radii_sq = self.radii**2
         self.req    = self.radii[0]
@@ -85,11 +84,21 @@ class Spheroid(Surface):
         # This is the exclusion zone radius, within which calculations of
         # intercept_normal_to() are automatically masked due to the ill-defined
         # geometry.
-
+        self.exclusion_unscaled = float(exclusion)
         self.exclusion = exclusion * self.rpol
 
+        self.unmasked = self
+
+        # Unique key for intercept calculations
+        self.intercept_key = ('ellipsoid', self.origin.waypoint,
+                                           self.frame.wayframe,
+                                           tuple(self.radii),
+                                           self.exclusion_unscaled)
+
     def __getstate__(self):
-        return (self.origin, self.frame, self.radii, self.exclusion)
+        return (Path.as_primary_path(self.origin),
+                Frame.as_primary_frame(self.frame),
+                tuple(self.radii), self.exclusion_unscaled)
 
     def __setstate__(self, state):
         self.__init__(*state)
@@ -112,6 +121,10 @@ class Spheroid(Surface):
                         three Scalars, one for each coordinate.
         """
 
+        if axes not in (2, 3):
+            raise ValueError('Surface.coords_from_vector3 ' +
+                             'axes values must equal 2 or 3')
+
         pos = Vector3.as_vector3(pos, derivs)
 
         unsquashed = Vector3.as_vector3(pos).element_mul(self.unsquash)
@@ -119,7 +132,7 @@ class Spheroid(Surface):
         r = unsquashed.norm()
         (x,y,z) = unsquashed.to_scalars()
         lat = (z/r).arcsin()
-        lon = y.arctan2(x) % TWOPI
+        lon = y.arctan2(x) % Scalar.TWOPI
 
         if axes == 2:
             return (lon, lat)
@@ -146,6 +159,10 @@ class Spheroid(Surface):
         be broadcastable to a single shape.
         """
 
+        if len(coords) not in (2, 3):
+            raise ValueError('Surface.vector3_from_coords requires 2 or 3 '
+                             'coords')
+
         # Convert to Scalars
         lon = Scalar.as_scalar(coords[0], derivs)
         lat = Scalar.as_scalar(coords[1], derivs)
@@ -161,6 +178,23 @@ class Spheroid(Surface):
         z = r * lat.sin() * self.squash_z
 
         return Vector3.from_scalars(x,y,z)
+
+    #===========================================================================
+    def position_is_inside(self, pos, obs=None, time=None):
+        """Where positions are inside the surface.
+
+        Input:
+            pos         a Vector3 of positions relative to the surface.
+            obs         a Vector3 of observer positions. Ignored for solid
+                        surfaces but needed for virtual surfaces.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        unless the surface is time-variable.
+
+        Return:         Boolean True where positions are inside the surface
+        """
+
+        unsquashed = Vector3.as_vector3(pos).element_mul(self.unsquash)
+        return unsquashed.norm() < self.radii[0]
 
     #===========================================================================
     def intercept(self, obs, los, time=None, derivs=False, guess=None):
@@ -341,6 +375,7 @@ class Spheroid(Surface):
 
         # Terminate when accuracy stops improving by at least a factor of 2
         max_dp = 1.e99
+        converged = False
         for count in range(SURFACE_PHOTONS.max_iterations):
             denom = Vector3.ONES + p * self.unsquash_sq
 
@@ -354,16 +389,22 @@ class Spheroid(Surface):
             p -= dp
 
             prev_max_dp = max_dp
-            max_dp = abs(dp).max()
+            max_dp = abs(dp).max(builtins=True, masked=-1.)
 
             if LOGGING.surface_iterations or Spheroid.DEBUG:
-                print(LOGGING.prefix, 'Spheroid.intercept_normal_to',
-                                      count+1, max_dp)
+                LOGGING.convergence('Spheroid.intercept_normal_to:',
+                                    'iter=%d; change=%.6g' % (count+1, max_dp))
 
-            if (np.all(Scalar.as_scalar(max_dp).mask) or
-                max_dp <= SURFACE_PHOTONS.dlt_precision or
-                max_dp >= prev_max_dp * 0.5):
-                    break
+            if max_dp <= SURFACE_PHOTONS.dlt_precision:
+                converged = True
+                break
+
+            if max_dp >= prev_max_dp * 0.5:
+                break
+
+        if not converged:
+            LOGGING.warn('Spheroid.intercept_normal_to did not converge;',
+                         'iter=%d; change=%.6g' % (count+1, max_dp))
 
         denom = Vector3.ONES + p * self.unsquash_sq
         cept = pos.element_div(denom)
@@ -607,13 +648,11 @@ class Spheroid(Surface):
 ################################################################################
 
 import unittest
+from oops.constants import HALFPI
 
 class Test_Spheroid(unittest.TestCase):
 
     def runTest(self):
-
-        from ..frame import Frame
-        from ..path import Path
 
         np.random.seed(2344)
 

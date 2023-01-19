@@ -55,7 +55,9 @@ class Pixel(Observation):
 
         # FOV
         self.fov = fov
-        assert self.fov.uv_shape == (1,1)
+        if self.fov.uv_shape != (1,1):
+          raise ValueError('Pixel observation FOV must have shape (1,1)')
+
         self.uv_shape = (1,1)
 
         # Axes
@@ -70,8 +72,9 @@ class Pixel(Observation):
 
         # Cadence
         self.cadence = cadence
-        assert isinstance(self.cadence, Cadence)
-        assert len(self.cadence.shape) == 1
+        if len(self.cadence.shape) != 1:
+            raise ValueError('Pixel observation requires a 1-D cadence')
+
         samples = self.cadence.shape[0]
 
         # Shape / Size
@@ -242,8 +245,6 @@ class Pixel(Observation):
         Return:         the corresponding event.
         """
 
-        assert len(self.cadence.shape) == 1
-
         if time is None:
             tstep = np.arange(self.cadence.shape[0]) + tfrac
             time = self.cadence.time_at_tstep(tstep)
@@ -277,8 +278,6 @@ class Pixel(Observation):
 
         Return:         the corresponding event.
         """
-
-        assert len(self.cadence.shape) == 1
 
         if tfrac is not None:
             if time is not None:

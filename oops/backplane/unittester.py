@@ -33,6 +33,7 @@
 
 import unittest
 
+from oops.backplane            import Test_Backplane_via_gold_master
 from oops.backplane            import Test_Backplane_Surfaces
 from oops.backplane            import Test_Backplane_Borders
 from oops.backplane            import Test_Backplane_Empty_Events

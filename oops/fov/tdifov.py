@@ -31,7 +31,8 @@ class TDIFOV(FOV):
         self.tdi_sign = -1 if '-' in tdi_axis else 1
 
         # Validation
-        assert tdi_axis in {'u', 'v', '-u', '-v', '+u', '+v'}
+        if tdi_axis not in ('u', 'v', '-u', '-v', '+u', '+v'):
+            raise ValueError('invalid tdi_axis value: ' + repr(tdi_axis))
 
         # Interpret the axis
         if self.tdi_axis == 'u':

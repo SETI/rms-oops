@@ -3,16 +3,16 @@
 ################################################################################
 
 import numpy as np
-from polymath import Scalar, Vector3
-
-from .           import Surface
-from .spheroid   import Spheroid
-from ..constants import HALFPI
+from polymath              import Scalar, Vector3
+from oops.frame            import Frame
+from oops.path             import Path
+from oops.surface          import Surface
+from oops.surface.spheroid import Spheroid
 
 class GraphicSpheroid(Surface):
     """A variant of Spheroid in which latitudes are planetographic."""
 
-    COORDINATE_TYPE = "spherical"
+    COORDINATE_TYPE = 'spherical'
     IS_VIRTUAL = False
 
     #===========================================================================
@@ -43,8 +43,17 @@ class GraphicSpheroid(Surface):
         self.unsquash_sq = self.spheroid.unsquash_z**2
         self.radii = self.spheroid.radii
 
+        self.exclusion = float(exclusion)
+
+        self.unmasked = self
+
+        # Unique key for intercept calculations
+        self.intercept_key = self.spheroid.intercept_key
+
     def __getstate__(self):
-        return (self.origin, self.frame, self.radii, self.exclusion)
+        return (Path.as_primary_path(self.origin),
+                Frame.as_primary_frame(self.frame),
+                tuple(self.radii), self.exclusion)
 
     def __setstate__(self, state):
         self.__init__(*state)
@@ -323,13 +332,11 @@ class GraphicSpheroid(Surface):
 ################################################################################
 
 import unittest
+from oops.constants import HALFPI
 
 class Test_GraphicSpheroid(unittest.TestCase):
 
     def runTest(self):
-
-        from ..frame import Frame
-        from ..path import Path
 
         np.random.seed(7204)
 

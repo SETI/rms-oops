@@ -6,7 +6,6 @@ from polymath       import Pair, Vector3
 from oops.backplane import Backplane
 from oops.surface   import Surface
 
-#===============================================================================
 def resolution(self, event_key, axis='u'):
     """Projected resolution in km/pixel at the surface intercept.
 
@@ -20,26 +19,25 @@ def resolution(self, event_key, axis='u'):
                             observation.
     """
 
-    event_key = self.standardize_event_key(event_key)
-    assert axis in ('u','v')
+    if axis not in ('u', 'v'):
+        raise ValueError('invalid axis: ' + repr(axis))
 
+    event_key = self.standardize_event_key(event_key)
     key = ('resolution', event_key, axis)
     if key not in self.backplanes:
         distance = self.distance(event_key)
 
-        res = self.dlos_duv.swap_items(Pair)
-        (u_resolution, v_resolution) = res.to_scalars()
-        u_resolution = distance * u_resolution.join_items(Vector3).norm()
-        v_resolution = distance * v_resolution.join_items(Vector3).norm()
+        dlos_du = Vector3(self.dlos_duv.vals[...,0], self.dlos_duv.mask)
+        dlos_dv = Vector3(self.dlos_duv.vals[...,1], self.dlos_duv.mask)
 
-        self.register_backplane(key[:-1] + ('u',), u_resolution)
-        self.register_backplane(key[:-1] + ('v',), v_resolution)
+        self.register_backplane(key[:-1] + ('u',), distance * dlos_du.norm())
+        self.register_backplane(key[:-1] + ('v',), distance * dlos_dv.norm())
 
     return self.backplanes[key]
 
 #===============================================================================
 def center_resolution(self, event_key, axis='u'):
-    """Directionless projected spatial resolution in km/pixel.
+    """Gridless, directionless projected spatial resolution in km/pixel.
 
     Measured at the central path of a body, based on range alone.
 
@@ -51,20 +49,20 @@ def center_resolution(self, event_key, axis='u'):
                             observation.
     """
 
-    event_key = self.standardize_event_key(event_key)
-    assert axis in ('u','v')
+    if axis not in ('u', 'v'):
+        raise ValueError('invalid axis: ' + repr(axis))
 
-    key = ('center_resolution', event_key, axis)
+    gridless_key = self.gridless_event_key(event_key)
+    key = ('center_resolution', gridless_key, axis)
     if key not in self.backplanes:
-        distance = self.center_distance(event_key)
+        distance = self.center_distance(gridless_key)
 
-        res = self.obs.fov.center_dlos_duv.swap_items(Pair)
-        (u_resolution, v_resolution) = res.to_scalars()
-        u_resolution = distance * u_resolution.join_items(Vector3).norm()
-        v_resolution = distance * v_resolution.join_items(Vector3).norm()
+        mask = self.center_dlos_duv.mask
+        dlos_du = Vector3(self.center_dlos_duv.vals[...,0], mask)
+        dlos_dv = Vector3(self.center_dlos_duv.vals[...,1], mask)
 
-        self.register_gridless_backplane(key[:-1] + ('u',), u_resolution)
-        self.register_gridless_backplane(key[:-1] + ('v',), v_resolution)
+        self.register_backplane(key[:-1] + ('u',), distance * dlos_du.norm())
+        self.register_backplane(key[:-1] + ('v',), distance * dlos_dv.norm())
 
     return self.backplanes[key]
 
@@ -106,17 +104,51 @@ def _fill_surface_resolution(self, event_key):
     """Internal method to fill in the surface resolution backplanes."""
 
     event_key = self.standardize_event_key(event_key)
-    event = self.get_surface_event_w_derivs(event_key)
+    event = self.get_surface_event(event_key, derivs=True)
 
     dpos_duv = event.state.d_dlos.chain(self.dlos_duv)
     (minres, maxres) = Surface.resolution(dpos_duv)
 
-    self.register_backplane(('finest_resolution', event_key), minres)
+    self.register_backplane(('finest_resolution',   event_key), minres)
     self.register_backplane(('coarsest_resolution', event_key), maxres)
 
 ################################################################################
 
+# Add these functions to the Backplane module
 Backplane._define_backplane_names(globals().copy())
+
+################################################################################
+# GOLD MASTER TESTS
+################################################################################
+
+from oops.backplane.gold_master import register_test_suite
+
+def resolution_test_suite(bpt):
+
+    bp = bpt.backplane
+    for name in (bpt.body_names + bpt.limb_names +
+                 bpt.ring_names + bpt.ansa_names):
+
+        bpt.gmtest(bp.resolution(name, 'u'),
+                   name + ' resolution along u axis (km)',
+                   limit=0.001, radius=1)
+        bpt.gmtest(bp.resolution(name, 'v'),
+                   name + ' resolution along v axis (km)',
+                   limit=0.001, radius=1)
+        bpt.gmtest(bp.center_resolution(name, 'u'),
+                   name + ' center resolution along u axis (km)',
+                   limit=0.001, radius=1)
+        bpt.gmtest(bp.center_resolution(name, 'v'),
+                   name + ' center resolution along v axis (km)',
+                   limit=0.001, radius=1)
+        bpt.gmtest(bp.finest_resolution(name),
+                   name + ' finest resolution (km)',
+                   limit=0.001, radius=1)
+        bpt.gmtest(bp.coarsest_resolution(name),
+                   name + ' coarsest resolution (km)',
+                   limit=0.1, radius=1)
+
+register_test_suite('resolution', resolution_test_suite)
 
 ################################################################################
 # UNIT TESTS

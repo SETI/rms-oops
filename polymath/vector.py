@@ -267,7 +267,9 @@ class Vector(Qube):
             # Quick internal method to make sure clip, inclusive, and shift are
             # tuples or lists of the correct length.
             if isinstance(item, (list, tuple)):
-                assert len(item) == len(top)
+                if len(item) != len(top):
+                    raise ValueError('top shape does not match rank of '
+                                     + 'Vector: %s, %d' % (top, len(item)))
             else:
                 item = len(top) * (item,)
             return item
@@ -277,7 +279,9 @@ class Vector(Qube):
             raise ValueError('denominators are not supported in Vector.int')
 
         if top is not None:
-            assert len(top) == self.item[-1]
+            if len(top) != self.item[-1]:
+                raise ValueError('top shape does not match rank of '
+                                 + 'Vector: %s, %d' % (top, len(self.item[-1])))
 
             clip = _as_tuple(clip)
             inclusive = _as_tuple(inclusive)

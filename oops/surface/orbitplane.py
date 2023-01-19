@@ -3,17 +3,16 @@
 ################################################################################
 
 import numpy as np
-from polymath import Scalar, Vector3
-
-from .                     import Surface
-from .ringplane            import RingPlane
-from ..event               import Event
-from ..frame               import Frame
-from ..frame.inclinedframe import InclinedFrame
-from ..frame.spinframe     import SpinFrame
-from ..path                import Path
-from ..path.circlepath     import CirclePath
-from ..constants           import PI, HALFPI, TWOPI, RPD
+from polymath                 import Scalar, Vector3
+from oops.constants           import PI, HALFPI, TWOPI, RPD
+from oops.event               import Event
+from oops.frame               import Frame
+from oops.frame.inclinedframe import InclinedFrame
+from oops.frame.spinframe     import SpinFrame
+from oops.path                import Path
+from oops.path.circlepath     import CirclePath
+from oops.surface             import Surface
+from oops.surface.ringplane   import RingPlane
 
 class OrbitPlane(Surface):
     """A subclass of the Surface class describing a flat surface sharing its
@@ -34,7 +33,8 @@ class OrbitPlane(Surface):
     IS_VIRTUAL = False
 
     #===========================================================================
-    def __init__(self, elements, epoch, origin, frame, path_id=None):
+    def __init__(self, elements, epoch, origin, frame, path_id=None,
+                       radii=None):
         """Constructor for an OrbitPlane surface.
 
             elements    a tuple containing three, six or nine orbital elements:
@@ -48,7 +48,7 @@ class OrbitPlane(Surface):
                             the surface but not the surface or its coordinate
                             system.
 
-                e           orbital eccentricty.
+                e           orbital eccentricity.
                 peri        longitude of pericenter at epoch, radians.
                 prec        pericenter precession rate, radians/sec.
 
@@ -63,6 +63,8 @@ class OrbitPlane(Surface):
                         defined. Should be inertial.
             path_id     the ID under which to register the orbit path; None to
                         leave it unregistered
+            radii       the nominal inner and outer radii of the ring, in km.
+                        None for a ring with no radial limits.
 
         Note that the origin and frame used by the returned OrbitPlane object
         will differ from those used to define it here.
@@ -71,18 +73,25 @@ class OrbitPlane(Surface):
         # Save the initial center path and frame. The frame should be inertial.
         self.defined_origin = Path.as_waypoint(origin)
         self.defined_frame  = Frame.as_wayframe(frame)
-        assert self.defined_frame.origin is None    # assert inertial
+        if self.defined_frame.origin is not None:
+            raise ValueError('frame of an OrbitPlane must be inertial')
 
         # We will update the surface's actual path and frame as needed
         self.internal_origin = self.defined_origin
         self.internal_frame  = self.defined_frame
 
         # Save the orbital elements
-        self.a   = elements[0]
-        self.lon = elements[1]
-        self.n   = elements[2]
+        self.elements = np.asfarray(elements)
+        self.a     = elements[0]
+        self.lon   = elements[1]
+        self.n     = elements[2]
+        self.epoch = float(epoch)
 
-        self.epoch = Scalar.as_scalar(epoch)
+        if radii is None:
+            self.radii = None
+        else:
+            self.radii    = np.asfarray(radii)
+            self.radii_sq = self.radii**2
 
         # Interpret the inclination
         self.has_inclination = (len(elements) >= 9)
@@ -161,7 +170,7 @@ class OrbitPlane(Surface):
 
         self.ringplane = RingPlane(origin = self.internal_origin,
                                    frame = self.internal_frame,
-                                   radii = None,
+                                   radii = self.radii,
                                    gravity = None,
                                    elevation = 0.)
 
@@ -169,8 +178,30 @@ class OrbitPlane(Surface):
         self.origin = self.internal_origin.waypoint
         self.frame = self.internal_frame.wayframe
 
+        # Unique key for intercept calculations
+        # ('ring', origin, frame, elevation, i, node, dnode_dt, epoch)
+        if self.has_inclination:
+            extras = tuple(elements[6:9]) + (self.epoch,)
+        else:
+            extras = (0., 0., 0., 0.)
+
+        self.intercept_key = ('ring', self.defined_origin.waypoint,
+                                      self.defined_frame.wayframe,
+                                      0.) + extras
+
+        # Save the unmasked version of this surface
+        if self.radii is None:
+            self.unmasked = self
+        else:
+            self.unmasked = OrbitPlane.__new__(type(OrbitPlane))
+            self.unmasked.__dict__ = self.__dict__.copy()
+            self.unmasked.radii = None
+
     def __getstate__(self):
-        return (self.elements, self.epoch, self.origin, self.frame)
+        return (tuple(self.elements), self.epoch,
+                Path.as_primary_path(self.defined_origin),
+                Frame.as_primary_frame(self.defined_frame),
+                None, self.radii)
 
     def __setstate__(self, state):
         self.__init__(*state)
