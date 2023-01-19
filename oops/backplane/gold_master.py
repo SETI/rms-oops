@@ -29,7 +29,7 @@ class Test_<your test name>(unittest.TestCase):
 import oops.backplane.gold_master as gm
 
 # Define the default observation for testing; note that this can be
-# overridden in the command line.
+# overridden on the command line.
 
 gm.set_default_obs(obspath = 'file path inside the test_data directory',
                    module = 'hosts.xxx.yyy',
@@ -38,13 +38,12 @@ gm.set_default_obs(obspath = 'file path inside the test_data directory',
                    ring   = 'SATURN_MAIN_RINGS' # for example, optional
                    kwargs = {})                 # other from_file inputs
 
-# Define any additional default parameters
+# Change any other default parameters, if necessary...
 
 gm.set_default_args(arg = default_value, ...)
 
 if __name__ == 'main':
-    args = gm.parse_args()
-    gm.run_tests(args)
+    gm.execute_as_command()
 
 """
 
