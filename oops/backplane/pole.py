@@ -18,7 +18,7 @@ def pole_clock_angle(self, event_key):
 
     key = ('pole_clock_angle', gridless_key)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     event = self.get_surface_event(gridless_key)
 
@@ -56,7 +56,7 @@ def pole_position_angle(self, event_key):
 
     key = ('pole_position_angle', event_key)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     return self.register_backplane(key, Scalar.TWOPI
                                         - self.pole_clock_angle(event_key))
@@ -76,17 +76,18 @@ def pole_test_suite(bpt):
 
     bp = bpt.backplane
     for name in bpt.body_names + bpt.ring_names:
-        clock = bp.pole_clock_angle(name) * DPR
-        position = bp.pole_position_angle(name) * DPR
+
+        clock = bp.pole_clock_angle(name)
+        position = bp.pole_position_angle(name)
         bpt.gmtest(clock,
                    name + ' pole clock angle (deg)',
-                   method='mod360', limit=0.001)
+                   method='mod360', limit=0.001, radius=1)
         bpt.gmtest(position,
                    name + ' pole position angle (deg)',
-                   method='mod360', limit=0.001)
+                   method='mod360', limit=0.001, radius=1)
         bpt.compare(clock + position, 0.,
                     name + ' pole clock plus position angle (deg)',
-                    method='mod360', limit=1.e-13)
+                    method='mod360', limit=1.e-13, radius=1)
 
 register_test_suite('pole', pole_test_suite)
 

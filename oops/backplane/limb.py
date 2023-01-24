@@ -23,13 +23,13 @@ def limb_altitude(self, event_key, zmin=None, zmax=None):
     event_key = self.standardize_event_key(event_key)
     key = ('limb_altitude', event_key, zmin, zmax)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     default_key = ('limb_altitude', event_key, None, None)
     if default_key not in self.backplanes:
         self._fill_limb_intercepts(event_key)
 
-    altitude = self.backplanes[default_key]
+    altitude = self.get_backplane(default_key)
     if zmin is None and zmax is None:
         return altitude
 
@@ -103,7 +103,7 @@ def limb_longitude(self, event_key, reference='iau', direction='west',
 
     # If this backplane array is already defined, return it
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     # Use the default longitude method
     longitude = self.longitude(*key[1:])
@@ -133,7 +133,7 @@ def limb_latitude(self, event_key, lat_type='centric'):
 
     # If this backplane array is already defined, return it
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     # Use the default latitude method
     latitude = self.latitude(event_key, lat_type)
@@ -159,7 +159,7 @@ def limb_clock_angle(self, event_key):
 
     # If this backplane array is already defined, return it
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     # Make sure the limb event is defined
     default_key = ('limb_altitude', event_key, None)
@@ -171,7 +171,7 @@ def limb_clock_angle(self, event_key):
 
     surface = PolarLimb(surface.ground, limits=surface.limits)
     event = surface.apply_coords_to_event(event, obs=self.obs, axes=2,
-                                                 derivs=False)
+                                                 derivs=self.ALL_DERIVS)
 
     return self.register_backplane(key, event.coord2)
 
@@ -213,7 +213,7 @@ def limb_test_suite(bpt):
                     name + ' altitude masked above 80 kkm minus unmasked')
         bpt.compare(limited - 80000., 0.,
                     name + ' altitude masked above 80 kkm minus 80,000',
-                    method='<=')
+                    operator='<=')
 
         # Test lat/lon derived from masked altitude
         bpt.compare(bp.limb_longitude(key).mask == mask,

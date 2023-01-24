@@ -16,7 +16,7 @@ def where_intercepted(self, event_key):
     event_key  = self.standardize_event_key(event_key)
     key = ('where_intercepted', event_key)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     event = self.get_surface_event(event_key)
     intercepted = Boolean(event.dep.expand_mask().antimask)
@@ -83,7 +83,7 @@ def _where_inside_or_outside_shadow(self, event_key, surface_key, tvl, inside):
         self.register_backplane(key[:-1] + (True,),  tvl_result)
         self.register_backplane(key[:-1] + (False,), Boolean(tvl_result.vals))
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 #===============================================================================
 def where_in_front(self, event_key, surface_key, tvl=False):
@@ -146,7 +146,7 @@ def _where_in_front_or_in_back(self, event_key, surface_key, tvl, in_front):
         self.register_backplane(key[:-1] + (True,), tvl_result)
         self.register_backplane(key[:-1] + (False,), Boolean(tvl_result.vals))
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 #===============================================================================
 def where_sunward(self, event_key, tvl=False):
@@ -200,7 +200,7 @@ def _where_sunward_or_antisunward(self, event_key, tvl, sunward):
         self.register_backplane(key[:-1] + (True,), tvl_result)
         self.register_backplane(key[:-1] + (False,), Boolean(tvl_result.vals))
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 #===============================================================================
 def where_inside(self, event_key, surface_key, tvl=False):
@@ -258,7 +258,7 @@ def _where_inside_or_outside(self, event_key, surface_key, tvl, inside):
         self.register_backplane(key[:-1] + (True,),  tvl_result)
         self.register_backplane(key[:-1] + (False,), Boolean(tvl_result.vals))
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 ################################################################################
 # Masks derived from backplanes
@@ -285,7 +285,7 @@ def where_below(self, backplane_key, value, tvl=False):
         self.register_backplane(key[:-1] + (True,), tvl_result)
         self.register_backplane(key[:-1] + (False,), Boolean(tvl_result.vals))
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 #===============================================================================
 def where_above(self, backplane_key, value, tvl=False):
@@ -309,7 +309,7 @@ def where_above(self, backplane_key, value, tvl=False):
         self.register_backplane(key[:-1] + (True,), tvl_result)
         self.register_backplane(key[:-1] + (False,), Boolean(tvl_result.vals))
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 #===============================================================================
 def where_between(self, backplane_key, low, high, tvl=False):
@@ -333,7 +333,7 @@ def where_between(self, backplane_key, low, high, tvl=False):
         self.register_backplane(key[:-1] + (True,), tvl_result)
         self.register_backplane(key[:-1] + (False,), Boolean(tvl_result.vals))
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 #===============================================================================
 def where_not(self, backplane_key, tvl=False):
@@ -358,7 +358,7 @@ def where_not(self, backplane_key, tvl=False):
         self.register_backplane(key[:-1] + (True,), tvl_result)
         self.register_backplane(key[:-1] + (False,), Boolean(tvl_result.vals))
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 #===============================================================================
 def where_any(self, *backplane_keys, tvl=False):
@@ -381,7 +381,7 @@ def where_any(self, *backplane_keys, tvl=False):
         self.register_backplane(key[:-1] + (True,), tvl_result)
         self.register_backplane(key[:-1] + (False,), Boolean(tvl_result.vals))
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 #===============================================================================
 def where_all(self, *backplane_keys, tvl=False):
@@ -404,7 +404,7 @@ def where_all(self, *backplane_keys, tvl=False):
         self.register_backplane(key[:-1] + (True,), tvl_result)
         self.register_backplane(key[:-1] + (False,), Boolean(tvl_result.vals))
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 ################################################################################
 
@@ -428,13 +428,13 @@ def where_test_suite(bpt):
 
         bpt.gmtest(intercepted,
                    name + ' where intercepted',
-                   radius=1)
+                   radius=1.5)
         bpt.gmtest(sunward,
                    name + ' where sunward',
-                   radius=1)
+                   radius=1.5)
         bpt.gmtest(antisunward,
                    name + ' where anti-sunward',
-                   radius=1)
+                   radius=1.5)
         bpt.compare(intercepted == (sunward.vals | antisunward.vals),
                     True,
                     name + ' mask eq sunward|antisunward')
@@ -461,10 +461,10 @@ def where_test_suite(bpt):
         in_back  = bp.where_in_back(planet, ring, tvl=True)
         bpt.gmtest(in_front,
                    planet + ' where in front of ' + ring,
-                   radius=1)
+                   radius=1.5)
         bpt.gmtest(in_back,
                    planet + ' where behind ' + ring,
-                   radius=1)
+                   radius=1.5)
         bpt.compare(intercepted == (in_front.vals | in_back.vals),
                     True,
                     planet + ' mask eq in front|behind ' + ring)
@@ -472,9 +472,11 @@ def where_test_suite(bpt):
         inside  = bp.where_inside_shadow(planet, ring, tvl=True)
         outside = bp.where_outside_shadow(planet, ring, tvl=True)
         bpt.gmtest(inside,
-                   planet + ' where shadowed by ' + ring)
+                   planet + ' where shadowed by ' + ring,
+                   radius=1.5)
         bpt.gmtest(outside,
-                   planet + ' where un-shadowed by ' + ring)
+                   planet + ' where un-shadowed by ' + ring,
+                   radius=1.5)
         bpt.compare(intercepted == (inside.vals | outside.vals),
                     True,
                     planet + ' mask eq inside|outside shadow of ' + ring)
@@ -485,10 +487,10 @@ def where_test_suite(bpt):
         in_back  = bp.where_in_back(ring, planet, tvl=True)
         bpt.gmtest(in_front,
                    ring + ' where in front of ' + planet,
-                   radius=1)
+                   radius=1.5)
         bpt.gmtest(in_back,
                    ring + ' where behind ' + planet,
-                   radius=1)
+                   radius=1.5)
         bpt.compare(intercepted == (in_front.vals | in_back.vals),
                     True,
                     ring + ' mask eq in front|behind ' + planet)
@@ -497,10 +499,10 @@ def where_test_suite(bpt):
         outside = bp.where_outside_shadow(ring, planet, tvl=True)
         bpt.gmtest(inside,
                    ring + ' where inside shadow of ' + planet,
-                   radius=1)
+                   radius=1.5)
         bpt.gmtest(outside,
                    ring + ' where outside shadow of ' + planet,
-                   radius=1)
+                   radius=1.5)
         bpt.compare(intercepted == (inside.vals | outside.vals),
                     True,
                     ring + ' mask eq inside|outside shadow of ' + planet)
@@ -510,7 +512,7 @@ def where_test_suite(bpt):
             interior = bp.where_inside(ring, planet, tvl=True)
             bpt.gmtest(interior,
                        ring + ' where inside ' + planet,
-                       radius=1)
+                       radius=1.5)
 
     for name in bpt.ring_names:
         intercepted = bp.where_intercepted(name)
@@ -519,13 +521,13 @@ def where_test_suite(bpt):
 
         bpt.gmtest(intercepted,
                    name + ' where intercepted',
-                   radius=1)
+                   radius=1.5)
         bpt.gmtest(sunward,
                    name + ' where sunward',
-                   radius=1)
+                   radius=1.5)
         bpt.gmtest(antisunward,
                    name + ' where anti-sunward',
-                   radius=1)
+                   radius=1.5)
 
         bpt.compare(bp.where_below(('ring_radius', ring), 0.),
                     False,

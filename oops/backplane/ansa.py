@@ -32,7 +32,7 @@ def ansa_radius(self, event_key, radius_type='positive', rmax=None):
     event_key = self.standardize_event_key(event_key)
     key = ('ansa_radius', event_key, radius_type, rmax)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     # Make sure the default is available
     key_default = ('ansa_radius', event_key, 'right', None)
@@ -40,7 +40,7 @@ def ansa_radius(self, event_key, radius_type='positive', rmax=None):
         self._fill_ansa_intercepts(event_key)
 
     # Get the unmasked backplane array
-    radius = self.backplanes[key_default]
+    radius = self.get_backplane(key_default)
 
     # Make sure the selected radius_type is available
     if radius_type == 'left':
@@ -75,10 +75,10 @@ def ansa_altitude(self, event_key):
 
     # If this backplane array is already defined, return it
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     self._fill_ansa_intercepts(event_key)
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 #===============================================================================
 def ansa_longitude(self, event_key, reference='node'):
@@ -109,7 +109,7 @@ def ansa_longitude(self, event_key, reference='node'):
 
     # If this backplane array is already defined, return it
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     # If it is not found with reference J2000, fill in those backplanes
     key_node = ('ansa_longitude', event_key, 'node')
@@ -118,7 +118,7 @@ def ansa_longitude(self, event_key, reference='node'):
 
     # Now apply the reference longitude
     if reference == 'node':
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     if reference == 'aries':
         ref_lon = self._aries_ring_longitude(event_key)
@@ -131,7 +131,7 @@ def ansa_longitude(self, event_key, reference='node'):
     elif reference == 'oha':
         ref_lon = self._sub_observer_longitude(event_key) - Scalar.PI
 
-    longitude = (self.backplanes[key_node] - ref_lon) % Scalar.TWOPI
+    longitude = (self.get_backplane(key_node) - ref_lon) % Scalar.TWOPI
     return self.register_backplane(key, longitude)
 
 #===============================================================================
@@ -171,7 +171,8 @@ def _fill_ansa_longitudes(self, event_key):
                          + event.surface.COORDINATE_TYPE)
 
     # Get the longitude in the associated ring plane
-    lon = event.surface.ringplane.coords_from_vector3(event.pos, axes=2)[1]
+    lon = event.surface.ringplane.coords_from_vector3(event.state, axes=2,
+                                                      derivs=self.ALL_DERIVS)[1]
     self.register_backplane(('ansa_longitude', event_key, 'node'), lon)
 
 #===============================================================================
@@ -192,7 +193,7 @@ def ansa_radial_resolution(self, event_key):
 
     # If this backplane array is already defined, return it
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     event = self.get_surface_event(event_key, derivs=True)
     if event.surface.COORDINATE_TYPE != 'cylindrical':
@@ -223,7 +224,7 @@ def ansa_vertical_resolution(self, event_key):
 
     # If this backplane array is already defined, return it
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     event = self.get_surface_event(event_key, derivs=True)
     if event.surface.COORDINATE_TYPE != 'cylindrical':
@@ -246,7 +247,7 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 from oops.backplane.gold_master import register_test_suite
-from oops.constants import DPR
+from oops.constants import PI
 
 def ansa_test_suite(bpt):
 
@@ -260,33 +261,33 @@ def ansa_test_suite(bpt):
                    limit=0.1, radius=1)
         bpt.gmtest(bp.ansa_radial_resolution(name),
                    name + ' radial resolution (km)',
-                   limit=0.01, radius=1)
+                   limit=0.003, radius=1.5)
         bpt.gmtest(bp.ansa_vertical_resolution(name),
                    name + ' vertical resolution (km)',
-                   limit=0.01, radius=1)
+                   limit=0.003, radius=1.5)
 
-        bpt.gmtest(bp.ansa_longitude(name, 'node') * DPR,
+        bpt.gmtest(bp.ansa_longitude(name, 'node'),
                    name + ' longitude wrt node (deg)',
                    method='mod360', limit=0.001, radius=1)
-        bpt.gmtest(bp.ansa_longitude(name, 'aries') * DPR,
+        bpt.gmtest(bp.ansa_longitude(name, 'aries'),
                    name + ' longitude wrt Aries (deg)',
                    method='mod360', limit=0.001, radius=1)
 
-        longitude = bp.ansa_longitude(name, 'obs') * DPR
+        longitude = bp.ansa_longitude(name, 'obs')
         bpt.gmtest(longitude,
                    name + ' longitude wrt observer (deg)',
                    method='mod360', limit=0.001, radius=1)
-        bpt.compare(longitude - bp.ansa_longitude(name, 'oha') * DPR,
-                    180.,
+        bpt.compare(longitude - bp.ansa_longitude(name, 'oha'),
+                    PI,
                     name + ' longitude wrt observer minus wrt OHA (deg)',
-                    method='mod360', limit=1.e-15)
+                    method='mod360', limit=1.e-14)
 
-        longitude = bp.ansa_longitude(name, 'sun') * DPR
+        longitude = bp.ansa_longitude(name, 'sun')
         bpt.gmtest(longitude,
                    name + ' longitude wrt Sun (deg)',
                    method = 'mod360', limit = 0.001, radius = 1)
-        bpt.compare(longitude - bp.ansa_longitude(name, 'sha') * DPR,
-                    180.,
+        bpt.compare(longitude - bp.ansa_longitude(name, 'sha'),
+                    PI,
                     name + ' longitude wrt Sun minus wrt SHA (deg)',
                     method='mod360', limit=1.e-15)
 
@@ -298,6 +299,7 @@ register_test_suite('ansa', ansa_test_suite)
 import unittest
 from oops.body import Body
 from oops.backplane.unittester_support import show_info
+from oops.constants import DPR
 
 #===============================================================================
 def exercise_resolution(bp,

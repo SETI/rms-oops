@@ -30,7 +30,7 @@ def border_atop(self, backplane_key, value):
     backplane_key = self.standardize_backplane_key(backplane_key)
     key = ('border_atop', backplane_key, value)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     absval = self.evaluate(backplane_key) - value
     sign = absval.sign()
@@ -63,7 +63,7 @@ def _border_above_or_below(self, sign, backplane_key, value):
         key = ('border_below', backplane_key, value)
 
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     backplane = sign * (self.evaluate(backplane_key) - value)
     border = np.zeros(self.meshgrid.shape, dtype='bool')
@@ -109,7 +109,7 @@ def _border_outside_or_inside(self, backplane_key, is_inside=True):
         key = ('border_outside', backplane_key)
 
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     backplane = self.evaluate(backplane_key)
     if backplane.dtype() != 'bool':
@@ -188,10 +188,10 @@ def border_test_suite(bpt):
         # ... additional tests
         bpt.compare(radius[below], 100.e3,
                     name + ' radii of border below 100 kkm',
-                    method='<=')
+                    operator='<=')
         bpt.compare(radius[above], 100.e3,
                     name + ' radii of border above 100 kkm',
-                    method='>=')
+                    operator='>=')
         bpt.compare((above | below)[atop], True,
                     name + ' border atop 100 kkm overlaps above|below',
                     radius=1)

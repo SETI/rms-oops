@@ -107,7 +107,7 @@ class EVENT_CONFIG(object):
 ################################################################################
 
 LOG_DATEFMT = '%Y-%m-%d %H:%M:%S.%f'
-LOG_FORMAT  = '%(mytime)s | %(name)s | %(levelname)-5s | %(message)s'
+LOG_FORMAT  = '%(mytime)s | %(name)s | %(mylevelname)-5s | %(message)s'
 LOG_FORMATTER = logging.Formatter(LOG_FORMAT, datefmt=LOG_DATEFMT)
 
 LOGGING_STACK = []
@@ -144,6 +144,17 @@ class LOGGING(object):
         'fatal'   : logging.FATAL,
         'critical': logging.CRITICAL,
     }
+
+    # Create a dictionary mapping level numbers to names
+    LEVEL_NAMES = {}
+    for name in LEVELS.keys():
+        level_val = LEVELS[name]
+        LEVEL_NAMES[level_val] = name.upper()
+        for k in range(level_val+1, level_val+10):
+            LEVEL_NAMES[k] = name.upper() + '[%d]' % k
+
+    for k in range(1, 10):
+        LEVEL_NAMES[k] = str(k)
 
     @staticmethod
     def reset():
@@ -267,6 +278,16 @@ class LOGGING(object):
         LOGGING.logger.setLevel(level)
         LOGGING.level = level
 
+    @staticmethod
+    def set_logger_level(level):
+        """Set the logging level of the logger."""
+
+        if isinstance(level, str):
+            level = LOGGING.LEVELS[level.lower()]
+        LOGGING.logger.setLevel(level)
+        LOGGING.level = level
+
+    @staticmethod
     def _check_logger_formatters():
         """Make sure all handlers have their formatter set properly."""
 
@@ -285,7 +306,7 @@ class LOGGING(object):
             handler.setFormatter(LOG_FORMATTER)
 
     @staticmethod
-    def print(*args, level=logging.INFO, literal=False):
+    def print(*args, level=logging.INFO, literal=False, force=False):
         """Print a log message for a given log level.
 
         The message is constructed by converting each argument to a string, and
@@ -302,6 +323,9 @@ class LOGGING(object):
             literal         if True, the message is logged as is, without any
                             time tag, level, or other information (but including
                             any specified prefix.
+
+            force           log the message even if its level is below that of
+                            the logger.
         """
 
         # Interpret level
@@ -370,52 +394,58 @@ class LOGGING(object):
                 now = datetime.datetime.now()
                 mytime = now.strftime('%Y-%m-%d %H:%M:%S.%f')
 
-            LOGGING.logger.log(level, message, extra={'mytime':mytime})
+            extras = {'mytime': mytime,
+                      'mylevelname': LOGGING.LEVEL_NAMES[level]}
+
+            if force and level < LOGGING.level:
+                LOGGING.logger.log(LOGGING.level, message, extra=extras)
+            else:
+                LOGGING.logger.log(level, message, extra=extras)
 
     @staticmethod
-    def debug(*args):
+    def debug(*args, force=False):
         """Same as print(*args, level='DEBUG')."""
-        LOGGING.print(*args, level=logging.DEBUG, literal=False)
+        LOGGING.print(*args, level=logging.DEBUG, literal=False, force=force)
 
     @staticmethod
-    def info(*args):
+    def info(*args, force=False):
         """Same as print(*args, level='INFO')."""
-        LOGGING.print(*args, level=logging.INFO, literal=False)
+        LOGGING.print(*args, level=logging.INFO, literal=False, force=force)
 
     @staticmethod
-    def warn(*args):
+    def warn(*args, force=False):
         """Same as print(*args, level='WARN')."""
-        LOGGING.print(*args, level=logging.WARN, literal=False)
+        LOGGING.print(*args, level=logging.WARN, literal=False, force=force)
 
     @staticmethod
-    def error(*args):
+    def error(*args, force=False):
         """Same as print(*args, level='ERROR')."""
-        LOGGING.print(*args, level=logging.ERROR, literal=False)
+        LOGGING.print(*args, level=logging.ERROR, literal=False, force=force)
 
     @staticmethod
-    def fatal(*args):
+    def fatal(*args, force=False):
         """Same as print(*args, level='FATAL')."""
-        LOGGING.print(*args, level=logging.FATAL, literal=False)
+        LOGGING.print(*args, level=logging.FATAL, literal=False, force=force)
 
     @staticmethod
-    def convergence(*args):
+    def convergence(*args, force=False):
         """Print a convergence message."""
-        LOGGING.print(*args, level=logging.DEBUG, literal=True)
+        LOGGING.print(*args, level=logging.DEBUG, literal=True, force=force)
 
     @staticmethod
-    def diagnostic(*args):
+    def diagnostic(*args, force=False):
         """Print a diagnostic message."""
-        LOGGING.print(*args, level=logging.DEBUG, literal=True)
+        LOGGING.print(*args, level=logging.DEBUG, literal=True, force=force)
 
     @staticmethod
-    def diagnostics(*args):
+    def diagnostics(*args, force=False):
         """Print a diagnostic message."""
-        LOGGING.print(*args, level=logging.DEBUG, literal=True)
+        LOGGING.print(*args, level=logging.DEBUG, literal=True, force=force)
 
     @staticmethod
-    def performance(*args):
+    def performance(*args, force=False):
         """Print a performance message."""
-        LOGGING.print(*args, level=logging.DEBUG, literal=True)
+        LOGGING.print(*args, level=logging.DEBUG, literal=True, force=force)
 
     @staticmethod
     def exception(exception, message=''):
@@ -444,7 +474,8 @@ class LOGGING(object):
         else:
             message = error_msg
 
-        LOGGING.logger.fatal(message, extra={'mytime':mytime})
+        LOGGING.logger.fatal(message, extra={'mytime': mytime,
+                                             'mylevelname': 'FATAL'})
         LOGGING.errors += 1
 
     @staticmethod
@@ -470,11 +501,16 @@ class LOGGING(object):
         global LOGGING_STACK
 
         state = LOGGING_STACK.pop()
+        old_level = LOGGING.level
+
         if not LOGGING_STACK:
             LOGGING_STACK.append(state)
 
         for key, value in state.items():
             setattr(LOGGING, key, value)
+
+        if old_level != LOGGING.level:
+            LOGGING.set_logging_level(LOGGING.level)
 
 LOGGING.push()      # At initialization, put the default settings onto the stack
 

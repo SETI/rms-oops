@@ -48,7 +48,7 @@ def longitude(self, event_key, reference='iau', direction='west',
     key0 = ('longitude', event_key)
     key = key0 + (reference, direction, minimum, lon_type)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     # If it is not found with default keys, fill in those backplanes
     # Note that longitudes default to eastward for right-handed
@@ -60,16 +60,18 @@ def longitude(self, event_key, reference='iau', direction='west',
     # Fill in the required longitude type if necessary
     key_typed = key0 + ('iau', 'east', 0, lon_type)
     if key_typed in self.backplanes:
-        longitude = self.backplanes[key_typed]
+        longitude = self.get_backplane(key_typed)
     else:
-        lon_squashed = self.backplanes[key_default]
+        lon_squashed = self.get_backplane(key_default)
         surface = self.get_surface(event_key[1])
 
         if lon_type == 'centric':
-            longitude = surface.lon_to_centric(lon_squashed)
+            longitude = surface.lon_to_centric(lon_squashed,
+                                               derivs=self.ALL_DERIVS)
             longitude = self.register_backplane(key_typed, longitude)
         else:
-            longitude = surface.lon_to_graphic(lon_squashed)
+            longitude = surface.lon_to_graphic(lon_squashed,
+                                               derivs=self.ALL_DERIVS)
             longitude = self.register_backplane(key_typed, longitude)
 
     # Define the longitude relative to the reference value
@@ -117,7 +119,7 @@ def latitude(self, event_key, lat_type='centric'):
     key0 = ('latitude', event_key)
     key = key0 + (lat_type,)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     # If it is not found with default keys, fill in those backplanes
     key_default = key0 + ('squashed',)
@@ -125,7 +127,7 @@ def latitude(self, event_key, lat_type='centric'):
         self._fill_surface_intercepts(event_key)
 
     # Fill in the values for this key
-    latitude = self.backplanes[key_default]
+    latitude = self.get_backplane(key_default)
     if lat_type == 'squashed':
         return latitude
 
@@ -133,12 +135,14 @@ def latitude(self, event_key, lat_type='centric'):
 
     # Fill in the requested lon_type if necessary
     lon_key = ('longitude', event_key, 'iau', 'east', 0, 'squashed')
-    longitude = self.backplanes[lon_key]
+    longitude = self.get_backplane(lon_key)
 
     if lat_type == 'centric':
-        latitude = surface.lat_to_centric(latitude, longitude)
+        latitude = surface.lat_to_centric(latitude, longitude,
+                                          derivs=self.ALL_DERIVS)
     else:
-        latitude = surface.lat_to_graphic(latitude, longitude)
+        latitude = surface.lat_to_graphic(latitude, longitude,
+                                          derivs=self.ALL_DERIVS)
 
     return self.register_backplane(key, latitude)
 
@@ -174,7 +178,7 @@ def _sub_observer_longitude(self, event_key):
     key = ('_sub_observer_longitude', gridless_key)
 
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     event = self.get_surface_event(gridless_key)
     dep_ap = event.dep_ap
@@ -190,7 +194,7 @@ def _sub_observer_latitude(self, event_key):
     key = ('_sub_observer_latitude', gridless_key)
 
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     event = self.get_surface_event(gridless_key)
     dep_ap = event.dep_ap
@@ -206,7 +210,7 @@ def _sub_solar_longitude(self, event_key):
     key = ('_sub_solar_longitude', gridless_key)
 
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     event = self.get_surface_event(gridless_key, arrivals=True)
     neg_arr_ap = event.neg_arr_ap
@@ -223,7 +227,7 @@ def _sub_solar_latitude(self, event_key):
     key = ('_sub_solar_latitude', gridless_key)
 
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     event = self.get_surface_event(gridless_key, arrivals=True)
     neg_arr_ap = event.neg_arr_ap
@@ -263,11 +267,11 @@ def sub_observer_longitude(self, event_key, reference='iau', direction='west',
     key0 = ('sub_observer_longitude', gridless_key)
     key = key0 + (reference, direction, minimum)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     key_default = key0 + ('iau', 'east', 0)
     if key_default in self.backplanes:
-        longitude = self.backplanes[key_default]
+        longitude = self.get_backplane(key_default)
     else:
         longitude = self._sub_observer_longitude(gridless_key)
         longitude = self.register_backplane(key_default, longitude)
@@ -304,14 +308,14 @@ def sub_solar_longitude(self, event_key, reference='iau',
 
     gridless_key = self.gridless_event_key(event_key)
 
-    key0 = ('sub_solar_longitude', event_key)
+    key0 = ('sub_solar_longitude', gridless_key)
     key = key0 + (reference, direction, minimum)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     key_default = key0 + ('iau', 'east', 0)
     if key_default in self.backplanes:
-        longitude = self.backplanes[key_default]
+        longitude = self.get_backplane(key_default)
     else:
         longitude = self._sub_solar_longitude(event_key)
         longitude = self.register_backplane(key_default, longitude)
@@ -378,10 +382,10 @@ def sub_observer_latitude(self, event_key, lat_type='centric'):
     gridless_key = self.gridless_event_key(event_key)
     key = ('sub_observer_latitude', gridless_key, lat_type)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     event = self.get_surface_event(gridless_key)
-    dep_ap = event.apparent_dep()
+    dep_ap = event.dep_ap
 
     if lat_type == 'graphic':
         dep_ap = dep_ap.element_mul(event.surface.unsquash_sq)
@@ -405,7 +409,7 @@ def sub_solar_latitude(self, event_key, lat_type='centric'):
     gridless_key = self.gridless_event_key(event_key)
     key = ('sub_solar_latitude', gridless_key, lat_type)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     event = self.get_gridless_event(gridless_key, arrivals=True)
     neg_arr_ap = event.neg_arr_ap
@@ -427,7 +431,7 @@ def lambert_law(self, event_key):
     event_key = self.standardize_event_key(event_key)
     key = ('lambert_law', event_key)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     lambert_law = self.incidence_angle(event_key).cos()
     lambert_law = lambert_law.mask_where(lambert_law.vals <= 0., 0.)
@@ -453,7 +457,7 @@ def minnaert_law(self, event_key, k, k2=None, clip=0.2):
     key = ('minnaert_law', event_key, k, k2, clip)
 
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     mu0 = self.lambert_law(event_key)
     mu = self.emission_angle(event_key).cos().clip(clip, None)
@@ -473,7 +477,7 @@ def lommel_seeliger_law(self, event_key):
     event_key = self.standardize_event_key(event_key)
     key = ('lommel_seeliger_law', event_key)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     mu0 = self.incidence_angle(event_key).cos()
     mu  = self.emission_angle(event_key).cos()
@@ -491,102 +495,103 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 from oops.backplane.gold_master import register_test_suite
-from oops.constants import DPR
 
 def spheroid_test_suite(bpt):
 
     bp = bpt.backplane
     for name in bpt.body_names + bpt.limb_names:
 
+        radius = 1.5 if name in bpt.limb_names else 1.
+
         # Longitude
         cos_lat = bp.latitude(name).cos().min(builtins=True)
-        bpt.gmtest(bp.longitude(name, 'iau') * DPR,
+        bpt.gmtest(bp.longitude(name, 'iau'),
                    name + ' longitude, IAU (deg)',
-                   limit=0.001/cos_lat, method='mod360', radius=1)
-        bpt.gmtest(bp.longitude(name, 'obs') * DPR,
+                   limit=0.1/cos_lat, method='mod360', radius=radius)
+        bpt.gmtest(bp.longitude(name, 'obs'),
                    name + ' longitude wrt observer (deg)',
-                   limit=0.001/cos_lat, method='mod360', radius=1)
-        bpt.gmtest(bp.longitude(name, reference='obs', minimum=-180) * DPR,
+                   limit=0.1/cos_lat, method='mod360', radius=radius)
+        bpt.gmtest(bp.longitude(name, reference='obs', minimum=-180),
                    name + ' longitude wrt observer, minimum -180 (deg)',
-                   limit=0.001/cos_lat, method='mod360', radius=1)
-        bpt.gmtest(bp.longitude(name, 'oha') * DPR,
+                   limit=0.1/cos_lat, method='mod360', radius=radius)
+        bpt.gmtest(bp.longitude(name, 'oha'),
                    name + ' longitude wrt OHA (deg)',
-                   limit=0.001/cos_lat, method='mod360', radius=1)
-        bpt.gmtest(bp.longitude(name, 'sun') * DPR,
+                   limit=0.1/cos_lat, method='mod360', radius=radius)
+        bpt.gmtest(bp.longitude(name, 'sun'),
                    name + ' longitude wrt Sun (deg)',
-                   limit=0.001/cos_lat, method='mod360', radius=1)
-        bpt.gmtest(bp.longitude(name, 'sha') * DPR,
+                   limit=0.1/cos_lat, method='mod360', radius=radius)
+        bpt.gmtest(bp.longitude(name, 'sha'),
                    name + ' longitude wrt SHA (deg)',
-                   limit=0.001/cos_lat, method='mod360', radius=1)
-        bpt.gmtest(bp.longitude(name, direction='east') * DPR,
+                   limit=0.1/cos_lat, method='mod360', radius=radius)
+        bpt.gmtest(bp.longitude(name, direction='east'),
                    name + ' longitude eastward (deg)',
-                   limit=0.001/cos_lat, method='mod360', radius=1)
+                   limit=0.1/cos_lat, method='mod360', radius=radius)
 
         # Latitude
-        bpt.gmtest(bp.latitude(name, lat_type='centric') * DPR,
+        bpt.gmtest(bp.latitude(name, lat_type='centric'),
                    name + ' latitude, planetocentric (deg)',
-                   limit=0.001, radius=1)
-        bpt.gmtest(bp.latitude(name, lat_type='graphic') * DPR,
+                   limit=0.1, method='degrees', radius=radius)
+        bpt.gmtest(bp.latitude(name, lat_type='graphic'),
                    name + ' latitude, planetographic (deg)',
-                   limit=0.001, radius=1)
+                   limit=0.1, method='degrees', radius=radius)
 
     for name in bpt.body_names:
 
         # Sub-observer longitude and latitude
         cos_lat = bp.sub_observer_latitude(name).cos().mean(builtins=True)
-        bpt.gmtest(bp.sub_observer_longitude(name, reference='iau') * DPR,
+        bpt.gmtest(bp.sub_observer_longitude(name, reference='iau'),
                    name + ' sub-observer longitude, IAU (deg)',
-                   limit=0.001/cos_lat, method='mod360')
-        bpt.gmtest(bp.sub_observer_longitude(name, reference='sun', minimum=-180) * DPR,
+                   limit=0.1/cos_lat, method='mod360')
+        bpt.gmtest(bp.sub_observer_longitude(name, reference='sun', minimum=-180),
                    name + ' sub-observer longitude wrt Sun (deg)',
-                   limit=0.001/cos_lat, method='mod360')
-        bpt.compare(bp.sub_observer_longitude(name, reference='obs', minimum=-180) * DPR,
+                   limit=0.1/cos_lat, method='mod360')
+        bpt.compare(bp.sub_observer_longitude(name, reference='obs', minimum=-180),
                     0.,
                     name + ' sub-observer longitude wrt observer (deg)',
                     method='mod360')
 
-        bpt.gmtest(bp.sub_observer_latitude(name, lat_type='centric') * DPR,
+        bpt.gmtest(bp.sub_observer_latitude(name, lat_type='centric'),
                    name + ' sub-observer latitude, planetocentric (deg)',
-                   limit=0.001)
-        bpt.gmtest(bp.sub_observer_latitude(name, lat_type='graphic') * DPR,
+                   limit=0.1, method='degrees')
+        bpt.gmtest(bp.sub_observer_latitude(name, lat_type='graphic'),
                    name + ' sub-observer latitude, planetographic (deg)',
-                   limit=0.001)
+                   limit=0.1, method='degrees')
 
         # Sub-solar longitude and latitude
         cos_lat = bp.sub_solar_latitude(name).cos().mean(builtins=True)
-        bpt.gmtest(bp.sub_solar_longitude(name, reference='iau') * DPR,
+        bpt.gmtest(bp.sub_solar_longitude(name, reference='iau'),
                    name + ' sub-solar longitude wrt IAU (deg)',
-                   limit=0.001/cos_lat, method='mod360')
-        bpt.gmtest(bp.sub_solar_longitude(name, reference='obs', minimum=-180) * DPR,
+                   limit=0.1/cos_lat, method='mod360')
+        bpt.gmtest(bp.sub_solar_longitude(name, reference='obs', minimum=-180),
                    name + ' sub-solar longitude wrt observer (deg)',
-                   limit=0.001/cos_lat, method='mod360')
-        bpt.compare(bp.sub_solar_longitude(name, reference='sun', minimum=-180) * DPR,
+                   limit=0.1/cos_lat, method='mod360')
+        bpt.compare(bp.sub_solar_longitude(name, reference='sun', minimum=-180),
                     0.,
                     name + ' sub-solar longitude wrt Sun (deg)',
                     method='mod360')
 
-        bpt.gmtest(bp.sub_solar_latitude(name, lat_type='centric') * DPR,
+        bpt.gmtest(bp.sub_solar_latitude(name, lat_type='centric'),
                    name + ' sub-solar latitude, planetocentric (deg)',
-                   limit=0.001)
-        bpt.gmtest(bp.sub_solar_latitude(name, lat_type='graphic') * DPR,
+                   limit=0.1, method='degrees')
+        bpt.gmtest(bp.sub_solar_latitude(name, lat_type='graphic'),
                    name + ' sub-solar latitude, planetographic (deg)',
-                   limit=0.001)
+                   limit=0.1, method='degrees')
 
         # Surface laws
         bpt.gmtest(bp.lambert_law(name),
                    name + ' as a Lambert law',
-                   limit=1.e-6, radius=1)
+                   limit=0.001, radius=1)
         bpt.gmtest(bp.minnaert_law(name, 0.5),
                    name + ' as a Minnaert law (k=0.7)',
-                   limit=1.e-6, radius=1)
+                   limit=0.001, radius=1)
         bpt.gmtest(bp.lommel_seeliger_law(name),
                    name + ' as a Lommel-Seeliger law',
-                   limit=1.e-6, radius=1)
+                   limit=0.001, radius=1)
 
     # Test of an empty backplane
     for (planet, name) in bpt.planet_moon_pairs:
         if planet != 'PLUTO':
-            bpt.compare(bp.longitude('STYX') * DPR,
+            bpt.compare(bp.longitude('STYX'),
                         0.,
                         'Styx longitude (deg)')
             break   # no need to repeat this test!

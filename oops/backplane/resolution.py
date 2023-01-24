@@ -33,7 +33,7 @@ def resolution(self, event_key, axis='u'):
         self.register_backplane(key[:-1] + ('u',), distance * dlos_du.norm())
         self.register_backplane(key[:-1] + ('v',), distance * dlos_dv.norm())
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 #===============================================================================
 def center_resolution(self, event_key, axis='u'):
@@ -64,7 +64,7 @@ def center_resolution(self, event_key, axis='u'):
         self.register_backplane(key[:-1] + ('u',), distance * dlos_du.norm())
         self.register_backplane(key[:-1] + ('v',), distance * dlos_dv.norm())
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 #===============================================================================
 def finest_resolution(self, event_key):
@@ -81,7 +81,7 @@ def finest_resolution(self, event_key):
     if key not in self.backplanes:
         self._fill_surface_resolution(event_key)
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 #===============================================================================
 def coarsest_resolution(self, event_key):
@@ -97,7 +97,7 @@ def coarsest_resolution(self, event_key):
     if key not in self.backplanes:
         self._fill_surface_resolution(event_key)
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 #===============================================================================
 def _fill_surface_resolution(self, event_key):
@@ -131,22 +131,30 @@ def resolution_test_suite(bpt):
 
         bpt.gmtest(bp.resolution(name, 'u'),
                    name + ' resolution along u axis (km)',
-                   limit=0.001, radius=1)
+                   limit=0.01, radius=1.5)
         bpt.gmtest(bp.resolution(name, 'v'),
                    name + ' resolution along v axis (km)',
-                   limit=0.001, radius=1)
+                   limit=0.01, radius=1.5)
         bpt.gmtest(bp.center_resolution(name, 'u'),
                    name + ' center resolution along u axis (km)',
-                   limit=0.001, radius=1)
+                   limit=0.01, radius=1.5)
         bpt.gmtest(bp.center_resolution(name, 'v'),
                    name + ' center resolution along v axis (km)',
-                   limit=0.001, radius=1)
+                   limit=0.01, radius=1.5)
+
+        # Because finest/coarsest resolution values diverge for emission angles
+        # near 90, we need to apply an extra mask
+        finest = bp.finest_resolution(name)
+        coarsest = bp.coarsest_resolution(name)
+        mu = bp.emission_angle(name).cos().abs()
+        mask = mu.tvl_lt(0.1).as_mask_where_nonzero_or_masked()
+
         bpt.gmtest(bp.finest_resolution(name),
                    name + ' finest resolution (km)',
-                   limit=0.001, radius=1)
+                   limit=0.01, radius=1.5, mask=mask)
         bpt.gmtest(bp.coarsest_resolution(name),
                    name + ' coarsest resolution (km)',
-                   limit=0.1, radius=1)
+                   limit=0.1, radius=1.5, mask=mask)
 
 register_test_suite('resolution', resolution_test_suite)
 

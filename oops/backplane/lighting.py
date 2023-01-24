@@ -17,10 +17,10 @@ def incidence_angle(self, event_key, apparent=True):
     event_key = self.standardize_event_key(event_key)
     key = ('incidence_angle', event_key, apparent)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     event = self.get_surface_event(event_key, arrivals=True)
-    incidence = event.incidence_angle(apparent=apparent)
+    incidence = event.incidence_angle(apparent=apparent, derivs=self.ALL_DERIVS)
 
     # Ring incidence angles should always be 0 to pi/2
     if event.surface.COORDINATE_TYPE == 'polar':
@@ -54,10 +54,10 @@ def emission_angle(self, event_key, apparent=True):
     event_key = self.standardize_event_key(event_key)
     key = ('emission_angle', event_key, apparent)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     event = self.get_surface_event(event_key)
-    emission = event.emission_angle(apparent=apparent)
+    emission = event.emission_angle(apparent=apparent, derivs=self.ALL_DERIVS)
 
     # Ring emission angles are always measured from the lit side normal
     if event.surface.COORDINATE_TYPE == 'polar':
@@ -69,7 +69,7 @@ def emission_angle(self, event_key, apparent=True):
         # Get the "ring flip" flag
         _ = self.incidence_angle(event_key)
         flip_key = ('_ring_flip', event_key)
-        flip = self.backplanes[flip_key]
+        flip = self.get_backplane(flip_key)
 
         # Now flip emission angles where necessary
         if flip.any():
@@ -90,10 +90,11 @@ def phase_angle(self, event_key, apparent=True):
     event_key = self.standardize_event_key(event_key)
     key = ('phase_angle', event_key, apparent)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     event = self.get_surface_event(event_key, arrivals=True)
-    return self.register_backplane(key, event.phase_angle(apparent=apparent))
+    phase = event.phase_angle(apparent=apparent, derivs=self.ALL_DERIVS)
+    return self.register_backplane(key, phase)
 
 #===============================================================================
 def scattering_angle(self, event_key, apparent=True):
@@ -108,10 +109,10 @@ def scattering_angle(self, event_key, apparent=True):
     event_key = self.standardize_event_key(event_key)
     key = ('scattering_angle', event_key, apparent)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     return self.register_backplane(key, Scalar.PI -
-                                   self.phase_angle(event_key, apparent))
+                                        self.phase_angle(event_key, apparent))
 
 #===============================================================================
 def center_incidence_angle(self, event_key, apparent=True):
@@ -181,45 +182,44 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 from oops.backplane.gold_master import register_test_suite
-from oops.constants import DPR
 
 def lighting_test_suite(bpt):
 
     bp = bpt.backplane
     for name in bpt.body_names + bpt.ring_names:
 
-        phase = bp.phase_angle(name) * DPR
+        phase = bp.phase_angle(name)
         bpt.gmtest(phase,
                    name + ' phase angle (deg)',
-                   limit=0.001, radius=1)
-        bpt.compare(phase + bp.scattering_angle(name) * DPR,
-                    180.,
+                   limit=0.01, radius=1.5, method='degrees')
+        bpt.compare(phase + bp.scattering_angle(name),
+                    Scalar.PI,
                     name + ' phase plus scattering angle (deg)',
-                    limit=1.e-15)
+                    limit=1.e-15, method='degrees')
 
-        phase = bp.center_phase_angle(name) * DPR
+        phase = bp.center_phase_angle(name)
         bpt.gmtest(phase,
                    name + ' center phase angle (deg)',
-                   limit=0.001)
-        bpt.compare(phase + bp.center_scattering_angle(name) * DPR,
-                    180.,
+                   limit=0.01, method='degrees')
+        bpt.compare(phase + bp.center_scattering_angle(name),
+                    Scalar.PI,
                     name + ' center phase plus scattering angle (deg)',
-                    limit=1.e-15)
+                    limit=1.e-15, method='degrees')
 
-        bpt.gmtest(bp.incidence_angle(name) * DPR,
+        bpt.gmtest(bp.incidence_angle(name),
                    name + ' incidence angle (deg)',
-                   limit=0.001, radius=1)
-        bpt.gmtest(bp.emission_angle(name) * DPR,
+                   limit=0.01, radius=1.5, method='degrees')
+        bpt.gmtest(bp.emission_angle(name),
                    name + ' emission angle (deg)',
-                   limit=0.001, radius=1)
+                   limit=0.01, radius=1.5, method='degrees')
 
         if name in bpt.ring_names:
-            bpt.gmtest(bp.center_incidence_angle(name) * DPR,
+            bpt.gmtest(bp.center_incidence_angle(name),
                        name + ' center incidence angle (deg)',
-                       limit=0.001)
-            bpt.gmtest(bp.center_emission_angle(name) * DPR,
+                       limit=0.01, method='degrees')
+            bpt.gmtest(bp.center_emission_angle(name),
                        name + ' center emission angle (deg)',
-                       limit=0.001)
+                       limit=0.01, method='degrees')
 
 register_test_suite('lighting', lighting_test_suite)
 

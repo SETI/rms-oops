@@ -45,6 +45,46 @@ gm.set_default_args(arg = default_value, ...)
 if __name__ == 'main':
     gm.execute_as_command()
 
+########################################################################
+# Log file format
+########################################################################
+
+A single record of the log file has this format:
+    "<time> | oops.backplane.gold_master | <level> | <suite> | <message>"
+where
+    <time>  is the local time to the level of ms.
+    <level> is one of "DEBUG", "INFO", "WARNING", "ERROR", "FATAL".
+    <suite> is the name of the test suite, e.g., "ring".
+    <message> is a descriptive message.
+
+For comparison tests, the message has the following format:
+    <status>: "<title>"; diff=<diff1>/<diff2>/<limit>; ...
+                         offset=<offset>/<radius>; ...
+                         pixels=<count1>/<count2>/<pixels>
+where:
+    <status> is one of:
+        "Success"               if the test passed;
+        "Value mismatch"        if the values disagree by more than the
+                                limit, but the mask is in agreement;
+        "Mask mismatch"         if the masks disagree, but the values are in
+                                agreement;
+        "Value/mask mismatch"   if both the values and the mask disagree.
+    <title>   is the title of the test.
+    <diff1>   is the maximum discrepancy among the unmasked values.
+    <diff2>   is the maximum discrepancy after we have expanded the
+              comparison to include neighboring pixels, as defined by the
+              specified radius.
+    <limit>   the specified discrepancy limit of the test.
+    <offset>  the offset distance required to bring value discrepancies below
+              the limit, or to resolve any mask discrepancies.
+    <radius>  the specified upper limit on an offset.
+    <count1>  the number of discrepant pixels before allowing for an offset.
+    <count2>  the number of discrepant pixels that cannot be accommodated by an
+              offset.
+    <pixels>  the total number of pixels tested.
+
+Note that <diff2> and <count2> are not listed if not offset is required. Also,
+note that the offset values are not listed in this case.
 """
 
 import argparse
@@ -64,10 +104,11 @@ from collections   import namedtuple
 from scipy.ndimage import minimum_filter, maximum_filter
 from scipy.ndimage import zoom as zoom_image
 
-from polymath         import Boolean, Scalar, Qube
+from polymath         import Boolean, Pair, Qube, Scalar
 from oops.backplane   import Backplane
 from oops.body        import Body
 from oops.config      import LOGGING
+from oops.constants   import DPR
 from oops.meshgrid    import Meshgrid
 from oops.observation import Observation
 
@@ -107,7 +148,7 @@ DEFAULTS = {
 }
 
 # Note that default values of output, info, convergence, diagnostics,
-# performance, and platform cannot be overridden here.
+# internals, performance, and platform cannot be overridden here.
 
 # These are for the default unit test
 DEFAULT_OBS = {
@@ -314,6 +355,11 @@ def execute_as_command():
                     help='''Number of pixels by which to expand image borders
                             when constructing the inventory; default %d.'''
                          % DEFAULTS['border'])
+    gr.add_argument('--derivs', action='store_true', default=False,
+                    help='''True to include most time and spatial derivatives in
+                            the backplane calculations; by default, they are
+                            only included for "--adopt", but this option can be
+                            useful for debugging.''')
 
     # Browse image options
     gr = parser.add_argument_group('Browse image options')
@@ -367,6 +413,9 @@ def execute_as_command():
                     help='Show iterative convergence information in the log.')
     gr.add_argument('--diagnostics', action='store_true', default=False,
                     help='Include diagnostic information in the log.')
+    gr.add_argument('--internals', action='store_true', default=False,
+                    help='''Include info about the Backplane internal state at
+                            the end of the log.''')
     gr.add_argument('--performance', action='store_true', default=False,
                     help='Include OOPS performance information in the log.')
     gr.add_argument('--platform', type=str, metavar='OS', default=None,
@@ -423,10 +472,12 @@ def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
     args.verbose = True
 
     # These have no entry in the DEFAULTS dictionary
+    args.derivs = False
     args.output = None
     args.info = False
     args.convergence = False
     args.diagnostics = False
+    args.internals = False
     args.performance = False
     args.platform = None
 
@@ -438,6 +489,9 @@ def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
     args.testcase = testcase
     args.task = 'compare'
     args.level = 'error'
+    args.verbose = True
+    args.du = 0.
+    args.dv = 0.
     args.obspath = ''           # filled in by _clean_up_args
 
     # Clean up, also filling in observation, module, planet(s), moon(s), ring(s)
@@ -480,19 +534,32 @@ def _clean_up_args(args):
     if isinstance(args.ring, str):
         args.ring = [args.ring]
 
+    # --output
     if args.output is None:
         args.output = OOPS_BACKPLANE_OUTPUT_PATH
 
+    # --platform
     if args.platform is None:
         args.platform = sys.platform
     else:
         args.platform = args.platform.lower()
 
+    # --format
     if args.browse_format not in ('png', 'jpg', 'tiff'):
         raise ValueError('unrecognized browse format: ' + args.browse_format)
 
+    # --undersample
     args.undersample = int(args.undersample)
 
+    # --level
+    if (args.convergence or args.diagnostics or args.performance):
+        args.level = 'debug'
+    try:
+        args.level = int(args.level)
+    except ValueError:
+        args.level = LOGGING.LEVELS[args.level.lower()]
+
+    # --suite
     if not args.suite or args.task == 'adopt':  # use all suites for task adopt
         args.suite = list(TEST_SUITES.keys())
     elif isinstance(args.suite, str):
@@ -500,14 +567,13 @@ def _clean_up_args(args):
 
     args.suite.sort()
 
+    # --adopt
     if args.task == 'adopt':    # required options for task adopt
         args.browse = True
         args.undersample = 1
-
-    try:
-        args.level = int(args.level)
-    except ValueError:
-        args.level = LOGGING.LEVELS[args.level.lower()]
+        args.derivs = True
+        args.du = 0.
+        args.dv = 0.
 
     # Planet, moon and ring must be lists
     if args.planet:
@@ -594,6 +660,9 @@ def _clean_up_args(args):
         if pair not in args.planet_ring_pairs:
             args.planet_ring_pairs.append(pair)
 
+    # Set the status of "No gold master"
+    _BackplaneComparison.set_no_gold_master_status(args.ignore_missing)
+
     return args
 
 #===============================================================================
@@ -658,17 +727,103 @@ def get_test_suite(name):
     return TEST_SUITES[name]
 
 ################################################################################
+# Internal _BackplaneComparison class
+################################################################################
+
+class _BackplaneComparison(object):
+    """Class for managing information about a single BackplaneTest
+    comparison.
+    """
+
+    STATUS_IS_OK = {
+        'Success'            : True,
+        'Value mismatch'     : False,
+        'Mask mismatch'      : False,
+        'Value/mask mismatch': False,
+        'Shape mismatch'     : False,
+        'No gold master'     : False,   # Defined by args.ignore_missing
+        'Invalid gold master': False,
+    }
+
+    def __init__(self, **kwargs):
+        """Container for comparison info.
+
+        status is one of:
+            "Success"               test passed;
+            "Value mismatch"        values differ;
+            "Mask mismatch"         masks differ;
+            "Value/mask mismatch"   both the values and the mask differ;
+            "Shape mismatch"        shapes do not match;
+            "No gold master"        gold master info is missing;
+            "Invalid gold master"   gold master cannot be read.
+
+        title        = title of the test.
+        suite        = name of test suite.
+        limit        = maximum allowed difference.
+        method       = name of the comparison method, e.g., 'mod360.
+        operator     = comparison operator.
+        radius       = allowed offset distance in pixels.
+        mask         = optional mask to exclude pixels from comparison.
+        pickle_path  = path to the pickle file, if any.
+
+        max_diff1    = the largest difference between unmasked pixels of array
+                       and master, initially.
+        diff_errors1 = the initial number of value discrepancies.
+        mask_errors1 = the number of mask discrepancies.
+
+        distance     = the largest offset adequate to eliminate a value
+                       discrepancy; zero if no offset is adequate.
+
+        max_diff2    = the final largest difference.
+        diff_errors2 = the final number of value discrepancies.
+        mask_errors2 = the final number of mask discrepancies.
+
+        pixels       = the total number of pixels.
+        """
+
+        self.title        = ''
+        self.suite        = ''
+        self.limit        = 0.
+        self.method       = ''
+        self.operator     = '='
+        self.radius       = 0.
+        self.mask         = False
+        self.pickle_path  = ''
+
+        self.status       = ''
+        self.max_diff1    = 0.
+        self.diff_errors1 = 0
+        self.mask_errors1 = 0
+        self.distance     = 0.
+        self.max_diff2    = 0.
+        self.diff_errors2 = 0
+        self.mask_errors2 = 0
+        self.pixels       = 0
+
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+    @property
+    def success(self):
+        """True if this comparison was successful."""
+
+        return _BackplaneComparison.STATUS_IS_OK[self.status]
+
+    @staticmethod
+    def set_no_gold_master_status(is_ok=False):
+        """Set the success value of status "No gold master".
+
+        This is defined globally by input argument "ignore_missing".
+        """
+
+        _BackplaneComparison.STATUS_IS_OK['No gold master'] = is_ok
+
+################################################################################
 # BackplaneTest class
 #
 # This class manages information about the backplanes of a particular
 # observation.
 ################################################################################
-
-# namedtuples describing exercise results for a particular backplane array
-_Comparison   = namedtuple('_Comparison', ['status', 'max_error', 'limit',
-                                           'mask_errors', 'offset_errors',
-                                           'size'])
-_NoComparison = namedtuple('_NoComparison', ['status', 'pickle_path'])
 
 TEST_SUITE = ''         # the name of the current test suite
 LATEST_TITLE = ''       # used to track what was happening if an error occurs
@@ -737,6 +892,9 @@ class BackplaneTest(object):
             self.backplane = Backplane(obs, meshgrid=self.meshgrid,
                                             inventory=None)
 
+        if self.args.derivs:
+            self.backplane.ALL_DERIVS = True
+
         # Determine file paths. Example:
         # filespec = $OOPS_TEST_DATA_PATH/cassini/ISS/N1460072401_1.IMG
         # masters: $OOPS_GOLD_MASTER_PATH/hosts.cassini.iss/ISS/N1460072401_1/
@@ -785,6 +943,7 @@ class BackplaneTest(object):
 
         # Set up the log handler; set aside any old log
         # Note that each BackplaneTest gets its own dedicated logger
+        LOGGING.push()
         if self.args.log:
             log_path = os.path.join(self.output_dir, self.task + '.log')
             if os.path.exists(log_path):
@@ -861,30 +1020,19 @@ class BackplaneTest(object):
                         LOGGING.exception(e)
 
             # Wrap up
-            if self.task == 'preview':
+            if self.task in ('preview', 'compare'):
                 file_path = self.write_summary(self.output_dir)
                 LOGGING.debug('Summary written: ' + file_path)
-                if LOGGING.warnings:
-                    LOGGING.info('Total warnings = ' + str(LOGGING.warnings))
-                if LOGGING.errors:
-                    LOGGING.info('Total errors = ' + str(LOGGING.errors))
 
-            elif self.task == 'compare':
-                file_path = self.write_summary(self.output_dir)
-                LOGGING.debug('Summary written: ' + file_path)
-                LOGGING.info('Total warnings = ' + str(LOGGING.warnings))
-                LOGGING.info('Total errors = ' + str(LOGGING.errors))
-
-            elif self.task == 'adopt':
+            else:
                 file_path = self.write_summary(self.gold_dir)
-                LOGGING.debug('Summary written: ' + file_path)
-                if LOGGING.warnings:
-                    LOGGING.info('Total warnings = ' + str(LOGGING.warnings))
-                if LOGGING.errors:
-                    LOGGING.info('Total errors = ' + str(LOGGING.errors))
+                LOGGING.info('Summary written: ' + file_path)
 
-            # Diagnostics...
-            if self.args.diagnostics:
+            # Internals...
+            if self.args.internals:
+                LOGGING.push()
+                LOGGING.set_logger_level('DEBUG')
+
                 for i in (False, True):
                     LOGGING.diagnostic('\nSurface Events, derivs=%s' % i)
                     keys = list(self.backplane.surface_events[i].keys())
@@ -913,7 +1061,19 @@ class BackplaneTest(object):
                 keys.sort(key=BackplaneTest._sort_key)
                 for key in keys:
                     sum = np.sum(self.backplane.backplanes[key].mask)
-                    LOGGING.diagnostic('   ', key, sum)
+                    if key in self.backplane.backplanes_with_derivs:
+                        derivs = self.backplane.backplanes_with_derivs[key].derivs
+                        flag = ' '
+                        if 't' in derivs:
+                            if 'los' in derivs:
+                                flag = '*'
+                            else:
+                                flag = 't'
+                        elif 'los' in derivs:
+                            flag = 'l'
+                    else:
+                        flag = ' '
+                    LOGGING.diagnostic('   %s%s' % (flag, key), sum)
 
                 LOGGING.diagnostic('\nAntimasks')
                 keys = list(self.backplane.antimasks.keys())
@@ -925,14 +1085,24 @@ class BackplaneTest(object):
                     LOGGING.diagnostic('   ', key, '(%s)' % info)
 
                 LOGGING.diagnostic()
+                LOGGING.pop()
 
             seconds = (datetime.datetime.now() - start).total_seconds()
             LOGGING.info('Elapsed time: %.3f s' % seconds)
 
         # Be sure to remove the BackplaneTest-specific file handler afterward
         finally:
+            if LOGGING.warnings:
+                LOGGING.debug('Total warnings = ' + str(LOGGING.warnings))
+            if LOGGING.errors:
+                LOGGING.info('Total errors = ' + str(LOGGING.errors),
+                             force=True)
+
             if self.args.log:
                 LOGGING.logger.removeHandler(handler)
+                handler.close()
+
+            LOGGING.pop()
 
     @staticmethod
     def _sort_key(key):
@@ -950,43 +1120,15 @@ class BackplaneTest(object):
             return 2, key
         return 3, str(key)
 
-    ############################################################################
-    # Test methods
-    #
-    # Results of a comparison are described by one of these named tuples:
-    # _Comparison(status, max_error, limit, mask_errors, radius)
-    # _NoComparison(status, pickle_path)
-    #
-    # The _Comparison status value is always one of these:
-    #   "Success"               test passed
-    #   "Value mismatch"        values differ
-    #   "Mask mismatch"         masks differ
-    #   "Value/mask mismatch"   both the values and the mask differ
-    #
-    # The _NoComparison status value is always one of these:
-    #   "Success"               test passed
-    #   "Shape mismatch"        shapes do not match
-    #   "No gold master"        gold master info is missing
-    #   "Invalid gold master"   gold master cannot be read
-    ############################################################################
-
-    _STATUS_IS_OK = {
-        'Success'            : True,
-        'Value mismatch'     : False,
-        'Mask mismatch'      : False,
-        'Value/mask mismatch': False,
-        'Shape mismatch'     : False,
-        'No gold master'     : False,   # See args.ignore_missing
-        'Invalid gold master': False,
-    }
-
     _MINMAX_VALUES = {
         'float': (sys.float_info.min, sys.float_info.max),
         'bool' : (False, True),
         'int'  : (-sys.maxsize - 1, sys.maxsize),
     }
 
-    def compare(self, array, master, title, limit=0., method='', radius=0.):
+    #===========================================================================
+    def compare(self, array, master, title, limit=0., method='', operator='=',
+                                            radius=0., mask=False):
         """Compare two backplane arrays and log the results.
 
         Note that the array can be a backplane that has been undersampled. The
@@ -997,308 +1139,84 @@ class BackplaneTest(object):
             master      reference value or gold master array.
             title       title string describing the test; must be unique.
             limit       upper limit on the difference between the arrays.
-            method      ''       for standard comparisons;
-                        'mod360' for doing comparisons mod 360;
-                        'border' for comparisons of border backplanes, in which
-                                 case the radius value is interpreted in units
-                                 of undersampled pixels rather than original
-                                 pixels;
-                        '>', '>=', '<', '<='
-                                 for comparisons according to one of these
-                                 operations, with any radius input ignored.
+            method      ''        for standard comparisons;
+                        'mod360'  for doing comparisons in degrees mod 360;
+                        'degrees' for doing comparisons in degrees;
+                        'border'  for comparisons of border backplanes, in which
+                                  case the radius value is interpreted in units
+                                  of undersampled pixels rather than original
+                                  pixels;
+            operator    the operator to use for the comparison, one of '=', '>',
+                        '>=', '<', or '<='.
             radius      the radius of a circle, in units of pixels, by which to
                         check for a possible spatial shift for the values the
                         mask. This values is rounded down, so radius < 1
                         indicates no shift.
+            mask        optional mask to apply. Mask areas are not included in
+                        the comparison.
         """
 
-        (array, title,
-         limit, method, radius) = self._validate_inputs(array, title,
-                                                        limit, method, radius)
-        self._compare(array, master, title, limit, method, radius)
+        global TEST_SUITE
 
-    def _compare(self, array, master, title, limit=0., method='', radius=0.):
-        """Internal method that performs a comparison _after_ the inputs have
-        been validated.
-        """
-
-        # Internal function to log the results
-        def my_comparison(status, max_error=0, mask_errors=0, offset_errors=0,
-                                                              pixels=0):
-            if status == 'Shape mismatch':
-
-                # Include the pickle path, if the file exists, in the message
-                basename = self._basename(title, gold=True)
-                pickle_path = os.path.join(self.gold_arrays,
-                                           basename + '.pickle')
-                if os.path.exists(pickle_path):
-                    comparison = _NoComparison(status, pickle_path)
-                else:
-                    comparison = _NoComparison(status, '')
-
-                self._log_comparison(comparison, title)
-                return
-
-            comparison = _Comparison(status, max_error, limit,
-                                     mask_errors, offset_errors, pixels)
-            self._log_comparison(comparison, title)
+        (array, comparison) = self._validate_inputs(array, title, limit, method,
+                                                    operator, radius, mask)
+        comparison.suite = TEST_SUITE
 
         if self.args.task != 'compare':
             LOGGING.debug('Summary:', title)
             return
 
-        # Make objects compatible
-        array = array.wod
-        master = array.as_this_type(master, recursive=False, coerce=True)
+        if method in ('mod360', 'degrees'):
+            master = master * DPR
+            # array is already converted to degrees by _validate_inputs
 
-        # Broadcast a shapeless object
-        if array.shape and not master.shape:
-            master = master.broadcast_to(array.shape)
-            master = master.remask_or(array.mask)
-
-        # Expand masks
-        array = array.expand_mask()
-        master = master.expand_mask()
-
-        # A comparison with an undersampled border requires special handling.
-        # In this case, the master array must be re-sampled in a way such that
-        # a new pixel is True if any of the pixels from which it is derived are
-        # True.
-        if method == 'border' and self.undersample != 1:
-            master_vals = master.vals.copy()
-            master_vals[master.mask] = False
-            new_vals = maximum_filter(master_vals, self.undersample,
-                                      mode='constant', cval=False)
-            if np.any(master.mask):
-                new_mask = minimum_filter(master.mask, self.undersample,
-                                          mode='constant', cval=False)
-            else:
-                new_mask = np.zeros(new_vals.shape, dtype='bool')
-
-            master = Boolean(new_vals, mask=new_mask)
-
-        # Re-sample master at the array's meshgrid if necessary
-        if array.shape == master.shape:
-            master_grid = master
-            indx = slice(None)          # this index that generally does nothing
-        elif self.undersample == 1:
-            my_comparison('Shape mismatch')
-            return
-        else:
-            grid = self.meshgrid.uv.int(top=self.full_shape,
-                                        clip=True, shift=True).vals
-            if self.obs.swap_uv:        # un-swap the uv indices
-                grid = grid[..., ::-1]
-
-            indx = (grid[...,0], grid[...,1])
-            if method == 'border':      # For "border", down-sample the master
-                master = master[indx]
-                master_grid = master
-                indx = slice(None)
-            else:                       # Otherwise, master stays at full
-                                        # resolution; master_grid is resampled.
-                master_grid = master[indx]
-                master_grid = master_grid.expand_mask()
-
-        # Find the differences among unmasked pixels
-        if method.isalnum() or method == '':
-            comparison_op = False
-            if method == 'mod360':
-                diff = ((array - master_grid - 180) % 360 - 180).abs()
-            else:
-                diff = (array - master_grid).abs()
-            max_diff = diff.max(builtins=True)
-
-        else:
-            comparison_op = True
-            diff = array - master_grid
-            if method[0] == '>':                # bad where diff is positive
-                diff = -diff
-            max_diff = diff.max(builtins=True)  # all good if max is <= 0
-
-        # Compare masks
-        mask_errors = np.sum(array.mask ^ master_grid.mask)
-        comparison_args = (max_diff, mask_errors, mask_errors, array.size)
-
-        # Handle fully masked results
-        if isinstance(max_diff, Qube):
-            zero = 0. if array.dtype() == 'float' else 0
-            if np.all(array.mask) and np.all(master.mask):
-                my_comparison('Success', *comparison_args)
-            else:
-                my_comparison('Value/mask mismatch', *comparison_args)
-            return
-
-        # Handle straightforward cases
-        if comparison_op:
-            if method[1:] == '=':
-                diff_errors = diff.__gt__(0, builtins=False).sum(builtins=True)
-            else:
-                diff_errors = diff.__ge__(0, builtins=False).sum(builtins=True)
-        else:
-            diff_errors = diff.__gt__(limit, builtins=False).sum(builtins=True)
-
-        if not diff_errors and not mask_errors:
-            my_comparison('Success', *comparison_args)
-            return
-
-        if radius < 1 or array.shape == () or comparison_op:
-            if diff_errors and not mask_errors:
-                my_comparison('Value mismatch', *comparison_args)
-            elif mask_errors and not diff_errors:
-                my_comparison('Mask mismatch', *comparison_args)
-            else:
-                my_comparison('Value/mask mismatch', *comparison_args)
-            return
-
-        # See if the mask discrepancy is compatible with the radius...
-
-        # The masks are compatible if...
-        #   everywhere array.mask is True, so is master.mask expanded by radius
-        #   everywhere array.mask is False, so is master.mask contracted
-        #
-        # Another way of saying this is that inside the region where master.mask
-        # expanded equals master.mask contracted, array.mask must equal
-        # master.mask.
-
-        if method == 'border':
-            fp = BackplaneTest._footprint(radius * self.undersample)
-        else:
-            fp = BackplaneTest._footprint(radius)
-
-        master_mask_expanded   = maximum_filter(master.mask, footprint=fp,
-                                                mode='constant', cval=False)
-        master_mask_contracted = minimum_filter(master.mask, footprint=fp,
-                                                mode='constant', cval=True)
-        region = (master_mask_expanded == master_mask_contracted)
-
-        # Apply the grid and compare
-        region_grid = region[indx]
-        mask_offset_errors = np.sum(array.mask[region_grid] !=
-                                    master_grid.mask[region_grid])
-        comparison_args = (max_diff, mask_errors, mask_offset_errors,
-                                     array.size)
-        if mask_offset_errors:
-            if max_diff > limit:
-                my_comparison('Value/mask mismatch', *comparison_args)
-            else:
-                my_comparison('Mask mismatch', *comparison_args)
-            return
-
-        # At this point, the masks are compatible.
-        # If there and no bad values, we're done
-        if max_diff <= limit:
-            my_comparison('Success', *comparison_args)
-            return
-
-        # Determine if the radius can solve the value discrepancies...
-
-        # There are two categories of discrepancies left
-        # 1. The array is unmasked but master is masked.
-        # 2. Both values are unmasked, but they differ by more than the limit.
-        #
-        # These are OK if the value of each discrepant pixel in the array is
-        # within the range of the nearby unmasked pixels in the master array,
-        # +/- the limit.
-
-        # Determine the range of values in master adjacent to each value in array
-        # Note that these are full-resolution arrays
-        extremes = BackplaneTest._MINMAX_VALUES[Qube._dtype(array.vals)]
-        master_vals = master.vals.copy()
-        master_vals[master.mask] = extremes[1]
-        min_master_vals = minimum_filter(master_vals, footprint=fp,
-                                         mode='constant', cval=extremes[1])
-        master_vals[master.mask] = extremes[0]
-        max_master_vals = maximum_filter(master_vals, footprint=fp,
-                                         mode='constant', cval=extremes[0])
-
-        new_master_mask = (min_master_vals == extremes[1])
-
-        # Resample the arrays
-        min_master_vals = min_master_vals[indx]
-        max_master_vals = max_master_vals[indx]
-        new_master_mask = new_master_mask[indx]
-
-        # Decide which pixels to check
-        case1 = np.logical_not(array.mask) & master_grid.mask
-        case2 = (diff > limit).as_mask_where_nonzero()
-        cases = case1 | case2
-
-        # Make sure every discrepant pixel is unmasked
-        if np.any(new_master_mask[cases]):
-            my_comparison('Value/mask mismatch', *comparison_args)
-
-        # Select only the discrepant pixels
-        array_vals = array.vals[cases]
-        min_vals = min_master_vals[cases]
-        max_vals = max_master_vals[cases]
-
-        if array.is_bool():
-            array_vals = array_vals.astype('int8')
-            min_vals = min_vals.astype('int8')
-            max_vals = max_vals.astype('int8')
-
-        # Derive largest error among the discrepant pixels
-        diffs_below = np.maximum(min_vals - array_vals, 0)
-            # Positive where a pixel in the array is less than any of the nearby
-            # pixels of the gold master; otherwise, 0.
-        diffs_above = np.maximum(array_vals - max_vals, 0)
-            # Positive where a pixel in the array is greater than any of the
-            # nearby pixels of the gold master; otherwise, 0.
-        case_diff = diffs_below + diffs_above
-        max_case_diff = case_diff.max()
-
-        comparison_args = (max_case_diff, mask_errors, mask_offset_errors,
-                                          array.size)
-
-        if max_case_diff <= limit:
-            my_comparison('Success', *comparison_args)
-        elif np.any(array.mask):
-            my_comparison('Value/mask mismatch', *comparison_args)
-        else:
-            my_comparison('Value mismatch', *comparison_args)
-
-        return
+        self._compare(array, master, comparison)
 
     #===========================================================================
-    def gmtest(self, array, title, limit=0., method='', radius=0.):
+    def gmtest(self, array, title, limit=0., method='', operator='=',
+                                   radius=0., mask=False):
         """Compare a backplane array against its gold master.
 
         Inputs:
             array       backplane array to be tested.
             title       title string describing the test; must be unique.
             limit       upper limit on the difference between the arrays.
-            method      ''       for standard comparisons;
-                        'mod360' for doing comparisons mod 360;
-                        'border' for comparisons of border backplanes, in which
-                                 case the radius value is interpreted in units
-                                 of undersampled pixels rather than original
-                                 pixels;
-                        '>', '>=', '<', '<='
-                                 for comparisons according to one of these
-                                 operations.
+            method      ''        for standard comparisons;
+                        'mod360'  for doing comparisons in degrees mod 360;
+                        'degrees' for doing comparisons in degrees;
+                        'border'  for comparisons of border backplanes, in which
+                                  case the radius value is interpreted in units
+                                  of undersampled pixels rather than original
+                                  pixels;
+            operator    the operator to use for the comparison, one of '=', '>',
+                        '>=', '<', or '<='.
             radius      the radius of a circle, in units of pixels, by which to
                         check for a possible spatial shift for the values the
                         mask. This values is rounded down, so radius < 1
                         indicates no shift.
+            mask        optional mask to apply. Mask areas are not included in
+                        the comparison.
         """
 
+        global TEST_SUITE
+
         # Validate inputs
-        (array, title,
-         limit, method, radius) = self._validate_inputs(array, title,
-                                                        limit, method, radius)
+        (array, comparison) = self._validate_inputs(array, title, limit, method,
+                                                    operator, radius, mask)
+        comparison.suite = TEST_SUITE
 
         # Handle a 2-D array
         if array.shape:
 
             # Determine the storage precision
+            # Gradients are saved at single precision
             if limit == 0.:
-                array.set_pickle_digits('double', 'fpzip')
+                array.set_pickle_digits(('double', 'single'), 'fpzip')
             else:
                 # Could save at reduced precision, but better to use full...
                 # digits = -np.log10(limit) + 1       # save one extra digit
-                # array.set_pickle_digits(digits, 1.)
-                array.set_pickle_digits('double', 'fpzip')
+                # array.set_pickle_digits((digits, 'single'), (1., 'fpzip'))
+                array.set_pickle_digits(('double', 'single'), 'fpzip')
 
             # Write the pickle file
             if self.task == 'adopt':
@@ -1328,11 +1246,11 @@ class BackplaneTest(object):
                 basename = self._basename(title, gold=True)
                 pickle_path = os.path.join(self.gold_arrays,
                                            basename + '.pickle')
+                comparison.pickle_path = pickle_path
 
                 # Handle a missing pickle file
                 if not os.path.exists(pickle_path):
-                    comparison = _NoComparison('No gold master', pickle_path)
-                    self._log_comparison(comparison, title)
+                    self._log_comparison(comparison, 'No gold master')
 
                 else:
                     # Retrieve pickled backplane
@@ -1340,18 +1258,16 @@ class BackplaneTest(object):
                         with open(pickle_path, 'rb') as f:
                             master = pickle.load(f)
                     except (ValueError, TypeError, OSError):
-                        comparison = _NoComparison('Invalid gold master',
-                                                   pickle_path)
-                        self._log_comparison(comparison)
+                        self._log_comparison(comparison, 'Invalid gold master')
 
                     # Compare...
                     else:
-                        self._compare(array, master, title, limit=limit,
-                                      method=method, radius=radius)
+                        self._compare(array, master, comparison)
 
             # For "preview" and "adopt"
             else:
-                LOGGING.debug('Written:', os.path.basename(pickle_path))
+                LOGGING.debug(comparison.suite, '|', 'Written:',
+                              os.path.basename(pickle_path))
 
         # Shapeless case
         else:
@@ -1359,36 +1275,349 @@ class BackplaneTest(object):
             # For "compare"
             if self.task == 'compare':
                 if title not in self.gold_summary:
-                    comparison = _NoComparison('No gold master', '')
-                    self._log_comparison(comparison, title)
+                    self._log_comparison(comparison, 'No gold master')
 
                 else:
                     (min_val, max_val, masked,
                                        unmasked) = self.gold_summary[title]
                     # If gold master value is not shapeless...
                     if min_val != max_val or masked + unmasked > 1:
-                        comparison = _NoComparison('Shape mismatch', '')
-                        self._log_comparison(comparison, title)
+                        self._log_comparison(comparison, 'Shape mismatch')
 
                     else:
                         master = Scalar(min_val, masked > 0)
-                        self._compare(array, master, title,
-                                      limit=limit, method=method, radius=radius)
+                        self._compare(array, master, comparison)
 
             # For "preview" and "adopt"
             else:
-                LOGGING.debug('Summary:', title)
+                LOGGING.debug(comparison.suite, '|', 'Summary:', title)
 
     #===========================================================================
-    def _validate_inputs(self, array, title, limit, method, radius):
+    def _compare(self, array, master, comparison):
+        """Internal method that performs a comparison _after_ the inputs have
+        been validated. Radians must already be converted to degrees.
+        """
+
+        # Make objects suitable and compatible
+        array_dtype = array.dtype()
+        if array_dtype == 'int':        # convert ints to floats
+            array = array.as_float()
+
+        master = array.as_this_type(master, recursive=True, coerce=True)
+
+        # Broadcast a shapeless master object
+        if array.shape and not master.shape:
+            master = master.broadcast_to(array.shape)
+            master = master.remask_or(array.mask)
+
+        # Expand masks
+        array = array.expand_mask()
+        master = master.expand_mask()
+
+        # Set aside derivs, if any, in case needed
+        array_derivs = array.derivs
+        array = array.wod
+
+        master_derivs = master.derivs
+        master = master.wod
+
+        # Convert a Boolean array to integers, internally int8
+        if array_dtype == 'bool':
+            array = Scalar(array.vals.astype('int8'), array.mask)
+            master = Scalar(master.vals.astype('int8'), master.mask)
+
+        # A comparison with an undersampled border requires special handling.
+        # In this case, the master array must be re-sampled in a way such that
+        # a new pixel is True if any of the pixels from which it is derived are
+        # True.
+        if comparison.method == 'border' and self.undersample != 1:
+            master_vals = master.vals.copy()
+            master_vals[master.mask] = 0
+            new_vals = maximum_filter(master_vals, self.undersample,
+                                      mode='constant', cval=0)
+            if np.any(master.mask):
+                new_mask = minimum_filter(master.mask, self.undersample,
+                                          mode='constant', cval=1)
+            else:
+                new_mask = np.zeros(new_vals.shape, dtype='bool')
+
+            master = Scalar(new_vals, mask=new_mask)
+
+        # Re-sample master at the array's meshgrid if necessary
+        if array.shape == master.shape:
+            master_grid = master
+            indx = slice(None)          # this index does nothing
+        elif self.undersample == 1:
+            self._log_comparison(comparison, 'Shape mismatch')
+            return
+        else:
+            grid = self.meshgrid.uv.int(top=self.full_shape,
+                                        clip=True, shift=True).vals
+            if self.obs.swap_uv:        # un-swap the uv indices
+                grid = grid[..., ::-1]
+
+            indx = (grid[...,0], grid[...,1])
+
+            # For "border", down-sample the master
+            if comparison.method == 'border':
+                master = master[indx]
+                master_grid = master
+                indx = slice(None)
+            else:                       # Otherwise, master stays at full
+                                        # resolution; master_grid is resampled.
+                master_grid = master[indx]
+                master_grid = master_grid.expand_mask()
+        # The "_grid" suffix indicates the master array when sampled at the
+        # meshgrid of the array.
+
+        # Find the differences among unmasked pixels
+        diff = array - master_grid
+        if comparison.method == 'mod360':
+            diff = (diff - 180.) % 360. - 180.
+
+        if comparison.operator == '=':
+            diff = diff.abs()
+        elif comparison.operator[0] == '>':
+            diff = -diff
+
+        max_diff = diff[comparison.antimask].max(builtins=True, masked=-1)
+        comparison.max_diff1 = max_diff
+        comparison.max_diff2 = max_diff
+
+        # Compare masks
+        mask_diff_mask = (array.mask ^ master_grid.mask) & comparison.antimask
+        mask_errors = np.sum(mask_diff_mask)
+        comparison.mask_errors1 = mask_errors
+        comparison.mask_errors2 = mask_errors
+
+        # Handle a fully masked result
+        zero = 0. if array.dtype() == 'float' else 0
+        if max_diff < 0:
+            comparison.max_diff1 = zero
+            comparison.max_diff2 = zero
+
+            # diff_errors2 is zero by default inside the comparison, so success
+            # or failure will depend on the mask_errors2
+            self._log_comparison(comparison)
+            return
+
+        # Compare values
+        if comparison.operator[-1] == '=':
+            tvl_error_mask = diff.tvl_gt(comparison.limit)
+        else:
+            tvl_error_mask = diff.tvl_ge(comparison.limit)
+
+        diff_error_mask = (tvl_error_mask.as_mask_where_nonzero()
+                           & comparison.antimask)
+            # mask where array and master are both unmasked, and their
+            # difference exceeds the limit
+        diff_errors = np.sum(diff_error_mask)
+        comparison.diff_errors1 = diff_errors
+        comparison.diff_errors2 = diff_errors
+
+        # If no errors, we're done
+        if diff_errors + mask_errors == 0:
+            self._log_comparison(comparison)
+            return
+
+        # If we have no flexibility, we're done
+        if (comparison.radius == 0. or comparison.operator != '='
+                                    or not array.shape):
+            self._log_comparison(comparison)
+            return
+
+        # Get the gradient, if any, trying various sources
+        d_dlos = None
+        grad = None
+        if 'los' not in array_derivs and hasattr(array, 'backplane_key'):
+            array_derivs = self.backplane.evaluate(array.backplane_key,
+                                                   derivs=True).derivs
+        if 'los' in array_derivs:
+            d_dlos = array_derivs['los']
+
+        if d_dlos is None and 'los' in master_derivs:
+            d_dlos = master_derivs['los'][indx]
+
+        if d_dlos is not None:
+            d_duv = d_dlos.chain(self.backplane.dlos_duv)
+            grad = d_duv.join_items(Pair).norm()
+
+        # If a gradient is available, use it to determine the magnitude of any
+        # pointing offset. If this is below the radius limit, success.
+        footprint = None        # footprint map
+        if comparison.operator == '=' and diff_errors and grad is not None:
+
+            grad_vals = grad.vals.copy()
+            grad_vals[grad.mask] = 1.e-99
+                # small but > 0., which forces offset to be large
+            distance = None
+
+            for k in range(2):
+                # If the first pass failed, maybe the issue is that we're at the
+                # edge of a mask, where a gradient value is missing. Handle this
+                # by using the radius limit to expand the number of pixels where
+                # the gradient is defined, and then re-calculating the offset.
+                if k == 1:
+                    if comparison.radius < 1.:
+                        break
+
+                    footprint = BackplaneTest._footprint(comparison.radius)
+                    grad_vals = maximum_filter(grad_vals, footprint=footprint,
+                                               mode='constant', cval=1.e-99)
+                    distance = comparison.radius
+
+                # Require all offsets to be <= radius and all diffs <= limit
+                offset_to_zero = diff / grad_vals
+                clipped_offset = offset_to_zero.clip(-comparison.radius,
+                                                      comparison.radius)
+                improved_diff = diff - grad_vals * clipped_offset
+                new_invalid_diff_mask = (improved_diff.abs() > comparison.limit)
+
+                if not new_invalid_diff_mask.any():
+                    diff_errors = 0
+                    max_diff = improved_diff.abs().max(builtins=True)
+
+                    if distance is None:
+                        selected_offsets = clipped_offset[diff_errors]
+                        distance = selected_offsets.abs().max(builtins=True,
+                                                              masked=0.)
+
+                    comparison.max_diff2 = max_diff
+                    comparison.diff_errors2 = diff_errors
+                    comparison.distance = distance
+
+                    if mask_errors:
+                        break
+
+                    self._log_comparison(comparison)
+                    return
+
+        # At this point, our only hope of resolving discrepancies involves
+        # invoking the radius limit. If this radius limit is less than 1, then
+        # the footprint for re-sampling is a single pixel, and therefore won't
+        # accomplish anything.
+
+        if comparison.radius < 1:
+            self._log_comparison(comparison)
+            return
+
+        comparison.distance = comparison.radius
+
+        # See if any mask discrepancy is compatible with the radius...
+        #
+        # The masks are compatible if...
+        # - everywhere array.mask is True, so is master.mask once expanded by
+        #   radius;
+        # - everywhere array.mask is False, so is master.mask contracted by
+        #   radius.
+        #
+        # Another way of saying this is that inside the region where master.mask
+        # expanded equals master.mask contracted, array.mask must equal
+        # master.mask. Elsewhere, a discrepancy is OK.
+
+        if mask_errors:
+            if comparison.method == 'border':
+                footprint = BackplaneTest._footprint(comparison.radius
+                                                     * self.undersample)
+            elif footprint is None:
+                footprint = BackplaneTest._footprint(comparison.radius)
+
+            comparison.distance = comparison.radius
+            master_mask_contracted = minimum_filter(master.mask,
+                                                    footprint=footprint,
+                                                    mode='constant', cval=True)
+            master_mask_expanded   = maximum_filter(master.mask,
+                                                    footprint=footprint,
+                                                    mode='constant', cval=False)
+            region_mask = (master_mask_expanded == master_mask_contracted)
+
+            # Apply the grid and compare; re-calculate mask errors
+            region_grid = region_mask[indx]
+                # region_grid has the shape of master, so we have to re-sample
+                # it at the meshgrid to match the array.
+            temp_mask = region_grid & comparison.antimask
+                # ...and then apply the comparison antimask
+
+            comparison.mask_errors2 = np.sum(array.mask[temp_mask] !=
+                                             master_grid.mask[temp_mask])
+
+        # Determine if the full radius can solve any value discrepancies...
+        #
+        # These are OK if the value of each discrepant pixel in the array is
+        # within the range of the nearby unmasked pixels in the master array,
+        # +/- the limit.
+
+        if diff_errors:
+
+            # Determine the range of values in master adjacent to each value in
+            # the array. Note that these are full-resolution arrays.
+            if footprint is None:
+                footprint = BackplaneTest._footprint(comparison.radius)
+
+            extremes = BackplaneTest._MINMAX_VALUES[array_dtype]
+            master_vals = master.vals.copy()
+            master_vals[master.mask] = extremes[1]
+            min_master_vals = minimum_filter(master_vals, footprint=footprint,
+                                             mode='constant', cval=extremes[1])
+            master_vals[master.mask] = extremes[0]
+            max_master_vals = maximum_filter(master_vals, footprint=footprint,
+                                             mode='constant', cval=extremes[0])
+
+            new_master_mask = (min_master_vals == extremes[1])
+                # This is the mask of all pixels in the full-resolution master
+                # array that are still masked after the radius has been applied.
+
+            # Resample these versions of the master to match the array.
+            min_master_grid = min_master_vals[indx]
+            max_master_grid = max_master_vals[indx]
+            master_mask_grid = new_master_mask[indx]
+
+            # Then select the discrepant pixels
+            array_vals = array.vals[diff_error_mask]
+            min_vals = min_master_grid[diff_error_mask]
+            max_vals = max_master_grid[diff_error_mask]
+
+            # Locate and check the revised discrepancies
+            diffs_below = min_vals - array_vals
+            diffs_above = array_vals - max_vals
+            comparison.max_diff2 = max(0, np.max(diffs_below),
+                                          np.max(diffs_above))
+
+            if comparison.operator[-1] == '=':
+                diff_error_mask_below = diffs_below > comparison.limit
+                diff_error_mask_above = diffs_above > comparison.limit
+            else:
+                diff_error_mask_below = diffs_below >= comparison.limit
+                diff_error_mask_above = diffs_above >= comparison.limit
+
+            comparison.diff_errors2 = (np.sum(diff_error_mask_below) +
+                                       np.sum(diff_error_mask_above))
+
+        self._log_comparison(comparison)
+        return
+
+    #===========================================================================
+    def _validate_inputs(self, array, title, limit, method, operator, radius,
+                               mask):
         """Initial steps for both compare() and gmtest()."""
 
         global LATEST_TITLE
         LATEST_TITLE = title
 
-        # Validate method
-        if method not in ('', 'mod360', 'border', '>', '>=', '<', '<='):
+        # Validate comparison options
+        if method not in ('', 'mod360', 'degrees', 'border'):
             raise ValueError('unknown comparison method: ' + repr(method))
+
+        if operator not in ('=', '>', '>=', '<', '<='):
+            raise ValueError('unknown operator: ' + repr(operator))
+
+        if operator != '=' and radius != 0:
+            raise ValueError('operator "%s" '  % operator
+                             + ' is incompatible with nonzero radius')
+
+        if operator != '=' and method == 'border':
+            raise ValueError('operator "%s" ' % operator
+                             + 'is incompatible with method "border"')
 
         # Validate limit
         if isinstance(limit, Qube):
@@ -1403,17 +1632,43 @@ class BackplaneTest(object):
 
         # Validate array
         if not isinstance(array, Qube):
-            if (isinstance(array, (bool, np.bool_))
-                or (isinstance(array, np.ndarray) and array.dtype.kind == 'b')):
-                    array = Boolean(array)
+            if Qube._dtype(array) == 'bool':
+                array = Boolean(array)
             else:
-                array = Scalar(array).as_float()
+                array = Scalar(array)
+
+        # Convert to degrees if necessary
+        if method in ('mod360', 'degrees'):
+            new_array = array * DPR
+            if hasattr(array, 'backplane_key'):
+                new_array.backplane_key = array.backplane_key
+            array = new_array
+
+        # Strip any derivatives other than d_dlos
+        if tuple(array.derivs.keys()) not in ((), ('los',)):
+            new_array = array.without_derivs(preserve='los')
+            if hasattr(array, 'backplane_key'):
+                new_array.backplane_key = array.backplane_key
+            array = new_array
 
         # Save the summary info in the dictionary
         self._summarize(array, title, method=method)
 
-        return (array, title, limit * self.args.tolerance, method,
-                              radius * self.args.radius)
+        # Check mask
+        if np.shape(mask) not in ((), array.shape):
+            raise ValueError('mask shape does not match array')
+
+        # Construct the comparison object
+        comparison = _BackplaneComparison(title = title,
+                                          limit = limit * self.args.tolerance,
+                                          method = method,
+                                          operator = operator,
+                                          radius = radius * self.args.radius,
+                                          mask = mask,
+                                          pixels = array.size)
+        comparison.antimask = np.logical_not(mask)      # extra attribute
+
+        return (array, comparison)
 
     #===========================================================================
     def _summarize(self, array, title, method=''):
@@ -1427,6 +1682,8 @@ class BackplaneTest(object):
         """
 
         def _save(minval, maxval, masked, total):
+            """Save and log summary info."""
+
             self.summary[title] = (minval, maxval, masked, total)
 
             if self.args.info:
@@ -1468,6 +1725,8 @@ class BackplaneTest(object):
             return
 
         # Handle mod360 case
+
+        # Convert to a 1-D array of values
         if np.shape(array.mask):
             vals = array.vals[array.antimask]
         elif np.shape(array.vals):
@@ -1476,13 +1735,14 @@ class BackplaneTest(object):
             _save(array.vals, array.vals, masked, total)
             return
 
+        # Sort mod 360
         sorted = np.sort(vals)
         sorted = np.hstack((sorted, [sorted[0] + 360]))
-        diffs = np.diff(sorted)
-        argmax = np.argmax(diffs)
-
+                                        # duplicate first item at end
+        diffs = np.diff(sorted)         # find successive difference
+        argmax = np.argmax(diffs)       # locate largest gap
         maxval = sorted[argmax]
-        if argmax == len(diffs) - 1:
+        if argmax == len(diffs) - 1:    # min is angle after largest gap
             minval = sorted[-1] - 360
         else:
             minval = sorted[argmax + 1]
@@ -1490,46 +1750,111 @@ class BackplaneTest(object):
         _save(minval, maxval, masked, total)
 
     #===========================================================================
-    def _log_comparison(self, comparison, title):
-        """Log this comparison info."""
+    def _log_comparison(self, comparison, status=''):
+        """Log this comparison info.
 
-        # Check the status
-        status = comparison.status
+        A single record of the log file has this format:
+          "<time> | oops.backplane.gold_master | <level> | <suite> | <message>"
+        where
+          <time>  is the local time to the level of ms.
+          <level> is one of "DEBUG", "INFO", "WARNING", "ERROR", "FATAL".
+          <suite> is the name of the test suite, e.g., "ring".
+          <message> is a descriptive message.
 
-        # Select error level
-        if BackplaneTest._STATUS_IS_OK[status]:
-            level = logging.INFO
-        else:
-            level = logging.ERROR
+        For comparisons, the message has the following format:
+          <status>: "<title>"; diff=<diff1>/<diff2>/<limit>; ...
+                               offset=<offset>/<radius>; ...
+                               pixels=<count1>/<count2>/<pixels>
+        where:
+          <status> is one of:
+            "Success"               if the test passed;
+            "Value mismatch"        if the values disagree by more than the
+                                    limit, but the mask is in agreement;
+            "Mask mismatch"         if the masks disagree, but the values are in
+                                    agreement;
+            "Value/mask mismatch"   if both the values and the mask disagree.
+          <title>   is the title of the test.
+          <diff1>   is the maximum discrepancy among the unmasked values.
+          <diff2>   is the maximum discrepancy after we have expanded the
+                    comparison to include neighboring pixels, as defined by the
+                    specified radius.
+          <limit>   the specified discrepancy limit of the test.
+          <offset>  the offset distance required to bring value discrepancies
+                    below the limit, or to resolve any mask discrepancies.
+          <radius>  the specified upper limit on an offset.
+          <count1>  the number of discrepant pixels before allowing for an
+                    offset.
+          <count2>  the number of discrepant pixels that cannot be accommodated
+                    by an offset.
+          <pixels>  the total number of pixels tested.
 
-        if status == 'No gold master' and self.args.ignore_missing:
-            level = logging.WARNING
+        Note that <diff2> and <count2> are not listed if not offset is required.
+        Also, note that the offset values are not listed in this case.
+        """
 
-        self.results[title] = comparison
+        # Fill in the status if necessary
+        if status:
+            comparison.status = status
+
+        errors1 = comparison.diff_errors1 + comparison.mask_errors1
+        errors2 = comparison.diff_errors2 + comparison.mask_errors2
+        if comparison.status == '':
+            if comparison.diff_errors2:
+                if comparison.mask_errors2:
+                    comparison.status = 'Value/mask mismatch'
+                else:
+                    comparison.status = 'Value mismatch'
+            else:
+                if comparison.mask_errors2:
+                    comparison.status = 'Mask mismatch'
+                else:
+                    comparison.status = 'Success'
+
+        # Determine status
+        success = comparison.success
+        level = logging.INFO if success else logging.ERROR
 
         # Construct the message
-        if isinstance(comparison, _Comparison):
-            val = self._valstr(comparison.max_error)
-            message = status + ': "%s"; diff=%s' % (title, val)
-            if comparison.limit:
-                message += '/' + self._valstr(comparison.limit)
+        message = [comparison.suite, ' | ', comparison.status]
 
-            if comparison.offset_errors == comparison.mask_errors:
-                message += '; pixels=%d/%d' % (comparison.mask_errors,
-                                               comparison.size)
-            else:
-                message += '; pixels=%d/%d/%d' % (comparison.mask_errors,
-                                                  comparison.offset_errors,
-                                                  comparison.size)
-
-        else:       # _NoComparison
+        # Handle failed comparison cases
+        if errors2 == 0 and comparison.status != 'Success':
             if comparison.pickle_path:
                 basename = os.path.basename(comparison.pickle_path)
-                message = status + ': ' + basename
-            else:
-                message = status + ': "%s"' % title
+                message += [': ', basename]
 
-        LOGGING.print(message, level=level)
+            else:
+                message += [': "', comparison.title, '"']
+
+        # Handle comparison cases
+        else:
+            val = self._valstr(comparison.max_diff1)
+            message += [': "', comparison.title, '"; diff=',
+                        self._valstr(comparison.max_diff1)]
+
+            if comparison.max_diff2 != comparison.max_diff1:
+                if comparison.max_diff2 <= comparison.limit * 1.e-8:
+                    message += ['/0.']
+                else:
+                    message += ['/', self._valstr(comparison.max_diff2)]
+
+            message += ['/', self._valstr(comparison.limit)]
+
+            if comparison.distance:
+                message += ['; offset=', self._valstr(comparison.distance),
+                            '/', self._valstr(comparison.radius)]
+
+            message += ['; pixels=', str(errors1)]
+
+            if errors2 != errors1:
+                message += ['/', str(errors2)]
+
+            message += ['/', str(comparison.pixels)]
+
+        LOGGING.print(''.join(message), level=level)
+
+        # Save the results
+        self.results[comparison.title] = comparison
 
     #===========================================================================
     @staticmethod
@@ -1537,11 +1862,14 @@ class BackplaneTest(object):
         """value formatter, avoiding "0.000" and "1.000e-12"."""
 
         if isinstance(value, Qube):
-            return '--'
-        elif isinstance(value, numbers.Integral):
+            if value.mask:
+                return '--'
+            value = value.vals
+
+        if isinstance(value, numbers.Integral):
             return str(value)
         else:
-            formatted = '%#.7g' % value
+            formatted = '%#.4g' % value
             parts = formatted.partition('e')
             return parts[0].rstrip('0') + parts[1] + parts[2]
 
@@ -1770,23 +2098,6 @@ class BackplaneTest(object):
             f.write('}\n')
 
         return filepath
-
-################################################################################
-# To run as a unit test, using the long-standing default Cassini image...
-################################################################################
-
-class Test_Backplane_Gold_Masters(unittest.TestCase):
-    """This will run the gold master tests with default inputs as a unit test.
-
-    All logging is off.
-    """
-
-    def test_backplane_gold_masters(self):
-
-        args = get_args(task='compare', log=False, verbose=False, info=False,
-                        convergence=False, diagnostics=False, performance=False,
-                        unittest=True, testcase=self)
-        run_tests(args)
 
 ################################################################################
 # To handle gold master testing from the command line...

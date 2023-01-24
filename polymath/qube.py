@@ -2164,6 +2164,8 @@ class Qube(object):
         conversion can be done without loss of information."""
 
         values = self._values_
+        if np.size(values) == 0:
+            return masked
         if np.shape(values):
             return self
         if self._mask_:

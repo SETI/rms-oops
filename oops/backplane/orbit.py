@@ -44,7 +44,7 @@ def orbit_longitude(self, event_key, reference='obs', planet=None):
     key0 = ('orbit_longitude', event_key)
     key = key0 + (reference, planet)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     planet_body = Body.lookup(planet)
     planet_event = planet_body.path.event_at_time(orbit_event.time)
@@ -53,13 +53,13 @@ def orbit_longitude(self, event_key, reference='obs', planet=None):
 
     # Locate reference vector in the J2000 frame
     if reference == 'obs':
-        reference_dir = orbit_event.dep_ap.wod
+        reference_dir = orbit_event.dep_ap
     elif reference == 'oha':
-        reference_dir = -orbit_event.dep_ap.wod
+        reference_dir = -orbit_event.dep_ap
     elif reference == 'sun':
-        reference_dir = orbit_event.neg_arr_ap.wod
+        reference_dir = orbit_event.neg_arr_ap
     elif reference == 'sha':
-        reference_dir = orbit_event.arr_ap.wod
+        reference_dir = orbit_event.arr_ap
     elif reference == 'aries':
         reference_dir = Vector3.XAXIS
     else:           # 'node'
@@ -90,28 +90,27 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 from oops.backplane.gold_master import register_test_suite
-from oops.constants import DPR
 
 def orbit_test_suite(bpt):
 
     bp = bpt.backplane
     for (_, name) in bpt.planet_moon_pairs:
-        bpt.gmtest(bp.orbit_longitude(name, reference='obs') * DPR,
+        bpt.gmtest(bp.orbit_longitude(name, reference='obs'),
                    name + ' orbit longitude wrt observer (deg)',
                    method='mod360', limit=0.001)
-        bpt.gmtest(bp.orbit_longitude(name, reference='oha') * DPR,
+        bpt.gmtest(bp.orbit_longitude(name, reference='oha'),
                    name + ' orbit longitude wrt OHA (deg)',
                    method='mod360', limit=0.001)
-        bpt.gmtest(bp.orbit_longitude(name, reference='sun') * DPR,
+        bpt.gmtest(bp.orbit_longitude(name, reference='sun'),
                    name + ' orbit longitude wrt Sun (deg)',
                    method='mod360', limit=0.001)
-        bpt.gmtest(bp.orbit_longitude(name, reference='sha') * DPR,
+        bpt.gmtest(bp.orbit_longitude(name, reference='sha'),
                    name + ' orbit longitude wrt SHA (deg)',
                    method='mod360', limit=0.001)
-        bpt.gmtest(bp.orbit_longitude(name, reference='aries') * DPR,
+        bpt.gmtest(bp.orbit_longitude(name, reference='aries'),
                    name + ' orbit longitude wrt Aries (deg)',
                    method='mod360', limit=0.001)
-        bpt.gmtest(bp.orbit_longitude(name, reference='node') * DPR,
+        bpt.gmtest(bp.orbit_longitude(name, reference='node'),
                    name + ' orbit longitude wrt node (deg)',
                    method='mod360', limit=0.001)
 

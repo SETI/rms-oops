@@ -24,6 +24,8 @@ class Backplane(object):
     DIAGNOSTICS = False     # set True to log diagnostics
     PERFORMANCE = False     # set True to log timings of surface calculations
 
+    ALL_DERIVS = False
+
     def __init__(self, obs, meshgrid=None, time=None, inventory=None,
                             inventory_border=0):
         """The constructor.
@@ -179,6 +181,7 @@ class Backplane(object):
         # planetographic latitudes at Saturn.
 
         self.backplanes = {}
+        self.backplanes_with_derivs = {}    # used by ALL_DERIVS option
 
         # Antimasks of surfaces, keyed by surface key.
         self.antimasks = {}
@@ -507,6 +510,8 @@ class Backplane(object):
         """The observation event of photons arriving at the detector.
         """
 
+        derivs = derivs or self.ALL_DERIVS
+
         # Gridded events always carry the same arrival vectors
         if self._is_dispersed(event_key):
             return self.obs_events[derivs]
@@ -634,6 +639,8 @@ class Backplane(object):
             arrivals        True for an event requiring arrival vectors; False
                             otherwise.
         """
+
+        derivs = derivs or self.ALL_DERIVS
 
         # Handle the empty event key (used for sky coordinates) quickly
         event_key = self.standardize_event_key(event_key)
@@ -772,6 +779,7 @@ class Backplane(object):
         event.insert_subfield('surface', surface)
 
         # Save the event
+        derivs = derivs or self.ALL_DERIVS
         self.surface_events[derivs][event_key] = event
 
         # Save the antimask
@@ -782,13 +790,15 @@ class Backplane(object):
 
         # Save the without-derivs version if necessary
         if derivs:
-            self._save_event(event_key, event.wod, surface, derivs=False)
+            self.surface_events[False][event_key] = event.wod
 
     #===========================================================================
     def get_gridless_event(self, event_key, derivs=False, arrivals=False):
         """The gridless event associated with this event key, even if the event
         key refers to dispersed or occultation lighting.
         """
+
+        derivs = derivs or self.ALL_DERIVS
 
         gridless_key = self.gridless_event_key(event_key)
         return self.get_surface_event(gridless_key, derivs=derivs,
@@ -798,7 +808,7 @@ class Backplane(object):
     # Backplane support
     ############################################################################
 
-    def register_backplane(self, key, backplane, expand=False):
+    def register_backplane(self, key, backplane, expand=False, derivs=False):
         """Insert this backplane into the dictionary.
 
         If expand is True and the backplane contains just a single value, the
@@ -811,8 +821,8 @@ class Backplane(object):
         elif isinstance(backplane, np.ndarray):
             backplane = Scalar(backplane)
 
-        # Never include derivatives; collapse mask if possible
-        backplane = backplane.wod.collapse_mask()
+        # Collapse mask if possible
+        backplane = backplane.collapse_mask()
 
         # Under some circumstances a derived backplane can be a scalar
         if expand and backplane.shape == () and self.shape != ():
@@ -828,21 +838,39 @@ class Backplane(object):
         # For reference, we add the key as an attribute of each backplane
         # object
         backplane.key = key
-        self.backplanes[key] = backplane.as_readonly()
+        backplane = backplane.as_readonly(recursive=True)
+        self.backplanes[key] = backplane.wod
 
-        return backplane
+        if backplane.derivs:
+            self.backplanes_with_derivs[key] = backplane
+
+        if derivs or self.ALL_DERIVS:
+            return backplane
+        else:
+            return backplane.wod
 
     #===========================================================================
-    def _remasked_backplane(self, key, backplane_key):
+    def _remasked_backplane(self, key, backplane_key, derivs=False):
         """Apply the mask of one backplane to another."""
 
-        array = self.evaluate(key)
+        derivs = derivs or self.ALL_DERIVS
+
+        array = self.evaluate(key, derivs=derivs)
         mask = self.evaluate(backplane_key).mask
-        array = array.remask_or(mask)
+        array = array.remask_or(mask, recursive=derivs)
 
         new_key = key[:1] + (backplane_key,) + key[2:]
         self.register_backplane(new_key, array)
         return array
+
+    #===========================================================================
+    def get_backplane(self, key, derivs=False):
+        """Return the selected backplane from the cache."""
+
+        if (derivs or self.ALL_DERIVS) and key in self.backplanes_with_derivs:
+            return self.backplanes_with_derivs[key]
+
+        return self.backplanes[key]
 
     ############################################################################
     # Method to access a backplane or mask by key
@@ -858,7 +886,7 @@ class Backplane(object):
 
     CALLABLES = set()
 
-    def evaluate(self, backplane_key):
+    def evaluate(self, backplane_key, derivs=False):
         """Evaluate the backplane array based on the given "backplane_key". A
         backplane_key takes the form of a tuple:
             (function_name, event_key, ...)
@@ -874,7 +902,14 @@ class Backplane(object):
         if func not in Backplane.CALLABLES:
             raise ValueError('unrecognized backplane function: ' + func)
 
-        return Backplane.__dict__[func].__call__(self, *backplane_key[1:])
+        # Evaluate...
+        backplane = Backplane.__dict__[func].__call__(self, *backplane_key[1:])
+
+        derivs = derivs or self.ALL_DERIVS
+        if derivs and backplane_key in self.backplanes_with_derivs:
+            backplane = self.backplanes_with_derivs[backplane_key]
+
+        return backplane
 
     #===========================================================================
     @staticmethod

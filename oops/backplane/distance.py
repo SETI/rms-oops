@@ -20,7 +20,7 @@ def distance(self, event_key, direction='dep'):
     event_key = self.standardize_event_key(event_key)
     key = ('distance', event_key, direction)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     lt = self.light_time(event_key, direction)
     return self.register_backplane(key, lt * C)
@@ -41,7 +41,7 @@ def light_time(self, event_key, direction='dep'):
     event_key = self.standardize_event_key(event_key)
     key = ('light_time', event_key, direction)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     if direction == 'arr':
         event = self.get_surface_event(event_key, arrivals=True)
@@ -64,7 +64,7 @@ def event_time(self, event_key):
 
     key = ('event_time', event_key)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     event = self.get_surface_event(event_key)
     return self.register_backplane(key, event.time)
