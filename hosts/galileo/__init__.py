@@ -91,7 +91,8 @@ class Galileo(object):
         if Galileo.initialized:
             return
 
-        from IPython import embed; embed()
+        (ck, spk) = ('NONE', 'NONE')
+
         # Define some important paths and frames
         Body.define_solar_system(Galileo.START_TIME, Galileo.STOP_TIME,
                                  asof=asof,
@@ -99,7 +100,7 @@ class Galileo(object):
                                  mst_pck=mst_pck,
                                  irregulars=irregulars)
 
-        _ = oops.path.SpicePath('GALILEO', 'SATURN')
+        _ = oops.path.SpicePath('GLL', 'JUPITER')
 
         spicedb.open_db()
 
@@ -110,7 +111,7 @@ class Galileo(object):
             Galileo.initialize_kernels([], Galileo.SPK_LIST)
             Galileo.SPK_LOADED = np.ones(Galileo.MONTHS, dtype='bool')
         else:
-            kernels = spicedb.select_spk(-82, name='CAS-SPK-' + spk,
+            kernels = spicedb.select_spk(-77, name='CAS-SPK-' + spk,
                                               time=(Galileo.START_TIME,
                                                     Galileo.STOP_TIME),
                                               asof=asof)
@@ -123,7 +124,7 @@ class Galileo(object):
             Galileo.initialize_kernels([], Galileo.CK_LIST)
             Galileo.CK_LOADED = np.ones(Galileo.MONTHS, dtype='bool')
         else:
-            kernels = spicedb.select_ck(-82, name='CAS-CK-' + ck,
+            kernels = spicedb.select_ck(-77, name='CAS-CK-' + ck,
                                              time=(Galileo.START_TIME,
                                                    Galileo.STOP_TIME),
                                              asof=asof)
@@ -131,7 +132,7 @@ class Galileo(object):
 
         # Load extra kernels if necessary
         if gapfill and ck not in ('PREDICTED', 'NONE'):
-            _ = spicedb.furnish_ck(-82, name='CAS-CK-GAPFILL')
+            _ = spicedb.furnish_ck(-77, name='CAS-CK-GAPFILL')
 
         spicedb.close_db()
 
@@ -286,7 +287,7 @@ class Galileo(object):
 
         # Furnish instruments and frames
         spicedb.open_db()
-        _ = spicedb.furnish_inst(-82, inst=instruments, asof=asof)
+        _ = spicedb.furnish_inst(-77, inst=instruments, asof=asof)
         spicedb.close_db()
 
     ############################################################################
@@ -317,7 +318,7 @@ class Galileo(object):
             asof = julian.ymdhms_format_from_day_sec(day, sec)
 
         spicedb.open_db()
-        kernel_info = spicedb.select_inst(-82, types='IK', inst=inst, asof=asof)
+        kernel_info = spicedb.select_inst(-77, types='IK', inst=inst, asof=asof)
         spicedb.furnish_kernels(kernel_info, fast=True)
         spicedb.close_db()
 
@@ -345,7 +346,7 @@ class Galileo(object):
             asof = julian.ymdhms_format_from_day_sec(day, sec)
 
         spicedb.open_db()
-        kernel_list = spicedb.select_inst(-82, types='FK', asof=asof)
+        kernel_list = spicedb.select_inst(-77, types='FK', asof=asof)
         spicedb.furnish_kernels(kernel_info, fast=True)
         spicedb.close_db()
 
@@ -361,16 +362,16 @@ class Galileo(object):
             bodies = [1, 199, 2, 299, 3, 399, 4, 499, 5, 599, 6, 699,
                       7, 799, 8, 899]
             if time[0] >= TOUR:
-                bodies += Body.SATURN_MOONS_LOADED
+                bodies += Body.JUPITER_MOONS_LOADED
             else:
                 bodies += Body.JUPITER_MOONS_LOADED
         else:
             if time[0] >= TOUR:
-                bodies = [6, 699] + Body.SATURN_MOONS_LOADED
+                bodies = [6, 699] + Body.JUPITER_MOONS_LOADED
             else:
                 bodies = [5, 599] + Body.JUPITER_MOONS_LOADED
 
-        return spicedb.used_basenames(time=time, inst=inst, sc=-82,
+        return spicedb.used_basenames(time=time, inst=inst, sc=-77,
                                       bodies=bodies)
 
 ################################################################################

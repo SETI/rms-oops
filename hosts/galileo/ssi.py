@@ -31,6 +31,7 @@ def from_file(filespec, fast_distortion=True,
     # Load the VICAR file
     vic = vicar.VicarImage.from_file(filespec)
     vicar_dict = vic.as_dict()
+    from IPython import embed; print('+++++++++++++'); embed()
 
     # Get key information from the header
     tstart = julian.tdb_from_tai(julian.tai_from_iso(vic['START_TIME']))
@@ -162,8 +163,9 @@ class SSI(object):
     fov = {}
     initialized = False
 
+############
     # Create a master version of the distortion model from
-    #   Owen Jr., W.M., 2003. Galileo SSI Geometric Calibration of April 2003.
+    #   Owen Jr., W.M., 2003. Cassini SSI Geometric Calibration of April 2003.
     #   JPL IOM 312.E-2003.
     # These polynomials convert from X,Y (radians) to U,V (pixels).
 
@@ -245,6 +247,11 @@ class SSI(object):
         Galileo.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
                            gapfill=gapfill,
                            mst_pck=mst_pck, irregulars=irregulars)
+        return
+
+
+
+
         Galileo.load_instruments(asof=asof)
 
         # Load the instrument kernel
