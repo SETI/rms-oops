@@ -3,8 +3,10 @@
 ################################################################################
 import numpy as np
 import julian
+import cspyce
 import vicar
 import pdstable
+import pdsparser
 import oops
 
 from hosts.galileo import Galileo
@@ -28,47 +30,39 @@ def from_file(filespec, fast_distortion=True,
     SSI.initialize()    # Define everything the first time through; use defaults
                         # unless initialize() is called explicitly.
 
-    # Load the VICAR file
+    # Load the PDS label
+    lbl_filespec = filespec.replace('.img', '.LBL')
+    recs = pdsparser.PdsLabel.load_file(lbl_filespec)
+    label = pdsparser.PdsLabel.from_string(recs).as_dict()
+
+    # Load the dta array
     vic = vicar.VicarImage.from_file(filespec)
     vicar_dict = vic.as_dict()
-    from IPython import embed; print('+++++++++++++'); embed()
 
-    # Get key information from the header
-    tstart = julian.tdb_from_tai(julian.tai_from_iso(vic['START_TIME']))
-    texp = max(1.e-3, vicar_dict['EXPOSURE_DURATION']) / 1000.
-    mode = vicar_dict['INSTRUMENT_MODE_ID']
+    # Get image metadata
+    meta = Metadata(label)
 
-    name = vicar_dict['INSTRUMENT_NAME']
+    # Load time-dependent kernels
+    Galileo.load_cks(meta.tstart, meta.tstart + meta.exposure)
+    Galileo.load_spks(meta.tstart, meta.tstart + meta.exposure)
 
-    filter1, filter2 = vicar_dict['FILTER_NAME']
+    # Define the field of view
+    FOV = meta.fov(label)
 
-    gain_mode = None
 
-    if vicar_dict['GAIN_MODE_ID'][:3] == '215':
-        gain_mode = 0
-    elif vicar_dict['GAIN_MODE_ID'][:2] == '95':
-        gain_mode = 1
-    elif vicar_dict['GAIN_MODE_ID'][:2] == '29':
-        gain_mode = 2
-    elif vicar_dict['GAIN_MODE_ID'][:2] == '12':
-        gain_mode = 3
 
-    # Make sure the SPICE kernels are loaded
-    Galileo.load_cks( tstart, tstart + texp)
-    Galileo.load_spks(tstart, tstart + texp)
+#    from IPython import embed; print('+++++++++++++'); embed()
+
 
     # Create a Snapshot
-    result = oops.obs.Snapshot(('v','u'), tstart, texp,
-                               SSI.fov[mode, fast_distortion],
-                               path = 'GALILEO',
-                               frame = 'GALILEO_SSI',
+    result = oops.obs.Snapshot(('v','u'), meta.tstart, meta.exposure,
+                               FOV,
+                               path = 'GLL',
+                               frame = 'GLL_SCAN_PLATFORM',
                                dict = vicar_dict,       # Add the VICAR dict
                                data = vic.data_2d,      # Add the data array
                                instrument = 'SSI',
-                               sampling = mode,
-                               filter1 = filter1,
-                               filter2 = filter2,
-                               gain_mode = gain_mode)
+                               filter = meta.filter)
 
     result.insert_subfield('spice_kernels',
                            Galileo.used_kernels(result.time, 'iss',
@@ -105,7 +99,7 @@ def from_index(filespec, **parameters):
 
         item = oops.obs.Snapshot(('v','u'), tstart, texp,
                                  SSI.fov[mode, False],
-                                 'GALILEO', 'GALILEO_SSI',
+                                 'GLL', 'GLL_SSI',
                                  dict = row_dict,       # Add index dictionary
                                  index_dict = row_dict, # Old name
                                  instrument = 'SSI',
@@ -154,6 +148,94 @@ def initialize(ck='reconstructed', planets=None, asof=None,
     SSI.initialize(ck=ck, planets=planets, asof=asof,
                    spk=spk, gapfill=gapfill,
                    mst_pck=mst_pck, irregulars=irregulars)
+
+
+#===============================================================================
+class Metadata(object):
+
+    #===========================================================================
+    def __init__(self, label):
+        """Use the label to assemble the image metadata.
+
+        Input:
+            label           The label dictionary.
+
+        Attributes:
+            nlines          A Numpy array containing the data in axis order
+                            (line, sample).
+            nsamples        The time sampling array in (line, sample) axis
+                            order, or None if no time backplane is found in
+                            the file.
+            nframelets
+
+        """
+
+        # Image dimensions
+        self.nlines = label['IMAGE']['LINES']
+        self.nsamples = label['IMAGE']['LINE_SAMPLES']
+
+        # Exposure time
+        exposure_ms = label['EXPOSURE_DURATION']
+        self.exposure = exposure_ms/1000.
+
+        # Filters
+        self.filter = label['FILTER_NAME']
+
+        #TODO: determine whether IMAGE_TIME is the start time or the mid time..
+        self.tstart = julian.tdb_from_tai(
+                        julian.tai_from_iso(label['IMAGE_TIME']))
+        self.tstop = self.tstart + self.exposure
+
+        # Target
+        self.target = label['TARGET_NAME']
+
+
+    #===========================================================================
+    def fov(self, label):
+        """Use the label to assemble the image metadata.
+
+        Input:
+            label           The label dictionary.
+
+        Attributes:
+            nlines          A Numpy array containing the data in axis order
+                            (line, sample).
+            nsamples        The time sampling array in (line, sample) axis
+                            order, or None if no time backplane is found in
+                            the file.
+            nframelets
+
+        """
+
+        # FOV Kernel pool variables
+        cf_var = 'INS-77036_DISTORTION_COEFF'
+        fo_var = 'INS-77036_FOCAL_LENGTH'
+        px_var = 'INS-77036_PIXEL_SIZE'
+        cxy_var = 'INS-77036_FOV_CENTER'
+
+        cf = cspyce.gdpool(cf_var, 0)[0]
+        fo = cspyce.gdpool(fo_var, 0)[0]
+        px = cspyce.gdpool(px_var, 0)[0]
+        cxy = cspyce.gdpool(cxy_var, 0)
+
+        # Construct FOV
+        scale = px/fo
+        distortion_coeff = [1,0,cf]
+
+        # Direct summation modes
+        mode = label['TELEMETRY_FORMAT_ID']
+        if mode=='HIS' or mode=='AI8':
+            scale = scale*2
+            cxy = cxy/2
+
+        self.fov = oops.fov.RadialFOV(scale,
+                                      (self.nsamples, self.nlines),
+                                      coefft_uv_from_xy=distortion_coeff,
+                                      uv_los=(cxy[0], cxy[1]))
+
+        return self.fov
+
+
 
 #===============================================================================
 class SSI(object):
@@ -244,9 +326,16 @@ class SSI(object):
         if SSI.initialized:
             return
 
+        # Initialize Galileo
         Galileo.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
                            gapfill=gapfill,
                            mst_pck=mst_pck, irregulars=irregulars)
+        Galileo.load_instruments(asof=asof)
+
+        # Construct the SpiceFrame
+        _ = oops.frame.SpiceFrame("GLL_SCAN_PLATFORM")
+
+        Galileo.initialized = True
         return
 
 
@@ -258,7 +347,7 @@ class SSI(object):
         SSI.instrument_kernel = Galileo.spice_instrument_kernel('SSI')[0]
 
         # Construct a Polynomial FOV
-        info = SSI.instrument_kernel['INS']['GALILEO_SSI']
+        info = SSI.instrument_kernel['INS']['GLL_SSI']
 
         # Full field of view
         lines = info['PIXEL_LINES']
@@ -302,10 +391,10 @@ class SSI(object):
         # Deal with the fact that the instrument's internal
         # coordinate  system is rotated 180 degrees
         rot180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
-        flipped = oops.frame.SpiceFrame('GALILEO_SSI',
-                                        frame_id='GALILEO_SSI_FLIPPED')
+        flipped = oops.frame.SpiceFrame('GLL_SSI',
+                                        frame_id='GLL_SSI_FLIPPED')
         frame = oops.frame.Cmatrix(rot180, flipped,
-                                       frame_id='GALILEO_SSI')
+                                       frame_id='GLL_SSI')
 
         SSI.initialized = True
 

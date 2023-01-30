@@ -204,7 +204,24 @@ class Galileo(object):
     #===========================================================================
     @staticmethod
     def load_kernels(t0, t1, loaded, lists, kernel_dict):
+        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+        import glob
 
+        kdir = os.path.join(TESTDATA_PARENT_DIRECTORY, '../SPICE/Galileo/')
+
+        cspyce.furnsh(kdir + 'LSK/naif0012.tls')
+        cspyce.furnsh(kdir + 'SCLK/mk00062a.tsc')
+        cspyce.furnsh(kdir + 'IK/gll36001.ti')
+        cspyce.furnsh(kdir + 'SPK/de421.bsp')
+        cspyce.furnsh(kdir + 'SPK/de432s.bsp')
+
+        [cspyce.furnsh(ckfile) for ckfile in glob.glob(kdir + 'CK/*.bc')]
+        [cspyce.furnsh(spkfile) for spkfile in glob.glob(kdir + 'SPK/*.bsp')]
+
+
+        return
+
+## TODO:
         # Find the range of months needed
         m1 = int((t0 - Galileo.TDB0) // Galileo.DTDB)
         m2 = int((t1 - Galileo.TDB0) // Galileo.DTDB) + 1
@@ -274,7 +291,7 @@ class Galileo(object):
 
         # Load the default instruments on the first pass
         if Galileo.loaded_instruments == []:
-            instruments += ['ISS', 'VIMS', 'CIRS', 'UVIS']
+           instruments += ['SSI']
 
         # On later calls, return quickly if there's nothing to do
         if instruments == []:
@@ -285,7 +302,7 @@ class Galileo(object):
             (day, sec) = julian.day_sec_from_iso(asof)
             asof = julian.ymdhms_format_from_day_sec(day, sec)
 
-        # Furnish instruments and frames
+        # Furnish instruments and frames; Note GLL has no frame kernel
         spicedb.open_db()
         _ = spicedb.furnish_inst(-77, inst=instruments, asof=asof)
         spicedb.close_db()
