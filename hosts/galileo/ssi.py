@@ -49,10 +49,8 @@ def from_file(filespec, fast_distortion=True,
     # Define the field of view
     FOV = meta.fov(label)
 
-
-
-#    from IPython import embed; print('+++++++++++++'); embed()
-
+    # Define the mask
+    mask = meta.mask(label)
 
     # Create a Snapshot
     result = oops.obs.Snapshot(('v','u'), meta.tstart, meta.exposure,
@@ -189,6 +187,21 @@ class Metadata(object):
         # Target
         self.target = label['TARGET_NAME']
 
+    #===========================================================================
+    def mask(self, label):
+        """Creates Galileo SSI mask.
+
+        Can be useful for debugging.
+        """
+        window = label.get('CUT_OUT_WINDOW')
+
+        if window is None:
+            return None
+
+        grid = np.mgrid[0:self.nlines, 0:self.nsamples] + 1
+        mask = np.where( ((grid[0] < window[0]) | (grid[0] > window[2]))
+                           & ((grid[1] < window[1]) | (grid[1] > window[3])), True, False)
+        return mask
 
     #===========================================================================
     def fov(self, label):
@@ -245,57 +258,6 @@ class SSI(object):
     fov = {}
     initialized = False
 
-############
-    # Create a master version of the distortion model from
-    #   Owen Jr., W.M., 2003. Cassini SSI Geometric Calibration of April 2003.
-    #   JPL IOM 312.E-2003.
-    # These polynomials convert from X,Y (radians) to U,V (pixels).
-
-    F = 2002.703    # mm
-    E2 = 8.28e-6    # / mm2
-    E5 = 5.45e-6    # / mm
-    E6 = -19.67e-6  # / mm
-    KX = 83.33333   # samples/mm
-    KY = 83.3428    # lines/mm
-
-    COEFF = np.zeros((4,4,2))
-    COEFF[1,0,0] = KX    * F
-    COEFF[3,0,0] = KX*E2 * F**3
-    COEFF[1,2,0] = KX*E2 * F**3
-    COEFF[1,1,0] = KX*E5 * F**2
-    COEFF[2,0,0] = KX*E6 * F**2
-
-    COEFF[0,1,1] = KY    * F
-    COEFF[2,1,1] = KY*E2 * F**3
-    COEFF[0,3,1] = KY*E2 * F**3
-    COEFF[0,2,1] = KY*E5 * F**2
-    COEFF[1,1,1] = KY*E6 * F**2
-
-    DISTORTION_COEFF_XY_TO_UV = COEFF
-
-    # Create a master version of the inverse distortion model.
-    # These coefficients were computed by numerically solving the above
-    # polynomials.
-    # These polynomials convert from U,V (pixels) to X,Y (radians).
-    # Maximum errors from applying the original distortion model and
-    # then inverting:
-    #   X DIFF MIN MAX -7.01489382641e-10 1.15568299657e-10
-    #   Y DIFF MIN MAX -7.7440587623e-10 8.81658628916e-10
-    #   U DIFF MIN MAX -0.00138077186011 1.94695478513e-05
-    #   V DIFF MIN MAX -0.000474712833352 0.000563339044731
-
-    INV_COEFF = np.zeros((4,4,2))
-    INV_COEFF[:,:,0] = [[ -1.14799845e-10,  7.80494024e-14,  1.73312704e-15, -5.95242349e-19],
-                        [  5.99190197e-06, -3.91823615e-13, -7.12054264e-15,  0.00000000e+00],
-                        [  1.42455664e-12, -2.15242793e-18,  0.00000000e+00,  0.00000000e+00],
-                        [ -7.11199158e-15,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
-    INV_COEFF[:,:,1] = [[ -4.86573092e-12,  5.99122009e-06, -3.91358768e-13, -7.12774967e-15],
-                        [  1.03832114e-13,  1.41728538e-12, -1.55778300e-18,  0.00000000e+00],
-                        [  2.03725690e-16, -7.11687723e-15,  0.00000000e+00,  0.00000000e+00],
-                        [  1.67086926e-21,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
-
-    DISTORTION_COEFF_UV_TO_XY = INV_COEFF
-
     #===========================================================================
     @staticmethod
     def initialize(ck='reconstructed', planets=None, asof=None,
@@ -335,68 +297,8 @@ class SSI(object):
         # Construct the SpiceFrame
         _ = oops.frame.SpiceFrame("GLL_SCAN_PLATFORM")
 
-        Galileo.initialized = True
-        return
-
-
-
-
-        Galileo.load_instruments(asof=asof)
-
-        # Load the instrument kernel
-        SSI.instrument_kernel = Galileo.spice_instrument_kernel('SSI')[0]
-
-        # Construct a Polynomial FOV
-        info = SSI.instrument_kernel['INS']['GLL_SSI']
-
-        # Full field of view
-        lines = info['PIXEL_LINES']
-        samples = info['PIXEL_SAMPLES']
-
-        xfov = info['FOV_REF_ANGLE']
-        yfov = info['FOV_CROSS_ANGLE']
-        assert info['FOV_ANGLE_UNITS'] == 'DEGREES'
-
-        uscale = np.arctan(np.tan(xfov * oops.RPD) / (samples/2.))
-        vscale = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
-
-        # Display directions: [u,v] = [right,down]
-        full_fov = oops.fov.PolynomialFOV((samples,lines),
-                                       coefft_uv_from_xy=
-                               SSI.DISTORTION_COEFF_XY_TO_UV,
-                                       coefft_xy_from_uv=None)
-        full_fov_fast = oops.fov.PolynomialFOV((samples,lines),
-                                       coefft_uv_from_xy=
-                               SSI.DISTORTION_COEFF_XY_TO_UV,
-                                       coefft_xy_from_uv=
-                               SSI.DISTORTION_COEFF_UV_TO_XY)
-        full_fov_none = oops.fov.FlatFOV((uscale,vscale), (samples,lines))
-
-        # Load the dictionary, include the subsampling modes
-        SSI.fov['FULL', False] = full_fov
-        SSI.fov['SUM2', False] = oops.fov.SubsampledFOV(full_fov, 2)
-        SSI.fov['SUM4', False] = oops.fov.SubsampledFOV(full_fov, 4)
-        SSI.fov['FULL', True] = full_fov_fast
-        SSI.fov['SUM2', True] = oops.fov.SubsampledFOV(full_fov_fast, 2)
-        SSI.fov['SUM4', True] = oops.fov.SubsampledFOV(full_fov_fast, 4)
-        SSI.fov['FULL', None] = full_fov_none
-        SSI.fov['SUM2', None] = oops.fov.SubsampledFOV(full_fov_none, 2)
-        SSI.fov['SUM4', None] = oops.fov.SubsampledFOV(full_fov_none, 4)
-
-        SSI.fov['FULL'] = full_fov_none
-        SSI.fov['SUM2'] = oops.fov.SubsampledFOV(full_fov_none, 2)
-        SSI.fov['SUM4'] = oops.fov.SubsampledFOV(full_fov_none, 4)
-
-        # Construct a SpiceFrame
-        # Deal with the fact that the instrument's internal
-        # coordinate  system is rotated 180 degrees
-        rot180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
-        flipped = oops.frame.SpiceFrame('GLL_SSI',
-                                        frame_id='GLL_SSI_FLIPPED')
-        frame = oops.frame.Cmatrix(rot180, flipped,
-                                       frame_id='GLL_SSI')
-
         SSI.initialized = True
+        return
 
     #===========================================================================
     @staticmethod

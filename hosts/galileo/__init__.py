@@ -208,8 +208,9 @@ class Galileo(object):
         import glob
 
         kdir = os.path.join(TESTDATA_PARENT_DIRECTORY, '../SPICE/Galileo/')
+        gkdir = os.path.join(TESTDATA_PARENT_DIRECTORY, '../SPICE/General/')
 
-        cspyce.furnsh(kdir + 'LSK/naif0012.tls')
+        cspyce.furnsh(gkdir + 'LSK/naif0012.tls')
         cspyce.furnsh(kdir + 'SCLK/mk00062a.tsc')
         cspyce.furnsh(kdir + 'IK/gll36001.ti')
         cspyce.furnsh(kdir + 'SPK/de421.bsp')
