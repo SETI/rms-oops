@@ -36,7 +36,7 @@ def from_file(filespec, fast_distortion=True,
     label = pdsparser.PdsLabel.from_string(recs).as_dict()
 
     # Load the dta array
-    vic = vicar.VicarImage.from_file(filespec)
+    vic = vicar.VicarImage.from_file(filespec, extraneous='warn')
     vicar_dict = vic.as_dict()
 
     # Get image metadata
