@@ -2586,7 +2586,7 @@ class Qube(object):
             obj = self.clone(recursive=True)
 
         for key, deriv in new_derivs.items():
-            obj.insert_deriv(deriv, override=True)
+            obj.insert_deriv(key, deriv, override=True)
 
         return obj
 

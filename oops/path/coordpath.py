@@ -29,7 +29,7 @@ class CoordPath(Path):
         """
 
         self.surface = surface
-        self.coords = tuple([Scalar(x) for x in coords])
+        self.coords = tuple(Scalar(x) for x in coords)
         self.obs_path = None if obs is None else Path.as_path(obs)
 
         if not self.surface.IS_VIRTUAL:

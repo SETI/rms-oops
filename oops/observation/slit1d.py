@@ -58,8 +58,7 @@ class Slit1D(Observation):
 
         # Axes / Shape / Size
         self.axes = list(axes)
-        count = ('u' in self.axes) + ('v' in self.axes)
-        if count != 1:
+        if ('u' in self.axes) == ('v' in self.axes):
             raise ValueError('axes are incompatible with Slit1D: '
                              + repr(tuple(axes)))
 

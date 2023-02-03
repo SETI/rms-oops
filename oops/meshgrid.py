@@ -161,15 +161,6 @@ class Meshgrid(object):
                         the properties of the FOV.
         """
 
-        if undersample < 1:
-            raise ValueError('invalid undersample: ' + repr(undersample))
-
-        if oversample < 1:
-            raise ValueError('invalid oversample: ' + repr(undersample))
-
-        if undersample != 1 and oversample != 1:
-            raise ValueError('undersample and oversample cannot both be != 1')
-
         u_size = 1 if u_axis < 0 else shape[u_axis]
         v_size = 1 if v_axis < 0 else shape[v_axis]
         uv_shape = (u_size, v_size)
@@ -192,6 +183,16 @@ class Meshgrid(object):
         if isinstance(oversample, numbers.Real):
             oversample = (oversample, oversample)
         oversample = Pair.as_pair(oversample).as_float().vals
+
+        # Valid value checks
+        if np.any(undersample < 1):
+            raise ValueError('invalid undersample: ' + repr(undersample))
+
+        if np.any(oversample < 1):
+            raise ValueError('invalid oversample: ' + repr(undersample))
+
+        if np.any(np.minimum(undersample, oversample) != 1):
+            raise ValueError('undersample and oversample cannot both be != 1')
 
         step = undersample/oversample
 
@@ -269,15 +270,15 @@ class Meshgrid(object):
             pass
 
         # Evaluate the LOS anew
-        los_ = self.fov.los_from_uvt(self.uv_w_duv_duv, time=time, derivs=True,
-                                     **self.fov_keywords)
+        result = self.fov.los_from_uvt(self.uv_w_duv_duv, time=time,
+                                       derivs=True, **self.fov_keywords)
 
         # Save it in the dictionary if possible
         key = Meshgrid._as_key(time)
         if key is not False:
-            self.filled_los_w_derivs[key] = los_
+            self.filled_los_w_derivs[key] = result
 
-        return los_
+        return result
 
     #===========================================================================
     def los(self, time=None):
@@ -298,15 +299,15 @@ class Meshgrid(object):
             pass
 
         # Evaluate the LOS anew
-        los_ = self.fov.los_from_uvt(self.uv, time=time, derivs=False,
-                                     **self.fov_keywords)
+        result = self.fov.los_from_uvt(self.uv, time=time, derivs=False,
+                                        **self.fov_keywords)
 
         # Save it in the dictionary if possible
         key = Meshgrid._as_key(time)
         if key is not False:
-            self.filled_los[key] = los_
+            self.filled_los[key] = result
 
-        return los_
+        return result
 
     #===========================================================================
     def dlos_duv(self, time=None):

@@ -507,8 +507,7 @@ class Backplane(object):
     ############################################################################
 
     def get_obs_event(self, event_key, derivs=False):
-        """The observation event of photons arriving at the detector.
-        """
+        """The observation event of photons arriving at the detector."""
 
         derivs = derivs or self.ALL_DERIVS
 
@@ -580,10 +579,10 @@ class Backplane(object):
 
     #===========================================================================
     def get_antimask(self, surface_key):
-        """Prepare an antimask for a particular surface event.
+        """Prepare a rectangular antimask for a particular surface event.
 
-        The antimask defines the area of the meshgrid that intercepts the given
-        surface.
+        The antimask defines the bounding box of the meshgrid that intercepts
+        the given surface.
         """
 
         # Return from the antimask cache if present

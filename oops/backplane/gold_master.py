@@ -209,8 +209,8 @@ def set_default_obs(obspath, module, planet, moon='', ring='', kwargs={}):
     """Set the details of the default observation to be used for the gold master
     test.
 
-    These are the default observation file path and module to use if the they
-    are not specified in the command line.
+    These are the default observation file path and module to use if they are
+    not specified in the command line.
 
     The specified planet, moon, and ring are used as the defaults when the
     observation is unspecified, but can be overridden at the command line.
@@ -283,7 +283,7 @@ def execute_as_command():
                     help='''Name(s) of one or more moons for which to generate
                             backplane arrays; default is %s.'''
                          % repr(DEFAULT_OBS['moon']))
-    gr.add_argument('-r', '--ring', type=str,nargs='*', metavar='name',
+    gr.add_argument('-r', '--ring', type=str, nargs='*', metavar='name',
                     default=None,
                     help='''Name(s) of one or more rings for which to generate
                             backplane arrays. Arrays are always generated for
@@ -305,18 +305,18 @@ def execute_as_command():
                     action='store_const', const='adopt',
                     help='''Adopt these backplane arrays as the new gold
                             masters.''')
-    gr.add_argument('--tolerance', metavar='TOL',
+    gr.add_argument('--tolerance', type=float, metavar='TOL',
                     default=float(DEFAULTS['tolerance']),
                     help='''Factor to apply to backplane array error tolerances;
                             default %s.'''
                          % str(DEFAULTS['tolerance']))
-    gr.add_argument('--radius', metavar='RAD',
+    gr.add_argument('--radius', type=float, metavar='RAD',
                     default=float(DEFAULTS['radius']),
                     help='''Factor to apply to backplane array radial offset
                             limits; default %s.'''
                          % str(DEFAULTS['radius']))
     gr.add_argument('--ignore-missing', action='store_true',
-                    default=float(DEFAULTS['ignore_missing']),
+                    default=DEFAULTS['ignore_missing'],
                     help='''Log a warning rather than an error if a gold
                             master backplane is missing.''')
     gr.add_argument('--suite', type=str, nargs='*', metavar='name',
@@ -375,6 +375,7 @@ def execute_as_command():
                     help='Zoom factor to apply to browse images; default %d.'
                          % DEFAULTS['zoom'])
     gr.add_argument('--format', type=str, dest='browse_format', metavar='EXT',
+                    choices=('jpg', 'png', 'tiff'),
                     default=DEFAULTS['browse_format'],
                     help='''Format for saving browse images, one of "png",
                             "jpg", or "tiff". Default is "%s".'''
@@ -402,10 +403,12 @@ def execute_as_command():
                     help='Do not write a log file in the output directory%s.'
                          % '' if DEFAULTS['log'] else ' (default)')
     gr.add_argument('--level', type=str, metavar='LEVEL',
+                    choices=['debug', 'warning', 'error']
+                            + [str(k) for k in range(1,31)],
                     default=DEFAULTS['level'],
                     help='''Minimum level for messages to be logged: "debug",
-                            "info", "warning", "error", or an integer; default
-                            is %s.'''
+                            "info", "warning", "error", or an integer 1-30;
+                            default is %s.'''
                          % DEFAULTS['level'])
     gr.add_argument('--info', action='store_true', default=False,
                     help='Include array summary info in the log.')
@@ -419,6 +422,7 @@ def execute_as_command():
     gr.add_argument('--performance', action='store_true', default=False,
                     help='Include OOPS performance information in the log.')
     gr.add_argument('--platform', type=str, metavar='OS', default=None,
+                    choices=('macos', 'windows', 'linux'),
                     help='''Name of the OS, as a proxy for how to name output
                             files: "macos" for MacOS, "windows" for Windows,
                             "linux" for Linux; default is to derive the OS name
@@ -1106,14 +1110,15 @@ class BackplaneTest(object):
 
     @staticmethod
     def _sort_key(key):
-        """Sort key function, needed to handle occurrences of Frames, Paths,
-        and None is some dictionary keys.
+        """Key function for the sort operation, needed to handle occurrences of
+        Frames, Paths, and None is some dictionary keys.
 
         Also allow sorting among numbers, strings and tuples: numbers first,
         strings second, objects third, tuples fourth.
         """
+
         if isinstance(key, (tuple, list)):
-            return 4, tuple([BackplaneTest._sort_key(item) for item in key])
+            return 4, tuple(BackplaneTest._sort_key(item) for item in key)
         if isinstance(key, numbers.Real):
             return 1, key
         if isinstance(key, str):
@@ -2022,8 +2027,8 @@ class BackplaneTest(object):
     # The summary file is a text file containing the definition of a Python
     # dictionary. The dictionary is keyed by backplane title string and its
     # values are tuples (minimum value, maximum value, masked pixels, total
-    # pixels). If the minimum and maximum are are equal, only one value is
-    # listed; if the object is fully masked, the value is None.
+    # pixels). If the minimum and maximum are equal, only one value is listed;
+    # if the object is fully masked, the value is None.
     ############################################################################
 
     @property
