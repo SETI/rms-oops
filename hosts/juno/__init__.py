@@ -259,6 +259,41 @@ class Juno(object):
         cspyce.furnsh(kdir + 'ik/juno_jiram_v02.ti')
         cspyce.furnsh(kdir + 'spk/de421.bsp')
         cspyce.furnsh(kdir + 'spk/de432s.bsp')
+### This would be best handled by creating a text file that contains a list of the
+### file names to be loaded (starting with "ck/, "spk/" etc.). Maintain this file
+### separately from the Python code. The Python code reads the list and furnishes
+### inside a big loop. When a new SPK or CK is released, we just add it to the list
+### and update it in the repo. See hosts/solar for how to allow a Python module to
+### locate a file within its own directory path. The kernels can live inside the
+### OOPS-Resources/SPICE tree, so you can determine the value of "kdir" from the
+### value of (unittester_support.OOPS_RESOURCES_ + 'SPICE/Juno/').
+###
+### Even better, adopt the Cassini module's method of just loading the CKs and SPKs
+### as they are requested, because there are so many of them. It'll just furnish the
+### CKs and SPKs when it needs them, in the background, silently.
+###
+### Other notes...
+###
+### There are a lot of duplicated files on Dropbox between
+### OOPS-Resources/SPICE/Juno and test_data/juno/kernels. Better to keep a single
+### set in the former. If kernels start to change out from underneath us in a way
+### that breaks unit tests, that would be the time to start keeping a specific
+### subset inside test_data/juno.
+###
+### The set of CKs and SPKs on Dropbox is currently incomplete. We need to start
+### maintaining it, and continue to do so once we are generating metadata tables.
+###
+### I see on the NAIF ftp server that there are multiple versions of the CKs and
+### SPKs, as there were for Cassini. We probably never need to worry about anything
+### but the reconstructed. However, in order to allow for multiple future versions,
+### I suggest you rename SPICE/Juno/CK to SPICE/Juno/CK-reconstructed and
+### SPICE/Juno/SPK to SPICE/Juno/SPK-reconstructed. This will make for simpler file
+### management going forward.
+###
+### The other day, you asked me to add a few kernels to SPICE.db. It's not clear to
+### me why that was necessary. The kernel management method I described above should
+### be sufficient for all Juno kernel management, and is the reason I've concluded
+### we should get rid of the sqlite database.
 
         return
 

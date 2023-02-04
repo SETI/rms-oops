@@ -1111,7 +1111,7 @@ class BackplaneTest(object):
     @staticmethod
     def _sort_key(key):
         """Key function for the sort operation, needed to handle occurrences of
-        Frames, Paths, and None is some dictionary keys.
+        Frames, Paths, and None in some dictionary keys.
 
         Also allow sorting among numbers, strings and tuples: numbers first,
         strings second, objects third, tuples fourth.
