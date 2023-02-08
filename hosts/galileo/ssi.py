@@ -58,7 +58,8 @@ def from_file(filespec, fast_distortion=True,
                                path = 'GLL',
                                frame = 'GLL_SCAN_PLATFORM',
                                dict = vicar_dict,       # Add the VICAR dict
-                               data = vic.data_2d,      # Add the data array
+                               data = mask,      # Add the data array
+#                               data = vic.data_2d,      # Add the data array
                                instrument = 'SSI',
                                filter = meta.filter)
 
@@ -67,6 +68,7 @@ def from_file(filespec, fast_distortion=True,
                                                 return_all_planets))
     result.insert_subfield('filespec', filespec)
     result.insert_subfield('basename', os.path.basename(filespec))
+    result.insert_subfield('mask', mask)
 
     return result
 
@@ -189,7 +191,7 @@ class Metadata(object):
 
     #===========================================================================
     def mask(self, label):
-        """Creates Galileo SSI mask.
+        """Create a Galileo SSI mask.
 
         Can be useful for debugging.
         """
@@ -199,8 +201,8 @@ class Metadata(object):
             return None
 
         grid = np.mgrid[0:self.nlines, 0:self.nsamples] + 1
-        mask = np.where( ((grid[0] < window[0]) | (grid[0] > window[2]))
-                           & ((grid[1] < window[1]) | (grid[1] > window[3])), True, False)
+        mask = np.where((grid[0] >= window[0]) & (grid[0] <= window[2]) &
+                        (grid[1] >= window[1]) & (grid[1] <= window[3]), True, False)
         return mask
 
     #===========================================================================
