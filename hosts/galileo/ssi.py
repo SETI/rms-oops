@@ -58,8 +58,7 @@ def from_file(filespec, fast_distortion=True,
                                path = 'GLL',
                                frame = 'GLL_SCAN_PLATFORM',
                                dict = vicar_dict,       # Add the VICAR dict
-                               data = mask,      # Add the data array
-#                               data = vic.data_2d,      # Add the data array
+                               data = vic.data_2d,      # Add the data array
                                instrument = 'SSI',
                                filter = meta.filter)
 

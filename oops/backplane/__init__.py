@@ -86,6 +86,7 @@ class Backplane(object):
         self.obs_event = obs.event_at_grid(self.meshgrid, time=self.time)
 #        from IPython import embed; print('+++++++++++++'); embed()
         self.obs_event._mask_ = self.obs.mask
+        self.obs_event._antimask_ = np.invert(self.obs.mask)
         self.obs_gridless_event = obs.gridless_event(self.meshgrid,
                                                      time=self.time)
 
