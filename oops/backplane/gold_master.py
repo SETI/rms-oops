@@ -15,6 +15,7 @@ class Test_<your test name>(unittest.TestCase):
 
         gm.execute_as_unittest(self,
                 obspath = 'file path inside the test_data directory',
+                index   = (index to apply to result of from_file, or None),
                 module  = 'hosts.xxx.yyy',
                 planet  = 'SATURN',             # for example
                 moon    = 'ENCELADUS',          # for example
@@ -26,12 +27,14 @@ class Test_<your test name>(unittest.TestCase):
 # How to have a gold master tester program dedicated to an instrument...
 ########################################################################
 
+import os
 import oops.backplane.gold_master as gm
 
 # Define the default observation for testing; note that this can be
 # overridden on the command line.
 
 gm.set_default_obs(obspath = 'file path inside the test_data directory',
+                   index  = (index to apply to result of from_file, or None),
                    module = 'hosts.xxx.yyy',
                    planet = 'SATURN'            # for example
                    moon   = 'ENCELADUS'         # for example
@@ -42,7 +45,7 @@ gm.set_default_obs(obspath = 'file path inside the test_data directory',
 
 gm.set_default_args(arg = default_value, ...)
 
-if __name__ == 'main':
+if __name__ == '__main__':
     gm.execute_as_command()
 
 ########################################################################
@@ -154,6 +157,7 @@ DEFAULTS = {
 DEFAULT_OBS = {
     'obspath'   : os.path.join(OOPS_TEST_DATA_PATH,
                                'cassini/ISS/W1573721822_1.IMG'),
+    'index'     : None,
     'module'    : 'hosts.cassini.iss',
     'planet'    : 'SATURN',
     'moon'      : 'EPIMETHEUS',
@@ -201,11 +205,12 @@ def set_default_args(**options):
 
     global DEFAULTS
 
-    for key, value in options:
+    for key, value in options.items():
         DEFAULTS[key] = value
 
 
-def set_default_obs(obspath, module, planet, moon='', ring='', kwargs={}):
+def set_default_obs(obspath, index, module, planet, moon=[], ring=[],
+                    kwargs={}):
     """Set the details of the default observation to be used for the gold master
     test.
 
@@ -217,6 +222,9 @@ def set_default_obs(obspath, module, planet, moon='', ring='', kwargs={}):
 
     Options:
         obspath         file path to the default data object to be used.
+        index           index to apply if from_file returns a list. If None,
+                        backplanes will be generated for every Observation
+                        returned by from_file.
         module          name of the default module to import, e.g.,
                         "hosts.cassini.iss". This module must have a "from_file"
                         method.
@@ -232,10 +240,11 @@ def set_default_obs(obspath, module, planet, moon='', ring='', kwargs={}):
     global DEFAULT_OBS
 
     DEFAULT_OBS['obspath'] = obspath
+    DEFAULT_OBS['index']   = index
     DEFAULT_OBS['module']  = module
     DEFAULT_OBS['planet']  = planet
-    DEFAULT_OBS['moon']    = moon
-    DEFAULT_OBS['ring']    = ring
+    DEFAULT_OBS['moon']    = moon if moon else []
+    DEFAULT_OBS['ring']    = ring if ring else []
     DEFAULT_OBS['kwargs']  = kwargs
 
 
@@ -265,6 +274,10 @@ def execute_as_command():
                     help='''File path to the data object(s) to be used;
                             default is %s.'''
                             % repr(DEFAULT_OBS['obspath']))
+    gr.add_argument('--index', type=int, metavar='N', default=None,
+                    help='''Index to use if the from_file method returns a list;
+                            by default, backplane arrays will be generated for
+                            each Observation object returned by from_file.''')
     gr.add_argument('--module', type=str, default=None, metavar='hosts...',
                     help='''Name of the module containing the "from_file"
                             method for any file paths specified; default is
@@ -439,7 +452,7 @@ def execute_as_command():
 ################################################################################
 
 def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
-                        kwargs={}, **options):
+                        index=None, kwargs={}, **options):
     """Run the gold master test suites for one or more observations as a unit
     test.
 
@@ -454,6 +467,7 @@ def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
         ring            name of the default ring, if any, or list of ring names.
                         Backplane arrays are always generated for the full ring
                         plane of the specified planet.
+        index           index to use if obspath returns a list; otherwise, None
         kwargs          an optional dictionary of keyword arguments to be passed
                         to from_file.
         **options       overrides for any default gold_master input arguments.
@@ -462,7 +476,7 @@ def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
     global DEFAULTS
 
     # Set the default observation details
-    set_default_obs(obspath, module, planet=planet, moon=moon, ring=ring,
+    set_default_obs(obspath, index, module, planet=planet, moon=moon, ring=ring,
                     kwargs={})
 
     # Initialize the command argument namespace
@@ -511,6 +525,7 @@ def _clean_up_args(args):
     # Use the default observation if necessary
     if not args.obspath:
         args.obspath = DEFAULT_OBS['obspath']
+        args.index   = DEFAULT_OBS['index']
         args.module  = DEFAULT_OBS['module']
         if args.planet is None:
             args.planet = DEFAULT_OBS['planet']
@@ -534,9 +549,9 @@ def _clean_up_args(args):
     if isinstance(args.planet, str):
         args.planet = [args.planet]
     if isinstance(args.moon, str):
-        args.moon = [args.moon]
+        args.moon = [args.moon] if args.moon else []
     if isinstance(args.ring, str):
-        args.ring = [args.ring]
+        args.ring = [args.ring] if args.ring else []
 
     # --output
     if args.output is None:
@@ -614,6 +629,7 @@ def _clean_up_args(args):
                 raise ValueError('Undefined environment variable: '
                                  + 'OOPS_TEST_DATA_PATH')
             if not abspath.startswith(OOPS_TEST_DATA_PATH_):
+                print(33333, abspath, OOPS_TEST_DATA_PATH_)
                 raise ValueError('File is not in the test data directory: '
                                  + obspath)
         if not os.path.exists(abspath):
@@ -633,6 +649,9 @@ def _clean_up_args(args):
     args.backplane_tests = []
     for abspath in args.abspaths:
         result = args.from_file(abspath, **DEFAULT_OBS['kwargs'])
+        if args.index is not None:
+            result = result[args.index]
+
         if isinstance(result, Observation):
             bpt = BackplaneTest(result, args)
             args.backplane_tests.append(bpt)
@@ -944,6 +963,9 @@ class BackplaneTest(object):
         self.gold_summary_ = None
         self.summary = {}
         self.results = {}
+
+        # Make sure the output directory exits
+        os.makedirs(self.output_dir, exist_ok=True)
 
         # Set up the log handler; set aside any old log
         # Note that each BackplaneTest gets its own dedicated logger
