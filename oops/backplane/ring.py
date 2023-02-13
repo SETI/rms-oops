@@ -793,12 +793,17 @@ def ring_test_suite(bpt):
         bpt.gmtest(bp.ring_radius(name),
                    name + ' radius (km)',
                    limit=0.1, radius=1)
-        bpt.gmtest(bp.ring_angular_resolution(name),
-                   name + ' angular resolution (deg)',
-                   method='degrees', limit=0.01, radius=1.5)
+
         bpt.gmtest(bp.ring_radius(name) * bp.ring_angular_resolution(name),
                    name + ' angular resolution (km)',
                    limit=0.1, radius=1.5)
+
+        mask = bp.where_inside(name, planet, tvl=False)
+        angular_res = bp.ring_angular_resolution(name).remask_or(mask)
+            # This test gets poorly-behaved near origin, hence, mask
+        bpt.gmtest(angular_res,
+                   name + ' angular resolution (deg)',
+                   method='degrees', limit=0.01, radius=1.5)
 
         # Longitude
         bpt.gmtest(bp.ring_longitude(name, reference='aries'),
@@ -836,13 +841,13 @@ def ring_test_suite(bpt):
 
         # Longitude & azimuth tests
         longitude = bp.ring_longitude(name, reference='obs')
-        azimuth = bp.ring_azimuth(name, 'obs')
+        azimuth = bp.ring_azimuth(name, direction='obs')
         bpt.gmtest(azimuth - longitude,
                    name + ' azimuth minus longitude wrt observer (deg)',
                    method='mod360', limit=0.01, radius=1)
 
         longitude = bp.ring_longitude(name, reference='sun')
-        azimuth = bp.ring_azimuth(name, 'sun')
+        azimuth = bp.ring_azimuth(name, direction='sun')
         bpt.compare(azimuth - longitude, 0.,
                     name + ' azimuth minus longitude wrt Sun (deg)',
                     method='mod360', limit=1.)

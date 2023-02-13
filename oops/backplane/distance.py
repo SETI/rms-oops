@@ -168,7 +168,9 @@ def distance_test_suite(bpt):
     for (planet, ring) in bpt.planet_ring_pairs:
         bpt.compare(bp.center_distance(planet) - bp.center_distance(ring),
                     0.,
-                    planet + ' center minus ' + ring + ' center to observer (km)')
+                    planet + ' center minus ' + ring
+                           + ' center to observer (km)',
+                    limit=1.e-6)
 
 register_test_suite('distance', distance_test_suite)
 

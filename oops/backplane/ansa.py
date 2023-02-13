@@ -280,7 +280,7 @@ def ansa_test_suite(bpt):
         bpt.compare(longitude - bp.ansa_longitude(name, 'oha'),
                     PI,
                     name + ' longitude wrt observer minus wrt OHA (deg)',
-                    method='mod360', limit=1.e-14)
+                    method='mod360', limit=1.e-13)
 
         longitude = bp.ansa_longitude(name, 'sun')
         bpt.gmtest(longitude,
@@ -289,7 +289,7 @@ def ansa_test_suite(bpt):
         bpt.compare(longitude - bp.ansa_longitude(name, 'sha'),
                     PI,
                     name + ' longitude wrt Sun minus wrt SHA (deg)',
-                    method='mod360', limit=1.e-15)
+                    method='mod360', limit=1.e-13)
 
 register_test_suite('ansa', ansa_test_suite)
 

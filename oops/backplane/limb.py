@@ -199,7 +199,7 @@ def limb_test_suite(bpt):
                    method='mod360', limit=1.e-13)
         bpt.compare(bp.limb_latitude(name) - bp.latitude(name), 0.,
                    name + ' latitude, limb minus generic (deg)',
-                   limit=1.e-13)
+                   method='degrees', limit=1.e-13)
 
         # Test a masked version
         key = ('limb_altitude', name, 0., 80000.)

@@ -507,33 +507,33 @@ def spheroid_test_suite(bpt):
         cos_lat = bp.latitude(name).cos().min(builtins=True)
         bpt.gmtest(bp.longitude(name, 'iau'),
                    name + ' longitude, IAU (deg)',
-                   limit=0.1/cos_lat, method='mod360', radius=radius)
+                   limit=0.001/cos_lat, method='mod360', radius=radius)
         bpt.gmtest(bp.longitude(name, 'obs'),
                    name + ' longitude wrt observer (deg)',
-                   limit=0.1/cos_lat, method='mod360', radius=radius)
+                   limit=0.001/cos_lat, method='mod360', radius=radius)
         bpt.gmtest(bp.longitude(name, reference='obs', minimum=-180),
                    name + ' longitude wrt observer, minimum -180 (deg)',
-                   limit=0.1/cos_lat, method='mod360', radius=radius)
+                   limit=0.001/cos_lat, method='mod360', radius=radius)
         bpt.gmtest(bp.longitude(name, 'oha'),
                    name + ' longitude wrt OHA (deg)',
-                   limit=0.1/cos_lat, method='mod360', radius=radius)
+                   limit=0.001/cos_lat, method='mod360', radius=radius)
         bpt.gmtest(bp.longitude(name, 'sun'),
                    name + ' longitude wrt Sun (deg)',
-                   limit=0.1/cos_lat, method='mod360', radius=radius)
+                   limit=0.001/cos_lat, method='mod360', radius=radius)
         bpt.gmtest(bp.longitude(name, 'sha'),
                    name + ' longitude wrt SHA (deg)',
-                   limit=0.1/cos_lat, method='mod360', radius=radius)
+                   limit=0.001/cos_lat, method='mod360', radius=radius)
         bpt.gmtest(bp.longitude(name, direction='east'),
                    name + ' longitude eastward (deg)',
-                   limit=0.1/cos_lat, method='mod360', radius=radius)
+                   limit=0.001/cos_lat, method='mod360', radius=radius)
 
         # Latitude
         bpt.gmtest(bp.latitude(name, lat_type='centric'),
                    name + ' latitude, planetocentric (deg)',
-                   limit=0.1, method='degrees', radius=radius)
+                   limit=0.001, method='degrees', radius=radius)
         bpt.gmtest(bp.latitude(name, lat_type='graphic'),
                    name + ' latitude, planetographic (deg)',
-                   limit=0.1, method='degrees', radius=radius)
+                   limit=0.001, method='degrees', radius=radius)
 
     for name in bpt.body_names:
 
@@ -541,10 +541,10 @@ def spheroid_test_suite(bpt):
         cos_lat = bp.sub_observer_latitude(name).cos().mean(builtins=True)
         bpt.gmtest(bp.sub_observer_longitude(name, reference='iau'),
                    name + ' sub-observer longitude, IAU (deg)',
-                   limit=0.1/cos_lat, method='mod360')
+                   limit=0.001/cos_lat, method='mod360')
         bpt.gmtest(bp.sub_observer_longitude(name, reference='sun', minimum=-180),
                    name + ' sub-observer longitude wrt Sun (deg)',
-                   limit=0.1/cos_lat, method='mod360')
+                   limit=0.001/cos_lat, method='mod360')
         bpt.compare(bp.sub_observer_longitude(name, reference='obs', minimum=-180),
                     0.,
                     name + ' sub-observer longitude wrt observer (deg)',
@@ -552,19 +552,19 @@ def spheroid_test_suite(bpt):
 
         bpt.gmtest(bp.sub_observer_latitude(name, lat_type='centric'),
                    name + ' sub-observer latitude, planetocentric (deg)',
-                   limit=0.1, method='degrees')
+                   limit=0.001, method='degrees')
         bpt.gmtest(bp.sub_observer_latitude(name, lat_type='graphic'),
                    name + ' sub-observer latitude, planetographic (deg)',
-                   limit=0.1, method='degrees')
+                   limit=0.001, method='degrees')
 
         # Sub-solar longitude and latitude
         cos_lat = bp.sub_solar_latitude(name).cos().mean(builtins=True)
         bpt.gmtest(bp.sub_solar_longitude(name, reference='iau'),
                    name + ' sub-solar longitude wrt IAU (deg)',
-                   limit=0.1/cos_lat, method='mod360')
+                   limit=0.001/cos_lat, method='mod360')
         bpt.gmtest(bp.sub_solar_longitude(name, reference='obs', minimum=-180),
                    name + ' sub-solar longitude wrt observer (deg)',
-                   limit=0.1/cos_lat, method='mod360')
+                   limit=0.001/cos_lat, method='mod360')
         bpt.compare(bp.sub_solar_longitude(name, reference='sun', minimum=-180),
                     0.,
                     name + ' sub-solar longitude wrt Sun (deg)',
@@ -572,10 +572,10 @@ def spheroid_test_suite(bpt):
 
         bpt.gmtest(bp.sub_solar_latitude(name, lat_type='centric'),
                    name + ' sub-solar latitude, planetocentric (deg)',
-                   limit=0.1, method='degrees')
+                   limit=0.001, method='degrees')
         bpt.gmtest(bp.sub_solar_latitude(name, lat_type='graphic'),
                    name + ' sub-solar latitude, planetographic (deg)',
-                   limit=0.1, method='degrees')
+                   limit=0.001, method='degrees')
 
         # Surface laws
         bpt.gmtest(bp.lambert_law(name),

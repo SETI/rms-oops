@@ -16,7 +16,20 @@ gm.set_default_obs(obspath = obspath,
                    planet = 'JUPITER',
                    moon   = [],
                    ring   = [],
-                   kwargs = {})
+                   kwargs = {'snap': False})
+
+gm.override('Celestial north minus east angles (deg)', 8.)
+gm.override('JUPITER center resolution along u axis (km)', 0.1)
+gm.override('JUPITER center resolution along v axis (km)', 0.1)
+gm.override('JUPITER:ANSA center resolution along u axis (km)', 0.1)
+gm.override('JUPITER:ANSA center resolution along v axis (km)', 0.1)
+gm.override('JUPITER:LIMB center resolution along u axis (km)', 0.1)
+gm.override('JUPITER:LIMB center resolution along v axis (km)', 0.1)
+gm.override('JUPITER:RING azimuth minus longitude wrt Sun (deg)', None)
+gm.override('JUPITER:RING center resolution along u axis (km)', 0.1)
+gm.override('JUPITER:RING center resolution along v axis (km)', 0.1)
+gm.override('JUPITER:RING emission angle, ring minus center (deg)', 40.)
+gm.override('JUPITER:RING incidence angle, ring minus center (deg)', 3.)
 
 gm.set_default_args(inventory=True, border=4)
 

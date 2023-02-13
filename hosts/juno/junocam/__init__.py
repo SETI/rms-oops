@@ -23,7 +23,7 @@ from hosts.juno import Juno
 #===============================================================================
 ### Avoid two horizontal separators in a row. One should suffice.
 def from_file(filespec, fast_distortion=True,
-              return_all_planets=False, **parameters):
+              return_all_planets=False, snap=False, **parameters):
     """A general, static method to return a Pushframe object based on a given
     JUNOCAM image file.
 
@@ -34,6 +34,9 @@ def from_file(filespec, fast_distortion=True,
 
         return_all_planets  Include kernels for all planets not just
                             Jupiter or Saturn.
+
+        snap                True to model the image as a Snapshot rather than as
+                            a TimedImage.
     """
     JUNOCAM.initialize()    # Define everything the first time through; use
                             # defaults unless initialize() is called explicitly.
@@ -63,7 +66,6 @@ def from_file(filespec, fast_distortion=True,
 ### You do have the stop time, after all.
 
     # Construct a Pushframe for each framelet
-    snap = False
     obs = []
     for i in range(meta.nframelets):
         fmeta = Metadata(flabels[i])
@@ -432,6 +434,44 @@ class JUNOCAM(object):
 
 ################################################################################
 # UNIT TESTS
+################################################################################
+import os
+import unittest
+import oops.backplane.gold_master as gm
+
+from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+
+class Test_Juno_Junocam_GoldMaster(unittest.TestCase):
+
+    def runTest(self):
+
+        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
+                               'juno/junocam/03/JNCR_2016347_03C00192_V01.img')
+
+        gm.override('Celestial north minus east angles (deg)', 8.)
+        gm.override('JUPITER center resolution along u axis (km)', 0.1)
+        gm.override('JUPITER center resolution along v axis (km)', 0.1)
+        gm.override('JUPITER:ANSA center resolution along u axis (km)', 0.1)
+        gm.override('JUPITER:ANSA center resolution along v axis (km)', 0.1)
+        gm.override('JUPITER:LIMB center resolution along u axis (km)', 0.1)
+        gm.override('JUPITER:LIMB center resolution along v axis (km)', 0.1)
+        gm.override('JUPITER:RING azimuth minus longitude wrt Sun (deg)', None)
+        gm.override('JUPITER:RING center resolution along u axis (km)', 0.1)
+        gm.override('JUPITER:RING center resolution along v axis (km)', 0.1)
+        gm.override('JUPITER:RING emission angle, ring minus center (deg)', 40.)
+        gm.override('JUPITER:RING incidence angle, ring minus center (deg)', 3.)
+
+        gm.execute_as_unittest(self,
+                obspath = obspath,
+                index   = 5,
+                module  = 'hosts.juno.junocam',
+                planet  = 'JUPITER',
+                moon    = '',
+                ring    = '',
+                kwargs  = {'swap': False})
+
+################################################################################
+# OLD UNIT TESTS
 ################################################################################
 import unittest
 import os.path

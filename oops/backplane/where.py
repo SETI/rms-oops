@@ -214,7 +214,7 @@ def where_inside(self, event_key, surface_key, tvl=False):
                                          inside=True)
 
 
-def where_outside(self, event_key, tvl=False):
+def where_outside(self, event_key, surface_key, tvl=False):
     """A mask where the first surface is exterior to the second surface.
 
     If tvl is True, this uses the mask uses three-valued logic, where locations
