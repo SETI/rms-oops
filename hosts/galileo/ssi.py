@@ -60,14 +60,14 @@ def from_file(filespec, fast_distortion=True,
                                dict = vicar_dict,       # Add the VICAR dict
                                data = vic.data_2d,      # Add the data array
                                instrument = 'SSI',
-                               filter = meta.filter)
+                               filter = meta.filter,
+                               mask = mask,
+                               filespec = filespec,
+                               basename = os.path.basename(filespec))
 
     result.insert_subfield('spice_kernels',
                            Galileo.used_kernels(result.time, 'iss',
                                                 return_all_planets))
-    result.insert_subfield('filespec', filespec)
-    result.insert_subfield('basename', os.path.basename(filespec))
-    result.insert_subfield('mask', mask)
 
     return result
 
@@ -201,7 +201,7 @@ class Metadata(object):
 
         grid = np.mgrid[0:self.nlines, 0:self.nsamples] + 1
         mask = np.where((grid[0] >= window[0]) & (grid[0] <= window[2]) &
-                        (grid[1] >= window[1]) & (grid[1] <= window[3]), True, False)
+                        (grid[1] >= window[1]) & (grid[1] <= window[3]), False, True)
         return mask
 
     #===========================================================================
