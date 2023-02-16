@@ -89,19 +89,21 @@ def from_file(filespec, fast_distortion=True,
         if not snap:
 ### Should be "else"
 
-            lines = fmeta.fov.uv_shape.vals[1]
-            cadence = oops.cadence.TDICadence(lines, fmeta.tstart,
+            tdi_lines = fmeta.fov.uv_shape.vals[0]
+            cadence = oops.cadence.TDICadence(tdi_lines, fmeta.tstart,
                                               fmeta.tdi_texp, fmeta.tdi_stages)
-            item = oops.obs.TimedImage(('vt','u'),
+            fov = oops.fov.TDIFOV(fmeta.fov, tstop=fmeta.tstop,
+                                  tdi_texp=fmeta.tdi_texp, tdi_axis='-u')
+            item = oops.obs.TimedImage(('v','ut'),
                                        cadence = cadence,
-                                       fov = fmeta.fov,
+                                       fov = fov,
                                        path = 'JUNO',
                                        frame = 'JUNO_JUNOCAM',
                                        instrument = 'JUNOCAM',
                                        filter = fmeta.filter,
                                        data = framelets[:,:,i])
-### The fov is wrong here. Each framelet needs its own TDIFOV, not the generic
-### fov, and each will have its own unique tstop value:
+### The fov value of fov.meta was wrong here. Each framelet needs its own
+### TDIFOV, not the generic fov, and each will have its own unique tstop value:
 ###     fov = TDIFOV(fmeta.fov, tstop, tdi_texp=fmeta.tdi_texp, tdi_axis='-u')
 ### where tstop is the end time of that individual framelet. I suspect it is
 ### close enough  that the backplanes look reasonable, but it should be fixed
@@ -329,7 +331,7 @@ class Metadata(object):
             scale = px/fo
             distortion_coeff = [1,0,k1,0,k2]
 
-            self.fov = oops.fov.RadialFOV(scale,
+            self.fov = oops.fov.BarrelFOV(scale,
                                           (self.nsamples, self.frlines),
                                           coefft_uv_from_xy=distortion_coeff,
                                           uv_los=(cx, cy))
@@ -449,16 +451,8 @@ class Test_Juno_Junocam_GoldMaster(unittest.TestCase):
                                'juno/junocam/03/JNCR_2016347_03C00192_V01.img')
 
         gm.override('Celestial north minus east angles (deg)', 8.)
-        gm.override('JUPITER center resolution along u axis (km)', 0.1)
-        gm.override('JUPITER center resolution along v axis (km)', 0.1)
-        gm.override('JUPITER:ANSA center resolution along u axis (km)', 0.1)
-        gm.override('JUPITER:ANSA center resolution along v axis (km)', 0.1)
-        gm.override('JUPITER:LIMB center resolution along u axis (km)', 0.1)
-        gm.override('JUPITER:LIMB center resolution along v axis (km)', 0.1)
         gm.override('JUPITER:RING azimuth minus longitude wrt Sun (deg)', None)
-        gm.override('JUPITER:RING center resolution along u axis (km)', 0.1)
-        gm.override('JUPITER:RING center resolution along v axis (km)', 0.1)
-        gm.override('JUPITER:RING emission angle, ring minus center (deg)', 40.)
+        gm.override('JUPITER:RING emission angle, ring minus center (deg)', None)
         gm.override('JUPITER:RING incidence angle, ring minus center (deg)', 3.)
 
         gm.execute_as_unittest(self,
@@ -468,7 +462,8 @@ class Test_Juno_Junocam_GoldMaster(unittest.TestCase):
                 planet  = 'JUPITER',
                 moon    = '',
                 ring    = '',
-                kwargs  = {'swap': False})
+                kwargs  = {'snap': False},
+                inventory=False, border=10)     # overrides of defaults
 
 ################################################################################
 # OLD UNIT TESTS

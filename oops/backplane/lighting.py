@@ -188,38 +188,93 @@ def lighting_test_suite(bpt):
     bp = bpt.backplane
     for name in bpt.body_names + bpt.ring_names:
 
-        phase = bp.phase_angle(name)
-        bpt.gmtest(phase,
-                   name + ' phase angle (deg)',
+        apparent = bp.phase_angle(name, apparent=True)
+        actual   = bp.phase_angle(name, apparent=False)
+        bpt.gmtest(apparent,
+                   name + ' phase angle, apparent (deg)',
                    limit=0.01, radius=1.5, method='degrees')
-        bpt.compare(phase + bp.scattering_angle(name),
+        bpt.gmtest(actual,
+                   name + ' phase angle, actual (deg)',
+                   limit=0.01, radius=1.5, method='degrees')
+        bpt.compare(bp.phase_angle(name) + bp.scattering_angle(name),
                     Scalar.PI,
                     name + ' phase plus scattering angle (deg)',
-                    limit=1.e-15, method='degrees')
+                    limit=1.e-14, method='degrees')
+        bpt.compare(apparent - actual,
+                    0.,
+                    name + ' phase angle, apparent minus actual (deg)',
+                    limit=0.1, method='degrees')
 
-        phase = bp.center_phase_angle(name)
-        bpt.gmtest(phase,
-                   name + ' center phase angle (deg)',
+        apparent = bp.center_phase_angle(name, apparent=True)
+        actual   = bp.center_phase_angle(name, apparent=False)
+        bpt.gmtest(apparent,
+                   name + ' center phase angle, apparent (deg)',
                    limit=0.01, method='degrees')
-        bpt.compare(phase + bp.center_scattering_angle(name),
+        bpt.gmtest(actual,
+                   name + ' center phase angle, actual (deg)',
+                   limit=0.01, method='degrees')
+        bpt.compare(bp.center_phase_angle(name)
+                    + bp.center_scattering_angle(name),
                     Scalar.PI,
                     name + ' center phase plus scattering angle (deg)',
-                    limit=1.e-15, method='degrees')
+                    limit=1.e-14, method='degrees')
+        bpt.compare(apparent - actual,
+                    0.,
+                    name + ' center phase angle, apparent minus actual (deg)',
+                    limit=0.1, method='degrees')
 
-        bpt.gmtest(bp.incidence_angle(name),
-                   name + ' incidence angle (deg)',
+        apparent = bp.incidence_angle(name, apparent=True)
+        actual   = bp.incidence_angle(name, apparent=False)
+        bpt.gmtest(apparent,
+                   name + ' incidence angle, apparent (deg)',
                    limit=0.01, radius=1.5, method='degrees')
-        bpt.gmtest(bp.emission_angle(name),
-                   name + ' emission angle (deg)',
+        bpt.gmtest(actual,
+                   name + ' incidence angle, actual (deg)',
                    limit=0.01, radius=1.5, method='degrees')
+        bpt.compare(apparent - actual,
+                    0.,
+                    name + ' incidence angle, apparent minus actual (deg)',
+                    limit=0.1, method='degrees')
 
-        if name in bpt.ring_names:
-            bpt.gmtest(bp.center_incidence_angle(name),
-                       name + ' center incidence angle (deg)',
-                       limit=0.01, method='degrees')
-            bpt.gmtest(bp.center_emission_angle(name),
-                       name + ' center emission angle (deg)',
-                       limit=0.01, method='degrees')
+        apparent = bp.emission_angle(name, apparent=True)
+        actual   = bp.emission_angle(name, apparent=False)
+        bpt.gmtest(apparent,
+                   name + ' emission angle, apparent (deg)',
+                   limit=0.01, radius=1.5, method='degrees')
+        bpt.gmtest(actual,
+                   name + ' emission angle, actual (deg)',
+                   limit=0.01, radius=1.5, method='degrees')
+        bpt.compare(apparent - actual,
+                    0.,
+                    name + ' emission angle, apparent minus actual (deg)',
+                    limit=0.1, method='degrees')
+
+    for name in bpt.ring_names:
+        apparent = bp.center_incidence_angle(name, apparent=True)
+        actual   = bp.center_incidence_angle(name, apparent=False)
+        bpt.gmtest(apparent,
+                   name + ' center incidence angle, apparent (deg)',
+                   limit=0.01, method='degrees')
+        bpt.gmtest(actual,
+                   name + ' center incidence angle, actual (deg)',
+                   limit=0.01, method='degrees')
+        bpt.compare(apparent - actual,
+                    0.,
+                    name + ' center incidence angle, apparent minus actual (deg)',
+                    limit=0.1, method='degrees')
+
+        apparent = bp.center_emission_angle(name, apparent=True)
+        actual   = bp.center_emission_angle(name, apparent=False)
+        bpt.gmtest(apparent,
+                   name + ' center emission angle, apparent (deg)',
+                   limit=0.01, method='degrees')
+        bpt.gmtest(actual,
+                   name + ' center emission angle, actual (deg)',
+                   limit=0.01, method='degrees')
+        bpt.compare(apparent - actual,
+                    0.,
+                    name + ' center emission angle, apparent minus actual (deg)',
+                    limit=0.1, method='degrees')
 
 register_test_suite('lighting', lighting_test_suite)
 

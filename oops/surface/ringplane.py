@@ -3,10 +3,10 @@
 ################################################################################
 
 import numpy as np
-from polymath     import Scalar, Vector3
-from oops.frame   import Frame
-from oops.path    import Path
-from oops.surface import Surface
+from polymath       import Scalar, Vector3
+from oops.frame     import Frame
+from oops.path      import Path
+from oops.surface   import Surface
 
 class RingPlane(Surface):
     """A subclass of Surface describing a flat surface in the (x,y) plane, in
@@ -21,6 +21,9 @@ class RingPlane(Surface):
 
     COORDINATE_TYPE = 'polar'
     IS_VIRTUAL = False
+
+    SPEED_CUTOFF = 300.     # maximum vflat in km/s. Without a limit, speeds
+                            # near the origin approach C.
 
     #===========================================================================
     def __init__(self, origin, frame, radii=None, gravity=None,
@@ -320,6 +323,11 @@ class RingPlane(Surface):
             if np.any(mask):
                 vflat = vflat.remask_or(mask)
 
+        # Clamp down the speeds to avoid ridiculous speeds near the origin
+        speed = vflat.norm()
+        if (speed > RingPlane.SPEED_CUTOFF).any():
+            vflat = vflat.unit() * Scalar.minimum(speed, RingPlane.SPEED_CUTOFF)
+
         return vflat
 
     ############################################################################
@@ -490,7 +498,7 @@ class Test_RingPlane(unittest.TestCase):
         speed1 = vels.norm()
         speed2 = a * Gravity.SATURN.n(a.vals)
         diff = (speed2 - speed1) / speed1
-        self.assertTrue(abs(diff).max() < 1.e-15)
+        self.assertTrue(abs(diff[speed2 < RingPlane.SPEED_CUTOFF]).max() < 1.e-15)
 
         ########################################################################
         # coords_of_event, event_from_coords

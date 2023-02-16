@@ -500,7 +500,7 @@ class Snapshot(Observation):
         centers = arrival_event.neg_arr_ap
         ranges = centers.norm()
         radii = Scalar([body.radius for body in bodies])
-        radius_angles = (radii/ranges).arcsin()
+        radius_angles = (radii / ranges).arcsin()
 
         inner_radii = Scalar([body.inner_radius for body in bodies])
         inner_angles = (inner_radii / ranges).arcsin()

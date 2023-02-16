@@ -163,12 +163,7 @@ class Event(object):
                 state = state.with_deriv('t', Vector3.ZERO)
 
         self._state_ = state.as_readonly()
-
-        if 't' not in self._state_.derivs:
-            raise ValueError('Event state requires a time derivative')
-
         self._pos_ = self._state_.without_deriv('t')
-
         self._origin_ = Event.PATH_CLASS.as_waypoint(origin)
         self._frame_ = Frame.as_wayframe(frame) or origin.frame
 
@@ -441,7 +436,8 @@ class Event(object):
 
         self._arr_ = arr
         if (self._ssb_ is not None) and (self._ssb_._arr_ is None):
-            self._ssb_._arr_ = self.xform_to_j2000.rotate(self._arr_)
+            ssb_arr = self.xform_to_j2000.rotate(self._arr_)
+            self._ssb_._arr_ = ssb_arr.as_readonly()
 
         self.empty_cache()
 
@@ -465,7 +461,8 @@ class Event(object):
 
         self._arr_ap_ = arr_ap
         if (self._ssb_ is not None) and (self._ssb_._arr_ap_ is None):
-            self._ssb_._arr_ap_ = self.xform_to_j2000.rotate(self._arr_ap_)
+            ssb_arr_ap = self.xform_to_j2000.rotate(self._arr_ap_)
+            self._ssb_._arr_ap_ = ssb_arr_ap.as_readonly()
 
         self.empty_cache()
 
@@ -476,7 +473,7 @@ class Event(object):
     @arr_j2000.setter
     def arr_j2000(self, value):
         ssb_event = self.ssb
-        if self is ssb_event:
+        if self is ssb_event:       # avoid recursion
             self.arr = value
         else:
             value = Vector3.as_vector3(value).as_readonly()
@@ -492,7 +489,7 @@ class Event(object):
     @arr_ap_j2000.setter
     def arr_ap_j2000(self, value):
         ssb_event = self.ssb
-        if self is ssb_event:
+        if self is ssb_event:       # avoid recursion
             self.arr_ap = value
         else:
             value = Vector3.as_vector3(value).as_readonly()
@@ -571,7 +568,7 @@ class Event(object):
         self.ssb.arr = -value
         self.ssb._neg_arr_ = value
 
-        if self.ssb is not self:
+        if self.ssb is not self:        # avoid recursion
             self.arr = self.xform_to_j2000.unrotate(self.ssb._arr_)
 
         self.empty_cache()
@@ -586,7 +583,7 @@ class Event(object):
         self.ssb.arr_ap = -value
         self.ssb._neg_arr_ap_ = value
 
-        if self.ssb is not self:
+        if self.ssb is not self:        # avoid recursion
             self.arr_ap = self.xform_to_j2000.unrotate(self.ssb._arr_ap_)
 
         self.empty_cache()
@@ -622,7 +619,8 @@ class Event(object):
 
         self._dep_ = dep
         if (self._ssb_ is not None) and (self._ssb_._dep_ is None):
-            self._ssb_._dep_ = self.xform_to_j2000.rotate(self._dep_)
+            ssb_dep = self.xform_to_j2000.rotate(self._dep_)
+            self._ssb_._dep_ = ssb_dep.as_readonly()
 
         self.empty_cache()
 
@@ -647,7 +645,8 @@ class Event(object):
         self._dep_ap_ = dep_ap
 
         if (self._ssb_ is not None) and (self._ssb_._dep_ap_ is None):
-            self._ssb_._dep_ap_ = self.xform_to_j2000.rotate(self._dep_ap_)
+            ssb_dep_ap = self.xform_to_j2000.rotate(self._dep_ap_)
+            self._ssb_._dep_ap_ = ssb_dep_ap.as_readonly()
 
         self.empty_cache()
 
@@ -659,7 +658,7 @@ class Event(object):
     def dep_j2000(self, value):
         ssb_event = self.ssb
 
-        if self is ssb_event:
+        if self is ssb_event:       # avoid recursion
             self.dep = value
         else:
             value = Vector3.as_vector3(value).as_readonly()
@@ -675,12 +674,12 @@ class Event(object):
     @dep_ap_j2000.setter
     def dep_ap_j2000(self, value):
         ssb_event = self.ssb
-        if self is ssb_event:
+        if self is ssb_event:       # avoid recursion
             self.dep_ap = value
         else:
             value = Vector3.as_vector3(value).as_readonly()
             self.dep_ap = self.xform_to_j2000.unrotate(value)
-            ssb_event._dep_ap_ = value
+            ssb_event._dep_ap_ = value.as_readonly()
 
         self.empty_cache()
 
@@ -726,7 +725,8 @@ class Event(object):
         self._perp_ = perp
 
         if (self._ssb_ is not None) and (self._ssb_._perp_ is None):
-            self._ssb_._perp_ = self.xform_to_j2000.rotate(self._perp_)
+            ssb_perp = self.xform_to_j2000.rotate(self._perp_)
+            self._ssb_._perp_ = ssb_perp.as_readonly()
 
         self.empty_cache()
 
@@ -750,7 +750,8 @@ class Event(object):
         self._vflat_ = vflat
 
         if (self._ssb_ is not None) and (self._ssb_._vflat_ is None):
-            self._ssb_._vflat_ = self.xform_to_j2000.rotate(self._vflat_)
+            ssb_vflat = self.xform_to_j2000.rotate(self._vflat_)
+            self._ssb_._vflat_ = ssb_vflat.as_readonly()
 
         self.empty_cache()
 
@@ -1713,14 +1714,9 @@ class Event(object):
         # the length of the ray is adjusted to be accurate to higher order in
         # (v/c)
 
-        ray_ssb = Vector3.as_vector3(ray_ssb).as_readonly()
-
+        ray_ssb = Vector3.as_vector3(ray_ssb, derivs).as_readonly()
         wrt_ssb = self.wrt_ssb(derivs, quick=quick)
-        vel_ssb = wrt_ssb.vel + wrt_ssb.vflat
-
-        if not derivs:
-            ray_ssb = ray_ssb.wod
-            vel_ssb = vel_ssb.wod
+        vel_ssb = wrt_ssb.vel + wrt_ssb.vflat.without_deriv('t')
 
         # Below, factor = 1 is good to first order, matching the accuracy of the
         # SPICE toolkit. The expansion in beta below was determined empirically
@@ -1758,14 +1754,9 @@ class Event(object):
         # This procedure is equivalent to a vector subtraction of the velocity
         # of the observer from the ray, given that the ray has length C.
 
-        ray_ap_ssb = Vector3.as_vector3(ray_ap_ssb).as_readonly()
-
+        ray_ap_ssb = Vector3.as_vector3(ray_ap_ssb, derivs).as_readonly()
         wrt_ssb = self.wrt_ssb(derivs, quick=quick)
-        vel_ssb = wrt_ssb.vel + wrt_ssb.vflat
-
-        if not derivs:
-            ray_ap_ssb = ray_ap_ssb.wod
-            vel_ssb = vel_ssb.wod
+        vel_ssb = wrt_ssb.vel + wrt_ssb.vflat.without_deriv('t')
 
         # Invert the function above
         beta_ssb = C_INVERSE * vel_ssb
@@ -2135,8 +2126,6 @@ class Test_Event(unittest.TestCase):
         exact_prime = aberrate(angles, BETA)
         delta = exact_prime - angles
         for k in range(181):
-#             print(k, np.sin(delta[k]), BETA * np.sin(angles[k]), end='')
-#             print(np.sin(delta[k]) - BETA * np.sin(angles[k]))
             self.assertTrue(abs(np.sin(delta[k]) - BETA * np.sin(angles[k])) <
                             1.e-6)
 

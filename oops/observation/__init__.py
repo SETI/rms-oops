@@ -425,7 +425,7 @@ class Observation(object):
 
     #===========================================================================
     def meshgrid(self, origin=None, undersample=1, oversample=1, limit=None,
-                       fov_keywords={}):
+                       center_uv=None, fov_keywords={}):
         """A Meshgrid shaped to broadcast to the observation's shape.
 
         This works like Meshgrid.for_fov() except that the (u,v) axes are
@@ -450,6 +450,9 @@ class Observation(object):
                         of the meshgrid. By default, this is the shape of the
                         FOV.
 
+            center_uv   Reference point at the center of the FOV; use None for
+                        the default, which depends on the origin and limit.
+
             fov_keywords  an optional dictionary of parameters passed to the
                         FOV methods, containing parameters that might affect
                         the properties of the FOV.
@@ -461,6 +464,7 @@ class Observation(object):
                                   undersample=undersample,
                                   oversample=oversample,
                                   limit=limit,
+                                  center_uv=center_uv,
                                   fov_keywords=fov_keywords)
 
     #===========================================================================

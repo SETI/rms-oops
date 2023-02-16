@@ -520,10 +520,10 @@ class Surface(object):
         path_wrt_ssb = self.origin.wrt(Path.SSB, Frame.J2000)
         frame_wrt_j2000 = self.frame.wrt(Frame.J2000)
 
-        # Prepare for iteration, avoiding any derivatives for now
+        # Prepare for iteration
         link_time = link.time
         obs_wrt_ssb = link_wrt_ssb.state
-        los_wrt_ssb = (link_wrt_ssb.get_subfield(link_key).unit() * C)
+        los_wrt_ssb = link_wrt_ssb.get_subfield(link_key).unit() * C
 
         # Make an initial guess at the light travel time
         if guess is not None:
@@ -578,7 +578,6 @@ class Surface(object):
             max_dlt = abs(dlt).max(builtins=True, masked=-1.)
 
             if LOGGING.surface_iterations:
-                print(max_dlt)
                 LOGGING.convergence('Surface._solve_photon_by_los',
                                     'iter=%d; change=%.6g' % (count+1, max_dlt))
 
@@ -613,24 +612,40 @@ class Surface(object):
 
         surface_time = link_time + lt
 
-        # Create the surface event in its own frame
+        #### Create the surface event in its own frame
+
+        # Update the mask overall
         los_wrt_surface = los_wrt_surface.remask(surface_time.mask)
-        surface_event = Event(surface_time, pos_wrt_surface,
+
+        # The intercept event with respect to the surface has a time-derivative
+        # due to the rate of change of the line of sight. However, THIS IS NOT A
+        # PHYSICAL VELOCITY. To define the surface event properly, we need to
+        # remove the time derivative of pos_wrt_surface. We assign it a new name
+        # d_dT to distinguish it from d_dt.
+
+        # This sets the true velocity in the surface frame
+        surface_state = pos_wrt_surface.rename_deriv('t', 'T', method='add')
+        surface_state.insert_deriv('t', self.velocity(pos_wrt_surface,
+                                                      surface_time))
+
+        surface_event = Event(surface_time, surface_state,
                               self.origin, self.frame)
+
+        # Subfields are calculated using the original pos_wrt_surface, so these
+        # attributes will have correct time-derivatives. This is OK because
+        # these time-derivatives are not physical velocities.
+
         surface_event.insert_subfield('perp',
                                       self.normal(pos_wrt_surface,
                                                   time=surface_event.time,
                                                   derivs=True))
-        surface_event.insert_subfield('vflat',
-                                      self.velocity(pos_wrt_surface,
-                                                    surface_event.time))
         surface_event.insert_subfield(surface_key, los_wrt_surface)
         surface_event.insert_subfield(surface_key + '_lt', -lt)
 
         # Fill in coordinate subfields
         (coord1,
          coord2,
-         coord3) = self.coords_from_vector3(surface_event.state,
+         coord3) = self.coords_from_vector3(pos_wrt_surface,
                                             obs_wrt_surface,
                                             time=surface_event.time,
                                             axes=3, derivs=True)
@@ -679,7 +694,6 @@ class Surface(object):
         surface_event.insert_subfield(surface_key, vector)
         surface_event.insert_subfield(surface_key + '_lt', scalar)
         surface_event.insert_subfield('perp', vector.wod)
-        surface_event.insert_subfield('vflat', vector.wod)
 
         if coords:
             surface_event.insert_subfield('coord1', scalar)
@@ -883,7 +897,7 @@ class Surface(object):
 
             # Evaluate the observer position relative to the current surface
             origin_wrt_ssb_then = path_wrt_ssb.event_at_time(surface_time,
-                                                            quick=False).state
+                                                             quick=False).state
             obs_wrt_origin_j2000 = obs_wrt_ssb_now - origin_wrt_ssb_then
 
             # Locate the coordinate position relative to the current surface
@@ -1237,11 +1251,33 @@ class Surface(object):
             lt = lt.remask_or(new_mask)
 
         surface_time = link_time + lt
-        surface_event = Event(surface_time, pos_wrt_surface,
+
+        #### Create the surface event in its own frame
+
+        # The intercept event with respect to the surface has a time-derivative
+        # due to the rate of change of the observer position. However, THIS IS
+        # NOT A PHYSICAL VELOCITY. To define the surface event properly, we need
+        # to remove the time derivative of pos_wrt_surface. We assign it a new
+        # name d_dT to distinguish it from d_dt.
+
+        # This sets the true velocity in the surface frame
+        surface_state = pos_wrt_surface.rename_deriv('t', 'T', method='add')
+        surface_state.insert_deriv('t', self.velocity(pos_wrt_surface,
+                                                      surface_time))
+
+        surface_event = Event(surface_time, surface_state,
                               self.origin, self.frame)
 
         # Fill in standard subfields
-        los_in_j2000 = sign * (surface_event.ssb.state - obs_wrt_ssb_now)
+
+        # To calculate the time-dependence of other attributes, we need to use
+        # the original pos_wrt_surface in order to give them the correct time-
+        # dependence. This is OK because these are not understood to be physical
+        # velocities.
+
+        alt_event = Event(surface_time, pos_wrt_surface,
+                          self.origin, self.frame)
+        los_in_j2000 = sign * (alt_event.ssb.state - obs_wrt_ssb_now)
         surface_event.insert_subfield(surface_key + '_j2000', los_in_j2000)
         surface_event.insert_subfield(surface_key + '_lt', -lt)
 
@@ -1249,14 +1285,11 @@ class Surface(object):
                                       self.normal(pos_wrt_surface,
                                                   time=surface_time,
                                                   derivs=True))
-        surface_event.insert_subfield('vflat',
-                                      self.velocity(pos_wrt_surface,
-                                                    time=surface_time))
 
         # Fill in coordinate subfields
         (coord1,
          coord2,
-         coord3) = self.coords_from_vector3(surface_event.state,
+         coord3) = self.coords_from_vector3(pos_wrt_surface,
                                             obs_wrt_origin_frame,
                                             time=surface_event.time,
                                             axes=3, derivs=True)
@@ -1514,21 +1547,35 @@ class Surface(object):
             return self._fully_masked_result(unshrunk_remote, remote_key,
                                              coords=True)
 
-        # Create the surface event
-        surface_event = Event(surface_time, pos_wrt_surface,
+        #### Create the surface event in its own frame
+
+        # The intercept event with respect to the surface has a time-derivative
+        # due to the rate of change of the observer position. However, THIS IS
+        # NOT A PHYSICAL VELOCITY. To define the surface event properly, we need
+        # to remove the time derivative of pos_wrt_surface. We assign it a new
+        # name d_dT to distinguish it from d_dt.
+
+        # This sets the true velocity in the surface frame
+        surface_state = pos_wrt_surface.rename_deriv('t', 'T', method='add')
+        surface_state.insert_deriv('t', self.velocity(pos_wrt_surface,
+                                                      surface_time))
+
+        surface_event = Event(surface_time, surface_state,
                               self.path, self.frame)
+
+        # Subfields are calculated using the original pos_wrt_surface, so these
+        # attributes will have correct time-derivatives. This is OK because
+        # these time-derivatives are not physical velocities.
+
         normal = self.normal(pos_wrt_surface, time=surface_time, derivs=True)
         surface_event.insert_subfield(surface_key + '_ap', normal)
         surface_event.insert_subfield(surface_key + '_lt', -lt)
         surface_event.insert_subfield('perp', normal)
-        surface_event.insert_subfield('vflat',
-                                      self.velocity(pos_wrt_surface,
-                                                    time=surface_time))
 
         # Fill in coordinate subfields
         (coord1,
          coord2,
-         coord3) = self.coords_from_vector3(surface_event.state,
+         coord3) = self.coords_from_vector3(pos_wrt_surface,
                                             pos_wrt_surface,
                                             time=surface_event.time,
                                             axes=3, derivs=True)

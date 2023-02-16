@@ -331,7 +331,7 @@ class BarrelFOV(FOV):
             # Division by 30 is just for extra safety
 
         # Make sure the initial r guess is an array copy and uses f's mask
-        r = Scalar(r_guess.vals.copy(), f.mask)
+        r = r_guess.copy().remask(f.mask)
 
         max_dr = 1.e99
         converged = False

@@ -1696,6 +1696,32 @@ class Qube(object):
         return result
 
     #===========================================================================
+    def rename_deriv(self, key, new_key, method='insert'):
+        """A shallow copy of this object with a derivative renamed.
+
+        A read-only object remains read-only.
+
+        Input:
+            key         the current key of the derivative to rename.
+            new_key     the new name of the derivative.
+            method      how to insert the new derivative:
+                        'insert'  inserts the new derivative, raising a
+                                  ValueError if a derivative of the same name
+                                  already exists.
+                        'replace' replaces an existing derivative of the same
+                                  name.
+                        'add'     adds this derivative to an existing derivative
+                                  of the same name.
+        """
+
+        if key not in self._derivs_:
+            return self
+
+        result = self.with_deriv(new_key, self._derivs_[key], method=method)
+        result = result.without_deriv(key)
+        return result
+
+    #===========================================================================
     def unique_deriv_name(self, key, *objects):
         """The given name for a deriv if it does not exist in this object or any
         of the given objects; otherwise return a variant that is unique."""

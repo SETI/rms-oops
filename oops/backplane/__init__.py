@@ -1130,7 +1130,6 @@ class Test_Backplane_Surfaces(unittest.TestCase):
 
         uv = snap.fov.uv_from_los(ev.neg_arr_ap)
         diff = uv - uv0
-        #print(diff.norm().min(), diff.norm().max())
         self.assertTrue(diff.norm().max() < 2.e-7)
 
         # CentricEllipsoid (lon,lat)
@@ -1145,7 +1144,6 @@ class Test_Backplane_Surfaces(unittest.TestCase):
 
         uv = snap.fov.uv_from_los(ev.neg_arr_ap)
         diff = uv - uv0
-        #print(diff.norm().min(), diff.norm().max())
         self.assertTrue(diff.norm().max() < 2.e-7)
 
         # GraphicEllipsoid (lon,lat)

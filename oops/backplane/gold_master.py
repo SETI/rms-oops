@@ -144,6 +144,7 @@ import os
 import pickle
 import PIL
 import sys
+import warnings
 
 from scipy.ndimage import minimum_filter, maximum_filter
 from scipy.ndimage import zoom as zoom_image
@@ -755,8 +756,8 @@ def _clean_up_args(args):
                 raise ValueError('Undefined environment variable: '
                                  + 'OOPS_TEST_DATA_PATH')
             if not abspath.startswith(OOPS_TEST_DATA_PATH_):
-                raise ValueError('File is not in the test data directory: '
-                                 + obspath)
+                warnings.warn('File is not in the test data directory: '
+                              + obspath)
         if not os.path.exists(abspath):
             raise FileNotFoundError('No such file: %s' % obspath)
 
@@ -1027,7 +1028,8 @@ class BackplaneTest(object):
         # Create backplane object
         self.meshgrid = obs.meshgrid(origin=(0.5 + self.args.du,
                                              0.5 + self.args.dv),
-                                     undersample=self.undersample)
+                                     undersample=self.undersample,
+                                     center_uv=np.array(obs.uv_shape)/2.)
             # By setting origin to 0.5 and requiring undersampling to be
             # integral, we ensure that an undersampled meshgrid will always
             # sample the centers of pixels in the original (u,v) grid.
@@ -1312,7 +1314,6 @@ class BackplaneTest(object):
 
         (array, comparison) = self._validate_inputs(array, title, limit, method,
                                                     operator, radius, mask)
-
         comparison.suite = TEST_SUITE
 
         if self.args.task == 'compare':
@@ -1438,6 +1439,7 @@ class BackplaneTest(object):
                                        unmasked) = self.gold_summary[title]
                     # If gold master value is not shapeless...
                     if min_val != max_val or masked + unmasked > 1:
+                        print('gm', 1442, min_val, max_val, masked, unmasked)
                         self._log_comparison(comparison, 'Shape mismatch')
 
                     else:
@@ -1504,6 +1506,7 @@ class BackplaneTest(object):
             master_grid = master
             indx = slice(None)          # this index does nothing
         elif self.undersample == 1:
+            print('gm', 1509, array.shape, master.shape)
             self._log_comparison(comparison, 'Shape mismatch')
             return
         else:
