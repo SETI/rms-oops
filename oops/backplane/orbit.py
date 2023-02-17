@@ -72,9 +72,7 @@ def orbit_longitude(self, event_key, reference='obs', planet=None):
 
     # Locate the reference direction in this frame
     reference_wrt_orbit = matrix.rotate(reference_dir)
-    x = reference_wrt_orbit.to_scalar(0)
-    y = reference_wrt_orbit.to_scalar(1)
-    ref_lon_wrt_orbit = y.arctan2(x,recursive=False)
+    ref_lon_wrt_orbit = reference_wrt_orbit.longitude(recursive=self.ALL_DERIVS)
 
     # Convert to an orbit with respect to the reference direction
     orbit_lon_wrt_ref = (-ref_lon_wrt_orbit) % Scalar.TWOPI

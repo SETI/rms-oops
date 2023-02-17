@@ -743,6 +743,11 @@ class Path(object):
             new_lt = (prev_lt - dlt).clip(lt_min, lt_max, False)
             path_time = link.time + new_lt
 
+            # The path_time contains a time derivative due to the motion of the
+            # link. We rename this derivative from 't' to 'T' to avoid
+            # confusion.
+            path_time = path_time.rename_deriv('t', 'T', method='add')
+
         # Construct the returned event
         path_event_ssb = path_wrt_ssb.event_at_time(path_time, quick=quick)
         link_event_ssb = link_wrt_ssb.copy()
@@ -1427,21 +1432,16 @@ class QuickPath(Path):
                 pos[...,1] = pos_y[0]
                 pos[...,2] = pos_z[0]
                 vel[...,0] = vel_x[0]
-                vel[...,1] = vel_x[0]
-                vel[...,2] = vel_x[0]
+                vel[...,1] = vel_y[0]
+                vel[...,2] = vel_z[0]
             else:
-                pos[...,0] = ((pos_x[1]-pos_x[0])/time_diff * tflat_diff +
-                              pos_x[0])
-                pos[...,1] = ((pos_y[1]-pos_y[0])/time_diff * tflat_diff +
-                              pos_y[0])
-                pos[...,2] = ((pos_z[1]-pos_z[0])/time_diff * tflat_diff +
-                              pos_z[0])
-                vel[...,0] = ((vel_x[1]-vel_x[0])/time_diff * tflat_diff +
-                              vel_x[0])
-                vel[...,1] = ((vel_y[1]-vel_y[0])/time_diff * tflat_diff +
-                              vel_y[0])
-                vel[...,2] = ((vel_z[1]-vel_z[0])/time_diff * tflat_diff +
-                              vel_z[0])
+                frac = tflat_diff / time_diff
+                pos[...,0] = pos_x[0] + frac * (pos_x[1] - pos_x[0])
+                pos[...,1] = pos_y[0] + frac * (pos_y[1] - pos_y[0])
+                pos[...,2] = pos_z[0] + frac * (pos_z[1] - pos_z[0])
+                vel[...,0] = vel_x[0] + frac * (vel_x[1] - vel_x[0])
+                vel[...,1] = vel_y[0] + frac * (vel_y[1] - vel_y[0])
+                vel[...,2] = vel_z[0] + frac * (vel_z[1] - vel_z[0])
 
         else:
             # Evaluate the positions and velocities

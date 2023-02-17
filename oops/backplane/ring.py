@@ -205,7 +205,7 @@ def _aries_ring_longitude(self, event_key):
     return self.register_backplane(key, longitude)
 
 #===============================================================================
-def ring_azimuth(self, event_key, direction='obs'):
+def ring_azimuth(self, event_key, direction='obs', apparent=True):
     """Angle from a photon direction to the local radial direction.
 
     The angle is measured in the prograde direction from the photon's direction
@@ -222,6 +222,10 @@ def ring_azimuth(self, event_key, direction='obs'):
                                 photon to the observer;
                         'sun'   for the (negative) apparent direction of the
                                 photon arriving from the Sun.
+        apparent        True for the apparent azimuth in the surface frame,
+                        allowing for the fact that ring particles are in orbital
+                        motion around the planet center;
+                        False for the actual azimuth.
     """
 
     if direction not in ('obs', 'sun'):
@@ -229,7 +233,7 @@ def ring_azimuth(self, event_key, direction='obs'):
 
     (event_key, backplane_key) = self._event_and_backplane_keys(event_key,
                                                                 RING_BACKPLANES)
-    key = ('ring_azimuth', event_key, direction)
+    key = ('ring_azimuth', event_key, direction, apparent)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
 
@@ -239,19 +243,20 @@ def ring_azimuth(self, event_key, direction='obs'):
 
     if direction == 'obs':
         event = self.get_surface_event(event_key)
-        photon_los = event.dep_ap
+        photon_los = event.dep_ap if apparent else event.dep
     else:
         event = self.get_surface_event(event_key, arrivals=True)
-        photon_los = event.neg_arr_ap
+        photon_los = event.neg_arr_ap if apparent else event.neg_arr
 
-    photon_angle = photon_los.to_scalar(1).arctan2(photon_los.to_scalar(0))
-    radius_angle = event.pos.to_scalar(1).arctan2(event.pos.to_scalar(0))
+    photon_angle = photon_los.longitude(recursive=self.ALL_DERIVS)
+    radius_angle = event.pos.longitude(recursive=self.ALL_DERIVS)
     azimuth = (radius_angle - photon_angle) % Scalar.TWOPI
 
     return self.register_backplane(key, azimuth)
 
 #===============================================================================
-def ring_elevation(self, event_key, direction='obs', pole='prograde'):
+def ring_elevation(self, event_key, direction='obs', pole='prograde',
+                                    apparent=True):
     """Angle from the ring plane to the photon direction, evaluated at the ring
     intercept point.
 
@@ -273,6 +278,10 @@ def ring_elevation(self, event_key, direction='obs', pole='prograde'):
                         'prograde'  positive elevations on the side of the rings
                                     defined by positive angular momentum;
                         'unsigned'  for positive elevations on both ring faces.
+        apparent        True for the apparent azimuth in the surface frame,
+                        allowing for the fact that ring particles are in orbital
+                        motion around the planet center;
+                        False for the actual azimuth.
     """
 
     if direction not in ('obs', 'sun'):
@@ -280,7 +289,7 @@ def ring_elevation(self, event_key, direction='obs', pole='prograde'):
 
     (event_key, backplane_key) = self._event_and_backplane_keys(event_key,
                                                                 RING_BACKPLANES)
-    key = ('ring_elevation', event_key, direction, pole)
+    key = ('ring_elevation', event_key, direction, pole, apparent)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
 
@@ -292,10 +301,12 @@ def ring_elevation(self, event_key, direction='obs', pole='prograde'):
     # ring_emission
     if direction == 'obs':
         pole = pole.replace('unsigned', 'observed')
-        pole_angle = self.ring_emission_angle(event_key, pole=pole)
+        pole_angle = self.ring_emission_angle(event_key, pole=pole,
+                                                         apparent=apparent)
     else:
         pole = pole.replace('unsigned', 'sunward')
-        pole_angle = self.ring_incidence_angle(event_key, pole=pole)
+        pole_angle = self.ring_incidence_angle(event_key, pole=pole,
+                                                          apparent=apparent)
 
     elevation = Scalar.HALFPI - pole_angle
     return self.register_backplane(key, elevation)
@@ -798,10 +809,7 @@ def ring_test_suite(bpt):
                    name + ' angular resolution (km)',
                    limit=0.1, radius=1.5)
 
-        mask = bp.where_inside(name, planet, tvl=False)
-        angular_res = bp.ring_angular_resolution(name).remask_or(mask)
-            # This test gets poorly-behaved near origin, hence, mask
-        bpt.gmtest(angular_res,
+        bpt.gmtest(bp.ring_angular_resolution(name),
                    name + ' angular resolution (deg)',
                    method='degrees', limit=0.01, radius=1.5)
 
@@ -832,12 +840,58 @@ def ring_test_suite(bpt):
                     method='mod360', limit=1.e-13)
 
         # Azimuth
-        bpt.gmtest(bp.ring_azimuth(name, direction='obs'),
-                   name + ' azimuth wrt observer (deg)',
+        apparent = bp.ring_azimuth(name, direction='obs', apparent=True)
+        actual   = bp.ring_azimuth(name, direction='obs', apparent=False)
+        bpt.gmtest(apparent,
+                   name + ' azimuth to observer, apparent (deg)',
                    method='mod360', limit=0.01, radius=1)
-        bpt.gmtest(bp.ring_azimuth(name, direction='sun'),
-                   name + ' azimuth wrt Sun (deg)',
+        bpt.gmtest(actual,
+                   name + ' azimuth to observer, actual (deg)',
                    method='mod360', limit=0.01, radius=1)
+        bpt.compare(apparent - actual,
+                    0.,
+                    name + ' azimuth to observer, apparent minus actual (deg)',
+                    method='mod360', limit=0.1)
+
+        apparent = bp.ring_azimuth(name, direction='sun', apparent=True)
+        actual   = bp.ring_azimuth(name, direction='sun', apparent=False)
+        bpt.gmtest(apparent,
+                   name + ' azimuth of Sun, apparent (deg)',
+                   method='mod360', limit=0.01, radius=1)
+        bpt.gmtest(actual,
+                   name + ' azimuth of Sun, actual (deg)',
+                   method='mod360', limit=0.01, radius=1)
+        bpt.compare(apparent - actual,
+                    0.,
+                    name + ' azimuth of Sun, apparent minus actual (deg)',
+                    method='mod360', limit=0.1)
+
+        # Elevation
+        apparent = bp.ring_elevation(name, direction='obs', apparent=True)
+        actual   = bp.ring_elevation(name, direction='obs', apparent=False)
+        bpt.gmtest(apparent,
+                   name + ' elevation to observer, apparent (deg)',
+                   method='degrees', limit=0.01, radius=1)
+        bpt.gmtest(actual,
+                   name + ' elevation to observer, actual (deg)',
+                   method='degrees', limit=0.01, radius=1)
+        bpt.compare(apparent - actual,
+                    0.,
+                    name + ' elevation to observer, apparent minus actual (deg)',
+                    method='degrees', limit=0.1)
+
+        apparent = bp.ring_elevation(name, direction='sun', apparent=True)
+        actual   = bp.ring_elevation(name, direction='sun', apparent=False)
+        bpt.gmtest(apparent,
+                   name + ' elevation of Sun, apparent (deg)',
+                   method='degrees', limit=0.01, radius=1)
+        bpt.gmtest(actual,
+                   name + ' elevation of Sun, actual (deg)',
+                   method='degrees', limit=0.01, radius=1)
+        bpt.compare(apparent - actual,
+                    0.,
+                    name + ' elevation of Sun, apparent minus actual (deg)',
+                    method='degrees', limit=0.1)
 
         # Longitude & azimuth tests
         longitude = bp.ring_longitude(name, reference='obs')
@@ -867,7 +921,7 @@ def ring_test_suite(bpt):
                     name + ' sub-observer longitude wrt observer (deg)',
                     method='mod360')
 
-        # Sub-solar longitude & azimuth
+        # Sub-solar longitude
         bpt.gmtest(bp.ring_sub_solar_longitude(name, reference='aries'),
                    name + ' sub-solar longitude wrt Aries (deg)',
                    method='mod360', limit=0.01, radius=1)

@@ -41,8 +41,7 @@ def pole_clock_angle(self, event_key):
     pole = rotmat * pole_j2000
 
     # Convert the X and Y components of the rotated pole into an angle
-    coords = pole.to_scalars()
-    clock_angle = coords[1].arctan2(coords[0]) % Scalar.TWOPI
+    clock_angle = pole.longitude(recursive=self.ALL_DERIVS)
 
     return self.register_backplane(key, clock_angle)
 

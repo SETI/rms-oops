@@ -884,14 +884,14 @@ class _BackplaneComparison(object):
     comparison.
     """
 
-    STATUS_IS_OK = {
-        'Success'            : True,
-        'Value mismatch'     : False,
-        'Mask mismatch'      : False,
-        'Value/mask mismatch': False,
-        'Shape mismatch'     : False,
-        'No gold master'     : False,   # Defined by args.ignore_missing
-        'Invalid gold master': False,
+    STATUS_LEVEL = {
+        'Success'            : 'INFO',
+        'Value mismatch'     : 'ERROR',
+        'Mask mismatch'      : 'ERROR',
+        'Value/mask mismatch': 'ERROR',
+        'Shape mismatch'     : 'ERROR',
+        'No gold master'     : 'ERROR',     # Defined by args.ignore_missing
+        'Invalid gold master': 'ERROR',
     }
 
     def __init__(self, **kwargs):
@@ -953,10 +953,10 @@ class _BackplaneComparison(object):
             setattr(self, key, value)
 
     @property
-    def success(self):
-        """True if this comparison was successful."""
+    def logging_level(self):
+        """Logging level for this test."""
 
-        return _BackplaneComparison.STATUS_IS_OK[self.status]
+        return _BackplaneComparison.STATUS_LEVEL[self.status]
 
     @staticmethod
     def set_no_gold_master_status(is_ok=False):
@@ -965,7 +965,8 @@ class _BackplaneComparison(object):
         This is defined globally by input argument "ignore_missing".
         """
 
-        _BackplaneComparison.STATUS_IS_OK['No gold master'] = is_ok
+        level = 'WARNING' if is_ok else 'ERROR'
+        _BackplaneComparison.STATUS_LEVEL['No gold master'] = level
 
 ################################################################################
 # BackplaneTest class
@@ -1439,7 +1440,6 @@ class BackplaneTest(object):
                                        unmasked) = self.gold_summary[title]
                     # If gold master value is not shapeless...
                     if min_val != max_val or masked + unmasked > 1:
-                        print('gm', 1442, min_val, max_val, masked, unmasked)
                         self._log_comparison(comparison, 'Shape mismatch')
 
                     else:
@@ -1506,7 +1506,6 @@ class BackplaneTest(object):
             master_grid = master
             indx = slice(None)          # this index does nothing
         elif self.undersample == 1:
-            print('gm', 1509, array.shape, master.shape)
             self._log_comparison(comparison, 'Shape mismatch')
             return
         else:
@@ -1956,7 +1955,7 @@ class BackplaneTest(object):
 
         errors1 = comparison.diff_errors1 + comparison.mask_errors1
         errors2 = comparison.diff_errors2 + comparison.mask_errors2
-        if comparison.status == '':
+        if comparison.status == '':         # if not yet filled in
             if comparison.diff_errors2:
                 if comparison.mask_errors2:
                     comparison.status = 'Value/mask mismatch'
@@ -1967,10 +1966,6 @@ class BackplaneTest(object):
                     comparison.status = 'Mask mismatch'
                 else:
                     comparison.status = 'Success'
-
-        # Determine status
-        success = comparison.success
-        level = logging.INFO if success else logging.ERROR
 
         # Construct the message
         message = [comparison.suite, ' | ', comparison.status]
@@ -2008,7 +2003,7 @@ class BackplaneTest(object):
 
             message += ['/', str(comparison.pixels)]
 
-        LOGGING.print(''.join(message), level=level)
+        LOGGING.print(''.join(message), level=comparison.logging_level)
 
         # Save the results
         self.results[comparison.title] = comparison

@@ -164,6 +164,33 @@ class Vector3(Vector):
 
         return (radius, longitude, z)
 
+    #===========================================================================
+    def longitude(self, recursive=True):
+        """Longitude (or right ascension) of this Vector3 as projected onto the
+        X/Y plane.
+
+        The returned value will always fall between zero and 2*pi.
+
+        Inputs:
+            recursive   True to include the derivatives. Default is True.
+        """
+
+        x = self.to_scalar(0, recursive=recursive)
+        y = self.to_scalar(1, recursive=recursive)
+        return y.arctan2(x) % Scalar.TWOPI
+
+    #===========================================================================
+    def latitude(self, recursive=True):
+        """Latitude (or declination) of this Vector3 relative to the Z-axis.
+
+        Inputs:
+            recursive   True to include the derivatives. Default is True.
+        """
+
+        z = self.to_scalar(2, recursive=recursive)
+        length = self.norm(recursive=recursive)
+        return (z/length).arcsin()
+
     ### Most operations are inherited from Vector. These include:
     #     def extract_scalar(self, axis, recursive=True)
     #     def as_scalars(self, recursive=True)

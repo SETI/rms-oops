@@ -181,9 +181,8 @@ def _sub_observer_longitude(self, event_key):
         return self.get_backplane(key)
 
     event = self.get_surface_event(gridless_key)
-    dep_ap = event.dep_ap
-    longitude = dep_ap.to_scalar(1).arctan2(dep_ap.to_scalar(0)) % Scalar.TWOPI
-
+    longitude = event.dep_ap.longitude(recursive=self.ALL_DERIVS)
+        # Use the apparent departure direction seen at the body center
     return self.register_backplane(key, longitude)
 
 #===============================================================================
@@ -197,9 +196,8 @@ def _sub_observer_latitude(self, event_key):
         return self.get_backplane(key)
 
     event = self.get_surface_event(gridless_key)
-    dep_ap = event.dep_ap
-    latitude = (dep_ap.to_scalar(2) / dep_ap.norm()).arcsin()
-
+    latitude = event.dep_ap.latitude(recursive=self.ALL_DERIVS)
+        # Use the apparent departure direction seen at the body center
     return self.register_backplane(key, latitude)
 
 #===============================================================================
@@ -213,10 +211,8 @@ def _sub_solar_longitude(self, event_key):
         return self.get_backplane(key)
 
     event = self.get_surface_event(gridless_key, arrivals=True)
-    neg_arr_ap = event.neg_arr_ap
-    longitude = neg_arr_ap.to_scalar(1).arctan2(neg_arr_ap.to_scalar(0)) \
-                % Scalar.TWOPI
-
+    longitude = event.neg_arr_ap.longitude(recursive=self.ALL_DERIVS)
+        # Use the (negative) apparent arrival direction seen at the body center
     return self.register_backplane(key, longitude)
 
 #===============================================================================
@@ -230,9 +226,8 @@ def _sub_solar_latitude(self, event_key):
         return self.get_backplane(key)
 
     event = self.get_surface_event(gridless_key, arrivals=True)
-    neg_arr_ap = event.neg_arr_ap
-    latitude = (neg_arr_ap.to_scalar(2) / neg_arr_ap.norm()).arcsin()
-
+    latitude = event.neg_arr_ap.latitude(recursive=self.ALL_DERIVS)
+        # Use the (negative) apparent arrival direction seen at the body center
     return self.register_backplane(key, latitude)
 
 ################################################################################
@@ -390,7 +385,7 @@ def sub_observer_latitude(self, event_key, lat_type='centric'):
     if lat_type == 'graphic':
         dep_ap = dep_ap.element_mul(event.surface.unsquash_sq)
 
-    latitude = (dep_ap.to_scalar(2) / dep_ap.norm()).arcsin()
+    latitude = dep_ap.latitude(recursive=self.ALL_DERIVS)
     return self.register_backplane(key, latitude)
 
 #===============================================================================
@@ -417,7 +412,7 @@ def sub_solar_latitude(self, event_key, lat_type='centric'):
     if lat_type == 'graphic':
         neg_arr_ap = neg_arr_ap.element_mul(event.surface.unsquash_sq)
 
-    latitude = (neg_arr_ap.to_scalar(2) / neg_arr_ap.norm()).arcsin()
+    latitude = neg_arr_ap.latitude(recursive=self.ALL_DERIVS)
     return self.register_backplane(key, latitude)
 
 #===============================================================================
@@ -433,7 +428,7 @@ def lambert_law(self, event_key):
     if key in self.backplanes:
         return self.get_backplane(key)
 
-    lambert_law = self.incidence_angle(event_key).cos()
+    lambert_law = self.incidence_angle(event_key, apparent=True).cos()
     lambert_law = lambert_law.mask_where(lambert_law.vals <= 0., 0.)
     return self.register_backplane(key, lambert_law)
 
@@ -460,7 +455,7 @@ def minnaert_law(self, event_key, k, k2=None, clip=0.2):
         return self.get_backplane(key)
 
     mu0 = self.lambert_law(event_key)
-    mu = self.emission_angle(event_key).cos().clip(clip, None)
+    mu = self.emission_angle(event_key, apparent=True).cos().clip(clip, None)
     minnaert_law = (mu0 ** k) * (mu ** k2)
     return self.register_backplane(key, minnaert_law)
 
@@ -479,7 +474,7 @@ def lommel_seeliger_law(self, event_key):
     if key in self.backplanes:
         return self.get_backplane(key)
 
-    mu0 = self.incidence_angle(event_key).cos()
+    mu0 = self.incidence_angle(event_key, apparent=True).cos()
     mu  = self.emission_angle(event_key).cos()
     lommel_seeliger_law = mu0 / (mu + mu0)
     lommel_seeliger_law = lommel_seeliger_law.mask_where(mu0 <= 0., 0.)
@@ -502,6 +497,8 @@ def spheroid_test_suite(bpt):
     for name in bpt.body_names + bpt.limb_names:
 
         radius = 1.5 if name in bpt.limb_names else 1.
+            # The extra flexibility in the testing of limb calculations seems to
+            # reduce the number of false positives.
 
         # Longitude
         cos_lat = bp.latitude(name).cos().min(builtins=True)

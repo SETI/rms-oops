@@ -22,8 +22,12 @@ class RingPlane(Surface):
     COORDINATE_TYPE = 'polar'
     IS_VIRTUAL = False
 
-    SPEED_CUTOFF = 300.     # maximum vflat in km/s. Without a limit, speeds
-                            # near the origin approach C.
+    # Define the maximum vflat in km/s. Without a limit, calculated orbital
+    # speeds near the origin approach C, causing problems with aberration
+    # calculations. None of this is physical because all of it is inside the
+    # planet (which is not really a point source). However, we want the ring
+    # plane, like other surfaces, to have a continuous definition.
+    SPEED_CUTOFF = 300.         # roughly C/1000
 
     #===========================================================================
     def __init__(self, origin, frame, radii=None, gravity=None,

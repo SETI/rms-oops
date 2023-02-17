@@ -661,10 +661,14 @@ class Backplane(object):
                 self._save_event(event_key, event, surface=surface,
                                                    derivs=derivs)
 
+            # Fill in the perpendicular if needed
+            if event.perp is None:
+                event.perp = Vector3.ZAXIS
+                self.surface_events[derivs][event_key] = event
+
             return event
 
         # Always include derivatives by default, except for shadowing events
-        event_key = self.standardize_event_key(event_key)
         is_shadowing   = self._is_shadowing(event_key)
         is_occultation = self._is_occultation(event_key)
         is_gridless    = self._is_gridless(event_key)
@@ -702,12 +706,12 @@ class Backplane(object):
 
         # Solve for the event
         if is_gridless:
-            surface = self.get_surface(event_key[1])
-            event = surface.origin.photon_to_event(detection, derivs=derivs)[0]
-            event = event.wrt(surface.origin, surface.frame)
+            # If gridless, the call to get_obs_event above filled in the event,
+            # but fill in the perpendicular if necessary
+            event = self.surface_events[derivs][event_key]
             if event.perp is None:
                 event.perp = Vector3.ZAXIS
-            self._save_event(event_key, event, surface=surface, derivs=derivs)
+                self.surface_events[derivs][event_key] = event
 
         else:   # is_dispersed or is_occultation
             event = self._get_los_event(event_key, detection, derivs)
