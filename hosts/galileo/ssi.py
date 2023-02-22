@@ -15,11 +15,15 @@ from hosts.galileo import Galileo
 # Standard class methods
 ################################################################################
 def from_file(filespec, fast_distortion=True,
-              return_all_planets=False, **parameters):
+              return_all_planets=False, full_fov=False, **parameters):
     """A general, static method to return a Snapshot object based on a given
-    Galileo SSI image file.
+    Galileo SSI image file.  By default, only the valid image region is
+    returned.
 
     Inputs:
+        full_fov:           If True, the full image is returned with a mask
+                            describing the regions with no data.
+
         fast_distortion     True to use a pre-inverted polynomial;
                             False to use a dynamically solved polynomial;
                             None to use a FlatFOV.
@@ -27,6 +31,7 @@ def from_file(filespec, fast_distortion=True,
         return_all_planets  Include kernels for all planets not just
                             Jupiter or Saturn.
     """
+
     SSI.initialize()    # Define everything the first time through; use defaults
                         # unless initialize() is called explicitly.
 
@@ -47,10 +52,13 @@ def from_file(filespec, fast_distortion=True,
     Galileo.load_spks(meta.tstart, meta.tstart + meta.exposure)
 
     # Define the field of view
-    FOV = meta.fov(label)
+    FOV = meta.fov(full_fov=full_fov)
 
     # Define the mask
-    mask = meta.mask(label)
+    mask = meta.mask(full_fov=full_fov)
+
+    # Trim the image
+    data = meta.trim(vic.data_2d, full_fov=full_fov)
 
     # Create a Snapshot
     result = oops.obs.Snapshot(('v','u'), meta.tstart, meta.exposure,
@@ -58,12 +66,14 @@ def from_file(filespec, fast_distortion=True,
                                path = 'GLL',
                                frame = 'GLL_SCAN_PLATFORM',
                                dict = vicar_dict,       # Add the VICAR dict
-                               data = vic.data_2d,      # Add the data array
+                               data = data,             # Add the data array
                                instrument = 'SSI',
                                filter = meta.filter,
-                               mask = mask,
                                filespec = filespec,
                                basename = os.path.basename(filespec))
+
+    if mask is not None:
+        result.insert_subfield('mask', mask)
 
     result.insert_subfield('spice_kernels',
                            Galileo.used_kernels(result.time, 'iss',
@@ -188,13 +198,36 @@ class Metadata(object):
         # Target
         self.target = label['TARGET_NAME']
 
+        # Telemetry mode
+        self.mode = label['TELEMETRY_FORMAT_ID']
+
+        # Window
+        if 'CUT_OUT_WINDOW' in label:
+            self.window = label['CUT_OUT_WINDOW']
+        else:
+            self.window = None
+
     #===========================================================================
-    def mask(self, label):
+    def mask(self, full_fov=False):
         """Create a Galileo SSI mask.
 
-        Can be useful for debugging.
+        Input:
+            full_fov        If False, no mask is created.
+
+        Attributes:
+            nlines          A Numpy array containing the data in axis order
+                            (line, sample).
+            nsamples        The time sampling array in (line, sample) axis
+                            order, or None if no time backplane is found in
+                            the file.
+            nframelets
+
         """
-        window = label.get('CUT_OUT_WINDOW')
+
+        if not full_fov:
+            return None
+
+        window = self.window
 
         if window is None:
             return None
@@ -205,11 +238,40 @@ class Metadata(object):
         return mask
 
     #===========================================================================
-    def fov(self, label):
+    def trim(self, data, full_fov=False):
+        """Trim image to label window
+
+        Input:
+            full_fov        If True, the image is not trimmed.
+
+        Attributes:
+            nlines          A Numpy array containing the data in axis order
+                            (line, sample).
+            nsamples        The time sampling array in (line, sample) axis
+                            order, or None if no time backplane is found in
+                            the file.
+            nframelets
+
+        """
+
+        if full_fov:
+            return None
+
+        window = self.window
+
+        if window is None:
+            return data
+
+        return data[window[0]:window[2], window[1]:window[3]]
+
+    #===========================================================================
+    def fov(self, full_fov=False):
         """Use the label to assemble the image metadata.
 
         Input:
             label           The label dictionary.
+            full_fov        If False, the FOV is cropped to the dimensions
+                            given by the cutout window.
 
         Attributes:
             nlines          A Numpy array containing the data in axis order
@@ -237,13 +299,22 @@ class Metadata(object):
         distortion_coeff = [1,0,cf]
 
         # Direct summation modes
-        mode = label['TELEMETRY_FORMAT_ID']
-        if mode=='HIS' or mode=='AI8':
+        if self.mode=='HIS' or self.mode=='AI8':
             scale = scale*2
             cxy = cxy/2
 
-        self.fov = oops.fov.RadialFOV(scale,
-                                      (self.nsamples, self.nlines),
+        # Apply cutout window
+        nsamples = self.nsamples
+        nlines = self.nlines
+        if not full_fov and self.window is not None:
+            window = np.array(self.window)
+            cxy = cxy - [window[0], window[1]]
+            nsamples = window[2] - window[0]
+            nlines = window[3] - window[1]
+
+        # Construct FOV
+        self.fov = oops.fov.BarrelFOV(scale,
+                                      (nsamples, nlines),
                                       coefft_uv_from_xy=distortion_coeff,
                                       uv_los=(cxy[0], cxy[1]))
 

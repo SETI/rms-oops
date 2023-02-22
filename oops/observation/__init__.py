@@ -513,7 +513,7 @@ class Observation(object):
 
         # Return the Meshgrid
         grid = Pair(values)
-        if self.mask is not None:
+        if hasattr(self, 'mask'):
             grid._mask_ = self.mask
         return Meshgrid(self.fov, grid, fov_keywords)
 
