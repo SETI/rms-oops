@@ -490,6 +490,6 @@ class Test_Pushbroom(unittest.TestCase):
         self.assertEqual(uvt[1], [a[1] for a in uvt_list])
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

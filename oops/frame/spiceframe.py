@@ -772,6 +772,6 @@ class Test_SpiceFrame(unittest.TestCase):
         Frame.USE_QUICKFRAMES = True
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

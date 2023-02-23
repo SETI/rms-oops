@@ -104,6 +104,6 @@ class Test_Qube_zero(unittest.TestCase):
     self.assertEqual(a.zero().shape, ())
 
 ############################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

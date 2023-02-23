@@ -322,6 +322,6 @@ class Test_RawCounts(unittest.TestCase):
         self.assertEqual(dn, dn2)
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

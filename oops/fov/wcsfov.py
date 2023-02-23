@@ -633,6 +633,6 @@ class Test_WCSFOV(unittest.TestCase):
             print('slow time = %.2f ms' % ((t1-t0)/iters*1000.))
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

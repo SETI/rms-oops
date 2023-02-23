@@ -11,6 +11,6 @@ from oops.cmodel_.longitude  import Test_Longitude
 from oops.cmodel_.radius     import Test_Radius
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

@@ -589,6 +589,6 @@ class Test_PolyFOV(unittest.TestCase):
         self.assertTrue(abs(uv.d_drs.vals[...,1] - duv_ds.vals).max() <= DEL)
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

@@ -165,6 +165,6 @@ class Test_SubsampledFOV(unittest.TestCase):
         self.assertEqual(test.area_factor((16,16)), 1.)
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

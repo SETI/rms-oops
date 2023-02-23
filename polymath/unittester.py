@@ -4,7 +4,7 @@
 # Execute unit tests from command line...
 ################################################################################
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
 
     from unit_tests.test_boolean               import *
 

@@ -619,6 +619,6 @@ class Test_OrbitPlane(unittest.TestCase):
         self.assertTrue(abs(lons - l).max() < 1.e-15)
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

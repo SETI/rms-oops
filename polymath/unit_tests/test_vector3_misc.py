@@ -258,6 +258,6 @@ class Test_Vector3_misc(unittest.TestCase):
                 "Vector3([3. 4. 5.])")
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

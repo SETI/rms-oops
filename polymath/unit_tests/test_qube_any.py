@@ -127,8 +127,6 @@ class Test_Qube_any(unittest.TestCase):
 
     for j in (1,2):
       for k in range(5):
-        if (j,k) == (0,0):
-            continue
         self.assertEqual(m0[j,k], np.any(x.values[:,j,k]))
 
     j = 0
@@ -183,6 +181,6 @@ class Test_Qube_any(unittest.TestCase):
 ################################################################################
 # Execute from command line...
 ################################################################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

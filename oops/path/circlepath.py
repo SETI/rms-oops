@@ -138,6 +138,6 @@ class Test_CirclePath(unittest.TestCase):
         self.assertEqual(copied.__getstate__(), state)
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################
