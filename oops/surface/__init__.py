@@ -3,7 +3,7 @@
 ################################################################################
 
 import numpy as np
-from polymath       import Qube, Scalar, Vector3
+from polymath       import Boolean, Qube, Scalar, Vector3
 from oops.config    import SURFACE_PHOTONS, LOGGING
 from oops.constants import C
 from oops.event     import Event
@@ -1270,7 +1270,7 @@ class Surface(object):
         perp = self.normal(pos_wrt_surface, time=surface_time, derivs=True)
         vflat = self.velocity(pos_wrt_surface, surface_time)
         surface_event.insert_subfield('perp', perp)
-        surface_state.insert_subfield('vflat', vflat)
+        surface_event.insert_subfield('vflat', vflat)
 
         # Fill in coordinate subfields
         coords = self.coords_from_vector3(pos_wrt_surface, obs_wrt_origin_frame,
@@ -1300,10 +1300,10 @@ class Surface(object):
         arrive at the surface at the specified time along a surface normal.
 
         This can be used to solve for the sub-solar point on a surface. See
-        _solve_photon_normal_at_surface() for details of inputs.
+        _solve_photon_normal_to_surface() for details of inputs.
         """
 
-        return self._solve_photon_normal_at_surface(time, path, -1, derivs,
+        return self._solve_photon_normal_to_surface(time, path, -1, derivs,
                                                     guess, antimask, quick,
                                                     converge)
 
@@ -1313,18 +1313,18 @@ class Surface(object):
         """Photon arrival at this surface, given departure and surface normal
         requirement.
 
-        See _solve_photon_normal_at_surface() for details.
+        See _solve_photon_normal_to_surface() for details.
         """
 
-        return self._solve_photon_normal_at_surface(time, path, +1, derivs,
+        return self._solve_photon_normal_to_surface(time, path, +1, derivs,
                                                     guess, antimask, quick,
                                                     converge)
 
     #===========================================================================
-    def _solve_photon_normal_at_surface(self, time, path, sign, derivs=False,
+    def _solve_photon_normal_to_surface(self, time, path, sign, derivs=False,
                                               guess=None, antimask=None,
                                               quick={}, converge={}):
-        """Solve for a photon surface intercept based on remote event and local
+        """Solve for a photon surface intercept based on remote path and local
         surface normal.
 
         Input:
@@ -1406,7 +1406,7 @@ class Surface(object):
         #### TODO: full testing!!
 
         if self.IS_VIRTUAL:
-            raise ValueError('Surface._solve_photon_normal_at_surface ' +
+            raise ValueError('Surface._solve_photon_normal_to_surface ' +
                              ' does not support virtual surface class '
                              + type(self).__name__)
 
@@ -1505,7 +1505,7 @@ class Surface(object):
             max_dlt = abs(dlt).max(builtins=True, masked=-1.)
 
             if LOGGING.surface_iterations:
-                LOGGING.convergence('Surface._solve_photon_normal_at_surface',
+                LOGGING.convergence('Surface._solve_photon_normal_to_surface',
                                     'iter=%d; change=%.6g' % (count+1, max_dlt))
 
             if max_dlt <= precision:
@@ -1521,14 +1521,17 @@ class Surface(object):
         #### END OF LOOP
 
         if not converged:
-            LOGGING.warn('Surface._solve_photon_normal_at_surface ' +
+            LOGGING.warn('Surface._solve_photon_normal_to_surface ' +
                          'did not converge;',
                          'iter=%d; change=%.6g' % (count+1, max_dlt))
 
-        # If the link is entirely masked, return masked results
+        # If the result is entirely masked, return masked results
         if max_dlt < 0. or np.all(path_time.mask):
-            return self._fully_masked_result(unshrunk_link, link_key,
-                                             coords=True)
+            # This is a fake, fully masked link
+            vec = Vector3.ZERO.broadcast_to(path_time.shape)
+            link = Event(path_time.remask(True), (vec, vec),
+                         path=path, frame=Frame.J2000)
+            return self._fully_masked_result(link, remote_key, coords=False)
 
         #### Create the surface event in its own frame
 
@@ -1575,7 +1578,7 @@ class Surface(object):
     ############################################################################
 
     @staticmethod
-    def resolution(dpos_duv):
+    def resolution(dpos_duv, _unittest=False):
         """Determine the spatial resolution on a surface.
 
         Input:
@@ -1593,8 +1596,7 @@ class Surface(object):
 
         # Define vectors parallel to the surface, containing the derivatives
         # with respect to each pixel coordinate.
-        dpos_du = Vector3(dpos_duv.values[...,0], dpos_duv.mask)
-        dpos_dv = Vector3(dpos_duv.values[...,1], dpos_duv.mask)
+        (dpos_du, dpos_dv) = dpos_duv.extract_denoms()
 
         # The resolution should be independent of the rotation angle of the
         # grid. We therefore need to solve for an angle theta such that
@@ -1604,12 +1606,12 @@ class Surface(object):
         #   dpos_du' <dot> dpos_dv' = 0
         #
         # Then, the magnitudes of dpos_du' and dpos_dv' will be the local values
-        # of finest and coarsest spatial resolution.
+        # of finest and coarsest spatial resolution (in either order).
         #
-        # Laying aside the overall scaling for a moment, instead solve:
-        #   dpos_du' =   dpos_du - t dpos_dv
-        #   dpos_dv' = t dpos_du +   dpos_dv
-        # for which the dot product is zero.
+        # Let t = tan(theta):
+        #   dpos_du' ~   dpos_du - t dpos_dv
+        #   dpos_dv' ~ t dpos_du +   dpos_dv
+        # subject to the requirement that the dot product is zero.
         #
         # 0 =   t^2 (dpos_du <dot> dpos_dv)
         #     + t   (|dpos_dv|^2 - |dpos_du|^2)
@@ -1623,19 +1625,33 @@ class Surface(object):
 
         # discr = b**2 - 4*a*c
         discr = b**2 + 4*a**2
-        t = (discr.sqrt() - b) / (2*a)
+
+        # There are two solutions, for which theta differs by pi/2 as one would
+        # expect. For our purposes, the highest-precision formulation is:
+        #   t = -2 * c / (b + sign(b) * sqrt(discr))
+        # because:
+        # 1. b and sqrt(discr) could be close, making subtraction imprecise.
+        # 2. a could be close to zero, so we don't want to divide by 2*a.
+
+        t = (2*a) / (b + b.sign() * discr.sqrt())
 
         # Now normalize and construct the primed partials
         cos_theta = 1. / (1 + t**2).sqrt()
         sin_theta = t * cos_theta
 
-        dpos_du_prime_norm = (cos_theta * dpos_du - sin_theta * dpos_dv).norm()
-        dpos_dv_prime_norm = (sin_theta * dpos_du + cos_theta * dpos_dv).norm()
+        dpos_du_prime = (cos_theta * dpos_du - sin_theta * dpos_dv)
+        dpos_dv_prime = (sin_theta * dpos_du + cos_theta * dpos_dv)
 
-        minres = Scalar(np.minimum(dpos_du_prime_norm.values,
-                                   dpos_dv_prime_norm.values), dpos_duv.mask)
-        maxres = Scalar(np.maximum(dpos_du_prime_norm.values,
-                                   dpos_dv_prime_norm.values), dpos_duv.mask)
+        # For purposes of testing, let's make sure the dot product is small
+        if _unittest:
+            return (dpos_du_prime, dpos_dv_prime)
+
+        # Return the minima and maxima separately
+        dpos_du_prime_norm = dpos_du_prime.norm()
+        dpos_dv_prime_norm = dpos_dv_prime.norm()
+
+        minres = Scalar.minimum(dpos_du_prime_norm, dpos_dv_prime_norm)
+        maxres = Scalar.maximum(dpos_du_prime_norm, dpos_dv_prime_norm)
 
         return (minres, maxres)
 
@@ -1649,9 +1665,22 @@ class Test_Surface(unittest.TestCase):
 
     def runTest(self):
 
-        # TBD
+        np.random.seed(6631)
 
-        pass
+        # Most methods are heavily tested elsewhere
+
+        # Surface.resolution...
+
+        # Make sure the rotated resolution vectors are perpendicular
+        dpos_duv = Vector3(np.random.randn(10000, 3, 2), drank=1)
+        (new_du, new_dv) = Surface.resolution(dpos_duv, _unittest=True)
+        self.assertTrue(new_du.dot(new_dv).max() < 1.e-12)
+
+        # We also expect area to be conserved
+        dpos_du = Vector3(dpos_duv.values[...,0])
+        dpos_dv = Vector3(dpos_duv.values[...,1])
+        diffs = dpos_du.cross(dpos_dv) - new_du.cross(new_dv)
+        self.assertTrue(diffs.norm().max() < 1.e-14)
 
 ########################################
 if __name__ == '__main__':

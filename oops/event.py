@@ -188,35 +188,45 @@ class Event(object):
         """The minimum info necessary to preserve the entire state of the event.
         """
 
-        arr_lt_attr = ''
-        dep_lt_attr = ''
-        more = {}
+        arr_lt_attr = ''    # name of one "arr" attribute, scaled by arr_lt
+        dep_lt_attr = ''    # name of one "dep" attribute, scaled by dep_lt
+        more = {}           # dict containing one "arr" and/or one "dep" vector
 
         # Save only the first occurrence of an arriving photon property
         for prop in Event.ARR_VEC3_PROPERTIES:
             attr = '_' + prop + '_'
             if hasattr(self, attr):
-                vec = self.getattr(attr)
+                vec = getattr(self, attr)
 
                 # Scale it by the light time if possible
+                arr_lt = None
                 if hasattr(self, '_arr_lt_'):
-                    more[prop] = vec.with_norm(getattr(self, '_arr_lt_'))
+                    arr_lt = self._arr_lt_
+                if arr_lt is not None:
+                    more[prop] = vec.with_norm(arr_lt)
                     arr_lt_attr = attr
                 else:
                     more[prop] = vec
+
+                break
 
         # Save only the first occurrence of a departing photon property
         for prop in Event.DEP_VEC3_PROPERTIES:
             attr = '_' + prop + '_'
             if hasattr(self, attr):
-                vec = self.getattr(attr)
+                vec = getattr(self, attr)
 
                 # Scale it by the light time if possible
+                dep_lt = None
                 if hasattr(self, '_dep_lt_'):
-                    more[prop] = vec.with_norm(getattr(self, '_dep_lt_'))
+                    dep_lt = self._dep_lt_
+                if dep_lt is not None:
+                    more[prop] = vec.with_norm(dep_lt)
                     dep_lt_attr = attr
                 else:
                     more[prop] = vec
+
+                break
 
         # Save additional properties
         for prop in ('perp', 'vflat'):
@@ -233,11 +243,11 @@ class Event(object):
 
     #===========================================================================
     def __setstate__(self, state):
-        self.__init__(*state[:-2])
+
+        (more, arr_lt_attr, dep_lt_attr) = state[-3:]
+        self.__init__(*state[:-3], **more)
 
         # Extract arriving and departing light time from the relevant vectors
-        (arr_lt_attr, dep_lt_attr) = state[-2:]
-
         if arr_lt_attr:
             vec = getattr(self, arr_lt_attr)
             self.fset('arr_lt', vec.norm())
@@ -893,9 +903,6 @@ class Event(object):
         """A shallow copy of the Event.
 
         Inputs:
-            recursive   True also to clone (shallow-copy) the attributes of the
-                        Event. This is necessary if derivatives of the subfields
-                        are going to be modified.
             omit        A list of properties and subfields to omit. Use 'arr' to
                         omit all arrival vectors and 'dep' to omit all departure
                         vectors; other properties and subfields must be named
@@ -910,20 +917,21 @@ class Event(object):
         if not isinstance(omit, (tuple,list)):
             omit = [omit]
 
-        # Handle omissions
+        # Expand the list of omissions
+        omissions = []
         for name in omit:
+            if name == 'arr':
+                omissions += Event.ARR_VEC3_PROPERTIES
+            elif name == 'dep':
+                omissions += Event.DEP_VEC3_PROPERTIES
+            else:
+                omissions.append(name)
 
-            # For 'arr' and 'dep', wipe out all associated vectors
-            if name == 'arr' or name == 'dep':
-                for prop_name in Event.SPECIAL_PROPERTIES:
-                    if name in prop_name and '_lt' not in prop_name:
-                        attr = Event.attr_name(prop_name)
-                        result.__dict__[attr] = None
-                        if result._ssb_ is not None:
-                            result._ssb_.__dict__[attr] = None
+        # Handle the omissions
+        for name in omissions:
 
-            # Wipe out other properties individually
-            elif name in Event.SPECIAL_PROPERTIES:
+            # Wipe out a property
+            if name in Event.SPECIAL_PROPERTIES:
                 attr = Event.attr_name(name)
                 result.__dict__[attr] = None
                 if result._ssb_ is not None:
@@ -1070,8 +1078,8 @@ class Event(object):
         event = self.copy()
         event._time_.insert_deriv('t', Scalar.ONE, override=True)
 
-        if event._ssb_ is not None and event._ssb_ is not event and \
-           event._ssb_._time_ is not event._time_:
+        if (event._ssb_ is not None and event._ssb_ is not event
+            and event._ssb_._time_ is not event._time_):
             event.ssb._time_.insert_deriv('t', Scalar.ONE, override=True)
 
         return event
@@ -1092,77 +1100,79 @@ class Event(object):
         return event
 
     #===========================================================================
-    def with_pos_derivs(self):
-        """A clone of this event containing unit position derivatives d_dpos in
-        the frame of the event.
-        """
-
-        if 'pos' in self.__state__.derivs:
-            return self
-
-        event = self.copy()
-        event._state_.insert_deriv('pos', Vector3.IDENTITY, override=True)
-
-        if event._ssb_ is not None and event._ssb_ is not event:
-            dpos_dpos_j2000 = event.xform_to_j2000.rotate(event._state_,
-                                                          derivs=True)
-            event.ssb._state_.insert_deriv('pos', dpos_dpos_j2000,
-                                                  override=True)
-
-        return event
-
-    #===========================================================================
-    def with_lt_derivs(self):
-        """A clone of this event containing unit photon arrival light-time
-        derivatives d_dlt.
-        """
-
-        if 'lt' in self.arr_lt.derivs:
-            return self
-
-        event = self.copy()
-        event._arr_lt_.insert_deriv('lt', Scalar.ONE, override=True)
-
-        if event._ssb_ is not None and event._ssb_ is not event and \
-           event._ssb_._arr_lt_ is not event._arr_lt_:
-            event._ssb_._arr_lt_.insert_deriv('lt', Scalar.ONE, override=True)
-
-        return event
-
-    #===========================================================================
-    def with_dep_derivs(self):
-        """A clone of this event with unit photon departure derivatives d_ddep.
-        """
-
-        if 'dep' in self.dep_ap.derivs:
-            return self
-
-        event = self.copy(omit='dep')
-        dep_ap = self.dep_ap.copy()
-        dep_ap.insert_deriv('dep', Vector3.IDENTITY, override=True)
-        event.dep_ap = dep_ap
-
-        return event
-
-    #===========================================================================
-    def with_dlt_derivs(self):
-        """A clone of this event containing unit photon departure
-        light-time derivatives d_ddlt.
-        """
-
-        if 'dlt' in self.dep_lt.derivs:
-            return self
-
-        event = self.copy()
-        event._dep_lt_.insert_deriv('dlt', Scalar.ONE, override=True)
-
-        if event._ssb_ is not None and event._ssb_ is not event and \
-           event._ssb_._dep_lt_ is not event._dep_lt_:
-            event._ssb_._dep_lt_.insert_deriv('dlt', Scalar.ONE,
-                                                       override=True)
-
-        return event
-
+# TODO: These are unused; might not work exactly as intended
+#
+#     def with_pos_derivs(self):
+#         """A clone of this event containing unit position derivatives d_dpos in
+#         the frame of the event.
+#         """
+#
+#         if 'pos' in self.__state__.derivs:
+#             return self
+#
+#         event = self.copy()
+#         event._state_.insert_deriv('pos', Vector3.IDENTITY, override=True)
+#
+#         if event._ssb_ is not None and event._ssb_ is not event:
+#             dpos_dpos_j2000 = event.xform_to_j2000.rotate(event._state_,
+#                                                           derivs=True)
+#             event.ssb._state_.insert_deriv('pos', dpos_dpos_j2000,
+#                                                   override=True)
+#
+#         return event
+#
+#     #===========================================================================
+#     def with_lt_derivs(self):
+#         """A clone of this event containing unit photon arrival light-time
+#         derivatives d_dlt.
+#         """
+#
+#         if 'lt' in self.arr_lt.derivs:
+#             return self
+#
+#         event = self.copy()
+#         event._arr_lt_.insert_deriv('lt', Scalar.ONE, override=True)
+#
+#         if event._ssb_ is not None and event._ssb_ is not event and \
+#            event._ssb_._arr_lt_ is not event._arr_lt_:
+#             event._ssb_._arr_lt_.insert_deriv('lt', Scalar.ONE, override=True)
+#
+#         return event
+#
+#     #===========================================================================
+#     def with_dep_derivs(self):
+#         """A clone of this event with unit photon departure derivatives d_ddep.
+#         """
+#
+#         if 'dep' in self.dep_ap.derivs:
+#             return self
+#
+#         event = self.copy(omit='dep')
+#         dep_ap = self.dep_ap.copy()
+#         dep_ap.insert_deriv('dep', Vector3.IDENTITY, override=True)
+#         event.dep_ap = dep_ap
+#
+#         return event
+#
+#     #===========================================================================
+#     def with_dlt_derivs(self):
+#         """A clone of this event containing unit photon departure
+#         light-time derivatives d_ddlt.
+#         """
+#
+#         if 'dlt' in self.dep_lt.derivs:
+#             return self
+#
+#         event = self.copy()
+#         event._dep_lt_.insert_deriv('dlt', Scalar.ONE, override=True)
+#
+#         if event._ssb_ is not None and event._ssb_ is not event and \
+#            event._ssb_._dep_lt_ is not event._dep_lt_:
+#             event._ssb_._dep_lt_.insert_deriv('dlt', Scalar.ONE,
+#                                                        override=True)
+#
+#         return event
+#
     ############################################################################
     # Shrink and unshrink operations
     ############################################################################

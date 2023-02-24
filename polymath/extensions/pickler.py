@@ -1052,6 +1052,6 @@ def __setstate__(self, state):
         if deriv['_readonly_']:
             new_deriv.as_readonly()
 
-        self._derivs_[key] = new_deriv
+        self.insert_deriv(key, new_deriv)
 
 ################################################################################

@@ -636,7 +636,7 @@ class Wayframe(Frame):
         # A frame might not get assigned the same ID on the next run of OOPS, so
         # saving the name alone is not meaningful. Instead, we save the current
         # primary definition, which has the same frame_id, origin, and shape.
-        return (self.as_primary_frame(),)
+        return (Frame.as_primary_frame(self),)
 
     def __setstate__(self, state):
         (primary_frame,) = state
@@ -856,8 +856,6 @@ class QuickFrame(Frame):
     """QuickFrame is a Frame subclass that returns Transform objects based on
     interpolation of another Frame within a specified time window.
     """
-
-    # PACKRAT_ARGS is undefined; save every attribute to keep this up to date
 
     def __init__(self, frame, interval, quickdict):
         """Constructor for a QuickFrame.

@@ -1029,7 +1029,7 @@ class Waypoint(Path):
         # A path might not get assigned the same ID on the next run of OOPS, so
         # saving the name alone is not meaningful. Instead, we save the current
         # primary definition, which has the same path_id, frame, and shape.
-        return (self.as_primary_path(),)
+        return (Path.as_primary_path(self),)
 
     def __setstate__(self, state):
         (primary_path,) = state

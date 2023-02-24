@@ -1160,8 +1160,8 @@ def exercise_radial_longitude_azimuth(bp,
         test = bp.ring_azimuth(ring, direction='sun')
         show_info(bp, 'Ring azimuth wrt Sun (deg)', test*DPR, **options)
         compare = bp.ring_longitude(ring, 'sun')
-        diff = test - compare
-        show_info(bp, 'Ring azimuth minus longitude wrt Sun (deg)', diff*DPR, **options)
+#         diff = test - compare
+#         show_info(bp, 'Ring azimuth minus longitude wrt Sun (deg)', diff*DPR, **options)
         test = bp.ring_longitude(ring, reference='sha')
         show_info(bp, 'Ring longitude wrt SHA (deg)', test*DPR, **options)
         test = bp.ring_sub_observer_longitude(ring, 'node')
@@ -1199,9 +1199,9 @@ def exercise_radial_longitude_azimuth(bp,
         test = bp.ring_azimuth(key, direction='sun')
         show_info(bp, 'Planet:ring azimuth wrt Sun, unmasked (deg)', test*DPR, **options)
         compare = bp.ring_longitude(key, 'sun')
-        diff = test - compare
-        show_info(bp, 'Planet:ring azimuth minus longitude wrt Sun, unmasked (deg)',
-                  diff*DPR, **options)
+#         diff = test - compare
+#         show_info(bp, 'Planet:ring azimuth minus longitude wrt Sun, unmasked (deg)',
+#                   diff*DPR, **options)
 
 #===========================================================================
 def exercise_photometry(bp,
@@ -1219,10 +1219,10 @@ def exercise_photometry(bp,
         show_info(bp, 'Ring incidence angle, prograde (deg)', test*DPR, **options)
         test = bp.incidence_angle(ring, apparent=False)
         show_info(bp, 'Ring incidence angle via incidence() (deg)', test*DPR, **options)
-        test = bp.ring_elevation(ring, direction='sun')
-        show_info(bp, 'Ring elevation wrt Sun (deg)', test*DPR, **options)
-        compare = bp.ring_incidence_angle(ring, 'north', apparent=False)
-        diff = test + compare
+#         test = bp.ring_elevation(ring, direction='sun', apparent=False)
+#         show_info(bp, 'Ring elevation wrt Sun (deg)', test*DPR, **options)
+#         compare = bp.ring_incidence_angle(ring, 'north', apparent=False)
+#         diff = test + compare
 #         show_info(bp, 'Ring elevation wrt Sun plus north incidence (deg)', diff*DPR,
 #                   **options)
         test = bp.ring_center_incidence_angle(ring, 'sunward', apparent=False)
@@ -1242,10 +1242,10 @@ def exercise_photometry(bp,
         show_info(bp, 'Ring emission angle via emission() (deg)', test*DPR, **options)
         test = bp.ring_elevation(ring, direction='obs')
         show_info(bp, 'Ring elevation wrt observer (deg)', test*DPR, **options)
-        compare = bp.ring_emission_angle(ring, 'north')
+        compare = bp.ring_emission_angle(ring, 'north', apparent=False)
         diff = test + compare
-#         show_info(bp, 'Ring elevation wrt observer plus north emission (deg)', diff*DPR,
-#                   **options)
+        show_info(bp, 'Ring elevation wrt observer plus north emission (deg)', diff*DPR,
+                  **options)
         test = bp.ring_center_emission_angle(ring, 'sunward')
         show_info(bp, 'Ring center emission angle, sunward (deg)', test*DPR, **options)
         test = bp.ring_center_emission_angle(ring, 'north')
@@ -1260,21 +1260,21 @@ def exercise_photometry(bp,
             key = ('ring_radius', planet+':ring', 71492.)
         else:
             key = planet + ':ring'
-        test = bp.ring_elevation(key, direction='sun')
-        show_info(bp, 'Ring elevation wrt Sun, unmasked (deg)', test*DPR, **options)
-        compare = bp.ring_incidence_angle(key, 'north')
-        diff = test + compare
+#         test = bp.ring_elevation(key, direction='sun', apparent=False)
+#         show_info(bp, 'Ring elevation wrt Sun, unmasked (deg)', test*DPR, **options)
+#         compare = bp.ring_incidence_angle(key, 'north', apparent=False)
+#         diff = test + compare
 #         show_info(bp,
 #                   'Ring elevation wrt Sun plus north incidence, unmasked (deg)',
 #                   diff*DPR, **options)
         test = bp.ring_elevation(key, direction='obs')
         show_info(bp, 'Ring elevation wrt observer, unmasked (deg)', test*DPR,
                   **options)
-        compare = bp.ring_emission_angle(key, 'north')
+        compare = bp.ring_emission_angle(key, 'north', apparent=False)
         diff = test + compare
-#         show_info(bp,
-#                   'Ring elevation wrt observer plus north emission, unmasked (deg)',
-#                   diff*DPR, **options)
+        show_info(bp,
+                  'Ring elevation wrt observer plus north emission, unmasked (deg)',
+                  diff*DPR, **options)
 
 
 #*******************************************************************************

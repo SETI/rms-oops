@@ -27,7 +27,7 @@ class TDIFOV(FOV):
         self.fov = fov
         self.tstop = float(tstop)
         self.tdi_texp = float(tdi_texp)
-        self.tdi_axis = tdi_axis[-1]
+        self.tdi_axis = tdi_axis
         self.tdi_sign = -1 if '-' in tdi_axis else 1
 
         # Validation
@@ -35,7 +35,7 @@ class TDIFOV(FOV):
             raise ValueError('invalid tdi_axis value: ' + repr(tdi_axis))
 
         # Interpret the axis
-        if self.tdi_axis == 'u':
+        if self.tdi_axis[-1] == 'u':
             self._duv_dshift = Pair((self.tdi_sign, 0))
             self._uv_line_index = 0
         else:
@@ -51,9 +51,9 @@ class TDIFOV(FOV):
         self.uv_area  = self.fov.uv_area
 
     def __getstate__(self):
-        return (self.fov, self.tdi_axis, self.cadence)
+        return (self.fov, self.tstop, self.tdi_texp, self.tdi_axis)
 
-    def __setstate__(self, *state):
+    def __setstate__(self, state):
         self.__init__(*state)
 
     #===========================================================================
