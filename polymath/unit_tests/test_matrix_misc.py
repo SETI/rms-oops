@@ -66,6 +66,6 @@ class Test_Matrix_misc(unittest.TestCase):
         self.assertTrue(np.all(abs(product.vals[...,1,2]) < DEL))
 
 ############################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

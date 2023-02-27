@@ -18,6 +18,6 @@ from oops.fov.tdifov        import Test_TDIFOV
 from oops.fov.wcsfov        import Test_WCSFOV
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

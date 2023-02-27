@@ -293,6 +293,6 @@ class Test_ReversedCadence(unittest.TestCase):
     case_partial_overlap(self, cadence)
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

@@ -11,7 +11,7 @@ from hosts.juno.jiram.spe import Test_Juno_JIRAM_SPE_Backplane_Exercises
 ########################################
 from oops.backplane.unittester_support import backplane_unittester_args
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################

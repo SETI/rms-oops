@@ -654,6 +654,6 @@ class Test_PolynomialFOV(unittest.TestCase):
         self.assertEqual(uv_test.derivs, {})
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

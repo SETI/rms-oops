@@ -108,6 +108,6 @@ class Test_ExtendedSource(unittest.TestCase):
         self.assertEqual(a, es.dn_from_value(es.value_from_dn(a)))
 
 #########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

@@ -21,7 +21,7 @@ from oops.surface.graphicellipsoid import Test_GraphicEllipsoid
 from oops.surface.graphicspheroid  import Test_GraphicSpheroid
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
 
     import oops
     oops.config.LOGGING.on('     ')

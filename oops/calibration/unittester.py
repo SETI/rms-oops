@@ -13,6 +13,6 @@ from oops.calibration.radiance       import Test_Radiance
 from oops.calibration.rawcounts      import Test_RawCounts
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

@@ -146,6 +146,6 @@ class Test_FlatFOV(unittest.TestCase):
         self.assertEqual(test2.area_factor(buffer), 0.5)
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

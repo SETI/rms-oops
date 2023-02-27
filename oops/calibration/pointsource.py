@@ -114,6 +114,6 @@ class Test_PointSource(unittest.TestCase):
         self.assertEqual(a, ps.dn_from_value(ps.value_from_dn(a, (10,10)), (10,10)))
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################
