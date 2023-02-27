@@ -6,7 +6,7 @@
 ################################################################################
 import os
 import pdsparser
-
+from pathlib import Path
 
 #===============================================================================
 class PDS3(object):
@@ -42,31 +42,72 @@ class PDS3(object):
         """Find the PDS3 label corresponding to the given file spec."""
 
         # Construct candidate label filenames
-        labelspecs = [filespec]
-        if not filespec.upper().endswith('.LBL'):
-            labelspecs.append(filespec.replace('.img', '.lbl'))
-            labelspecs.append(filespec.replace('.IMG', '.lbl'))
+        spec = Path(filespec)
+
+        labelspecs = [
+            spec.with_suffix('.lbl'),
+            spec.with_suffix('.LBL') ]
+
+        if filespec.upper().endswith('.LBL'):
+            labelspecs.append(filespec)
 
         # Check candidates; return first one that exists
         for labelspec in labelspecs:
-            if os.path.isfile(labelspec) :
-                return labelspec 
-                
+            if os.path.isfile(labelspec):
+                return labelspec
+
         # If no successful candidate, assume attached label
-        return filespec       
+        return filespec
 
     #===========================================================================
     @staticmethod
     def get_label(filespec):
-        """FInd the PDS3 label, clean it, load it, and parse into dictionary."""
+        """Find the PDS3 label, clean it, load it, and parse into dictionary."""
+
+        assert os.path.isfile(filespec)
 
         # Find the label
-        labelspec = find_label(filespec)
+        labelspec = PDS3.find_label(filespec)
 
         # Load and clean the PDS label
-        lines = clean_label(pdsparser.PdsLabel.load_file(labelspec))
+        lines = PDS3.clean_label(pdsparser.PdsLabel.load_file(labelspec))
 
         # Parse the label into a dictionary
         return pdsparser.PdsLabel.from_string(lines).as_dict()
 
 
+################################################################################
+# UNIT TESTS
+################################################################################
+import unittest
+import os.path
+
+from hosts.pds3              import PDS3
+from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+
+
+#*******************************************************************************
+class Test_PDS3(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+
+        filespec = 'cassini/ISS/W1575634136_1.IMG'
+        label_dict = PDS3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
+        self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
+
+        filespec = 'cassini/ISS/W1575634136_1.LBL'
+        label_dict = PDS3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
+        self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
+
+#        This tests a failure mode
+#        filespec = 'nofile.crap'
+#        label_dict = PDS3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
+#        self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
+
+
+
+##############################################
+if __name__ == '__main__': # pragma: no cover
+    unittest.main(verbosity=2)
+################################################################################
