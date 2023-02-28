@@ -33,6 +33,7 @@
 
 import unittest
 
+from oops.backplane            import Test_Backplane_via_gold_master
 from oops.backplane            import Test_Backplane_Surfaces
 from oops.backplane            import Test_Backplane_Borders
 from oops.backplane            import Test_Backplane_Empty_Events
@@ -53,7 +54,7 @@ from oops.backplane.where      import Test_Where
 ########################################
 from oops.backplane.unittester_support import backplane_unittester_args
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################

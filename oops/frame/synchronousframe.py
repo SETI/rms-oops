@@ -3,11 +3,10 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Scalar, Matrix3
-
-from .           import Frame
-from ..path      import Path
-from ..transform import Transform
+from polymath       import Matrix3, Qube, Scalar
+from oops.frame     import Frame
+from oops.path      import Path
+from oops.transform import Transform
 
 class SynchronousFrame(Frame):
     """A Frame subclass describing a a body that always keeps the x-axis pointed
@@ -31,7 +30,8 @@ class SynchronousFrame(Frame):
         self.planet_path = Path.as_path(planet_path)
         self.path = Path.wrt(self.planet_path, self.body_path)
 
-        assert self.planet_path.shape == ()
+        if self.planet_path.shape:
+            raise ValueError('SynchronousFrame requires a shapeless body path')
 
         self.frame_id  = frame_id
         self.reference = Frame.as_wayframe(self.planet_path.frame)
@@ -51,7 +51,8 @@ class SynchronousFrame(Frame):
 
     # Unpickled frames will always have temporary IDs to avoid conflicts
     def __getstate__(self):
-        return (self.body_path, self.planet_path, self.shape)
+        return (Path.as_primary_path(self.body_path),
+                Path.as_primary_path(self.planet_path), self.shape)
 
     def __setstate__(self, state):
         # If this frame matches a pre-existing frame, re-use its ID
@@ -85,7 +86,7 @@ import unittest
 class Test_SynchronousFrame(unittest.TestCase):
 
     def setUp(self):
-        from ..body import Body
+        from oops.body import Body
 
         Body.reset_registry()
         Body.define_solar_system('2000-01-01', '2020-01-01')
@@ -94,7 +95,7 @@ class Test_SynchronousFrame(unittest.TestCase):
         pass
 
     def runTest(self):
-        from ..path import Path
+        from oops.path import Path
 
         # Path of Saturn relative to Enceladus
         inward = Path.as_path('SATURN').wrt('ENCELADUS')
@@ -122,6 +123,6 @@ class Test_SynchronousFrame(unittest.TestCase):
                         < 0.1)
 
 #########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

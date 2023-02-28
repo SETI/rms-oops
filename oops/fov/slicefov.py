@@ -3,8 +3,7 @@
 ################################################################################
 
 from polymath import Pair
-
-from . import FOV
+from oops.fov import FOV
 
 class SliceFOV(FOV):
     """A subclass of FOV in which only a slice of another FOV's (u,v) array is
@@ -104,6 +103,6 @@ class Test_SliceFOV(unittest.TestCase):
         pass
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

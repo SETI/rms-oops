@@ -21,6 +21,6 @@ from oops.frame.trackerframe     import Test_TrackerFrame
 from oops.frame.twovectorframe   import Test_TwoVectorFrame
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

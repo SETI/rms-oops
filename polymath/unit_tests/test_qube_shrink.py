@@ -373,9 +373,31 @@ class Test_Qube_shrink(unittest.TestCase):
                 else:
                     self.assertTrue((value1[test_mask] == value3[test_mask]).all())
 
+    # Fully masked after shrink
+
+    # (qube, antimask)
+    values = [
+        (Boolean(True, False), False),
+        (Boolean(True, True ), False),
+        (Scalar([1,2], False), False),
+        (Scalar([1,2], True ), False),
+        (Scalar([1,2], np.array([False, True])), False),
+        (Scalar([1,2], np.array([False, True])), np.array([False, True])),
+        (Scalar([1.,2.], False), False),
+        (Scalar([1.,2.], np.array([False, True])), np.array([False, True])),
+        (Scalar(np.arange(100), False), False),
+    ]
+
+    for (a, antimask) in values:
+        aa = a.shrink(antimask)
+        self.assertEqual(aa.shape, ())
+        b = aa.unshrink(antimask, a.shape)
+        self.assertEqual(a.shape, b.shape)
+        self.assertEqual(a.dtype(), b.dtype())
+
 ################################################################################
 # Execute from command line...
 ################################################################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

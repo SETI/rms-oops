@@ -740,6 +740,6 @@ def case_tdicadence_10_100_10_1(self, cad):
     self.assertEqual(cad.tstride_at_tstep(10), 10)
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

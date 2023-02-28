@@ -3,11 +3,10 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Scalar, Vector3, Matrix3
-
-from .           import Frame
-from ..path      import Path
-from ..transform import Transform
+from polymath       import Matrix3, Qube, Scalar, Vector3
+from oops.frame     import Frame
+from oops.path      import Path
+from oops.transform import Transform
 
 class SpinFrame(Frame):
     """A Frame subclass describing a frame in uniform rotation about one axis of
@@ -73,7 +72,7 @@ class SpinFrame(Frame):
     # Unpickled frames will always have temporary IDs to avoid conflicts
     def __getstate__(self):
         return (self.offset, self.rate, self.epoch, self.axis2,
-                self.reference, self.shape)
+                Frame.as_primary_frame(self.reference), self.shape)
 
     def __setstate__(self, state):
         # If this frame matches a pre-existing frame, re-use its ID
@@ -122,7 +121,7 @@ class Test_SpinFrame(unittest.TestCase):
         np.random.seed(6521)
 
         # Import here to avoid conflicts
-        from ..event import Event
+        from oops.event import Event
 
         Frame.reset_registry()
         Path.reset_registry()
@@ -210,6 +209,6 @@ class Test_SpinFrame(unittest.TestCase):
         Frame.reset_registry()
 
 #########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

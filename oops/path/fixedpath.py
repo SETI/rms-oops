@@ -4,9 +4,9 @@
 
 from polymath import Qube, Vector3
 
-from .       import Path
-from ..event import Event
-from ..frame import Frame
+from oops.event import Event
+from oops.frame import Frame
+from oops.path  import Path
 
 class FixedPath(Path):
     """A path described by fixed coordinates relative to another path and frame.
@@ -46,7 +46,9 @@ class FixedPath(Path):
 
     # Unpickled paths will always have temporary IDs to avoid conflicts
     def __getstate__(self):
-        return (self.pos, self.origin, self.frame)
+        return (self.pos,
+                Path.as_primary_path(self.origin),
+                Frame.as_primary_frame(self.frame))
 
     def __setstate__(self, state):
         self.__init__(*state)
@@ -78,6 +80,6 @@ class Test_FixedPath(unittest.TestCase):
         pass
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

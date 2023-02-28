@@ -3,11 +3,10 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Scalar, Vector3, Matrix3
-
-from .           import Frame
-from .poleframe  import PoleFrame
-from ..transform import Transform
+from polymath             import Matrix3, Qube, Scalar, Vector3
+from oops.frame           import Frame
+from oops.frame.poleframe import PoleFrame
+from oops.transform       import Transform
 
 class LaplaceFrame(Frame):
     """A Frame subclass defined by a Kepler Path and a tilt angle.
@@ -95,7 +94,8 @@ class LaplaceFrame(Frame):
 
     # Unpickled frames will always have temporary IDs to avoid conflicts
     def __getstate__(self):
-        return (self.orbit, self.tilt, self.given_cache_size, self.shape)
+        return (Path.as_primary_path(self.orbit),
+                self.tilt, self.given_cache_size, self.shape)
 
     def __setstate__(self, state):
         # If this frame matches a pre-existing frame, re-use its ID
@@ -234,6 +234,6 @@ class Test_LaplaceFrame(unittest.TestCase):
         pass
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

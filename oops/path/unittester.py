@@ -14,6 +14,6 @@ from oops.path.multipath  import Test_MultiPath
 from oops.path.spicepath  import Test_SpicePath
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

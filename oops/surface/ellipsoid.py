@@ -2,16 +2,12 @@
 # oops/surface/ellipsoid.py: Ellipsoid subclass of class Surface
 ################################################################################
 
-from __future__ import print_function
-
 import numpy as np
-from polymath import Scalar, Vector3, Matrix
-
-from .           import Surface
-from ..config    import SURFACE_PHOTONS, LOGGING
-from ..frame     import Frame
-from ..path      import Path
-from ..constants import PI, HALFPI, TWOPI
+from polymath       import Matrix, Scalar, Vector3
+from oops.config    import SURFACE_PHOTONS, LOGGING
+from oops.frame     import Frame
+from oops.path      import Path
+from oops.surface   import Surface
 
 class Ellipsoid(Surface):
     """An ellipsoidal surface centered on the given path and fixed with respect
@@ -35,6 +31,7 @@ class Ellipsoid(Surface):
 
     COORDINATE_TYPE = 'spherical'
     IS_VIRTUAL = False
+    HAS_INTERIOR = True
 
     DEBUG = False       # True for convergence testing in intercept_normal_to()
 
@@ -84,11 +81,21 @@ class Ellipsoid(Surface):
         # This is the exclusion zone radius, within which calculations of
         # intercept_normal_to() are automatically masked due to the ill-defined
         # geometry.
-
+        self.exclusion_unscaled = float(exclusion)
         self.exclusion = exclusion * self.rpol
 
+        self.unmasked = self
+
+        # Unique key for intercept calculations
+        self.intercept_key = ('ellipsoid', self.origin.waypoint,
+                                           self.frame.wayframe,
+                                           tuple(self.radii),
+                                           self.exclusion_unscaled)
+
     def __getstate__(self):
-        return (self.origin, self.frame, self.radii, self.exclusion)
+        return (Path.as_primary_path(self.origin),
+                Frame.as_primary_frame(self.frame),
+                tuple(self.radii), self.exclusion_unscaled)
 
     def __setstate__(self, state):
         self.__init__(*state)
@@ -112,6 +119,10 @@ class Ellipsoid(Surface):
                         three Scalars, one for each coordinate.
         """
 
+        if axes not in (2, 3):
+            raise ValueError('Surface.coords_from_vector3 ' +
+                             'axes values must equal 2 or 3')
+
         pos = Vector3.as_vector3(pos, derivs)
 
         unsquashed = Vector3.as_vector3(pos).element_mul(self.unsquash)
@@ -119,12 +130,7 @@ class Ellipsoid(Surface):
         r = unsquashed.norm()
         (x,y,z) = unsquashed.to_scalars()
         lat = (z/r).arcsin()
-#        lon_unsquashed = y.arctan2(x) % TWOPI
-        lon = y.arctan2(x) % TWOPI
-
-        # Convert longitude from "unsquashed" to planetocentric
-#         lon = (lon_unsquashed.tan() * self.squash_y).arctan()  # -pi/2 to pi/2
-#         lon += np.pi * ((lon_unsquashed.vals + np.pi/2) // np.pi)
+        lon = y.arctan2(x) % Scalar.TWOPI
 
         if axes == 2:
             return (lon, lat)
@@ -151,27 +157,43 @@ class Ellipsoid(Surface):
         be broadcastable to a single shape.
         """
 
+        if len(coords) not in (2, 3):
+            raise ValueError('Surface.vector3_from_coords requires 2 or 3 '
+                             'coords')
+
         # Convert to Scalars
         lon = Scalar.as_scalar(coords[0], derivs)
         lat = Scalar.as_scalar(coords[1], derivs)
-
-        # Convert longitude from planetocentric to "unsquashed"
-#         lon_unsquashed = (lon.tan() * self.unsquash_y).arctan()
-#         lon_unsquashed = lon_unsquashed + PI * ((lon.vals + HALFPI) // PI)
 
         if len(coords) == 2:
             r = Scalar(self.req)
         else:
             r = Scalar(coords[2], derivs) + self.req
 
+        # Convert to "squashed" spherical coordinates
         r_coslat = r * lat.cos()
-#         x = r_coslat * lon_unsquashed.cos()
-#         y = r_coslat * lon_unsquashed.sin() * self.squash_y
         x = r_coslat * lon.cos()
         y = r_coslat * lon.sin() * self.squash_y
         z = r * lat.sin() * self.squash_z
 
         return Vector3.from_scalars(x,y,z)
+
+    #===========================================================================
+    def position_is_inside(self, pos, obs=None, time=None):
+        """Where positions are inside the surface.
+
+        Input:
+            pos         a Vector3 of positions relative to the surface.
+            obs         a Vector3 of observer positions. Ignored for solid
+                        surfaces but needed for virtual surfaces.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        unless the surface is time-variable.
+
+        Return:         Boolean True where positions are inside the surface
+        """
+
+        unsquashed = Vector3.as_vector3(pos).element_mul(self.unsquash)
+        return unsquashed.norm() < self.radii[0]
 
     #===========================================================================
     def intercept(self, obs, los, time=None, derivs=False, guess=None):
@@ -353,6 +375,7 @@ class Ellipsoid(Surface):
 
         # Terminate when accuracy stops improving by at least a factor of 2
         max_dp = 1.e99
+        converged = False
         for count in range(SURFACE_PHOTONS.max_iterations):
             denom = Vector3.ONES + p * self.unsquash_sq
 
@@ -366,16 +389,23 @@ class Ellipsoid(Surface):
             p -= dt
 
             prev_max_dp = max_dp
-            max_dp = abs(dt).max()
+            max_dp = abs(dt).max(builtins=True, masked=-1.)
 
             if LOGGING.surface_iterations or Ellipsoid.DEBUG:
-                print(LOGGING.prefix, 'Surface.spheroid.intercept_normal_to',
-                                      count+1, max_dp)
+                LOGGING.convergence('Surface.spheroid.intercept_normal_to:',
+                                    'iter=%d; change=%.6g' % (count+1, max_dp))
 
-            if (np.all(Scalar.as_scalar(max_dp).mask)
-                or max_dp <= SURFACE_PHOTONS.dlt_precision
-                or max_dp >= prev_max_dp * 0.5):
-                    break
+            if max_dp <= SURFACE_PHOTONS.dlt_precision:
+                converged = True
+                break
+
+            if max_dp >= prev_max_dp:
+                break
+
+        if not converged:
+            LOGGING.warn('Surface.spheroid.intercept_normal_to ' +
+                         'did not converge;',
+                         'iter=%d; change=%.6g' % (count+1, max_dp))
 
         denom = Vector3.ONES + p * self.unsquash_sq
         cept = pos.element_div(denom)
@@ -609,13 +639,11 @@ class Ellipsoid(Surface):
 ################################################################################
 
 import unittest
+from oops.constants import PI, HALFPI
 
 class Test_Ellipsoid(unittest.TestCase):
 
     def runTest(self):
-
-        from ..frame import Frame
-        from ..path import Path
 
         np.random.seed(2610)
 
@@ -831,6 +859,6 @@ class Test_Ellipsoid(unittest.TestCase):
         Frame.reset_registry()
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

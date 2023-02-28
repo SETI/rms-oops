@@ -3,14 +3,13 @@
 ################################################################################
 
 import numpy as np
-from polymath import Scalar
-
-from .                 import Observation
-from ..cadence         import Cadence
-from ..cadence.instant import Instant
-from ..fov.nullfov     import NullFOV
-from ..frame           import Frame
-from ..path            import Path
+from polymath             import Scalar
+from oops.cadence         import Cadence
+from oops.cadence.instant import Instant
+from oops.fov.nullfov     import NullFOV
+from oops.frame           import Frame
+from oops.observation     import Observation
+from oops.path            import Path
 
 class InSitu(Observation):
     """NOTE: This is still a work in progress. Not yet tested. Do not use.
@@ -101,6 +100,6 @@ class Test_InSitu(unittest.TestCase):
         pass
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

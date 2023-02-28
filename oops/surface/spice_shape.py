@@ -4,10 +4,11 @@
 
 import cspyce
 
-from .spheroid          import Spheroid
-from .ellipsoid         import Ellipsoid
-from ..path.spicepath   import SpicePath
-from ..frame.spiceframe import SpiceFrame
+from oops.frame.spiceframe  import SpiceFrame
+from oops.path.spicepath    import SpicePath
+from oops.surface.ellipsoid import Ellipsoid
+from oops.surface.spheroid  import Spheroid
+
 import oops.spice_support as spice
 
 def spice_shape(spice_id, frame_id=None, default_radii=None):
@@ -58,9 +59,9 @@ class Test_spice_shape(unittest.TestCase):
 
     def runTest(self):
 
-        from ..path import Path
-        from ..frame import Frame
-        from ..unittester_support import TESTDATA_PARENT_DIRECTORY
+        from oops.path import Path
+        from oops.frame import Frame
+        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
         import os.path
 
         spice.initialize()
@@ -81,6 +82,6 @@ class Test_spice_shape(unittest.TestCase):
         Frame.reset_registry()
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

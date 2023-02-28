@@ -115,6 +115,6 @@ class Test_Qube_units(unittest.TestCase):
     self.assertTrue((c-a).d_dt.rms().max() < DEL)
 
 ############################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

@@ -6,46 +6,44 @@ from polymath import Scalar, Vector3, Matrix3
 
 from oops.backplane import Backplane
 from oops.frame     import Frame
-from oops.constants import TWOPI
 
-#===============================================================================
 def pole_clock_angle(self, event_key):
-    """Projected pole vector on the sky, measured from north through wes.
+    """Gridless projected pole vector on the sky, measured from north through
+    west.
 
     In other words, measured clockwise on the sky.
     """
 
-    event_key = self.standardize_event_key(event_key)
+    gridless_key = self.gridless_event_key(event_key)
 
-    key = ('pole_clock_angle', event_key)
-    if key not in self.backplanes:
-        event = self.get_gridless_event(event_key)
+    key = ('pole_clock_angle', gridless_key)
+    if key in self.backplanes:
+        return self.get_backplane(key)
 
-        # Get the body frame's Z-axis in J2000 coordinates
-        frame = Frame.J2000.wrt(event.frame)
-        xform = frame.transform_at_time(event.time)
-        pole_j2000 = xform.rotate(Vector3.ZAXIS)
+    event = self.get_surface_event(gridless_key)
 
-        # Define the vector to the observer in the J2000 frame
-        dep_j2000 = event.wrt_ssb().apparent_dep()
+    # Get the body frame's Z-axis in J2000 coordinates
+    frame = Frame.J2000.wrt(event.frame)
+    xform = frame.transform_at_time(event.time)
+    pole_j2000 = xform.rotate(Vector3.ZAXIS)
 
-        # Construct a rotation matrix from J2000 to a frame in which the Z-axis
-        # points along -dep and the J2000 pole is in the X-Z plane. As it
-        # appears to the observer, the Z-axis points toward the body, the X-axis
-        # points toward celestial north as projected on the sky, and the Y-axis
-        # points toward celestial west (not east!).
-        rotmat = Matrix3.twovec(-dep_j2000, 2, Vector3.ZAXIS, 0)
+    # Define the vector to the observer in the J2000 frame
+    dep_j2000 = event.wrt_ssb().dep_ap
 
-        # Rotate the body frame's Z-axis to this frame.
-        pole = rotmat * pole_j2000
+    # Construct a rotation matrix from J2000 to a frame in which the Z-axis
+    # points along -dep and the J2000 pole is in the X-Z plane. As it
+    # appears to the observer, the Z-axis points toward the body, the X-axis
+    # points toward celestial north as projected on the sky, and the Y-axis
+    # points toward celestial west (not east!).
+    rotmat = Matrix3.twovec(-dep_j2000, 2, Vector3.ZAXIS, 0)
 
-        # Convert the X and Y components of the rotated pole into an angle
-        coords = pole.to_scalars()
-        clock_angle = coords[1].arctan2(coords[0]) % TWOPI
+    # Rotate the body frame's Z-axis to this frame.
+    pole = rotmat * pole_j2000
 
-        self.register_gridless_backplane(key, clock_angle)
+    # Convert the X and Y components of the rotated pole into an angle
+    clock_angle = pole.longitude(recursive=self.ALL_DERIVS)
 
-    return self.backplanes[key]
+    return self.register_backplane(key, clock_angle)
 
 #===============================================================================
 def pole_position_angle(self, event_key):
@@ -56,15 +54,41 @@ def pole_position_angle(self, event_key):
     event_key = self.standardize_event_key(event_key)
 
     key = ('pole_position_angle', event_key)
-    if key not in self.backplanes:
-        self.register_gridless_backplane(key,
-                        Scalar.TWOPI - self.pole_clock_angle(event_key))
+    if key in self.backplanes:
+        return self.get_backplane(key)
 
-    return self.backplanes[key]
+    return self.register_backplane(key, Scalar.TWOPI
+                                        - self.pole_clock_angle(event_key))
 
 ################################################################################
 
 Backplane._define_backplane_names(globals().copy())
+
+################################################################################
+# GOLD MASTER TESTS
+################################################################################
+
+from oops.backplane.gold_master import register_test_suite
+from oops.constants import DPR
+
+def pole_test_suite(bpt):
+
+    bp = bpt.backplane
+    for name in bpt.body_names + bpt.ring_names:
+
+        clock = bp.pole_clock_angle(name)
+        position = bp.pole_position_angle(name)
+        bpt.gmtest(clock,
+                   name + ' pole clock angle (deg)',
+                   method='mod360', limit=0.001, radius=1)
+        bpt.gmtest(position,
+                   name + ' pole position angle (deg)',
+                   method='mod360', limit=0.001, radius=1)
+        bpt.compare(clock + position, 0.,
+                    name + ' pole clock plus position angle (deg)',
+                    method='mod360', limit=1.e-13, radius=1)
+
+register_test_suite('pole', pole_test_suite)
 
 ################################################################################
 # UNIT TESTS
@@ -99,6 +123,6 @@ class Test_Pole(unittest.TestCase):
 
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

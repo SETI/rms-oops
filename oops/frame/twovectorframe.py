@@ -2,10 +2,9 @@
 # oops/frame/twovectorframe.py: Subclass TwoVectorFrame of class Frame
 ################################################################################
 
-from polymath import Qube, Vector3, Matrix3
-
-from .           import Frame
-from ..transform import Transform
+from polymath       import Matrix3, Qube, Vector3
+from oops.frame     import Frame
+from oops.transform import Transform
 
 class TwoVectorFrame(Frame):
     """A Frame subclass describing a frame that is fixed relative to another
@@ -50,11 +49,12 @@ class TwoVectorFrame(Frame):
 
         self.vector1 = Vector3.as_vector3(vector1)
         self.vector2 = Vector3.as_vector3(vector2)
-        self.axis1 = axis1
-        self.axis2 = axis2
+        self.axis1 = str(axis1).upper()
+        self.axis2 = str(axis2).upper()
 
-        assert (self.axis1 in 'XYZ')
-        assert (self.axis2 in 'XYZ')
+        for axis in (self.axis1, self.axis2):
+            if axis not in ('X','Y','Z'):
+                raise ValueError('invalid axis value: ' + repr(axis))
 
         self.reference = Frame.as_wayframe(frame)
 
@@ -98,8 +98,9 @@ class TwoVectorFrame(Frame):
 
     # Unpickled frames will always have temporary IDs to avoid conflicts
     def __getstate__(self):
-        return (self.reference, self.vector1, self.axis1,
-                                self.vector2, self.axis2, self.shape)
+        return (Frame.as_primary_frame(self.reference),
+                self.vector1, self.axis1,
+                self.vector2, self.axis2, self.shape)
 
     def __setstate__(self, state):
         # If this frame matches a pre-existing frame, re-use its ID
@@ -138,6 +139,6 @@ class Test_TwoVectorFrame(unittest.TestCase):
         pass    # TBD
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

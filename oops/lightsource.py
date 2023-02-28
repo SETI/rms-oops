@@ -101,7 +101,7 @@ class LightSource(object):
         """Solve for a photon arrival event from this lightsource.
 
         Input parameters are identical to the Path method of the same name, but
-        only the arrival event is returned.
+        for LightSources not identified with paths, the departure event is None.
 
         Input:
             event       the event of the observation.
@@ -153,15 +153,15 @@ class LightSource(object):
         if self.source_is_moving:
             return self.source.solve_photon(event, -1, derivs=derivs,
                                             guess=guess, antimask=antimask,
-                                            quick=quick, converge=converge)[1]
+                                            quick=quick, converge=converge)
 
         if derivs:
-            new_event = event.copy()
+            arrival = event.copy()
         else:
-            new_event = event.wod.copy()
+            arrival = event.wod.copy()
 
-        new_event.neg_arr_j2000 = self.source
-        return new_event
+        arrival.neg_arr_j2000 = self.source
+        return (None, arrival)
 
     #===========================================================================
     def as_path(self):
@@ -331,6 +331,6 @@ class Test_LightSource(unittest.TestCase):
     pass
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

@@ -11,7 +11,7 @@ import hosts.solar.rieke as rieke
 
 import tabulation as tab
 
-if 'FLUX_DENSITY' not in globals():
+if 'FLUX_DENSITY' not in globals(): # pragma: no cover
 
     assert stis.UNITS  == rieke.UNITS
     assert stis.XUNITS == rieke.XUNITS

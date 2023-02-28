@@ -1,9 +1,0 @@
-# TBD...
-#   position(self, event_key, axis='x', apparent=True, frame='j2000')
-#       returns an arbitrary position vector in an arbitrary frame
-#   velocity(self, event_key, axis='x', apparent=True, frame='j2000')
-#       returns an arbitrary velocity vector in an arbitrary frame
-#   projected_radius(self, event_key, radius='long')
-#       returns the projected angular radius of the body along its long or
-#       short axis.
-

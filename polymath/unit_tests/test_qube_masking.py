@@ -190,6 +190,6 @@ class Test_qube_masking(unittest.TestCase):
     self.assertEqual(Boolean(a.clip([7,6,5,4,3,2],upper,False).mask), False)
 
 ############################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

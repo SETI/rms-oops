@@ -4,9 +4,9 @@
 
 from polymath import Qube, Scalar
 
-from .         import Path
-from ..event   import Event
-from ..surface import Surface
+from oops.event import Event
+from oops.frame import Frame
+from oops.path  import Path
 
 class LinearCoordPath(Path):
     """A path defined by coordinates changing linearly on a specified Surface.
@@ -38,8 +38,6 @@ class LinearCoordPath(Path):
         self.epoch = Scalar.as_scalar(epoch)
         self.obs_path = Path.as_path(obs)
 
-        assert isinstance(self.surface, Surface)
-
         # Required attributes
         self.path_id = path_id
         self.origin  = self.surface.origin
@@ -55,7 +53,7 @@ class LinearCoordPath(Path):
     # Unpickled paths will always have temporary IDs to avoid conflicts
     def __getstate__(self):
         return (self.surface, self.coords, self.coords_dot, self.epoch,
-                self.obs_path)
+                Path.as_primary_path(self.obs_path))
 
     def __setstate__(self, state):
         self.__init__(*state)
@@ -102,6 +100,6 @@ class Test_LinearCoordPath(unittest.TestCase):
         pass
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

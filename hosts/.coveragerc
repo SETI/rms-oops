@@ -1,0 +1,13 @@
+[run]
+branch = True
+include =
+    ./**/*.py
+omit =
+    */venv/*
+
+[html]
+Title = Coverage Report for OOPS Hosts
+
+[report]
+exclude_lines =
+  pragma: no cover

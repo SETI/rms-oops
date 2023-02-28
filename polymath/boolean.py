@@ -100,8 +100,9 @@ class Boolean(Scalar):
         return False
 
     #===========================================================================
-    def sum(self, axis=None, value=True, out=None):
-        """The number of items matching True or False.
+    def sum(self, axis=None, value=True, builtins=None,
+                  recursive=True, out=None):
+        """The sum of the unmasked values along the specified axis.
 
         Input:
             axis        an integer axis or a tuple of axes. The sum is
@@ -109,25 +110,25 @@ class Boolean(Scalar):
                         in the returned value. If None (the default), then the
                         sum is performed across all axes if the object.
             value       value to match.
-            out         Ignored. Enables "np.sum(Boolean)" to work.
+            builtins    if True and the result is a single unmasked scalar, the
+                        result is returned as a Python int or float instead of
+                        as an instance of Qube. Default is that specified by
+                        Qube.PREFER_BUILTIN_TYPES.
+            recursive   Ignored for class Boolean.
+            out         Ignored. Enables "np.sum(Qube)" to work.
         """
 
         if value:
-            return self.as_int().sum(axis=axis)
+            return self.as_int().sum(axis=axis, builtins=builtins)
         else:
-            return (Scalar.ONE - self.as_int()).sum(axis=axis)
+            return (Scalar.ONE - self.as_int()).sum(axis=axis,
+                                                    builtins=builtins)
 
     #===========================================================================
     def identity(self):
         """An object of this subclass equivalent to the identity."""
 
         return Boolean(True).as_readonly()
-
-    #===========================================================================
-    def logical_not(self):
-        """The negation of this object."""
-
-        return Boolean(np.logical_not(self._values_), self._mask_)
 
     ############################################################################
     # Arithmetic operators

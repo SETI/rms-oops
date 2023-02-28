@@ -1,9 +1,9 @@
 ################################################################################
-# polymath/extensions/tvl.py: three-valued logic operations
+# polymath/extensions/tvl.py: Three-valued logic operations
 ################################################################################
 
 import numpy as np
-from ..qube import Qube
+from polymath.qube import Qube
 
 def tvl_and(self, arg, builtins=None):
     """Three-valued logic "and" operator.

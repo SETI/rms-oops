@@ -4,9 +4,9 @@
 
 import numpy as np
 import numbers
-from polymath import Pair
 
-from . import FOV
+from polymath import Pair
+from oops.fov import FOV
 
 class GapFOV(FOV):
     """A subclass of FOV in which there gaps between the individual pixels."""
@@ -131,6 +131,6 @@ class Test_GapFOV(unittest.TestCase):
         print('GapFOV unit tests are needed!')
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

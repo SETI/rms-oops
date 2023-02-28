@@ -3,13 +3,10 @@
 ################################################################################
 
 import numpy as np
-
-from polymath import Scalar, Vector3
-
-from .           import Surface
-from ..frame     import Frame
-from ..path      import Path
-from ..constants import TWOPI
+from polymath       import Scalar, Vector3
+from oops.frame     import Frame
+from oops.path      import Path
+from oops.surface   import Surface
 
 class RingPlane(Surface):
     """A subclass of Surface describing a flat surface in the (x,y) plane, in
@@ -24,6 +21,13 @@ class RingPlane(Surface):
 
     COORDINATE_TYPE = 'polar'
     IS_VIRTUAL = False
+
+    # Define the maximum vflat in km/s. Without a limit, calculated orbital
+    # speeds near the origin approach C, causing problems with aberration
+    # calculations. None of this is physical because all of it is inside the
+    # planet (which is not really a point source). However, we want the ring
+    # plane, like other surfaces, to have a continuous definition.
+    SPEED_CUTOFF = 300.         # roughly C/1000
 
     #===========================================================================
     def __init__(self, origin, frame, radii=None, gravity=None,
@@ -62,10 +66,10 @@ class RingPlane(Surface):
         self.origin    = Path.as_waypoint(origin)
         self.frame     = Frame.as_wayframe(frame)
         self.gravity   = gravity
-        self.elevation = elevation
+        self.elevation = float(elevation)
         self.modes     = modes
         self.nmodes    = len(self.modes)
-        self.epoch     = epoch
+        self.epoch     = float(epoch)
 
         if radii is None:
             self.radii = None
@@ -73,9 +77,30 @@ class RingPlane(Surface):
             self.radii    = np.asfarray(radii)
             self.radii_sq = self.radii**2
 
+        # Save the unmasked version of this surface
+        if radii is None:
+            self.unmasked = self
+        else:
+            self.unmasked = RingPlane(self.origin, self.frame,
+                                      radii = None,
+                                      gravity = self.gravity,
+                                      elevation = self.elevation,
+                                      modes = self.modes,
+                                      epoch = self.epoch)
+
+        # Unique key for intercept calculations
+        # ('ring', origin, frame, elevation, i, node, dnode_dt, epoch)
+        # Extra elements are so OrbitPlane and RingPlane can share the same
+        # key in situations where the orbit is not inclined.
+        self.intercept_key = ('ring', self.origin.waypoint,
+                                      self.frame.wayframe,
+                                      self.elevation, 0., 0., 0., 0.)
+
     def __getstate__(self):
-        return (self.origin, self.frame, self.radii, self.gravity,
-                self.elevation, self.modes, self.epoch)
+        return (Path.as_primary_path(self.origin),
+                Frame.as_primary_frame(self.frame),
+                None if self.radii is None else tuple(self.radii),
+                self.gravity, self.elevation, self.modes, self.epoch)
 
     def __setstate__(self, state):
         self.__init__(*state)
@@ -99,17 +124,30 @@ class RingPlane(Surface):
                         three Scalars, one for each coordinate.
         """
 
+        if axes not in (2, 3):
+            raise ValueError('Surface.coords_from_vector3 ' +
+                             'axes values must equal 2 or 3')
+
         pos = Vector3.as_vector3(pos, derivs)
 
         # Generate cylindrical coordinates
         (x,y,z) = pos.to_scalars()
         r = (x**2 + y**2).sqrt()
-        theta = y.arctan2(x) % TWOPI
+        theta = y.arctan2(x) % Scalar.TWOPI
 
         if self.nmodes:
             a = r - self.mode_offset(theta, time, derivs)
         else:
             a = r
+
+        # Apply mask as needed
+        if self.radii is not None:
+            mask = a.tvl_lt(self.radii[0]) | a.tvl_gt(self.radii[1])
+            if mask.any():
+                a = a.remask_or(mask.vals)
+                theta = theta.remask(a.mask)
+                if axes > 2:
+                    z = z.remask(r.mask)
 
         if axes == 2:
             return (a, theta)
@@ -137,6 +175,10 @@ class RingPlane(Surface):
         Note that the coordinates can all have different shapes, but they must
         be broadcastable to a single shape.
         """
+
+        if len(coords) not in (2, 3):
+            raise ValueError('Surface.vector3_from_coords requires 2 or 3 '
+                             'coords')
 
         a = Scalar.as_scalar(coords[0], derivs)
         theta = Scalar.as_scalar(coords[1], derivs)
@@ -285,6 +327,11 @@ class RingPlane(Surface):
             if np.any(mask):
                 vflat = vflat.remask_or(mask)
 
+        # Clamp down the speeds to avoid ridiculous speeds near the origin
+        speed = vflat.norm()
+        if (speed > RingPlane.SPEED_CUTOFF).any():
+            vflat = vflat.unit() * Scalar.minimum(speed, RingPlane.SPEED_CUTOFF)
+
         return vflat
 
     ############################################################################
@@ -321,13 +368,14 @@ class RingPlane(Surface):
 ################################################################################
 
 import unittest
+from oops.constants import TWOPI
 
 class Test_RingPlane(unittest.TestCase):
 
     def runTest(self):
 
-        from ..gravity import Gravity
-        from ..event import Event
+        from oops.gravity import Gravity
+        from oops.event import Event
 
         np.random.seed(8829)
 
@@ -454,7 +502,7 @@ class Test_RingPlane(unittest.TestCase):
         speed1 = vels.norm()
         speed2 = a * Gravity.SATURN.n(a.vals)
         diff = (speed2 - speed1) / speed1
-        self.assertTrue(abs(diff).max() < 1.e-15)
+        self.assertTrue(abs(diff[speed2 < RingPlane.SPEED_CUTOFF]).max() < 1.e-15)
 
         ########################################################################
         # coords_of_event, event_from_coords
@@ -481,6 +529,6 @@ class Test_RingPlane(unittest.TestCase):
         Frame.reset_registry()
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

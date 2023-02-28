@@ -2,12 +2,10 @@
 # oops/gravity/oblategravity.py: OblateGravity subclass of class Gravity
 ################################################################################
 
-import warnings
-
 import numpy as np
-
-from .           import Gravity
-from ..constants import TWOPI
+from oops.config    import LOGGING
+from oops.constants import TWOPI
+from oops.gravity   import Gravity
 
 class OblateGravity(Gravity):
     """A class describing the gravity field of an oblate planet using an
@@ -384,7 +382,7 @@ class OblateGravity(Gravity):
 
         # Iterate using Newton's method
         da_prev_max = 1.e99
-        for iter in range(20):
+        for count in range(20):
             # a step in Newton's method: x(i+1) = x(i) - f(xi) / fp(xi)
             # our f(x) = self.combo() - freq
             #     fp(x) = self.dcombo()
@@ -398,7 +396,7 @@ class OblateGravity(Gravity):
             a -= da
 
             # If Newton's method stops converging, return what we've got
-            if iter > 4 and da_max >= da_prev_max:
+            if count > 4 and da_max >= da_prev_max:
                 break
 
             da_prev_max = da_max
@@ -783,8 +781,8 @@ class OblateGravity(Gravity):
                 if not idx_to_use.any():
                     break
                 if not announced:
-                    warnings.warn('geom_from_state() started diverging! ' +
-                                  'Tolerance met = %e' % diffmax)
+                    LOGGING.warn('geom_from_state() started diverging! ' +
+                                 'Tolerance met = %e' % diffmax)
                     announced = True
 
                 diff_of_diff = diff - old_diff
@@ -1170,7 +1168,7 @@ class Test_Gravity(unittest.TestCase):
                 c = abs((b - a) / a)
                 self.assertTrue(np.all(c < ERROR_TOLERANCE))
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main()
 
 ################################################################################

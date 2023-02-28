@@ -58,8 +58,9 @@ class Slit1D(Observation):
 
         # Axes / Shape / Size
         self.axes = list(axes)
-        assert (('u' in self.axes and 'v' not in self.axes) or
-                ('v' in self.axes and 'u' not in self.axes))
+        if ('u' in self.axes) == ('v' in self.axes):
+            raise ValueError('axes are incompatible with Slit1D: '
+                             + repr(tuple(axes)))
 
         self.shape = len(axes) * [0]
 
@@ -82,7 +83,9 @@ class Slit1D(Observation):
 
         self.swap_uv = False
 
-        assert self.uv_shape[self._cross_slit_uv_axis] == 1
+        if self.uv_shape[self._cross_slit_uv_axis] != 1:
+            raise ValueError('Slit1D cross-slit FOV axis must have length 1')
+
         self.t_axis = -1
 
         # Cadence
@@ -360,6 +363,6 @@ class Test_Slit1D(unittest.TestCase):
         self.assertEqual(time_max, 10.)
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

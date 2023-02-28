@@ -638,7 +638,7 @@ class Qube(object):
             if kind == 'f':
                 return ('float', arg)
 
-            if kind in {'i','u'}:
+            if kind in ('i','u'):
                 return ('int', arg)
 
             if kind == 'b':
@@ -737,7 +737,7 @@ class Qube(object):
                 return np.asfarray(arg)
 
             if dtype == 'int':
-                if arg.dtype.kind in {'i', 'u'}:
+                if arg.dtype.kind in ('i', 'u'):
                     return arg
                 return (arg // 1).astype('int')
 
@@ -799,7 +799,7 @@ class Qube(object):
         else:
             if kind == 'f':
                 return cls._suitable_dtype('float')
-            if kind in {'i', 'u'}:
+            if kind in ('i', 'u'):
                 return cls._suitable_dtype('int')
             if kind == 'b':
                 return cls._suitable_dtype('bool')
@@ -967,7 +967,7 @@ class Qube(object):
 
         # Transfer attributes other than derivatives and cache
         for (attr, value) in self.__dict__.items():
-            if attr in {'_derivs_', '_cache_'}:
+            if attr in ('_derivs_', '_cache_'):
                 obj.__dict__[attr] = {}
             elif attr.startswith('d_d'):
                 continue
@@ -1682,7 +1682,8 @@ class Qube(object):
 
         result = self.clone(recursive=True)
 
-        assert method in ('insert', 'replace', 'add')
+        if method not in ('insert', 'replace', 'add'):
+            raise ValueError('invalid with_deriv method: ' + repr(method))
 
         if key in result._derivs_:
             if method == 'insert':
@@ -1692,6 +1693,32 @@ class Qube(object):
                 value = value + result._derivs_[key]
 
         result.insert_deriv(key, value)
+        return result
+
+    #===========================================================================
+    def rename_deriv(self, key, new_key, method='insert'):
+        """A shallow copy of this object with a derivative renamed.
+
+        A read-only object remains read-only.
+
+        Input:
+            key         the current key of the derivative to rename.
+            new_key     the new name of the derivative.
+            method      how to insert the new derivative:
+                        'insert'  inserts the new derivative, raising a
+                                  ValueError if a derivative of the same name
+                                  already exists.
+                        'replace' replaces an existing derivative of the same
+                                  name.
+                        'add'     adds this derivative to an existing derivative
+                                  of the same name.
+        """
+
+        if key not in self._derivs_:
+            return self
+
+        result = self.with_deriv(new_key, self._derivs_[key], method=method)
+        result = result.without_deriv(key)
         return result
 
     #===========================================================================
@@ -2158,15 +2185,17 @@ class Qube(object):
         return obj
 
     #===========================================================================
-    def as_builtin(self):
+    def as_builtin(self, masked=None):
         """This object as a Python built-in class (float, int, or bool) if the
         conversion can be done without loss of information."""
 
         values = self._values_
+        if np.size(values) == 0:
+            return masked
         if np.shape(values):
             return self
         if self._mask_:
-            return self
+            return self if masked is None else masked
 
         if self._units_ not in (None, Units.UNITLESS):
             return self
@@ -2507,22 +2536,83 @@ class Qube(object):
     #===========================================================================
     def expand_mask(self, recursive=True):
         """A shallow copy where a single mask value of True or False is
-        converted to an array."""
+        converted to an array.
 
-        obj = self.clone(recursive=False)
+        If the object's mask is already an array, it is returned unchanged.
+        """
 
         if np.shape(self._mask_) and not (recursive and self._derivs_):
-            return obj
+            return self
 
-        if isinstance(obj._mask_, (bool, np.bool_)):
+        # Clone the object only if necessary
+        obj = None
+        if np.isscalar(self._mask_):
+            obj = self.clone(recursive=True)
             if obj._mask_:
                 obj._set_mask_(np.ones(self._shape_, dtype=np.bool_))
             else:
                 obj._set_mask_(np.zeros(self._shape_, dtype=np.bool_))
 
-        if recursive and self._derivs_:
-            for (key,deriv) in self._derivs_.items():
-                obj.insert_deriv(key, deriv.expand_mask(recursive=False))
+        # Clone any derivs only if necessary
+        new_derivs = {}
+        if recursive:
+            for (key, deriv) in self._derivs_.items():
+                mask_before = deriv._mask_
+                new_deriv = deriv.expand_mask(recursive=False)
+                if mask_before is not new_deriv._mask_:
+                    new_derivs[key] = new_deriv
+
+        # If nothing has changed, return self
+        if obj is None and not new_derivs:
+            return self
+
+        # Return the modified object
+        if obj is None:
+            obj = self.clone(recursive=True)
+
+        for key, deriv in new_derivs.items():
+            obj.insert_deriv(key, deriv, override=True)
+
+        return obj
+
+    #===========================================================================
+    def collapse_mask(self, recursive=True):
+        """A shallow copy where a mask entirely containing either True or False
+        is converted to a single boolean.
+        """
+
+        if np.isscalar(self._mask_) and not (recursive and self._derivs_):
+            return self
+
+        # Clone the object only if necessary
+        obj = None
+        if np.shape(self._mask_):
+            if not np.any(self._mask_):
+                obj = self.clone(recursive=True)
+                obj._set_mask_(False)
+            elif np.all(self._mask_):
+                obj = self.clone(recursive=True)
+                obj._set_mask_(True)
+
+        # Clone any derivs only if necessary
+        new_derivs = {}
+        if recursive:
+            for (key, deriv) in self._derivs_.items():
+                mask_before = deriv._mask_
+                new_deriv = deriv.collapse_mask(recursive=False)
+                if mask_before is not new_deriv._mask_:
+                    new_derivs[key] = new_deriv
+
+        # If nothing has changed, return self
+        if obj is None and not new_derivs:
+            return self
+
+        # Return the modified object
+        if obj is None:
+            obj = self.clone(recursive=True)
+
+        for key, deriv in new_derivs.items():
+            obj.insert_deriv(key, deriv, override=True)
 
         return obj
 
@@ -4002,11 +4092,22 @@ class Qube(object):
 
         return self
 
+    #===========================================================================
+    def logical_not(self):
+        """The negation of this object, True where it is zero or False."""
+
+        if self._rank_:
+            values = np.any(self._values_, axis=tuple(range(-self._rank_,0)))
+        else:
+            values = self._values_
+
+        return Qube.BOOLEAN_CLASS(np.logical_not(values), self._mask_)
+
     ############################################################################
     # Any and all
     ############################################################################
 
-    def any(self, axis=None, builtins=None, out=None):
+    def any(self, axis=None, builtins=None, masked=None, out=None):
         """True if any of the unmasked items are nonzero.
 
         Input:
@@ -4019,6 +4120,9 @@ class Qube(object):
                         the result is returned as a Python boolean instead of
                         an instance of Boolean. Default is that specified by
                         Qube.PREFER_BUILTIN_TYPES.
+            masked      value to return if builtins is True but the returned
+                        value is masked. Default is to return a masked value
+                        instead of a builtin type.
             out         Ignored. Enables "np.any(Qube)" to work.
         """
 
@@ -4042,12 +4146,12 @@ class Qube(object):
             builtins = Qube.PREFER_BUILTIN_TYPES
 
         if builtins:
-            return result.as_builtin()
+            return result.as_builtin(masked=masked)
 
         return result
 
     #===========================================================================
-    def all(self, axis=None, builtins=None, out=None):
+    def all(self, axis=None, builtins=None, masked=None, out=None):
         """True if all the unmasked items are nonzero.
 
         Input:
@@ -4060,6 +4164,9 @@ class Qube(object):
                         the result is returned as a Python boolean instead of
                         an instance of Boolean. Default is that specified by
                         Qube.PREFER_BUILTIN_TYPES.
+            masked      value to return if builtins is True but the returned
+                        value is masked. Default is to return a masked value
+                        instead of a builtin type.
             out         Ignored. Enables "np.all(Qube)" to work.
         """
 
@@ -4083,7 +4190,7 @@ class Qube(object):
             builtins = Qube.PREFER_BUILTIN_TYPES
 
         if builtins:
-            return result.as_builtin()
+            return result.as_builtin(masked=masked)
 
         return result
 
@@ -4230,7 +4337,8 @@ class Qube(object):
         Qube._raise_unsupported_op('identity()', self)
 
     #===========================================================================
-    def sum(self, axis=None, recursive=True, builtins=None, out=None):
+    def sum(self, axis=None, recursive=True, builtins=None, masked=None,
+                  out=None):
         """The sum of the unmasked values along the specified axis.
 
         Input:
@@ -4244,6 +4352,9 @@ class Qube(object):
                         result is returned as a Python int or float instead of
                         as an instance of Qube. Default is that specified by
                         Qube.PREFER_BUILTIN_TYPES.
+            masked      value to return if builtins is True but the returned
+                        value is masked. Default is to return a masked value
+                        instead of a builtin type.
             out         Ignored. Enables "np.sum(Qube)" to work.
         """
 
@@ -4254,12 +4365,12 @@ class Qube(object):
             builtins = Qube.PREFER_BUILTIN_TYPES
 
         if builtins:
-            return result.as_builtin()
+            return result.as_builtin(masked=masked)
 
         return result
 
     #===========================================================================
-    def mean(self, axis=None, recursive=True, builtins=None,
+    def mean(self, axis=None, recursive=True, builtins=None, masked=None,
                    dtype=None, out=None):
         """The mean of the unmasked values along the specified axis.
 
@@ -4274,6 +4385,9 @@ class Qube(object):
                         result is returned as a Python int or float instead of
                         as an instance of Scalar. Default is that specified by
                         Qube.PREFER_BUILTIN_TYPES.
+            masked      value to return if builtins is True but the returned
+                        value is masked. Default is to return a masked value
+                        instead of a builtin type.
             dtype, out  Ignored. Enable "np.mean(Qube)" to work.
         """
 
@@ -4284,7 +4398,7 @@ class Qube(object):
             builtins = Qube.PREFER_BUILTIN_TYPES
 
         if builtins:
-            return result.as_builtin()
+            return result.as_builtin(masked=masked)
 
         return result
 

@@ -42,6 +42,8 @@ class Scalar(Qube):
             return 256**dtype.itemsize - 1
         elif dtype.kind == 'i':
             return 256**dtype.itemsize//2 - 1
+        elif dtype.kind == 'b':
+            return 1
         else:
             raise ValueError('invalid dtype %s' % str(dtype))
 
@@ -57,6 +59,8 @@ class Scalar(Qube):
             return 0
         elif dtype.kind == 'i':
             return -256**dtype.itemsize//2
+        elif dtype.kind == 'b':
+            return 0
         else:
             raise ValueError('invalid dtype %s' % str(dtype))
 
@@ -69,6 +73,8 @@ class Scalar(Qube):
         """
 
         if isinstance(arg, Scalar):
+            if arg.is_bool():
+                return arg.as_int()
             if recursive:
                 return arg
             return arg.wod
@@ -175,7 +181,7 @@ class Scalar(Qube):
 
     #===========================================================================
     def int(self, top=None, remask=False, clip=False, inclusive=True,
-                  shift=None, builtins=None):
+                  shift=None, builtins=None, masked=None):
         """An integer (floor) version of this Scalar.
 
         If this object already contains integers, it is returned as is.
@@ -196,6 +202,9 @@ class Scalar(Qube):
                         the result is returned as a Python int instead of an
                         instance of Scalar. Default is the value specified
                         by Qube.PREFER_BUILTIN_TYPES.
+            masked      value to return if builtins is True but the returned
+                        value is masked. Default is to return a masked value
+                        instead of a builtin type.
         """
 
         if self._drank_:
@@ -253,7 +262,7 @@ class Scalar(Qube):
             builtins = Qube.PREFER_BUILTIN_TYPES
 
         if builtins:
-            return result.as_builtin()
+            return result.as_builtin(masked=masked)
 
         return result
 
@@ -662,7 +671,7 @@ class Scalar(Qube):
         return obj
 
     #===========================================================================
-    def sign(self, zeros=True, builtins=None):
+    def sign(self, zeros=True, builtins=None, masked=None):
         """The sign of each value as +1, -1 or 0.
 
         Inputs:
@@ -672,6 +681,9 @@ class Scalar(Qube):
                         the result is returned as a Python int instead of an
                         instance of Scalar. Default is the value specified
                         by Qube.PREFER_BUILTIN_TYPES.
+            masked      value to return if builtins is True but the returned
+                        value is masked. Default is to return a masked value
+                        instead of a builtin type.
         """
 
         result = Scalar(np.sign(self._values_), mask=self._mask_)
@@ -684,7 +696,7 @@ class Scalar(Qube):
             builtins = Qube.PREFER_BUILTIN_TYPES
 
         if builtins:
-            return result.as_builtin()
+            return result.as_builtin(masked=masked)
 
         return result
 
@@ -748,7 +760,7 @@ class Scalar(Qube):
         return self * (self * a + b) + c
 
     #===========================================================================
-    def max(self, axis=None, builtins=None, out=None):
+    def max(self, axis=None, builtins=None, masked=None, out=None):
         """The maximum of the unmasked values.
 
         Input:
@@ -760,6 +772,9 @@ class Scalar(Qube):
                         the result is returned as a Python int or float instead
                         of an instance of Scalar. Default is the value specified
                         by Qube.PREFER_BUILTIN_TYPES.
+            masked      value to return if builtins is True but the returned
+                        value is masked. Default is to return a masked value
+                        instead of a builtin type.
             out         Ignored. Enables "np.max(Scalar)" to work.
         """
 
@@ -810,12 +825,12 @@ class Scalar(Qube):
             builtins = Qube.PREFER_BUILTIN_TYPES
 
         if builtins:
-            return result.as_builtin()
+            return result.as_builtin(masked=masked)
 
         return result
 
     #===========================================================================
-    def min(self, axis=None, builtins=None, out=None):
+    def min(self, axis=None, builtins=None, masked=None, out=None):
         """The minimum of the unmasked values.
 
         Input:
@@ -827,6 +842,9 @@ class Scalar(Qube):
                         the result is returned as a Python int or float instead
                         of an instance of Scalar. Default is the value specified
                         by Qube.PREFER_BUILTIN_TYPES.
+            masked      value to return if builtins is True but the returned
+                        value is masked. Default is to return a masked value
+                        instead of a builtin type.
             out         Ignored. Enables "np.min(Scalar)" to work.
         """
 
@@ -878,12 +896,12 @@ class Scalar(Qube):
             builtins = Qube.PREFER_BUILTIN_TYPES
 
         if builtins:
-            return result.as_builtin()
+            return result.as_builtin(masked=masked)
 
         return result
 
     #===========================================================================
-    def argmax(self, axis=None, builtins=None):
+    def argmax(self, axis=None, builtins=None, masked=None):
         """The index of the maximum of the unmasked values along the specified
         axis.
 
@@ -902,6 +920,9 @@ class Scalar(Qube):
                         the result is returned as a Python int instead of an
                         instance of Scalar. Default is the value specified
                         by Qube.PREFER_BUILTIN_TYPES.
+            masked      value to return if builtins is True but the returned
+                        value is masked. Default is to return a masked value
+                        instead of a builtin type.
         """
 
         if self._drank_:
@@ -951,12 +972,12 @@ class Scalar(Qube):
             builtins = Qube.PREFER_BUILTIN_TYPES
 
         if builtins:
-            return result.as_builtin()
+            return result.as_builtin(masked=masked)
 
         return result
 
     #===========================================================================
-    def argmin(self, axis=None, builtins=None):
+    def argmin(self, axis=None, builtins=None, masked=None):
         """The index of the minimum of the unmasked values along the specified
         axis.
 
@@ -972,6 +993,9 @@ class Scalar(Qube):
                         the result is returned as a Python int instead of an
                         instance of Scalar. Default is the value specified
                         by Qube.PREFER_BUILTIN_TYPES.
+            masked      value to return if builtins is True but the returned
+                        value is masked. Default is to return a masked value
+                        instead of a builtin type.
         """
 
         if self._drank_:
@@ -1021,7 +1045,7 @@ class Scalar(Qube):
             builtins = Qube.PREFER_BUILTIN_TYPES
 
         if builtins:
-            return result.as_builtin()
+            return result.as_builtin(masked=masked)
 
         return result
 
@@ -1125,7 +1149,7 @@ class Scalar(Qube):
         return result
 
     #===========================================================================
-    def median(self, axis=None, builtins=None, out=None):
+    def median(self, axis=None, builtins=None, masked=None, out=None):
         """The median of the unmasked values.
 
         Input:
@@ -1137,6 +1161,9 @@ class Scalar(Qube):
                         result is returned as a Python int or float instead of
                         as an instance of Scalar. Default is that specified by
                         Qube.PREFER_BUILTIN_TYPES.
+            masked      value to return if builtins is True but the returned
+                        value is masked. Default is to return a masked value
+                        instead of a builtin type.
             out         Ignored. Enables "np.median(Scalar)" to work.
         """
 
@@ -1225,7 +1252,7 @@ class Scalar(Qube):
             builtins = Qube.PREFER_BUILTIN_TYPES
 
         if builtins:
-            return result.as_builtin()
+            return result.as_builtin(masked=masked)
 
         return result
 
@@ -1338,7 +1365,7 @@ class Scalar(Qube):
     #   All comparisons involving masked values return False.
     ############################################################################
 
-    def __lt__(self, arg):
+    def __lt__(self, arg, builtins=True):
 
         arg = Scalar.as_scalar(arg)
         Units.require_compatible(self._units_, arg._units_)
@@ -1349,7 +1376,7 @@ class Scalar(Qube):
         compare = (self._values_ < arg._values_)
 
         # Return a Python bool if possible
-        if np.isscalar(compare):
+        if np.isscalar(compare) and builtins:
             if self._mask_ or arg._mask_:
                 return False
             return bool(compare)
@@ -1360,18 +1387,18 @@ class Scalar(Qube):
         result._truth_if_all_ = True
         return result
 
-    def __gt__(self, arg):
+    def __gt__(self, arg, builtins=True):
 
         arg = Scalar.as_scalar(arg)
         Units.require_compatible(self._units_, arg._units_)
         if self._denom_ or arg._denom_:
-            raise ValueError('Scalar">" operator does not support ' +
+            raise ValueError('Scalar ">" operator does not support ' +
                              'denominators')
 
         compare = (self._values_ > arg._values_)
 
         # Return a Python bool if possible
-        if np.isscalar(compare):
+        if np.isscalar(compare) and builtins:
             if self._mask_ or arg._mask_:
                 return False
             return bool(compare)
@@ -1382,7 +1409,7 @@ class Scalar(Qube):
         result._truth_if_all_ = True
         return result
 
-    def __le__(self, arg):
+    def __le__(self, arg, builtins=True):
 
         arg = Scalar.as_scalar(arg)
         Units.require_compatible(self._units_, arg._units_)
@@ -1393,7 +1420,7 @@ class Scalar(Qube):
         compare = (self._values_ <= arg._values_)
 
         # Return a Python bool if possible
-        if np.isscalar(compare):
+        if np.isscalar(compare) and builtins:
             if self._mask_ or arg._mask_:
                 return False
             return bool(compare)
@@ -1404,7 +1431,7 @@ class Scalar(Qube):
         result._truth_if_all_ = True
         return result
 
-    def __ge__(self, arg):
+    def __ge__(self, arg, builtins=True):
 
         arg = Scalar.as_scalar(arg)
         Units.require_compatible(self._units_, arg._units_)
@@ -1415,7 +1442,7 @@ class Scalar(Qube):
         compare = (self._values_ >= arg._values_)
 
         # Return a Python bool if possible
-        if np.isscalar(compare):
+        if np.isscalar(compare) and builtins:
             if self._mask_ or arg._mask_:
                 return False
             return bool(compare)

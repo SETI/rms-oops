@@ -3,10 +3,9 @@
 ################################################################################
 
 import numpy as np
-from polymath import Vector3, Matrix3
-
-from .           import Frame
-from ..transform import Transform
+from polymath       import Matrix3, Vector3
+from oops.frame     import Frame
+from oops.transform import Transform
 
 class PosTargFrame(Frame):
     """A Frame subclass describing a fixed rotation about the X and Y axes, so
@@ -70,7 +69,8 @@ class PosTargFrame(Frame):
 
     # Unpickled frames will always have temporary IDs to avoid conflicts
     def __getstate__(self):
-        return (self.xpos, self.ypos, self.reference, self.shape)
+        return (self.xpos, self.ypos,
+                Frame.as_primary_frame(self.reference), self.shape)
 
     def __setstate__(self, state):
         # If this frame matches a pre-existing frame, re-use its ID
@@ -111,6 +111,6 @@ class Test_PosTargFrame(unittest.TestCase):
         Frame.reset_registry()
 
 #########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

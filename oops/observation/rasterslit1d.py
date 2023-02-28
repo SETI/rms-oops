@@ -65,9 +65,11 @@ class RasterSlit1D(Observation):
 
         # Axes / Shape / Size
         self.axes = list(axes)
-        assert (('ut' in self.axes and 'vt' not in self.axes) or
-                ('vt' in self.axes and 'ut' not in self.axes))
-        assert 't' not in self.axes
+        count1 = ('ut' in self.axes) + ('vt' in self.axes)
+        count2 = ('t' in self.axes)
+        if (count1, count2) != (1,0):
+            raise ValueError('invalid axes for RasterSlit1D: '
+                             + repr(self.axes))
 
         self.shape = len(axes) * [0]
 
@@ -91,7 +93,8 @@ class RasterSlit1D(Observation):
         self.swap_uv = False
 
         self._along_slit_len = fov_uv_shape[self._along_slit_uv_index]
-        assert fov_uv_shape[self._cross_slit_uv_index] == 1
+        if fov_uv_shape[self._cross_slit_uv_index] != 1:
+            raise ValueError('RasterSlit1D cross-slit axis must have length 1')
 
         # Cadence
         samples = self._along_slit_len
@@ -102,7 +105,10 @@ class RasterSlit1D(Observation):
             self.cadence = Metronome.for_array1d(samples, **cadence)
         elif isinstance(cadence, Cadence):
             self.cadence = cadence
-            assert self.cadence.shape == (samples,)
+            if self.cadence.shape != (samples,):
+                raise ValueError('RasterSlit1D input Cadence and FOV shapes '
+                                 'are incompatible: %s, %s'
+                                 % (cadence.shape, tuple(fov.uv_shape.vals)))
         else:
             raise TypeError('Invalid cadence class: ' + type(cadence).__name__)
 
@@ -474,6 +480,6 @@ class Test_RasterSlit1D(unittest.TestCase):
         self.assertTrue(np.all(t.mask == np.array(2*[False] + [True])))
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

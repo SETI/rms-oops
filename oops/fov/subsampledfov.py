@@ -3,8 +3,7 @@
 ################################################################################
 
 from polymath import Pair
-
-from . import FOV
+from oops.fov import FOV
 
 class SubsampledFOV(FOV):
     """Subclass of FOV in which the pixels of a given base FOV class are
@@ -35,9 +34,7 @@ class SubsampledFOV(FOV):
         self.uv_los   = self.fov.uv_los.element_div(self.rescale)
         self.uv_area  = self.fov.uv_area  * self.rescale2
 
-        self.uv_shape = (self.fov.uv_shape.element_div(self.rescale)).as_int()
-
-        assert self.rescale.element_mul(self.uv_shape) == self.fov.uv_shape
+        self.uv_shape = self.fov.uv_shape.element_div(self.rescale).as_int()
 
     def __getstate__(self):
         return (self.fov, self.rescale)
@@ -108,7 +105,8 @@ class Test_SubsampledFOV(unittest.TestCase):
     def runTest(self):
 
         # Imports just required for unit testing
-        from .flatfov import FlatFOV
+        from oops.fov.flatfov import FlatFOV
+        from oops.config      import AREA_FACTOR
 
         # Centered sub-sampling...
 
@@ -159,12 +157,18 @@ class Test_SubsampledFOV(unittest.TestCase):
         xy = (64/2048., 32/2048.)
         self.assertEqual(flat.uv_from_xy(xy), test.uv_from_xy(xy) * 2.)
 
-        self.assertEqual(test.uv_area, 4*flat.uv_area)
+        try:
+            AREA_FACTOR.old = True
 
-        self.assertEqual(flat.area_factor((32,32)), 1.)
-        self.assertEqual(test.area_factor((16,16)), 1.)
+            self.assertEqual(test.uv_area, 4*flat.uv_area)
+
+            self.assertEqual(flat.area_factor((32,32)), 1.)
+            self.assertEqual(test.area_factor((16,16)), 1.)
+
+        finally:
+            AREA_FACTOR.old = False
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

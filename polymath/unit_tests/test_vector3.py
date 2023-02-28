@@ -179,6 +179,6 @@ class Test_Vector3(unittest.TestCase):
         self.assertEqual(type(a.element_div(b)), Vector3)
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

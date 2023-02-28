@@ -3,11 +3,9 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Scalar, Vector3, Matrix3
-
-from .           import Frame
-from ..transform import Transform
-from ..constants import TWOPI
+from polymath       import Matrix3, Qube, Scalar, Vector3
+from oops.frame     import Frame
+from oops.transform import Transform
 
 class PoleFrame(Frame):
     """A Frame subclass describing a non-rotating frame centered on the Z-axis
@@ -118,7 +116,8 @@ class PoleFrame(Frame):
 
     # Unpickled frames will always have temporary IDs to avoid conflicts
     def __getstate__(self):
-        return (self.planet_frame, self.invariable_pole, self.retrograde,
+        return (Frame.as_primary_frame(self.planet_frame),
+                self.invariable_pole, self.retrograde,
                 self.aries, self.given_cache_size, self.shape)
 
     def __setstate__(self, state):
@@ -226,7 +225,8 @@ class PoleFrame(Frame):
         # The ascending node is 90 degrees ahead of the pole
         (x, y, _) = z_axis_wrt_invar.to_scalars()
 
-        return (y.arctan2(x) + np.pi/2. + self.invariable_node_lon) % TWOPI
+        node = (y.arctan2(x) + Scalar.HALFPI + self.invariable_node_lon)
+        return node % Scalar.TWOPI
 
 ################################################################################
 # UNIT TESTS
@@ -243,12 +243,12 @@ class Test_PoleFrame(unittest.TestCase):
         # Imports are here to reduce conflicts
         import os
         import cspyce
-        from ..event           import Event
-        from .ringframe        import RingFrame
-        from .spiceframe       import SpiceFrame
-        from ..path.spicepath  import SpicePath
-        from ..path            import Path
-        from ..unittester_support import TESTDATA_PARENT_DIRECTORY
+        from oops.event              import Event
+        from oops.frame.ringframe    import RingFrame
+        from oops.frame.spiceframe   import SpiceFrame
+        from oops.path               import Path
+        from oops.path.spicepath     import SpicePath
+        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls'))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/pck00010.tpc'))
@@ -450,6 +450,6 @@ class Test_PoleFrame(unittest.TestCase):
         Frame.reset_registry()
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

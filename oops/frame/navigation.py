@@ -3,11 +3,10 @@
 ################################################################################
 
 import numpy as np
-from polymath import Vector3, Matrix3
-
-from .           import Frame
-from ..fittable  import Fittable
-from ..transform import Transform
+from polymath       import Matrix3, Vector3
+from oops.fittable  import Fittable
+from oops.frame     import Frame
+from oops.transform import Transform
 
 class Navigation(Frame, Fittable):
     """A Frame subclass describing a fittable, fixed offset from another frame,
@@ -34,7 +33,8 @@ class Navigation(Frame, Fittable):
         """
 
         self.angles = np.array(angles)
-        assert self.angles.shape in ((2,),(3,))
+        if self.angles.shape not in ((2,),(3,)):
+            raise ValueError('two or three Navigation angles must be provided')
 
         self.cache = {}
         self.param_name = "angles"
@@ -61,7 +61,7 @@ class Navigation(Frame, Fittable):
 
     # Unpickled frames will always have temporary IDs to avoid conflicts
     def __getstate__(self):
-        return (self.angles, self.reference)
+        return (self.angles, Frame.as_primary_frame(self.reference))
 
     def __setstate__(self, state):
         self.__init__(*state)
@@ -110,7 +110,8 @@ class Navigation(Frame, Fittable):
         """
 
         params = np.array(params).copy()
-        assert self.angles.shape == params.shape
+        if self.angles.shape != params.shape:
+            raise ValueError('new parameter shape does not match original')
 
         self.angles = params
 
@@ -145,6 +146,6 @@ class Test_Navigation(unittest.TestCase):
         pass
 
 #########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

@@ -2,12 +2,14 @@
 # oops/backplane/unittester_support.py
 ################################################################################
 
+import glob
 import os
 import numbers
 import numpy as np
 
-from polymath import Scalar
-from PIL      import Image
+from PIL         import Image
+from polymath    import Scalar
+from oops.config import LOGGING
 
 #===============================================================================
 def _read_image(filename):
@@ -61,14 +63,16 @@ def _scale_image(array, minval, maxval):
     return bytes
 
 #===============================================================================
-def _compare_backplanes(array, reference, margin=0.05):
+def _compare_backplanes(array, reference, title, margin=0.05):
     """Compare a backplane array to the reference array."""
 
     array = Scalar.as_scalar(array)
     reference = Scalar.as_scalar(reference)
 
-    diff = abs(array - reference)
-    assert diff.max() <= reference.max()*margin
+    # Convert to signed ints before comparing
+    diff = np.abs(array.vals.astype('int16') - reference.vals.astype('int16'))
+    assert diff.max() <= reference.max()*margin, \
+          'COMPARE BACKPLANES ERROR in "%s"' % title
 
 #===============================================================================
 def _convert_filename(filename):
@@ -203,14 +207,22 @@ def show_info(bp, title, array, **options):
 
     # Compare with reference array if refdir is known
     if refdir is not None:
-        assert os.path.exists(refdir), f'Reference directory not found: {refdir}'
+        if not os.path.exists(refdir):
+            raise FileNotFoundError('Reference directory not found: ' + refdir)
 
         filename = _construct_filename(bp, array, title, refdir)
         reference = _read_image(filename)
-        assert reference is not None, f'Reference file is missing: {filename}'
+        if reference is None:
+            pattern = filename.split('[')[0] + '*.png'
+            matches = glob.glob(pattern)
+            if matches:
+                reference = _read_image(matches[0])
+            else:
+                basename = os.path.basename(filename)
+                LOGGING.warn('Reference file not found: ' + basename)
+                return
 
-        _compare_backplanes(image, reference)
-
+        _compare_backplanes(image, reference, title)
 
 #*******************************************************************************
 class Backplane_Settings(object):

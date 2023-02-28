@@ -2,10 +2,9 @@
 # oops/fov/offsetfov.py: OffsetFOV subclass of FOV
 ################################################################################
 
-from polymath import Pair
-
-from .          import FOV
-from ..fittable import Fittable
+from polymath      import Pair
+from oops.fittable import Fittable
+from oops.fov      import FOV
 
 class OffsetFOV(FOV, Fittable):
     """FOV subclass in which the line of sight has been shifted relative to
@@ -35,7 +34,9 @@ class OffsetFOV(FOV, Fittable):
         self.fov = fov
 
         # Deal with alternative inputs:
-        assert (uv_offset is None) or (xy_offset is None)
+        if (uv_offset is not None) and (xy_offset is not None):
+            raise ValueError('only one of uv_offset and xy_offset can be '
+                             + 'specified')
 
         self.uv_offset = uv_offset
         self.xy_offset = xy_offset
@@ -157,6 +158,6 @@ class Test_OffsetFOV(unittest.TestCase):
         pass
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

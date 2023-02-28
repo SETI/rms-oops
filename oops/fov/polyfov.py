@@ -2,12 +2,10 @@
 # oops/fov/polyfov.py: PolyFOV subclass of FOV, and WCS FOV support.
 ################################################################################
 
-from __future__ import print_function
-
 import numpy as np
-import warnings
 
 from polymath         import Pair
+from oops.config      import LOGGING
 from oops.fov         import FOV
 from oops.fov.flatfov import FlatFOV
 
@@ -94,8 +92,10 @@ class PolyFOV(FOV):
             self.coefft_duv_dy = (self.coefft_uv_from_xy[:,1:] *
                                   np.arange(1,order+1)[np.newaxis,:,np.newaxis])
 
-        assert (self.coefft_xy_from_uv is not None or
-                self.coefft_uv_from_xy is not None)
+        if (self.coefft_xy_from_uv is None and
+            self.coefft_uv_from_xy is None):
+                raise ValueError('at least one of coefft_xy_from_uv and '
+                                 + 'coefft_uv_from_xy must be specified')
 
         self.iters = max(int(iters), 2)
         self.fast = bool(fast) and (self.coefft_uv_from_xy is not None)
@@ -388,11 +388,12 @@ class PolyFOV(FOV):
             dpq_dab = dab_dpq.reciprocal(nozeros=True)
                 # nozeros=True is safe because dab_dpq can't be zero-valued
             dpq = dpq_dab.chain(ab.wod - ab_test)
-            new_max_dpq = dpq.norm().max(builtins=True)
+            new_max_dpq = dpq.norm().max(builtins=True, masked=-1.)
 
-            if PolyFOV.DEBUG:
-                print('PolyFOV._solve_polynomial: iter=%d; change=%.6g'
-                      % (count+1, new_max_dpq))
+            if LOGGING.fov_iterations or PolyFOV.DEBUG:
+                LOGGING.convergence('PolyFOV._solve_polynomial:',
+                                    'iter=%d; change=%.6g' % (count+1,
+                                                              new_max_dpq))
 
             # Quit when convergence stops
             if new_max_dpq <= eps:
@@ -401,15 +402,14 @@ class PolyFOV(FOV):
                 break
 
             if new_max_dpq >= max_dpq:
-                iters = count + 1
                 break
 
             pq += dpq.vals
             max_dpq = new_max_dpq
 
         if not converged:
-            warnings.warn(('convergence stopped at %.6g in iter=%d of ' +
-                           'PolyFOV._solve_polynomial') % (max_dpq, iters))
+            LOGGING.warn('PolyFOV._solve_polynomial did not converge;',
+                         'iter=%d; change=%.6g' % (count+1, new_max_dpq))
 
         # Propagate derivatives if necessary
         if derivs:
@@ -464,7 +464,7 @@ class Test_PolyFOV(unittest.TestCase):
                 xy = fov.xy_from_uv(uv, derivs=True)
                 uv_test = fov.uv_from_xy(xy, derivs=True)
             t1 = time.time()
-            print('time = %.2f ms' % ((t1-t0)/iters*1000.))
+            LOGGING.info('time = %.2f ms' % ((t1-t0)/iters*1000.), literal=True)
         else:
             xy = fov.xy_from_uv(uv, derivs=True)
             uv_test = fov.uv_from_xy(xy, derivs=False)
@@ -589,6 +589,6 @@ class Test_PolyFOV(unittest.TestCase):
         self.assertTrue(abs(uv.d_drs.vals[...,1] - duv_ds.vals).max() <= DEL)
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

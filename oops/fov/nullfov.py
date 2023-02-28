@@ -3,8 +3,7 @@
 ################################################################################
 
 from polymath import Boolean, Scalar, Pair, Vector3
-
-from . import FOV
+from oops.fov import FOV
 
 class NullFOV(FOV):
     """A subclass of FOV that describes an instrument with no field of view,
@@ -289,6 +288,6 @@ class Test_NullFOV(unittest.TestCase):
         pass
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

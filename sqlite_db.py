@@ -113,7 +113,7 @@ class test_sqlite_db(unittest.TestCase):
 # Perform unit testing if executed from the command line
 ################################################################################
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main()
 
 ################################################################################

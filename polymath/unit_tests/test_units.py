@@ -95,6 +95,6 @@ class Test_Units(unittest.TestCase):
     self.assertEqual(Units.KM, (Units.KM**2).sqrt())
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################
