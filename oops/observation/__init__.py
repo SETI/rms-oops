@@ -513,8 +513,16 @@ class Observation(object):
 
         # Return the Meshgrid
         grid = Pair(values)
+
+        ####################################################################
+        # Proposed mod by Spitale to apply mask to the meshgrid.
+        #  Currently assumes mask is an optional subfield rather than
+        #  an explicit attribute.
+        ####################################################################
         if hasattr(self, 'mask'):
             grid._mask_ = self.mask
+        ####################################################################
+
         return Meshgrid(self.fov, grid, fov_keywords)
 
     #===========================================================================

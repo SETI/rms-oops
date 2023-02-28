@@ -303,22 +303,22 @@ class Metadata(object):
             scale = scale*2
             cxy = cxy/2
 
-        # Apply cutout window
-        nsamples = self.nsamples
-        nlines = self.nlines
-        if not full_fov and self.window is not None:
-            window = np.array(self.window)
-            cxy = cxy - [window[0], window[1]]
-            nsamples = window[2] - window[0]
-            nlines = window[3] - window[1]
-
-        # Construct FOV
-        self.fov = oops.fov.BarrelFOV(scale,
-                                      (nsamples, nlines),
+        # Construct full FOV
+        fov_full = oops.fov.BarrelFOV(scale,
+                                      (self.nsamples, self.nlines),
                                       coefft_uv_from_xy=distortion_coeff,
                                       uv_los=(cxy[0], cxy[1]))
 
-        return self.fov
+        # Apply cutout window if full fov not requested
+        if not full_fov and self.window is not None:
+            window = np.array(self.window)
+            fov = oops.fov.SliceFOV(fov_full,
+                                    window[[0,1]],
+                                    window[2:] - window[0:2])
+        else:
+            fov = fov_full
+
+        return fov
 
 
 
