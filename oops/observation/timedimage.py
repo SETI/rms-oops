@@ -106,9 +106,11 @@ class TimedImage(Observation):
         # Cadence
         self.cadence = cadence
         if self._time_is_1d:
-            assert len(self.cadence.shape) == 1, '1-D cadence required'
+            if len(self.cadence.shape) != 1:
+                raise ValueError('TimedImage axes requires 1-D cadence')
         else:
-            assert len(self.cadence.shape) == 2, '2-D cadence required'
+            if len(self.cadence.shape) != 2:
+                raise ValueError('TimedImage axes requires 2-D cadence')
 
         # Timing
         self.time = self.cadence.time
@@ -128,17 +130,20 @@ class TimedImage(Observation):
         # observations in which the cadence defines one dimension, not the FOV.
         if self._time_is_1d:
             t_size = self.cadence.shape[0]
-            assert t_size >= self.shape[self.t_axis], \
-                'TimedImage FOV and cadence have incompatible shapes'
+            if t_size < self.shape[self.t_axis]:
+                raise ValueError('TimedImage FOV and cadence have incompatible '
+                                 + 'shapes')
             self._extended_fov = (t_size > self.shape[self.t_axis])
             self.shape[self.t_axis] = t_size
             self.uv_shape[self._t_uv_axis] = t_size
         else:
-            assert self.shape[self.t_axis[0]] in (self.cadence.shape[0], 1), \
-                'TimedImage FOV and cadence have incompatible shapes'
+            if self.shape[self.t_axis[0]] not in (self.cadence.shape[0], 1):
+                raise ValueError('TimedImage FOV and cadence have incompatible '
+                                 + 'shapes')
             t_size = self.cadence.shape[1]
-            assert t_size >= self.shape[self.t_axis[1]], \
-                'TimedImage FOV and cadence have incompatible shapes'
+            if t_size < self.shape[self.t_axis[1]]:
+                raise ValueError('TimedImage FOV and cadence have incompatible '
+                                 + 'shapes')
             self._extended_fov = (t_size > self.shape[self.t_axis[1]])
             self.shape[self.t_axis[1]] = t_size
             self.uv_shape[self._fast_t_uv_axis] = t_size
@@ -383,6 +388,8 @@ class Test_TimedImage(unittest.TestCase):
         # Old RasterScan unit tests
         ########################################################################
 
+        RasterScan = TimedImage
+
         ####################################################
         # Continuous observation, shape (10,20)
         # Axes are (fast,slow)
@@ -392,7 +399,7 @@ class Test_TimedImage(unittest.TestCase):
         slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
         fast_cadence = Metronome(tstart=0., tstride=1., texp=1., steps=10)
         cadence = DualCadence(slow_cadence, fast_cadence)
-        obs = TimedImage(axes=('ufast','vslow'), cadence=cadence, fov=fov,
+        obs = RasterScan(axes=('ufast','vslow'), cadence=cadence, fov=fov,
                          path='SSB', frame='J2000')
 
         indices = Vector([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(0,21),(10,21)])
@@ -522,7 +529,7 @@ class Test_TimedImage(unittest.TestCase):
         slow_cadence = Metronome(tstart=0., tstride=1000., texp=1., steps=10)
         fast_cadence = Metronome(tstart=0., tstride=10., texp=1., steps=20)
         cadence = DualCadence(slow_cadence, fast_cadence)
-        obs = TimedImage(axes=('uslow','vfast'), cadence=cadence, fov=fov,
+        obs = RasterScan(axes=('uslow','vfast'), cadence=cadence, fov=fov,
                                                  path='SSB', frame='J2000')
 
         indices = Vector([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
@@ -559,7 +566,7 @@ class Test_TimedImage(unittest.TestCase):
         slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
         fast_cadence = Metronome(tstart=0., tstride=1., texp=0.8, steps=10)
         cadence = DualCadence(slow_cadence, fast_cadence)
-        obs = TimedImage(axes=('ufast','vslow'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+        obs = RasterScan(axes=('ufast','vslow'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
         self.assertEqual(obs.time[1], 199.8)
 
@@ -603,7 +610,7 @@ class Test_TimedImage(unittest.TestCase):
         slow_cadence = Metronome(tstart=0., tstride=11., texp=10., steps=20)
         fast_cadence = Metronome(tstart=0., tstride=1., texp=0.8, steps=10)
         cadence = DualCadence(slow_cadence, fast_cadence)
-        obs = TimedImage(axes=('ufast','vslow'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+        obs = RasterScan(axes=('ufast','vslow'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
         self.assertEqual(obs.time[1], 218.8)
 
@@ -674,7 +681,7 @@ class Test_TimedImage(unittest.TestCase):
         slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
         fast_cadence = Metronome(tstart=0., tstride=1., texp=0.8, steps=10)
         cadence = DualCadence(slow_cadence, fast_cadence)
-        obs = TimedImage(axes=('a','vslow','b','ufast','c'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+        obs = RasterScan(axes=('a','vslow','b','ufast','c'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
         self.assertEqual(obs.time[1], 199.8)
 
@@ -712,6 +719,8 @@ class Test_TimedImage(unittest.TestCase):
         # Old Pushbroom unit tests
         ########################################################################
 
+        Pushbroom = TimedImage
+
         ########################################
         # Overall shape (10,20)
         # Time is second axis; time = v * 10.
@@ -719,7 +728,7 @@ class Test_TimedImage(unittest.TestCase):
 
         flatfov = FlatFOV((0.001,0.001), (10,20))
         cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
-        obs = TimedImage(axes=('u','vt'), cadence=cadence, fov=flatfov,
+        obs = Pushbroom(axes=('u','vt'), cadence=cadence, fov=flatfov,
                                          path='SSB', frame='J2000')
 
         indices = Vector([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
@@ -813,7 +822,7 @@ class Test_TimedImage(unittest.TestCase):
         ########################################
 
         cadence = Metronome(tstart=0., tstride=10., texp=10., steps=10)
-        obs = TimedImage(axes=('ut','v'), cadence=cadence, fov=flatfov,
+        obs = Pushbroom(axes=('ut','v'), cadence=cadence, fov=flatfov,
                                          path='SSB', frame='J2000')
 
         indices = Vector([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
@@ -849,7 +858,7 @@ class Test_TimedImage(unittest.TestCase):
         ########################################################
 
         cadence = Metronome(tstart=0., tstride=10., texp=8., steps=10)
-        obs = TimedImage(axes=('ut','v'), cadence=cadence, fov=flatfov,
+        obs = Pushbroom(axes=('ut','v'), cadence=cadence, fov=flatfov,
                                          path='SSB', frame='J2000')
 
         self.assertEqual(obs.time[1], 98.)
@@ -907,9 +916,11 @@ class Test_TimedImage(unittest.TestCase):
         # Old Slit unit tests
         ########################################################################
 
+        Slit = TimedImage
+
         fov = FlatFOV((0.001,0.001), (10,1))
         cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
-        obs = TimedImage(axes=('u','vt'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+        obs = Slit(axes=('u','vt'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
         indices = Vector([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
         tstep = indices.to_scalar(1)
@@ -992,7 +1003,7 @@ class Test_TimedImage(unittest.TestCase):
 
         fov = FlatFOV((0.001,0.001), (1,20))
         cadence = Metronome(tstart=0., tstride=10., texp=10., steps=10)
-        obs = TimedImage(axes=('ut','v'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+        obs = Slit(axes=('ut','v'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
         indices = Vector([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
         indices_ = indices.copy()
@@ -1020,7 +1031,7 @@ class Test_TimedImage(unittest.TestCase):
 
         fov = FlatFOV((0.001,0.001), (1,20))
         cadence = Metronome(tstart=0., tstride=10., texp=8., steps=10)
-        obs = TimedImage(axes=('ut','v'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+        obs = Slit(axes=('ut','v'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
         self.assertEqual(obs.time[1], 98.)
 
@@ -1068,7 +1079,7 @@ class Test_TimedImage(unittest.TestCase):
 
         # Alternative texp and axes
         cadence = Metronome(tstart=0., tstride=10., texp=8., steps=10)
-        obs = TimedImage(axes=('a','v','b','ut','c'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+        obs = Slit(axes=('a','v','b','ut','c'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
         self.assertEqual(obs.time[1], 98.)
 
@@ -1101,11 +1112,13 @@ class Test_TimedImage(unittest.TestCase):
         # Old RasterSlit unit tests
         ########################################################################
 
+        RasterSlit = TimedImage
+
         fov = FlatFOV((0.001,0.001), (10,1))
         slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
         fast_cadence = Metronome(tstart=0., tstride=1., texp=1., steps=10)
         cadence = DualCadence(slow_cadence, fast_cadence)
-        obs = TimedImage(axes=('ufast','vslow'), cadence=cadence, fov=fov,
+        obs = RasterSlit(axes=('ufast','vslow'), cadence=cadence, fov=fov,
                          path='SSB', frame='J2000')
 
         indices = Pair([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
@@ -1195,7 +1208,7 @@ class Test_TimedImage(unittest.TestCase):
         slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=10)
         fast_cadence = Metronome(tstart=0., tstride=0.5, texp=0.5, steps=20)
         cadence = DualCadence(slow_cadence, fast_cadence)
-        obs = TimedImage(axes=('uslow','vfast'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+        obs = RasterSlit(axes=('uslow','vfast'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
         indices = Pair([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
         indices_ = indices.copy()
@@ -1230,7 +1243,7 @@ class Test_TimedImage(unittest.TestCase):
         slow_cadence = Metronome(tstart=0., tstride=10., texp=8., steps=20)
         fast_cadence = Metronome(tstart=0., tstride=1., texp=0.5, steps=10)
         cadence = DualCadence(slow_cadence, fast_cadence)
-        obs = TimedImage(axes=('ufast','vslow'), cadence=cadence, fov=fov,
+        obs = RasterSlit(axes=('ufast','vslow'), cadence=cadence, fov=fov,
                                                  path='SSB', frame='J2000')
 
         self.assertEqual(obs.time[1], 199.5)
@@ -1276,7 +1289,7 @@ class Test_TimedImage(unittest.TestCase):
         slow_cadence = Metronome(tstart=0., tstride=11., texp=10., steps=20)
         fast_cadence = Metronome(tstart=0., tstride=1., texp=0.8, steps=10)
         cadence = DualCadence(slow_cadence, fast_cadence)
-        obs = TimedImage(axes=('ufast','vslow'), cadence=cadence, fov=fov,
+        obs = RasterSlit(axes=('ufast','vslow'), cadence=cadence, fov=fov,
                                                  path='SSB', frame='J2000')
 
         self.assertEqual(obs.time[1], 218.8)
@@ -1350,7 +1363,7 @@ class Test_TimedImage(unittest.TestCase):
         slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
         fast_cadence = Metronome(tstart=0., tstride=1., texp=0.8, steps=10)
         cadence = DualCadence(slow_cadence, fast_cadence)
-        obs = TimedImage(axes=('a','vslow','b','ufast','c'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+        obs = RasterSlit(axes=('a','vslow','b','ufast','c'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
         self.assertEqual(obs.time[1], 199.8)
 
@@ -1389,10 +1402,12 @@ class Test_TimedImage(unittest.TestCase):
         # Old Pushframe unit tests
         ########################################################################
 
+        Pushframe = TimedImage
+
         flatfov = FlatFOV((0.001,0.001), (10,20))
         cadence = TDICadence(lines=20, tstart=100., tdi_texp=10., tdi_stages=2,
                              tdi_sign=-1)
-        obs = TimedImage(axes=('u','vt'),
+        obs = Pushframe(axes=('u','vt'),
                         cadence=cadence, fov=flatfov, path='SSB', frame='J2000')
 
         indices = Vector([( 0,0),( 0,1),( 0,10),( 0,18),( 0,19),( 0,20),( 0,21),
@@ -1476,7 +1491,7 @@ class Test_TimedImage(unittest.TestCase):
         # Alternative axis order ('ut','v')
         cadence = TDICadence(lines=10, tstart=100., tdi_texp=10., tdi_stages=10,
                              tdi_sign=-1)
-        obs = TimedImage(axes=('ut','v'),
+        obs = Pushframe(axes=('ut','v'),
                         cadence=cadence, fov=flatfov, path='SSB', frame='J2000')
 
         indices = Vector([(-1,0),(0,-1),(0,0),(0,20),(9,0),(10,0),(11,0),(11,20)])
@@ -1503,7 +1518,7 @@ class Test_TimedImage(unittest.TestCase):
         # Alternative texp for discontinuous indices
         cadence = TDICadence(lines=10, tstart=100., tdi_texp=10., tdi_stages=10,
                                        tdi_sign=1)
-        obs = TimedImage(axes=('ut','v'),
+        obs = Pushframe(axes=('ut','v'),
                         cadence=cadence, fov=flatfov, path='SSB', frame='J2000')
 
         self.assertEqual(obs.time[0], 100.)

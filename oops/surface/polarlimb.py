@@ -3,11 +3,9 @@
 ################################################################################
 
 import numpy as np
-from polymath import Scalar, Vector3
-
-from .           import Surface
-from .limb       import Limb
-from ..constants import HALFPI
+from polymath          import Scalar, Vector3
+from oops.surface      import Surface
+from oops.surface.limb import Limb
 
 class PolarLimb(Surface):
     """A variant of the Limb surface, in which the coordinates are redefined as
@@ -43,7 +41,9 @@ class PolarLimb(Surface):
                         range are masked.
         """
 
-        assert ground.COORDINATE_TYPE == 'spherical'
+        if ground.COORDINATE_TYPE != 'spherical':
+            raise ValueError('PolarLimb requires a spheroidal ground surface')
+
         self.ground = ground
         self.origin = ground.origin
         self.frame  = ground.frame
@@ -54,6 +54,15 @@ class PolarLimb(Surface):
             self.limits = None
         else:
             self.limits = (limits[0], limits[1])
+
+        # Save the unmasked version of this surface
+        if limits is None:
+            self.unmasked = self
+        else:
+            self.unmasked = PolarLimb(self.ground, None)
+
+        # Unique key for intercept calculations
+        self.intercept_key = ('limb',) + self.ground.intercept_key
 
     def __getstate__(self):
         return (self.ground, self.limits)
@@ -84,6 +93,10 @@ class PolarLimb(Surface):
                         if groundtrack is True, a Vector3 of ground points is
                         appended to the returned tuple.
         """
+
+        if axes not in (2, 3):
+            raise ValueError('Surface.coords_from_vector3 ' +
+                             'axes values must equal 2 or 3')
 
         if derivs:
             raise NotImplementedError('PolarLimb.coords_from_vector3 ' +  # TODO
@@ -124,6 +137,10 @@ class PolarLimb(Surface):
         Return:         a Vector3 of intercept points defined by the
                         coordinates.
         """
+
+        if len(coords) not in (2, 3):
+            raise ValueError('Surface.vector3_from_coords requires 2 or 3 '
+                             'coords')
 
         if derivs:
             raise NotImplementedError('PolarLimb.vector3_from_coords ' +  # TODO
@@ -212,16 +229,16 @@ class PolarLimb(Surface):
 ################################################################################
 
 import unittest
+from oops.constants import HALFPI
 
 class Test_PolarLimb(unittest.TestCase):
 
     def runTest(self):
 
-        from ..frame import Frame
-        from ..path import Path
-
-        from .spheroid  import Spheroid
-        from .ellipsoid import Ellipsoid
+        from oops.frame             import Frame
+        from oops.path              import Path
+        from oops.surface.spheroid  import Spheroid
+        from oops.surface.ellipsoid import Ellipsoid
 
         REQ  = 60268.
         RMID = 54364.

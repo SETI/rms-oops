@@ -122,6 +122,8 @@ class Test_FlatFOV(unittest.TestCase):
 
     def runTest(self):
 
+        from oops.config import AREA_FACTOR
+
         test = FlatFOV((1/2048.,-1/2048.), 101, (50,75))
 
         buffer = np.empty((101,101,2))
@@ -139,11 +141,16 @@ class Test_FlatFOV(unittest.TestCase):
         uv_test = test.uv_from_xy(xy)
         self.assertEqual(uv_test, Pair(buffer))
 
-        self.assertEqual(test.area_factor(buffer), 1.)
+        try:
+            AREA_FACTOR.old = True
+            self.assertEqual(test.area_factor(buffer), 1.)
 
-        test2 = FlatFOV((1/2048.,-1/2048.), 101, (50,75),
-                        uv_area=test.uv_area*2)
-        self.assertEqual(test2.area_factor(buffer), 0.5)
+            test2 = FlatFOV((1/2048.,-1/2048.), 101, (50,75),
+                            uv_area=test.uv_area*2)
+            self.assertEqual(test2.area_factor(buffer), 0.5)
+
+        finally:
+            AREA_FACTOR.old = False
 
 ########################################
 if __name__ == '__main__': # pragma: no cover

@@ -4,9 +4,9 @@
 
 from polymath import Qube, Scalar, Vector3
 
-from .       import Path
-from ..event import Event
-from ..frame import Frame
+from oops.event import Event
+from oops.frame import Frame
+from oops.path  import Path
 
 class LinearPath(Path):
     """A path defining linear motion relative to another path and frame."""
@@ -62,7 +62,9 @@ class LinearPath(Path):
 
     # Unpickled paths will always have temporary IDs to avoid conflicts
     def __getstate__(self):
-        return (self.pos, self.epoch, self.origin, self.frame)
+        return (self.pos, self.epoch,
+                Path.as_primary_path(self.origin),
+                Frame.as_primary_frame(self.frame))
 
     def __setstate__(self, state):
         self.__init__(*state)

@@ -10,8 +10,6 @@ from polymath.qube   import Qube
 from polymath.scalar import Scalar
 from polymath.vector import Vector
 
-TWOPI = 2. * np.pi
-
 class Vector3(Vector):
     """A vector with a fixed length of three."""
 
@@ -122,7 +120,7 @@ class Vector3(Vector):
         (x,y,z) = self.to_scalars(recursive=recursive)
         length = self.norm(recursive=recursive)
 
-        ra = y.arctan2(x) % TWOPI
+        ra = y.arctan2(x) % Scalar.TWOPI
         dec = (z/length).arcsin()
 
         return (ra, dec, length)
@@ -162,9 +160,36 @@ class Vector3(Vector):
         (x,y,z) = self.to_scalars(recursive=recursive)
         radius = (x**2 + y**2).sqrt(recursive=recursive)
 
-        longitude = y.arctan2(x, recursive=recursive) % TWOPI
+        longitude = y.arctan2(x, recursive=recursive) % Scalar.TWOPI
 
         return (radius, longitude, z)
+
+    #===========================================================================
+    def longitude(self, recursive=True):
+        """Longitude (or right ascension) of this Vector3 as projected onto the
+        X/Y plane.
+
+        The returned value will always fall between zero and 2*pi.
+
+        Inputs:
+            recursive   True to include the derivatives. Default is True.
+        """
+
+        x = self.to_scalar(0, recursive=recursive)
+        y = self.to_scalar(1, recursive=recursive)
+        return y.arctan2(x) % Scalar.TWOPI
+
+    #===========================================================================
+    def latitude(self, recursive=True):
+        """Latitude (or declination) of this Vector3 relative to the Z-axis.
+
+        Inputs:
+            recursive   True to include the derivatives. Default is True.
+        """
+
+        z = self.to_scalar(2, recursive=recursive)
+        length = self.norm(recursive=recursive)
+        return (z/length).arcsin()
 
     ### Most operations are inherited from Vector. These include:
     #     def extract_scalar(self, axis, recursive=True)

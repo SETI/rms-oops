@@ -472,7 +472,9 @@ class Snapshot(Observation):
                                            in each direction.
         """
 
-        assert return_type in ('list', 'flags', 'full')
+        if return_type not in ('list', 'flags', 'full'):
+            raise ValueError('invalid return_type for Observation.inventory: '
+                             + repr(return_type))
 
         if fov is None:
             fov = self.fov
@@ -498,7 +500,7 @@ class Snapshot(Observation):
         centers = arrival_event.neg_arr_ap
         ranges = centers.norm()
         radii = Scalar([body.radius for body in bodies])
-        radius_angles = (radii/ranges).arcsin()
+        radius_angles = (radii / ranges).arcsin()
 
         inner_radii = Scalar([body.inner_radius for body in bodies])
         inner_angles = (inner_radii / ranges).arcsin()

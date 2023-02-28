@@ -220,8 +220,7 @@ class Test_Juno_JIRAM_SPE_Backplane_Exercises(unittest.TestCase):
         root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'juno/jiram')
         file = os.path.join(root, 'JNOJIR_2000/DATA/JIR_SPE_RDR_2013282T133845_V03.DAT')
         (obs, slits) = jiram.from_file(file)
-        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-                                 planet_key='MOON')
+        exercise_backplanes(obs, use_inventory=False, planet_key='MOON')
 
 
 ##############################################

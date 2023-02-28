@@ -147,12 +147,16 @@ import unittest
 
 class Test_Radiance(unittest.TestCase):
 
-    def runTest(self):
+  def runTest(self):
 
-        import numpy as np
-        from polymath import Pair
-        from oops.fov.flatfov import FlatFOV
-        from oops.constants import RPD
+    import numpy as np
+    from polymath import Pair
+    from oops.fov.flatfov import FlatFOV
+    from oops.constants import RPD
+    from oops.config import AREA_FACTOR
+
+    try:
+        AREA_FACTOR.old = True
 
         flat_fov = FlatFOV((RPD/3600.,RPD/3600.), (1024,1024))
         cal = Radiance('TEST', flat_fov, 5.)
@@ -326,6 +330,9 @@ class Test_Radiance(unittest.TestCase):
 
         dn2 = cal2.dn_from_point(values, uv)
         self.assertEqual(dn, dn2)
+
+    finally:
+        AREA_FACTOR.old = False
 
 ########################################
 if __name__ == '__main__': # pragma: no cover

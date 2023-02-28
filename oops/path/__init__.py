@@ -2,16 +2,14 @@
 # oops/path/__init__.py: Abstract class Path and its required subclasses
 ################################################################################
 
-from __future__ import print_function
-
 import numpy as np
 import scipy.interpolate as interp
 
 from polymath import Qube, Scalar, Vector3
 
-from ..config import QUICK, PATH_PHOTONS, LOGGING, PICKLE_CONFIG
-from ..event  import Event
-from ..frame  import Frame
+from oops.config import QUICK, PATH_PHOTONS, LOGGING, PICKLE_CONFIG
+from oops.event  import Event
+from oops.frame  import Frame
 import oops.constants as constants
 
 class Path(object):
@@ -83,6 +81,10 @@ class Path(object):
         """
 
         pass
+
+    ############################################################################
+    # String operations
+    ############################################################################
 
     @property
     def origin_id(self):
@@ -543,16 +545,17 @@ class Path(object):
             direction in both events.
 
         Convergence parameters are as follows:
-            iters       the maximum number of iterations of Newton's method to
-                        perform. It should almost never need to be > 5.
-            precision   iteration stops when the largest change in light travel
-                        time between one iteration and the next falls below this
-                        threshold (in seconds).
-            limit       the maximum allowed absolute value of the change in
-                        light travel time from the nominal range calculated
-                        initially. Changes in light travel with absolute values
-                        larger than this limit are clipped. This prevents the
-                        divergence of the solution in some cases.
+            max_iterations  the maximum number of iterations of Newton's method
+                            to perform. It should almost never need to be > 6.
+            dlt_precision   iteration stops when the largest change in light
+                            travel time between one iteration and the next falls
+                            below this threshold (in seconds).
+            dlt_limit       the maximum allowed absolute value of the change in
+                            light travel time from the nominal range calculated
+                            initially. Changes in light travel with absolute
+                            values larger than this limit are clipped. This
+                            prevents the divergence of the solution in some
+                            cases.
         """
 
         # Internal function to return an entirely masked result
@@ -637,7 +640,7 @@ class Path(object):
         if antimask is None:
             antimask = link.antimask
         else:
-            antimask &= link.antimask
+            antimask = antimask & link.antimask
 
         # If the link is entirely masked...
         if not np.any(antimask):
@@ -681,7 +684,8 @@ class Path(object):
         # tolerance is reached. Convergence takes just a few iterations.
         max_dlt = np.inf
         prev_lt = None
-        for iter in range(iters):
+        converged = False
+        for count in range(iters):
 
             # Quicken the path and frame evaluations on first iteration
             # Hereafter, we specify quick=False because it's already quick.
@@ -705,20 +709,27 @@ class Path(object):
 
             # Test for convergence
             prev_max_dlt = max_dlt
-            max_dlt = abs(dlt).max()
+            max_dlt = abs(dlt).max(builtins=True, masked=-1.)
 
             if LOGGING.surface_iterations:
-                print(LOGGING.prefix, 'Path._solve_photon', iter, max_dlt)
+                LOGGING.performance('Path._solve_photon',
+                                    'iter=%d; change=%.6g' % (count+1, max_dlt))
 
-            if (max_dlt <= precision
-                or max_dlt >= prev_max_dlt
-                or max_dlt == Scalar.MASKED):
-                    break
+            if max_dlt <= precision:
+                converged = True
+                break
+
+            if max_dlt >= prev_max_dlt:
+                break
 
         #### END OF LOOP
 
+        if not converged:
+            LOGGING.warn('Path._solve_photon did not converge;',
+                         'iter=%d; change=%.6g' % (count+1, max_dlt))
+
         # If the link is entirely masked...
-        if max_dlt == Scalar.MASKED:
+        if max_dlt < 0.:
             return fully_masked_results()
 
         # Restore derivatives to path_time if necessary
@@ -731,6 +742,11 @@ class Path(object):
                    (delta_vel_ssb.proj(delta_pos_ssb).norm() - signed_c))
             new_lt = (prev_lt - dlt).clip(lt_min, lt_max, False)
             path_time = link.time + new_lt
+
+            # The path_time contains a time derivative due to the motion of the
+            # link. We rename this derivative from 't' to 'T' to avoid
+            # confusion.
+            path_time = path_time.rename_deriv('t', 'T', method='add')
 
         # Construct the returned event
         path_event_ssb = path_wrt_ssb.event_at_time(path_time, quick=quick)
@@ -854,12 +870,6 @@ class Path(object):
             return RotatedPath(newpath, frame)
 
     #===========================================================================
-    def wrt_ssb(self):
-        """This path relative to the SSB, in the J2000 frame."""
-
-        return self.wrt(Path.SSB, Frame.J2000)
-
-    #===========================================================================
     def quick_path(self, time, quick={}):
         """A new QuickPath that approximates this path within given time limits.
 
@@ -926,8 +936,8 @@ class Path(object):
             if tmin >= quickpath.t0 and tmax <= quickpath.t1:
 
                 if LOGGING.quickpath_creation:
-                    print(LOGGING.prefix, 'Re-using QuickPath: ' + str(self),
-                                          '(%.3f, %.3f)' % (tmin, tmax))
+                    LOGGING.diagnostic('Re-using QuickPath: ' + str(self),
+                                       '(%.3f, %.3f)' % (tmin, tmax))
 
                 return quickpath
 
@@ -958,8 +968,8 @@ class Path(object):
             effort_extending_quickpath = OVERHEAD + steps + count/SPEEDUP
             if count >= effort_extending_quickpath:
                 if LOGGING.quickpath_creation:
-                    print(LOGGING.prefix, 'Extending QuickPath: ' + str(self),
-                                          '(%.3f, %.3f)' % (tmin, tmax))
+                    LOGGING.diagnostic('Extending QuickPath: ' + str(self),
+                                       '(%.3f, %.3f)' % (tmin, tmax))
 
                 quickpath.extend((tmin,tmax))
                 return quickpath
@@ -971,8 +981,8 @@ class Path(object):
             return self
 
         if LOGGING.quickpath_creation:
-            print(LOGGING.prefix, 'New QuickPath: ' + str(self),
-                                  '(%.3f, %.3f)' % (tmin, tmax))
+            LOGGING.diagnostic('New QuickPath: ' + str(self),
+                               '(%.3f, %.3f)' % (tmin, tmax))
 
         result = QuickPath(self, (tmin, tmax), quickdict)
 
@@ -1019,7 +1029,7 @@ class Waypoint(Path):
         # A path might not get assigned the same ID on the next run of OOPS, so
         # saving the name alone is not meaningful. Instead, we save the current
         # primary definition, which has the same path_id, frame, and shape.
-        return (self.as_primary_path(),)
+        return (Path.as_primary_path(self),)
 
     def __setstate__(self, state):
         (primary_path,) = state
@@ -1115,7 +1125,9 @@ class LinkedPath(Path):
         self.path = path
         self.parent = parent
 
-        assert self.path.origin == self.parent.waypoint
+        if self.path.origin != self.parent.waypoint:
+            raise ValueError('LinkedPath paths are incompatible: %s, %s'
+                             % (path, parent))
 
         if self.path.frame == self.parent.frame:
             self.rotation = None
@@ -1168,7 +1180,10 @@ class RelativePath(Path):
         self.path       = Path.as_path(path)
         self.new_origin = Path.as_path(origin)
 
-        assert self.path.origin.waypoint == self.new_origin.origin.waypoint
+        if self.path.origin.waypoint != self.new_origin.origin.waypoint:
+            raise ValueError('RelativePath paths are incompatible: %s, %s'
+                             % (self.path.origin.waypoint,
+                                self.new_origin.origin.waypoint))
 
         if self.path.frame == self.new_origin.frame:
             self.rotation = None
@@ -1417,21 +1432,16 @@ class QuickPath(Path):
                 pos[...,1] = pos_y[0]
                 pos[...,2] = pos_z[0]
                 vel[...,0] = vel_x[0]
-                vel[...,1] = vel_x[0]
-                vel[...,2] = vel_x[0]
+                vel[...,1] = vel_y[0]
+                vel[...,2] = vel_z[0]
             else:
-                pos[...,0] = ((pos_x[1]-pos_x[0])/time_diff * tflat_diff +
-                              pos_x[0])
-                pos[...,1] = ((pos_y[1]-pos_y[0])/time_diff * tflat_diff +
-                              pos_y[0])
-                pos[...,2] = ((pos_z[1]-pos_z[0])/time_diff * tflat_diff +
-                              pos_z[0])
-                vel[...,0] = ((vel_x[1]-vel_x[0])/time_diff * tflat_diff +
-                              vel_x[0])
-                vel[...,1] = ((vel_y[1]-vel_y[0])/time_diff * tflat_diff +
-                              vel_y[0])
-                vel[...,2] = ((vel_z[1]-vel_z[0])/time_diff * tflat_diff +
-                              vel_z[0])
+                frac = tflat_diff / time_diff
+                pos[...,0] = pos_x[0] + frac * (pos_x[1] - pos_x[0])
+                pos[...,1] = pos_y[0] + frac * (pos_y[1] - pos_y[0])
+                pos[...,2] = pos_z[0] + frac * (pos_z[1] - pos_z[0])
+                vel[...,0] = vel_x[0] + frac * (vel_x[1] - vel_x[0])
+                vel[...,1] = vel_y[0] + frac * (vel_y[1] - vel_y[0])
+                vel[...,2] = vel_z[0] + frac * (vel_z[1] - vel_z[0])
 
         else:
             # Evaluate the positions and velocities
@@ -1514,6 +1524,8 @@ Path.SSB.wrt_ssb = Path.SSB
 # Initialize the registry
 Path.initialize_registry()
 
+Event.PATH_CLASS = Path
+
 ###############################################################################
 # UNIT TESTS
 ################################################################################
@@ -1525,16 +1537,16 @@ class Test_Path(unittest.TestCase):
     def runTest(self):
 
         # Re-import here to so modules all come from the oops tree
-        from . import Path, LinkedPath, ReversedPath, \
-                      RelativePath, RotatedPath, QuickPath
+        from oops.path import Path, LinkedPath, ReversedPath, \
+                              RelativePath, RotatedPath, QuickPath
 
         # More imports are here to avoid conflicts
         import os
         import cspyce
-        from .spicepath import SpicePath
-        from .linearpath import LinearPath
-        from ..frame.spiceframe import SpiceFrame
-        from ..unittester_support import TESTDATA_PARENT_DIRECTORY
+        from oops.path.spicepath     import SpicePath
+        from oops.path.linearpath    import LinearPath
+        from oops.frame.spiceframe   import SpiceFrame
+        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
         Path.USE_QUICKPATHS = False
 

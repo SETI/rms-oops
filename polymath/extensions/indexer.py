@@ -522,7 +522,8 @@ def _prep_index(self, indx):
 def _prep_scalar_index(self, indx):
     """Prepare the index, assumed suitable for a shapeless object.
 
-    A single value can only be indexed with True, False, Ellipsis, and None.
+    A single value can only be indexed with True, False, Ellipsis, an empty
+    slice, and None.
 
     Input:
         indx            index to prepare.
@@ -579,6 +580,10 @@ def _prep_scalar_index(self, indx):
 
         elif item is None:
             shapes[has_ellipsis].append(1)
+
+        elif isinstance(item, slice):
+            if item != slice(None, None, None):
+                raise IndexError('too many indices')
 
         else:
             raise IndexError('invalid index type: ' + type(item).__name__)

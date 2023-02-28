@@ -3,8 +3,7 @@
 ################################################################################
 
 from polymath import Pair
-
-from . import FOV
+from oops.fov import FOV
 
 class SliceFOV(FOV):
     """A subclass of FOV in which only a slice of another FOV's (u,v) array is

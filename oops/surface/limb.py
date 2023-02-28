@@ -2,14 +2,10 @@
 # oops/surface/limb.py: Limb subclass of class Surface
 ################################################################################
 
-from __future__ import print_function
-
 import numpy as np
-from polymath import Scalar, Vector3, Matrix3
-
-from .           import Surface
-from ..config    import SURFACE_PHOTONS, LOGGING
-from ..constants import PI, HALFPI, TWOPI
+from polymath     import Scalar, Vector3
+from oops.config  import SURFACE_PHOTONS, LOGGING
+from oops.surface import Surface
 
 class Limb(Surface):
     """This surface is defined as the locus of points where a surface normal
@@ -31,7 +27,7 @@ class Limb(Surface):
 
     COORDINATE_TYPE = 'limb'
     IS_VIRTUAL = True
-    DEBUG = False   # True for convergence testing in intercept()
+    DEBUG = False       # True for convergence testing in intercept()
 
     #===========================================================================
     def __init__(self, ground, limits=None):
@@ -46,7 +42,9 @@ class Limb(Surface):
                         this range are masked.
         """
 
-        assert ground.COORDINATE_TYPE == 'spherical'
+        if ground.COORDINATE_TYPE != 'spherical':
+            raise ValueError('Limb requires a spheroidal ground surface')
+
         self.ground = ground
         self.origin = ground.origin
         self.frame  = ground.frame
@@ -55,6 +53,15 @@ class Limb(Surface):
             self.limits = None
         else:
             self.limits = (limits[0], limits[1])
+
+        # Save the unmasked version of this surface
+        if limits is None:
+            self.unmasked = self
+        else:
+            self.unmasked = Limb(self.ground, None)
+
+        # Unique key for intercept calculations
+        self.intercept_key = ('limb',) + self.ground.intercept_key
 
     def __getstate__(self):
         return (self.ground, self.limits)
@@ -96,6 +103,10 @@ class Limb(Surface):
                         appended to the returned tuple.
         """
 
+        if axes not in (2, 3):
+            raise ValueError('Surface.coords_from_vector3 ' +
+                             'axes values must equal 2 or 3')
+
         pos = Vector3.as_vector3(pos, derivs)
 
         if guess is None:
@@ -109,19 +120,21 @@ class Limb(Surface):
 
         (lon, lat) = self.ground.coords_from_vector3(track, derivs)
 
-        if axes == 2:
-            results = (lon, lat)
-        else:
+        # Derive z; mask if necessary
+        if axes > 2 or self.limits is not None:
             z = (pos.norm() - track.norm()).sign() * (pos - track).norm()
 
-            # Mask based on elevation limits if necessary
             if self.limits is not None:
-                zmask = (z.vals < self.limits[0]) | (z.vals > self.limits[1])
-                z = z.mask_where(zmask, replace=0.)
-                lon = lon.remask(z.mask)
-                lat = lat.remask(z.mask)
+                zmask = z.tvl_lt(self.limits[0]) | z.tvl_gt(self.limits[1])
+                if zmask.any():
+                    z = z.remask_or(zmask)
+                    lon = lon.remask(z.mask)
+                    lat = lat.remask(z.mask)
 
+        if axes > 2:
             results = (lon, lat, z)
+        else:
+            results = (lon, lat)
 
         if guess is not None:
             results += (ground_guess,)
@@ -152,6 +165,10 @@ class Limb(Surface):
         Return:         a Vector3 of intercept points defined by the
                         coordinates.
         """
+
+        if len(coords) not in (2, 3):
+            raise ValueError('Surface.vector3_from_coords requires 2 or 3 '
+                             'coords')
 
         track = self.ground.vector3_from_coords(coords[:2], derivs=derivs)
 
@@ -225,6 +242,7 @@ class Limb(Surface):
 
         max_abs_dt = 1.e99
         ground_guess = False
+        converged = False
         for count in range(SURFACE_PHOTONS.max_iterations):
             pos = obs + t * los
             pos.insert_deriv('pos', Vector3.IDENTITY)
@@ -241,14 +259,23 @@ class Limb(Surface):
             t = t - dt
 
             prev_max_abs_dt = max_abs_dt
-            max_abs_dt = abs(dt).max()
+            max_abs_dt = abs(dt).max(builtins=True, masked=-1.)
 
             if LOGGING.surface_iterations or Limb.DEBUG:
-                print(LOGGING.prefix, 'Limb.intercept', count+1, max_abs_dt)
+                LOGGING.convergence('Limb.intercept',
+                                    'iter=%d; change=%.6g' % (count+1,
+                                                              max_abs_dt))
 
-            if (max_abs_dt <= SURFACE_PHOTONS.dlt_precision or
-                max_abs_dt >= prev_max_abs_dt):
-                    break
+            if max_abs_dt <= SURFACE_PHOTONS.dlt_precision:
+                converged = True
+                break
+
+            if max_abs_dt >= prev_max_abs_dt:
+                break
+
+        if not converged:
+            LOGGING.warn('Limb.intercept did not converge',
+                         'iter=%d; change=%.6g' % (count+1, max_abs_dt))
 
         t = t.wod
         pos = obs + t * los
@@ -294,7 +321,7 @@ class Limb(Surface):
         x = track.dot(xaxis)
         y = track.dot(yaxis)
 
-        clock = y.arctan2(x) % TWOPI
+        clock = y.arctan2(x) % Scalar.TWOPI
         return clock
 
     #===========================================================================
@@ -360,8 +387,8 @@ class Limb(Surface):
         dv_dv = Scalar(np.ones(clock.shape))
 
         prev_max_abs_dv = 1.e99
-        MAX_ITERS = 20
-        for iter in range(MAX_ITERS):
+        converged = False
+        for count in range(SURFACE_PHOTONS.groundtrack_iterations):
 
             v.insert_deriv('v', dv_dv, override=True)
             u = (aa * v**2 + bb).sqrt() - cc * v
@@ -375,18 +402,26 @@ class Limb(Surface):
             dv = f.wod / df_dv
             v -= dv
 
-            max_abs_dv = abs(dv).max()
+            max_abs_dv = abs(dv).max(builtins=True, masked=-1.)
 
             if LOGGING.surface_iterations or Limb.DEBUG:
-                print(LOGGING.prefix, "Limb.groundtrack_from_clock",
-                                      iter, max_abs_dv)
+                LOGGING.convergence('Limb.groundtrack_from_clock',
+                                    'iter=%d; change=%.6g' % (count+1,
+                                                              max_abs_dv))
 
-            # Break when convergence stops, even if the target precision was not
-            # reached. This is OK because the ground track is perpendicular to
-            # the line of sight, so we can't expect perfect precision.
+            if max_abs_dv <= SURFACE_PHOTONS.groundtrack_precision:
+                converged = True
+                break
+
+            # If the solution stops improving, break but issue a warning
             if max_abs_dv > prev_max_abs_dv:
                 break
+
             prev_max_abs_dv = max_abs_dv
+
+        if not converged:
+            LOGGING.warn('Limb.groundtrack_from_clock did not converge;',
+                         'iter=%d; change=%.6g' % (count+1, max_abs_dv))
 
         track = u.wod * a1 + v.wod * a2
         return track
@@ -416,7 +451,7 @@ class Limb(Surface):
 
         x = track.dot(x_axis)
         y = track.dot(y_axis)
-        clock = y.arctan2(x) % TWOPI
+        clock = y.arctan2(x) % Scalar.TWOPI
 
         results = (z, clock)
 
@@ -497,8 +532,8 @@ class Limb(Surface):
         dv_dv = Scalar(np.ones(clock.shape))
 
         prev_max_abs_dv = 1.e99
-        MAX_ITERS = 20
-        for count in range(MAX_ITERS):
+        converged = False
+        for count in range(SURFACE_PHOTONS.groundtrack_iterations):
 
             v.insert_deriv('v', dv_dv, override=True)
             u = (aa * v**2 + bb).sqrt() - cc * v
@@ -513,18 +548,26 @@ class Limb(Surface):
             dv = f.wod / df_dv
             v -= dv
 
-            max_abs_dv = abs(dv).max()
+            max_abs_dv = abs(dv).max(builtins=True, masked=-1.)
 
             if LOGGING.surface_iterations or Limb.DEBUG:
-                print(LOGGING.prefix, 'Limb.intercept_from_z_clock',
-                                      count+1, max_abs_dv)
+                LOGGING.convergence('Limb.intercept_from_z_clock',
+                                    'iter=%d; change=%.6g' % (count+1,
+                                                              max_abs_dv))
 
-            # Break when convergence stops, even if the target precision was not
-            # reached. This is OK because the ground track is perpendicular to
-            # the line of sight, so we can't expect perfect precision.
+            if max_abs_dv <= SURFACE_PHOTONS.groundtrack_precision:
+                converged = True
+                break
+
+            # If the solution stops improving, break but issue a warning
             if max_abs_dv > prev_max_abs_dv:
                 break
+
             prev_max_abs_dv = max_abs_dv
+
+        if not converged:
+            LOGGING.warn('Limb.intercept_from_z_clock did not converge;',
+                         'iter=%d; change=%.6g' % (count+1, max_abs_dv))
 
         track = u.wod * a1 + v.wod * a2
         cept = track + z * perp.wod
@@ -595,20 +638,21 @@ class Limb(Surface):
 ################################################################################
 
 import unittest
+from oops.constants import PI, HALFPI, TWOPI
 
 class Test_Limb(unittest.TestCase):
 
     def runTest(self):
 
-        from ..frame import Frame
-        from ..path import Path
-
-        from .spheroid  import Spheroid
-        from .ellipsoid import Ellipsoid
-        from .centricspheroid import CentricSpheroid
-        from .graphicspheroid import GraphicSpheroid
-        from .centricellipsoid import CentricEllipsoid
-        from .graphicellipsoid import GraphicEllipsoid
+        from oops.frame                    import Frame
+        from oops.path                     import Path
+        from oops.surface.centricellipsoid import CentricEllipsoid
+        from oops.surface.centricspheroid  import CentricSpheroid
+        from oops.surface.ellipsoid        import Ellipsoid
+        from oops.surface.graphicellipsoid import GraphicEllipsoid
+        from oops.surface.graphicspheroid  import GraphicSpheroid
+        from oops.surface.spheroid         import Spheroid
+        from polymath                      import Matrix3
 
         np.random.seed(6922)
 

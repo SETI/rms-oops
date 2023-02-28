@@ -8,26 +8,22 @@ import numbers
 import cspyce
 import spicedb
 
-from polymath import Vector3
-
-from oops.path           import Path
-from oops.path.multipath import MultiPath
-from oops.path.spicepath import SpicePath
-
+from polymath                    import Vector3
 from oops.frame                  import Frame, AliasFrame
 from oops.frame.poleframe        import PoleFrame
 from oops.frame.ringframe        import RingFrame
 from oops.frame.spiceframe       import SpiceFrame
 from oops.frame.synchronousframe import SynchronousFrame
 from oops.frame.twovectorframe   import TwoVectorFrame
-
-from oops.surface.nullsurface import NullSurface
-from oops.surface.orbitplane  import OrbitPlane
-from oops.surface.ringplane   import RingPlane
-from oops.surface.spice_shape import spice_shape
-
-from oops.gravity               import Gravity
-from oops.gravity.oblategravity import OblateGravity
+from oops.gravity                import Gravity
+from oops.gravity.oblategravity  import OblateGravity
+from oops.path                   import Path
+from oops.path.multipath         import MultiPath
+from oops.path.spicepath         import SpicePath
+from oops.surface.nullsurface    import NullSurface
+from oops.surface.orbitplane     import OrbitPlane
+from oops.surface.ringplane      import RingPlane
+from oops.surface.spice_shape    import spice_shape
 
 import oops.constants     as constants
 import oops.spice_support as spice_support
@@ -463,14 +459,16 @@ class Body(object):
 
         # On a repeat call, make sure the frames match
         if isinstance(self.ring_frame, RingFrame) and pole is None:
-            assert self.ring_frame.epoch == epoch
-            assert self.ring_frame.retrograde == retrograde
-            return
+            if (self.ring_frame.epoch != epoch or
+                self.ring_frame.retrograde != retrograde):
+                    raise ValueError('re-definition of RingFrame is '
+                                     + 'incompatible with the original')
 
         if isinstance(self.ring_frame, PoleFrame) and pole is not None:
-            assert self.ring_frame.retrograde == retrograde
-            assert self.ring_frame.invariable_pole == pole
-            return
+            if (self.ring_frame.retrograde != retrograde or
+                self.ring_frame.invariable_pole != pole):
+                    raise ValueError('re-definition of PoleFrame is '
+                                     + 'incompatible with the original')
 
         if pole is not None:
             pole = Vector3.as_vector3(pole)
@@ -868,6 +866,65 @@ class Body(object):
 
         return Path.as_primary_path(self.path)
 
+    #===========================================================================
+    def photon_to_event(self, event, derivs=False, guess=None,
+                              antimask=None, quick={}, converge={}):
+        """Solve for a photon arrival event from the center of this body.
+
+        This is equivalent to self.path.photon_to_event. It is provided for
+        compatibility with the LightSource method of the same name.
+
+        Input:
+            event       the event of the observation.
+
+            derivs      True to propagate derivatives of the event position into
+                        the returned event. The time derivative is always
+                        retained.
+
+            guess       an initial guess to use as the event time along the
+                        path; otherwise None. Should only be used if the event
+                        time was already returned from a similar calculation.
+
+            antimask    if not None, this is a boolean array to be applied to
+                        event times and positions. Only the indices where
+                        antimask=True will be used in the solution.
+
+            quick       an optional dictionary to override the configured
+                        default parameters for QuickPaths and QuickFrames; False
+                        to disable the use of QuickPaths and QuickFrames. The
+                        default configuration is defined in config.py.
+
+            converge    an optional dictionary of parameters to override the
+                        configured default convergence parameters. The default
+                        configuration is defined in config.py.
+
+        Return:         arrival.
+
+            arrival     a copy of the given event, with the photon arrival or
+                        departure line of sight and light travel time filled in.
+
+            These subfields and derivatives are defined:
+                    arr         direction of the arriving photon at the path.
+                    arr_lt      (negative) light travel time from the link
+                                event.
+
+        Convergence parameters are as follows:
+            iters       the maximum number of iterations of Newton's method to
+                        perform. It should almost never need to be > 5.
+            precision   iteration stops when the largest change in light travel
+                        time between one iteration and the next falls below this
+                        threshold (in seconds).
+            limit       the maximum allowed absolute value of the change in
+                        light travel time from the nominal range calculated
+                        initially. Changes in light travel with absolute values
+                        larger than this limit are clipped. This prevents the
+                        divergence of the solution in some cases.
+        """
+
+        return self.path.photon_to_event(event, derivs=derivs,
+                                         guess=guess, antimask=antimask,
+                                         quick=quick, converge=converge)
+
     ############################################################################
     # General function to load Solar System components
     ############################################################################
@@ -971,9 +1028,8 @@ class Body(object):
 
         # Also define the solar disk as a light source. The import of the
         # LightSource class is local to this function because a file-level
-        # import would result in recursive imports.
-
-        from .lightsource import DiskSource
+        # import would result in a recursive import.
+        from oops.lightsource import DiskSource
         _ = DiskSource('SOLAR_DISK', SpicePath(10), 695990., 11)
 
         return names

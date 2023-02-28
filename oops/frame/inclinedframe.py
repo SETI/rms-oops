@@ -2,13 +2,11 @@
 # oops/frame/inclinedframe.py: Subclass InclinedFrame of class Frame
 ################################################################################
 
-from polymath import Qube, Scalar
-
-from .                 import Frame
-from .rotation         import Rotation
-from .spinframe        import SpinFrame
-from ..frame.poleframe import PoleFrame
-import oops.constants as constants
+from polymath             import Qube, Scalar
+from oops.frame           import Frame
+from oops.frame.poleframe import PoleFrame
+from oops.frame.rotation  import Rotation
+from oops.frame.spinframe import SpinFrame
 
 class InclinedFrame(Frame):
     """InclinedFrame is a Frame subclass describing a frame that is inclined to
@@ -94,7 +92,8 @@ class InclinedFrame(Frame):
 
     # Unpickled frames will always have temporary IDs to avoid conflicts
     def __getstate__(self):
-        return (self.inc, self.node, self.rate, self.epoch, self.reference,
+        return (self.inc, self.node, self.rate, self.epoch,
+                Frame.as_primary_frame(self.reference),
                 self.despin, self.shape)
 
     def __setstate__(self, state):
@@ -128,7 +127,7 @@ class InclinedFrame(Frame):
 
         # Locate the ascending nodes in the reference frame
         return (self.node + self.rate * (Scalar.as_scalar(time)
-                                         - self.epoch)) % constants.TWOPI
+                                         - self.epoch)) % Scalar.TWOPI
 
 ################################################################################
 # UNIT TESTS

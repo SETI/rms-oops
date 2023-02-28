@@ -12,6 +12,8 @@ Qube._prep_scalar_index = indexer._prep_scalar_index
 
 from polymath.extensions import item_ops
 Qube.extract_numer      = item_ops.extract_numer
+Qube.extract_denom      = item_ops.extract_denom
+Qube.extract_denoms     = item_ops.extract_denoms
 Qube.slice_numer        = item_ops.slice_numer
 Qube.transpose_numer    = item_ops.transpose_numer
 Qube.reshape_numer      = item_ops.reshape_numer

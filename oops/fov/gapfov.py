@@ -4,9 +4,9 @@
 
 import numpy as np
 import numbers
-from polymath import Pair
 
-from . import FOV
+from polymath import Pair
+from oops.fov import FOV
 
 class GapFOV(FOV):
     """A subclass of FOV in which there gaps between the individual pixels."""

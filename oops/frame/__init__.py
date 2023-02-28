@@ -2,14 +2,11 @@
 # oops/frame/__init__.py: Abstract class Frame and its required subclasses
 ################################################################################
 
-from __future__ import print_function
-
 import numpy as np
-from polymath import Qube, Scalar, Vector3, Matrix3, Quaternion
 from scipy.interpolate import InterpolatedUnivariateSpline
-
-from ..config    import QUICK, LOGGING, PICKLE_CONFIG
-from ..transform import Transform
+from polymath          import Matrix3, Quaternion, Qube, Scalar, Vector3
+from oops.config       import QUICK, LOGGING, PICKLE_CONFIG
+from oops.transform    import Transform
 
 class Frame(object):
     """A Frame is an abstract class that returns a Transform (rotation matrix
@@ -94,7 +91,8 @@ class Frame(object):
         same shape; standard rules of broadcasting apply.
         """
 
-        pass
+        raise NotImplementedError(type(self).__name__ + '.transform_at_time ' +
+                                  'is not implemented')
 
     #===========================================================================
     def transform_at_time_if_possible(self, time, quick={}):
@@ -127,6 +125,26 @@ class Frame(object):
         time = Scalar.as_scalar(time)
         return (time, self.transform_at_time(time, quick=quick))
 
+    #===========================================================================
+    def node_at_time(self, time, quick={}):
+        """Angle from the frame's X-axis to the X-Y plane's ascending node on
+        the J2000 equator.
+        """
+
+        frame = self.wrt(Frame.J2000)
+        xform = frame.transform_at_time(time, quick=quick)
+        z_axis_wrt_j2000 = xform.unrotate(Vector3.ZAXIS)
+        (x,y,_) = z_axis_wrt_j2000.to_scalars()
+
+        if (x,y) == (0.,0.):
+            return Scalar(0.)
+
+        return (y.arctan2(x) + Scalar.HALFPI) % Scalar.TWOPI
+
+    ############################################################################
+    # String operations
+    ############################################################################
+
     @property
     def reference_id(self):
         return self.reference.frame_id
@@ -138,37 +156,12 @@ class Frame(object):
 
         return self.origin.path_id
 
-    ############################################################################
-    # string operations
-    ############################################################################
-
     def __str__(self):
         return (type(self).__name__ + '(' + self.frame_id + '/' +
                                             self.reference_id + ')')
 
     def __repr__(self):
         return self.__str__()
-
-    ############################################################################
-    # For serialization, standard frames are uniquely identified by ID
-    ############################################################################
-
-    def PACKRAT__args__(self):
-        if self.frame_id in Frame.STANDARD_FRAMES:
-            return ['frame_id']
-
-        return Frame.as_primary_frame(self)
-
-    @staticmethod
-    def PACKRAT__init__(cls, **args):
-        try:
-            frame_id = args['frame_id']
-            if frame_id in Frame.STANDARD_FRAMES:
-                return Frame.as_frame(frame_id)
-        except KeyError:
-            pass
-
-        return None
 
     ############################################################################
     # Registry Management
@@ -485,12 +478,6 @@ class Frame(object):
         return LinkedFrame(target, newframe)
 
     #===========================================================================
-    def wrt_j2000(self, reference):
-        """This frame relative to J2000."""
-
-        return self.wrt(Frame.J2000)
-
-    #===========================================================================
     def quick_frame(self, time, quick={}):
         """A QuickFrame that approximates this frame within given time limits.
 
@@ -556,8 +543,8 @@ class Frame(object):
             if tmin >= quickframe.t0 and tmax <= quickframe.t1:
 
                 if LOGGING.quickframe_creation:
-                    print(LOGGING.prefix, 'Re-using QuickFrame: ' + str(self),
-                                          '(%.3f, %.3f)' % (tmin, tmax))
+                    LOGGING.diagnostic('Re-using QuickFrame: ' + str(self),
+                                       '(%.3f, %.3f)' % (tmin, tmax))
 
                 return quickframe
 
@@ -588,8 +575,8 @@ class Frame(object):
             effort_extending_quickframe = OVERHEAD + steps + count/SPEEDUP
             if count >= effort_extending_quickframe:
                 if LOGGING.quickframe_creation:
-                    print(LOGGING.prefix, 'Extending QuickFrame: ' + str(self),
-                                          '(%.3f, %.3f)' % (tmin, tmax))
+                    LOGGING.diagnostic('Extending QuickFrame: ' + str(self),
+                                       '(%.3f, %.3f)' % (tmin, tmax))
 
                 quickframe.extend((tmin,tmax))
                 return quickframe
@@ -601,8 +588,8 @@ class Frame(object):
             return self
 
         if LOGGING.quickframe_creation:
-            print(LOGGING.prefix, 'New QuickFrame: ' + str(self),
-                                  '(%.3f, %.3f)' % (tmin, tmax))
+            LOGGING.diagnostic('New QuickFrame: ' + str(self),
+                               '(%.3f, %.3f)' % (tmin, tmax))
 
         result = QuickFrame(self, (tmin, tmax), quickdict)
 
@@ -649,7 +636,7 @@ class Wayframe(Frame):
         # A frame might not get assigned the same ID on the next run of OOPS, so
         # saving the name alone is not meaningful. Instead, we save the current
         # primary definition, which has the same frame_id, origin, and shape.
-        return (self.as_primary_frame(),)
+        return (Frame.as_primary_frame(self),)
 
     def __setstate__(self, state):
         (primary_frame,) = state
@@ -726,7 +713,9 @@ class LinkedFrame(Frame):
         self.frame  = Frame.as_frame(frame)
         self.parent = Frame.as_frame(parent)
 
-        assert self.frame.reference == self.parent.wayframe
+        if self.frame.reference != self.parent.wayframe:
+            raise ValueError('LinkedFrame mismatch: %s, %s'
+                             % (self.frame.reference, self.parent.wayframe))
 
         # Required attributes
         self.wayframe  = self.frame.wayframe
@@ -783,7 +772,9 @@ class RelativeFrame(Frame):
         self.frame1 = Frame.as_frame(frame1)
         self.frame2 = Frame.as_frame(frame2)
 
-        assert self.frame1.reference == self.frame2.reference
+        if self.frame1.reference != self.frame2.reference:
+            raise ValueError('RelativeFrame mismatch: %s, %s'
+                             % (self.frame1.reference, self.frame2.reference))
 
         # Required attributes
         self.wayframe  = self.frame1.wayframe
@@ -865,8 +856,6 @@ class QuickFrame(Frame):
     """QuickFrame is a Frame subclass that returns Transform objects based on
     interpolation of another Frame within a specified time window.
     """
-
-    # PACKRAT_ARGS is undefined; save every attribute to keep this up to date
 
     def __init__(self, frame, interval, quickdict):
         """Constructor for a QuickFrame.
@@ -1258,15 +1247,15 @@ class Test_Frame(unittest.TestCase):
     def runTest(self):
 
         # Re-import here to so modules all come from the oops tree
-        from . import Frame, QuickFrame
+        from oops.frame import Frame, QuickFrame
 
         # More imports are here to avoid conflicts
         import os
         import cspyce
-        from .rotation import Rotation
-        from .spiceframe import SpiceFrame
-        from ..path.spicepath import SpicePath
-        from ..unittester_support import TESTDATA_PARENT_DIRECTORY
+        from oops.frame.rotation     import Rotation
+        from oops.frame.spiceframe   import SpiceFrame
+        from oops.path.spicepath     import SpicePath
+        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls'))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/pck00010.tpc'))

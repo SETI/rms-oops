@@ -3,7 +3,8 @@
 ################################################################################
 
 import numpy as np
-from polymath import Boolean, Scalar, Pair, Vector3, Qube
+from polymath    import Boolean, Scalar, Pair, Vector3, Qube
+from oops.config import AREA_FACTOR
 
 class FOV(object):
     """The FOV (Field of View) abstract class provides a description of the
@@ -13,9 +14,10 @@ class FOV(object):
     the positive Z axis oriented near the center of the line of sight. The x and
     y axes are effectively in the plane of the FOV, with the x-axis oriented
     horizontally and the y-axis pointed downward. The values for (x,y) are
-    implemented using a "pinhole camera" model, in which the z-component has
-    unit length. Therefore, at least near the center of the field of view, the
-    units of x and y are radians.
+    implemented using a "pinhole camera" or "gnomonic" model, in which the
+    z-component has unit length. Therefore, near the center of the field of
+    view, the units of x and y are radians. However, the scale shifts at greater
+    x and y, because the magnitude of the vector is sqrt(1 + x**2 + y**2).
 
     The FOV converts between the actual line of sight vector (x,y,z) and an
     internal coordinate system (ICS) that typically defines a pixel grid. It
@@ -130,7 +132,10 @@ class FOV(object):
                         (x,y) coordinates in the camera's frame.
         """
 
-        assert self.IS_TIME_INDEPENDENT
+        if not self.IS_TIME_INDEPENDENT:
+            raise NotImplementedError(type(self).__name__ + '.xy_from_uv is ' +
+                                      'not implemented; FOV is time-dependent')
+
         return self.xy_from_uvt(uv_pair, derivs=derivs, remask=remask,
                                                         **keywords)
 
@@ -153,7 +158,10 @@ class FOV(object):
                         FOV coordinates.
         """
 
-        assert self.IS_TIME_INDEPENDENT
+        if not self.IS_TIME_INDEPENDENT:
+            raise NotImplementedError(type(self).__name__ + '.uv_from_xy is ' +
+                                      'not implemented; FOV is time-dependent')
+
         return self.uv_from_xyt(xy_pair, derivs=derivs, remask=remask,
                                                         **keywords)
 
@@ -182,14 +190,55 @@ class FOV(object):
         xy_pair = self.xy_from_uvt(uv_pair, time=time, derivs=True,
                                             remask=remask, **keywords)
 
-        dx_du = xy_pair.d_duv.vals[...,0,0]
-        dx_dv = xy_pair.d_duv.vals[...,0,1]
-        dy_du = xy_pair.d_duv.vals[...,1,0]
-        dy_dv = xy_pair.d_duv.vals[...,1,1]
+        # These are the values returned prior to January 2023. It ignores the
+        # distinction between (x,y) and (x',y'). It is preserved for backward
+        # compatibility and because it simplifies some of the Calibration unit
+        # tests.
+        if AREA_FACTOR.old:
+            dx_du = xy_pair.d_duv.vals[...,0,0]
+            dx_dv = xy_pair.d_duv.vals[...,0,1]
+            dy_du = xy_pair.d_duv.vals[...,1,0]
+            dy_dv = xy_pair.d_duv.vals[...,1,1]
+            cross_product = dx_du * dy_dv - dx_dv * dy_du
+            return Scalar(np.abs(cross_product) / self.uv_area, xy_pair.mask)
+
+        # (x,y) are defined on the assumption that z = 1. We actually need the
+        # partial derivatives of (x',y'), defined so that (x',y',z') is a unit
+        # vector parallel to (x,y,1). This ensures that the units on x' and y'
+        # are radians.
+        #
+        # Conversion...
+        #   x' = x / los(x,y)
+        #   y' = y / los(x,y)
+        #   los(x,y) = sqrt(1 + x^2 + y^2)
+        #
+        # This leads to:
+        #   dx'/dx = (1 + y^2) / los^3
+        #   dx'/dy = -2xy / los^3
+        #   dy'/dx = -2xy / los^3
+        #   dy'/dy = (1 + x^2) / los^3
+
+        (x,y) = xy_pair.to_scalars(recursive=False)
+        los = (1 + x**2 + y**2).sqrt()
+
+        dxy_prime_dxy_vals = np.empty(uv_pair.shape + (2,2))
+        dxy_prime_dxy_vals[...,0,0] = 1 + y.vals**2
+        dxy_prime_dxy_vals[...,0,1] = -2 * x.vals * y.vals
+        dxy_prime_dxy_vals[...,1,0] = dxy_prime_dxy_vals[...,0,1]
+        dxy_prime_dxy_vals[...,1,1] = 1 + x.vals**2
+
+        dxy_prime_dxy = Pair(dxy_prime_dxy_vals, drank=1) / los**3
+
+        dxy_prime_duv = dxy_prime_dxy.chain(xy_pair.d_duv)
 
         # Construct the cross products
-        return Scalar(np.abs(dx_du * dy_dv - dx_dv * dy_du) / self.uv_area,
-                      xy_pair.mask)
+        dx_du = dxy_prime_duv.vals[...,0,0]
+        dx_dv = dxy_prime_duv.vals[...,0,1]
+        dy_du = dxy_prime_duv.vals[...,1,0]
+        dy_dv = dxy_prime_duv.vals[...,1,1]
+        cross_product = dx_du * dy_dv - dx_dv * dy_du
+
+        return Scalar(np.abs(cross_product) / self.uv_area, xy_pair.mask)
 
     #===========================================================================
     def los_from_xy(self, xy_pair, derivs=False):
@@ -242,7 +291,7 @@ class FOV(object):
 
     #===========================================================================
     def los_from_uvt(self, uv_pair, time=None, derivs=False, remask=False,
-                                                             **keywords):
+                                    **keywords):
         """The line of sight vector in the camera's frame, given FOV
         coordinates (u,v) at the specified time.
 
@@ -348,10 +397,16 @@ class FOV(object):
         Return:         Pair of (u,v) coordinates in the FOV.
         """
 
-        assert self.IS_TIME_INDEPENDENT
+        if not self.IS_TIME_INDEPENDENT:
+            raise NotImplementedError(type(self).__name__ + '.uv_from_los ' +
+                                    'is not implemented; FOV is time-dependent')
+
         return self.uv_from_los_t(los, derivs=derivs, remask=remask, **keywords)
 
-    #===========================================================================
+    ############################################################################
+    # Boundary tests
+    ############################################################################
+
     def uv_is_outside(self, uv_pair, time=None, inclusive=True,
                             uv_min=None, uv_max=None):
         """A Boolean mask identifying coordinates outside the FOV.
@@ -497,7 +552,10 @@ class FOV(object):
         else:
             return clipped
 
-    #===========================================================================
+    ################################################################################
+    # Self-check support
+    ################################################################################
+
     def max_inversion_error(self, steps=30):
         """Sample the FOV and return the largest error in pixels resulting from
         uv -> xy -> uv.

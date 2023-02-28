@@ -3,11 +3,10 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Scalar, Vector3, Matrix3
-
-from .           import Frame
-from ..fittable  import Fittable
-from ..transform import Transform
+from polymath       import Matrix3, Qube, Scalar, Vector3
+from oops.fittable  import Fittable
+from oops.frame     import Frame
+from oops.transform import Transform
 
 class Rotation(Frame, Fittable):
     """A Frame describing a fixed rotation about one axis of another frame."""
@@ -61,7 +60,8 @@ class Rotation(Frame, Fittable):
                 Rotation.FRAME_IDS[key] = self.frame_id
 
     def __getstate__(self):
-        return (self.angle, self.axis2, self.reference, self.shape)
+        return (self.angle, self.axis2,
+                Frame.as_primary_frame(self.reference), self.shape)
 
     def __setstate__(self, state):
         # If this frame matches a pre-existing frame, re-use its ID
@@ -96,7 +96,8 @@ class Rotation(Frame, Fittable):
         """
 
         params = Scalar.as_scalar(params)
-        assert params.shape == self.shape
+        if params.shape != self.shape:
+            raise ValueError('new parameter shape does not match original')
 
         self.angle = params
 

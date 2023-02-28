@@ -5,7 +5,6 @@
 from oops.backplane import Backplane
 from oops.constants import C
 
-#===============================================================================
 def distance(self, event_key, direction='dep'):
     """Distance in km between a photon's departure and its arrival.
 
@@ -15,15 +14,16 @@ def distance(self, event_key, direction='dep'):
                         'dep' for distance traveled by the departing photon.
     """
 
+    if direction not in ('dep', 'arr'):
+        raise ValueError('invalid photon direction: ' + repr(direction))
+
     event_key = self.standardize_event_key(event_key)
-    assert direction in ('dep', 'arr')
-
     key = ('distance', event_key, direction)
-    if key not in self.backplanes:
-        lt = self.light_time(event_key, direction)
-        self.register_backplane(key, lt * C)
+    if key in self.backplanes:
+        return self.get_backplane(key)
 
-    return self.backplanes[key]
+    lt = self.light_time(event_key, direction)
+    return self.register_backplane(key, lt * C)
 
 #===============================================================================
 def light_time(self, event_key, direction='dep'):
@@ -35,21 +35,22 @@ def light_time(self, event_key, direction='dep'):
                         'dep' for the travel time of the departing photon.
     """
 
+    if direction not in ('dep', 'arr'):
+        raise ValueError('invalid photon direction: ' + repr(direction))
+
     event_key = self.standardize_event_key(event_key)
-    assert direction in ('dep', 'arr')
-
     key = ('light_time', event_key, direction)
-    if key not in self.backplanes:
-        if direction == 'arr':
-            event = self.get_surface_event_with_arr(event_key)
-            lt = event.arr_lt
-        else:
-            event = self.get_surface_event(event_key)
-            lt = event.dep_lt
+    if key in self.backplanes:
+        return self.get_backplane(key)
 
-        self.register_backplane(key, abs(lt))
+    if direction == 'arr':
+        event = self.get_surface_event(event_key, arrivals=True)
+        lt = event.arr_lt
+    else:
+        event = self.get_surface_event(event_key)
+        lt = event.dep_lt
 
-    return self.backplanes[key]
+    return self.register_backplane(key, lt.abs())
 
 #===============================================================================
 def event_time(self, event_key):
@@ -62,15 +63,15 @@ def event_time(self, event_key):
     event_key = self.standardize_event_key(event_key)
 
     key = ('event_time', event_key)
-    if key not in self.backplanes:
-        event = self.get_surface_event(event_key)
-        self.register_backplane(key, event.time)
+    if key in self.backplanes:
+        return self.get_backplane(key)
 
-    return self.backplanes[key]
+    event = self.get_surface_event(event_key)
+    return self.register_backplane(key, event.time)
 
 #===============================================================================
 def center_distance(self, event_key, direction='dep'):
-    """Distance traveled by a photon between paths.
+    """Gridless distance traveled by a photon between paths.
 
     Input:
         event_key       key defining the event at the body's path.
@@ -80,17 +81,12 @@ def center_distance(self, event_key, direction='dep'):
                                        departing photon.
     """
 
-    event_key = self.standardize_event_key(event_key)
-    key = ('center_distance', event_key, direction)
-    if key not in self.backplanes:
-        lt = self.center_light_time(event_key, direction)
-        self.register_gridless_backplane(key, lt * C)
-
-    return self.backplanes[key]
+    gridless_key = self.gridless_event_key(event_key)
+    return self.distance(gridless_key, direction=direction)
 
 #===============================================================================
 def center_light_time(self, event_key, direction='dep'):
-    """Light travel time in seconds from a path.
+    """Gridless light travel time in seconds from a path.
 
     Input:
         event_key       key defining the event at the body's path.
@@ -100,25 +96,12 @@ def center_light_time(self, event_key, direction='dep'):
                                        departing photon.
     """
 
-    event_key = self.standardize_event_key(event_key)
-    assert direction in ('dep', 'arr', 'obs', 'sun')
-
-    key = ('center_light_time', event_key, direction)
-    if key not in self.backplanes:
-        if direction in ('arr', 'sun'):
-            event = self.get_gridless_event_with_arr(event_key)
-            lt = event.arr_lt
-        else:
-            event = self.get_gridless_event(event_key)
-            lt = event.dep_lt
-
-        self.register_gridless_backplane(key, abs(lt))
-
-    return self.backplanes[key]
+    gridless_key = self.gridless_event_key(event_key)
+    return self.light_time(gridless_key, direction=direction)
 
 #===============================================================================
 def center_time(self, event_key):
-    """The absolute time when the photon intercepted the path.
+    """Gridless absolute time when the photon intercepted the path.
 
     Measured in seconds TDB.
 
@@ -126,18 +109,70 @@ def center_time(self, event_key):
         event_key       key defining the event at the body's path.
     """
 
-    event_key = self.standardize_event_key(event_key)
-
-    key = ('center_time', event_key)
-    if key not in self.backplanes:
-        event = self.get_gridless_event(event_key)
-        self.register_gridless_backplane(key, event.time)
-
-    return self.backplanes[key]
+    gridless_key = self.gridless_event_key(event_key)
+    return self.event_time(gridless_key)
 
 ################################################################################
 
+# Add these functions to the Backplane module
 Backplane._define_backplane_names(globals().copy())
+
+################################################################################
+# GOLD MASTER TESTS
+################################################################################
+
+from oops.backplane.gold_master import register_test_suite
+
+def distance_test_suite(bpt):
+
+    bp = bpt.backplane
+    for name in bpt.body_names + bpt.ring_names:
+
+        # Observer distance and light time
+        bpt.gmtest(bp.distance(name),
+                   name + ' distance to observer (km)',
+                   limit=1., radius=1)
+        bpt.gmtest(bp.center_distance(name),
+                   name + ' center distance to observer (km)',
+                   limit=1.)
+
+        lt = bp.light_time(name)
+        clt = bp.center_light_time(name)
+        bpt.gmtest(lt,
+                   name + ' light time to observer (s)',
+                   limit=3.e-6, radius=1)
+        bpt.gmtest(clt,
+                   name + ' center light time to observer (km)',
+                   limit=3.e-6)
+
+        # Sun distance and light time
+        bpt.gmtest(bp.distance(name, direction='arr'),
+                   name + ' distance from Sun (km)',
+                   limit=1., radius=1)
+        bpt.gmtest(bp.center_distance(name, direction='arr'),
+                    name + ' center distance from Sun (km)',
+                   limit=1.)
+
+        bpt.gmtest(bp.light_time(name, direction='arr'),
+                   name + ' light time from Sun (km)',
+                   limit=3.e-6, radius=1)
+        bpt.gmtest(bp.center_light_time(name, direction='arr'),
+                   name + ' center light time from Sun (km)',
+                   limit=3.e-6, radius=1)
+
+        # Event time
+        bpt.gmtest(bp.event_time(name),
+                   name + ' event time (TDB)',
+                   limit=0.01, radius=1)
+
+    for (planet, ring) in bpt.planet_ring_pairs:
+        bpt.compare(bp.center_distance(planet) - bp.center_distance(ring),
+                    0.,
+                    planet + ' center minus ' + ring
+                           + ' center to observer (km)',
+                    limit=1.e-6)
+
+register_test_suite('distance', distance_test_suite)
 
 ################################################################################
 # UNIT TESTS
@@ -191,12 +226,8 @@ def exercise_sun(bp,
     if planet is not None:
         test = bp.distance(planet, direction='arr')
         show_info(bp, 'Distance Sun to planet, arrival (km)', test, **options)
-        test = bp.distance(('sun', planet), direction='dep')
-        show_info(bp, 'Distance Sun to planet, departure (km)', test, **options)
         test = bp.center_distance(planet, direction='arr')
         show_info(bp, 'Distance Sun to planet center, arrival (km)', test, **options)
-        test = bp.center_distance(('sun', planet), direction='dep')
-        show_info(bp, 'Distance Sun to planet center, departure (km)', test, **options)
 
         if Body.lookup(planet).ring_body is not None:
             test = bp.distance(planet+':ring', direction='arr')
@@ -210,12 +241,8 @@ def exercise_sun(bp,
     if ring is not None:
         test = bp.distance(ring, direction='arr')
         show_info(bp, 'Distance Sun to rings, arrival (km)', test, **options)
-        test = bp.distance(('sun', ring), direction='dep')
-        show_info(bp, 'Distance Sun to rings, departure (km)', test, **options)
         test = bp.center_distance(ring, direction='arr')
         show_info(bp, 'Distance Sun to ring center, arrival (km)', test, **options)
-        test = bp.center_distance(('sun', ring), direction='dep')
-        show_info(bp, 'Distance Sun to ring center, departure (km)', test, **options)
 
 #===============================================================================
 def exercise_observer_light_time(bp,

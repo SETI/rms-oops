@@ -3,7 +3,7 @@
 ################################################################################
 
 import numpy as np
-from ..qube import Qube
+from polymath.qube import Qube
 
 def extract_numer(self, axis, index, classes=(), recursive=True):
     """An object extracted from one numerator axis.
@@ -46,6 +46,64 @@ def extract_numer(self, axis, index, classes=(), recursive=True):
                                                       False))
 
     return obj
+
+#===============================================================================
+def extract_denom(self, axis, index, classes=()):
+    """An object extracted from one denominator axis.
+
+    Input:
+        axis        the item axis from which to extract a slice.
+        index       the index value at which to extract the slice.
+        classes     a single class or list or tuple of classes. The class of the
+                    object returned will be the first suitable class in the
+                    list. If not provided and denominator rank is one, the
+                    object returned will have the same class as self. Otherwise,
+                    a generic Qube object will be returned.
+    """
+
+    # Position axis from left
+    if axis >= 0:
+        a1 = axis
+    else:
+        a1 = axis + self._drank_
+    if a1 < 0 or a1 >= self._drank_:
+        raise ValueError('axis is out of range (%d,%d): %d',
+                         (-self._drank_, self._drank_, axis))
+    k1 = len(self._shape_) + self._nrank_ + a1
+
+    # Roll this axis to the beginning and slice it out
+    new_values = np.rollaxis(self._values_, k1, 0)
+    new_values = new_values[index]
+
+    # Construct and cast
+    obj = Qube(new_values, self._mask_, drank=self._drank_ - 1,
+               example=self)
+    obj = obj.cast((type(self),) + classes)
+    obj._readonly_ = self._readonly_
+
+    return obj
+
+#===============================================================================
+def extract_denoms(self):
+    """Tuple of objects extracted from one object with a 1-D denominator.
+
+    Returns a list of objects with the same class as self, but drank = 0.
+    """
+
+    if self._drank_ == 0:
+        return [self]
+
+    if self._drank_ != 1:
+        raise ValueError('extract_denoms requires drank == 1')
+
+    objects = []
+    for k in range(self._denom_[0]):
+        obj = Qube.__new__(type(self))
+        obj.__init__(self._values_[...,k], self._mask_, drank=0, example=self)
+        obj._readonly_ = self._readonly_
+        objects.append(obj)
+
+    return objects
 
 #===============================================================================
 def slice_numer(self, axis, index1, index2, classes=(), recursive=True):
@@ -302,6 +360,7 @@ def split_items(self, nrank, classes):
     Derivatives are removed.
 
     Input:
+        nrank       number of numerator axes to retain.
         classes     either a single subclass of Qube or a list or tuple of
                     subclasses. The returned object will be an instance of the
                     first suitable subclass in the list.

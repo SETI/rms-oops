@@ -5,9 +5,9 @@
 import numpy as np
 from polymath import Qube, Scalar
 
-from .       import Path
-from ..event import Event
-from ..frame import Frame
+from oops.event import Event
+from oops.frame import Frame
+from oops.path  import Path
 
 class MultiPath(Path):
     """Gathers a set of paths into a single 1-D Path object."""
@@ -58,7 +58,9 @@ class MultiPath(Path):
 
     # Unpickled paths will always have temporary IDs to avoid conflicts
     def __getstate__(self):
-        return (self.paths, self.origin, self.frame)
+        return (self.paths,
+                Path.as_primary_path(self.origin),
+                Frame.as_primary_frame(self.frame))
 
     def __setstate__(self, state):
         # If this path matches a pre-existing path, re-use its ID
@@ -151,9 +153,9 @@ class Test_MultiPath(unittest.TestCase):
     def runTest(self):
 
         import cspyce
-        from .spicepath import SpicePath
-        from ..unittester_support import TESTDATA_PARENT_DIRECTORY
         import os
+        from oops.path.spicepath     import SpicePath
+        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "naif0009.tls"))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "pck00010.tpc"))

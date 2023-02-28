@@ -4,9 +4,9 @@
 
 from polymath import Qube, Scalar
 
-from .         import Path
-from ..event   import Event
-from ..surface import Surface
+from oops.event   import Event
+from oops.path    import Path
+from oops.surface import Surface
 
 class CoordPath(Path):
     """A path defined by fixed coordinates on a specified Surface."""
@@ -29,10 +29,8 @@ class CoordPath(Path):
         """
 
         self.surface = surface
-        self.coords = [Scalar(x) for x in coords]
+        self.coords = tuple(Scalar(x) for x in coords)
         self.obs_path = None if obs is None else Path.as_path(obs)
-
-        assert isinstance(self.surface, Surface)
 
         if not self.surface.IS_VIRTUAL:
             self.pos = self.surface.vector3_from_coords(self.coords)
@@ -52,7 +50,9 @@ class CoordPath(Path):
 
     # Unpickled paths will always have temporary IDs to avoid conflicts
     def __getstate__(self):
-        return (self.surface, self.coords, self.obs_path)
+        return (self.surface, self.coords,
+                None if self.obs_path is None
+                                      else Path.as_primary_path(self.obs_path))
 
     def __setstate__(self, state):
         self.__init__(*state)

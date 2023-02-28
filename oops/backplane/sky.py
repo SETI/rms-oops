@@ -7,7 +7,6 @@ from polymath       import Scalar, Vector3
 from oops.backplane import Backplane
 from oops.frame     import Frame
 
-#===============================================================================
 def right_ascension(self, event_key=(), apparent=True, direction='arr'):
     """Right ascension of the arriving or departing photon
 
@@ -24,12 +23,11 @@ def right_ascension(self, event_key=(), apparent=True, direction='arr'):
     """
 
     event_key = self.standardize_event_key(event_key)
-
     key = ('right_ascension', event_key, apparent, direction)
     if key not in self.backplanes:
         self._fill_ra_dec(event_key, apparent, direction)
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 #===============================================================================
 def declination(self, event_key=(), apparent=True, direction='arr'):
@@ -48,26 +46,29 @@ def declination(self, event_key=(), apparent=True, direction='arr'):
     """
 
     event_key = self.standardize_event_key(event_key)
-
     key = ('declination', event_key, apparent, direction)
     if key not in self.backplanes:
         self._fill_ra_dec(event_key, apparent, direction)
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 #===============================================================================
 def _fill_ra_dec(self, event_key, apparent, direction):
     """Fill internal backplanes of RA and dec."""
 
-    assert direction in ('arr', 'dep')
+    if direction not in ('arr', 'dep'):
+        raise ValueError('invalid photon direction: ' + direction)
 
-    event = self.get_surface_event_with_arr(event_key)
-    (ra, dec) = event.ra_and_dec(apparent=apparent, subfield=direction)
+    if not event_key:
+        event = self.get_obs_event(event_key)
+    else:
+        event = self.get_surface_event(event_key, arrivals=True)
 
-    self.register_backplane(('right_ascension', event_key, apparent, direction),
-                            ra)
-    self.register_backplane(('declination', event_key, apparent, direction),
-                            dec)
+    (ra, dec) = event.ra_and_dec(apparent=apparent, subfield=direction,
+                                 derivs=self.ALL_DERIVS)
+    etc = (event_key, apparent, direction)
+    self.register_backplane(('right_ascension',) + etc, ra)
+    self.register_backplane(('declination',)     + etc, dec)
 
 #===============================================================================
 def celestial_north_angle(self, event_key=()):
@@ -85,22 +86,20 @@ def celestial_north_angle(self, event_key=()):
     event_key = self.standardize_event_key(event_key)
     key = ('celestial_north_angle', event_key)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
-    temp_key = ('dlos_ddec', event_key)
+    temp_key = ('_dlos_ddec', event_key)
     if temp_key not in self.backplanes:
         self._fill_dlos_dradec(event_key)
 
-    dlos_ddec = self.backplanes[temp_key]
+    dlos_ddec = self.get_backplane(temp_key)
     duv_ddec = self.duv_dlos.chain(dlos_ddec)
 
     du_ddec_vals = duv_ddec.vals[...,0]
     dv_ddec_vals = duv_ddec.vals[...,1]
     clock = np.arctan2(dv_ddec_vals, du_ddec_vals)
 
-    self.register_backplane(key, Scalar(clock, duv_ddec.mask))
-
-    return self.backplanes[key]
+    return self.register_backplane(key, Scalar(clock, duv_ddec.mask))
 
 #===============================================================================
 def celestial_east_angle(self, event_key=()):
@@ -118,21 +117,20 @@ def celestial_east_angle(self, event_key=()):
     event_key = self.standardize_event_key(event_key)
     key = ('celestial_east_angle', event_key)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
-    temp_key = ('dlos_dra', event_key)
+    temp_key = ('_dlos_dra', event_key)
     if temp_key not in self.backplanes:
         self._fill_dlos_dradec(event_key)
 
-    dlos_dra = self.backplanes[temp_key]
+    dlos_dra = self.get_backplane(temp_key)
     duv_dra = self.duv_dlos.chain(dlos_dra)
 
     du_dra_vals = duv_dra.vals[...,0]
     dv_dra_vals = duv_dra.vals[...,1]
     clock = np.arctan2(dv_dra_vals, du_dra_vals)
-    self.register_backplane(key, Scalar(clock, duv_dra.mask))
 
-    return self.backplanes[key]
+    return self.register_backplane(key, Scalar(clock, duv_dra.mask))
 
 #===============================================================================
 def _fill_dlos_dradec(self, event_key):
@@ -171,15 +169,13 @@ def _fill_dlos_dradec(self, event_key):
     dlos_dra  = Vector3(dlos_dradec.vals[...,0], ra.mask)
     dlos_ddec = Vector3(dlos_dradec.vals[...,1], ra.mask)
 
-    self.register_backplane(('dlos_dra',  event_key), dlos_dra)
-    self.register_backplane(('dlos_ddec', event_key), dlos_ddec)
+    self.register_backplane(('_dlos_dra',  event_key), dlos_dra)
+    self.register_backplane(('_dlos_ddec', event_key), dlos_ddec)
 
 #===============================================================================
 def center_right_ascension(self, event_key, apparent=True, direction='arr'):
-    """Right ascension of the arriving or departing photon
-
-    Optionally, it allows for stellar aberration and for frames other than
-    J2000.
+    """Gridless right ascension of a photon from the body center to the
+    detector.
 
     Input:
         event_key       key defining the event at the body's path.
@@ -190,20 +186,16 @@ def center_right_ascension(self, event_key, apparent=True, direction='arr'):
                         'dep' to return the direction of a departing photon.
     """
 
-    event_key = self.standardize_event_key(event_key)
-
-    key = ('center_right_ascension', event_key, apparent, direction)
+    gridless_key = self.gridless_event_key(event_key)
+    key = ('center_right_ascension', gridless_key, apparent, direction)
     if key not in self.backplanes:
-        self._fill_center_ra_dec(event_key, apparent, direction)
+        self._fill_center_ra_dec(gridless_key, apparent, direction)
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 #===============================================================================
 def center_declination(self, event_key, apparent=True, direction='arr'):
-    """Declination of the arriving or departing photon.
-
-    Optionally, it allows for stellar aberration and for frames other than
-    J2000.
+    """Gridless declination of a photon from the body center to the detector.
 
     Input:
         event_key       key defining the event at the body's path.
@@ -214,33 +206,114 @@ def center_declination(self, event_key, apparent=True, direction='arr'):
                         'dep' to return the direction of a departing photon.
     """
 
-    event_key = self.standardize_event_key(event_key)
-
-    key = ('center_declination', event_key, apparent, direction)
+    gridless_key = self.gridless_event_key(event_key)
+    key = ('center_declination', gridless_key, apparent, direction)
     if key not in self.backplanes:
-        self._fill_center_ra_dec(event_key, apparent, direction)
+        self._fill_center_ra_dec(gridless_key, apparent, direction)
 
-    return self.backplanes[key]
+    return self.get_backplane(key)
 
 #===============================================================================
 def _fill_center_ra_dec(self, event_key, apparent, direction):
     """Internal method to fill in RA and dec for the center of a body."""
 
-    assert direction in ('arr', 'dep')
+    if direction not in ('arr', 'dep'):
+        raise ValueError('invalid photon direction: ' + direction)
 
-    _ = self.get_gridless_event_with_arr(event_key)
-    event = self.gridless_arrivals[event_key]
-
-    (ra, dec) = event.ra_and_dec(apparent, subfield=direction)
-
-    self.register_gridless_backplane(
-            ('center_right_ascension', event_key, apparent, direction), ra)
-    self.register_gridless_backplane(
-            ('center_declination', event_key, apparent, direction), dec)
+    gridless_key = self.gridless_event_key(event_key)
+    event = self.get_obs_event(gridless_key)
+    (ra, dec) = event.ra_and_dec(apparent=apparent, subfield=direction,
+                                 derivs=self.ALL_DERIVS)
+    etc = (gridless_key, apparent, direction)
+    self.register_backplane(('center_right_ascension',) + etc, ra)
+    self.register_backplane(('center_declination',)     + etc, dec)
 
 ################################################################################
 
+# Add these functions to the Backplane module
 Backplane._define_backplane_names(globals().copy())
+
+################################################################################
+# GOLD MASTER TESTS
+################################################################################
+
+from oops.backplane.gold_master import register_test_suite
+from oops.constants import HALFPI
+
+def sky_test_suite(bpt):
+
+    bp = bpt.backplane
+
+    # Right ascension
+    cos_dec = bp.declination().cos().mean(builtins=True)
+    actual = bp.right_ascension(apparent=False)
+    apparent = bp.right_ascension(apparent=True)
+    bpt.gmtest(actual,
+               'Right ascension (deg, actual)',
+               limit=1.e-6/cos_dec, method='mod360', radius=1.)
+    bpt.gmtest(apparent,
+               'Right ascension (deg, apparent)',
+               limit=1.e-6/cos_dec, method='mod360', radius=1.)
+    bpt.compare(actual - apparent, 0.,
+                'Right ascension, actual minus apparent (deg)',
+                limit=0.1/cos_dec, method='mod360')
+
+    # Declination
+    actual = bp.declination(apparent=False)
+    apparent = bp.declination(apparent=True)
+    bpt.gmtest(actual,
+               'Declination (deg, actual)',
+               limit=1.e-6, method='degrees', radius=1.)
+    bpt.gmtest(apparent,
+               'Declination (deg, apparent)',
+               limit=1.e-6, method='degrees', radius=1.)
+    bpt.compare(actual - apparent, 0.,
+                'Declination, actual minus apparent (deg)',
+                limit=0.1/cos_dec, method='mod360')
+
+    # Sky angles
+    north = bp.celestial_north_angle()
+    east  = bp.celestial_east_angle()
+    bpt.gmtest(north,
+               'Celestial north angle (deg)',
+               method='mod360', limit=0.001)
+    bpt.gmtest(east,
+               'Celestial east angle (deg)',
+               method='mod360', limit=0.001)
+    bpt.compare(north - east, HALFPI,
+                'Celestial north minus east angles (deg)',
+                method='mod360', limit=2.)
+
+    for name in bpt.body_names:
+
+        # Right ascension
+        cos_dec = bp.center_declination(name).cos().mean(builtins=True)
+        actual = bp.center_right_ascension(name, apparent=False)
+        apparent = bp.center_right_ascension(name, apparent=True)
+        bpt.gmtest(actual,
+                   name + ' center right ascension (deg, actual)',
+                   limit=1.e-6/cos_dec, method='mod360')
+        bpt.gmtest(apparent,
+                   name + ' center right ascension (deg, apparent)',
+                   limit=1.e-6/cos_dec, method='mod360')
+        bpt.compare(actual - apparent, 0.,
+                    name + ' center right ascension, actual minus apparent (deg)',
+                    limit=0.1/cos_dec, method='mod360')
+
+        # Declination
+        actual = bp.center_declination(name, apparent=False)
+        apparent = bp.center_declination(name, apparent=True)
+        bpt.gmtest(actual,
+                   name + ' center declination (deg, actual)',
+                   limit=1.e-6, method='degrees')
+        bpt.gmtest(apparent,
+                   name + ' center declination (deg, apparent)',
+                   limit=1.e-6, method='degrees')
+        bpt.compare(actual - apparent, 0.,
+                    name + ' center declination, actual minus apparent (deg)',
+                    limit=0.1, method='degrees')
+
+register_test_suite('sky', sky_test_suite)
 
 ################################################################################
 # UNIT TESTS

@@ -5,12 +5,11 @@
 import numpy as np
 import cspyce
 
-from polymath import Scalar, Vector3
-
-from .                import Frame
-from ..path           import Path
-from ..path.spicepath import SpicePath
-from ..transform      import Transform
+from polymath            import Scalar, Vector3
+from oops.frame          import Frame
+from oops.path           import Path
+from oops.path.spicepath import SpicePath
+from oops.transform      import Transform
 import oops.spice_support as spice
 
 class SpiceType1Frame(Frame):

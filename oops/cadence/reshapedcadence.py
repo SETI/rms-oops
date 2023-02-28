@@ -27,7 +27,8 @@ class ReshapedCadence(Cadence):
         self._rank = len(self.shape)
         self._size = int(np.product(self.shape))
 
-        assert self._size == np.product(self.cadence.shape)
+        if self._size != np.product(self.cadence.shape):
+            raise ValueError('ReshapedCadence size and shape are incompatible')
 
         if self._rank > 2:
             raise ValueError('%d-D cadences are not supported' % self._rank)
