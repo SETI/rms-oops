@@ -1168,7 +1168,7 @@ class Test_Gravity(unittest.TestCase):
                 c = abs((b - a) / a)
                 self.assertTrue(np.all(c < ERROR_TOLERANCE))
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main()
 
 ################################################################################

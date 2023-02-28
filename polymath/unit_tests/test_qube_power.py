@@ -91,6 +91,6 @@ class Test_Qube_power(unittest.TestCase):
     self.assertTrue(np.all(abs((a**-15).d_dt.vals - (b*b*b*b*b*b*b*b*b*b*b*b*b*b*b).d_dt.vals)) < 1.e-13)
 
 ############################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

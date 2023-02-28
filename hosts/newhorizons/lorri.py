@@ -666,6 +666,6 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
                                fov_1024.uv_scale.vals[1])
 
 ############################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

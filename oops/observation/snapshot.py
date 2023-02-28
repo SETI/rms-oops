@@ -711,6 +711,6 @@ class Test_Snapshot(unittest.TestCase):
         self.assertTrue(np.all(uv.mask == 4*[False] + [True]))
 
 ################################################################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

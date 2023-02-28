@@ -169,6 +169,6 @@ class Test_TrackerFrame(unittest.TestCase):
         self.assertTrue(abs(obs_event.arr_ap.unit() - start_arr).max() < 1.e-6)
 
 #########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

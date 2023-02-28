@@ -20,7 +20,7 @@ from oops.surface.spheroid         import Test_Spheroid
 from oops.surface.spice_shape      import Test_spice_shape
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
 
     import oops
     oops.config.LOGGING.on('     ')

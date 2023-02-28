@@ -206,6 +206,6 @@ class Test_SpiceType1Frame(unittest.TestCase):
         pass                # TBD
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

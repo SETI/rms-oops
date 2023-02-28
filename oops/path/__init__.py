@@ -1671,6 +1671,6 @@ class Test_Path(unittest.TestCase):
         self.assertEqual(event.vel, (0,0,0))
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

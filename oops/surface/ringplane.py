@@ -529,6 +529,6 @@ class Test_RingPlane(unittest.TestCase):
         Frame.reset_registry()
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

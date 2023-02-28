@@ -678,6 +678,6 @@ def case_dual_metronome(self, cad1d, cad2d):
                                                     remask=True), (Pair.MASKED, Pair.MASKED))
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

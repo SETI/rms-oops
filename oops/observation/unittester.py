@@ -18,6 +18,6 @@ from oops.observation.snapshot     import Test_Snapshot
 from oops.observation.timedimage   import Test_TimedImage
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

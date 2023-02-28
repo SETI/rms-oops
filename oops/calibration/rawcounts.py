@@ -329,6 +329,6 @@ class Test_RawCounts(unittest.TestCase):
         AREA_FACTOR.old = False
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

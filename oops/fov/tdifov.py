@@ -235,6 +235,6 @@ class Test_TDIFOV(unittest.TestCase):
         self.assertTrue(np.all(abs(diffs.vals[...,1] + 1/2048./8.) < 1.e-14))
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

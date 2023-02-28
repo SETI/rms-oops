@@ -363,6 +363,6 @@ class Test_Slit1D(unittest.TestCase):
         self.assertEqual(time_max, 10.)
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

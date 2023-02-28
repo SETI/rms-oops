@@ -657,6 +657,6 @@ class Test_RadialFOV(unittest.TestCase):
 #         self.assertTrue(abs(uv1.d_drs.vals - uv2.d_drs.vals).max() <= DEL)
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

@@ -12,7 +12,7 @@ from hosts.juno.junocam   import Test_Juno_Junocam_GoldMaster
 ########################################
 from oops.backplane.unittester_support import backplane_unittester_args
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################

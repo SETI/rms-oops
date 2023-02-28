@@ -1250,6 +1250,6 @@ def one_time_step(self, cadence):
     self.assertEqual(cadence.tstride_at_tstep(1), 10)
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

@@ -328,6 +328,6 @@ class Test_Lighting(unittest.TestCase):
 
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################

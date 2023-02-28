@@ -131,6 +131,6 @@ class Test_GapFOV(unittest.TestCase):
         print('GapFOV unit tests are needed!')
 
 ########################################
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     unittest.main(verbosity=2)
 ################################################################################
