@@ -82,56 +82,6 @@ def from_file(filespec, fast_distortion=True,
     return result
 
 #===============================================================================
-def from_index(filespec, **parameters):
-    """A static method to return a list of Snapshot objects.
-
-    One object for each row in an SSI index file. The filespec refers to the
-    label of the index file.
-    """
-    SSI.initialize()    # Define everything the first time through
-
-    # Read the index file
-    COLUMNS = []        # Return all columns
-    TIMES = ['START_TIME']
-    table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
-    row_dicts = table.dicts_by_row()
-
-    # Create a list of Snapshot objects
-    snapshots = []
-    for row_dict in row_dicts:
-
-        tstart = julian.tdb_from_tai(row_dict['START_TIME'])
-        texp = max(1.e-3, row_dict['EXPOSURE_DURATION']) / 1000.
-        mode = row_dict['INSTRUMENT_MODE_ID']
-
-        name = row_dict['INSTRUMENT_NAME']
-
-        item = oops.obs.Snapshot(('v','u'), tstart, texp,
-                                 SSI.fov[mode, False],
-                                 'GLL', 'GLL_SSI',
-                                 dict = row_dict,       # Add index dictionary
-                                 index_dict = row_dict, # Old name
-                                 instrument = 'SSI',
-                                 sampling = mode)
-
-        item.spice_kernels = Galileo.used_kernels(item.time, 'iss')
-
-        item.filespec = os.path.join(row_dict['VOLUME_ID'],
-                                     row_dict['FILE_SPECIFICATION_NAME'])
-        item.basename = row_dict['FILE_NAME']
-
-        snapshots.append(item)
-
-    # Make sure all the SPICE kernels are loaded
-    tdb0 = row_dicts[ 0]['START_TIME']
-    tdb1 = row_dicts[-1]['START_TIME']
-
-    Galileo.load_cks( tdb0, tdb1)
-    Galileo.load_spks(tdb0, tdb1)
-
-    return snapshots
-
-#===============================================================================
 def initialize(ck='reconstructed', planets=None, asof=None,
                spk='reconstructed', gapfill=True,
                mst_pck=True, irregulars=True):
@@ -398,8 +348,8 @@ from oops.backplane.exercise_backplanes import exercise_backplanes
 from oops.backplane.unittester_support  import Backplane_Settings
 
 
-#*******************************************************************************
-class Test_Galileo_SSI(unittest.TestCase):
+#===============================================================================
+# class Test_Galileo_SSI(unittest.TestCase):
 
     def runTest(self):
 
@@ -415,8 +365,8 @@ class Test_Galileo_SSI(unittest.TestCase):
         self.assertTrue(abs(snapshot.time[1] - snapshot3940.time[1]) < 1.e-3)
 
 
-#*******************************************************************************
-class Test_Galileo_SSI_Backplane_Exercises(unittest.TestCase):
+#===============================================================================
+# class Test_Galileo_SSI_Backplane_Exercises(unittest.TestCase):
 
     #===========================================================================
     def runTest(self):
