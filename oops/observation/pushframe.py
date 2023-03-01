@@ -467,6 +467,6 @@ class Test_Pushframe(unittest.TestCase):
         self.assertEqual(obs.uvt((10,5))[1], 200.)
 
 ########################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

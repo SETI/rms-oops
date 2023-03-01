@@ -966,7 +966,7 @@ class Test_Cassini_VIMS_Backplane_Exercises(unittest.TestCase):
 ############################################
 from oops.backplane.unittester_support import backplane_unittester_args
 
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################

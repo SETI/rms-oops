@@ -1683,6 +1683,6 @@ class Test_Surface(unittest.TestCase):
         self.assertTrue(diffs.norm().max() < 1.e-14)
 
 ########################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################
