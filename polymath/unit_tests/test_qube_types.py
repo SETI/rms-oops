@@ -224,6 +224,6 @@ class Test_Qube_types(unittest.TestCase):
     self.assertEqual(a.masked_single().shape, ())
 
 ############################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

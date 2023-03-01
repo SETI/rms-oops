@@ -363,6 +363,6 @@ class Test_FlatCalib(unittest.TestCase):
         self.assertEqual(dn, dn2)
 
 #########################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

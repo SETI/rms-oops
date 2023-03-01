@@ -486,37 +486,7 @@ class Test_Juno_Junocam_GoldMaster_JNCR_2016347_03C00192_V01(unittest.TestCase):
                 inventory=False, border=10)     # overrides of defaults
 
 
-################################################################################
-# OLD UNIT TESTS
-################################################################################
-#import unittest
-#import os.path
-#
-#from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
-#from oops.backplane.exercise_backplanes import exercise_backplanes
-#from oops.backplane.unittester_support  import Backplane_Settings
-#
-#
-##*******************************************************************************
-#class Test_Juno_Junocam_Backplane_Exercises(unittest.TestCase):
-#
-#    #===========================================================================
-#    def runTest(self):
-#
-#        if Backplane_Settings.NO_EXERCISES:
-#            self.skipTest('')
-#
-#        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'juno/junocam')
-#        file = os.path.join(root, '03/JNCR_2016347_03C00192_V01.img')
-#        obs = from_file(file)[5]
-#        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-#                                 planet_key='JUPITER')
-#
-
 ##############################################
-from oops.backplane.unittester_support import backplane_unittester_args
-
-if __name__ == '__main__': # pragma: no cover
-    backplane_unittester_args()
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

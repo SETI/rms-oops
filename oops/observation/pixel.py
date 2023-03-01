@@ -484,6 +484,6 @@ class Test_Pixel(unittest.TestCase):
         self.assertEqual(time1[:4], obs.time[1])
 
 ########################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

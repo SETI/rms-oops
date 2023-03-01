@@ -68,6 +68,6 @@ class Test_Qube_identity(unittest.TestCase):
     self.assertEqual(a.identity().shape, ())
 
 ############################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################
