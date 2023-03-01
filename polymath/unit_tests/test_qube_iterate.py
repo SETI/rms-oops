@@ -81,6 +81,6 @@ class Test_Qube_iterate(unittest.TestCase):
     self.assertEqual(count, 1)
 
 ############################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

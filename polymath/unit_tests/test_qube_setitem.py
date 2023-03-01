@@ -786,6 +786,6 @@ class Test_Qube_setitem(unittest.TestCase):
         self.assertTrue(aa[:,i,:,j] == a[:,i,:,j])
 
 ############################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

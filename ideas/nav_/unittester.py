@@ -11,6 +11,6 @@ from repointing  import Test_Repointing
 from timeshift   import Test_TimeShift
 
 ########################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

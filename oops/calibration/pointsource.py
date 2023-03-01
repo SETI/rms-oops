@@ -120,6 +120,6 @@ class Test_PointSource(unittest.TestCase):
             AREA_FACTOR.old = False
 
 ########################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

@@ -271,6 +271,6 @@ class Test_Repointing(unittest.TestCase):
             self.assertTrue(abs(diff) < 1.e-7)
 
 #########################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

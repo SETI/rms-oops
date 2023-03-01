@@ -300,6 +300,6 @@ class Test_Qube_as_this_type(unittest.TestCase):
     self.assertTrue(not bb.readonly)
 
 ############################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

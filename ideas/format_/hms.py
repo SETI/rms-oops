@@ -126,6 +126,6 @@ class Test_HMS(unittest.TestCase):
         self.assertTrue(t1 == t2a)
 
 ########################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

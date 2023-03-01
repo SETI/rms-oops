@@ -246,6 +246,6 @@ class Test_Affine(unittest.TestCase):
     self.assertTrue(np.all(dy_dv_diff.abs().values < 1.e-15))
 
 #########################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

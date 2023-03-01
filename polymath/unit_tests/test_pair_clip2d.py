@@ -30,6 +30,6 @@ class Test_Pair_clip2d(unittest.TestCase):
     self.assertTrue(np.all(a.clip2d(lower,[4,5],True).mask == [False,False,True]))
 
 ############################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

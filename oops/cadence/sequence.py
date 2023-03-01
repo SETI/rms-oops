@@ -444,6 +444,6 @@ class Test_Sequence(unittest.TestCase):
         self.assertEqual(cadence.time_at_tstep(2.4 , remask=True), 127.)
 
 ########################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

@@ -480,6 +480,6 @@ class Test_RasterSlit1D(unittest.TestCase):
         self.assertTrue(np.all(t.mask == np.array(2*[False] + [True])))
 
 ########################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

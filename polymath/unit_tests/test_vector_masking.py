@@ -75,6 +75,6 @@ class Test_vector_masking(unittest.TestCase):
     self.assertEqual(a.clip_component(2,lower,upper,False), [[0,1,4],[3,4,5],[6,7,3]])
 
 ############################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

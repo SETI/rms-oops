@@ -86,6 +86,6 @@ class Test_Qube_readonly(unittest.TestCase):
     self.assertTrue(a.d_dm.values[0,0,0,0] != 42)
 
 ############################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

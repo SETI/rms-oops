@@ -14,6 +14,6 @@ from oops.cadence.sequence        import Test_Sequence
 from oops.cadence.tdicadence      import Test_TDICadence
 
 ########################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################
