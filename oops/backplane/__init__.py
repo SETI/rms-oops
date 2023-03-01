@@ -934,22 +934,25 @@ class Backplane(object):
 ################################################################################
 # UNIT TESTS via gold_master
 ################################################################################
-
 import unittest
 import oops.backplane.gold_master as gm
 from oops.unittester_support import OOPS_TEST_DATA_PATH
 
+
+#===============================================================================
 class Test_Backplane_via_gold_master(unittest.TestCase):
 
-  def runTest(self):
+    #===========================================================================
+    def runTest(self):
 
-    gm.execute_as_unittest(self,
+        gm.execute_as_unittest(self,
                 obspath = os.path.join(OOPS_TEST_DATA_PATH,
                                        'cassini/ISS/W1573721822_1.IMG'),
                 module  = 'hosts.cassini.iss',
                 planet  = 'SATURN',
                 moon    = 'EPIMETHEUS',
                 ring    = 'SATURN_MAIN_RINGS')
+
 
 ################################################################################
 # UNIT TESTS
@@ -965,15 +968,13 @@ from oops.meshgrid                      import Meshgrid
 from oops.event                         import Event
 
 from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
-from oops.backplane.exercise_backplanes import exercise_backplanes
-from oops.backplane.unittester_support  import Backplane_Settings
 
 UNITTEST_SATURN_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                         'cassini/ISS/W1573721822_1.IMG')
 UNITTEST_RHEA_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                       'cassini/ISS/N1649465464_1.IMG')
 
-#*******************************************************************************
+#===============================================================================
 class Test_Backplane_Surfaces(unittest.TestCase):
 
     OLD_RHEA_SURFACE = None
@@ -983,9 +984,6 @@ class Test_Backplane_Surfaces(unittest.TestCase):
         global OLD_RHEA_SURFACE
 
         from oops.surface.ellipsoid import Ellipsoid
-
-        if Backplane_Settings.EXERCISES_ONLY:
-            self.skipTest("")
 
         # This only needed when this test is run before the SS has been
         # defined by a host from_file() method
@@ -1026,8 +1024,7 @@ class Test_Backplane_Surfaces(unittest.TestCase):
         import hosts.cassini.iss as iss
 
         snap = iss.from_file(UNITTEST_SATURN_FILESPEC, fast_distortion=False)
-        meshgrid = Meshgrid.for_fov(snap.fov,
-                    undersample=Backplane_Settings.UNDERSAMPLE, swap=True)
+        meshgrid = Meshgrid.for_fov(snap.fov, undersample=16, swap=True)
         uv0 = meshgrid.uv
         bp = Backplane(snap, meshgrid)
 
@@ -1117,8 +1114,7 @@ class Test_Backplane_Surfaces(unittest.TestCase):
         # Rhea tests, with Rhea modified
         body = Body.as_body('RHEA')
         snap = iss.from_file(UNITTEST_RHEA_FILESPEC, fast_distortion=False)
-        meshgrid = Meshgrid.for_fov(snap.fov,
-                    undersample=Backplane_Settings.UNDERSAMPLE, swap=True)
+        meshgrid = Meshgrid.for_fov(snap.fov, undersample=16, swap=True)
 
         uv0 = meshgrid.uv
         bp = Backplane(snap, meshgrid)
@@ -1166,7 +1162,7 @@ class Test_Backplane_Surfaces(unittest.TestCase):
         self.assertTrue(diff.norm().max() < 2.e-7)
 
 
-#*******************************************************************************
+#===============================================================================
 class Test_Backplane_Borders(unittest.TestCase):
 
     #===========================================================================
@@ -1175,19 +1171,11 @@ class Test_Backplane_Borders(unittest.TestCase):
         # NOTE These tests are very sensitive to the specific kernel pool used.
         import hosts.cassini.iss as iss
 
-        if Backplane_Settings.EXERCISES_ONLY:
-            self.skipTest('')
-
-        # These test assume undersample = 1.
-        if Backplane_Settings.UNDERSAMPLE != 1:
-            return
-
         filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                 'cassini/ISS/W1573721822_1.IMG')
 
         snap = iss.from_file(filespec)
-        meshgrid = Meshgrid.for_fov(snap.fov,
-                        undersample=Backplane_Settings.UNDERSAMPLE, swap=True)
+        meshgrid = Meshgrid.for_fov(snap.fov, undersample=1, swap=True)
         bp = Backplane(snap, meshgrid, inventory=None)
 
         # Test border of planet intercepted mask, inside
@@ -1223,22 +1211,18 @@ class Test_Backplane_Borders(unittest.TestCase):
         self.assertTrue(count == 1715)
 
 
-#*******************************************************************************
+#===============================================================================
 class Test_Backplane_Empty_Events(unittest.TestCase):
 
     #===========================================================================
     def runTest(self):
         import hosts.cassini.iss as iss
 
-        if Backplane_Settings.EXERCISES_ONLY:
-            self.skipTest('')
-
         filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                 'cassini/ISS/W1573721822_1.IMG')
 
         snap = iss.from_file(filespec)
-        meshgrid = Meshgrid.for_fov(snap.fov,
-                      undersample=Backplane_Settings.UNDERSAMPLE, swap=True)
+        meshgrid = Meshgrid.for_fov(snap.fov, undersample=16, swap=True)
         bp = Backplane(snap, meshgrid, inventory=None)
 
         # Test empty mask of planet ring radius below 10 km
@@ -1270,32 +1254,7 @@ class Test_Backplane_Empty_Events(unittest.TestCase):
         self.assertTrue(percent == 100)
 
 
-#*******************************************************************************
-class Test_Backplane_Exercises(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-        import hosts.cassini.iss as iss
-
-        if Backplane_Settings.NO_EXERCISES:
-            self.skipTest('')
-
-#        iss.initialize(asof='2019-09-01', mst_pck=True)
-
-        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                'cassini/ISS/W1573721822_1.IMG')
-
-        obs = iss.from_file(filespec)
-        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-                                 planet_key='saturn',
-                                 moon_key='epimetheus',
-                                 ring_key='saturn_main_rings')
-
-
 ##############################################
-from oops.backplane.unittester_support import backplane_unittester_args
-
 if __name__ == '__main__':
-    backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################

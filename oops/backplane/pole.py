@@ -94,31 +94,13 @@ register_test_suite('pole', pole_test_suite)
 # UNIT TESTS
 ################################################################################
 import unittest
-from oops.constants import DPR
-from oops.backplane.unittester_support import show_info
+
 
 #===============================================================================
-def exercise(bp,
-             planet=None, moon=None, ring=None,
-             undersample=16, use_inventory=False, inventory_border=2,
-             **options):
-    """generic unit tests for pole.py"""
-
-    if planet is not None:
-        test = bp.pole_clock_angle(planet)
-        show_info(bp, 'planet pole clock angle (deg)', test*DPR, **options)
-        test = bp.pole_position_angle(planet)
-        show_info(bp, 'planet pole position angle (deg)', test*DPR, **options)
-
-
-#*******************************************************************************
 class Test_Pole(unittest.TestCase):
 
     #===========================================================================
     def runTest(self):
-        from oops.backplane.unittester_support import Backplane_Settings
-        if Backplane_Settings.EXERCISES_ONLY:
-            self.skipTest("")
         pass
 
 

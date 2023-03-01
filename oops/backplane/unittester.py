@@ -37,7 +37,6 @@ from oops.backplane            import Test_Backplane_via_gold_master
 from oops.backplane            import Test_Backplane_Surfaces
 from oops.backplane            import Test_Backplane_Borders
 from oops.backplane            import Test_Backplane_Empty_Events
-from oops.backplane            import Test_Backplane_Exercises
 from oops.backplane.ansa       import Test_Ansa
 from oops.backplane.border     import Test_Border
 from oops.backplane.distance   import Test_Distance
@@ -52,9 +51,6 @@ from oops.backplane.spheroid   import Test_Spheroid
 from oops.backplane.where      import Test_Where
 
 ########################################
-from oops.backplane.unittester_support import backplane_unittester_args
-
 if __name__ == '__main__':
-    backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################

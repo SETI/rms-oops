@@ -229,28 +229,13 @@ register_test_suite('limb', limb_test_suite)
 # UNIT TESTS
 ################################################################################
 import unittest
-from oops.backplane.unittester_support import show_info
+
 
 #===============================================================================
-def exercise(bp,
-             planet=None, moon=None, ring=None,
-             undersample=16, use_inventory=False, inventory_border=2,
-             **options):
-    """generic unit tests for limb.py"""
-
-    if planet is not None:
-        test = bp.limb_altitude(planet+':limb', zmin=0.)
-        show_info(bp, 'Limb altitude (km)', test, **options)
-
-
-#*******************************************************************************
 class Test_Limb(unittest.TestCase):
 
     #===========================================================================
     def runTest(self):
-        from oops.backplane.unittester_support import Backplane_Settings
-        if Backplane_Settings.EXERCISES_ONLY:
-            self.skipTest("")
         pass
 
 
