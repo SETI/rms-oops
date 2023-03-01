@@ -422,9 +422,7 @@ import os.path
 import unittest
 import oops.backplane.gold_master as gm
 
-from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
-from oops.backplane.exercise_backplanes import exercise_backplanes
-from oops.backplane.unittester_support  import Backplane_Settings
+from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
 
 
 #===============================================================================
@@ -458,6 +456,7 @@ class Test_Cassini_ISS_GoldMaster_N1460072401(unittest.TestCase):
                 --module hosts.cassini.iss \
                 --planet SATURN \
                 --ring SATURN_MAIN_RINGS \
+                --no-inventory \
                 --preview
 
             python gold_master.py \
@@ -465,6 +464,7 @@ class Test_Cassini_ISS_GoldMaster_N1460072401(unittest.TestCase):
                 --module hosts.cassini.iss \
                 --planet SATURN \
                 --ring SATURN_MAIN_RINGS \
+                --no-inventory \
                 --adopt
         """
         gm.execute_as_unittest(self,
@@ -493,6 +493,7 @@ class Test_Cassini_ISS_GoldMaster_W1573721822_1(unittest.TestCase):
                 --planet SATURN \
                 --moon EPIMETHEUS \
                 --ring SATURN_MAIN_RINGS \
+                --no-inventory \
                 --preview
 
             python gold_master.py \
@@ -501,6 +502,7 @@ class Test_Cassini_ISS_GoldMaster_W1573721822_1(unittest.TestCase):
                 --planet SATURN \
                 --moon EPIMETHEUS \
                 --ring SATURN_MAIN_RINGS \
+                --no-inventory \
                 --adopt
         """
         gm.execute_as_unittest(self,
@@ -515,9 +517,6 @@ class Test_Cassini_ISS_GoldMaster_W1573721822_1(unittest.TestCase):
 
 
 ############################################
-from oops.backplane.unittester_support import backplane_unittester_args
-
 if __name__ == '__main__':
-    backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################
