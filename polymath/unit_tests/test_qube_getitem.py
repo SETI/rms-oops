@@ -509,6 +509,6 @@ class Test_Qube_getitem(unittest.TestCase):
     self.assertEqual(b[:,1,1], a[:,0,:,3])
 
 ############################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

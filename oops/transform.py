@@ -453,6 +453,6 @@ class Test_Transform(unittest.TestCase):
         # Transform derivatives are unit tested as part of the SpinFrame tests
 
 ########################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

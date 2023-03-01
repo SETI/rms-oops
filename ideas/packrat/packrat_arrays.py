@@ -1324,7 +1324,7 @@ class Test_Packrat_arrays(unittest.TestCase):
 # Perform unit testing if executed from the command line
 ################################################################################
 
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main()
 
 ################################################################################

@@ -522,6 +522,6 @@ class Test_Cassini_VIMS_Suite(unittest.TestCase):
         oops.config.LOGGING.off()
 
 ############################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

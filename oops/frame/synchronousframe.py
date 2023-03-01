@@ -123,6 +123,6 @@ class Test_SynchronousFrame(unittest.TestCase):
                         < 0.1)
 
 #########################################
-if __name__ == '__main__': # pragma: no cover
+if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################
