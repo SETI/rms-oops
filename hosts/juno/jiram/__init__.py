@@ -209,6 +209,8 @@ class Test_Juno_JIRAM_GoldMaster_JIR_IMG_RDR_2013282T133843_V03(unittest.TestCas
                 --no-inventory \
                 --adopt
         """
+#        gm.override('Celestial north minus east angles (deg)', 8.)
+
         gm.execute_as_unittest(self,
                 obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                        'juno/jiram/JNOJIR_2000/DATA/'

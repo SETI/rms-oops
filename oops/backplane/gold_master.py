@@ -146,6 +146,7 @@ import PIL
 import sys
 import warnings
 
+from PIL           import Image
 from scipy.ndimage import minimum_filter, maximum_filter
 from scipy.ndimage import zoom as zoom_image
 
