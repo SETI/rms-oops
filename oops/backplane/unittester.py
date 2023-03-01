@@ -1,36 +1,6 @@
 ################################################################################
 # oops/backplane/unittester.py
 ################################################################################
-#
-# usage: unittester.py [-h] [--args [arg [arg ...]]] [--verbose]
-#                     [--exercises-only] [--no-exercises] [--no-compare]
-#                     [--output dir] [--no-output] [--log] [--undersample N]
-#                     [--reference] [--test-level N]
-#
-#
-# optional arguments:
-#  -h, --help            show this help message and exit
-#  --args [arg [arg ...]]
-#                        Generic arguments to pass to the test modules. Must
-#                        occur last in the argument list.
-#  --verbose             Print output to the terminal.
-#  --exercises-only      Execute only the backplane exercises.
-#  --no-exercises        Execute all tests except the backplane exercises.
-#  --no-compare          Do not compare backplanes with references.
-#  --output dir          Directory in which to save backplane PNG images.
-#                        Default is $OOPS_BACKPLANE_OUTPUT_PATH/[data dir]. If
-#                        the directory does not exist, it is created.
-#  --no-output           Disable saving of backplane PNG files.
-#  --log                 Enable the internal oops logging.
-#  --undersample N       Amount by which to undersample backplanes. Default is
-#                        16.
-#  --reference           Generate reference backplanes and exit.
-#  --test-level N        Selects among pre-set parameter combinations:
-#                        -test_level 1: no printing, no saving, undersample 32.
-#                        -test_level 2: printing, no saving, undersample 16.
-#                        -test_level 3: printing, saving, no undersampling.
-#                        These behaviors are overridden by other arguments.
-
 import unittest
 
 from oops.backplane            import Test_Backplane_via_gold_master
