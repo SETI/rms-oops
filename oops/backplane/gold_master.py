@@ -1052,6 +1052,7 @@ class BackplaneTest(object):
         # masters: $OOPS_GOLD_MASTER_PATH/hosts.cassini.iss/ISS/N1460072401_1/
         # arrays: $OOPS_BACKPLANE_OUTPUT_PATH/N1460072401_1/arrays
         # browse: $OOPS_BACKPLANE_OUTPUT_PATH/N1460072401_1/browse
+        # sampled masters: $OOPS_BACKPLANE_OUTPUT_PATH/N1460072401_1/master_grid
 
         self.abspath = os.path.abspath(os.path.realpath(obs.filespec))
         basename_prefix = os.path.splitext(os.path.basename(self.abspath))[0]
@@ -1060,17 +1061,21 @@ class BackplaneTest(object):
                                      args.module, basename_prefix)
         self.gold_arrays = os.path.join(self.gold_dir, 'arrays' + self.suffix)
         self.gold_browse = os.path.join(self.gold_dir, 'browse' + self.suffix)
+        self.gold_sampled = os.path.join(self.gold_dir, 'master_grid' + self.suffix)
 
         self.output_dir = os.path.join(args.output, basename_prefix)
         self.output_arrays = os.path.join(self.output_dir,
                                           'arrays' + self.suffix)
         self.output_browse = os.path.join(self.output_dir,
                                           'browse' + self.suffix)
+        self.output_master_grid = os.path.join(self.output_dir,
+                                          'master_grid' + self.suffix)
 
         self.array_path = None
         self.browse_path = None
         self.gold_path = None
-        self.gold_value = None
+        self.gold_value_path = None
+        self.master_grid_path = None
 
         # Initialize the comparison log
         self.gold_summary_ = None
@@ -1153,6 +1158,9 @@ class BackplaneTest(object):
             if self.task in ('preview', 'compare'):
                 LOGGING.info('Writing arrays to', self.output_arrays)
                 os.makedirs(self.output_arrays, exist_ok=True)
+
+                LOGGING.info('Writing sampled masters to', self.output_master_grid)
+                os.makedirs(self.output_master_grid, exist_ok=True)
 
                 if self.args.browse:
                     LOGGING.info('Writing browse images to', self.output_browse)
@@ -1453,7 +1461,7 @@ class BackplaneTest(object):
 
                     else:
                         master = Scalar(min_val, masked > 0)
-                        self.gold_value = master
+                        self.gold_value_path = master
                         self._compare(array, master, comparison)
 
             # For "preview" and "adopt"
@@ -1535,8 +1543,18 @@ class BackplaneTest(object):
                                         # resolution; master_grid is resampled.
                 master_grid = master[indx]
                 master_grid = master_grid.expand_mask()
+
         # The "_grid" suffix indicates the master array when sampled at the
         # meshgrid of the array.
+
+        # Save sampled master
+        basename = self._basename(comparison.title, gold=False)
+        pickle_path = os.path.join(self.output_master_grid,
+                                       basename + '.pickle')
+#        from IPython import embed; print('+++++++++++++'); embed()
+        with open(pickle_path, 'wb') as f:
+            pickle.dump(master_grid, f)
+        self.master_grid_path = pickle_path
 
         # Find the differences among unmasked pixels
         diff = array - master_grid
@@ -2013,18 +2031,17 @@ class BackplaneTest(object):
 
             message += ['/', str(comparison.pixels)]
 
-
         # Add paths to relevant files
-#        from IPython import embed; print('+++++++++++++'); embed()
         if self.gold_path is not None:
             message += [' | master: ', self.gold_path]
-        else:
-            if self.gold_value is not None:
-                message += [' | master: ', str(self.gold_value)]
+        if self.gold_value_path is not None:
+            message += [' | master_value: ', str(self.gold_value_path)]
         if self.array_path is not None:
             message += [' | array: ', self.array_path]
         if self.browse_path is not None:
             message += [' | browse: ', self.browse_path]
+        if self.master_grid_path is not None:
+            message += [' | sampled master: ', self.master_grid_path]
 
 
         LOGGING.print(''.join(message), level=comparison.logging_level)
