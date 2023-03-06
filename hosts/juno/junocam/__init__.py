@@ -445,28 +445,36 @@ from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 
 #===============================================================================
-class Test_Juno_Junocam_GoldMaster_JNCR_2016347_03C00192_V01(unittest.TestCase):
+class Test_Juno_Junocam_GoldMaster(unittest.TestCase):
 
     #===========================================================================
     def runTest(self):
         """
-        JNCR_2016347_03C00192_V01 Compare w Gold Masters
+        Gold master tests for Juno Junocam.
 
+        Docstrings used below to facilitate copy/pasting of multi-line commands.
+        """
+
+        ############################
+        # JNCR_2016347_03C00192_V01
+        ############################
+        """
         To preview and regenerate gold masters (from pds-oops/oops/backplane/):
-            python gold_master.py \
-                ~/Dropbox-SETI/OOPS-Resources/test_data/juno/junocam/03/JNCR_2016347_03C00192_V01.img \
-                --module hosts.juno.junocam \
-                --planet JUPITER \
-                --no-inventory \
-                --preview
 
-            python gold_master.py \
-                ~/Dropbox-SETI/OOPS-Resources/test_data/cassini/ISS/JNCR_2016347_03C00192_V01.img \
-                ~/Dropbox-SETI/OOPS-Resources/test_data/juno/junocam/03/JNCR_2016347_03C00192_V01.img \
-                --module hosts.juno.junocam \
-                --planet JUPITER \
-                --no-inventory \
-                --adopt
+        python gold_master.py \
+            ~/Dropbox-SETI/OOPS-Resources/test_data/juno/junocam/03/JNCR_2016347_03C00192_V01.img \
+            --module hosts.juno.junocam \
+            --planet JUPITER \
+            --no-inventory \
+            --preview
+
+        python gold_master.py \
+            ~/Dropbox-SETI/OOPS-Resources/test_data/cassini/ISS/JNCR_2016347_03C00192_V01.img \
+            ~/Dropbox-SETI/OOPS-Resources/test_data/juno/junocam/03/JNCR_2016347_03C00192_V01.img \
+            --module hosts.juno.junocam \
+            --planet JUPITER \
+            --no-inventory \
+            --adopt
         """
         gm.override('Celestial north minus east angles (deg)', 8.)
         gm.override('JUPITER:RING azimuth minus longitude wrt Sun (deg)', None)

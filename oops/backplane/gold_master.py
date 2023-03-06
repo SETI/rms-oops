@@ -1067,6 +1067,11 @@ class BackplaneTest(object):
         self.output_browse = os.path.join(self.output_dir,
                                           'browse' + self.suffix)
 
+        self.array_path = None
+        self.browse_path = None
+        self.gold_path = None
+        self.gold_value = None
+
         # Initialize the comparison log
         self.gold_summary_ = None
         self.summary = {}
@@ -1393,11 +1398,13 @@ class BackplaneTest(object):
                                        basename + '.pickle')
             with open(pickle_path, 'wb') as f:
                 pickle.dump(array, f)
+            self.array_path = pickle_path
 
             # Write the browse image
             if self.args.browse:
                 browse_name = basename + '.' + self.args.browse_format
                 browse_path = os.path.join(output_browse, browse_name)
+                self.browse_path = browse_path
                 self.save_browse(array, browse_path)
 
             # For "compare"
@@ -1421,6 +1428,7 @@ class BackplaneTest(object):
 
                     # Compare...
                     else:
+                        self.gold_path = pickle_path
                         self._compare(array, master, comparison)
 
             # For "preview" and "adopt"
@@ -1445,6 +1453,7 @@ class BackplaneTest(object):
 
                     else:
                         master = Scalar(min_val, masked > 0)
+                        self.gold_value = master
                         self._compare(array, master, comparison)
 
             # For "preview" and "adopt"
@@ -2003,6 +2012,20 @@ class BackplaneTest(object):
                 message += ['/', str(errors2)]
 
             message += ['/', str(comparison.pixels)]
+
+
+        # Add paths to relevant files
+#        from IPython import embed; print('+++++++++++++'); embed()
+        if self.gold_path is not None:
+            message += [' | master: ', self.gold_path]
+        else:
+            if self.gold_value is not None:
+                message += [' | master: ', str(self.gold_value)]
+        if self.array_path is not None:
+            message += [' | array: ', self.array_path]
+        if self.browse_path is not None:
+            message += [' | browse: ', self.browse_path]
+
 
         LOGGING.print(''.join(message), level=comparison.logging_level)
 

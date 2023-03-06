@@ -185,29 +185,37 @@ from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
 
 
 #===============================================================================
-class Test_Juno_JIRAM_GoldMaster_JIR_IMG_RDR_2013282T133843_V03(unittest.TestCase):
+class Test_Juno_JIRAM_GoldMaster(unittest.TestCase):
 
     #===========================================================================
     def runTest(self):
         """
-        JIR_IMG_RDR_2013282T133843_V03 Compare w Gold Masters
+        Gold master tests for Juno JIRAM.
 
+        Docstrings used below to facilitate copy/pasting of multi-line commands.
+        """
+
+        #################################
+        # JIR_IMG_RDR_2013282T133843_V03
+        #################################
+        """
         To preview and regenerate gold masters (from pds-oops/oops/backplane/):
-            python gold_master.py \
-                ~/Dropbox-SETI/OOPS-Resources/test_data/juno/jiram/JNOJIR_2000/DATA/JIR_IMG_RDR_2013282T133843_V03.IMG \
-                --index 1 \
-                --module hosts.juno.jiram \
-                --moon MOON \
-                --no-inventory \
-                --preview
 
-            python gold_master.py \
-                ~/Dropbox-SETI/OOPS-Resources/test_data/juno/jiram/JNOJIR_2000/DATA/JIR_IMG_RDR_2013282T133843_V03.IMG \
-                --index 1 \
-                --module hosts.juno.jiram \
-                --moon MOON \
-                --no-inventory \
-                --adopt
+        python gold_master.py \
+            ~/Dropbox-SETI/OOPS-Resources/test_data/juno/jiram/JNOJIR_2000/DATA/JIR_IMG_RDR_2013282T133843_V03.IMG \
+            --index 1 \
+            --module hosts.juno.jiram \
+            --moon MOON \
+            --no-inventory \
+            --preview
+
+        python gold_master.py \
+            ~/Dropbox-SETI/OOPS-Resources/test_data/juno/jiram/JNOJIR_2000/DATA/JIR_IMG_RDR_2013282T133843_V03.IMG \
+            --index 1 \
+            --module hosts.juno.jiram \
+            --moon MOON \
+            --no-inventory \
+            --adopt
         """
 #        gm.override('Celestial north minus east angles (deg)', 8.)
 
@@ -222,31 +230,27 @@ class Test_Juno_JIRAM_GoldMaster_JIR_IMG_RDR_2013282T133843_V03(unittest.TestCas
                 ring    = '',
                 inventory=False, border=10)
 
-
-#===============================================================================
-class Test_Juno_JIRAM_GoldMaster_JIR_IMG_RDR_2017244T104633_V01(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
+        #################################
+        # JIR_IMG_RDR_2017244T104633_V01
+        #################################
         """
-        JIR_IMG_RDR_2017244T104633_V01 Compare w Gold Masters
-
         To preview and regenerate gold masters (from pds-oops/oops/backplane/):
-            python gold_master.py \
-                ~/Dropbox-SETI/OOPS-Resources/test_data/juno/jiram/JNOJIR_2008/DATA/JIR_IMG_RDR_2017244T104633_V01.IMG \
-                --index 1 \
-                --module hosts.juno.jiram \
-                --moon EUROPA \
-                --no-inventory \
-                --preview
 
-            python gold_master.py \
-                ~/Dropbox-SETI/OOPS-Resources/test_data/juno/jiram/JNOJIR_2008/DATA/JIR_IMG_RDR_2017244T104633_V01.IMG \
-                --index 1 \
-                --module hosts.juno.jiram \
-                --moon EUROPA \
-                --no-inventory \
-                --adopt
+        python gold_master.py \
+            ~/Dropbox-SETI/OOPS-Resources/test_data/juno/jiram/JNOJIR_2008/DATA/JIR_IMG_RDR_2017244T104633_V01.IMG \
+            --index 1 \
+            --module hosts.juno.jiram \
+            --moon EUROPA \
+            --no-inventory \
+            --preview
+
+        python gold_master.py \
+            ~/Dropbox-SETI/OOPS-Resources/test_data/juno/jiram/JNOJIR_2008/DATA/JIR_IMG_RDR_2017244T104633_V01.IMG \
+            --index 1 \
+            --module hosts.juno.jiram \
+            --moon EUROPA \
+            --no-inventory \
+            --adopt
         """
         gm.execute_as_unittest(self,
                 obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
@@ -259,31 +263,27 @@ class Test_Juno_JIRAM_GoldMaster_JIR_IMG_RDR_2017244T104633_V01(unittest.TestCas
                 ring    = '',
                 inventory=False, border=10)
 
-
-#===============================================================================
-class Test_Juno_JIRAM_GoldMaster_JIR_IMG_RDR_2018197T055537_V01(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
+        #################################
+        # JIR_IMG_RDR_2018197T055537_V01
+        #################################
         """
-        JIR_IMG_RDR_2018197T055537_V01 Compare w Gold Masters
-
         To preview and regenerate gold masters (from pds-oops/oops/backplane/):
-            python gold_master.py \
-                ~/Dropbox-SETI/OOPS-Resources/test_data/juno/jiram/JNOJIR_2014/DATA/JIR_IMG_RDR_2018197T055537_V01.IMG \
-                --index 0 \
-                --module hosts.juno.jiram \
-                --planet JUPITER \
-                --no-inventory \
-                --preview
 
-            python gold_master.py \
-                ~/Dropbox-SETI/OOPS-Resources/test_data/juno/jiram/JNOJIR_2014/DATA/JIR_IMG_RDR_2018197T055537_V01.IMG \
-                --index 0 \
-                --module hosts.juno.jiram \
-                --planet JUPITER \
-                --no-inventory \
-                --adopt
+        python gold_master.py \
+            ~/Dropbox-SETI/OOPS-Resources/test_data/juno/jiram/JNOJIR_2014/DATA/JIR_IMG_RDR_2018197T055537_V01.IMG \
+            --index 0 \
+            --module hosts.juno.jiram \
+            --planet JUPITER \
+            --no-inventory \
+            --preview
+
+        python gold_master.py \
+            ~/Dropbox-SETI/OOPS-Resources/test_data/juno/jiram/JNOJIR_2014/DATA/JIR_IMG_RDR_2018197T055537_V01.IMG \
+            --index 0 \
+            --module hosts.juno.jiram \
+            --planet JUPITER \
+            --no-inventory \
+            --adopt
         """
         gm.execute_as_unittest(self,
                 obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
@@ -296,31 +296,27 @@ class Test_Juno_JIRAM_GoldMaster_JIR_IMG_RDR_2018197T055537_V01(unittest.TestCas
                 ring    = '',
                 inventory=False, border=10)
 
-
-#===============================================================================
-class Test_Juno_JIRAM_GoldMaster_JIR_SPE_RDR_2013282T133845_V03(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
+        #################################
+        # JIR_SPE_RDR_2013282T133845_V03
+        #################################
         """
-        JIR_SPE_RDR_2013282T133845_V03 Compare w Gold Masters
-
         To preview and regenerate gold masters (from pds-oops/oops/backplane/):
-            python gold_master.py \
-                ~/Dropbox-SETI/OOPS-Resources/test_data/juno/jiram/JNOJIR_2000/DATA/JIR_SPE_RDR_2013282T133845_V03.DAT \
-                --index 0 \
-                --module hosts.juno.jiram \
-                --moon MOON \
-                --no-inventory \
-                --preview
 
-            python gold_master.py \
-                ~/Dropbox-SETI/OOPS-Resources/test_data/juno/jiram/JNOJIR_2000/DATA/JIR_SPE_RDR_2013282T133845_V03.DAT \
-                --index 0 \
-                --module hosts.juno.jiram \
-                --moon MOON \
-                --no-inventory \
-                --adopt
+        python gold_master.py \
+            ~/Dropbox-SETI/OOPS-Resources/test_data/juno/jiram/JNOJIR_2000/DATA/JIR_SPE_RDR_2013282T133845_V03.DAT \
+            --index 0 \
+            --module hosts.juno.jiram \
+            --moon MOON \
+            --no-inventory \
+            --preview
+
+        python gold_master.py \
+            ~/Dropbox-SETI/OOPS-Resources/test_data/juno/jiram/JNOJIR_2000/DATA/JIR_SPE_RDR_2013282T133845_V03.DAT \
+            --index 0 \
+            --module hosts.juno.jiram \
+            --moon MOON \
+            --no-inventory \
+            --adopt
         """
         gm.execute_as_unittest(self,
                 obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
