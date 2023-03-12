@@ -104,7 +104,7 @@ class Scalar(Qube):
         """
 
         if indx != 0:
-            raise ValueError('Scalar has trailing shape (); index out of range')
+            raise ValueError('Scalar.to_scalar() index out of range')
 
         if recursive:
             return self
@@ -208,7 +208,7 @@ class Scalar(Qube):
         """
 
         if self._drank_:
-            raise ValueError('denominators are not supported in Scalar.int')
+            raise ValueError('Scalar.int() does not support denominators')
 
         Units.require_unitless(self._units_)
 
@@ -278,7 +278,7 @@ class Scalar(Qube):
         """
 
         if self._drank_:
-            raise ValueError('denominators are not supported in Scalar.frac')
+            raise ValueError('Scalar.frac() does not support denominators')
 
         Units.require_unitless(self._units_)
 
@@ -318,7 +318,7 @@ class Scalar(Qube):
         """
 
         if self._drank_:
-            raise ValueError('denominators are not supported in Scalar.sin')
+            raise ValueError('Scalar.sin() does not support denominators')
 
         Units.require_angle(self._units_)
         obj = Scalar(np.sin(self._values_), mask=self._mask_)
@@ -340,7 +340,7 @@ class Scalar(Qube):
         """
 
         if self._drank_:
-            raise ValueError('denominators are not supported in Scalar.cos')
+            raise ValueError('Scalar.cos() does not support denominators')
 
         Units.require_angle(self._units_)
         obj = Scalar(np.cos(self._values_), mask=self._mask_)
@@ -362,7 +362,7 @@ class Scalar(Qube):
         """
 
         if self._drank_:
-            raise ValueError('denominators are not supported in Scalar.tan')
+            raise ValueError('Scalar.tan() does not support denominators')
 
         Units.require_angle(self._units_)
 
@@ -390,7 +390,7 @@ class Scalar(Qube):
         """
 
         if self._drank_:
-            raise ValueError('denominators are not supported in Scalar.arcsin')
+            raise ValueError('Scalar.arcsin() does not support denominators')
 
         # Limit domain to [-1,1] if necessary
         if check:
@@ -416,7 +416,8 @@ class Scalar(Qube):
                 try:
                     func_values = np.arcsin(self._values_)
                 except RuntimeWarning:
-                    raise ValueError('arcsin of value outside domain (-1,1)')
+                    raise ValueError('Scalar.arcsin() of value outside domain '
+                                     '(-1,1)')
 
             obj = Scalar(func_values, mask=self._mask_)
 
@@ -443,7 +444,7 @@ class Scalar(Qube):
         """
 
         if self._drank_:
-            raise ValueError('denominators are not supported in Scalar.arccos')
+            raise ValueError('Scalar.arccos() does not support denominators')
 
         # Limit domain to [-1,1] if necessary
         if check:
@@ -469,7 +470,8 @@ class Scalar(Qube):
                 try:
                     func_values = np.arccos(self._values_)
                 except RuntimeWarning:
-                    raise ValueError('arccos of value outside domain (-1,1)')
+                    raise ValueError('Scalar.arccos() of value outside domain '
+                                     '(-1,1)')
 
             obj = Scalar(func_values, mask=self._mask_)
 
@@ -490,7 +492,7 @@ class Scalar(Qube):
         """
 
         if self._drank_:
-            raise ValueError('denominators are not supported in Scalar.arctan')
+            raise ValueError('Scalar.arctan() does not support denominators')
 
         Units.require_unitless(self._units_)
 
@@ -522,7 +524,7 @@ class Scalar(Qube):
         Units.require_compatible(y._units_, x._units_)
 
         if x._drank_ or y._drank_:
-            raise ValueError('denominators are not supported in Scalar.arctan2')
+            raise ValueError('Scalar.arctan2() does not support denominators')
 
         obj = Scalar(np.arctan2(y._values_, x._values_),
                      Qube.or_(x._mask_, y._mask_))
@@ -562,7 +564,7 @@ class Scalar(Qube):
         """
 
         if self._drank_:
-            raise ValueError('denominators are not supported in Scalar.sqrt')
+            raise ValueError('Scalar.sqrt() does not support denominators')
 
         if check:
             no_negs = self.mask_where_lt(0., replace=1.)
@@ -575,7 +577,7 @@ class Scalar(Qube):
                 try:
                     sqrt_vals = np.sqrt(no_negs._values_)
                 except RuntimeWarning:
-                    raise ValueError('sqrt of negative value')
+                    raise ValueError('Scalar.sqrt() of negative value')
 
         obj = Scalar(sqrt_vals, mask=no_negs._mask_,
                                 units=Units.sqrt_units(no_negs._units_))
@@ -604,7 +606,7 @@ class Scalar(Qube):
         """
 
         if self._drank_:
-            raise ValueError('denominators are not supported in Scalar.log')
+            raise ValueError('Scalar.log() does not support denominators')
 
         if check:
             no_negs = self.mask_where_le(0., replace=1.)
@@ -616,7 +618,7 @@ class Scalar(Qube):
                 try:
                     log_values = np.log(no_negs._values_)
                 except RuntimeWarning:
-                    raise ValueError('log of non-positive value')
+                    raise ValueError('Scalar.log() of non-positive value')
 
         obj = Scalar(log_values, mask=no_negs._mask_)
 
@@ -645,7 +647,7 @@ class Scalar(Qube):
         global EXP_CUTOFF
 
         if self._drank_:
-            raise ValueError('denominators are not supported in Scalar.exp')
+            raise ValueError('Scalar.exp() does not support denominators')
 
         Units.require_angle(self._units_)
 
@@ -660,7 +662,7 @@ class Scalar(Qube):
                 try:
                     exp_values = np.exp(no_oflow._values_)
                 except (ValueError, TypeError):
-                    raise ValueError('overflow encountered in Scalar.exp')
+                    raise ValueError('Scalar.exp() overflow encountered')
 
         obj = Scalar(exp_values, mask=no_oflow._mask_)
 
@@ -779,9 +781,9 @@ class Scalar(Qube):
         """
 
         if self._drank_:
-            raise ValueError('denominators are not supported in Scalar.max')
+            raise ValueError('Scalar.max() does not support denominators')
 
-        self._check_axis(axis)      # make sure axis input is valid
+        self._check_axis(axis, 'max()')         # make sure axis input is valid
 
         if self._size_ == 0:
             return self.wod._zero_sized_result(axis)
@@ -849,9 +851,9 @@ class Scalar(Qube):
         """
 
         if self._drank_:
-            raise ValueError('denominators are not supported in Scalar.min')
+            raise ValueError('Scalar.min() does not support denominators')
 
-        self._check_axis(axis)      # make sure axis input is valid
+        self._check_axis(axis, 'min()')         # make sure axis input is valid
 
         if self._size_ == 0:
             return self.wod._zero_sized_result(axis)
@@ -926,12 +928,12 @@ class Scalar(Qube):
         """
 
         if self._drank_:
-            raise ValueError('denominators are not supported in Scalar.argmax')
+            raise ValueError('Scalar.argmax() does not support denominators')
 
-        self._check_axis(axis)      # make sure axis input is valid
+        self._check_axis(axis, 'argmax()')      # make sure axis input is valid
 
         if self._shape_ == ():
-            raise ValueError('no argmax for Scalar with shape ()')
+            raise ValueError('no Scalar.argmax() for object with shape ()')
 
         if self._size_ == 0:
             ints = self.zeros(self.shape, dtype='int')
@@ -999,12 +1001,12 @@ class Scalar(Qube):
         """
 
         if self._drank_:
-            raise ValueError('denominators are not supported in Scalar.argmin')
+            raise ValueError('Scalar.argmin() does not support denominators')
 
-        self._check_axis(axis)      # make sure axis input is valid
+        self._check_axis(axis, 'argmin()')      # make sure axis input is valid
 
         if self._shape_ == ():
-            raise ValueError('no argmin for Scalar with shape ()')
+            raise ValueError('no Scalar.argmin() for object with shape ()')
 
         if self._size_ == 0:
             ints = self.zeros(self.shape, dtype='int')
@@ -1059,7 +1061,7 @@ class Scalar(Qube):
         """
 
         if len(args) == 0:
-            raise ValueError('invalid number of arguments to Scalar.maximum')
+            raise ValueError('missing arguments to Scalar.maximum()')
 
         # Convert to scalars of the same shape
         scalars = []
@@ -1071,7 +1073,7 @@ class Scalar(Qube):
         # Make sure there are no denominators
         for scalar in scalars:
           if scalar._drank_:
-            raise ValueError('denominators are not supported in Scalar.maximum')
+            raise ValueError('Scalar.maximum() does not support denominators')
 
         # len == 1 case is easy
         if len(scalars) == 1:
@@ -1108,7 +1110,7 @@ class Scalar(Qube):
         """
 
         if len(args) == 0:
-            raise ValueError('invalid number of arguments to Scalar.minimum')
+            raise ValueError('missing arguments to Scalar.minimum()')
 
         # Convert to scalars of the same shape
         scalars = []
@@ -1120,7 +1122,7 @@ class Scalar(Qube):
         # Make sure there are no denominators
         for scalar in scalars:
           if scalar._drank_:
-            raise ValueError('denominators are not supported in Scalar.minimum')
+            raise ValueError('Scalar.minimum() does not support denominators')
 
         # len == 1 case is easy
         if len(scalars) == 1:
@@ -1168,9 +1170,9 @@ class Scalar(Qube):
         """
 
         if self._drank_:
-            raise ValueError('denominators are not supported in Scalar.median')
+            raise ValueError('Scalar.median() does not support denominators')
 
-        self._check_axis(axis)      # make sure axis input is valid
+        self._check_axis(axis, 'median()')      # make sure axis input is valid
 
         if self._size_ == 0:
             return self.wod._zero_sized_result(axis)
@@ -1266,9 +1268,9 @@ class Scalar(Qube):
         """
 
         if self._drank_:
-            raise ValueError('denominators are not supported in Scalar.sort')
+            raise ValueError('Scalar.sort() does not support denominators')
 
-        self._check_axis(axis)      # make sure axis input is valid
+        self._check_axis(axis, 'sort()')        # make sure axis input is valid
 
         if self._size_ == 0:
             return self.wod._zero_sized_result(axis)
@@ -1315,8 +1317,7 @@ class Scalar(Qube):
         """
 
         if self._rank_:
-            raise ValueError('denominators are not supported in ' +
-                             'Scalar.reciprocal')
+           raise ValueError('Scalar.reciprocal() does not support denominators')
 
         # mask out zeros if necessary
         if nozeros:
@@ -1327,7 +1328,7 @@ class Scalar(Qube):
                     denom_inv_values = 1. / denom._values_
                     denom_inv_mask = denom._mask_
                 except (ZeroDivisionError, RuntimeWarning):
-                    raise ValueError('divide by zero in Scalar.reciprocal')
+                    raise ValueError('divide by zero in Scalar.reciprocal()')
 
         else:
             denom = self.mask_where_eq(0, replace=1)
@@ -1370,7 +1371,7 @@ class Scalar(Qube):
         arg = Scalar.as_scalar(arg)
         Units.require_compatible(self._units_, arg._units_)
         if self._denom_ or arg._denom_:
-            raise ValueError('Scalar "<" operator does not support ' +
+            raise ValueError('Scalar "<" operator does not support '
                              'denominators')
 
         compare = (self._values_ < arg._values_)
@@ -1392,7 +1393,7 @@ class Scalar(Qube):
         arg = Scalar.as_scalar(arg)
         Units.require_compatible(self._units_, arg._units_)
         if self._denom_ or arg._denom_:
-            raise ValueError('Scalar ">" operator does not support ' +
+            raise ValueError('Scalar ">" operator does not support '
                              'denominators')
 
         compare = (self._values_ > arg._values_)
@@ -1414,7 +1415,7 @@ class Scalar(Qube):
         arg = Scalar.as_scalar(arg)
         Units.require_compatible(self._units_, arg._units_)
         if self._denom_ or arg._denom_:
-            raise ValueError('Scalar "<=" operator does not support ' +
+            raise ValueError('Scalar "<=" operator does not support '
                              'denominators')
 
         compare = (self._values_ <= arg._values_)
@@ -1436,7 +1437,7 @@ class Scalar(Qube):
         arg = Scalar.as_scalar(arg)
         Units.require_compatible(self._units_, arg._units_)
         if self._denom_ or arg._denom_:
-            raise ValueError('Scalar ">=" operator does not support ' +
+            raise ValueError('Scalar ">=" operator does not support '
                              'denominators')
 
         compare = (self._values_ >= arg._values_)
@@ -1538,7 +1539,7 @@ class Scalar(Qube):
     def __pow__(self, expo, recursive=True):
 
         if self._denom_:
-            raise ValueError('Scalar "**" operator does not support ' +
+            raise ValueError('Scalar "**" operator does not support '
                              'denominators')
 
         # Handle the common and easy cases where there is only a single exponent
@@ -1557,11 +1558,12 @@ class Scalar(Qube):
         # Interpret the exponent and mask if any
         if isinstance(expo, Scalar):
             if expo._rank_:
-                raise ValueError('exponent must be scalar')
+                raise ValueError('Scalar "**" exponent must be scalar')
             Units.require_unitless(expo._units_)
 
             if expo._derivs_:
-                raise ValueError('derivatives in exponents are not supported')
+                raise ValueError('Scalar "**" exponent derivatives are not '
+                                 'supported')
 
         else:
             expo = Scalar(expo)
@@ -1610,7 +1612,7 @@ class Scalar(Qube):
             elif np.isscalar(expo._values_):
                 new_units = Units.units_power(self._units_, expo._values_)
             else:
-                raise ValueError('object with units cannot be raised to ' +
+                raise ValueError('Scalar with units cannot be raised to '
                                  'multiple powers')
 
         obj = Scalar.__new__(type(self))

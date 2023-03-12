@@ -97,25 +97,34 @@ class Ansa(Surface):
                     ringplane, ringplane.radii)
 
     #===========================================================================
-    def coords_from_vector3(self, pos, obs, time=None, axes=2, derivs=False):
-        """Convert positions in the internal frame to surface coordinates.
+    def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
+                                  derivs=False, hints=None):
+        """Surface coordinates associated with a position vector.
 
         Input:
-            pos         a Vector3 of positions at or near the surface.
-            obs         a Vector3 of observer positions. Ignored for solid
-                        surfaces but needed for virtual surfaces.
-            time        a Scalar time at which to evaluate the surface; ignored.
+            pos         a Vector3 of positions at or near the surface, relative
+                        to this surface's origin and frame.
+            obs         a Vector3 of observer position relative to this
+                        surface's origin and frame. Ignored for solid surfaces
+                        but needed for virtual surfaces.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        unless the surface is time-variable.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
             derivs      True to propagate any derivatives inside pos and obs
                         into the returned coordinates.
+            hints       ignored.
 
         Return:         coordinate values packaged as a tuple containing two or
                         three Scalars, one for each coordinate.
+            rad         projected distance from the body pole, in km.
+            z           projected vertical distance above the ring plane, in km.
+            theta       longitude of the intercept point, in radians; included
+                        if axes == 3.
         """
 
-        if axes not in (2, 3):
-            raise ValueError('Surface.coords_from_vector3 axes not 2 or 3')
+        # Validate inputs
+        self._coords_from_vector3_check(axes)
 
         pos = Vector3.as_vector3(pos, derivs)
         obs = Vector3.as_vector3(obs, derivs)
@@ -156,27 +165,30 @@ class Ansa(Surface):
 
     #===========================================================================
     def vector3_from_coords(self, coords, obs, time=None, derivs=False):
-        """Convert surface coordinates to positions in the internal frame.
+        """The position where a point with the given coordinates falls relative
+        to this surface's origin and frame.
 
         Input:
-            coords      a tuple of two or three Scalars defining the
-                        coordinates.
-            obs         position of the observer in the surface frame. Ignored
-                        for solid surfaces but needed for virtual surfaces.
+            coords      a tuple of two or three Scalars defining coordinates at
+                        or near this surface.
+                rad     projected distance in km from the body pole.
+                z       projected vertical distance in km above the ring plane.
+                theta   longitude in radians of the intercept point.
+            obs         a Vector3 of observer position relative to this
+                        surface's origin and frame.
             time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate any derivatives inside the coordinates
                         and obs into the returned position vectors.
 
-        Return:         a Vector3 of intercept points defined by the
-                        coordinates.
+        Return:         a Vector3 of points defined by the coordinates, relative
+                        to this surface's origin and frame.
 
         Note that the coordinates can all have different shapes, but they must
         be broadcastable to a single shape.
         """
 
-        if len(coords) not in (2, 3):
-            raise ValueError('Surface.vector3_from_coords requires 2 or 3 '
-                             'coords')
+        # Validate inputs
+        self._vector3_from_coords_check(coords)
 
         # Given (r,z, theta) and the observer position, solve for position.
         #   pos = (|r| cos(a), |r| sin(a), z)
@@ -235,19 +247,25 @@ class Ansa(Surface):
         return pos
 
     #===========================================================================
-    def intercept(self, obs, los, time=None, derivs=False, guess=None):
+    def intercept(self, obs, los, time=None, direction='dep', derivs=False,
+                                  guess=None, hints=None):
         """The position where a specified line of sight intercepts the surface.
 
         Input:
-            obs         observer position as a Vector3.
-            los         line of sight as a Vector3.
-            time        a Scalar time at which to evaluate the surface; ignored.
+            obs         observer position as a Vector3 relative to this
+                        surface's origin and frame.
+            los         line of sight as a Vector3 in this surface's frame.
+            time        a Scalar time at the surface; ignored here.
+            direction   'arr' for a photon arriving at the surface; 'dep' for a
+                        photon departing from the surface; ignored here.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
-            guess       Unused.
+            guess       unused.
+            hints       unused.
 
-        Return:         a tuple (pos, t) where
-            pos         a Vector3 of intercept points on the surface, in km.
+        Return:         a tuple (pos, t) or (pos, t, hints), where
+            pos         a Vector3 of intercept points on the surface relative
+                        to this surface's origin and frame, in km.
             t           a Scalar such that:
                             intercept = obs + t * los
         """
@@ -271,6 +289,9 @@ class Ansa(Surface):
 
         pos = obs + t * los
 
+        if hints is not None:
+            return (pos, t, hints)
+
         return (pos, t)
 
     #===========================================================================
@@ -278,7 +299,8 @@ class Ansa(Surface):
         """The normal vector at a position at or near a surface.
 
         Input:
-            pos         a Vector3 of positions at or near the surface.
+            pos         a Vector3 of positions at or near the surface relative
+                        to this surface's origin and frame.
             time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate any derivatives of pos into the
                         returned normal vectors.

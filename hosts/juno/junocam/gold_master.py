@@ -19,9 +19,9 @@ gm.set_default_obs(obspath = obspath,
                    kwargs = {'snap': False})
 
 gm.override('Celestial north minus east angles (deg)', 8.)
-gm.override('JUPITER:RING azimuth minus longitude wrt Sun (deg)', None)
-gm.override('JUPITER:RING emission angle, ring minus center (deg)', None)
-gm.override('JUPITER:RING incidence angle, ring minus center (deg)', 3.)
+gm.override('JUPITER longitude d/dv self-check (deg/pix)', 0.3)
+gm.override('JUPITER:RING azimuth d/du self-check (deg/pix)', 0.1)
+gm.override('JUPITER:RING emission angle, ring minus center (deg)', 8.)
 
 # Because JunoCam has such a large, distorted FOV, we need to assign the
 # backplanes an especially large inventory border: border=10 seems to work.

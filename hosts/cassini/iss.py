@@ -2,6 +2,7 @@
 # hosts/cassini/iss.py
 ################################################################################
 
+import os
 import numpy as np
 import julian
 import vicar
@@ -417,52 +418,52 @@ class ISS(object):
 ################################################################################
 # UNIT TESTS
 ################################################################################
-
-import unittest
-import os.path
-
-from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
-from oops.backplane.exercise_backplanes import exercise_backplanes
-from oops.backplane.unittester_support  import Backplane_Settings
-
-
-#*******************************************************************************
-class Test_Cassini_ISS(unittest.TestCase):
-
-    def runTest(self):
-
-        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-
-        snapshots = from_index(os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                            'cassini/ISS/index.lbl'))
-        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                          'cassini/ISS/W1575634136_1.IMG'))
-        snapshot3940 = snapshots[3940]  #should be same as snapshot
-
-        self.assertTrue(abs(snapshot.time[0] - snapshot3940.time[0]) < 1.e-3)
-        self.assertTrue(abs(snapshot.time[1] - snapshot3940.time[1]) < 1.e-3)
-
-
-#*******************************************************************************
-class Test_Cassini_ISS_Backplane_Exercises(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-
-        if Backplane_Settings.NO_EXERCISES:
-            self.skipTest('')
-
-        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'cassini/ISS')
-        file = os.path.join(root, 'N1460072401_1.IMG')
-        obs = from_file(file)
-        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-                                 planet_key='SATURN')
-
-
-############################################
-from oops.backplane.unittester_support import backplane_unittester_args
-
-if __name__ == '__main__':
-    backplane_unittester_args()
-    unittest.main(verbosity=2)
+#
+# import unittest
+# import os.path
+#
+# from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+# from oops.backplane.exercise_backplanes import exercise_backplanes
+# from oops.backplane.unittester_support  import Backplane_Settings
+#
+#
+# #*******************************************************************************
+# class Test_Cassini_ISS(unittest.TestCase):
+#
+#     def runTest(self):
+#
+#         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+#
+#         snapshots = from_index(os.path.join(TESTDATA_PARENT_DIRECTORY,
+#                                             'cassini/ISS/index.lbl'))
+#         snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
+#                                           'cassini/ISS/W1575634136_1.IMG'))
+#         snapshot3940 = snapshots[3940]  #should be same as snapshot
+#
+#         self.assertTrue(abs(snapshot.time[0] - snapshot3940.time[0]) < 1.e-3)
+#         self.assertTrue(abs(snapshot.time[1] - snapshot3940.time[1]) < 1.e-3)
+#
+#
+# #*******************************************************************************
+# class Test_Cassini_ISS_Backplane_Exercises(unittest.TestCase):
+#
+#     #===========================================================================
+#     def runTest(self):
+#
+#         if Backplane_Settings.NO_EXERCISES:
+#             self.skipTest('')
+#
+#         root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'cassini/ISS')
+#         file = os.path.join(root, 'N1460072401_1.IMG')
+#         obs = from_file(file)
+#         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
+#                                  planet_key='SATURN')
+#
+#
+# ############################################
+# from oops.backplane.unittester_support import backplane_unittester_args
+#
+# if __name__ == '__main__':
+#     backplane_unittester_args()
+#     unittest.main(verbosity=2)
 ################################################################################

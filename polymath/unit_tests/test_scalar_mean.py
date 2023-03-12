@@ -86,9 +86,9 @@ class Test_Scalar_mean(unittest.TestCase):
     m012 = x.mean(axis=(-1,1,0))
     self.assertTrue(m0.is_float())
     self.assertTrue(m01.is_float())
-    if Qube.PREFER_BUILTIN_TYPES: # pragma: no cover
+    if Qube.PREFER_BUILTIN_TYPES:
         self.assertTrue(isinstance(m012, float))
-    else: # pragma: no cover
+    else:
         self.assertTrue(m012.is_float())
 
     self.assertEqual(m0.shape, (3,5))
@@ -114,9 +114,9 @@ class Test_Scalar_mean(unittest.TestCase):
     m012 = x.mean(axis=(-1,1,0))
     self.assertTrue(m0.is_float())
     self.assertTrue(m01.is_float())
-    if Qube.PREFER_BUILTIN_TYPES: # pragma: no cover
+    if Qube.PREFER_BUILTIN_TYPES:
         self.assertTrue(isinstance(m012, float))
-    else: # pragma: no cover
+    else:
         self.assertTrue(m012.is_float())
 
     self.assertEqual(m0.shape, (3,5))

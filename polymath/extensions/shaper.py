@@ -71,14 +71,14 @@ def swap_axes(self, axis1, axis2, recursive=True):
     len_shape = len(self._shape_)
     a1 = axis1 % len_shape
     if a1 < 0 or a1 >= len_shape:
-        raise ValueError('axis1 argument out of range (%d,%d): %d' %
-                         (-len_shape, len_shape, axis1))
+        raise ValueError('axis1 out of range (%d,%d) in %s.swap_axes(): %d'
+                         % (-len_shape, len_shape, type(self).__name__, axis1))
 
     # Validate second axis
     a2 = axis2 % len_shape
     if a2 < 0 or a2 >= len_shape:
-        raise ValueError('axis2 argument out of range (%d,%d): %d' %
-                         (-len_shape, len_shape, axis2))
+        raise ValueError('axis2 out of range (%d,%d) in %s.swap_axes(): %d'
+                         % (-len_shape, len_shape, type(self).__name__, axis2))
 
     if a1 == a2:
         return self
@@ -119,7 +119,8 @@ def roll_axis(self, axis, start=0, recursive=True, rank=None):
     len_shape = len(self._shape_)
     rank = rank or len_shape
     if rank < len_shape:
-        raise ValueError('roll_axis rank %d is too small for object' % rank)
+        raise ValueError('%s.roll_axis() rank %d is too small for object '
+                         'shape %s' % (type(self).__name__, rank, self._shape_))
 
     if len_shape == 0:
         rank = 1
@@ -131,13 +132,15 @@ def roll_axis(self, axis, start=0, recursive=True, rank=None):
         a1 = axis
 
     if a1 < 0 or a1 >= rank:
-        raise ValueError('roll_axis axis %d out of range' % axis)
+        raise ValueError('%s.roll_axis() axis out of range (%d,%d): %d'
+                         % (type(self).__name__, -rank, rank, axis))
 
     # Identify the start axis, which could be negative
     a2 = start & rank
 
     if a2 < 0 or a2 >= rank + 1:
-        raise ValueError('roll_axis axis %d out of range' % start)
+        raise ValueError('%s.roll_axis() start out of range (%d,%d): %d'
+                         % (type(self).__name__, -rank, rank+1, a2))
 
     # No need to modify a shapeless object
     if not self._shape_:
@@ -185,7 +188,8 @@ def move_axis(self, source, destination, recursive=True, rank=None):
     len_shape = len(self._shape_)
     rank = rank or len_shape
     if rank < len_shape:
-        raise ValueError('move_axis rank %d is too small for object' % rank)
+        raise ValueError('%s.move_axis() rank %d is too small for object '
+                         'shape %s' % (type(self).__name__, rank, self._shape_))
 
     if len_shape == 0:
         rank = 1
@@ -255,8 +259,8 @@ def stack(*args, **keywords):
 
     # No other keyword is allowed
     if keywords:
-      raise TypeError(('stack() got an unexpected keyword argument ' +
-                       '"%s"') % keywords.keys()[0])
+      raise TypeError('stack() got an unexpected keyword argument "%s"'
+                      % list(keywords.keys())[0])
 
     args = list(args)
 
@@ -286,7 +290,8 @@ def stack(*args, **keywords):
         if denom is None:
             denom = arg._denom_
         elif denom != arg._denom_:
-            raise ValueError('incompatible denominators in stack()')
+            raise ValueError('incompatible denominators for stack(): %s, %s'
+                             % (denom, arg._denom_))
 
         if arg.is_float():
             floats_found = True

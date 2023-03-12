@@ -28,7 +28,7 @@ import tabulation as tab
 RSUN = 695700.
 FACTOR = 4 * np.pi * (RSUN/solar.AU)**2
 
-if 'FLUX_DENSITY' not in globals(): # pragma: no cover
+if 'FLUX_DENSITY' not in globals():
 
     # Read the file
     filepath = os.path.join(os.path.split(solar.__file__)[0],

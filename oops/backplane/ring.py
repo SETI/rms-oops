@@ -23,7 +23,7 @@ def ring_radius(self, event_key, rmin=None, rmax=None):
                         the event_key.
     """
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = self.standardize_event_key(event_key, default='RING')
     key = ('ring_radius', event_key, rmin, rmax)
     if key in self.backplanes:
         return self.get_backplane(key)
@@ -67,8 +67,10 @@ def ring_longitude(self, event_key, reference='node'):
     """
 
     # Handle embedded backplane
-    (event_key, backplane_key) = self._event_and_backplane_keys(event_key,
-                                                                RING_BACKPLANES)
+    (event_key,
+     backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
+                                                     default='RING')
+
     key = ('ring_longitude', event_key, reference)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
@@ -154,7 +156,8 @@ def radial_mode(self, backplane_key, cycles, epoch, amp, peri0, speed,
         radius = self.ring_radius(event_key, rmin=None, rmax=None)
     else:
         # We always save the unmasked version of each radial mode backplane
-        radius = self.get_backplane(('_unmasked_radial_mode',) + backplane_key[1:])
+        unmasked_key = ('_unmasked_radial_mode',) + backplane_key[1:]
+        radius = self.get_backplane(unmasked_key)
 
     # Evaluate the original unmasked ring backplanes
     a = self.ring_radius(event_key)
@@ -192,7 +195,7 @@ def _aries_ring_longitude(self, event_key):
     (prograde) direction.
     """
 
-    event_key = self.gridless_event_key(event_key)
+    event_key = self.gridless_event_key(event_key, default='RING')
     key = ('_aries_ring_longitude', event_key)
 
     if key in self.backplanes:
@@ -231,8 +234,10 @@ def ring_azimuth(self, event_key, direction='obs', apparent=True):
     if direction not in ('obs', 'sun'):
         raise ValueError('invalid azimuth direction: ' + repr(direction))
 
-    (event_key, backplane_key) = self._event_and_backplane_keys(event_key,
-                                                                RING_BACKPLANES)
+    (event_key,
+     backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
+                                                     default='RING')
+
     key = ('ring_azimuth', event_key, direction, apparent)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
@@ -278,17 +283,19 @@ def ring_elevation(self, event_key, direction='obs', pole='prograde',
                         'prograde'  positive elevations on the side of the rings
                                     defined by positive angular momentum;
                         'unsigned'  for positive elevations on both ring faces.
-        apparent        True for the apparent azimuth in the surface frame,
+        apparent        True for the apparent elevation in the surface frame,
                         allowing for the fact that ring particles are in orbital
                         motion around the planet center;
-                        False for the actual azimuth.
+                        False for the actual elevation.
     """
 
     if direction not in ('obs', 'sun'):
         raise ValueError('invalid elevation direction: ' + repr(direction))
 
-    (event_key, backplane_key) = self._event_and_backplane_keys(event_key,
-                                                                RING_BACKPLANES)
+    (event_key,
+     backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
+                                                     default='RING')
+
     key = ('ring_elevation', event_key, direction, pole, apparent)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
@@ -301,15 +308,13 @@ def ring_elevation(self, event_key, direction='obs', pole='prograde',
     # ring_emission
     if direction == 'obs':
         pole = pole.replace('unsigned', 'observed')
-        pole_angle = self.ring_emission_angle(event_key, pole=pole,
-                                                         apparent=apparent)
+        alt_key = ('ring_emission_angle', event_key, pole, apparent)
     else:
         pole = pole.replace('unsigned', 'sunward')
-        pole_angle = self.ring_incidence_angle(event_key, pole=pole,
-                                                          apparent=apparent)
+        alt_key = ('ring_incidence_angle', event_key, pole, apparent)
 
-    elevation = Scalar.HALFPI - pole_angle
-    return self.register_backplane(key, elevation)
+    pole_angle = self.evaluate(alt_key)
+    return self.register_backplane(key, Scalar.HALFPI - pole_angle)
 
 #===============================================================================
 def _fill_ring_intercepts(self, event_key):
@@ -319,11 +324,14 @@ def _fill_ring_intercepts(self, event_key):
         event_key       key defining the ring surface event.
     """
 
+    # Validate the surface type
+    surface = self.get_surface(event_key[1])
+    if surface.COORDINATE_TYPE != 'polar':
+        raise ValueError('invalid coordinate type for ring geometry: '
+                         + surface.COORDINATE_TYPE)
+
     # Get the ring intercept coordinates
     event = self.get_surface_event(event_key)
-    if event.surface.COORDINATE_TYPE != 'polar':
-        raise ValueError('invalid coordinate type for ring geometry: '
-                         + event.surface.COORDINATE_TYPE)
 
     # Register the default ring_radius and ring_longitude backplanes
     self.register_backplane(('ring_radius', event_key, None, None),
@@ -358,8 +366,10 @@ def ring_incidence_angle(self, event_key, pole='sunward', apparent=True):
     if pole not in ('sunward', 'observed', 'north', 'prograde'):
         raise ValueError('invalid incidence angle pole: ' + repr(pole))
 
-    (event_key, backplane_key) = self._event_and_backplane_keys(event_key,
-                                                                RING_BACKPLANES)
+    (event_key,
+     backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
+                                                     default='RING')
+
     key = ('ring_incidence_angle', event_key, pole, apparent)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
@@ -423,8 +433,10 @@ def ring_emission_angle(self, event_key, pole='sunward', apparent=True):
     if pole not in ('sunward', 'observed', 'north', 'prograde'):
         raise ValueError('invalid emission angle pole: ' + repr(pole))
 
-    (event_key, backplane_key) = self._event_and_backplane_keys(event_key,
-                                                                RING_BACKPLANES)
+    (event_key,
+     backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
+                                                     default='RING')
+
     key = ('ring_emission_angle', event_key, pole, apparent)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
@@ -479,7 +491,7 @@ def ring_sub_observer_longitude(self, event_key, reference='node'):
         raise ValueError('invalid longitude reference: ' + repr(reference))
 
     # Look up under the desired reference
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = self.gridless_event_key(event_key, default='RING')
     key0 = ('ring_sub_observer_longitude', gridless_key)
     key = key0 + (reference,)
     if key in self.backplanes:
@@ -531,7 +543,7 @@ def ring_sub_solar_longitude(self, event_key, reference='node'):
         raise ValueError('invalid longitude reference: ' + repr(reference))
 
     # Look up under the desired reference
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = self.gridless_event_key(event_key, default='RING')
     key0 = ('ring_sub_solar_longitude', gridless_key)
     key = key0 + (reference,)
     if key in self.backplanes:
@@ -580,7 +592,7 @@ def ring_center_incidence_angle(self, event_key, pole='sunward', apparent=True):
                         False for the actual.
     """
 
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = self.gridless_event_key(event_key, default='RING')
     return self.ring_incidence_angle(gridless_key, pole=pole, apparent=apparent)
 
 #===============================================================================
@@ -604,7 +616,7 @@ def ring_center_emission_angle(self, event_key, pole='sunward', apparent=True):
                         False for the actual.
     """
 
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = self.gridless_event_key(event_key, default='RING')
     return self.ring_emission_angle(gridless_key, pole=pole, apparent=apparent)
 
 #===============================================================================
@@ -618,8 +630,10 @@ def ring_radial_resolution(self, event_key):
                         array.
     """
 
-    (event_key, backplane_key) = self._event_and_backplane_keys(event_key,
-                                                                RING_BACKPLANES)
+    (event_key,
+     backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
+                                                     default='RING')
+
     key = ('ring_radial_resolution', event_key)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
@@ -649,8 +663,10 @@ def ring_angular_resolution(self, event_key):
                         array.
     """
 
-    (event_key, backplane_key) = self._event_and_backplane_keys(event_key,
-                                                                RING_BACKPLANES)
+    (event_key,
+     backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
+                                                     default='RING')
+
     key = ('ring_angular_resolution', event_key)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
@@ -683,8 +699,10 @@ def ring_gradient_angle(self, event_key):
                         array.
     """
 
-    (event_key, backplane_key) = self._event_and_backplane_keys(event_key,
-                                                                RING_BACKPLANES)
+    (event_key,
+     backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
+                                                     default='RING')
+
     key = ('ring_gradient_angle', event_key)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
@@ -748,7 +766,7 @@ def ring_shadow_incidence(self, event_key, ring_surface_key):
     ring_event = self.get_surface_event(ring_event_key)
 
     # The departure vectors are defined in the ring event, but not the arrivals
-    emission = ring_event.emission_angle(apparent=True)
+    emission = ring_event.emission_angle(apparent=True, derivs=self.ALL_DERIVS)
     incidence = Scalar.HALFPI - (Scalar.HALFPI - emission).abs()
 
     return self.register_backplane(key, incidence)
@@ -760,7 +778,7 @@ def ring_radius_in_front(self, event_key, ring_surface_key):
     event_key = self.standardize_event_key(event_key)
     ring_surface_key = ring_surface_key.upper()
 
-    key = ('ring_in_front_radius', event_key, ring_surface_key)
+    key = ('ring_radius_in_front', event_key, ring_surface_key)
     if key in self.backplanes:
         return self.get_backplane(key)
 
@@ -794,6 +812,7 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 from oops.backplane.gold_master import register_test_suite
+from oops.constants import DPR
 
 def ring_test_suite(bpt):
 
@@ -964,11 +983,8 @@ def ring_test_suite(bpt):
         bpt.compare(sunward - Scalar.HALFPI, 0.,
                     name + ' incidence angle minus 90, sunward (deg)',
                     operator='<=', method='degrees')
-        bpt.gmtest(elevation,
-                   name + ' elevation of Sun, sunward (deg)',
-                   limit=0.01, radius=1, method='degrees')
         bpt.compare(sunward + elevation, Scalar.HALFPI,
-                    name + ' sunward incidence plus solar elevation (deg)',
+                    name + ' incidence plus solar elevation (deg)',
                     limit=1.e-13, method='degrees')
         bpt.compare(sunward - generic, 0.,
                     name + ' incidence angle, sunward minus generic (deg)',
@@ -1024,9 +1040,9 @@ def ring_test_suite(bpt):
         bpt.compare(emission - Scalar.HALFPI, 0.,
                     name + ' emission angle minus 90, observed (deg)',
                     operator='<', method='degrees')
-        bpt.gmtest(elevation,
-                   name + ' elevation of observer (deg)',
-                   limit=0.01, radius=1, method='degrees')
+        bpt.compare(emission + elevation, Scalar.HALFPI,
+                    name + ' emission plus observer elevation (deg)',
+                    limit=1.e-13, method='degrees')
 
         sunward = bp.ring_emission_angle(name, 'sunward')
         bpt.compare(sunward - generic, 0.,
@@ -1084,211 +1100,76 @@ def ring_test_suite(bpt):
                    name + ' longitude, modes 1 and 2, 70-100 kkm (deg)',
                    limit=0.01, method='mod360', radius=1)
 
+    # Derivative tests
+    if bpt.derivs:
+      (bp, bp_u0, bp_u1, bp_v0, bp_v1) = bpt.backplanes
+      pixel_uv = np.abs(bp.obs.fov.uv_scale.vals)
+
+      for name in bpt.ring_names:
+
+        # Get approximate ring spatial scale in km/pixel and deg/pixel
+        km_per_los_radian = bp.distance(name) / bp.mu(name)
+        if np.all(km_per_los_radian.mask):
+            continue
+
+        km_per_pixel = km_per_los_radian.max() * pixel_uv
+        (ulimit_km, vlimit_km) = km_per_pixel * 0.001
+
+        deg_per_los_radian = km_per_los_radian / bp.ring_radius(name) * DPR
+        deg_per_pixel = deg_per_los_radian.max() * pixel_uv
+        (ulimit_deg, vlimit_deg) = deg_per_pixel * 0.001
+
+        # ring_radius
+        rad = bp.ring_radius(name)
+        drad_duv = rad.d_dlos.chain(bp.dlos_duv)
+        (drad_du, drad_dv) = drad_duv.extract_denoms()
+
+        drad = bp_u1.ring_radius(name) - bp_u0.ring_radius(name)
+        bpt.compare(drad.wod/bpt.duv, drad_du,
+                    name + ' radius d/du self-check (km/pix)',
+                    limit=ulimit_km, radius=1)
+
+        drad = bp_v1.ring_radius(name) - bp_v0.ring_radius(name)
+        bpt.compare(drad.wod/bpt.duv, drad_dv,
+                    name + ' radius d/dv self-check (km/pix)',
+                    limit=vlimit_km, radius=1)
+
+        # ring_longitude
+        lon = bp.ring_longitude(name)
+        dlon_duv = lon.d_dlos.chain(bp.dlos_duv)
+        (dlon_du, dlon_dv) = dlon_duv.extract_denoms()
+
+        dlon = (bp_u1.ring_longitude(name) - bp_u0.ring_longitude(name)).abs()
+        dlon = Scalar.PI - (dlon - Scalar.PI).abs()
+        bpt.compare((dlon.wod/bpt.duv - dlon_du).abs().median(), 0.,
+                    name + ' longitude d/du self-check (deg/pix)',
+                    limit=ulimit_deg, method='degrees')
+
+        dlon = (bp_v1.ring_longitude(name) - bp_v0.ring_longitude(name)).abs()
+        dlon = Scalar.PI - (dlon.wod - Scalar.PI).abs()
+        bpt.compare((dlon.wod/bpt.duv - dlon_dv).abs().median(), 0.,
+                    name + ' longitude d/dv self-check (deg/pix)',
+                    limit=vlimit_deg, method='degrees')
+
+        # ring_azimuth
+        az = bp.ring_azimuth(name)
+        daz_duv = az.d_dlos.chain(bp.dlos_duv)
+        (daz_du, daz_dv) = daz_duv.extract_denoms()
+
+        daz = (bp_u1.ring_azimuth(name) - bp_u0.ring_azimuth(name)).abs()
+        daz = Scalar.PI - (daz - Scalar.PI).abs()
+        bpt.compare((daz.wod/bpt.duv - daz_du).abs().median(), 0.,
+                    name + ' azimuth d/du self-check (deg/pix)',
+                    limit=ulimit_deg, method='degrees')
+
+        daz = (bp_v1.ring_azimuth(name) - bp_v0.ring_azimuth(name)).abs()
+        daz = Scalar.PI - (daz - Scalar.PI).abs()
+        bpt.compare((daz.wod/bpt.duv - daz_dv).abs().median(), 0.,
+                    name + ' azimuth d/dv self-check (deg/pix)',
+                    limit=vlimit_deg, method='degrees')
+
+        # ring_elevation is tested by incidence and emission
+
 register_test_suite('ring', ring_test_suite)
 
-################################################################################
-# UNIT TESTS
-################################################################################
-import unittest
-from oops.constants import DPR
-from oops.backplane.unittester_support import show_info
-
-#===========================================================================
-def exercise_resolution(bp,
-                        planet=None, moon=None, ring=None,
-                        undersample=16, use_inventory=False, inventory_border=2,
-                        **options):
-    """Generic unit tests for ring.py"""
-
-    if ring is not None:
-        test = bp.ring_radial_resolution(ring)
-        show_info(bp, 'Ring radial resolution (km)', test, **options)
-        test = bp.ring_angular_resolution(ring)
-        show_info(bp, 'Ring angular resolution (deg)', test*DPR, **options)
-        radii = bp.ring_radius(ring)
-        show_info(bp, 'Ring angular resolution (km)', test * radii, **options)
-
-#===========================================================================
-def exercise_radial_modes(bp,
-                          planet=None, moon=None, ring=None,
-                          undersample=16, use_inventory=False, inventory_border=2,
-                          **options):
-    """Generic unit tests for ring.py"""
-
-    if ring is not None:
-        test = bp.ring_radius(ring)
-        show_info(bp, 'Ring radius (km)', test, **options)
-        test0 = bp.ring_radius(ring, 70.e3, 100.e3)
-        show_info(bp, 'Ring radius, 70-100 km (km)', test0, **options)
-        test1 = bp.radial_mode(test0.key, 40, 0., 1000., 0., 0., 100.e3)
-        show_info(bp, 'Ring radius, 70-100 km, mode 1 (km)', test1, **options)
-        test = bp.radial_mode(test1.key, 40, 0., -1000., 0., 0., 100.e3)
-        show_info(bp, 'Ring radius, 70-100 km, mode 1 canceled (km)', test, **options)
-        test2 = bp.radial_mode(test1.key, 25, 0., 500., 0., 0., 100.e3)
-        show_info(bp, 'Ring radius, 70-100 km, modes 1 and 2 (km)', test2, **options)
-        test = bp.ring_radius(ring).without_mask()
-        show_info(bp, 'Ring radius unmasked (km)', test, **options)
-
-#===========================================================================
-def exercise_radial_longitude_azimuth(bp,
-                                      planet=None, moon=None, ring=None,
-                                      undersample=16, use_inventory=False,
-                                      inventory_border=2,
-                                      **options):
-    """Generic unit tests for ring.py"""
-
-    if ring is not None:
-        test = bp.ring_longitude(ring, reference='node')
-        show_info(bp, 'Ring longitude wrt node (deg)', test*DPR, **options)
-        test = bp.ring_longitude(('ring_radius', ring, 70.e3, 100.e3), 'node')
-        show_info(bp, 'Ring longitude wrt node, 70-100 km (deg)', test*DPR, **options)
-
-        test = bp.ring_longitude(ring, reference='aries')
-        show_info(bp, 'Ring longitude wrt Aries (deg)', test*DPR, **options)
-        test = bp.ring_longitude(ring, reference='obs')
-        show_info(bp, 'Ring longitude wrt observer (deg)', test*DPR, **options)
-#         test = bp.ring_azimuth(ring, 'obs')
-#         show_info(bp, 'Ring azimuth wrt observer (deg)', test*DPR, **options)
-#         compare = bp.ring_longitude(ring, 'obs')
-#         diff = test - compare
-#         show_info(bp, 'Ring azimuth minus longitude wrt observer (deg)', diff*DPR,
-#                   **options)
-        test = bp.ring_longitude(ring, reference='oha')
-        show_info(bp, 'Ring longitude wrt OHA (deg)', test*DPR, **options)
-        test = bp.ring_longitude(ring, reference='sun')
-        show_info(bp, 'Ring longitude wrt Sun (deg)', test*DPR, **options)
-        test = bp.ring_azimuth(ring, direction='sun')
-        show_info(bp, 'Ring azimuth wrt Sun (deg)', test*DPR, **options)
-        compare = bp.ring_longitude(ring, 'sun')
-#         diff = test - compare
-#         show_info(bp, 'Ring azimuth minus longitude wrt Sun (deg)', diff*DPR, **options)
-        test = bp.ring_longitude(ring, reference='sha')
-        show_info(bp, 'Ring longitude wrt SHA (deg)', test*DPR, **options)
-        test = bp.ring_sub_observer_longitude(ring, 'node')
-        show_info(bp, 'Ring sub-observer longitude wrt node (deg)', test*DPR, **options)
-        test = bp.ring_sub_observer_longitude(ring, 'aries')
-        show_info(bp, 'Ring sub-observer longitude wrt Aries (deg)', test*DPR, **options)
-        test = bp.ring_sub_observer_longitude(ring, 'sun')
-        show_info(bp, 'Ring sub-observer longitude wrt Sun (deg)', test*DPR, **options)
-        test = bp.ring_sub_observer_longitude(ring, 'obs')
-        show_info(bp, 'Ring sub-observer longitude wrt observer (deg)', test*DPR,
-                  **options)
-        test = bp.ring_sub_solar_longitude(ring, 'node')
-        show_info(bp, 'Ring sub-solar longitude wrt node (deg)', test*DPR, **options)
-        test = bp.ring_sub_solar_longitude(ring, 'aries')
-        show_info(bp, 'Ring sub-solar longitude wrt Aries (deg)', test*DPR, **options)
-        test = bp.ring_sub_solar_longitude(ring, 'sun')
-        show_info(bp, 'Ring sub-solar longitude wrt Sun (deg)', test*DPR, **options)
-        test = bp.ring_sub_solar_longitude(ring, 'obs')
-        show_info(bp, 'Ring sub-solar longitude wrt observer (deg)', test*DPR,
-                  **options)
-
-    if planet is not None and Body.lookup(planet).ring_body is not None:
-        if planet.upper() == 'SATURN':
-            key = ('ring_radius', planet+':ring', 60268.)
-        elif planet.upper() == 'JUPITER':
-            key = ('ring_radius', planet+':ring', 71492.)
-        else:
-            key = planet + ':ring'
-        test = bp.ring_azimuth(key, 'obs')
-        show_info(bp, 'Planet:ring azimuth wrt observer, unmasked (deg)', test*DPR, **options)
-        compare = bp.ring_longitude(key, 'obs')
-        diff = test - compare
-        show_info(bp, 'Planet:ring azimuth minus longitude wrt observer, unmasked (deg)',
-                  diff*DPR, **options)
-        test = bp.ring_azimuth(key, direction='sun')
-        show_info(bp, 'Planet:ring azimuth wrt Sun, unmasked (deg)', test*DPR, **options)
-        compare = bp.ring_longitude(key, 'sun')
-#         diff = test - compare
-#         show_info(bp, 'Planet:ring azimuth minus longitude wrt Sun, unmasked (deg)',
-#                   diff*DPR, **options)
-
-#===========================================================================
-def exercise_photometry(bp,
-                        planet=None, moon=None, ring=None,
-                        undersample=16, use_inventory=False, inventory_border=2,
-                        **options):
-    """Generic unit tests for ring.py"""
-
-    if ring is not None:
-        test = bp.ring_incidence_angle(ring, 'sunward', apparent=False)
-        show_info(bp, 'Ring incidence angle, sunward (deg)', test*DPR, **options)
-        test = bp.ring_incidence_angle(ring, 'north', apparent=False)
-        show_info(bp, 'Ring incidence angle, north (deg)', test*DPR, **options)
-        test = bp.ring_incidence_angle(ring, 'prograde', apparent=False)
-        show_info(bp, 'Ring incidence angle, prograde (deg)', test*DPR, **options)
-        test = bp.incidence_angle(ring, apparent=False)
-        show_info(bp, 'Ring incidence angle via incidence() (deg)', test*DPR, **options)
-#         test = bp.ring_elevation(ring, direction='sun', apparent=False)
-#         show_info(bp, 'Ring elevation wrt Sun (deg)', test*DPR, **options)
-#         compare = bp.ring_incidence_angle(ring, 'north', apparent=False)
-#         diff = test + compare
-#         show_info(bp, 'Ring elevation wrt Sun plus north incidence (deg)', diff*DPR,
-#                   **options)
-        test = bp.ring_center_incidence_angle(ring, 'sunward', apparent=False)
-        show_info(bp, 'Ring center incidence angle, sunward (deg)', test*DPR, **options)
-        test = bp.ring_center_incidence_angle(ring, 'north', apparent=False)
-        show_info(bp, 'Ring center incidence angle, north (deg)', test*DPR, **options)
-        test = bp.ring_center_incidence_angle(ring, 'prograde', apparent=False)
-        show_info(bp, 'Ring center incidence angle, prograde (deg)', test*DPR,
-                  **options)
-        test = bp.ring_emission_angle(ring, 'sunward')
-        show_info(bp, 'Ring emission angle, sunward (deg)', test*DPR, **options)
-        test = bp.ring_emission_angle(ring, 'north')
-        show_info(bp, 'Ring emission angle, north (deg)', test*DPR, **options)
-        test = bp.ring_emission_angle(ring, 'prograde')
-        show_info(bp, 'Ring emission angle, prograde (deg)', test*DPR, **options)
-        test = bp.emission_angle(ring)
-        show_info(bp, 'Ring emission angle via emission() (deg)', test*DPR, **options)
-        test = bp.ring_elevation(ring, direction='obs')
-        show_info(bp, 'Ring elevation wrt observer (deg)', test*DPR, **options)
-#         compare = bp.ring_emission_angle(ring, 'north', apparent=False)
-#         diff = test + compare
-#         show_info(bp, 'Ring elevation wrt observer plus north emission (deg)', diff*DPR,
-#                   **options)
-        test = bp.ring_center_emission_angle(ring, 'sunward')
-        show_info(bp, 'Ring center emission angle, sunward (deg)', test*DPR, **options)
-        test = bp.ring_center_emission_angle(ring, 'north')
-        show_info(bp, 'Ring center emission angle, north (deg)', test*DPR, **options)
-        test = bp.ring_center_emission_angle(ring, 'prograde')
-        show_info(bp, 'Ring center emission angle, prograde (deg)', test*DPR, **options)
-
-    if planet is not None and Body.lookup(planet).ring_body is not None:
-        if planet.upper() == 'SATURN':
-            key = ('ring_radius', planet+':ring', 60268.)
-        elif planet.upper() == 'JUPITER':
-            key = ('ring_radius', planet+':ring', 71492.)
-        else:
-            key = planet + ':ring'
-#         test = bp.ring_elevation(key, direction='sun', apparent=False)
-#         show_info(bp, 'Ring elevation wrt Sun, unmasked (deg)', test*DPR, **options)
-#         compare = bp.ring_incidence_angle(key, 'north', apparent=False)
-#         diff = test + compare
-#         show_info(bp,
-#                   'Ring elevation wrt Sun plus north incidence, unmasked (deg)',
-#                   diff*DPR, **options)
-        test = bp.ring_elevation(key, direction='obs')
-        show_info(bp, 'Ring elevation wrt observer, unmasked (deg)', test*DPR,
-                  **options)
-#         compare = bp.ring_emission_angle(key, 'north', apparent=False)
-#         diff = test + compare
-#         show_info(bp,
-#                   'Ring elevation wrt observer plus north emission, unmasked (deg)',
-#                   diff*DPR, **options)
-
-
-#*******************************************************************************
-class Test_Ring(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-        from oops.backplane.unittester_support import Backplane_Settings
-        if Backplane_Settings.EXERCISES_ONLY:
-            self.skipTest("")
-        pass
-
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

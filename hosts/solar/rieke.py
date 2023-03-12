@@ -8,7 +8,7 @@ import astropy.io.fits as pyfits
 import hosts.solar as solar
 import tabulation as tab
 
-if 'FLUX_DENSITY' not in globals(): # pragma: no cover
+if 'FLUX_DENSITY' not in globals():
 
     # Read the file
     filepath = os.path.join(os.path.split(solar.__file__)[0],

@@ -2,8 +2,7 @@
 # oops/backplanes/where.py: Boolean backplanes
 ################################################################################
 
-import numpy as np
-from polymath       import Boolean, Qube, Scalar
+from polymath       import Boolean, Scalar
 from oops.backplane import Backplane
 
 ################################################################################
@@ -74,7 +73,7 @@ def _where_inside_or_outside_shadow(self, event_key, surface_key, tvl, inside):
         surface = self.get_surface(surface_key)
         if surface.HAS_INTERIOR:
             where_inside = self.where_inside(event_key, surface_key)
-            result_vals |= where_inside.vals
+            result_vals = result_vals | where_inside.vals
 
         # Set the internal values to False at every masked location
         tvl_result = Boolean(result_vals & event.antimask, event.mask)
@@ -535,76 +534,4 @@ def where_test_suite(bpt):
 
 register_test_suite('where', where_test_suite)
 
-################################################################################
-# UNIT TESTS
-################################################################################
-import unittest
-from oops.backplane.unittester_support import show_info
-
-#===============================================================================
-def exercise(bp,
-             planet=None, moon=None, ring=None,
-             undersample=16, use_inventory=False, inventory_border=2,
-             **options):
-    """generic unit tests for where.py"""
-
-    if planet is not None:
-        test = bp.where_intercepted(planet)
-        show_info(bp, 'Mask of planet intercepted', test, **options)
-        test = bp.evaluate(('where_intercepted', planet))
-        show_info(bp, 'Mask of planet intercepted via evaluate()', test, **options)
-        test = bp.where_sunward(planet)
-        show_info(bp, 'Mask of planet sunward', test, **options)
-        test = bp.evaluate(('where_sunward', planet))
-        show_info(bp, 'Mask of planet sunward via evaluate()', test, **options)
-        test = bp.where_below(('incidence_angle', planet), HALFPI)
-        show_info(bp, 'Mask of planet sunward via where_below()', test, **options)
-        test = bp.where_antisunward(planet)
-        show_info(bp, 'Mask of planet anti-sunward', test, **options)
-        test = bp.where_above(('incidence_angle', planet), HALFPI)
-        show_info(bp, 'Mask of planet anti-sunward via where_above()', test, **options)
-        test = bp.where_between(('incidence_angle', planet), HALFPI,3.2)
-        show_info(bp, 'Mask of planet anti-sunward via where_between()', test, **options)
-
-        if ring is not None:
-            test = bp.where_in_front(planet, ring)
-            show_info(bp, 'Mask of planet in front of rings', test, **options)
-            test = bp.where_in_back(planet, ring)
-            show_info(bp, 'Mask of planet behind rings', test, **options)
-            test = bp.where_inside_shadow(planet, ring)
-            show_info(bp, 'Mask of planet in shadow of rings', test, **options)
-            test = bp.where_outside_shadow(planet, ring)
-            show_info(bp, 'Mask of planet outside shadow of rings', test, **options)
-            test = bp.where_in_front(ring, planet)
-            show_info(bp, 'Mask of rings in front of planet', test, **options)
-            test = bp.where_in_back(ring, planet)
-            show_info(bp, 'Mask of rings behind planet', test, **options)
-            test = bp.where_inside_shadow(ring, planet)
-            show_info(bp, 'Mask of rings in shadow of planet', test, **options)
-            test = bp.where_outside_shadow(ring, planet)
-            show_info(bp, 'Mask of rings outside shadow of planet', test, **options)
-
-    if ring is not None:
-        test = bp.where_intercepted(ring)
-        show_info(bp, 'Mask of rings intercepted', test, **options)
-        test = bp.where_sunward(ring)
-        show_info(bp, 'Mask of rings sunward', test, **options)
-        test = bp.where_antisunward(ring)
-        show_info(bp, 'Mask of rings anti-sunward', test, **options)
-
-
-#*******************************************************************************
-class Test_Where(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-        from oops.backplane.unittester_support import Backplane_Settings
-        if Backplane_Settings.EXERCISES_ONLY:
-            self.skipTest("")
-        pass
-
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

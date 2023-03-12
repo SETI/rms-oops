@@ -272,7 +272,7 @@ class Polynomial(Vector):
 
     def __pow__(self, arg):
         if arg < 0 or arg != int(arg):
-            raise ValueError('Polynomial exponents must be non-negative ' +
+            raise ValueError('Polynomial exponents must be non-negative '
                              'integers')
 
         if arg == 0:
