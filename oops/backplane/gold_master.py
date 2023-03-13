@@ -34,7 +34,7 @@ import oops.backplane.gold_master as gm
 
 class Test_<your test name>(unittest.TestCase):
 
-    def setUp():
+    def setUp(self):
 
         gm.define_standard_obs('obs1',
                 obspath = 'file path inside the test_data directory',
@@ -47,18 +47,18 @@ class Test_<your test name>(unittest.TestCase):
         gm.define_standard_obs('obs2', ...)
         gm.define_standard_obs('obs3', ...)
 
-    def run_test1(self):
-        gm.execute_standard_unittest(
+    def test_1(self):
+        gm.execute_standard_unittest(unittest.TestCase,
                     'obs1'
                     <overrides of any default gold_master input arguments>)
 
-    def run_test2(self):
-        gm.execute_standard_unittest(
+    def test_2(self):
+        gm.execute_standard_unittest(unittest.TestCase,
                     'obs2'
                     <overrides of any default gold_master input arguments>)
 
-    def run_test3(self):
-        gm.execute_standard_unittest(
+    def test_3(self):
+        gm.execute_standard_unittest(unittest.TestCase,
                     'obs3'
                     <overrides of any default gold_master input arguments>)
 
