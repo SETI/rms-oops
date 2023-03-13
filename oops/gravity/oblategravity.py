@@ -3,6 +3,7 @@
 ################################################################################
 
 import numpy as np
+import warnings
 from oops.config    import LOGGING
 from oops.constants import TWOPI
 from oops.gravity   import Gravity

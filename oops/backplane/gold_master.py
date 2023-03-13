@@ -596,48 +596,54 @@ def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
         **options       overrides for any default gold_master input arguments.
     """
 
-    # Initialize the command argument namespace
-    args = argparse.Namespace()
-    for key, value in DEFAULTS.items():
-        setattr(args, key, value)
+    try:
+        # Initialize the command argument namespace
+        args = argparse.Namespace()
+        for key, value in DEFAULTS.items():
+            setattr(args, key, value)
 
-    # Set the default observation details
-    args.name = ''      # use blank as a temporary name here
-    define_standard_obs('', obspath, index, module,
-                            planet=planet, moon=moon, ring=ring,
-                            kwargs={})
+        # Set the default observation details
+        args.name = ''      # use blank as a temporary name here
+        define_standard_obs('', obspath, index, module,
+                                planet=planet, moon=moon, ring=ring,
+                                kwargs={})
 
-    # These values in the DEFAULTS dictionary are overridden
-    args.browse = False
-    args.log = False
-    args.verbose = True
+        # These values in the DEFAULTS dictionary are overridden
+        args.browse = False
+        args.log = False
+        args.verbose = True
 
-    # These have no entry in the DEFAULTS dictionary
-    args.output = None
-    args.summary = False
-    args.convergence = False
-    args.diagnostics = False
-    args.internals = False
-    args.performance = False
-    args.fullpaths = False
-    args.platform = None
-    args.save_sampled = False
+        # These have no entry in the DEFAULTS dictionary
+        args.output = None
+        args.summary = False
+        args.convergence = False
+        args.diagnostics = False
+        args.internals = False
+        args.performance = False
+        args.fullpaths = False
+        args.platform = None
+        args.save_sampled = False
 
-    # Fill in any overrides
-    for key, value in options.items():
-        setattr(args, key, value)
+        # Fill in any overrides
+        for key, value in options.items():
+            setattr(args, key, value)
 
-    # These options are mandatory
-    args.testcase = testcase
-    args.task = 'compare'
-    args.level = 'error'
-    args.verbose = True
-    args.du = 0.
-    args.dv = 0.
-    args.obspath = ''           # filled in by _clean_up_args
+        # These options are mandatory
+        args.testcase = testcase
+        args.task = 'compare'
+        args.level = 'error'
+        args.verbose = True
+        args.du = 0.
+        args.dv = 0.
+        args.obspath = ''           # filled in by _clean_up_args
 
-    # Clean up, also filling in observation, module, planet(s), moon(s), ring(s)
-    args = _clean_up_args(args)
+        # Clean up, also filling in observation, module, planet(s), moon(s),
+        # ring(s)
+        args = _clean_up_args(args)
+
+    except Exception as e:
+        testcase.assertTrue(False, str(e))
+
     run_tests(args)
 
 
@@ -772,12 +778,13 @@ def _clean_up_args(args):
         if args.task in ('compare', 'adopt'):
             if not OOPS_TEST_DATA_PATH:
                 raise ValueError('Undefined environment variable: '
-                                 + 'OOPS_TEST_DATA_PATH')
-            if not abspath.startswith(OOPS_TEST_DATA_PATH_):
+                                 'OOPS_TEST_DATA_PATH')
+            test_data_path_ = os.path.realpath(OOPS_TEST_DATA_PATH) + '/'
+            if not abspath.startswith(test_data_path_):
                 warnings.warn('File is not in the test data directory: '
-                              + obspath)
+                              + obspath + '; ' + test_data_path_)
         if not os.path.exists(abspath):
-            raise FileNotFoundError('No such file: %s' % obspath)
+            raise FileNotFoundError('No such file: ' + obspath)
 
         args.abspaths.append(abspath)
 
