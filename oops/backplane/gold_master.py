@@ -782,7 +782,7 @@ def _clean_up_args(args):
             test_data_path_ = os.path.realpath(OOPS_TEST_DATA_PATH) + '/'
             if not abspath.startswith(test_data_path_):
                 warnings.warn('File is not in the test data directory: '
-                              + obspath + '; ' + test_data_path_)
+                              + obspath + '; ' + OOPS_TEST_DATA_PATH)
         if not os.path.exists(abspath):
             raise FileNotFoundError('No such file: ' + obspath)
 
