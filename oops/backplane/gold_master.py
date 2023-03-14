@@ -180,7 +180,6 @@ DEFAULTS = {
     'suite'         : [],
     'du'            : 0.,
     'dv'            : 0.,
-    'derivs'        : False,
     'undersample'   : 16,
     'inventory'     : True,
     'border'        : 0,
@@ -233,9 +232,6 @@ def set_default_args(**options):
                         [] (the default) to include all test suites.
         du, dv          pixel offsets to apply to the origin of the meshgrid,
                         for testing sensitivity to pointing offsets; default 0.
-        derivs          True to include tests of the spatial derivatives of
-                        backplane arrays; False to suppress them. Spatial
-                        derivative tests are especially time-consuming.
         undersample     undersample factor for backplane tests and browse
                         images; default 16.
         inventory       True to use an inventory when generating backplanes.
@@ -458,16 +454,15 @@ def execute_as_command():
                             origin in units of pixels; default 0. This can be
                             useful for testing the tolerance to pointing
                             uncertainties.''')
-    gr.add_argument('--derivs', action='store_true',
-                    default=DEFAULTS['derivs'],
+    gr.add_argument('--derivs', action='store_true', default=None,
                     help='''Perform tests of spatial derivatives of backplane
-                             arrays%s.'''
-                          % (' (default)' if DEFAULTS['derivs'] else '')
-                          + ' These tests are especially time-consuming.')
+                            arrays. Default is to exclude the derivative tests
+                            when undersampling=1, and to include them otherwise.
+                            Note that tests can take several times longer with
+                            this option enabled.''')
     gr.add_argument('--no-derivs', action='store_false', dest='derivs',
                     help='''Suppress tests of spatial derivatives of backplane
-                            arrays %s.'''
-                         % '' if DEFAULTS['derivs'] else ' (default)')
+                            arrays.''')
 
     # Backplane array options
     gr = parser.add_argument_group('Backplane array options')
@@ -543,8 +538,6 @@ def execute_as_command():
                             "info", "warning", "error", or an integer 1-30;
                             default is %s.'''
                          % DEFAULTS['level'])
-    gr.add_argument('--summary', action='store_true', default=False,
-                    help='Include array summary info in the log.')
     gr.add_argument('--convergence', action='store_true', default=False,
                     help='Show iterative convergence information in the log.')
     gr.add_argument('--diagnostics', action='store_true', default=False,
@@ -615,7 +608,6 @@ def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
 
         # These have no entry in the DEFAULTS dictionary
         args.output = None
-        args.summary = False
         args.convergence = False
         args.diagnostics = False
         args.internals = False
@@ -635,6 +627,7 @@ def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
         args.verbose = True
         args.du = 0.
         args.dv = 0.
+        args.derivs = True
         args.obspath = ''           # filled in by _clean_up_args
 
         # Clean up, also filling in observation, module, planet(s), moon(s),
@@ -736,7 +729,11 @@ def _clean_up_args(args):
 
     args.suite.sort()
 
-    # --adopt
+    # --derivs
+    if args.derivs is None:
+        args.derivs = (args.undersample > 1)
+
+    # Special requirements for task --adopt
     if args.task == 'adopt':    # required options for task adopt
         args.browse = True
         args.undersample = 1
@@ -1369,11 +1366,12 @@ class BackplaneTest(object):
 
         if self.args.task == 'compare':
             if comparison.limit is None:
-                LOGGING.debug(comparison.suite, '| Canceled: "' + title + '"')
+                LOGGING.debug(comparison.suite, f'| Canceled: "{title}"')
                 return
 
-        else:
-            LOGGING.debug(comparison.suite, '| Summary:', title)
+        else:               # adopt or preview
+            LOGGING.debug(comparison.suite, f'| Summary: "{title}";',
+                          comparison.text)
             return
 
         if method in ('mod360', 'degrees'):
@@ -1486,8 +1484,9 @@ class BackplaneTest(object):
 
             # For "preview" and "adopt"
             else:
-                LOGGING.debug(comparison.suite, '|', 'Written:',
-                              os.path.basename(output_pickle_path))
+                LOGGING.debug(comparison.suite, '| Written:',
+                              os.path.basename(output_pickle_path) + ';',
+                              comparison.text)
 
         # Shapeless case
         else:
@@ -1510,7 +1509,8 @@ class BackplaneTest(object):
 
             # For "preview" and "adopt"
             else:
-                LOGGING.debug(comparison.suite, '|', 'Summary:', title)
+                LOGGING.debug(comparison.suite, f'| Summary: "{title}";',
+                              comparison.text)
 
         LATEST_TITLE = ''
 
@@ -1855,7 +1855,8 @@ class BackplaneTest(object):
 
         # Warn about duplicated titles
         if title in self.results:
-            LOGGING.error(TEST_SUITE, '| Duplicated title:', title)
+            LOGGING.error(TEST_SUITE, f'| Duplicated title: "{title}";',
+                          comparison.text)
 
         # Validate array
         if not isinstance(array, Qube):
@@ -1878,9 +1879,6 @@ class BackplaneTest(object):
                 new_array.backplane_key = array.backplane_key
             array = new_array
 
-        # Save the summary info in the dictionary
-        self._summarize(array, title, method=method, suite=TEST_SUITE)
-
         # Check mask
         if np.shape(mask) not in ((), array.shape):
             raise ValueError('mask shape does not match array')
@@ -1893,12 +1891,15 @@ class BackplaneTest(object):
                                           radius = radius * self.args.radius,
                                           mask = mask,
                                           pixels = array.size)
-        comparison.antimask = np.logical_not(mask)      # extra attribute
+
+        # Extra attributes
+        comparison.antimask = np.logical_not(mask)
+        comparison.text = self._summarize(array, title, method=method)
 
         return (array, comparison)
 
     #===========================================================================
-    def _summarize(self, array, title, method, suite):
+    def _summarize(self, array, title, method):
         """Save the summary info for this backplane array.
 
         For boolean arrays, the saved tuple is
@@ -1908,34 +1909,29 @@ class BackplaneTest(object):
         The cases are distinguished by whether the first value is int of float.
         """
 
-        def _save(minval, maxval, masked, total):
-            """Save and log summary info."""
+        def _summary_text(minval, maxval, masked, total):
+            """Save the summary info and return a formatted text string."""
 
             self.summary[title] = (minval, maxval, masked, total)
 
-            if self.args.summary:
-                message = [title, ': ']
-                if isinstance(minval, numbers.Integral):   # if array is boolean
-                    message += ['false,true = %d,%d' % (minval, maxval)]
-                elif masked < total:
-                    if minval == maxval:
-                        message += ['value = ', self._valstr(minval)]
-                    else:
-                        message += ['min,max = ', self._valstr(minval), ', ',
-                                                  self._valstr(maxval)]
-                if masked:
-                    percent = (100. * masked) / total
-                    if 99.9 < percent < 100.:   # "100.0"% means every pixel
-                        percent = 99.9
-                    if message[-1] != ': ':
-                        message += ['; ']
-                    message += ['mask ', '%.1f' % percent, '%']
-
-                message = ''.join(message)
-                if self.args.level > logging.DEBUG:
-                    LOGGING.info(suite, '|', message, force=True)
+            message = []
+            if isinstance(minval, numbers.Integral):   # if array is boolean
+                message += ['false,true=%d,%d' % (minval, maxval)]
+            elif masked < total:
+                if minval == maxval:
+                    message += ['value=', self._valstr(minval)]
                 else:
-                    LOGGING.literal(''.join(message))
+                    message += ['min,max=', self._valstr(minval), ',',
+                                            self._valstr(maxval)]
+            if masked:
+                percent = (100. * masked) / total
+                if 99.9 < percent < 100.:   # "100.0"% means every pixel
+                    percent = 99.9
+                if message:
+                    message += [', ']
+                message += ['mask=', '%.1f' % percent, '%']
+
+            return ''.join(message)
 
         masked = array.count_masked()
         total = array.size
@@ -1943,17 +1939,15 @@ class BackplaneTest(object):
         if array.is_bool():
             trues  = np.sum(array.antimask & array.vals)
             falses = np.sum(array.antimask & np.logical_not(array.vals))
-            _save(falses, trues, masked, total)
-            return
+            return _summary_text(falses, trues, masked, total)
 
         if masked == total:
-            _save(array.default, array.default, masked, total)
-            return
+            return _summary_text(array.default, array.default, masked, total)
 
         if method != 'mod360':
-            _save(array.min(builtins=True), array.max(builtins=True),
-                  masked, total)
-            return
+            return _summary_text(array.min(builtins=True),
+                                 array.max(builtins=True),
+                                 masked, total)
 
         # Handle mod360 case
 
@@ -1963,8 +1957,7 @@ class BackplaneTest(object):
         elif np.shape(array.vals):
             vals = array.vals.ravel()
         else:
-            _save(array.vals, array.vals, masked, total)
-            return
+            return _summary_text(array.vals, array.vals, masked, total)
 
         # Sort mod 360
         sorted = np.sort(vals)
@@ -1978,7 +1971,7 @@ class BackplaneTest(object):
         else:
             minval = sorted[argmax + 1]
 
-        _save(minval, maxval, masked, total)
+        return _summary_text(minval, maxval, masked, total)
 
     #===========================================================================
     def _log_comparison(self, comparison, status=''):
@@ -2023,20 +2016,7 @@ class BackplaneTest(object):
         Also, note that the offset values are not listed in this case.
         """
 
-        ATTRS = ('gold_pickle_path', 'output_pickle_path', 'browse_path',
-                 'sampled_gold_path')
-        LABELS = ('master:', 'array:', 'browse:', 'sampled master:')
-
-        if self.args.fullpaths:
-            for (attr, label) in zip(ATTRS, LABELS):
-                if not hasattr(comparison, attr):
-                    continue
-
-                path = getattr(comparison, attr)
-                if ' ' in path:
-                    path = '"' + path + '"'
-
-                LOGGING.literal(label, path)
+        global TEST_SUITE
 
         # Fill in the status if necessary
         if status:
@@ -2057,35 +2037,34 @@ class BackplaneTest(object):
                     comparison.status = 'Success'
 
         # Construct the message
-        message = [comparison.suite, ' | ', comparison.status]
+        message = [comparison.suite, ' | ', comparison.status, ': "',
+                   comparison.title, '"; ', comparison.text]
 
         # Handle failed comparison cases
-        if errors2 == 0 and comparison.status != 'Success':
-            if comparison.pickle_path:
-                basename = os.path.basename(comparison.pickle_path)
-                message += [': ', basename]
-
-            else:
-                message += [': "', comparison.title, '"']
-
-        # Handle comparison cases
-        else:
-            message += [': "', comparison.title, '"; diff=',
-                        self._valstr(comparison.max_diff1)]
+        if comparison.status == 'Success' or errors2 > 0:
+            message += ['; diff=', self._valstr(comparison.max_diff1)]
 
             if comparison.max_diff2 != comparison.max_diff1:
                 if comparison.max_diff2 <= comparison.limit * 1.e-8:
-                    message += ['/0.']
+                    if isinstance(comparison.max_diff2, numbers.Integral):
+                        message += ['/0']
+                    else:
+                        message += ['/0.']
                 else:
                     message += ['/', self._valstr(comparison.max_diff2)]
 
-            message += ['/', self._valstr(comparison.limit)]
+            message += ['/']
+            if (isinstance(comparison.max_diff2, numbers.Integral)
+                    and comparison.limit == 0):
+                message += ['0']
+            else:
+                message += [self._valstr(comparison.limit)]
 
             if comparison.distance:
-                message += ['; offset=', self._valstr(comparison.distance),
+                message += [', offset=', self._valstr(comparison.distance),
                             '/', self._valstr(comparison.radius)]
 
-            message += ['; pixels=', str(errors1)]
+            message += [', pixels=', str(errors1)]
 
             if errors2 != errors1:
                 message += ['/', str(errors2)]
@@ -2096,6 +2075,22 @@ class BackplaneTest(object):
 
         # Save the results
         self.results[comparison.title] = comparison
+
+        # Log the file paths
+        ATTRS = ('gold_pickle_path', 'output_pickle_path', 'browse_path',
+                 'sampled_gold_path')
+        LABELS = ('master:', 'array:', 'browse:', 'sampled master:')
+
+        if self.args.fullpaths:
+            path_logged = False
+            for (attr, label) in zip(ATTRS, LABELS):
+                if hasattr(comparison, attr):
+                    path = getattr(comparison, attr)
+                    LOGGING.info(TEST_SUITE, '|', label, path, force=True)
+                    path_logged = True
+
+            if path_logged:
+                LOGGING.literal()
 
     #===========================================================================
     @staticmethod
