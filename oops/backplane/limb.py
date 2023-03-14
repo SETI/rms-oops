@@ -20,7 +20,7 @@ def limb_altitude(self, event_key, zmin=None, zmax=None):
         zmax            upper limit on altitude.
     """
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = self.standardize_event_key(event_key, default='LIMB')
     key = ('limb_altitude', event_key, zmin, zmax)
     if key in self.backplanes:
         return self.get_backplane(key)
@@ -52,11 +52,14 @@ def _fill_limb_intercepts(self, event_key):
         event_key       key defining the limb surface event.
     """
 
-    # Get the limb intercept coordinates
-    event = self.get_surface_event(event_key)
-    if event.surface.COORDINATE_TYPE != 'limb':
+    # Validate the surface type
+    surface = self.get_surface(event_key[1])
+    if surface.COORDINATE_TYPE != 'limb':
         raise ValueError('invalid coordinate type for limb geometry: '
-                         + event.surface.COORDINATE_TYPE)
+                         + surface.COORDINATE_TYPE)
+
+    # Get the ring intercept coordinates
+    event = self.get_surface_event(event_key)
 
     # Register the default backplanes
     self.register_backplane(('longitude', event_key, 'iau', 'east', 0,
@@ -95,8 +98,10 @@ def limb_longitude(self, event_key, reference='iau', direction='west',
                         matters for Ellipsoids.
     """
 
-    (event_key, backplane_key) = self._event_and_backplane_keys(event_key,
-                                                                LIMB_BACKPLANES)
+    (event_key,
+     backplane_key) = self._event_and_backplane_keys(event_key, LIMB_BACKPLANES,
+                                                     default='LIMB')
+
     key = ('limb_longitude', event_key, reference, direction, minimum, lon_type)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
@@ -125,8 +130,10 @@ def limb_latitude(self, event_key, lat_type='centric'):
                                     internally.
     """
 
-    (event_key, backplane_key) = self._event_and_backplane_keys(event_key,
-                                                                LIMB_BACKPLANES)
+    (event_key,
+     backplane_key) = self._event_and_backplane_keys(event_key, LIMB_BACKPLANES,
+                                                     default='LIMB')
+
     key = ('limb_latitude', event_key, lat_type)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
@@ -151,8 +158,10 @@ def limb_clock_angle(self, event_key):
                         array.
     """
 
-    (event_key, backplane_key) = self._event_and_backplane_keys(event_key,
-                                                                LIMB_BACKPLANES)
+    (event_key,
+     backplane_key) = self._event_and_backplane_keys(event_key, LIMB_BACKPLANES,
+                                                     default='LIMB')
+
     key = ('limb_clock_angle', event_key)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
@@ -162,16 +171,17 @@ def limb_clock_angle(self, event_key):
         return self.get_backplane(key)
 
     # Make sure the limb event is defined
-    default_key = ('limb_altitude', event_key, None)
+    default_key = ('limb_clock_angle', event_key)
     if default_key not in self.backplanes:
         self._fill_limb_intercepts(event_key)
 
     surface = self.get_surface(event_key[1])
     event = self.get_surface_event(event_key)
 
-    surface = PolarLimb(surface.ground, limits=surface.limits)
-    event = surface.apply_coords_to_event(event, obs=self.obs, axes=2,
-                                                 derivs=self.ALL_DERIVS)
+    polar_surface = PolarLimb(surface.ground, limits=surface.limits)
+    event = polar_surface.apply_coords_to_event(event, obs=self.obs_event,
+                                                       axes=2,
+                                                       derivs=self.ALL_DERIVS)
 
     return self.register_backplane(key, event.coord2)
 
@@ -190,6 +200,7 @@ def limb_test_suite(bpt):
 
     bp = bpt.backplane
     for name in bpt.limb_names:
+
         altitude = bp.limb_altitude(name)
         bpt.gmtest(altitude,
                    name + ' altitude (km)',
@@ -200,6 +211,10 @@ def limb_test_suite(bpt):
         bpt.compare(bp.limb_latitude(name) - bp.latitude(name), 0.,
                    name + ' latitude, limb minus generic (deg)',
                    method='degrees', limit=1.e-13)
+
+        bpt.gmtest(bp.limb_clock_angle(name),
+                   name + ' clock angle (deg)',
+                   limit=0.001, radius=1, method='mod360')
 
         # Test a masked version
         key = ('limb_altitude', name, 0., 80000.)
@@ -223,23 +238,45 @@ def limb_test_suite(bpt):
                     True,
                     name + ' latitude mask eq altitude mask')
 
+    # Derivative tests
+    if bpt.derivs:
+      (bp, bp_u0, bp_u1, bp_v0, bp_v1) = bpt.backplanes
+      pixel_duv = np.abs(bp.obs.fov.uv_scale.vals)
+
+      for name in bpt.limb_names:
+
+        (ulimit, vlimit) = bp.center_distance(name) * pixel_duv * 1.e-3
+
+        # limb_altitude
+        alt = bp.limb_altitude(name)
+        dalt_duv = alt.d_dlos.chain(bp.dlos_duv)
+        (dalt_du, dalt_dv) = dalt_duv.extract_denoms()
+
+        dalt = bp_u1.limb_altitude(name) - bp_u0.limb_altitude(name)
+        bpt.compare(dalt.wod/bpt.duv, dalt_du,
+                    name + ' altitude d/du self-check (km/pix)',
+                    limit=ulimit, radius=1)
+
+        dalt = bp_v1.limb_altitude(name) - bp_v0.limb_altitude(name)
+        bpt.compare(dalt.wod/bpt.duv, dalt_dv,
+                    name + ' altitude d/dv self-check (km/pix)',
+                    limit=vlimit, radius=1)
+
+        # limb_clock_angle
+        clock = bp.limb_clock_angle(name)
+        dclock_duv = clock.d_dlos.chain(bp.dlos_duv)
+        (dclock_du, dclock_dv) = dclock_duv.extract_denoms()
+
+        dclock = bp_u1.limb_clock_angle(name) - bp_u0.limb_clock_angle(name)
+        bpt.compare(dclock.wod/bpt.duv, dclock_du,
+                    name + ' clock angle d/du self-check (km/pix)',
+                    limit=ulimit, radius=1)
+
+        dclock = bp_v1.limb_clock_angle(name) - bp_v0.limb_clock_angle(name)
+        bpt.compare(dclock.wod/bpt.duv, dclock_dv,
+                    name + ' clock angle d/dv self-check (km/pix)',
+                    limit=vlimit, radius=1, method='mod360')
+
 register_test_suite('limb', limb_test_suite)
 
-################################################################################
-# UNIT TESTS
-################################################################################
-import unittest
-
-
-#===============================================================================
-class Test_Limb(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-        pass
-
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

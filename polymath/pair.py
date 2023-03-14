@@ -7,6 +7,7 @@ import numpy as np
 import numbers
 
 from polymath.qube   import Qube
+from polymath.scalar import Scalar
 from polymath.vector import Vector
 
 class Pair(Vector):
@@ -150,6 +151,20 @@ class Pair(Vector):
         return obj
 
     #===========================================================================
+    def angle(self, recursive=True):
+        """Polar angle of this Pair as measured from the X-axis toward the
+        Y-axis.
+
+        The returned value will always fall between zero and 2*pi.
+
+        Inputs:
+            recursive   True to include the derivatives. Default is True.
+        """
+
+        (x, y) = self.to_scalars(recursive=recursive)
+        return y.arctan2(x) % Scalar.TWOPI
+
+    #===========================================================================
     def clip2d(self, lower, upper, remask=False):
         """A copy with values clipped to fall within 2D limits.
 
@@ -171,7 +186,8 @@ class Pair(Vector):
         if lower is not None:
             lower = Pair.as_pair(lower)
             if lower._shape_:
-                raise ValueError('Lower limit must contain exactly two values')
+                raise ValueError('Pair.clip2d() lower limit must contain '
+                                 'exactly two values')
             if lower._mask_:
                 lower = None
 
@@ -179,7 +195,8 @@ class Pair(Vector):
         if upper is not None:
             upper = Pair.as_pair(upper)
             if upper._shape_:
-                raise ValueError('Upper limit must contain exactly two values')
+                raise ValueError('Pair.clip2d() upper limit must contain '
+                                 'exactly two values')
             if upper._mask_:
                 upper = None
 

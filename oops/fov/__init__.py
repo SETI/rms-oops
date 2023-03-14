@@ -263,7 +263,7 @@ class FOV(object):
 
         # In the pinhole camera model, the z-component is always 1
         (x,y) = Pair.to_scalars(xy_pair)
-        return Vector3.from_scalars(x,y,1.).unit(derivs)
+        return Vector3.from_scalars(x,y,1.).unit(recursive=derivs)
 
     #===========================================================================
     def xy_from_los(self, los, derivs=False):
@@ -292,7 +292,7 @@ class FOV(object):
     #===========================================================================
     def los_from_uvt(self, uv_pair, time=None, derivs=False, remask=False,
                                     **keywords):
-        """The line of sight vector in the camera's frame, given FOV
+        """The unit line of sight vector in the camera's frame, given FOV
         coordinates (u,v) at the specified time.
 
         The los points in the direction specified by coordinate Pair (u,v).
@@ -320,8 +320,8 @@ class FOV(object):
 
     #===========================================================================
     def los_from_uv(self, uv_pair, derivs=False, remask=False, **keywords):
-        """The line of sight vector given FOV coordinates (u,v), assuming this
-        FOV is time-independent.
+        """The unit line of sight vector given FOV coordinates (u,v), assuming
+        this FOV is time-independent.
 
         The los points in the direction specified by coordinate Pair (u,v).
         Note that this is the direction _opposite_ to that of the arriving

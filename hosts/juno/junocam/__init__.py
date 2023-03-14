@@ -515,7 +515,6 @@ class Test_Juno_Junocam_GoldMaster(unittest.TestCase):
 #                kwargs  = {'snap': False},
 #                inventory=False, border=10)     # overrides of defaults
 
-
 ##############################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)

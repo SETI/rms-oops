@@ -197,30 +197,38 @@ class Matrix(Qube):
             classes = keywords['classes']
             del keywords['classes']
 
+        # No other keyword is allowed
+        if keywords:
+          raise ValueError('Matrix.from_scalars() got an unexpected keyword '
+                           'argument "%s"'
+                           % (list(keywords.keys())[0]))
+
         # Create the Vector object
         vector = Vector.from_scalars(*args, **keywords)
 
         # Int matrices are disallowed
         if vector.is_int():
-            raise TypeError('Matrix objects must be of type float')
+            raise TypeError('Matrix.from_scalars() requires objects with data '
+                            'type float')
 
         # Determine the shape
         if item is not None:
             if len(item) != 2:
-                raise ValueError('invalid Matrix shape %s' % str(item))
+                raise ValueError('invalid Matrix shape: %s' % item)
 
             size = item[0] * item[1]
             if len(args) != item:
-                raise ValueError('incorrect number of Scalars to create ' +
-                                 'Matrix of shape %s' % str(item))
+                raise ValueError('incorrect number of Scalars for '
+                                 'Matrix.from_scalars() with shape %s'
+                                 % item)
             item = tuple(item)
 
         else:
             dim = int(np.sqrt(len(args)))
             size = dim*dim
             if size != len(args):
-                raise ValueError('incorrect number of Scalars to construct ' +
-                                 'a square Matrix')
+                raise ValueError('incorrect number of Scalars for '
+                                 'Matrix.from_scalars() with square shape')
             item = (dim, dim)
 
         return vector.reshape_numer(item, list(classes) + [Matrix],
@@ -242,11 +250,13 @@ class Matrix(Qube):
 
         size = self.item[0]
         if size != self.item[1]:
-            raise ValueError('a diagonal matrix must be square')
+            raise ValueError('%s.is_diagonal() requires a square matrix; '
+                             'shape is %s'
+                             % (type(self).__name__, self._numer_))
 
         if self._drank_:
-            raise ValueError('diagonal matrix test is not supported for a '
-                             'Matrix with a denominator')
+            raise ValueError('%s.is_diagonal() does not support denominators'
+                             % type(self).__name__)
 
         # If necessary, calculate the matrix RMS
         if delta != 0.:
@@ -322,11 +332,13 @@ class Matrix(Qube):
 
         # Validate array
         if self._numer_[0] != self._numer_[1]:
-            raise ValueError('only square matrices can be inverted: shape is ' +
-                             str(self._numer_))
+            raise ValueError('%s.inverse() requires a square matrix; '
+                             'shape is %s'
+                             % (type(self).__name__, self._numer_))
 
         if self._drank_:
-            raise ValueError('a matrix with denominators cannot be inverted')
+            raise ValueError('%s.inverse() does not support denominators'
+                             % type(self).__name__)
 
         # Check determinant if necessary
         if not nozeros:
@@ -346,7 +358,8 @@ class Matrix(Qube):
             try:
                 new_values = np.linalg.inv(self._values_)
             except RuntimeWarning:
-                raise ValueError('inverse of matrix with determinant == 0')
+                raise ValueError('%s.inverse() input has determinant == 0'
+                                 % type(self).__name__)
 
         # Construct the result
         obj = Matrix(new_values, new_mask,
@@ -375,10 +388,12 @@ class Matrix(Qube):
 
         m0 = self.wod
         if m0._drank_:
-            raise ValueError('a denominator is not supported for unitary()')
+            raise ValueError('%s.unitary() does not support denominators'
+                             % type(self).__name__)
 
         if m0._numer_ != (3,3):
-            raise ValueError('matrix shape must be 3x3 for unitary()')
+            raise ValueError('%s.unitary() requires 3x3 matrix as input'
+                             % type(self).__name__)
 
         # Iterate...
         next_m = m0
@@ -511,7 +526,9 @@ class Matrix(Qube):
         size = self._numer_[0]
 
         if self._numer_[1] != size:
-            raise ValueError('Matrix is not square')
+            raise ValueError('%s.identity() requires a square matrix; '
+                             'shape is %s'
+                             % (type(self).__name__, self._numer_))
 
         values = np.zeros((size,size))
         for i in range(size):

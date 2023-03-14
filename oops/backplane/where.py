@@ -2,8 +2,7 @@
 # oops/backplanes/where.py: Boolean backplanes
 ################################################################################
 
-import numpy as np
-from polymath       import Boolean, Qube, Scalar
+from polymath       import Boolean, Scalar
 from oops.backplane import Backplane
 
 ################################################################################
@@ -74,7 +73,7 @@ def _where_inside_or_outside_shadow(self, event_key, surface_key, tvl, inside):
         surface = self.get_surface(surface_key)
         if surface.HAS_INTERIOR:
             where_inside = self.where_inside(event_key, surface_key)
-            result_vals |= where_inside.vals
+            result_vals = result_vals | where_inside.vals
 
         # Set the internal values to False at every masked location
         tvl_result = Boolean(result_vals & event.antimask, event.mask)
@@ -535,21 +534,4 @@ def where_test_suite(bpt):
 
 register_test_suite('where', where_test_suite)
 
-################################################################################
-# UNIT TESTS
-################################################################################
-import unittest
-
-
-#===============================================================================
-class Test_Where(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-        pass
-
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

@@ -4,116 +4,80 @@
 
 import numpy as np
 from polymath          import Scalar, Vector3
-from oops.surface      import Surface
 from oops.surface.limb import Limb
 
-class PolarLimb(Surface):
-    """A variant of the Limb surface, in which the coordinates are redefined as
-    follows:
-        z       the elevation above the surface, the vertical distance from the
+class PolarLimb(Limb):
+    """This surface is defined as the locus of points where a surface normal
+    from a spheroid or ellipsoid is perpendicular to the line of sight. This
+    provides a convenient coordinate system for describing cloud features on the
+    limb of a body.
+
+    The coordinates of PolarLimb are (z, clock, d), where:
+        z       the vertical distance in km normal to the limb of the body
                 surface.
-        clock   an angle on the sky, measured clockwise from the projected
-                direction of the north pole.
-        d       offset distance beyond the virtual limb plane along the line of
-                sight.
+        clock   the angle of the normal vector on the sky, measured clockwise
+                from the projected direction of the north pole.
+        d       an offset distance beyond the virtual limb plane along the line
+                of sight; usually zero.
     """
-
-    COORDINATE_TYPE = 'polar'
-    IS_VIRTUAL = True
-    DEBUG = False   # True for convergence testing in intercept()
-
-    # Class constants to override where derivs are undefined
-    coords_from_vector3_DERIVS_ARE_IMPLEMENTED = False
-    vector3_from_coords_DERIVS_ARE_IMPLEMENTED = False
-    intercept_DERIVS_ARE_IMPLEMENTED = False
-    normal_DERIVS_ARE_IMPLEMENTED = False
-
-    #===========================================================================
-    def __init__(self, ground, limits=None):
-        """Constructor for a Limb surface.
-
-        Input:
-            ground      the Surface object relative to which limb points are to
-                        be defined. It should be a Spheroid or Ellipsoid,
-                        optically using Centric or Graphic coordinates.
-            limits      an optional single value or tuple defining the absolute
-                        numerical limit(s) placed on z; values outside this
-                        range are masked.
-        """
-
-        if ground.COORDINATE_TYPE != 'spherical':
-            raise ValueError('PolarLimb requires a spheroidal ground surface')
-
-        self.ground = ground
-        self.origin = ground.origin
-        self.frame  = ground.frame
-
-        self.limb = Limb(self.ground, limits)
-
-        if limits is None:
-            self.limits = None
-        else:
-            self.limits = (limits[0], limits[1])
-
-        # Save the unmasked version of this surface
-        if limits is None:
-            self.unmasked = self
-        else:
-            self.unmasked = PolarLimb(self.ground, None)
-
-        # Unique key for intercept calculations
-        self.intercept_key = ('limb',) + self.ground.intercept_key
-
-    def __getstate__(self):
-        return (self.ground, self.limits)
-
-    def __setstate__(self, state):
-        self.__init__(*state)
 
     #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
-                                  derivs=False, groundtrack=False):
-        """Convert positions in the internal frame to surface coordinates.
+                                  derivs=False, hints=None, groundtrack=False):
+        """Surface coordinates associated with a position vector.
 
         Input:
-            pos         a Vector3 of positions at or near the surface.
-            obs         a Vector3 of observer positions. Ignored for solid
-                        surfaces but needed for virtual surfaces.
+            pos         a Vector3 of positions at or near the surface, relative
+                        to this surface's origin and frame.
+            obs         a Vector3 of observer position relative to this
+                        surface's origin and frame.
             time        a Scalar time at which to evaluate the surface; ignored.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
             derivs      True to propagate any derivatives inside pos and obs
                         into the returned coordinates.
-            groundtrack True to add an extra returned value to the tuple,
-                        containing the groundtrack point as a Vector3.
+            hints       if provided, the value of the coefficient p such that
+                            ground + p * normal(ground) = pos
+                        for the ground point on the body surface. Do not use if
+                        the third coordinate might have a nonzero value.
+            groundtrack True to return the intercept on the surface along with
+                        the coordinates.
 
-        Return:         coordinate values packaged as a tuple containing two or
-                        three Scalars, one for each coordinate.
-
-                        if groundtrack is True, a Vector3 of ground points is
-                        appended to the returned tuple.
+        Return:         a tuple containing two to five values.
+            z           the vertical distance in km normal to the limb of the
+                        body surface.
+            clock       the angle in radians of the normal vector on the sky,
+                        measured clockwise from the projected direction of the
+                        north pole.
+            dist        optional offset distance in km beyond the virtual limb
+                        plane along the line of sight.
+            groundtrack associated point on the body surface; included if the
+                        input groundtrack is True.
         """
 
-        if axes not in (2, 3):
-            raise ValueError('Surface.coords_from_vector3 ' +
-                             'axes values must equal 2 or 3')
+        # Validate inputs
+        self._coords_from_vector3_check(axes)
 
-        if derivs:
-            raise NotImplementedError('PolarLimb.coords_from_vector3 ' +  # TODO
-                                      'does not implement derivatives')
+        pos = Vector3.as_vector3(pos, recursive=derivs)
+        obs = Vector3.as_vector3(obs, recursive=derivs)
 
-        pos = Vector3.as_vector3(pos, False)
-        obs = Vector3.as_vector3(obs, False)
-        los = pos - obs
-        (cept, t, track) = self.limb.intercept(obs, los, groundtrack=True)
-
-        (z, clock) = self.limb.z_clock_from_intercept(cept, obs)
-
-        if axes == 2:
-            results = (z, clock)
+        # There's a quick solution for the surface point if hints are provided
+        if hints is not None:
+            p = Scalar.as_scalar(hints, recursive=derivs)
+            denom = Vector3.ONES + p * self.ground.unsquash_sq
+            track = pos.element_div(denom)
+            cept = pos
         else:
+            los = pos - obs
+            (cept, _, p, track) = self.intercept(obs, los, derivs=derivs,
+                                                 hints=True, groundtrack=True)
+                # The returned value of p speeds up the next calculation
+
+        results = self.z_clock_from_intercept(cept, obs, derivs=derivs, hints=p)
+
+        if axes == 3:
             d = los.dot(pos - cept) / los.norm()
-            results = (z, clock, d)
+            results += (d,)
 
         if groundtrack:
             results += (track,)
@@ -123,36 +87,47 @@ class PolarLimb(Surface):
     #===========================================================================
     def vector3_from_coords(self, coords, obs=None, time=None, derivs=False,
                                   groundtrack=False):
-        """Convert surface coordinates to positions in the internal frame.
+        """The position where a point with the given coordinates falls relative
+        to this surface's origin and frame.
 
         Input:
-            coords      a tuple of two or three Scalars defining the coordinates
-            obs         position of the observer in the surface frame.
+            coords      a tuple of two or three Scalars defining coordinates at
+                        or near this surface.
+                z       the vertical distance in km normal to the limb of the
+                        body surface.
+                clock   the angle in radians of the normal vector on the sky,
+                        measured clockwise from the projected direction of the
+                        north pole.
+                dist    optional offset distance in km beyond the virtual limb
+                        plane along the line of sight.
+            obs         a Vector3 of observer positions relative to this
+                        surface's origin and frame.
             time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to include the partial derivatives of the intercept
                         point with respect to observer and to the coordinates.
-            groundtrack True to replace the returned value by a tuple, where the
-                        second quantity is the groundtrack point as a Vector3.
+            groundtrack True to include the associated groundtrack points on the
+                        body surface in the returned result.
 
-        Return:         a Vector3 of intercept points defined by the
-                        coordinates.
+        Return:         pos or (pos, groundtrack), where:
+            pos         a Vector3 of points defined by the coordinates, relative
+                        to this surface's origin and frame.
+            groundtrack a Vector3 of associated points on the body surface;
+                        included if input groundtrack is True.
+
+        Note that the coordinates can all have different shapes, but they must
+        be broadcastable to a single shape.
         """
 
-        if len(coords) not in (2, 3):
-            raise ValueError('Surface.vector3_from_coords requires 2 or 3 '
-                             'coords')
-
-        if derivs:
-            raise NotImplementedError('PolarLimb.vector3_from_coords ' +  # TODO
-                                      'does not implement derivatives')
+        # Validate inputs
+        self._vector3_from_coords_check(coords)
 
         (z, clock) = coords[:2]
         (cept, track) = self.limb.intercept_from_z_clock(z, clock, obs,
-                                                         derivs=False,
+                                                         derivs=derivs,
                                                          groundtrack=True)
 
         if len(coords) > 2:
-            d = Scalar.as_scalar(clock, False)
+            d = Scalar.as_scalar(clock, recursive=derivs)
             los = cept - obs
             cept += (d / los.norm()) * los
 
@@ -160,69 +135,6 @@ class PolarLimb(Surface):
             return (cept, track)
         else:
             return cept
-
-    #===========================================================================
-    def intercept(self, obs, los, time=None, derivs=False, guess=None,
-                        groundtrack=False):
-        """The position where a specified line of sight intercepts the surface.
-
-        Input:
-            obs         observer position as a Vector3.
-            los         line of sight as a Vector3.
-            time        a Scalar time at which to evaluate the surface; ignored.
-            derivs      True to propagate any derivatives inside obs and los
-                        into the returned intercept point.
-            guess       optional initial guess at the coefficient t such that:
-                            intercept = obs + t * los
-            groundtrack True to include the surface intercept points of the body
-                        associated with each limb intercept. This array can
-                        speed up any subsequent calculations such as calls to
-                        normal(), and can be used to determine locations in
-                        body coordinates.
-
-        Return:         a tuple (pos, t) where
-            pos         a Vector3 of intercept points on the surface, in km.
-            t           a Scalar such that:
-                            intercept = obs + t * los
-        """
-
-        if derivs:
-            raise NotImplementedError('PolarLimb.intercept ' +    # TODO
-                                      'does not implement derivatives')
-
-        return self.limb.intercept(obs, los, derivs=derivs, guess=guess,
-                                             groundtrack=groundtrack)
-
-    #===========================================================================
-    def normal(self, pos, time=None, derivs=False):
-        """The normal vector at a position at or near a surface.
-
-        Input:
-            pos         a Vector3 of positions at or near the surface.
-            time        a Scalar time at which to evaluate the surface; ignored.
-            derivs      True to propagate any derivatives of pos into the
-                        returned normal vectors.
-
-        Return:         a Vector3 containing directions normal to the surface
-                        that pass through the position. Lengths are arbitrary.
-        """
-
-        return self.ground.normal(pos, derivs)
-
-    ############################################################################
-    # (lon,lat) conversions
-    ############################################################################
-
-    def lonlat_from_vector3(self, pos, derivs=False, groundtrack=True):
-        """Longitude and latitude for a position near the surface."""
-
-        track = self.ground.intercept_normal_to(pos, derivs=derivs)
-        coords = self.ground.coords_from_vector3(track, derivs=derivs)
-
-        if groundtrack:
-            return (coords[0], coords[1], track)
-        else:
-            return coords[:2]
 
 ################################################################################
 # UNIT TESTS

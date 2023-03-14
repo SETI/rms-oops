@@ -94,12 +94,7 @@ def celestial_north_angle(self, event_key=()):
 
     dlos_ddec = self.get_backplane(temp_key)
     duv_ddec = self.duv_dlos.chain(dlos_ddec)
-
-    du_ddec_vals = duv_ddec.vals[...,0]
-    dv_ddec_vals = duv_ddec.vals[...,1]
-    clock = np.arctan2(dv_ddec_vals, du_ddec_vals)
-
-    return self.register_backplane(key, Scalar(clock, duv_ddec.mask))
+    return self.register_backplane(key, duv_ddec.angle())
 
 #===============================================================================
 def celestial_east_angle(self, event_key=()):
@@ -125,12 +120,7 @@ def celestial_east_angle(self, event_key=()):
 
     dlos_dra = self.get_backplane(temp_key)
     duv_dra = self.duv_dlos.chain(dlos_dra)
-
-    du_dra_vals = duv_dra.vals[...,0]
-    dv_dra_vals = duv_dra.vals[...,1]
-    clock = np.arctan2(dv_dra_vals, du_dra_vals)
-
-    return self.register_backplane(key, Scalar(clock, duv_dra.mask))
+    return self.register_backplane(key, duv_dra.angle())
 
 #===============================================================================
 def _fill_dlos_dradec(self, event_key):
@@ -165,9 +155,8 @@ def _fill_dlos_dradec(self, event_key):
 
     dlos_dradec = xform.rotate(dlos_dradec_j2000)
 
-    # Convert to a column matrix and save
-    dlos_dra  = Vector3(dlos_dradec.vals[...,0], ra.mask)
-    dlos_ddec = Vector3(dlos_dradec.vals[...,1], ra.mask)
+    # Convert to column vectors and save
+    (dlos_dra, dlos_ddec) = dlos_dradec.extract_denoms()
 
     self.register_backplane(('_dlos_dra',  event_key), dlos_dra)
     self.register_backplane(('_dlos_ddec', event_key), dlos_ddec)
@@ -238,7 +227,7 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 from oops.backplane.gold_master import register_test_suite
-from oops.constants import HALFPI
+from oops.constants import HALFPI, DPR
 
 def sky_test_suite(bpt):
 
@@ -313,23 +302,45 @@ def sky_test_suite(bpt):
                     name + ' center declination, actual minus apparent (deg)',
                     limit=0.1, method='degrees')
 
+    # Derivative tests
+    if bpt.derivs:
+        (bp, bp_u0, bp_u1, bp_v0, bp_v1) = bpt.backplanes
+        pixel_duv = np.abs(bp.obs.fov.uv_scale.vals)
+        cos_dec = bp.declination().cos().mean(builtins=True)
+        (ulimit, vlimit) = DPR * pixel_duv * 1.e-6
+
+        # right_ascension
+        ra = bp.right_ascension()
+        dra_duv = ra.d_dlos.chain(bp.dlos_duv)
+        (dra_du, dra_dv) = dra_duv.extract_denoms()
+
+        dra = bp_u1.right_ascension() - bp_u0.right_ascension()
+        dra = Scalar.PI - (dra.wod - Scalar.PI).abs()
+        bpt.compare(dra/bpt.duv, dra_du,
+                    'Right ascension d/du self-check (deg/pix)',
+                    limit=ulimit/cos_dec, radius=1, method='degrees')
+
+        dra = bp_v1.right_ascension() - bp_v0.right_ascension()
+        dra = Scalar.PI - (dra.wod - Scalar.PI).abs()
+        bpt.compare(dra/bpt.duv, dra_dv,
+                    'Right ascension d/dv self-check (deg/pix)',
+                    limit=vlimit/cos_dec, radius=1, method='degrees')
+
+        # declination
+        dec = bp.declination()
+        ddec_duv = dec.d_dlos.chain(bp.dlos_duv)
+        (ddec_du, ddec_dv) = ddec_duv.extract_denoms()
+
+        ddec = bp_u1.declination() - bp_u0.declination()
+        bpt.compare(ddec.wod/bpt.duv, ddec_du,
+                    'Declination d/du self-check (deg/pix)',
+                    limit=ulimit, radius=1, method='degrees')
+
+        ddec = bp_v1.declination() - bp_v0.declination()
+        bpt.compare(ddec.wod/bpt.duv, ddec_dv,
+                    'Declination d/dv self-check (deg/pix)',
+                    limit=vlimit, radius=1, method='degrees')
+
 register_test_suite('sky', sky_test_suite)
 
-################################################################################
-# UNIT TESTS
-################################################################################
-import unittest
-
-
-#===============================================================================
-class Test_Sky(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-        pass
-
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

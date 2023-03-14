@@ -26,13 +26,13 @@ class SubsampledFOV(FOV):
         """
 
         self.fov = fov
-        self.rescale  = Pair.as_pair(rescale)
+        self.rescale  = Pair.as_pair(rescale).as_readonly()
         self.rescale2 = self.rescale.vals[0] * self.rescale.vals[1]
 
         # Required fields
         self.uv_scale = self.fov.uv_scale.element_mul(self.rescale)
         self.uv_los   = self.fov.uv_los.element_div(self.rescale)
-        self.uv_area  = self.fov.uv_area  * self.rescale2
+        self.uv_area  = self.fov.uv_area * self.rescale2
 
         self.uv_shape = self.fov.uv_shape.element_div(self.rescale).as_int()
 

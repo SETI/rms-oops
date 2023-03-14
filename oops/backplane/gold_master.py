@@ -7,14 +7,10 @@
 ########################################################################
 # Case 1: A single test
 ####################################
-
 import unittest
 import oops.backplane.gold_master as gm
-
 class Test_<your test name>(unittest.TestCase):
-
     def runTest(self):
-
         gm.execute_as_unittest(self,
                 obspath = 'file path inside the test_data directory',
                 index   = (index to apply to result of from_file, or None),
@@ -24,18 +20,13 @@ class Test_<your test name>(unittest.TestCase):
                 ring    = 'SATURN_MAIN_RINGS',  # for example, optional
                 kwargs  = {},                   # other from_file inputs
                 <overrides of any default gold_master input arguments>)
-
 ####################################
 # Case 2: Multiple tests
 ####################################
-
 import unittest
 import oops.backplane.gold_master as gm
-
 class Test_<your test name>(unittest.TestCase):
-
-    def setUp(self):
-
+    def setUp():
         gm.define_standard_obs('obs1',
                 obspath = 'file path inside the test_data directory',
                 index   = (index to apply to result of from_file, or None),
@@ -46,32 +37,25 @@ class Test_<your test name>(unittest.TestCase):
                 kwargs  = {})                   # other from_file inputs
         gm.define_standard_obs('obs2', ...)
         gm.define_standard_obs('obs3', ...)
-
-    def test_1(self):
-        gm.execute_standard_unittest(unittest.TestCase,
+    def run_test1(self):
+        gm.execute_standard_unittest(
                     'obs1'
                     <overrides of any default gold_master input arguments>)
-
-    def test_2(self):
-        gm.execute_standard_unittest(unittest.TestCase,
+    def run_test2(self):
+        gm.execute_standard_unittest(
                     'obs2'
                     <overrides of any default gold_master input arguments>)
-
-    def test_3(self):
-        gm.execute_standard_unittest(unittest.TestCase,
+    def run_test3(self):
+        gm.execute_standard_unittest(
                     'obs3'
                     <overrides of any default gold_master input arguments>)
-
 ########################################################################
 # How to have a gold master tester program dedicated to an instrument...
 ########################################################################
-
 import os
 import oops.backplane.gold_master as gm
-
 # Define the default observation for testing; note that this can be
 # overridden on the command line.
-
 gm.define_standard_obs(
                 'default',
                 obspath = 'file path inside the test_data directory',
@@ -83,18 +67,13 @@ gm.define_standard_obs(
                 kwargs  = {})                 # other from_file inputs
         gm.define_standard_obs('test2', ...)
         gm.define_standard_obs('test3', ...)
-
 # Change any other default parameters, if necessary...
-
 gm.set_default_args(arg = default_value, ...)
-
 if __name__ == '__main__':
     gm.execute_as_command()
-
 ########################################################################
 # Log file format
 ########################################################################
-
 A single record of the log file has this format:
     "<time> | oops.backplane.gold_master | <level> | <suite> | <message>"
 where
@@ -102,7 +81,6 @@ where
     <level> is one of "DEBUG", "INFO", "WARNING", "ERROR", "FATAL".
     <suite> is the name of the test suite, e.g., "ring".
     <message> is a descriptive message.
-
 For comparison tests, the message has the following format:
     <status>: "<title>"; diff=<diff1>/<diff2>/<limit>; ...
                          offset=<offset>/<radius>; ...
@@ -128,7 +106,6 @@ where:
     <count2>  the number of discrepant pixels that cannot be accommodated by an
               offset.
     <pixels>  the total number of pixels tested.
-
 Note that <diff2> and <count2> are not listed if not offset is required. Also,
 note that the offset values are not listed in this case.
 """
@@ -142,11 +119,10 @@ import numbers
 import numpy as np
 import os
 import pickle
-import PIL
+import PIL.Image
 import sys
 import warnings
 
-from PIL           import Image
 from scipy.ndimage import minimum_filter, maximum_filter
 from scipy.ndimage import zoom as zoom_image
 
@@ -212,7 +188,6 @@ STANDARD_OBS = {
 
 def set_default_args(**options):
     """Set the default command-line arguments for a gold master test.
-
     Options:
         planet          name of a planet for which to generate backplane arrays,
                         or else a list of planet names.
@@ -257,13 +232,10 @@ def set_default_obs(obspath, index, module, planet, moon=[], ring=[],
                     kwargs={}):
     """Set the details of the default observation to be used for the gold master
     test.
-
     These are the default observation file path and module to use if they are
     not specified in the command line.
-
     The specified planet, moon, and ring are used as the defaults when the
     observation is unspecified, but can be overridden at the command line.
-
     Options:
         obspath         file path to the default data object to be used.
         index           index to apply if from_file returns a list. If None,
@@ -289,13 +261,10 @@ def set_default_obs(obspath, index, module, planet, moon=[], ring=[],
 def define_standard_obs(name, obspath, index, module, planet, moon=[], ring=[],
                               kwargs={}):
     """Set the details of a standard gold master test.
-
     These are the observation file path and module to use when a test is
     identified by name.
-
     The specified planet, moon, and ring are used as the defaults when the
     observation is unspecified, but can be overridden at the command line.
-
     Options:
         name            name given for this test.
         obspath         file path to the default data object to be used.
@@ -337,7 +306,6 @@ TEST_OVERRIDES = {}
 
 def override(title, value):
     """Override the hard-wired comparison values for specific tests.
-
     Input:
         title       the exact title of a test, e.g.,
                     "JUPITER:RING incidence angle, ring minus center (deg)".
@@ -357,7 +325,6 @@ def override(title, value):
 def execute_as_command():
     """Parse command-line arguments for gold master testing of one or more
     backplanes and then run the tests.
-
     A "Namespace" object is returned, containing all of the command line
     attributes, plus:
         from_file       the "from_file" function of the selected module.
@@ -455,6 +422,15 @@ def execute_as_command():
                             origin in units of pixels; default 0. This can be
                             useful for testing the tolerance to pointing
                             uncertainties.''')
+    gr.add_argument('--derivs', action='store_true', default=None,
+                    help='''Perform tests of spatial derivatives of backplane
+                            arrays. Default is to exclude the derivative tests
+                            when undersampling=1, and to include them otherwise.
+                            Note that tests can take several times longer with
+                            this option enabled.''')
+    gr.add_argument('--no-derivs', action='store_false', dest='derivs',
+                    help='''Suppress tests of spatial derivatives of backplane
+                            arrays.''')
 
     # Backplane array options
     gr = parser.add_argument_group('Backplane array options')
@@ -476,11 +452,10 @@ def execute_as_command():
                     help='''Number of pixels by which to expand image borders
                             when constructing the inventory; default %d.'''
                          % DEFAULTS['border'])
-    gr.add_argument('--derivs', action='store_true', default=False,
-                    help='''True to include most time and spatial derivatives in
-                            the backplane calculations; by default, they are
-                            only included for "--adopt", but this option can be
-                            useful for debugging.''')
+    gr.add_argument('--save-sampled', '--ss', action='store_true',
+                    default=False, dest='save_sampled',
+                    help='''Save copies of the master arrays at the undersampled
+                            grid points.''')
 
     # Browse image options
     gr = parser.add_argument_group('Browse image options')
@@ -531,8 +506,6 @@ def execute_as_command():
                             "info", "warning", "error", or an integer 1-30;
                             default is %s.'''
                          % DEFAULTS['level'])
-    gr.add_argument('--info', action='store_true', default=False,
-                    help='Include array summary info in the log.')
     gr.add_argument('--convergence', action='store_true', default=False,
                     help='Show iterative convergence information in the log.')
     gr.add_argument('--diagnostics', action='store_true', default=False,
@@ -542,6 +515,9 @@ def execute_as_command():
                             the end of the log.''')
     gr.add_argument('--performance', action='store_true', default=False,
                     help='Include OOPS performance information in the log.')
+    gr.add_argument('--fullpaths', action='store_true', default=False,
+                    help='''Include the full paths of all output files in the
+                            log.''')
     gr.add_argument('--platform', type=str, metavar='OS', default=None,
                     choices=('macos', 'windows', 'linux'),
                     help='''Name of the OS, as a proxy for how to name output
@@ -563,7 +539,6 @@ def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
                         index=None, kwargs={}, **options):
     """Run the gold master test suites for one or more observations as a unit
     test.
-
     Inputs:
         testcase        the unittest TestCase object.
         obspath         file path to the default data object to be used.
@@ -581,54 +556,60 @@ def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
         **options       overrides for any default gold_master input arguments.
     """
 
-    # Initialize the command argument namespace
-    args = argparse.Namespace()
-    for key, value in DEFAULTS.items():
-        setattr(args, key, value)
+    try:
+        # Initialize the command argument namespace
+        args = argparse.Namespace()
+        for key, value in DEFAULTS.items():
+            setattr(args, key, value)
 
-    # Set the default observation details
-    args.name = ''      # use blank as a temporary name here
-    define_standard_obs('', obspath, index, module,
-                            planet=planet, moon=moon, ring=ring,
-                            kwargs={})
+        # Set the default observation details
+        args.name = ''      # use blank as a temporary name here
+        define_standard_obs('', obspath, index, module,
+                                planet=planet, moon=moon, ring=ring,
+                                kwargs={})
 
-    # These values in the DEFAULTS dictionary are overridden
-    args.browse = False
-    args.log = False
-    args.verbose = True
+        # These values in the DEFAULTS dictionary are overridden
+        args.browse = False
+        args.log = False
+        args.verbose = True
 
-    # These have no entry in the DEFAULTS dictionary
-    args.derivs = False
-    args.output = None
-    args.info = False
-    args.convergence = False
-    args.diagnostics = False
-    args.internals = False
-    args.performance = False
-    args.platform = None
+        # These have no entry in the DEFAULTS dictionary
+        args.output = None
+        args.convergence = False
+        args.diagnostics = False
+        args.internals = False
+        args.performance = False
+        args.fullpaths = False
+        args.platform = None
+        args.save_sampled = False
 
-    # Fill in any overrides
-    for key, value in options.items():
-        setattr(args, key, value)
+        # Fill in any overrides
+        for key, value in options.items():
+            setattr(args, key, value)
 
-    # These options are mandatory
-    args.testcase = testcase
-    args.task = 'compare'
-    args.level = 'error'
-    args.verbose = True
-    args.du = 0.
-    args.dv = 0.
-    args.obspath = ''           # filled in by _clean_up_args
+        # These options are mandatory
+        args.testcase = testcase
+        args.task = 'compare'
+        args.level = 'error'
+        args.verbose = True
+        args.du = 0.
+        args.dv = 0.
+        args.derivs = True
+        args.obspath = ''           # filled in by _clean_up_args
 
-    # Clean up, also filling in observation, module, planet(s), moon(s), ring(s)
-    args = _clean_up_args(args)
+        # Clean up, also filling in observation, module, planet(s), moon(s),
+        # ring(s)
+        args = _clean_up_args(args)
+
+    except Exception as e:
+        testcase.assertTrue(False, str(e))
+
     run_tests(args)
 
 
 def execute_standard_unittest(testcase, name, **options):
     """Run the gold master test suites for one or more observations as a unit
     test.
-
     Inputs:
         testcase        the unittest TestCase object.
         name            name of a standard unit test.
@@ -700,7 +681,7 @@ def _clean_up_args(args):
 
     # --level
     if (args.convergence or args.diagnostics or args.performance):
-        args.level = 'debug'
+            args.level = 'debug'
     try:
         args.level = int(args.level)
     except ValueError:
@@ -714,13 +695,18 @@ def _clean_up_args(args):
 
     args.suite.sort()
 
-    # --adopt
+    # --derivs
+    if args.derivs is None:
+        args.derivs = (args.undersample > 1)
+
+    # Special requirements for task --adopt
     if args.task == 'adopt':    # required options for task adopt
         args.browse = True
         args.undersample = 1
-        args.derivs = True
         args.du = 0.
         args.dv = 0.
+        args.derivs = False
+        args.save_sampled = False
 
     # Planet, moon and ring must be lists
     if args.planet:
@@ -755,12 +741,13 @@ def _clean_up_args(args):
         if args.task in ('compare', 'adopt'):
             if not OOPS_TEST_DATA_PATH:
                 raise ValueError('Undefined environment variable: '
-                                 + 'OOPS_TEST_DATA_PATH')
-            if not abspath.startswith(OOPS_TEST_DATA_PATH_):
+                                 'OOPS_TEST_DATA_PATH')
+            test_data_path_ = os.path.realpath(OOPS_TEST_DATA_PATH) + '/'
+            if not abspath.startswith(test_data_path_):
                 warnings.warn('File is not in the test data directory: '
-                              + obspath)
+                              + obspath + '; ' + OOPS_TEST_DATA_PATH)
         if not os.path.exists(abspath):
-            raise FileNotFoundError('No such file: %s' % obspath)
+            raise FileNotFoundError('No such file: ' + obspath)
 
         args.abspaths.append(abspath)
 
@@ -860,7 +847,6 @@ TEST_SUITES = {}            # dictionary of all test suites
 
 def register_test_suite(name, func):
     """Add the given function to the dictionary of exercise tests.
-
     This must be called for each defined test suite.
     """
 
@@ -897,7 +883,6 @@ class _BackplaneComparison(object):
 
     def __init__(self, **kwargs):
         """Container for comparison info.
-
         status is one of:
             "Success"               test passed;
             "Value mismatch"        values differ;
@@ -906,7 +891,6 @@ class _BackplaneComparison(object):
             "Shape mismatch"        shapes do not match;
             "No gold master"        gold master info is missing;
             "Invalid gold master"   gold master cannot be read.
-
         title        = title of the test.
         suite        = name of test suite.
         limit        = maximum allowed difference.
@@ -915,19 +899,15 @@ class _BackplaneComparison(object):
         radius       = allowed offset distance in pixels.
         mask         = optional mask to exclude pixels from comparison.
         pickle_path  = path to the pickle file, if any.
-
         max_diff1    = the largest difference between unmasked pixels of array
                        and master, initially.
         diff_errors1 = the initial number of value discrepancies.
         mask_errors1 = the number of mask discrepancies.
-
         distance     = the largest offset adequate to eliminate a value
                        discrepancy; zero if no offset is adequate.
-
         max_diff2    = the final largest difference.
         diff_errors2 = the final number of value discrepancies.
         mask_errors2 = the final number of mask discrepancies.
-
         pixels       = the total number of pixels.
         """
 
@@ -962,7 +942,6 @@ class _BackplaneComparison(object):
     @staticmethod
     def set_no_gold_master_status(is_ok=False):
         """Set the success value of status "No gold master".
-
         This is defined globally by input argument "ignore_missing".
         """
 
@@ -998,7 +977,6 @@ class BackplaneTest(object):
 
     def __init__(self, obs, args, suffix=''):
         """Construct a BackplaneTest for the given observation.
-
         Input:
             obs         Observation.
             args        A Namespace object containing the command line inputs.
@@ -1013,10 +991,11 @@ class BackplaneTest(object):
         self.suffix = suffix
 
         self.upward = obs.fov.uv_scale.vals[1] < 0.     # direction of v-axis
-        self.full_shape = obs.uv_shape[::-1] if obs.swap_uv else obs.uv_shape
+        self.full_shape = (obs.uv_shape[::-1] if obs.swap_uv else obs.uv_shape)
 
         # Copy a few key args into self
         self.task        = args.task
+        self.derivs      = args.derivs
         self.undersample = args.undersample
         self.inventory   = args.inventory
         self.border      = args.border
@@ -1027,32 +1006,47 @@ class BackplaneTest(object):
         self.planet_moon_pairs = args.planet_moon_pairs
         self.planet_ring_pairs = args.planet_ring_pairs
 
-        # Create backplane object
-        self.meshgrid = obs.meshgrid(origin=(0.5 + self.args.du,
-                                             0.5 + self.args.dv),
-                                     undersample=self.undersample,
-                                     center_uv=np.array(obs.uv_shape)/2.)
+        # Create backplane object plus four with offset meshgrids
+        EPS = 1.e-5
+        self.origins = [(0.5 + self.args.du      , 0.5 + self.args.dv      ),
+                        (0.5 + self.args.du - EPS, 0.5 + self.args.dv      ),
+                        (0.5 + self.args.du + EPS, 0.5 + self.args.dv      ),
+                        (0.5 + self.args.du      , 0.5 + self.args.dv - EPS),
+                        (0.5 + self.args.du      , 0.5 + self.args.dv + EPS)]
             # By setting origin to 0.5 and requiring undersampling to be
             # integral, we ensure that an undersampled meshgrid will always
             # sample the centers of pixels in the original (u,v) grid.
+        self.duv = 2 * EPS
+
+        self.meshgrids = []
+        for origin in self.origins:
+            meshgrid = obs.meshgrid(origin=origin,
+                                    undersample=self.undersample,
+                                    center_uv=np.array(obs.uv_shape)/2.)
+            self.meshgrids.append(meshgrid)
 
         if self.inventory:
-            self.backplane = Backplane(obs, meshgrid=self.meshgrid,
-                                            inventory={},
-                                            inventory_border=self.border)
+            inventory_dict = {'inventory': {}, 'inventory_border': self.border}
         else:
-            self.backplane = Backplane(obs, meshgrid=self.meshgrid,
-                                            inventory=None)
+            inventory_dict = {'inventory': None}
 
-        if self.args.derivs:
-            self.backplane.ALL_DERIVS = True
+        self.backplanes = []
+        for meshgrid in self.meshgrids:
+            backplane = Backplane(obs, meshgrid=meshgrid, **inventory_dict)
+            self.backplanes.append(backplane)
+
+        # Select the primary meshgrid and backplane
+        self.meshgrid = self.meshgrids[0]
+        self.backplane = self.backplanes[0]
+        self.backplane.ALL_DERIVS = True
 
         # Determine file paths. Example:
         # filespec = $OOPS_TEST_DATA_PATH/cassini/ISS/N1460072401_1.IMG
         # masters: $OOPS_GOLD_MASTER_PATH/hosts.cassini.iss/ISS/N1460072401_1/
         # arrays: $OOPS_BACKPLANE_OUTPUT_PATH/N1460072401_1/arrays
         # browse: $OOPS_BACKPLANE_OUTPUT_PATH/N1460072401_1/browse
-        # sampled masters: $OOPS_BACKPLANE_OUTPUT_PATH/N1460072401_1/master_grid
+        # gold masters sampled at the undersampling grid:
+        #         $OOPS_BACKPLANE_OUTPUT_PATH/N1460072401_1/sampled_gold
 
         self.abspath = os.path.abspath(os.path.realpath(obs.filespec))
         basename_prefix = os.path.splitext(os.path.basename(self.abspath))[0]
@@ -1061,21 +1055,14 @@ class BackplaneTest(object):
                                      args.module, basename_prefix)
         self.gold_arrays = os.path.join(self.gold_dir, 'arrays' + self.suffix)
         self.gold_browse = os.path.join(self.gold_dir, 'browse' + self.suffix)
-        self.gold_sampled = os.path.join(self.gold_dir, 'master_grid' + self.suffix)
 
         self.output_dir = os.path.join(args.output, basename_prefix)
         self.output_arrays = os.path.join(self.output_dir,
                                           'arrays' + self.suffix)
         self.output_browse = os.path.join(self.output_dir,
                                           'browse' + self.suffix)
-        self.output_master_grid = os.path.join(self.output_dir,
-                                          'master_grid' + self.suffix)
-
-        self.array_path = None
-        self.browse_path = None
-        self.gold_path = None
-        self.gold_value_path = None
-        self.master_grid_path = None
+        self.sampled_gold = os.path.join(self.output_dir,
+                                          'sampled_gold' + self.suffix)
 
         # Initialize the comparison log
         self.gold_summary_ = None
@@ -1159,12 +1146,13 @@ class BackplaneTest(object):
                 LOGGING.info('Writing arrays to', self.output_arrays)
                 os.makedirs(self.output_arrays, exist_ok=True)
 
-                LOGGING.info('Writing sampled masters to', self.output_master_grid)
-                os.makedirs(self.output_master_grid, exist_ok=True)
-
                 if self.args.browse:
                     LOGGING.info('Writing browse images to', self.output_browse)
                     os.makedirs(self.output_browse, exist_ok=True)
+
+                if self.args.save_sampled:
+                    LOGGING.info('Writing sampled masters to', self.sampled_gold)
+                    os.makedirs(self.sampled_gold, exist_ok=True)
 
                 if not OOPS_BACKPLANE_OUTPUT_PATH:
                     LOGGING.info('   To change this destination, define '
@@ -1180,10 +1168,10 @@ class BackplaneTest(object):
 
                 except Exception as e:
                     if LATEST_TITLE:
-                        LOGGING.exception(e, 'Error in %s: %s'
+                        LOGGING.exception(e, '%s | Fatal error in %s'
                                              % (TEST_SUITE, LATEST_TITLE))
                     elif TEST_SUITE:
-                        LOGGING.exception(e, 'Error in %s' % TEST_SUITE)
+                        LOGGING.exception(e, '%s | Fatal error' % TEST_SUITE)
                     else:
                         LOGGING.exception(e)
 
@@ -1200,37 +1188,38 @@ class BackplaneTest(object):
             if self.args.internals:
                 LOGGING.push()
                 LOGGING.set_logger_level('DEBUG')
+                bp = self.backplane
 
                 for i in (False, True):
                     LOGGING.diagnostic('\nSurface Events, derivs=%s' % i)
-                    keys = list(self.backplane.surface_events[i].keys())
+                    keys = list(bp.surface_events[i].keys())
                     keys.sort()
                     for key in keys:
-                        sum = np.sum(self.backplane.surface_events[i][key].mask)
+                        sum = np.sum(bp.surface_events[i][key].mask)
                         LOGGING.diagnostic('   ', key, sum)
 
                 for i in (False, True):
                     LOGGING.diagnostic('\nIntercepts, derivs=%s' % i)
-                    keys = list(self.backplane.intercepts[i].keys())
+                    keys = list(bp.intercepts[i].keys())
                     keys.sort(key=BackplaneTest._sort_key)
                     for key in keys:
-                        sum = np.sum(self.backplane.intercepts[i][key].mask)
+                        sum = np.sum(bp.intercepts[i][key].mask)
                         LOGGING.diagnostic('   ', key, sum)
 
                 LOGGING.diagnostic('\nGridless arrivals')
-                keys = list(self.backplane.gridless_arrivals.keys())
+                keys = list(bp.gridless_arrivals.keys())
                 keys.sort(key=BackplaneTest._sort_key)
                 for key in keys:
-                    sum = np.sum(self.backplane.gridless_arrivals[key].mask)
+                    sum = np.sum(bp.gridless_arrivals[key].mask)
                     LOGGING.diagnostic('   ', key, sum)
 
                 LOGGING.diagnostic('\nBackplanes')
-                keys = list(self.backplane.backplanes.keys())
+                keys = list(bp.backplanes.keys())
                 keys.sort(key=BackplaneTest._sort_key)
                 for key in keys:
-                    sum = np.sum(self.backplane.backplanes[key].mask)
-                    if key in self.backplane.backplanes_with_derivs:
-                        derivs = self.backplane.backplanes_with_derivs[key].derivs
+                    sum = np.sum(bp.backplanes[key].mask)
+                    if key in bp.backplanes_with_derivs:
+                        derivs = bp.backplanes_with_derivs[key].derivs
                         flag = ' '
                         if 't' in derivs:
                             if 'los' in derivs:
@@ -1244,10 +1233,10 @@ class BackplaneTest(object):
                     LOGGING.diagnostic('   %s%s' % (flag, key), sum)
 
                 LOGGING.diagnostic('\nAntimasks')
-                keys = list(self.backplane.antimasks.keys())
+                keys = list(bp.antimasks.keys())
                 keys.sort()
                 for key in keys:
-                    antimask = self.backplane.antimasks[key]
+                    antimask = bp.antimasks[key]
                     info = ('array' if isinstance(antimask, np.ndarray)
                                     else str(antimask))
                     LOGGING.diagnostic('   ', key, '(%s)' % info)
@@ -1276,7 +1265,6 @@ class BackplaneTest(object):
     def _sort_key(key):
         """Key function for the sort operation, needed to handle occurrences of
         Frames, Paths, and None in some dictionary keys.
-
         Also allow sorting among numbers, strings and tuples: numbers first,
         strings second, objects third, tuples fourth.
         """
@@ -1299,10 +1287,8 @@ class BackplaneTest(object):
     def compare(self, array, master, title, limit=0., method='', operator='=',
                                             radius=0., mask=False):
         """Compare two backplane arrays and log the results.
-
         Note that the array can be a backplane that has been undersampled. The
         gold master array can be either full-resolution or undersampled.
-
         Inputs:
             array       backplane array to be compared.
             master      reference value or gold master array.
@@ -1325,19 +1311,21 @@ class BackplaneTest(object):
                         the comparison.
         """
 
-        global TEST_SUITE
+        global TEST_SUITE, LATEST_TITLE
 
+        LATEST_TITLE = title
         (array, comparison) = self._validate_inputs(array, title, limit, method,
                                                     operator, radius, mask)
         comparison.suite = TEST_SUITE
 
         if self.args.task == 'compare':
             if comparison.limit is None:
-                LOGGING.debug(comparison.suite, '| Canceled: "' + title + '"')
+                LOGGING.debug(comparison.suite, f'| Canceled: "{title}"')
                 return
 
-        else:
-            LOGGING.debug(comparison.suite, '| Summary:', title)
+        else:               # adopt or preview
+            LOGGING.debug(comparison.suite, f'| Summary: "{title}";',
+                          comparison.text)
             return
 
         if method in ('mod360', 'degrees'):
@@ -1345,12 +1333,13 @@ class BackplaneTest(object):
             # array is already converted to degrees by _validate_inputs
 
         self._compare(array, master, comparison)
+        LATEST_TITLE = ''
 
     #===========================================================================
     def gmtest(self, array, title, limit=0., method='', operator='=',
                                    radius=0., mask=False):
-        """Compare a backplane array against its gold master.
-
+        """Compare a backplane array against its gold master. Save the array,
+        browse image, and sampled master.
         Inputs:
             array       backplane array to be tested.
             title       title string describing the test; must be unique.
@@ -1372,9 +1361,10 @@ class BackplaneTest(object):
                         the comparison.
         """
 
-        global TEST_SUITE
+        global TEST_SUITE, LATEST_TITLE
 
         # Validate inputs
+        LATEST_TITLE = title
         (array, comparison) = self._validate_inputs(array, title, limit, method,
                                                     operator, radius, mask)
         comparison.suite = TEST_SUITE
@@ -1402,47 +1392,54 @@ class BackplaneTest(object):
                 output_browse = self.output_browse
                 basename = self._basename(title, gold=False)
 
-            pickle_path = os.path.join(output_arrays,
-                                       basename + '.pickle')
-            with open(pickle_path, 'wb') as f:
+            output_pickle_path = os.path.join(output_arrays,
+                                              basename + '.pickle')
+            comparison.output_pickle_path = output_pickle_path
+            with open(output_pickle_path, 'wb') as f:
                 pickle.dump(array, f)
-            self.array_path = pickle_path
 
             # Write the browse image
             if self.args.browse:
                 browse_name = basename + '.' + self.args.browse_format
                 browse_path = os.path.join(output_browse, browse_name)
-                self.browse_path = browse_path
+                comparison.browse_path = browse_path
                 self.save_browse(array, browse_path)
 
             # For "compare"
             if self.task == 'compare':
                 basename = self._basename(title, gold=True)
-                pickle_path = os.path.join(self.gold_arrays,
-                                           basename + '.pickle')
-                comparison.pickle_path = pickle_path
+                gold_pickle_path = os.path.join(self.gold_arrays,
+                                                basename + '.pickle')
+                comparison.gold_pickle_path = gold_pickle_path
 
                 # Handle a missing pickle file
-                if not os.path.exists(pickle_path):
+                if not os.path.exists(gold_pickle_path):
                     self._log_comparison(comparison, 'No gold master')
 
                 else:
                     # Retrieve pickled backplane
                     try:
-                        with open(pickle_path, 'rb') as f:
+                        with open(gold_pickle_path, 'rb') as f:
                             master = pickle.load(f)
                     except (ValueError, TypeError, OSError):
                         self._log_comparison(comparison, 'Invalid gold master')
 
                     # Compare...
                     else:
-                        self.gold_path = pickle_path
+                        if self.args.save_sampled:
+                            basename = self._basename(comparison.title,
+                                                      gold=False)
+                            comparison.sampled_gold_path = os.path.join(
+                                                           self.sampled_gold,
+                                                           basename + '.pickle')
+
                         self._compare(array, master, comparison)
 
             # For "preview" and "adopt"
             else:
-                LOGGING.debug(comparison.suite, '|', 'Written:',
-                              os.path.basename(pickle_path))
+                LOGGING.debug(comparison.suite, '| Written:',
+                              os.path.basename(output_pickle_path) + ';',
+                              comparison.text)
 
         # Shapeless case
         else:
@@ -1461,12 +1458,14 @@ class BackplaneTest(object):
 
                     else:
                         master = Scalar(min_val, masked > 0)
-                        self.gold_value_path = master
                         self._compare(array, master, comparison)
 
             # For "preview" and "adopt"
             else:
-                LOGGING.debug(comparison.suite, '|', 'Summary:', title)
+                LOGGING.debug(comparison.suite, f'| Summary: "{title}";',
+                              comparison.text)
+
+        LATEST_TITLE = ''
 
     #===========================================================================
     def _compare(self, array, master, comparison):
@@ -1547,14 +1546,10 @@ class BackplaneTest(object):
         # The "_grid" suffix indicates the master array when sampled at the
         # meshgrid of the array.
 
-        # Save sampled master
-        basename = self._basename(comparison.title, gold=False)
-        pickle_path = os.path.join(self.output_master_grid,
-                                       basename + '.pickle')
-#        from IPython import embed; print('+++++++++++++'); embed()
-        with open(pickle_path, 'wb') as f:
-            pickle.dump(master_grid, f)
-        self.master_grid_path = pickle_path
+        # Saved the sampled array if necessary
+        if hasattr(comparison, 'sampled_gold_path'):
+            with open(comparison.sampled_gold_path, 'wb') as f:
+                pickle.dump(master_grid, f)
 
         # Find the differences among unmasked pixels
         diff = array - master_grid
@@ -1618,6 +1613,7 @@ class BackplaneTest(object):
         if 'los' not in array_derivs and hasattr(array, 'backplane_key'):
             array_derivs = self.backplane.evaluate(array.backplane_key,
                                                    derivs=True).derivs
+
         if 'los' in array_derivs:
             d_dlos = array_derivs['los']
 
@@ -1782,8 +1778,7 @@ class BackplaneTest(object):
                                mask):
         """Initial steps for both compare() and gmtest()."""
 
-        global LATEST_TITLE, TEST_OVERRIDES
-        LATEST_TITLE = title
+        global TEST_OVERRIDES, TEST_SUITE
 
         # Validate comparison options
         if method not in ('', 'mod360', 'degrees', 'border'):
@@ -1807,13 +1802,14 @@ class BackplaneTest(object):
             if np.any(limit.mask):
                 limit = 0.
             else:
-                limit = limit.vals * self.args.tolerance
+                limit = abs(limit.vals * self.args.tolerance)
         else:
-                limit = limit * self.args.tolerance
+                limit = abs(limit * self.args.tolerance)
 
         # Warn about duplicated titles
         if title in self.results:
-            LOGGING.error('Duplicated title:', title)
+            LOGGING.error(TEST_SUITE, f'| Duplicated title: "{title}";',
+                          comparison.text)
 
         # Validate array
         if not isinstance(array, Qube):
@@ -1836,9 +1832,6 @@ class BackplaneTest(object):
                 new_array.backplane_key = array.backplane_key
             array = new_array
 
-        # Save the summary info in the dictionary
-        self._summarize(array, title, method=method)
-
         # Check mask
         if np.shape(mask) not in ((), array.shape):
             raise ValueError('mask shape does not match array')
@@ -1851,45 +1844,46 @@ class BackplaneTest(object):
                                           radius = radius * self.args.radius,
                                           mask = mask,
                                           pixels = array.size)
-        comparison.antimask = np.logical_not(mask)      # extra attribute
+
+        # Extra attributes
+        comparison.antimask = np.logical_not(mask)
+        comparison.text = self._summarize(array, title, method=method)
 
         return (array, comparison)
 
     #===========================================================================
-    def _summarize(self, array, title, method=''):
+    def _summarize(self, array, title, method):
         """Save the summary info for this backplane array.
-
         For boolean arrays, the saved tuple is
             (False count, True count, masked count, total pixels)
         For floats, the saved tuple is:
             (minimum value, maximum vale, masked count, total pixels)
-        The case are distinguished by whether the first value is int of float.
+        The cases are distinguished by whether the first value is int of float.
         """
 
-        def _save(minval, maxval, masked, total):
-            """Save and log summary info."""
+        def _summary_text(minval, maxval, masked, total):
+            """Save the summary info and return a formatted text string."""
 
             self.summary[title] = (minval, maxval, masked, total)
 
-            if self.args.info:
-                message = ['  ', title, ': ']
-                if isinstance(minval, numbers.Integral):   # if array is boolean
-                    message += ['false,true = %d,%d' % (minval, maxval)]
-                elif masked < total:
-                    if minval == maxval:
-                        message += ['value = ', self._valstr(minval)]
-                    else:
-                        message += ['min,max = ', self._valstr(minval), ', ',
-                                                  self._valstr(maxval)]
-                if masked:
-                    percent = (100. * masked) / total
-                    if 99.9 < percent < 100.:   # "100.0"% means every pixel
-                        percent = 99.9
-                    if message[-1] != ': ':
-                        message += ['; ']
-                    message += ['mask ', '%.1f' % percent, '%']
+            message = []
+            if isinstance(minval, numbers.Integral):   # if array is boolean
+                message += ['false,true=%d,%d' % (minval, maxval)]
+            elif masked < total:
+                if minval == maxval:
+                    message += ['value=', self._valstr(minval)]
+                else:
+                    message += ['min,max=', self._valstr(minval), ',',
+                                            self._valstr(maxval)]
+            if masked:
+                percent = (100. * masked) / total
+                if 99.9 < percent < 100.:   # "100.0"% means every pixel
+                    percent = 99.9
+                if message:
+                    message += [', ']
+                message += ['mask=', '%.1f' % percent, '%']
 
-                LOGGING.literal(''.join(message))
+            return ''.join(message)
 
         masked = array.count_masked()
         total = array.size
@@ -1897,17 +1891,15 @@ class BackplaneTest(object):
         if array.is_bool():
             trues  = np.sum(array.antimask & array.vals)
             falses = np.sum(array.antimask & np.logical_not(array.vals))
-            _save(falses, trues, masked, total)
-            return
+            return _summary_text(falses, trues, masked, total)
 
         if masked == total:
-            _save(array.default, array.default, masked, total)
-            return
+            return _summary_text(array.default, array.default, masked, total)
 
         if method != 'mod360':
-            _save(array.min(builtins=True), array.max(builtins=True),
-                  masked, total)
-            return
+            return _summary_text(array.min(builtins=True),
+                                 array.max(builtins=True),
+                                 masked, total)
 
         # Handle mod360 case
 
@@ -1917,8 +1909,7 @@ class BackplaneTest(object):
         elif np.shape(array.vals):
             vals = array.vals.ravel()
         else:
-            _save(array.vals, array.vals, masked, total)
-            return
+            return _summary_text(array.vals, array.vals, masked, total)
 
         # Sort mod 360
         sorted = np.sort(vals)
@@ -1932,12 +1923,11 @@ class BackplaneTest(object):
         else:
             minval = sorted[argmax + 1]
 
-        _save(minval, maxval, masked, total)
+        return _summary_text(minval, maxval, masked, total)
 
     #===========================================================================
     def _log_comparison(self, comparison, status=''):
         """Log this comparison info.
-
         A single record of the log file has this format:
           "<time> | oops.backplane.gold_master | <level> | <suite> | <message>"
         where
@@ -1945,7 +1935,6 @@ class BackplaneTest(object):
           <level> is one of "DEBUG", "INFO", "WARNING", "ERROR", "FATAL".
           <suite> is the name of the test suite, e.g., "ring".
           <message> is a descriptive message.
-
         For comparisons, the message has the following format:
           <status>: "<title>"; diff=<diff1>/<diff2>/<limit>; ...
                                offset=<offset>/<radius>; ...
@@ -1972,10 +1961,11 @@ class BackplaneTest(object):
           <count2>  the number of discrepant pixels that cannot be accommodated
                     by an offset.
           <pixels>  the total number of pixels tested.
-
         Note that <diff2> and <count2> are not listed if not offset is required.
         Also, note that the offset values are not listed in this case.
         """
+
+        global TEST_SUITE
 
         # Fill in the status if necessary
         if status:
@@ -1996,58 +1986,60 @@ class BackplaneTest(object):
                     comparison.status = 'Success'
 
         # Construct the message
-        message = [comparison.suite, ' | ', comparison.status]
+        message = [comparison.suite, ' | ', comparison.status, ': "',
+                   comparison.title, '"; ', comparison.text]
 
         # Handle failed comparison cases
-        if errors2 == 0 and comparison.status != 'Success':
-            if comparison.pickle_path:
-                basename = os.path.basename(comparison.pickle_path)
-                message += [': ', basename]
-
-            else:
-                message += [': "', comparison.title, '"']
-
-        # Handle comparison cases
-        else:
-            message += [': "', comparison.title, '"; diff=',
-                        self._valstr(comparison.max_diff1)]
+        if comparison.status == 'Success' or errors2 > 0:
+            message += ['; diff=', self._valstr(comparison.max_diff1)]
 
             if comparison.max_diff2 != comparison.max_diff1:
                 if comparison.max_diff2 <= comparison.limit * 1.e-8:
-                    message += ['/0.']
+                    if isinstance(comparison.max_diff2, numbers.Integral):
+                        message += ['/0']
+                    else:
+                        message += ['/0.']
                 else:
                     message += ['/', self._valstr(comparison.max_diff2)]
 
-            message += ['/', self._valstr(comparison.limit)]
+            message += ['/']
+            if (isinstance(comparison.max_diff2, numbers.Integral)
+                    and comparison.limit == 0):
+                message += ['0']
+            else:
+                message += [self._valstr(comparison.limit)]
 
             if comparison.distance:
-                message += ['; offset=', self._valstr(comparison.distance),
+                message += [', offset=', self._valstr(comparison.distance),
                             '/', self._valstr(comparison.radius)]
 
-            message += ['; pixels=', str(errors1)]
+            message += [', pixels=', str(errors1)]
 
             if errors2 != errors1:
                 message += ['/', str(errors2)]
 
             message += ['/', str(comparison.pixels)]
 
-        # Add paths to relevant files
-        if self.gold_path is not None:
-            message += [' | master: ', self.gold_path]
-        if self.gold_value_path is not None:
-            message += [' | master_value: ', str(self.gold_value_path)]
-        if self.array_path is not None:
-            message += [' | array: ', self.array_path]
-        if self.browse_path is not None:
-            message += [' | browse: ', self.browse_path]
-        if self.master_grid_path is not None:
-            message += [' | sampled master: ', self.master_grid_path]
-
-
         LOGGING.print(''.join(message), level=comparison.logging_level)
 
         # Save the results
         self.results[comparison.title] = comparison
+
+        # Log the file paths
+        ATTRS = ('gold_pickle_path', 'output_pickle_path', 'browse_path',
+                 'sampled_gold_path')
+        LABELS = ('master:', 'array:', 'browse:', 'sampled master:')
+
+        if self.args.fullpaths:
+            path_logged = False
+            for (attr, label) in zip(ATTRS, LABELS):
+                if hasattr(comparison, attr):
+                    path = getattr(comparison, attr)
+                    LOGGING.info(TEST_SUITE, '|', label, path, force=True)
+                    path_logged = True
+
+            if path_logged:
+                LOGGING.literal()
 
     #===========================================================================
     @staticmethod
@@ -2082,7 +2074,6 @@ class BackplaneTest(object):
     #===========================================================================
     def _basename(self, title, gold=False):
         """Convert a title to a file basename.
-
         if gold is True, the Linux shell-friendly basename is always returned,
         regardless of the platform. Otherwise, the platform-specific basename is
         returned.
@@ -2299,6 +2290,18 @@ class BackplaneTest(object):
 if __name__ == '__main__':
 
     import oops.backplane.gold_master as gm
+
+    # The d/dv numerical ring derivatives are extra-uncertain due to the high
+    # foreshortening in the vertical direction.
+
+    gm.override('SATURN longitude d/du self-check (deg/pix)', 0.3)
+    gm.override('SATURN longitude d/dv self-check (deg/pix)', 0.05)
+    gm.override('SATURN_MAIN_RINGS azimuth d/dv self-check (deg/pix)', 1.)
+    gm.override('SATURN_MAIN_RINGS distance d/dv self-check (km/pix)', 0.3)
+    gm.override('SATURN_MAIN_RINGS longitude d/dv self-check (deg/pix)', 1.)
+    gm.override('SATURN:RING azimuth d/dv self-check (deg/pix)', 0.1)
+    gm.override('SATURN:RING distance d/dv self-check (km/pix)', 0.3)
+    gm.override('SATURN:RING longitude d/dv self-check (deg/pix)', 0.1)
 
     gm.execute_as_command()
 

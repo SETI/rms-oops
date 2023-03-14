@@ -2,7 +2,6 @@
 # oops/backplanes/distance.py: Distance-related backplanes
 ################################################################################
 
-from polymath       import Pair, Vector3
 from oops.backplane import Backplane
 from oops.surface   import Surface
 
@@ -26,10 +25,7 @@ def resolution(self, event_key, axis='u'):
     key = ('resolution', event_key, axis)
     if key not in self.backplanes:
         distance = self.distance(event_key)
-
-        dlos_du = Vector3(self.dlos_duv.vals[...,0], self.dlos_duv.mask)
-        dlos_dv = Vector3(self.dlos_duv.vals[...,1], self.dlos_duv.mask)
-
+        (dlos_du, dlos_dv) = self.dlos_duv.extract_denoms()
         self.register_backplane(key[:-1] + ('u',), distance * dlos_du.norm())
         self.register_backplane(key[:-1] + ('v',), distance * dlos_dv.norm())
 
@@ -56,11 +52,7 @@ def center_resolution(self, event_key, axis='u'):
     key = ('center_resolution', gridless_key, axis)
     if key not in self.backplanes:
         distance = self.center_distance(gridless_key)
-
-        mask = self.center_dlos_duv.mask
-        dlos_du = Vector3(self.center_dlos_duv.vals[...,0], mask)
-        dlos_dv = Vector3(self.center_dlos_duv.vals[...,1], mask)
-
+        (dlos_du, dlos_dv) = self.center_dlos_duv.extract_denoms()
         self.register_backplane(key[:-1] + ('u',), distance * dlos_du.norm())
         self.register_backplane(key[:-1] + ('v',), distance * dlos_dv.norm())
 
@@ -106,9 +98,8 @@ def _fill_surface_resolution(self, event_key):
     event_key = self.standardize_event_key(event_key)
     event = self.get_surface_event(event_key, derivs=True)
 
-    dpos_duv = event.state.d_dlos.chain(self.dlos_duv)
-    (minres, maxres) = Surface.resolution(dpos_duv)
-
+    dpos_duv1 = event.pos.d_dlos.chain(self.dlos_duv1)
+    (minres, maxres) = Surface.resolution(dpos_duv1)
     self.register_backplane(('finest_resolution',   event_key), minres)
     self.register_backplane(('coarsest_resolution', event_key), maxres)
 
@@ -144,8 +135,6 @@ def resolution_test_suite(bpt):
 
         # Because finest/coarsest resolution values diverge for emission angles
         # near 90, we need to apply an extra mask
-        finest = bp.finest_resolution(name)
-        coarsest = bp.coarsest_resolution(name)
         mu = bp.emission_angle(name).cos().abs()
         mask = mu.tvl_lt(0.1).as_mask_where_nonzero_or_masked()
 
@@ -158,21 +147,4 @@ def resolution_test_suite(bpt):
 
 register_test_suite('resolution', resolution_test_suite)
 
-################################################################################
-# UNIT TESTS
-################################################################################
-import unittest
-
-
-#===============================================================================
-class Test_Resolution(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-        pass
-
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

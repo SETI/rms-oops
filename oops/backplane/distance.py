@@ -122,6 +122,7 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 from oops.backplane.gold_master import register_test_suite
+import numpy as np
 
 def distance_test_suite(bpt):
 
@@ -172,23 +173,32 @@ def distance_test_suite(bpt):
                            + ' center to observer (km)',
                     limit=1.e-6)
 
+    # Derivative tests
+    if bpt.derivs:
+      (bp, bp_u0, bp_u1, bp_v0, bp_v1) = bpt.backplanes
+      pixel_duv = np.abs(bp.obs.fov.uv_scale.vals)
+
+      for name in bpt.body_names + bpt.ring_names:
+
+        km_per_los_radian = bp.distance(name) / bp.mu(name)
+        (ulimit, vlimit) = km_per_los_radian.median() * pixel_duv * 1.e-4
+
+        dist = bp.distance(name)
+        ddist_duv = dist.d_dlos.chain(bp.dlos_duv)
+        (ddist_du, ddist_dv) = ddist_duv.extract_denoms()
+
+        ddist = bp_u1.distance(name) - bp_u0.distance(name)
+        if not np.all(ddist.mask):
+            bpt.compare((ddist.wod/bpt.duv - ddist_du).abs().median(), 0.,
+                        name + ' distance d/du self-check (km/pix)',
+                        limit=ulimit)
+
+        ddist = bp_v1.distance(name) - bp_v0.distance(name)
+        if not np.all(ddist.mask):
+            bpt.compare((ddist.wod/bpt.duv - ddist_dv).abs().median(), 0.,
+                        name + ' distance d/dv self-check (km/pix)',
+                        limit=vlimit)
+
 register_test_suite('distance', distance_test_suite)
 
-################################################################################
-# UNIT TESTS
-################################################################################
-import unittest
-
-
-#===============================================================================
-class Test_Distance(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-        pass
-
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

@@ -1,24 +1,35 @@
 ################################################################################
 # oops/backplane/unittester.py
 ################################################################################
-import unittest
 
-from oops.backplane            import Test_Backplane_via_gold_master
-from oops.backplane            import Test_Backplane_Surfaces
-from oops.backplane            import Test_Backplane_Borders
-from oops.backplane            import Test_Backplane_Empty_Events
-from oops.backplane.ansa       import Test_Ansa
-from oops.backplane.border     import Test_Border
-from oops.backplane.distance   import Test_Distance
-from oops.backplane.lighting   import Test_Lighting
-from oops.backplane.limb       import Test_Limb
-from oops.backplane.orbit      import Test_Orbit
-from oops.backplane.pole       import Test_Pole
-from oops.backplane.resolution import Test_Resolution
-from oops.backplane.ring       import Test_Ring
-from oops.backplane.sky        import Test_Sky
-from oops.backplane.spheroid   import Test_Spheroid
-from oops.backplane.where      import Test_Where
+import os
+import unittest
+import oops.backplane.gold_master as gm
+from oops.unittester_support import OOPS_TEST_DATA_PATH
+
+class Test_Backplane_via_gold_master(unittest.TestCase):
+
+  def runTest(self):
+
+    # The d/dv numerical ring derivatives are extra-uncertain due to the high
+    # foreshortening in the vertical direction.
+
+    gm.override('SATURN longitude d/du self-check (deg/pix)', 0.3)
+    gm.override('SATURN longitude d/dv self-check (deg/pix)', 0.05)
+    gm.override('SATURN_MAIN_RINGS azimuth d/dv self-check (deg/pix)', 1.)
+    gm.override('SATURN_MAIN_RINGS distance d/dv self-check (km/pix)', 0.3)
+    gm.override('SATURN_MAIN_RINGS longitude d/dv self-check (deg/pix)', 1.)
+    gm.override('SATURN:RING azimuth d/dv self-check (deg/pix)', 0.1)
+    gm.override('SATURN:RING distance d/dv self-check (km/pix)', 0.3)
+    gm.override('SATURN:RING longitude d/dv self-check (deg/pix)', 0.1)
+
+    gm.execute_as_unittest(self,
+                obspath = os.path.join(OOPS_TEST_DATA_PATH,
+                                       'cassini/ISS/W1573721822_1.IMG'),
+                module  = 'hosts.cassini.iss',
+                planet  = 'SATURN',
+                moon    = 'EPIMETHEUS',
+                ring    = 'SATURN_MAIN_RINGS')
 
 ########################################
 if __name__ == '__main__':

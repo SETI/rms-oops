@@ -57,8 +57,8 @@ def pole_position_angle(self, event_key):
     if key in self.backplanes:
         return self.get_backplane(key)
 
-    return self.register_backplane(key, Scalar.TWOPI
-                                        - self.pole_clock_angle(event_key))
+    clock = self.pole_clock_angle(event_key)
+    return self.register_backplane(key, Scalar.TWOPI - clock)
 
 ################################################################################
 
@@ -69,7 +69,6 @@ Backplane._define_backplane_names(globals().copy())
 ################################################################################
 
 from oops.backplane.gold_master import register_test_suite
-from oops.constants import DPR
 
 def pole_test_suite(bpt):
 
@@ -90,21 +89,4 @@ def pole_test_suite(bpt):
 
 register_test_suite('pole', pole_test_suite)
 
-################################################################################
-# UNIT TESTS
-################################################################################
-import unittest
-
-
-#===============================================================================
-class Test_Pole(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-        pass
-
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################
