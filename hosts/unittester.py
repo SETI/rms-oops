@@ -13,9 +13,6 @@ from hosts.juno.unittester         import *
 from hosts.solar.unittester        import *
 
 ########################################
-from oops.backplane.unittester_support import backplane_unittester_args
-
 if __name__ == '__main__':
-    backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################

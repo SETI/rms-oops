@@ -25,7 +25,7 @@ def _mean_or_sum(arg, axis=None, recursive=True, _combine_as_mean=False):
                     True to combine as a mean; False to combine as a sum.
     """
 
-    arg._check_axis(axis)
+    arg._check_axis(axis, 'mean()' if _combine_as_mean else 'sum()')
 
     if arg._size_ == 0:
         return arg._zero_sized_result(axis=axis)
@@ -110,7 +110,7 @@ def _mean_or_sum(arg, axis=None, recursive=True, _combine_as_mean=False):
     return obj
 
 #===============================================================================
-def _check_axis(arg, axis):
+def _check_axis(arg, axis, op):
     """Validate the axis as None, an int, or a tuple of ints."""
 
     if axis is None:    # can't be a problem
@@ -132,11 +132,13 @@ def _check_axis(arg, axis):
         try:
             _ = selections[i]
         except IndexError:
-            raise IndexError('axis %d is out of bounds for array of rank %d'
-                             % (i, len(arg._shape_)))
+            raise IndexError('axis is out of range (%d,%d) in %s.%s: %d'
+                             % (-len(arg._shape_), -len(arg._shape_),
+                                type(arg).__name__, op, i))
 
         if selections[i]:
-            raise IndexError('duplicate value in axis: ' + str(axis_for_show))
+            raise IndexError('duplicated axis in %s.%s: %s'
+                             % (type(arg).__name__, op, axis_for_show))
 
         selections[i] = True
 
@@ -181,8 +183,7 @@ def dot(arg1, arg2, axis1=-1, axis2=0, classes=(), recursive=True):
 
     # At most one object can have a denominator.
     if arg1._drank_ and arg2._drank_:
-        raise ValueError('at most one object in dot() can have a ' +
-                         'denominator')
+        Qube._raise_dual_denoms('dot()', arg1, arg2)
 
     # Position axis1 from left
     if axis1 >= 0:
@@ -190,8 +191,9 @@ def dot(arg1, arg2, axis1=-1, axis2=0, classes=(), recursive=True):
     else:
         a1 = axis1 + arg1._nrank_
     if a1 < 0 or a1 >= arg1._nrank_:
-        raise ValueError('first axis is out of range (%d,%d): %d' %
-                         (-arg1._nrank_, arg1._nrank_, axis1))
+        raise ValueError('first axis is out of range (%d,%d) in %s.dot(): %d'
+                         % (-arg1._nrank_, arg1._nrank_, type(arg1).__name__,
+                            axis1))
     k1 = a1 + len(arg1._shape_)
 
     # Position axis2 from item left
@@ -200,14 +202,16 @@ def dot(arg1, arg2, axis1=-1, axis2=0, classes=(), recursive=True):
     else:
         a2 = axis2 + arg2._nrank_
     if a2 < 0 or a2 >= arg2._nrank_:
-        raise ValueError('second axis out of range (%d,%d): %d' %
-                         (-arg2._nrank_, arg2._nrank_, axis2))
+        raise ValueError('second axis is out of range (%d,%d) in %s.dot(): %d'
+                         % (-arg2._nrank_, arg2._nrank_, type(arg2).__name__,
+                            axis2))
     k2 = a2 + len(arg2._shape_)
 
     # Confirm that the axis lengths are compatible
     if arg1._numer_[a1] != arg2._numer_[a2]:
-        raise ValueError('axes have different lengths: %d, %d' %
-                         (arg1._numer_[a1], arg2._numer_[a2]))
+        raise ValueError('%s.dot() axes have different lengths: %d, %d' %
+                         (type(arg1).__name__, arg1._numer_[a1],
+                          arg2._numer_[a2]))
 
     # Re-shape the value arrays (shape, numer1, numer2, denom1, denom2)
     shape1 = (arg1._shape_ + arg1._numer_ + (arg2._nrank_ - 1) * (1,) +
@@ -281,7 +285,8 @@ def norm(arg, axis=-1, classes=(), recursive=True):
     """
 
     if arg._drank_ != 0:
-        raise ValueError('norm() does not allow denominators')
+        raise ValueError('%s.norm() does not support denominators'
+                         % type(arg).__name__)
 
     # Position axis from left
     if axis >= 0:
@@ -289,8 +294,9 @@ def norm(arg, axis=-1, classes=(), recursive=True):
     else:
         a1 = axis + arg._nrank_
     if a1 < 0 or a1 >= arg._nrank_:
-        raise ValueError('axis is out of range (%d,%d): %d' %
-                         (-arg._nrank_, arg._nrank_, axis))
+        raise ValueError('axis is out of range (%d,%d) in %s.norm(): %d'
+                         % (-arg._nrank_, arg._nrank_, type(arg).__name__,
+                            axis))
     k1 = a1 + len(arg._shape_)
 
     # Evaluate the norm
@@ -328,7 +334,8 @@ def norm_sq(arg, axis=-1, classes=(), recursive=True):
     """
 
     if arg._drank_ != 0:
-        raise ValueError('norm_sq() does not allow denominators')
+        raise ValueError('%s.norm_sq() does not support denominators'
+                         % type(arg).__name__)
 
     # Position axis from left
     if axis >= 0:
@@ -336,8 +343,9 @@ def norm_sq(arg, axis=-1, classes=(), recursive=True):
     else:
         a1 = axis + arg._nrank_
     if a1 < 0 or a1 >= arg._nrank_:
-        raise ValueError('axis is out of range (%d,%d): %d' %
-                         (-arg._nrank_, arg._nrank_, axis))
+        raise ValueError('axis is out of range (%d,%d) in %s.norm_sq(): %d'
+                         % (-arg._nrank_, arg._nrank_, type(arg).__name__,
+                            axis))
     k1 = a1 + len(arg._shape_)
 
     # Evaluate the norm
@@ -380,8 +388,7 @@ def cross(arg1, arg2, axis1=-1, axis2=0, classes=(), recursive=True):
 
     # At most one object can have a denominator.
     if arg1._drank_ and arg2._drank_:
-        raise ValueError('at most one object in cross() can have a ' +
-                         'denominator')
+        Qube._raise_dual_denoms('cross()', arg1, arg2)
 
     # Position axis1 from left
     if axis1 >= 0:
@@ -389,8 +396,9 @@ def cross(arg1, arg2, axis1=-1, axis2=0, classes=(), recursive=True):
     else:
         a1 = axis1 + arg1._nrank_
     if a1 < 0 or a1 >= arg1._nrank_:
-        raise ValueError('first axis is out of range (%d,%d): %d' %
-                         (-arg1._nrank_, arg1._nrank_, axis1))
+        raise ValueError('first axis is out of range (%d,%d) in %s.cross(): %d'
+                         % (-arg1._nrank_, arg1._nrank_, type(arg1).__name__,
+                            axis1))
     k1 = a1 + len(arg1._shape_)
 
     # Position axis2 from item left
@@ -399,15 +407,18 @@ def cross(arg1, arg2, axis1=-1, axis2=0, classes=(), recursive=True):
     else:
         a2 = axis2 + arg2._nrank_
     if a2 < 0 or a2 >= arg2._nrank_:
-        raise ValueError('second axis out of range (%d,%d): %d' %
-                         (-arg2._nrank_, arg2._nrank_, axis2))
+        raise ValueError('second axis is out of range (%d,%d) in %s.cross(): %d'
+                         % (-arg2._nrank_, arg2._nrank_, type(arg2).__name__,
+                            axis2))
     k2 = a2 + len(arg2._shape_)
 
     # Confirm that the axis lengths are compatible
     if ((arg1._numer_[a1] != arg2._numer_[a2]) or
         (arg1._numer_[a1] not in (2,3))):
-        raise ValueError('invalid axis length for cross product: %d, %d' %
-                         (arg1._numer_[a1], arg2._numer_[a2]))
+        raise ValueError('invalid axis length for %s.cross(): %d, %d; '
+                         'must be 2 or 3'
+                         % (type(arg1).__name__, arg1._numer_[a1],
+                            arg2._numer_[a2]))
 
     # Re-shape the value arrays (shape, numer1, numer2, denom1, denom2)
     shape1 = (arg1._shape_ + arg1._numer_ + (arg2._nrank_ - 1) * (1,) +
@@ -516,7 +527,7 @@ def outer(arg1, arg2, classes=(), recursive=True):
     # At most one object can have a denominator. This is sufficient
     # to track first derivatives
     if arg1._drank_ and arg2._drank_:
-        raise ValueError('at most one object in outer() can have a denominator')
+        Qube._raise_dual_denoms('outer()', arg1, arg2)
 
     # Re-shape the value arrays (shape, numer1, numer2, denom1, denom2)
     shape1 = (arg1._shape_ + arg1._numer_ + arg2._nrank_ * (1,) +
@@ -584,8 +595,10 @@ def as_diagonal(arg, axis, classes=(), recursive=True):
     else:
         a1 = axis + arg._nrank_
     if a1 < 0 or a1 >= arg._nrank_:
-        raise ValueError('axis is out of range (%d,%d): %d',
-                         (-arg._nrank_, arg._nrank_, axis))
+        raise ValueError('axis is out of range (%d,%d) in %s.as_diagonal(): %d'
+                         % (-arg._nrank_, arg._nrank_, type(arg).__name__,
+                            axis))
+
     k1 = a1 + len(arg._shape_)
 
     # Roll this axis to the end

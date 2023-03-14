@@ -1018,15 +1018,28 @@ class Event(object):
 
     #===========================================================================
     def mask_where(self, mask):
-        """A shallow copy of this Event with a new mask."""
+        """A shallow copy of this Event with a new mask, using mask_where."""
 
-        def apply_mask(arg):
+        def apply_mask_where(arg):
             if arg.shape != self.shape:
                 arg = arg.broadcast_into_shape(self.shape)
 
             return arg.mask_where(mask)
 
-        result = self._apply_this_func(apply_mask)
+        result = self._apply_this_func(apply_mask_where)
+        return result
+
+    #===========================================================================
+    def remask(self, mask):
+        """A shallow copy of this Event with a new mask, using remask."""
+
+        def apply_remask(arg):
+            if arg.shape != self.shape:
+                arg = arg.broadcast_into_shape(self.shape)
+
+            return arg.remask(mask)
+
+        result = self._apply_this_func(apply_remask)
         return result
 
     #===========================================================================
@@ -1093,14 +1106,14 @@ class Event(object):
 
         event = self.copy(omit='arr')
 
-        neg_arr_ap = self.neg_arr_ap.copy()
+        neg_arr_ap = self.neg_arr_ap.unit().copy()
         neg_arr_ap.insert_deriv('los', Vector3.IDENTITY, override=True)
         event.neg_arr_ap = neg_arr_ap
 
         return event
 
     #===========================================================================
-# TODO: These are unused; might not work exactly as intended
+# TODO: These are unused; might not work exactly as intended. --Mark
 #
 #     def with_pos_derivs(self):
 #         """A clone of this event containing unit position derivatives d_dpos in
@@ -1217,15 +1230,16 @@ class Event(object):
         boolean array where True indicates values to be kept.
         """
 
-        def unshrink1(arg):
+        def unshrink1(arg, mask):
+            if arg.shape:
+                arg = arg.remask(mask)
             return arg.unshrink(antimask, shape)
 
-        if antimask is None:
-            return self
-        if Qube.is_one_true(antimask):
-            return self
+        # Make sure the new mask applies everywhere
+        if antimask is None or Qube.is_one_true(antimask):
+            return self.remask(self.mask)
 
-        result = self._apply_this_func(unshrink1)
+        result = self._apply_this_func(unshrink1, self.mask)
 
         if self._xform_to_j2000_ is not None:
             xform = self._xform_to_j2000_
@@ -1278,9 +1292,9 @@ class Event(object):
 
         (self._ssb_,
          self._xform_to_j2000_) = self.wrt(Event.PATH_CLASS.SSB,
-                                            Frame.J2000,
-                                            derivs=derivs, quick=quick,
-                                            include_xform=True)
+                                           Frame.J2000,
+                                           derivs=derivs, quick=quick,
+                                           include_xform=True)
 
         if self._ssb_ is not self:
             self._ssb_._ssb_ = self._ssb_
@@ -1967,7 +1981,7 @@ class Event(object):
         else:
             arr = shrunk.arr
 
-        result = Scalar.PI - shrunk.perp.sep(arr, derivs)
+        result = Scalar.PI - shrunk.perp.sep(arr, recursive=derivs)
         return result.unshrink(self.antimask, self.shape)
 
     #===========================================================================
@@ -2001,7 +2015,7 @@ class Event(object):
         else:
             dep = shrunk.dep
 
-        result = shrunk.perp.sep(dep, derivs)
+        result = shrunk.perp.sep(dep, recursive=derivs)
         return result.unshrink(self.antimask, self.shape)
 
     #===========================================================================
@@ -2037,7 +2051,7 @@ class Event(object):
             dep = shrunk.dep
             arr = shrunk.arr
 
-        result = Scalar.PI - dep.sep(arr, derivs)
+        result = Scalar.PI - dep.sep(arr, recursive=derivs)
         return result.unshrink(self.antimask, self.shape)
 
     #===========================================================================

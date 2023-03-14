@@ -80,8 +80,9 @@ def flux_density(model='STIS_Rieke', units='W/m^2/um', xunits='um',
                         specified units.
     """
 
-    # The first act of importing a model causes its value of FLUX_DENSITY to
-    # become defined.
+    # Each reference to a named model triggers the import of its associated
+    # Python file hosts/solar/<name>.py, referenced as "hosts.solar.<name>"
+    # here. Note that modules are imported only if requested, not by default.
     try:
         module = importlib.import_module('hosts.solar.' + model.lower())
     except ImportError:

@@ -472,11 +472,12 @@ def fpzip_compress(array, digits=16, dtype=np.float_):
             # Raise any warnings
             if PICKLE_WARNINGS and first_exception is not None:
                 if precision != initial_precision:
-                    warnings.warn('fpzip.compress increased precision from ' +
-                                  '%d to %d' % (initial_precision, precision))
+                    warnings.warn('fpzip.compress increased precision from '
+                                  '%d to %d'
+                                  % (initial_precision, precision))
                 if shape != initial_shape:
                     warnings.warn('fpzip.compress reduced shape from %s to %s'
-                                  % (str(initial_shape), str(shape)))
+                                  % (initial_shape, shape))
 
             return (fpzip_bytes, zeroed_bits)
 
@@ -760,6 +761,9 @@ def _decode_floats(encoded):
 def _encode_ints(values):
     """Encode an integer array using BZ2 compression."""
 
+    if not values.flags['CONTIGUOUS']:
+        values = values.copy()
+
     return bz2.compress(values)
 
 #===============================================================================
@@ -772,6 +776,9 @@ def _decode_ints(values, shape):
 #===============================================================================
 def _encode_bools(values):
     """Encode a boolean array using packbits + BZ2 compression."""
+
+    if not values.flags['CONTIGUOUS']:
+        values = values.copy()
 
     return bz2.compress(np.packbits(values))
 

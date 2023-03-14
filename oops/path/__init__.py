@@ -904,7 +904,7 @@ class Path(object):
 
         # Obtain the local QuickPath dictionary
         quickdict = QUICK.dictionary
-        if len(quick) > 0:
+        if quick:
             quickdict = quickdict.copy()
             quickdict.update(quick)
 
