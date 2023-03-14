@@ -199,23 +199,3 @@ def border_test_suite(bpt):
 register_test_suite('border', border_test_suite)
 
 ################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-#*******************************************************************************
-class Test_Border(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-        from oops.backplane.unittester_support import Backplane_Settings
-        if Backplane_Settings.EXERCISES_ONLY:
-            self.skipTest("")
-        pass
-
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
-################################################################################

@@ -263,32 +263,32 @@ class Vector(Qube):
                         the input value of inclusive.
         """
 
-        def _as_tuple(item):
+        def _as_tuple(item, name):
             # Quick internal method to make sure clip, inclusive, and shift are
             # tuples or lists of the correct length.
             if isinstance(item, (list, tuple)):
-                if len(item) != len(top):
-                    raise ValueError('top shape does not match rank of '
-                                     + 'Vector: %s, %d' % (top, len(item)))
+                if len(item) != self._numer_[0]:
+                    raise ValueError('%s.int() %s does not match item '
+                                     'shape %s: (%d,)'
+                                     % (type(self).__name__, name,
+                                        self._numer_, len(item)))
             else:
                 item = len(top) * (item,)
             return item
 
         Units.require_unitless(self._units_)
         if self._denom_:
-            raise ValueError('denominators are not supported in Vector.int')
+            raise ValueError('%s.int() does not support denominators'
+                             % type(self).__name__)
 
         if top is not None:
-            if len(top) != self.item[-1]:
-                raise ValueError('top shape does not match rank of '
-                                 + 'Vector: %s, %d' % (top, len(self.item[-1])))
-
-            clip = _as_tuple(clip)
-            inclusive = _as_tuple(inclusive)
+            top = _as_tuple(top, 'top')
+            clip = _as_tuple(clip, 'clip')
+            inclusive = _as_tuple(inclusive, 'inclusive')
             if shift is None:
                 shift = inclusive
             else:
-                shift = _as_tuple(shift)
+                shift = _as_tuple(shift, 'shift')
 
             # Convert to int; be sure it's a copy before modifying
             if self.is_int():
@@ -539,11 +539,12 @@ class Vector(Qube):
         """
 
         if self._numer_ != (3,):
-            raise ValueError('shape must be (3,)')
+            raise ValueError('%s.cross_product_as_matrix() requires item shape '
+                            '(3,)' % type(self).__name__)
 
         if self._drank_:
-            raise ValueError('denominators are not supported in ' +
-                             type(self).__name__ + '.cross_product_as_matrix')
+            raise ValueError('%s.cross_product_as_matrix() does not support '
+                             'denominators' % type(self).__name__)
 
         # Roll the numerator axis to the end if necessary
         if self._drank_ == 0:
@@ -595,12 +596,12 @@ class Vector(Qube):
 
         # Validate
         if arg._numer_ != self._numer_:
-            raise ValueError(("incompatible numerator shapes: " +
-                              "%s, %s") % (str(self._numer_), str(arg._numer_)))
+            raise ValueError('incompatible numerator shapes in '
+                             '%s.element_mul(): %s, %s'
+                             % (type(self).__name__, self._numer_, arg._numer_))
 
         if self._drank_ > 0 and arg._drank_ > 0:
-            raise ValueError(("dual operand denominators for element_mul(): " +
-                              "%s, %s") % (str(self._denom_), str(arg._denom_)))
+            Qube._raise_dual_denoms('element_mul()', self, arg)
 
         # Reshape value arrays as needed
         if arg._drank_:
@@ -658,12 +659,11 @@ class Vector(Qube):
 
         # Validate
         if arg._numer_ != self._numer_:
-            raise ValueError(("incompatible numerator shapes: " +
-                              "%s, %s") % (str(self._numer_), str(arg._numer_)))
+            Qube._raise_incompatible_numers('element_div()', self, arg)
 
         if arg._drank_ > 0:
-            raise ValueError(("right operand denominator for element_div(): " +
-                              "%s") % str(arg._denom_))
+            raise ValueError('%s.element_div() operand cannot have a '
+                             'denominator' % type(self).__name__)
 
         # Mask out zeros in divisor
         zero_mask = (arg._values_ == 0.)
@@ -783,7 +783,8 @@ class Vector(Qube):
         for arg in args:
             scalar = Scalar.as_scalar(arg)
             if scalar._drank_:
-                raise ValueError('denominators are not supported in combos()')
+                raise ValueError('%s.combos() does not support denominators'
+                                 % cls.__name__)
 
             scalars.append(scalar)
             newshape += list(scalar._shape_)
@@ -926,8 +927,8 @@ class Vector(Qube):
         """
 
         if self._drank_:
-            raise ValueError('clip_component() requires a Vector without a ' +
-                             'denominator')
+            raise ValueError('%s.clip_component() does not support denominators'
+                             % type(self).__name__)
 
         vector = self.copy()
         mask = vector._mask_

@@ -7,7 +7,7 @@ import functools
 import numpy as np
 import types
 
-from polymath               import Boolean, Qube, Scalar
+from polymath               import Boolean, Qube, Scalar, Vector3
 from oops.body              import Body
 from oops.config            import LOGGING
 from oops.surface.ansa      import Ansa
@@ -145,13 +145,11 @@ class Backplane(object):
         # dict[derivs] = event
         self.obs_events = {
             False: self.obs_event.wod,
-            True : self.obs_event.with_time_derivs().with_los_derivs()
+            True : self.obs_event.with_los_derivs()
         }
 
-        # Gridless arrival events always include time derivatives
-        self.obs_gridless_event = (obs.gridless_event(self.meshgrid,
-                                                      time=self.time)
-                                      .with_time_derivs())
+        self.obs_gridless_event = obs.gridless_event(self.meshgrid,
+                                                     time=self.time)
 
         self.shape = self.obs_event.shape
 
@@ -234,6 +232,39 @@ class Backplane(object):
         return self._dlos_duv
 
     @property
+    def dlos_duv1(self):
+        """The derivative of the line of sight with respect to (u1,v1), where
+        (u1,v1) match (u,v) but have been forced to be orthogonal. This is done
+        by leaving the lesser pixel size alone, and shifting the greater pixel
+        edge to be orthogonal while conserving the pixel area. This is a
+        better pair to use for determining spatial resolution.
+        """
+
+        if hasattr(self, '_dlos_duv1'):
+            return self._dlos_duv1
+
+        (dlos_du, dlos_dv) = self.dlos_duv.extract_denoms()
+
+        self._dlos_duv1 = self.dlos_duv.copy()
+        (dlos_du1, dlos_dv1) = self._dlos_duv1.extract_denoms()
+            # memory is shared between self._dlos_duv1, dlos_du1, and dlos_dv1
+            # so changes to dlos_du1, and dlos_dv1 appear inside self._dlos_duv1
+
+        # Select pixels where the u-size is smaller
+        u_is_smaller = dlos_du.norm_sq().vals <= dlos_dv.norm_sq().vals
+
+        # Here, replace v with its component perpendicular to u
+        dlos_dv1[u_is_smaller] = dlos_dv.perp(dlos_du)[u_is_smaller]
+
+        # Select pixels where the v is smaller
+        v_is_smaller = np.logical_not(u_is_smaller)
+
+        # Here, replace u with its component perpendicular to v
+        dlos_du1[v_is_smaller] = dlos_du.perp(dlos_dv)[v_is_smaller]
+
+        return self._dlos_duv1
+
+    @property
     def duv_dlos(self):
         if not hasattr(self, '_duv_dlos'):
             self._duv_dlos = self.meshgrid.duv_dlos(self.time)
@@ -259,11 +290,14 @@ class Backplane(object):
     ############################################################################
 
     @functools.lru_cache(maxsize=300)
-    def standardize_event_key(self, event_key):
+    def standardize_event_key(self, event_key, default=''):
         """Repair an event key to make it suitable for indexing a dictionary.
 
         The photons originate from the Sun unless otherwise indicated. An empty
         event_key is returned as an empty tuple.
+
+        Use default = 'ANSA', 'RING', or 'LIMB' to add this suffix to the body
+        name if no suffix is specified.
         """
 
         if not event_key:
@@ -271,34 +305,43 @@ class Backplane(object):
 
         # Handle an individual string
         if isinstance(event_key, str):
-            return ('SUN<', event_key.upper())
-
-        # Handle a tuple of strings
-        new_key = [k.upper() for k in event_key]
+            event_key = ('SUN<', event_key.upper())
+        else:
+            # Handle a tuple of strings
+            event_key = [k.upper() for k in event_key]
 
         # Begin with the Sun if there is no illumination already
-        if new_key[0][-1] not in ('<', '>', '-'):
-            new_key = ['SUN<'] + new_key
+        if event_key[0][-1] not in ('<', '>', '-'):
+            event_key = ['SUN<'] + event_key
 
         # If SUN is duplicated, remove the extra one
         # This happens when re-using old event keys that did not have the suffix
-        if new_key[0][:-1] == new_key[1]:
-            new_key = new_key[:1] + new_key[2:]
+        if event_key[0][:-1] == event_key[1]:
+            event_key = event_key[:1] + event_key[2:]
 
-        new_key = tuple(new_key)
+        # Add the default surface suffix to the body if necessary
+        if default and ':' not in event_key[-1]:
+            default = default.upper()
+            surface = self.get_surface(event_key[-1])
+            if surface.COORDINATE_TYPE == 'spherical':
+                event_key = event_key[:-1] + (event_key[-1] + ':' + default,)
+            elif default == 'ANSA' and surface.COORDINATE_TYPE == 'polar':
+                event_key = event_key[:-1] + (event_key[-1] + ':' + default,)
+
+        event_key = tuple(event_key)
 
         # Check length
-        if self._is_dispersed(new_key) and len(new_key) not in (2,3):
+        if self._is_dispersed(event_key) and len(event_key) not in (2,3):
             raise ValueError('illegal surface event key: ' + repr(event_key))
 
-        if self._is_occultation(new_key) and len(new_key) != 2:
+        if self._is_occultation(event_key) and len(event_key) != 2:
             raise ValueError('illegal occultation event key: '
                              + repr(event_key))
 
-        if self._is_gridless(new_key) and len(new_key) != 2:
+        if self._is_gridless(event_key) and len(event_key) != 2:
             raise ValueError('illegal gridless event key: ' + repr(event_key))
 
-        return new_key
+        return event_key
 
     def _is_dispersed(self, event_key):
         if len(event_key) == 0:
@@ -320,10 +363,10 @@ class Backplane(object):
             return False
         return self._is_dispersed(event_key) and len(event_key) == 3
 
-    def gridless_event_key(self, event_key):
+    def gridless_event_key(self, event_key, default=''):
         """Convert event key to gridless."""
 
-        event_key = self.standardize_event_key(event_key)
+        event_key = self.standardize_event_key(event_key, default=default)
         if not event_key:
             return event_key
 
@@ -367,11 +410,14 @@ class Backplane(object):
 
     #===========================================================================
     @functools.lru_cache(maxsize=300)
-    def _event_and_backplane_keys(self, event_key, names=()):
+    def _event_and_backplane_keys(self, event_key, names=(), default=''):
         """Interpret the input as either a backplane_key or an event_key.
 
         names is the set of possible backplane names to seek; if not specified,
         the complete set of defined Backplane names is used.
+
+        Use default = 'ANSA', 'RING', or 'LIMB' to add this suffix to the body
+        name if no suffix is specified.
         """
 
         if not names:
@@ -383,7 +429,7 @@ class Backplane(object):
             event_key = event_key[1]
             uses_backplane_key = True
 
-        event_key = self.standardize_event_key(event_key)
+        event_key = self.standardize_event_key(event_key, default=default)
         if uses_backplane_key:
             backplane_key = self.standardize_backplane_key(backplane_key)
             return (event_key, backplane_key)
@@ -935,6 +981,7 @@ class Backplane(object):
 # UNIT TESTS via gold_master
 ################################################################################
 
+import os
 import unittest
 import oops.backplane.gold_master as gm
 from oops.unittester_support import OOPS_TEST_DATA_PATH
@@ -942,6 +989,16 @@ from oops.unittester_support import OOPS_TEST_DATA_PATH
 class Test_Backplane_via_gold_master(unittest.TestCase):
 
   def runTest(self):
+
+    # The d/dv numerical ring derivatives are extra-uncertain due to the high
+    # foreshortening in the vertical direction.
+
+    gm.override('SATURN:RING longitude d/dv self-check (deg/pix)', 0.1)
+    gm.override('SATURN:RING azimuth d/dv self-check (deg/pix)', 0.1)
+    gm.override('SATURN_MAIN_RINGS longitude d/dv self-check (deg/pix)', 1.)
+    gm.override('SATURN_MAIN_RINGS azimuth d/dv self-check (deg/pix)', 1.)
+    gm.override('SATURN:RING distance d/dv self-check (km/pix)', 0.3)
+    gm.override('SATURN_MAIN_RINGS distance d/dv self-check (km/pix)', 0.3)
 
     gm.execute_as_unittest(self,
                 obspath = os.path.join(OOPS_TEST_DATA_PATH,
@@ -951,351 +1008,7 @@ class Test_Backplane_via_gold_master(unittest.TestCase):
                 moon    = 'EPIMETHEUS',
                 ring    = 'SATURN_MAIN_RINGS')
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-import os
-
-import oops.config as config
-
-from polymath                           import Vector3
-from oops.meshgrid                      import Meshgrid
-from oops.event                         import Event
-
-from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
-from oops.backplane.exercise_backplanes import exercise_backplanes
-from oops.backplane.unittester_support  import Backplane_Settings
-
-UNITTEST_SATURN_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                        'cassini/ISS/W1573721822_1.IMG')
-UNITTEST_RHEA_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                      'cassini/ISS/N1649465464_1.IMG')
-
-#*******************************************************************************
-class Test_Backplane_Surfaces(unittest.TestCase):
-
-    OLD_RHEA_SURFACE = None
-
-    #===========================================================================
-    def setUp(self):
-        global OLD_RHEA_SURFACE
-
-        from oops.surface.ellipsoid import Ellipsoid
-
-        if Backplane_Settings.EXERCISES_ONLY:
-            self.skipTest("")
-
-        # This only needed when this test is run before the SS has been
-        # defined by a host from_file() method
-        Body.define_solar_system('2000-01-01', '2020-01-01')
-
-        # Distort Rhea's shape for better Ellipsoid testing
-        rhea = Body.as_body('RHEA')
-        OLD_RHEA_SURFACE = rhea.surface
-        old_rhea_radii = OLD_RHEA_SURFACE.radii
-
-        new_rhea_radii = tuple(np.array([1.1, 1., 0.9]) * old_rhea_radii)
-        new_rhea_surface = Ellipsoid(rhea.path, rhea.frame, new_rhea_radii)
-        Body.as_body('RHEA').surface = new_rhea_surface
-
-  #      config.LOGGING.on('   ')
-        config.EVENT_CONFIG.collapse_threshold = 0.
-        config.SURFACE_PHOTONS.collapse_threshold = 0.
-
-    #===========================================================================
-    def tearDown(self):
-        global OLD_RHEA_SURFACE
-
-        config.LOGGING.off()
-        config.EVENT_CONFIG.collapse_threshold = 3.
-        config.SURFACE_PHOTONS.collapse_threshold = 3.
-
-        # Restore Rhea's shape
-        Body.as_body('RHEA').surface = OLD_RHEA_SURFACE
-
-    #===========================================================================
-    def runTest(self):
-
-        from oops.surface.centricspheroid  import CentricSpheroid
-        from oops.surface.graphicspheroid  import GraphicSpheroid
-        from oops.surface.centricellipsoid import CentricEllipsoid
-        from oops.surface.graphicellipsoid import GraphicEllipsoid
-
-        import hosts.cassini.iss as iss
-
-        snap = iss.from_file(UNITTEST_SATURN_FILESPEC, fast_distortion=False)
-        meshgrid = Meshgrid.for_fov(snap.fov,
-                    undersample=Backplane_Settings.UNDERSAMPLE, swap=True)
-        uv0 = meshgrid.uv
-        bp = Backplane(snap, meshgrid)
-
-        # Actual (ra,dec)
-        ra = bp.right_ascension(apparent=False)
-        dec = bp.declination(apparent=False)
-
-        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-        ev.neg_arr_j2000 = Vector3.from_ra_dec_length(ra, dec)
-        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-        diff = uv - uv0
-        self.assertTrue(diff.norm().max() < 1.e-9)
-
-        ra = bp.right_ascension(apparent=True)
-        dec = bp.declination(apparent=True)
-
-        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-        ev.neg_arr_ap_j2000 = Vector3.from_ra_dec_length(ra, dec)
-        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-
-        diff = uv - uv0
-
-        # RingPlane (rad, lon)
-        rad = bp.ring_radius('saturn:ring')
-        lon = bp.ring_longitude('saturn:ring', reference='node')
-
-        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-        body = Body.as_body('SATURN_RING_PLANE')
-        (_, ev) = body.surface.photon_to_event_by_coords(ev, (rad,lon))
-
-        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-        diff = uv - uv0
-        self.assertTrue(diff.norm().max() < 1.e-8)
-
-        # Ansa (rad, alt)
-        rad = bp.ansa_radius('saturn:ansa', radius_type='right')
-        alt = bp.ansa_altitude('saturn:ansa')
-
-        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-        body = Body.as_body('SATURN_RING_PLANE')
-        surface = Ansa.for_ringplane(body.surface)
-        (_, ev) = surface.photon_to_event_by_coords(ev, (rad,alt))
-
-        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-        diff = uv - uv0
-        self.assertTrue(diff.norm().max() < 1.e-8)
-
-        # Spheroid (lon,lat)
-        lat = bp.latitude('saturn', lat_type='squashed')
-        lon = bp.longitude('saturn', reference='iau', direction='east',
-                                     lon_type='centric')
-        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-        body = Body.as_body('SATURN')
-        (_, ev) = body.surface.photon_to_event_by_coords(ev, (lon,lat))
-        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-        diff = uv - uv0
-        self.assertTrue(diff.norm().max() < 1.e-8)
-
-        # CentricSpheroid (lon,lat)
-        lat = bp.latitude('saturn', lat_type='centric')
-        lon = bp.longitude('saturn', reference='iau', direction='east',
-                                     lon_type='centric')
-
-        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-        body = Body.as_body('SATURN')
-        surface = CentricSpheroid(body.path, body.frame, body.surface.radii)
-        (_, ev) = surface.photon_to_event_by_coords(ev, (lon,lat))
-
-        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-        diff = uv - uv0
-        self.assertTrue(diff.norm().max() < 1.e-8)
-
-        # GraphicSpheroid (lon,lat)
-        lat = bp.latitude('saturn', lat_type='graphic')
-        lon = bp.longitude('saturn', reference='iau', direction='east',
-                                     lon_type='centric')
-
-        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-        body = Body.as_body('SATURN')
-        surface = GraphicSpheroid(body.path, body.frame, body.surface.radii)
-        (_, ev) = surface.photon_to_event_by_coords(ev, (lon,lat))
-
-        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-        diff = uv - uv0
-        self.assertTrue(diff.norm().max() < 1.e-8)
-
-        # Rhea tests, with Rhea modified
-        body = Body.as_body('RHEA')
-        snap = iss.from_file(UNITTEST_RHEA_FILESPEC, fast_distortion=False)
-        meshgrid = Meshgrid.for_fov(snap.fov,
-                    undersample=Backplane_Settings.UNDERSAMPLE, swap=True)
-
-        uv0 = meshgrid.uv
-        bp = Backplane(snap, meshgrid)
-
-        # Ellipsoid (lon,lat)
-        lat = bp.latitude('rhea', lat_type='squashed')
-        lon = bp.longitude('rhea', reference='iau', direction='east',
-                                   lon_type='squashed')
-
-        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-        body = Body.as_body('RHEA')
-        (_, ev) = body.surface.photon_to_event_by_coords(ev, (lon,lat))
-
-        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-        diff = uv - uv0
-        self.assertTrue(diff.norm().max() < 2.e-7)
-
-        # CentricEllipsoid (lon,lat)
-        lat = bp.latitude('rhea', lat_type='centric')
-        lon = bp.longitude('rhea', reference='iau', direction='east',
-                                   lon_type='centric')
-
-        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-        body = Body.as_body('RHEA')
-        surface = CentricEllipsoid(body.path, body.frame, body.surface.radii)
-        (_, ev) = surface.photon_to_event_by_coords(ev, (lon,lat))
-
-        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-        diff = uv - uv0
-        self.assertTrue(diff.norm().max() < 2.e-7)
-
-        # GraphicEllipsoid (lon,lat)
-        lat = bp.latitude('rhea', lat_type='graphic')
-        lon = bp.longitude('rhea', reference='iau', direction='east',
-                                   lon_type='graphic')
-
-        ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-        body = Body.as_body('RHEA')
-        surface = GraphicEllipsoid(body.path, body.frame, body.surface.radii)
-        (_, ev) = surface.photon_to_event_by_coords(ev, (lon,lat))
-
-        uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-        diff = uv - uv0
-        #print(diff.norm().min(), diff.norm().max())
-        self.assertTrue(diff.norm().max() < 2.e-7)
-
-
-#*******************************************************************************
-class Test_Backplane_Borders(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-
-        # NOTE These tests are very sensitive to the specific kernel pool used.
-        import hosts.cassini.iss as iss
-
-        if Backplane_Settings.EXERCISES_ONLY:
-            self.skipTest('')
-
-        # These test assume undersample = 1.
-        if Backplane_Settings.UNDERSAMPLE != 1:
-            return
-
-        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                'cassini/ISS/W1573721822_1.IMG')
-
-        snap = iss.from_file(filespec)
-        meshgrid = Meshgrid.for_fov(snap.fov,
-                        undersample=Backplane_Settings.UNDERSAMPLE, swap=True)
-        bp = Backplane(snap, meshgrid, inventory=None)
-
-        # Test border of planet intercepted mask, inside
-        mask = bp.where_intercepted('saturn')
-
-        test = bp.border_inside(mask)
-        count = np.sum(test.vals)
-        self.assertTrue(count == 961)
-
-        # Test border of planet intercepted mask, outside
-        test = bp.border_outside(mask)
-        count = np.sum(test.vals)
-        self.assertTrue(count == 962)
-
-        # Test border of ring radius below 100 km
-        test = bp.border_below(('ring_radius', 'saturn:ring'), 100.e3)
-        count = np.sum(test.vals)
-        self.assertTrue(count == 1713)
-
-        # Test border of ring radius atop 100 km
-        test = bp.border_atop(('ring_radius', 'saturn:ring'), 100.e3)
-        count = np.sum(test.vals)
-        self.assertTrue(count == 1715)
-
-        # Test border of ring radius above 100 km
-        test = bp.border_above(('ring_radius', 'saturn:ring'), 100.e3)
-        count = np.sum(test.vals)
-        self.assertTrue(count == 1715)
-
-        # Test border of ring radius above 100 km via evaluate()
-        test = bp.evaluate(('border_above', ('ring_radius', 'saturn:ring'), 100.e3))
-        count = np.sum(test.vals)
-        self.assertTrue(count == 1715)
-
-
-#*******************************************************************************
-class Test_Backplane_Empty_Events(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-        import hosts.cassini.iss as iss
-
-        if Backplane_Settings.EXERCISES_ONLY:
-            self.skipTest('')
-
-        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                'cassini/ISS/W1573721822_1.IMG')
-
-        snap = iss.from_file(filespec)
-        meshgrid = Meshgrid.for_fov(snap.fov,
-                      undersample=Backplane_Settings.UNDERSAMPLE, swap=True)
-        bp = Backplane(snap, meshgrid, inventory=None)
-
-        # Test empty mask of planet ring radius below 10 km
-        test = bp.where_below(('ring_radius', 'saturn_main_rings'), 10.e3)
-        count = np.sum(test.vals)
-        total = np.size(test.vals)
-        percent = int(count / float(total) * 100. + 0.5)
-        self.assertTrue(percent == 0)
-
-        # Test empty ring radius for Pluto
-        test = bp.ring_radius('pluto:ring', rmax=10.e3)
-        total = np.size(test.mask)
-        masked = np.sum(test.mask)
-        percent = int(masked / float(total) * 100. + 0.5)
-        self.assertTrue(percent == 100)
-
-        # Test empty longitude for Pluto
-        test = bp.longitude('pluto')
-        total = np.size(test.mask)
-        masked = np.sum(test.mask)
-        percent = int(masked / float(total) * 100. + 0.5)
-        self.assertTrue(percent == 100)
-
-        # Test empty incidence angle for Pluto
-        test = bp.incidence_angle('pluto')
-        total = np.size(test.mask)
-        masked = np.sum(test.mask)
-        percent = int(masked / float(total) * 100. + 0.5)
-        self.assertTrue(percent == 100)
-
-
-#*******************************************************************************
-class Test_Backplane_Exercises(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-        import hosts.cassini.iss as iss
-
-        if Backplane_Settings.NO_EXERCISES:
-            self.skipTest('')
-
-#        iss.initialize(asof='2019-09-01', mst_pck=True)
-
-        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                'cassini/ISS/W1573721822_1.IMG')
-
-        obs = iss.from_file(filespec)
-        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-                                 planet_key='saturn',
-                                 moon_key='epimetheus',
-                                 ring_key='saturn_main_rings')
-
-
-##############################################
-from oops.backplane.unittester_support import backplane_unittester_args
-
+########################################
 if __name__ == '__main__':
-    backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################

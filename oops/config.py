@@ -66,30 +66,36 @@ class QUICK(object):
 
 class PATH_PHOTONS(object):
     max_iterations = 4          # Maximum number of iterations.
-    dlt_precision = 1.e-9       # Iterations stops when every change in light
+    dlt_precision = 3.e-7       # Iterations stops when every change in light
                                 # travel time from one iteration to the next
-                                # drops below this threshold.
+                                # drops below this threshold. This is roughly
+                                # the accuracy of a double-precision time in
+                                # seconds for dates within a few decades of the
+                                # year 2000.
     dlt_limit = 10.             # The allowed range of variations in light
                                 # travel time before they are truncated. This
                                 # should be related to the physical scale of
                                 # the system being studied.
+    km_precision = 1.e-4        # Default precision goal in geometry solutions
+                                # is ten cm.
+    rel_precision = 1.e-10      # Between sqrt(machine precision) and machine
+                                # precision.
 
 # For Surface._solve_photon_by_los()
 
 class SURFACE_PHOTONS(object):
-    max_iterations = 5          # Maximum number of iterations.
-    dlt_precision = 1.e-9       # See PATH_PHOTONS for more info.
+    max_iterations = 6          # Maximum number of iterations.
+    dlt_precision = 3.e-7       # See PATH_PHOTONS for more info.
     dlt_limit = 10.             # See PATH_PHOTONS for more info.
     collapse_threshold = 3.     # When a surface intercept consists of a range
                                 # of times smaller than this threshold, the
                                 # times are converted to a single value.
                                 # This approximation can speed up some
                                 # calculations substantially.
-    groundtrack_precision = 0.01
-                                # Spatial precision sought in ground tracks
-                                # within a limb surface calculation, in km.
-    groundtrack_iterations = 20 # Maximum number of iterations in ground track
-                                # calculations.
+    km_precision = 1.e-4        # Default precision goal in geometry solutions
+                                # is ten cm.
+    rel_precision = 1.e-10      # Between sqrt(machine precision) and machine
+                                # precision.
 
 ################################################################################
 # Event precision
@@ -477,6 +483,10 @@ class LOGGING(object):
         LOGGING.logger.fatal(message, extra={'mytime': mytime,
                                              'mylevelname': 'FATAL'})
         LOGGING.errors += 1
+
+    def literal(*args, level=logging.DEBUG, force=True):
+        """Print a literal message to the log."""
+        LOGGING.print(*args, level=level, literal=True, force=force)
 
     @staticmethod
     def push():

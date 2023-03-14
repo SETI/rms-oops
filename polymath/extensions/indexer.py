@@ -186,13 +186,14 @@ def __setitem__(self, indx, arg):
         arg_mask = arg._mask_
 
     # Set the new values and mask
-    if not np.any(post_mask):               # post-mask is False
+    if not np.any(post_mask):                # post-mask is False
 
         self._values_[vals_index] = arg_values
         if np.shape(self._mask_):
+            self._mask_ = self._mask_.copy() # copy; it might be shared
             self._mask_[pre_index] = arg_mask
 
-    else:                                   # post-mask is an array
+    else:                                    # post-mask is an array
 
         # antimask is False wherever the index is masked
         antimask = np.logical_not(post_mask)
@@ -214,6 +215,7 @@ def __setitem__(self, indx, arg):
             else:
                 selection[antimask] = arg_mask
 
+            self._mask_ = self._mask_.copy()    # copy; it might be shared
             self._mask_[pre_index] = selection
 
     self._cache_.clear()
@@ -309,7 +311,7 @@ def _prep_index(self, indx):
 
         if type(item) == type(Ellipsis):
             if ellipsis_k >= 0:
-                raise IndexError('an index can only have a single ' +
+                raise IndexError('an index can only have a single '
                                  'ellipsis ("...")')
             ellipsis_k = k
 
@@ -371,11 +373,11 @@ def _prep_index(self, indx):
                 item_shape = item._shape_
                 for k,item_length in enumerate(item_shape):
                   if self._shape_[inloc + k] != item_length:
-                    raise IndexError((
-                        'boolean index did not match indexed array along ' +
-                        'dimension %d; dimension is %d but corresponding ' +
-                        'boolean dimension is %d') % (inloc + k,
-                            self._shape_[inloc + k], item_length))
+                    raise IndexError(
+                        'boolean index did not match indexed array along '
+                        'dimension %d; dimension is %d but corresponding '
+                        'boolean dimension is %d'
+                        % (inloc + k, self._shape_[inloc + k], item_length))
 
                 # Update index and mask
                 index = Qube.or_(item._values_, item._mask_)  # True or masked
@@ -490,7 +492,7 @@ def _prep_index(self, indx):
             pre_index += [item]
 
         else:
-            raise IndexError('invalid index type: ' + str(type(item)))
+            raise IndexError('invalid index type: ' + type(item).__name__)
 
     # Get the shape of the array indices
     array_shape = Qube.broadcasted_shape(*array_shapes)
@@ -574,7 +576,7 @@ def _prep_scalar_index(self, indx):
 
         elif item is Ellipsis:
             if has_ellipsis:
-                raise IndexError('an index can only have a single ' +
+                raise IndexError('an index can only have a single '
                                  'ellipsis ("...")')
             has_ellipsis = True
 
