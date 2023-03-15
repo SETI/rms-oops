@@ -316,10 +316,10 @@ def override(title, value, names=None):
     """
 
     global TEST_OVERRIDES, STANDARD_OBS
-    
+
     if names is None:
         names = STANDARD_OBS.keys()
-        
+
     for name in [names]:
         TEST_OVERRIDES[name] = {}
         TEST_OVERRIDES[name][title] = value
@@ -329,7 +329,8 @@ def override(title, value, names=None):
 # Command line execution
 ################################################################################
 
-def execute_as_command():
+#===============================================================================
+def execute_as_command(**options):
     """Parse command-line arguments for gold master testing of one or more
     backplanes and then run the tests.
     A "Namespace" object is returned, containing all of the command line
@@ -337,6 +338,9 @@ def execute_as_command():
         from_file       the "from_file" function of the selected module.
         abpaths         the list of absolute paths to the observations.
         backplane_tests the list of BackplaneTest objects.
+        
+    Inputs:
+        **options       overrides for any default gold_master input arguments.
     """
 
     global STANDARD_OBS
@@ -535,17 +539,47 @@ def execute_as_command():
 
     args = parser.parse_args()
     args.testcase = None
+
+    # Fill in any overrides
+    for key, value in options.items():
+        setattr(args, key, value)
+
+    # Run tests
     args = _clean_up_args(args)
     run_tests(args)
+
+#===============================================================================
+def execute_standard_command(name, **options):
+    """Run the gold master test suites for one or more observations.
+    
+    Inputs:
+        testcase        the unittest TestCase object.
+        name            name of a standard unit test.
+        **options       overrides for any default gold_master input arguments.
+    """
+
+    global STANDARD_OBS
+
+    test = STANDARD_OBS[name]
+    execute_as_command(name=name, obspath = test['obspath'],
+                                  module  = test['module'],
+                                  planet  = test['planet'],
+                                  moon    = test['moon'],
+                                  ring    = test['ring'],
+                                  index   = test['index'],
+                                  kwargs  = test['kwargs'],
+                                  **options)
 
 ################################################################################
 # unittest module support
 ################################################################################
 
+#===============================================================================
 def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
                         index=None, kwargs={}, **options):
     """Run the gold master test suites for one or more observations as a unit
     test.
+    
     Inputs:
         testcase        the unittest TestCase object.
         obspath         file path to the default data object to be used.
@@ -613,7 +647,7 @@ def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
 
     run_tests(args)
 
-
+#===============================================================================
 def execute_standard_unittest(testcase, name, **options):
     """Run the gold master test suites for one or more observations as a unit
     test.

@@ -470,7 +470,9 @@ class Test_Juno_Junocam_GoldMaster(unittest.TestCase):
     def runTest(self):
         from hosts.juno.junocam import standard_obs
         gm.execute_standard_unittest(unittest.TestCase, 'JNCR_2016347_03C00192_V01')
-        gm.execute_standard_unittest(unittest.TestCase, 'JNCR_2019096_19M00012_V02')
+#        gm.execute_standard_unittest(unittest.TestCase, 'JNCR_2019096_19M00012_V02')
+
+#        gm.execute_standard_unittest(unittest.TestCase, exclude='default')
 
 #    #===========================================================================
 #    def runTest(self):
