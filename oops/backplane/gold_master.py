@@ -304,18 +304,25 @@ def define_standard_obs(name, obspath, index, module, planet, moon=[], ring=[],
 
 TEST_OVERRIDES = {}
 
-def override(title, value):
+def override(title, value, names=None):
     """Override the hard-wired comparison values for specific tests.
     Input:
         title       the exact title of a test, e.g.,
                     "JUPITER:RING incidence angle, ring minus center (deg)".
         value       the revised comparison value, or None to suppress the test
                     entirely.
+        names       if specified, this override applies only the the named
+                    standard observations.
     """
 
-    global TEST_OVERRIDES
-
-    TEST_OVERRIDES[title] = value
+    global TEST_OVERRIDES, STANDARD_OBS
+    
+    if names is None:
+        names = STANDARD_OBS.keys()
+        
+    for name in [names]:
+        TEST_OVERRIDES[name] = {}
+        TEST_OVERRIDES[name][title] = value
 
 
 ################################################################################
@@ -1796,15 +1803,17 @@ class BackplaneTest(object):
                              + 'is incompatible with method "border"')
 
         # Validate limit
-        if title in TEST_OVERRIDES:
-            limit = TEST_OVERRIDES[title]
-        elif isinstance(limit, Qube):
-            if np.any(limit.mask):
-                limit = 0.
+        name = self.args.name
+        if name in TEST_OVERRIDES.keys():
+            if title in TEST_OVERRIDES[name]:
+                limit = TEST_OVERRIDES[name][title]
+            elif isinstance(limit, Qube):
+                if np.any(limit.mask):
+                    limit = 0.
+                else:
+                    limit = abs(limit.vals * self.args.tolerance)
             else:
-                limit = abs(limit.vals * self.args.tolerance)
-        else:
-                limit = abs(limit * self.args.tolerance)
+                    limit = abs(limit * self.args.tolerance)
 
         # Warn about duplicated titles
         if title in self.results:
