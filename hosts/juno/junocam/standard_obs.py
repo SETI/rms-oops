@@ -14,7 +14,6 @@ from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 name = 'JNCR_2016347_03C00192_V01'
 ##################################
 gm.define_standard_obs(name,
-#gm.define_standard_obs('default',
         obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                'juno/junocam/03/' + name + '.img'),
         index   = 5,

@@ -317,10 +317,15 @@ def override(title, value, names=None):
 
     global TEST_OVERRIDES, STANDARD_OBS
 
-    if names is None:
-        names = STANDARD_OBS.keys()
+    # Force names to be a list, use all standard obs by default
+    if names is not None:
+        if not isinstance(names, list):
+            names = [names]
+    else:
+        names = list(STANDARD_OBS.keys())
 
-    for name in [names]:
+    # Set overrides
+    for name in names:
         TEST_OVERRIDES[name] = {}
         TEST_OVERRIDES[name][title] = value
 
@@ -549,26 +554,43 @@ def execute_as_command(**options):
     run_tests(args)
 
 #===============================================================================
-def execute_standard_command(name, **options):
+def execute_standard_command(names=None, exclude=None, **options):
     """Run the gold master test suites for one or more observations.
     
     Inputs:
-        testcase        the unittest TestCase object.
-        name            name of a standard unit test.
+        names           names of standard observations to run.
+        exclude         names of standard observations to exclude.
         **options       overrides for any default gold_master input arguments.
     """
 
     global STANDARD_OBS
 
-    test = STANDARD_OBS[name]
-    execute_as_command(name=name, obspath = test['obspath'],
-                                  module  = test['module'],
-                                  planet  = test['planet'],
-                                  moon    = test['moon'],
-                                  ring    = test['ring'],
-                                  index   = test['index'],
-                                  kwargs  = test['kwargs'],
-                                  **options)
+    # Force exclude to be a list
+    if exclude is None:
+        exclude = []
+    else:
+        if not isinstance(exclude, list):
+            exclude = [exclude]
+
+    # Force names to be a list, use all standard obs by default
+    if names is not None:
+        if not isinstance(names, list):
+            names = [names]
+    else:
+        names = list(STANDARD_OBS.keys())
+
+    # Run tests
+    for name in names:
+        if name not in exclude:
+            test = STANDARD_OBS[name]
+            execute_as_command(name=name, obspath = test['obspath'],
+                                          module  = test['module'],
+                                          planet  = test['planet'],
+                                          moon    = test['moon'],
+                                          ring    = test['ring'],
+                                          index   = test['index'],
+                                          kwargs  = test['kwargs'],
+                                          **options)
 
 ################################################################################
 # unittest module support
@@ -648,26 +670,44 @@ def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
     run_tests(args)
 
 #===============================================================================
-def execute_standard_unittest(testcase, name, **options):
+def execute_standard_unittest(testcase, names=None, exclude=None, **options):
     """Run the gold master test suites for one or more observations as a unit
     test.
     Inputs:
         testcase        the unittest TestCase object.
-        name            name of a standard unit test.
+        names           names of standard observations to run.
+        exclude         names of standard observations to exclude.
         **options       overrides for any default gold_master input arguments.
     """
 
     global STANDARD_OBS
 
-    test = STANDARD_OBS[name]
-    execute_as_unittest(testcase, obspath = test['obspath'],
-                                  module  = test['module'],
-                                  planet  = test['planet'],
-                                  moon    = test['moon'],
-                                  ring    = test['ring'],
-                                  index   = test['index'],
-                                  kwargs  = test['kwargs'],
-                                  **options)
+    # Force exclude to be a list
+    if exclude is None:
+        exclude = []
+    else:
+        if not isinstance(exclude, list):
+            exclude = [exclude]
+
+    # Force names to be a list, use all standard obs by default
+    if names is not None:
+        if not isinstance(names, list):
+            names = [names]
+    else:
+        names = list(STANDARD_OBS.keys())
+
+    # Run tests
+    for name in names:
+        if name not in exclude:
+            test = STANDARD_OBS[name]
+            execute_as_unittest(testcase, obspath = test['obspath'],
+                                          module  = test['module'],
+                                          planet  = test['planet'],
+                                          moon    = test['moon'],
+                                          ring    = test['ring'],
+                                          index   = test['index'],
+                                          kwargs  = test['kwargs'],
+                                          **options)
 
 #===============================================================================
 def _clean_up_args(args):

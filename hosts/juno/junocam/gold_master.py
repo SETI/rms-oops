@@ -10,12 +10,7 @@ import oops.backplane.gold_master as gm
 gm.set_default_args(inventory=False, border=10)
 
 if __name__ == '__main__':
-#    gm.execute_as_command()
-    
-    gm.execute_standard_command('JNCR_2016347_03C00192_V01')
-    gm.execute_standard_command('JNCR_2019096_19M00012_V02')
-
-#    gm.execute_standard_command(exclude='default')
+    gm.execute_standard_command(exclude='default')
 
 ################################################################################
 
