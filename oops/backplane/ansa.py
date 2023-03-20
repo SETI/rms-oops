@@ -310,6 +310,7 @@ def ansa_test_suite(bpt):
 
       for name in bpt.ansa_names:
 
+#        from IPython import embed; print('+++++++++++++'); embed()
         (ulimit, vlimit) = bp.center_distance(name) * pixel_duv * 1.e-3
 
         # ansa_radius

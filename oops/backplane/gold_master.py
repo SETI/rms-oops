@@ -1256,7 +1256,6 @@ class BackplaneTest(object):
                 test_suite = get_test_suite(key)
                 TEST_SUITE = key
                 LATEST_TITLE = ''
-#                from IPython import embed; print('+++++++++++++'); embed()
                 try:
                     test_suite(self)
 
