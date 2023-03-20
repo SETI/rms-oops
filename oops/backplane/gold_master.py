@@ -365,7 +365,8 @@ def execute_as_command(**options):
                     help='''Index to use if the from_file method returns a list;
                             by default, backplane arrays will be generated for
                             each Observation object returned by from_file.''')
-    gr.add_argument('--name', type=str, default='default',
+    gr.add_argument('--name', type=str, default=None,
+###    gr.add_argument('--name', type=str, default='default',
                     help='''The name of the defined standard observation to use
                             if a file path is not given explicitly. Default is
                             "default".''')
@@ -544,6 +545,15 @@ def execute_as_command(**options):
 
     args = parser.parse_args()
     args.testcase = None
+
+    # If --name given and it is overridden, only run test with matching 
+    # overidden name
+    if args.name is not None:
+        if 'name' in options.keys():
+            if args.name != options['name']:
+                return
+    else:
+        args.name = 'default'
 
     # Fill in any overrides
     for key, value in options.items():
@@ -1244,6 +1254,7 @@ class BackplaneTest(object):
                 test_suite = get_test_suite(key)
                 TEST_SUITE = key
                 LATEST_TITLE = ''
+#                from IPython import embed; print('+++++++++++++'); embed()
                 try:
                     test_suite(self)
 
