@@ -310,8 +310,15 @@ def ansa_test_suite(bpt):
 
       for name in bpt.ansa_names:
 
-#        from IPython import embed; print('+++++++++++++'); embed()
+### this assumes center_distance is gridless, but sometimes it is gridded
+### and gives an error...
         (ulimit, vlimit) = bp.center_distance(name) * pixel_duv * 1.e-3
+
+### this addresses the immediate problem, but I thik dist should have
+### only a single value
+#        dist = bp.center_distance(name)
+#        ulimit = dist * pixel_duv[0] * 1.e-3
+#        vlimit = dist * pixel_duv[1] * 1.e-3
 
         # ansa_radius
         rad = bp.ansa_radius(name)

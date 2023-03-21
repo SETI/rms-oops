@@ -750,6 +750,8 @@ class Backplane(object):
         else:
             detection = self.get_obs_event(event_key, derivs=derivs)
 
+#        if event_key == ('SUN-', 'JUPITER:ANSA'):
+#            print(0)
         # Solve for the event
         if is_gridless:
             # If gridless, the call to get_obs_event above filled in the event,

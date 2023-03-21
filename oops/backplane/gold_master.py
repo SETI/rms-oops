@@ -345,7 +345,7 @@ def execute_as_command(**options):
         from_file       the "from_file" function of the selected module.
         abpaths         the list of absolute paths to the observations.
         backplane_tests the list of BackplaneTest objects.
-        
+
     Inputs:
         **options       overrides for any default gold_master input arguments.
     """
@@ -548,7 +548,7 @@ def execute_as_command(**options):
     args = parser.parse_args()
     args.testcase = None
 
-    # If --name given and it is overridden, only run test with matching 
+    # If --name given and it is overridden, only run test with matching
     # overidden name
     if args.name is not None:
         if 'name' in options.keys():
@@ -568,7 +568,7 @@ def execute_as_command(**options):
 #===============================================================================
 def execute_standard_command(names=None, exclude=None, **options):
     """Run the gold master test suites for one or more observations.
-    
+
     Inputs:
         names           names of standard observations to run.
         exclude         names of standard observations to exclude.
@@ -613,7 +613,7 @@ def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
                         index=None, kwargs={}, **options):
     """Run the gold master test suites for one or more observations as a unit
     test.
-    
+
     Inputs:
         testcase        the unittest TestCase object.
         obspath         file path to the default data object to be used.
@@ -1853,12 +1853,16 @@ class BackplaneTest(object):
             comparison.max_diff2 = max(0, np.max(diffs_below),
                                           np.max(diffs_above))
 
+            limit = comparison.limit
+            if not isinstance(limit, float):
+                limit = limit[diff_error_mask]
+
             if comparison.operator[-1] == '=':
-                diff_error_mask_below = diffs_below > comparison.limit
-                diff_error_mask_above = diffs_above > comparison.limit
+                diff_error_mask_below = diffs_below > limit
+                diff_error_mask_above = diffs_above > limit
             else:
-                diff_error_mask_below = diffs_below >= comparison.limit
-                diff_error_mask_above = diffs_above >= comparison.limit
+                diff_error_mask_below = diffs_below >= limit
+                diff_error_mask_above = diffs_above >= limit
 
             comparison.diff_errors2 = (np.sum(diff_error_mask_below) +
                                        np.sum(diff_error_mask_above))
