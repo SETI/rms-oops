@@ -54,6 +54,9 @@ def from_file(filespec, fast_distortion=True,
     # Define the field of view
     FOV = meta.fov(full_fov=full_fov)
 
+    # Define the mask
+    mask = meta.mask(full_fov=full_fov)
+
     # Trim the image
     data = meta.trim(vic.data_2d, full_fov=full_fov)
 
@@ -68,6 +71,9 @@ def from_file(filespec, fast_distortion=True,
                                filter = meta.filter,
                                filespec = filespec,
                                basename = os.path.basename(filespec))
+
+    if mask is not None:
+        result.insert_subfield('mask', mask)
 
     result.insert_subfield('spice_kernels',
                            Galileo.used_kernels(result.time, 'iss',
@@ -150,6 +156,36 @@ class Metadata(object):
             self.window = label['CUT_OUT_WINDOW']
         else:
             self.window = None
+
+    #===========================================================================
+    def mask(self, full_fov=False):
+        """Create a Galileo SSI mask.
+
+        Input:
+            full_fov        If False, no mask is created.
+
+        Attributes:
+            nlines          A Numpy array containing the data in axis order
+                            (line, sample).
+            nsamples        The time sampling array in (line, sample) axis
+                            order, or None if no time backplane is found in
+                            the file.
+            nframelets
+
+        """
+
+        if not full_fov:
+            return None
+
+        window = self.window
+
+        if window is None:
+            return None
+
+        grid = np.mgrid[0:self.nlines, 0:self.nsamples] + 1
+        mask = np.where((grid[0] >= window[0]) & (grid[0] <= window[2]) &
+                        (grid[1] >= window[1]) & (grid[1] <= window[3]), False, True)
+        return mask
 
     #===========================================================================
     def trim(self, data, full_fov=False):
@@ -308,47 +344,47 @@ import unittest
 import os.path
 
 from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
-#from oops.backplane.exercise_backplanes import exercise_backplanes
-#from oops.backplane.unittester_support  import Backplane_Settings
+from oops.backplane.exercise_backplanes import exercise_backplanes
+from oops.backplane.unittester_support  import Backplane_Settings
 
 
-##===============================================================================
-#class Test_Galileo_SSI(unittest.TestCase):
-#
-#    def runTest(self):
-#
-#        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-#
-#        snapshots = from_index(os.path.join(TESTDATA_PARENT_DIRECTORY,
-#                                            'galileo/SSI/index.lbl'))
-#        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
-#                                          'galileo/SSI/W1575634136_1.IMG'))
-#        snapshot3940 = snapshots[3940]  #should be same as snapshot
-#
-#        self.assertTrue(abs(snapshot.time[0] - snapshot3940.time[0]) < 1.e-3)
-#        self.assertTrue(abs(snapshot.time[1] - snapshot3940.time[1]) < 1.e-3)
-#
-#
-##===============================================================================
-## class Test_Galileo_SSI_Backplane_Exercises(unittest.TestCase):
-#
-#    #===========================================================================
-#    def runTest(self):
-#
-#        if Backplane_Settings.NO_EXERCISES:
-#            self.skipTest('')
-#
-#        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'galileo/SSI')
-#        file = os.path.join(root, 'N1460072401_1.IMG')
-#        obs = from_file(file)
-#        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-#                                 planet_key='SATURN')
-#
+#===============================================================================
+class Test_Galileo_SSI(unittest.TestCase):
+
+    def runTest(self):
+
+        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+
+        snapshots = from_index(os.path.join(TESTDATA_PARENT_DIRECTORY,
+                                            'galileo/SSI/index.lbl'))
+        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
+                                          'galileo/SSI/W1575634136_1.IMG'))
+        snapshot3940 = snapshots[3940]  #should be same as snapshot
+
+        self.assertTrue(abs(snapshot.time[0] - snapshot3940.time[0]) < 1.e-3)
+        self.assertTrue(abs(snapshot.time[1] - snapshot3940.time[1]) < 1.e-3)
+
+
+#===============================================================================
+# class Test_Galileo_SSI_Backplane_Exercises(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+
+        if Backplane_Settings.NO_EXERCISES:
+            self.skipTest('')
+
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'galileo/SSI')
+        file = os.path.join(root, 'N1460072401_1.IMG')
+        obs = from_file(file)
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
+                                 planet_key='SATURN')
+
 
 ############################################
-#from oops.backplane.unittester_support import backplane_unittester_args
+from oops.backplane.unittester_support import backplane_unittester_args
 
 if __name__ == '__main__':
-#    backplane_unittester_args()
+    backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################
