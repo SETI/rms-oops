@@ -37,9 +37,9 @@ def mask_where(self, mask, replace=None, remask=True, recursive=True):
     if replace is not None:
         replace = self.as_this_type(replace, recursive=True)
         if replace._shape_ not in ((), self._shape_):
-            raise ValueError('shape of replacement is incompatible with ' +
-                             'shape of object being masked: %s, %s' %
-                             (replace._shape_, self._shape_))
+            raise ValueError('shape of replacement is incompatible with '
+                             'shape of object being masked: %s, %s'
+                             % (replace._shape_, self._shape_))
 
     # Shapeless case
     if np.isscalar(self._values_):
@@ -143,8 +143,11 @@ def mask_where_le(self, limit, replace=None, remask=True):
                         False to replace the values but leave them unmasked.
     """
 
-    if self._rank_:
-        raise ValueError('mask_where_le requires item rank zero')
+    if self._denom_:
+        raise ValueError('%s.mask_where_le() does not support denominators'
+                         % type(self).__name__)
+    if self._numer_:
+        raise ValueError('mask_where_le() does not support item rank > 0')
 
     if isinstance(limit, Qube):
         limit = limit._values_
@@ -170,8 +173,11 @@ def mask_where_ge(self, limit, replace=None, remask=True):
                         False to replace the values but leave them unmasked.
     """
 
-    if self._rank_:
-        raise ValueError('mask_where_ge requires item rank zero')
+    if self._denom_:
+        raise ValueError('%s.mask_where_ge() does not support denominators'
+                         % type(self).__name__)
+    if self._numer_:
+        raise ValueError('mask_where_ge() does not support item rank > 0')
 
     if isinstance(limit, Qube):
         limit = limit._values_
@@ -198,8 +204,11 @@ def mask_where_lt(self, limit, replace=None, remask=True):
                         False to replace the values but leave them unmasked.
     """
 
-    if self._rank_:
-        raise ValueError('mask_where_lt requires item rank zero')
+    if self._denom_:
+        raise ValueError('%s.mask_where_lt() does not support denominators'
+                         % type(self).__name__)
+    if self._numer_:
+        raise ValueError('mask_where_lt() does not support item rank > 0')
 
     if isinstance(limit, Qube):
         limit = limit._values_
@@ -225,8 +234,11 @@ def mask_where_gt(self, limit, replace=None, remask=True):
                         False to replace the values but leave them unmasked.
     """
 
-    if self._rank_:
-        raise ValueError('mask_where_gt requires item rank zero')
+    if self._denom_:
+        raise ValueError('%s.mask_where_gt() does not support denominators'
+                         % type(self).__name__)
+    if self._numer_:
+        raise ValueError('mask_where_gt() does not support item rank > 0')
 
     if isinstance(limit, Qube):
         limit = limit._values_
@@ -258,8 +270,11 @@ def mask_where_between(self, lower, upper, mask_endpoints=False,
                         False to replace the values but leave them unmasked.
     """
 
-    if self._rank_:
-        raise ValueError('mask_where_between requires item rank zero')
+    if self._denom_:
+        raise ValueError('%s.mask_where_between() does not support denominators'
+                         % type(self).__name__)
+    if self._numer_:
+        raise ValueError('mask_where_between() does not support item rank > 0')
 
     if isinstance(lower, Qube):
         lower = lower._values_
@@ -309,8 +324,11 @@ def mask_where_outside(self, lower, upper, mask_endpoints=False, replace=None,
                         False to replace the values but leave them unmasked.
     """
 
-    if self._rank_:
-        raise ValueError('mask_where_outside requires item rank zero')
+    if self._denom_:
+        raise ValueError('%s.mask_where_outside() does not support denominators'
+                         % type(self).__name__)
+    if self._numer_:
+        raise ValueError('mask_where_outside() does not support item rank > 0')
 
     if isinstance(lower, Qube):
         lower = lower._values_
@@ -359,8 +377,11 @@ def clip(self, lower, upper, remask=True, inclusive=True):
                         limit unmasked; False to mask them.
     """
 
-    if self._rank_:
-        raise TypeError('clip requires an object with rank 0')
+    if self._denom_:
+        raise ValueError('%s.clip() does not support denominators'
+                         % type(self).__name__)
+    if self._numer_:
+        raise ValueError('clip() does not support item rank > 0')
 
     # Easy case...
     if np.isscalar(lower) and np.isscalar(upper):

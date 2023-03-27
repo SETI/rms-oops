@@ -26,8 +26,8 @@ class DualCadence(Cadence):
         self.short = short.time_shift(-short.time[0])   # starts at time 0
 
         self.shape = self.long.shape + self.short.shape
-        assert len(self.long.shape) == 1
-        assert len(self.short.shape) == 1
+        if len(self.long.shape) != 1 or len(self.short.shape) != 1:
+            raise ValueError('long and short cadences must be 1-D')
 
         self.time = (self.long.time[0],
                      self.long.lasttime + self.short.time[1])
@@ -489,7 +489,7 @@ def case_dual_metronome(self, cad1d, cad2d):
     self.assertTrue((abs(test1d[~outside] % 5 - test2d[~outside].to_scalar(1)) < 1.e-13).all())
 
     # Make sure everything works with scalars
-    for iter in range(100):
+    for count in range(100):
         random1d = np.random.random()
         random2d = Vector((random1d//5, random1d%5))
 

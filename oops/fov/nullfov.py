@@ -3,8 +3,7 @@
 ################################################################################
 
 from polymath import Boolean, Scalar, Pair, Vector3
-
-from . import FOV
+from oops.fov import FOV
 
 class NullFOV(FOV):
     """A subclass of FOV that describes an instrument with no field of view,

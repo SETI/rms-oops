@@ -30,6 +30,7 @@ import oops.fov.all         as fov
 import oops.gravity.all     as gravity
 import oops.frame.all       as frame
 import oops.observation.all as obs
+import oops.observation.all as observation
 import oops.path.all        as path
 import oops.surface.all     as surface
 

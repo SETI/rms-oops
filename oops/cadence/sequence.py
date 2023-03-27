@@ -33,16 +33,18 @@ class Sequence(Cadence):
 
         # Work with Numpy arrays initially
         if isinstance(tlist, Scalar):
-            assert not np.any(tlist.mask)
+            if np.any(tlist.mask):
+                raise ValueError('Sequence tlist input must be unmasked')
             tlist = tlist.vals
 
         if isinstance(texp, Scalar):
-            assert not np.any(texp.mask)
+            if np.any(texp.mask):
+                raise ValueError('Sequence texp input must be unmasked')
             texp = texp.vals
 
         tlist = np.asfarray(tlist)
-        assert np.ndim(tlist) == 1
-        assert tlist.size > 1
+        if np.ndim(tlist) != 1 or tlist.size <= 1:
+            raise ValueError('Sequence tlist must be 1-D')
 
         tstrides = np.diff(tlist)
 
@@ -51,8 +53,10 @@ class Sequence(Cadence):
         # Interpret texp
         if np.shape(texp):          # texp is an array
             texp = np.asfarray(texp)
-            assert texp.shape == tlist.shape
-            assert np.all(texp > 0.)
+            if texp.shape != tlist.shape:
+                raise ValueError('Shape mismatch between texp and tlist')
+            if np.any(texp <= 0.):
+                raise ValueError('All texp values must be positive')
 
             self.min_tstride = np.min(tstrides)
             self.max_tstride = np.max(tstrides)
@@ -63,7 +67,8 @@ class Sequence(Cadence):
             self._tstop_is_ordered = np.any(np.diff(tstop) < 0.)
 
         elif texp:                  # texp is a nonzero constant
-            assert texp > 0.
+            if (texp <= 0.):
+                raise ValueError('All texp values must be positive')
             self.min_tstride = np.min(tstrides)
             self.max_tstride = np.max(tstrides)
             self.is_continuous = (texp >= self.max_tstride)
@@ -81,7 +86,8 @@ class Sequence(Cadence):
             texp = tstrides
             tstop = tlist[1:]
             tlist = tlist[:-1]      # last time is not a time step
-            assert np.all(texp > 0.)
+            if np.any(texp <= 0.):
+                raise ValueError('Sequence tlist inputs must be monotonic')
 
             tstrides = tstrides[:-1]
             self.min_tstride = np.min(tstrides)

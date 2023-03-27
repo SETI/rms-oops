@@ -10,21 +10,19 @@ import astropy.io.fits as pyfits
 import hosts.solar as solar
 import tabulation as tab
 
-if 'FLUX_DENSITY' not in globals():
+# Read the file
+filepath = os.path.join(os.path.split(solar.__file__)[0],
+                        'stis-sun_reference_stis_002.fits')
+hdulist = pyfits.open(filepath)
+try:
+    table = hdulist[1].data
+    wavelength = table['WAVELENGTH']    # Angstroms
+    flux = table['FLUX']                # erg/s/cm^2/A
+finally:
+    hdulist.close()
 
-    # Read the file
-    filepath = os.path.join(os.path.split(solar.__file__)[0],
-                            'stis-sun_reference_stis_002.fits')
-    hdulist = pyfits.open(filepath)
-    try:
-        table = hdulist[1].data
-        wavelength = table['WAVELENGTH']    # Angstroms
-        flux = table['FLUX']                # erg/s/cm^2/A
-    finally:
-        hdulist.close()
-
-    FLUX_DENSITY = tab.Tabulation(wavelength, flux)
-    UNITS = 'erg/s/cm^2/A'
-    XUNITS = 'A'
+FLUX_DENSITY = tab.Tabulation(wavelength, flux)
+UNITS = 'erg/s/cm^2/A'
+XUNITS = 'A'
 
 ################################################################################
