@@ -349,7 +349,7 @@ from oops.backplane.unittester_support  import Backplane_Settings
 
 
 #===============================================================================
-# class Test_Galileo_SSI(unittest.TestCase):
+class Test_Galileo_SSI(unittest.TestCase):
 
     def runTest(self):
 
