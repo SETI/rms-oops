@@ -73,6 +73,8 @@ gm.define_standard_obs(name,
         ring    = '',
         kwargs  = {'snap':False, 'inventory':False, 'border':10})
 
+# this one has ansa problems because so high above equator 
+
 gm.override('Celestial north minus east angles (deg)', 8., names=name)
 gm.override('JUPITER longitude d/dv self-check (deg/pix)', 0.3, names=name)
 gm.override('JUPITER:RING azimuth d/du self-check (deg/pix)', 0.1, names=name)
