@@ -1,59 +1,37 @@
 ################################################################################
 # oops/backplane/unittester.py
 ################################################################################
-#
-# usage: unittester.py [-h] [--args [arg [arg ...]]] [--verbose]
-#                     [--exercises-only] [--no-exercises] [--no-compare]
-#                     [--output dir] [--no-output] [--log] [--undersample N]
-#                     [--reference] [--test-level N]
-#
-#
-# optional arguments:
-#  -h, --help            show this help message and exit
-#  --args [arg [arg ...]]
-#                        Generic arguments to pass to the test modules. Must
-#                        occur last in the argument list.
-#  --verbose             Print output to the terminal.
-#  --exercises-only      Execute only the backplane exercises.
-#  --no-exercises        Execute all tests except the backplane exercises.
-#  --no-compare          Do not compare backplanes with references.
-#  --output dir          Directory in which to save backplane PNG images.
-#                        Default is $OOPS_BACKPLANE_OUTPUT_PATH/[data dir]. If
-#                        the directory does not exist, it is created.
-#  --no-output           Disable saving of backplane PNG files.
-#  --log                 Enable the internal oops logging.
-#  --undersample N       Amount by which to undersample backplanes. Default is
-#                        16.
-#  --reference           Generate reference backplanes and exit.
-#  --test-level N        Selects among pre-set parameter combinations:
-#                        -test_level 1: no printing, no saving, undersample 32.
-#                        -test_level 2: printing, no saving, undersample 16.
-#                        -test_level 3: printing, saving, no undersampling.
-#                        These behaviors are overridden by other arguments.
 
+import os
 import unittest
+import oops.backplane.gold_master as gm
+from oops.unittester_support import OOPS_TEST_DATA_PATH
 
-from oops.backplane            import Test_Backplane_Surfaces
-from oops.backplane            import Test_Backplane_Borders
-from oops.backplane            import Test_Backplane_Empty_Events
-from oops.backplane            import Test_Backplane_Exercises
-from oops.backplane.ansa       import Test_Ansa
-from oops.backplane.border     import Test_Border
-from oops.backplane.distance   import Test_Distance
-from oops.backplane.lighting   import Test_Lighting
-from oops.backplane.limb       import Test_Limb
-from oops.backplane.orbit      import Test_Orbit
-from oops.backplane.pole       import Test_Pole
-from oops.backplane.resolution import Test_Resolution
-from oops.backplane.ring       import Test_Ring
-from oops.backplane.sky        import Test_Sky
-from oops.backplane.spheroid   import Test_Spheroid
-from oops.backplane.where      import Test_Where
+class Test_Backplane_via_gold_master(unittest.TestCase):
+
+  def runTest(self):
+
+    # The d/dv numerical ring derivatives are extra-uncertain due to the high
+    # foreshortening in the vertical direction.
+
+    gm.override('SATURN longitude d/du self-check (deg/pix)', 0.3)
+    gm.override('SATURN longitude d/dv self-check (deg/pix)', 0.05)
+    gm.override('SATURN_MAIN_RINGS azimuth d/dv self-check (deg/pix)', 1.)
+    gm.override('SATURN_MAIN_RINGS distance d/dv self-check (km/pix)', 0.3)
+    gm.override('SATURN_MAIN_RINGS longitude d/dv self-check (deg/pix)', 1.)
+    gm.override('SATURN:RING azimuth d/dv self-check (deg/pix)', 0.1)
+    gm.override('SATURN:RING distance d/dv self-check (km/pix)', 0.3)
+    gm.override('SATURN:RING longitude d/dv self-check (deg/pix)', 0.1)
+
+    gm.execute_as_unittest(self,
+                obspath = os.path.join(OOPS_TEST_DATA_PATH,
+                                       'cassini/ISS/W1573721822_1.IMG'),
+                module  = 'hosts.cassini.iss',
+                planet  = 'SATURN',
+                moon    = 'EPIMETHEUS',
+                ring    = 'SATURN_MAIN_RINGS')
 
 ########################################
-from oops.backplane.unittester_support import backplane_unittester_args
-
 if __name__ == '__main__':
-    backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################

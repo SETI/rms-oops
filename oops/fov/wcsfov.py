@@ -2,8 +2,6 @@
 # oops/fov/wcsfov.py: FOV subclass for WCS/SIP FOVs described by FITS headers.
 ################################################################################
 
-from __future__ import print_function
-
 import numpy as np
 
 from polymath           import Pair, Matrix
@@ -65,16 +63,19 @@ class WCSFOV(FOV):
         self.ref_axis = str(ref_axis)
         self.fast = bool(fast)
 
-        assert ref_axis in ('x', 'y')
+        if ref_axis not in ('x', 'y'):
+            raise ValueError('invalid value of ref_axis: ' + repr(ref_axis))
 
         self.uv_shape = Pair([header['NAXIS2'], header['NAXIS1']])
         self.uv_los = Pair([header['CRPIX1'] - 0.5, header['CRPIX2'] - 0.5])
 
         # We require that x_wcs = RA and y_wcs = dec
-        assert header['CTYPE1'][:8] == 'RA---TAN'
-        assert header['CTYPE2'][:8] == 'DEC--TAN'
-        assert header['CUNIT1'] == 'deg'
-        assert header['CUNIT2'] == 'deg'
+        if (header['CTYPE1'][:8] != 'RA---TAN' or
+            header['CTYPE2'][:8] != 'DEC--TAN'):
+                raise ValueError('only WCS CTYPEs "RA---TAN" and "DEC--TAN" '
+                                 + 'are supported')
+        if header['CUNIT1'] != 'deg' and  header['CUNIT2'] != 'deg':
+            raise ValueError('only CUNIT = "deg" is supported')
 
         # The FITS formula is:
         #   (x_wcs, y_wcs) = [[CD1_1,CD1_2],[CD2_1,CD2_2]] (u+f(u,v), v+g(u,v))
@@ -188,7 +189,6 @@ class WCSFOV(FOV):
 
         self.cd = Matrix([[cd11, cd12], [cd21, cd22]])
 
-        assert ref_axis in ('x', 'y')
         if ref_axis == 'x':
             self.clock = np.arctan2(-cd12, cd22)
         else:
@@ -484,14 +484,14 @@ class Test_WCSFOV(unittest.TestCase):
                 xy = fov_fast.xy_from_uv(uv, derivs=True)
                 uv_test = fov_fast.uv_from_xy(xy, derivs=True)
             t1 = time.time()
-            print('fast time = %.2f ms' % ((t1-t0)/iters*1000.))
+            LOGGING.print('fast time = %.2f ms' % ((t1-t0)/iters*1000.))
 
             t0 = time.time()
             for k in range(iters):
                 xy = fov.xy_from_uv(uv, derivs=True)
                 uv_test = fov.uv_from_xy(xy, derivs=True)
             t1 = time.time()
-            print('slow time = %.2f ms' % ((t1-t0)/iters*1000.))
+            LOGGING.print('slow time = %.2f ms' % ((t1-t0)/iters*1000.))
         else:
             xy = fov.xy_from_uv(uv, derivs=True)
             uv_test = fov.uv_from_xy(xy, derivs=False)
@@ -623,14 +623,14 @@ class Test_WCSFOV(unittest.TestCase):
                 xy = fov_fast.xy_from_uv(uv, derivs=False)
                 uv_test = fov_fast.uv_from_xy(xy, derivs=False)
             t1 = time.time()
-            print('fast time = %.2f ms' % ((t1-t0)/iters*1000.))
+            LOGGING.print('fast time = %.2f ms' % ((t1-t0)/iters*1000.))
 
             t0 = time.time()
             for k in range(iters):
                 xy = fov.xy_from_uv(uv, derivs=False)
                 uv_test = fov.uv_from_xy(xy, derivs=False)
             t1 = time.time()
-            print('slow time = %.2f ms' % ((t1-t0)/iters*1000.))
+            LOGGING.print('slow time = %.2f ms' % ((t1-t0)/iters*1000.))
 
 ########################################
 if __name__ == '__main__':

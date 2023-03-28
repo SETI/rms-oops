@@ -73,8 +73,8 @@ class Matrix3(Matrix):
         (unit1, vector2) = Qube.broadcast(unit1, vector2)
 
         # Denominators are disallowed
-        assert unit1._denom_   == (), 'denominator is disallowed'
-        assert vector2._denom_ == (), 'denominator is disallowed'
+        if unit1._denom_ or vector2._denom_:
+            raise ValueError('Matrix3.twovec() does not support denominators')
 
         # Define the remaining two columns of the matrix
         axis3 = 3 - axis1 - axis2
@@ -104,8 +104,9 @@ class Matrix3(Matrix):
             for (key,deriv) in vector2._derivs_.items():
                 if key in denoms:
                     if deriv._denom_ != denoms[key]:
-                        raise ValueError('denominator shape mismatch: %s, %s' %
-                                         (denoms[key], deriv._denom_))
+                        raise ValueError('derivative "%s" denominator mismatch '
+                                         'in Matrix3.twovec(): %s, %s'
+                                         % (key, denoms[key], deriv._denom_))
                 else:
                     denoms[key] = vector2._derivs_[key].denom
 
@@ -611,7 +612,7 @@ class Matrix3(Matrix):
             out         Ignored. Enables "np.sum(Qube)" to work.
         """
 
-        raise TypeError('Matrix3.sum is not supported')
+        raise TypeError('Matrix3.sum() is not supported')
 
     #===========================================================================
     def mean(self, axis=None, recursive=True, builtins=None,
@@ -632,7 +633,7 @@ class Matrix3(Matrix):
             dtype, out  Ignored. Enable "np.mean(Qube)" to work.
         """
 
-        raise TypeError('Matrix3.mean is not supported')
+        raise TypeError('Matrix3.mean() is not supported')
 
     #===========================================================================
     def __getstate__experimental(self):

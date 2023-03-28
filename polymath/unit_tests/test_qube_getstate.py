@@ -101,15 +101,15 @@ class Test_Qube_getstate(unittest.TestCase):
 
             mask1 = np.random.randn(*shape) < -0.5
             mask1[0] = True
-            if ndims > 1:
-              mask1[:,-1] = True
+            # ndims > 1
+            mask1[:,-1] = True
             if ndims > 2:
               mask1[:,:,0] = True
 
             mask2 = np.zeros(shape, dtype='bool')
             mask2[-1] = True
-            if ndims > 1:
-              mask2[:,0] = True
+            # ndims > 1
+            mask2[:,0] = True
             if ndims > 2:
               mask2[:,:,-1] = True
 

@@ -124,14 +124,11 @@ def _pickle_debug(debug):
     global PICKLE_DEBUG
     PICKLE_DEBUG = debug
 
-# Useful function and some constants relevant to IEEE floats
-def log10(x):
-    return np.log(x) / LOG10
-
-LOG10         = np.log(10)
-SINGLE_DIGITS = log10(2**23)    # 6.92
-DOUBLE_DIGITS = log10(2**52)    # 15.65
-LOG10_BIT     = log10(2.)
+# Useful constants relevant to IEEE floats
+assert sys.float_info.mant_dig == 53, 'Serious trouble: floats are not IEEE'
+SINGLE_DIGITS = np.log10(2**23)    # 6.92
+DOUBLE_DIGITS = np.log10(2**52)    # 15.65
+LOG10_BIT     = np.log10(2.)
 
 #===============================================================================
 def set_pickle_digits(self, digits='double', reference='fpzip'):
@@ -187,8 +184,8 @@ def set_pickle_digits(self, digits='double', reference='fpzip'):
                     The default is "fpzip".
     """
 
-    digits = _validate_pickle_digits(digits)
     reference = _validate_pickle_reference(reference)
+    digits = _validate_pickle_digits(digits, reference)
 
     self._pickle_digits = digits
     self._pickle_reference = reference
@@ -257,8 +254,9 @@ def set_default_pickle_digits(digits='double', reference='fpzip'):
 
     global DEFAULT_PICKLE_DIGITS, DEFAULT_PICKLE_REFERENCE
 
-    DEFAULT_PICKLE_DIGITS = _validate_pickle_digits(digits)
-    DEFAULT_PICKLE_REFERENCE = _validate_pickle_reference(reference)
+    reference = _validate_pickle_reference(reference)
+    DEFAULT_PICKLE_REFERENCE = reference
+    DEFAULT_PICKLE_DIGITS = _validate_pickle_digits(digits, reference)
 
 #===============================================================================
 def pickle_digits(self):
@@ -296,19 +294,20 @@ def pickle_reference(self):
 def _check_pickle_digits(self):
     """Validate the pickle attributes."""
 
-    if hasattr(self, '_pickle_digits'):
-        digits = self._pickle_digits
-    else:
-        digits = None
-
-    self._pickle_digits = _validate_pickle_digits(digits)
-
     if hasattr(self, '_pickle_reference'):
         reference = self._pickle_reference
     else:
         reference = None
 
-    self._pickle_reference = _validate_pickle_reference(reference)
+    reference = _validate_pickle_reference(reference)
+    self._pickle_reference = reference
+
+    if hasattr(self, '_pickle_digits'):
+        digits = self._pickle_digits
+    else:
+        digits = None
+
+    self._pickle_digits = _validate_pickle_digits(digits, reference)
 
     for key, deriv in self._derivs_.items():
         if not hasattr(deriv, '_pickle_digits'):
@@ -317,7 +316,7 @@ def _check_pickle_digits(self):
             deriv._pickle_reference = 2 * self._pickle_reference[1:]
 
 #===============================================================================
-def _validate_pickle_digits(digits):
+def _validate_pickle_digits(digits, reference):
     """Validate and return the pickle digit values."""
 
     original_digits = digits
@@ -333,10 +332,11 @@ def _validate_pickle_digits(digits):
 
     new_digits = []
     try:
-        for digit in digits[:2]:
+        for k, digit in enumerate(digits[:2]):
             if isinstance(digit, numbers.Real):
-                digit = min(max(SINGLE_DIGITS, float(digit)), DOUBLE_DIGITS)
-            elif digit not in {'single', 'double'}:
+                if not isinstance(reference[k], numbers.Real):
+                    digit = min(max(SINGLE_DIGITS, float(digit)), DOUBLE_DIGITS)
+            elif digit not in ('single', 'double'):
                 raise ValueError('invalid pickle digits: ' + repr(digit))
 
             new_digits.append(digit)
@@ -472,11 +472,12 @@ def fpzip_compress(array, digits=16, dtype=np.float_):
             # Raise any warnings
             if PICKLE_WARNINGS and first_exception is not None:
                 if precision != initial_precision:
-                    warnings.warn('fpzip.compress increased precision from ' +
-                                  '%d to %d' % (initial_precision, precision))
+                    warnings.warn('fpzip.compress increased precision from '
+                                  '%d to %d'
+                                  % (initial_precision, precision))
                 if shape != initial_shape:
                     warnings.warn('fpzip.compress reduced shape from %s to %s'
-                                  % (str(initial_shape), str(shape)))
+                                  % (initial_shape, shape))
 
             return (fpzip_bytes, zeroed_bits)
 
@@ -565,7 +566,10 @@ def _encode_one_float_array(values, digits, reference):
 
     # Determine the number of digits to be accommodated by the offset
     if isinstance(reference, numbers.Real):
-        ref_value = np.abs(reference)
+        max_value = max(-minval, maxval)
+        digits = digits + np.log10(max_value / reference)
+        ref_value = max_value
+
     else:
         abs_values = np.abs(raveled[raveled != 0.]) # exclude zeros here
         if reference == 'smallest':
@@ -586,11 +590,13 @@ def _encode_one_float_array(values, digits, reference):
     bytes_needed = np.log(unique_values_needed) / np.log(256)
     nbytes = -int(-bytes_needed // 1)               # nbytes is rounded up
 
+    # In nbytes > 6, better to use double precision plus fpzip
     if nbytes > 6:
         (fpzip_bytes, bits) = fpzip_compress(values)
         return ('float64', shape, bits, fpzip_bytes)
 
-    if nbytes == 4 and digits <= SINGLE_DIGITS:     # no benefit from encoding
+    # Sometimes the test reveals that single precision fpzip is best
+    if nbytes == 4 and digits <= SINGLE_DIGITS:
         (fpzip_bytes, bits) = fpzip_compress(values, dtype=np.float32)
         return ('float32', shape, bits, fpzip_bytes)
 
@@ -718,7 +724,7 @@ def _decode_floats(encoded):
 
     method = encoded[0]
 
-    if method in {'float32', 'float64', 'fpzip'}:
+    if method in ('float32', 'float64', 'fpzip'):
         (_, shape, bits, fpzip_bytes) = encoded
         return fpzip_decompress(fpzip_bytes, shape, bits)
 
@@ -755,6 +761,9 @@ def _decode_floats(encoded):
 def _encode_ints(values):
     """Encode an integer array using BZ2 compression."""
 
+    if not values.flags['CONTIGUOUS']:
+        values = values.copy()
+
     return bz2.compress(values)
 
 #===============================================================================
@@ -767,6 +776,9 @@ def _decode_ints(values, shape):
 #===============================================================================
 def _encode_bools(values):
     """Encode a boolean array using packbits + BZ2 compression."""
+
+    if not values.flags['CONTIGUOUS']:
+        values = values.copy()
 
     return bz2.compress(np.packbits(values))
 
@@ -999,14 +1011,16 @@ def __setstate__(self, state):
         elif method == 'ANTIMASKED':
             if antimask is None:
                 raise ValueError('missing antimask for decoding')
-            new_values = np.empty(self._shape_ + self._item_, dtype='float')
+            new_values = np.empty(self._shape_ + self._item_,
+                                  dtype=Qube._dtype(self._default_))
             new_values[...] = self._default_
             new_values[antimask] = self._values_
             self._values_ = new_values
             values_is_writable = True
 
         elif method == 'ALL_MASKED':
-            new_values = np.empty(self._shape_ + self._item_, dtype='float')
+            new_values = np.empty(self._shape_ + self._item_,
+                                  dtype=Qube._dtype(self._default_))
             new_values[...] = self._default_
             self._values_ = new_values
             values_is_writable = True
@@ -1045,6 +1059,6 @@ def __setstate__(self, state):
         if deriv['_readonly_']:
             new_deriv.as_readonly()
 
-        self._derivs_[key] = new_deriv
+        self.insert_deriv(key, new_deriv)
 
 ################################################################################

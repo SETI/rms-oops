@@ -147,7 +147,8 @@ class Polynomial(Vector):
     def invert_line(self, recursive=True):
         """The inversion of this linear polynomial."""
 
-        assert self.order == 1, 'invert_line requires a first-order polynomial'
+        if self.order != 1:
+            raise ValueError('invert_line requires a first-order polynomial')
 
         # y = a x + b
         # y - b = a x
@@ -271,7 +272,7 @@ class Polynomial(Vector):
 
     def __pow__(self, arg):
         if arg < 0 or arg != int(arg):
-            raise ValueError('Polynomial exponents must be non-negative ' +
+            raise ValueError('Polynomial exponents must be non-negative '
                              'integers')
 
         if arg == 0:

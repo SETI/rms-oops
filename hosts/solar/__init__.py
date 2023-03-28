@@ -2,7 +2,7 @@
 # hosts/solar/__init__.py: Models for the solar flux density at 1 AU.
 #
 # Models currently supported are:
-#   Colina      0.14   to 2.5 micron
+#   Colina      0.1195 to 2.5 micron
 #   Kurucz      0.15   to 300 micron
 #   Rieke       0.2    to 30  micron
 #   STIS        0.1195 to 2.7 micron
@@ -80,8 +80,9 @@ def flux_density(model='STIS_Rieke', units='W/m^2/um', xunits='um',
                         specified units.
     """
 
-    # The first act of importing a model causes its value of FLUX_DENSITY to
-    # become defined.
+    # Each reference to a named model triggers the import of its associated
+    # Python file hosts/solar/<name>.py, referenced as "hosts.solar.<name>"
+    # here. Note that modules are imported only if requested, not by default.
     try:
         module = importlib.import_module('hosts.solar.' + model.lower())
     except ImportError:

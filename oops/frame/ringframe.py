@@ -3,11 +3,9 @@
 ################################################################################
 
 import numpy as np
-from polymath import Qube, Scalar, Vector3, Matrix3
-
-from .           import Frame
-from ..transform import Transform
-from ..constants import TWOPI
+from polymath       import Matrix3, Qube, Scalar, Vector3
+from oops.frame     import Frame
+from oops.transform import Transform
 
 class RingFrame(Frame):
     """A Frame subclass describing a non-rotating frame centered on the Z-axis
@@ -107,8 +105,8 @@ class RingFrame(Frame):
 
     # Unpickled frames will always have temporary IDs to avoid conflicts
     def __getstate__(self):
-        return (self.planet_frame, self.epoch, self.retrograde, self.aries,
-                self.given_cache_size, self.shape)
+        return (Frame.as_primary_frame(self.planet_frame), self.epoch,
+                self.retrograde, self.aries, self.given_cache_size, self.shape)
 
     def __setstate__(self, state):
         # If this frame matches a pre-existing frame, re-use its ID
@@ -204,7 +202,7 @@ class RingFrame(Frame):
         if (x,y) == (0.,0.):
             return Scalar(0.)
 
-        return (y.arctan2(x) + np.pi/2.) % TWOPI
+        return (y.arctan2(x) + np.pi/2.) % Scalar.TWOPI
 
 ################################################################################
 # UNIT TESTS
@@ -219,11 +217,11 @@ class Test_RingFrame(unittest.TestCase):
         # Imports are here to reduce conflicts
         import os
         import cspyce
-        from .spiceframe      import SpiceFrame
-        from ..path.spicepath import SpicePath
-        from ..event          import Event
-        from ..path           import Path
-        from ..unittester_support import TESTDATA_PARENT_DIRECTORY
+        from oops.frame.spiceframe   import SpiceFrame
+        from oops.path.spicepath     import SpicePath
+        from oops.event              import Event
+        from oops.path               import Path
+        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
         np.random.seed(2492)
 

@@ -4,20 +4,19 @@
 
 # Import the Surface class and all its subclasses into a common name space
 
-from .             import Surface
-from .ansa         import Ansa
-from .ellipsoid    import Ellipsoid
-from .limb         import Limb
-from .nullsurface  import NullSurface
-from .orbitplane   import OrbitPlane
-from .polarlimb    import PolarLimb
-from .ringplane    import RingPlane
-from .spheroid     import Spheroid
-from .spice_shape  import spice_shape
-
-from .centricellipsoid import CentricEllipsoid
-from .centricspheroid  import CentricSpheroid
-from .graphicellipsoid import GraphicEllipsoid
-from .graphicspheroid  import GraphicSpheroid
+from oops.surface                  import Surface
+from oops.surface.ansa             import Ansa
+from oops.surface.centricellipsoid import CentricEllipsoid
+from oops.surface.centricspheroid  import CentricSpheroid
+from oops.surface.ellipsoid        import Ellipsoid
+from oops.surface.graphicellipsoid import GraphicEllipsoid
+from oops.surface.graphicspheroid  import GraphicSpheroid
+from oops.surface.limb             import Limb
+from oops.surface.nullsurface      import NullSurface
+from oops.surface.orbitplane       import OrbitPlane
+from oops.surface.polarlimb        import PolarLimb
+from oops.surface.ringplane        import RingPlane
+from oops.surface.spheroid         import Spheroid
+from oops.surface.spice_shape      import spice_shape
 
 ################################################################################

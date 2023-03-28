@@ -5,9 +5,9 @@
 import numpy as np
 from polymath import Qube, Scalar, Vector3
 
-from .       import Path
-from ..event import Event
-from ..frame import Frame
+from oops.event import Event
+from oops.frame import Frame
+from oops.path  import Path
 
 class CirclePath(Path):
     """A path describing uniform circular motion about another path.
@@ -70,8 +70,9 @@ class CirclePath(Path):
                 CirclePath.PATH_IDS[key] = self.path_id
 
     def __getstate__(self):
-        return (self.radius, self.lon, self.rate, self.epoch, self.origin,
-                self.frame, self.shape)
+        return (self.radius, self.lon, self.rate, self.epoch,
+                Path.as_primary_path(self.origin),
+                Frame.as_primary_frame(self.frame), self.shape)
 
     def __setstate__(self, state):
         # If this path matches a pre-existing path, re-use its ID

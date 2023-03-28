@@ -80,8 +80,9 @@ class Quaternion(Vector):
 
         # Validate denominators
         if scalar._denom_ != vector._denom_:
-            raise ValueError('denominator shapes are incompatible: %s, %s' %
-                             (str(scalar._denom_), str(vector._denom_)))
+            raise ValueError('Quaternion.from_parts() denominators are '
+                             'incompatible: %s, %s'
+                             % (scalar._denom_, vector._denom_))
 
         # Align axes
         drank = scalar._drank_
@@ -195,8 +196,8 @@ class Quaternion(Vector):
         """
 
         if self._drank_:
-            raise ValueError('unsupported denominator for to_matrix(): %s' %
-                             str(self._denom_))
+            raise ValueError('Quaternion.to_matrix3() does not support '
+                             'denominators')
 
         # From http://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
         pvals = self._values_
@@ -409,7 +410,7 @@ class Quaternion(Vector):
         """
 
         if recursive and matrix._derivs_:
-            raise NotImplementedError('Quaternion.from_matrix3 ' +      # TODO
+            raise NotImplementedError('Quaternion.from_matrix3() '      # TODO
                                       'does not implement derivatives')
 
         # From http://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
@@ -561,8 +562,7 @@ class Quaternion(Vector):
 
         # Check denominators
         if self._drank_ and arg._drank_:
-            raise ValueError("dual operand denominators for '*': %s, %s" %
-                             (str(self._denom_), str(arg._denom_)))
+            Qube._raise_dual_denoms('*', self, arg)
 
         # Align axes
         a = self

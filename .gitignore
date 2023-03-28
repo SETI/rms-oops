@@ -15,4 +15,6 @@ oops/backplane-unittest-results*
 *venv*
 **/.vscode
 *.json
-
+*.bbprojectd
+.coverage
+htmlcov

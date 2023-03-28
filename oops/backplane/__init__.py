@@ -2,18 +2,18 @@
 # oops/backplane/__init__.py: Backplane class
 ################################################################################
 
+import datetime
+import functools
+import numpy as np
 import types
 
-import numpy as np
-from polymath import Boolean, Qube, Scalar
-
+from polymath               import Boolean, Qube, Scalar, Vector3
 from oops.body              import Body
-from oops.path              import AliasPath
+from oops.config            import LOGGING
 from oops.surface.ansa      import Ansa
 from oops.surface.limb      import Limb
 from oops.surface.ringplane import RingPlane
 
-#===============================================================================
 class Backplane(object):
     """Class that supports the generation and manipulation of sets of backplanes
     with a particular observation.
@@ -21,7 +21,11 @@ class Backplane(object):
     intermediate results are cached to speed up calculations.
     """
 
-    #===========================================================================
+    DIAGNOSTICS = False     # set True to log diagnostics
+    PERFORMANCE = False     # set True to log timings of surface calculations
+
+    ALL_DERIVS = False
+
     def __init__(self, obs, meshgrid=None, time=None, inventory=None,
                             inventory_border=0):
         """The constructor.
@@ -46,6 +50,63 @@ class Backplane(object):
             inventory_border
                         number of pixels to extend the box surrounding each body
                         as determined by the inventory.
+
+        Notes about Backplane Arrays
+
+        Every backplane array method takes an "event_key" as its first input.
+        This is normally indicated by a tuple of two items:
+            (source_key, surface_key)
+        where the first item is the source of the lighting (usually the Sun) and
+        the second is the surface for which geometry is needed.
+
+        Each intercepted surface is defined by a surface key string, one of:
+            body_name           for the default surface of a body;
+            body_name:RING      for the ring surface associated with a body;
+            body_name:ANSA      for the ansa surface associated with a body;
+            body_name:LIMB      for the limb surface associated with a body.
+
+        The light source is defined by a source key string of the form:
+            body_name<          for dispersed illumination;
+            body_name>          for occultation illumination;
+            body_name-          for path-based illumination.
+
+        These strings are not case-sensitive.
+
+        As a shortcut, you can specify a surface_key string alone in place of an
+        event_key, in which case "SUN<" is assumed as the source.
+
+        In dispersed illumination, each backplane has spatial dimensions that
+        are defined by the Meshgrid. Photons leave the source in all directions,
+        and some of those that intercept the surface are reflected toward the
+        detector. The detector selects the photons it receives based on its. The
+        event is defined as the moment the photons hit the surface and are
+        reflected.
+
+        In occultation illumination, backplanes have no spatial dimensions.
+        Photons leave the source along a direct line of sight to the detector,
+        and the event is defined as the time and location where the photons
+        intercept the surface.
+
+        In path-based illumination, the photon follows one or more straight-
+        line paths between the origin points of the surfaces. The backplanes
+        have no spatial dimensions, but can be used to answer such questions as
+        "what is the sub-solar latitude on Saturn?" or "where is Enceladus in
+        this image?"
+
+        Examples:
+        ('SUN<', 'SATURN:RING') could describe a 2-D image of Saturn's rings.
+        ('SUN>', 'SATURN:RING') could describe a solar occultation profile of
+                Saturn's rings.
+        ('SUN-', 'SATURN:RING') defines the direction of the center of Saturn's
+                rings (which is also the center of Saturn).
+
+        Most of the time, an event key only contains two items as in the
+        examples above. However, shadowing can be defined by inserting one
+        additional surface key after 'SUN<'. For example,
+            ('SUN<', 'MIMAS', 'SATURN:RING')
+        describes the surface event at Mimas, subject to the constraint that the
+        photons subsequently reflected off of Saturn and arrived at the
+        detector; it can be used to determine how Mimas shadows the rings.
         """
 
         self.obs = obs
@@ -61,10 +122,6 @@ class Backplane(object):
             self.time = obs.timegrid(self.meshgrid)
         else:
             self.time = Scalar.as_scalar(time)
-
-        # Filled in if needed
-        self._filled_dlos_duv = None
-        self._filled_duv_dlos = None
 
         # For some cases, times are all equal. If so, collapse the times.
         dt = self.time - obs.midtime
@@ -84,43 +141,27 @@ class Backplane(object):
 
         # Define events
         self.obs_event = obs.event_at_grid(self.meshgrid, time=self.time)
+
+        # dict[derivs] = event
+        self.obs_events = {
+            False: self.obs_event.wod,
+            True : self.obs_event.with_los_derivs()
+        }
+
         self.obs_gridless_event = obs.gridless_event(self.meshgrid,
                                                      time=self.time)
 
         self.shape = self.obs_event.shape
 
-        # The surface_events dictionary comes in two versions, one with
-        # derivatives and one without. Each dictionary is keyed by a tuple of
-        # strings, where each string is the name of a body from which photons
-        # depart. Each event is defined by a call to Surface.photon_to_event()
-        # to the next. The last event is the arrival at the observation, which
-        # is implied so it does not appear in the key. For example, ('SATURN',)
-        # is the key for an event defining the departures of photons from the
-        # surface of Saturn to the observer. Shadow calculations require a
-        # pair of steps; for example, ('saturn','saturn_main_rings') is the key
-        # for the event of intercept points on Saturn that fall in the path of
-        # the photons arriving at Saturn's rings from the Sun.
-        #
-        # Note that body names in event keys are case-insensitive.
+        # The surface_events dictionary comes in two versions, with and without
+        # derivatives with respect to los and time.
 
-        self.surface_events_w_derivs = {(): self.obs_event}
-        self.surface_events = {(): self.obs_event.wod}
+        self.surface_events = {
+            False: {},
+            True : {}
+        }
 
-        # The path_events dictionary holds photon departure events from paths.
-        # All photons originate from the Sun so this name is implied. For
-        # example, ('SATURN',) is the key for the event of a photon departing
-        # the Sun such that it later arrives at the Saturn surface.
-
-        self.path_events = {}
-
-        # The gridless_events dictionary keeps track of photon events at the
-        # origin point of each defined surface. It uses the same keys as the
-        # surface_events dictionary.
-        #
-        # The observed counterpart to each gridless event is stored in
-        # gridless_arrivals
-
-        self.gridless_events   = {(): self.obs_gridless_event}
+        # Gridless/occultation events of photon paths arriving at the detector
         self.gridless_arrivals = {}
 
         # The backplanes dictionary holds every backplane that has been
@@ -128,23 +169,32 @@ class Backplane(object):
         # is keyed by (name of backplane, event_key, optional additional
         # parameters). The name of the backplane is always the name of the
         # backplane method that generates this backplane. For example,
-        # ('phase_angle', ('saturn',)) is the key for a backplane of phase angle
+        # ('phase_angle', ('SATURN',)) is the key for a backplane of phase angle
         # values at the Saturn intercept points.
         #
         # If the function that returns a backplane requires additional
         # parameters, those appear in the tuple after the event key in the same
         # order that they appear in the calling function. For example,
-        # ('latitude', ('saturn',), 'graphic') is the key for the backplane of
+        # ('latitude', ('SATURN',), 'graphic') is the key for the backplane of
         # planetographic latitudes at Saturn.
 
         self.backplanes = {}
+        self.backplanes_with_derivs = {}    # used by ALL_DERIVS option
 
-        # Antimasks of surfaces, by body name
+        # Antimasks of surfaces, keyed by surface key.
         self.antimasks = {}
 
-        # Minimum radius of each ":RING" object is the radius of the central
-        # body
-        self.min_ring_radius = {}
+        # We save unmasked surface intercept events based on the intercept_key
+        # of the surface. This avoids the re-calculating of intercept events
+        # when the only change is to their coordinates or mask. The dictionary
+        # key is an event_key in which each surface_key (after the first item,
+        # which is the light source name) is replaced by the unmasked surface
+        # intercept key.
+
+        self.intercepts = {
+            False: {},
+            True : {},
+        }
 
     ############################################################################
     # Serialization support
@@ -152,136 +202,251 @@ class Backplane(object):
     # internal buffers, but try to avoid any duplication
     ############################################################################
 
-    #===========================================================================
     def __getstate__(self):
-
-        # Check for duplications between dictionaries
-        surface_events = {}
-        surface_events_w_derivs = {}
-        gridless_events = {}
-
-        for key in self.surface_events:
-            # Don't save item keyed by () or item with a derivs version
-            if key and key not in surface_events_w_derivs:
-                surface_events[key] = self.surface_events[key]
-
-        for key in self.surface_events_w_derivs:
-            # Don't save item keyed by ()
-            if key:
-                surface_events[key] = self.surface_events[key]
-
-        for key in self.gridless_events:
-            # Don't save item keyed by ()
-            if key:
-                gridless_events[key] = self.gridless_events[key]
 
         return (self.obs, self._input_meshgrid, self.time,
                 self._input_inventory, self.inventory_border,
-                surface_events, surface_events_w_derivs, self.path_events,
-                gridless_events, self.gridless_arrivals)
+                self.surface_events, self.gridless_arrivals, self.antimasks,
+                self.intercepts)
 
-    #===========================================================================
     def __setstate__(self, state):
 
         (obs, meshgrid, time, inventory, inventory_border,
-         surface_events, surface_events_w_derivs, path_events, gridless_events,
-         gridless_arrivals) = state
+         surface_events, gridless_arrivals, antimasks, intercepts) = state
 
         self.__init__(obs, meshgrid, time, inventory, inventory_border)
-        self.surface_events.update(surface_events)
-        self.surface_events_w_derivs.update(surface_events_w_derivs)
-        self.path_events = path_events
-        self.gridless_events.update(gridless_events)
+        self.surface_events = surface_events
         self.gridless_arrivals = gridless_arrivals
+        self.antimasks = antimasks
+        self.intercepts = intercepts
 
     ############################################################################
-    # Key properties
+    # Resolution properties
     ############################################################################
 
-    #===========================================================================
     @property
     def dlos_duv(self):
-        if self._filled_dlos_duv is None:
-            self._filled_dlos_duv = self.meshgrid.dlos_duv(self.time)
+        if not hasattr(self, '_dlos_duv'):
+            self._dlos_duv = self.meshgrid.dlos_duv(self.time)
 
-        return self._filled_dlos_duv
+        return self._dlos_duv
 
-    #===========================================================================
     @property
-    def duv_dlos(self):
-        if self._filled_duv_dlos is None:
-            self._filled_duv_dlos = self.meshgrid.duv_dlos(self.time)
-
-        return self._filled_duv_dlos
-
-    ############################################################################
-    # Event manipulations
-    #
-    # Event keys are tuples (body_id, body_id, ...) where each body_id is a
-    # a step along the path of a photon. The path always begins at the Sun and
-    # and ends at the observer.
-    ############################################################################
-
-    #===========================================================================
-    def standardize_event_key(self, event_key):
-        """Repair an event key to make it suitable for indexing a dictionary.
-
-        Strings are converted to uppercase. A string gets turned into a tuple.
-        Solar illumination is added at the front if no lighting is specified.
+    def dlos_duv1(self):
+        """The derivative of the line of sight with respect to (u1,v1), where
+        (u1,v1) match (u,v) but have been forced to be orthogonal. This is done
+        by leaving the lesser pixel size alone, and shifting the greater pixel
+        edge to be orthogonal while conserving the pixel area. This is a
+        better pair to use for determining spatial resolution.
         """
 
-        # Convert to tuple if necessary
+        if hasattr(self, '_dlos_duv1'):
+            return self._dlos_duv1
+
+        (dlos_du, dlos_dv) = self.dlos_duv.extract_denoms()
+
+        self._dlos_duv1 = self.dlos_duv.copy()
+        (dlos_du1, dlos_dv1) = self._dlos_duv1.extract_denoms()
+            # memory is shared between self._dlos_duv1, dlos_du1, and dlos_dv1
+            # so changes to dlos_du1, and dlos_dv1 appear inside self._dlos_duv1
+
+        # Select pixels where the u-size is smaller
+        u_is_smaller = dlos_du.norm_sq().vals <= dlos_dv.norm_sq().vals
+
+        # Here, replace v with its component perpendicular to u
+        dlos_dv1[u_is_smaller] = dlos_dv.perp(dlos_du)[u_is_smaller]
+
+        # Select pixels where the v is smaller
+        v_is_smaller = np.logical_not(u_is_smaller)
+
+        # Here, replace u with its component perpendicular to v
+        dlos_du1[v_is_smaller] = dlos_du.perp(dlos_dv)[v_is_smaller]
+
+        return self._dlos_duv1
+
+    @property
+    def duv_dlos(self):
+        if not hasattr(self, '_duv_dlos'):
+            self._duv_dlos = self.meshgrid.duv_dlos(self.time)
+
+        return self._duv_dlos
+
+    @property
+    def center_dlos_duv(self):
+        if not hasattr(self, '_center_dlos_duv'):
+            self._center_dlos_duv = self.meshgrid.center_dlos_duv(self.time)
+
+        return self._center_dlos_duv
+
+    @property
+    def center_duv_dlos(self):
+        if not hasattr(self, '_center_duv_dlos'):
+            self._center_duv_dlos = self.meshgrid.center_duv_dlos(self.time)
+
+        return self._center_duv_dlos
+
+    ############################################################################
+    # Dictionary keys
+    ############################################################################
+
+    @functools.lru_cache(maxsize=300)
+    def standardize_event_key(self, event_key, default=''):
+        """Repair an event key to make it suitable for indexing a dictionary.
+
+        The photons originate from the Sun unless otherwise indicated. An empty
+        event_key is returned as an empty tuple.
+
+        Use default = 'ANSA', 'RING', or 'LIMB' to add this suffix to the body
+        name if no suffix is specified.
+        """
+
+        if not event_key:
+            return ()
+
+        # Handle an individual string
         if isinstance(event_key, str):
-            event_key = (event_key.upper(),)
-
-        elif type(event_key) == tuple:
-            items = []
-            for item in event_key:
-                if isinstance(item, str):
-                    items.append(item.upper())
-                else:
-                    items.append(item)
-
-            event_key = tuple(items)
-
+            event_key = ('SUN<', event_key.upper())
         else:
-            raise ValueError('illegal event key type: ' + str(type(event_key)))
+            # Handle a tuple of strings
+            event_key = [k.upper() for k in event_key]
+
+        # Begin with the Sun if there is no illumination already
+        if event_key[0][-1] not in ('<', '>', '-'):
+            event_key = ['SUN<'] + event_key
+
+        # If SUN is duplicated, remove the extra one
+        # This happens when re-using old event keys that did not have the suffix
+        if event_key[0][:-1] == event_key[1]:
+            event_key = event_key[:1] + event_key[2:]
+
+        # Add the default surface suffix to the body if necessary
+        if default and ':' not in event_key[-1]:
+            default = default.upper()
+            surface = self.get_surface(event_key[-1])
+            if surface.COORDINATE_TYPE == 'spherical':
+                event_key = event_key[:-1] + (event_key[-1] + ':' + default,)
+            elif default == 'ANSA' and surface.COORDINATE_TYPE == 'polar':
+                event_key = event_key[:-1] + (event_key[-1] + ':' + default,)
+
+        event_key = tuple(event_key)
+
+        # Check length
+        if self._is_dispersed(event_key) and len(event_key) not in (2,3):
+            raise ValueError('illegal surface event key: ' + repr(event_key))
+
+        if self._is_occultation(event_key) and len(event_key) != 2:
+            raise ValueError('illegal occultation event key: '
+                             + repr(event_key))
+
+        if self._is_gridless(event_key) and len(event_key) != 2:
+            raise ValueError('illegal gridless event key: ' + repr(event_key))
 
         return event_key
 
+    def _is_dispersed(self, event_key):
+        if len(event_key) == 0:
+            return True
+        return event_key[0][-1] == '<'
+
+    def _is_occultation(self, event_key):
+        if len(event_key) == 0:
+            return False
+        return event_key[0][-1] == '>'
+
+    def _is_gridless(self, event_key):
+        if len(event_key) == 0:
+            return False
+        return event_key[0][-1] == '-'
+
+    def _is_shadowing(self, event_key):
+        if len(event_key) == 0:
+            return False
+        return self._is_dispersed(event_key) and len(event_key) == 3
+
+    def gridless_event_key(self, event_key, default=''):
+        """Convert event key to gridless."""
+
+        event_key = self.standardize_event_key(event_key, default=default)
+        if not event_key:
+            return event_key
+
+        return (event_key[0][:-1] + '-',) + event_key[1:]
+
     #===========================================================================
-    @staticmethod
-    def standardize_backplane_key(backplane_key):
+    def standardize_backplane_key(self, backplane_key):
         """Repair a backplane key to make it suitable for indexing a dictionary.
 
         A string is turned into a tuple. Strings are converted to upper case. If
         the argument is a backplane already, the key is extracted from it.
         """
 
+        if isinstance(backplane_key, Qube):
+            if hasattr(backplane_key, 'key'):
+                return backplane_key.key
+
+            for key, value in self.backplanes.items():
+                if value is backplane_key:
+                    return key
+
+            raise ValueError('illegal backplane key type: ' +
+                              type(backplane_key).__name__)
+
+        return self._standardize_backplane_key_if_not_qube(backplane_key)
+
+    @functools.lru_cache(maxsize=300)
+    def _standardize_backplane_key_if_not_qube(self, backplane_key):
+
         if isinstance(backplane_key, str):
-            return (backplane_key.upper(),)
+            backplane_key = (backplane_key.upper(),)
 
-        elif type(backplane_key) == tuple:
-            return backplane_key
-
-        elif isinstance(backplane_key, (Scalar, Boolean)):
-            return backplane_key.key
+        elif isinstance(backplane_key, tuple):
+            pass
 
         else:
             raise ValueError('illegal backplane key type: ' +
-                              str(type(backplane_key)))
+                              type(backplane_key).__name__)
+
+        return backplane_key
 
     #===========================================================================
-    @staticmethod
-    def get_body_and_modifier(event_key):
-        """A body object and modifier based on the given surface ID.
+    @functools.lru_cache(maxsize=300)
+    def _event_and_backplane_keys(self, event_key, names=(), default=''):
+        """Interpret the input as either a backplane_key or an event_key.
+
+        names is the set of possible backplane names to seek; if not specified,
+        the complete set of defined Backplane names is used.
+
+        Use default = 'ANSA', 'RING', or 'LIMB' to add this suffix to the body
+        name if no suffix is specified.
+        """
+
+        if not names:
+            names = Backplane.CALLABLES
+
+        backplane_key = event_key
+        uses_backplane_key = False
+        while event_key[0] in names:
+            event_key = event_key[1]
+            uses_backplane_key = True
+
+        event_key = self.standardize_event_key(event_key, default=default)
+        if uses_backplane_key:
+            backplane_key = self.standardize_backplane_key(backplane_key)
+            return (event_key, backplane_key)
+
+        return (event_key, None)
+
+    #===========================================================================
+    @functools.lru_cache(maxsize=300)
+    def get_body_and_modifier(self, surface_key):
+        """A body object and modifier based on the given surface key.
 
         The string is normally a registered body ID (case insensitive), but it
-        can be modified with ':ansa', ':ring' or ':limb' to indicate an
+        can be modified with ':ANSA', ':RING' or ':LIMB' to indicate an
         associated surface.
         """
 
-        surface_id = event_key[0].upper()
+        surface_id = surface_key.upper()
 
         modifier = None
         if surface_id.endswith(':ANSA'):
@@ -303,18 +468,147 @@ class Backplane(object):
         return (Body.lookup(body_id), modifier)
 
     #===========================================================================
-    def get_surface(self, event_key):
-        """A surface based on its ID."""
+    @functools.lru_cache(maxsize=300)
+    def unmasked_surface_key(self, surface_key):
+        """The unmasked surface key associated with a given surface key.
+        Example: SATURN_MAIN_RINGS -> SATURN:RING.
 
-        (body, modifier) = Backplane.get_body_and_modifier(event_key)
+        If the surface has no associated unmasked surface, the same surface key
+        is returned.
+        """
+
+        (body, modifier) = self.get_body_and_modifier(surface_key)
+
+        # If this is an ansa surface, make sure the parent is a planet, not ring
+        if modifier == 'ANSA':
+            if body.surface.COORDINATE_TYPE == 'polar':
+                body = body.parent
+
+        body_name = body.name.upper()
+
+        # If the string has a modifier, it must be the default surface
+        if modifier:
+            return body_name + ':' + modifier
+
+        # Determine what kind of a surface this is
+        intercept_key = self.get_surface(surface_key).intercept_key
+        surface_type = intercept_key[0]
+
+        if surface_type == 'ellipsoid':
+            return body_name
+
+        parent = body.parent
+
+        # If it's a ring or orbit, we must confirm that it has zero inclination
+        # or elevation, and uses the parent body's ring_frame. Format is:
+        # ('ring', origin, frame, elevation, i, node, dnode_dt, epoch)
+        if surface_type == 'ring':
+            if intercept_key[3:] != (0., 0., 0., 0., 0.):
+                return surface_key
+            if intercept_key[2] is not parent.ring_frame.wayframe:
+                return surface_key
+
+            return body_name + ':RING'
+
+        # ('ansa', origin, frame)
+        if surface_type == 'ansa':
+            if intercept_key[2] is not parent.ring_frame:
+                return surface_key
+
+            return body_name + ':ANSA'
+
+        return ''
+
+    #===========================================================================
+    @functools.lru_cache(maxsize=300)
+    def unmasked_event_key(self, event_key):
+        """Return the unmasked event key based on an event key.
+        """
+
+        event_key = self.standardize_event_key(event_key)
+
+        new_key = [event_key[0]]
+        for surface_key in event_key[1:]:
+            new_key.append(self.unmasked_surface_key(surface_key))
+
+        return tuple(new_key)
+
+    #===========================================================================
+    @functools.lru_cache(maxsize=300)
+    def intercept_dict_key(self, event_key):
+        """Return the key for the intercepts dictionary based on an event key.
+        """
+
+        event_key = self.standardize_event_key(event_key)
+
+        new_key = [event_key[0]]
+        for surface_key in event_key[1:]:
+            surface = self.get_surface(surface_key)
+            new_key.append(surface.intercept_key)
+
+        return tuple(new_key)
+
+    ############################################################################
+    # Event solver
+    ############################################################################
+
+    def get_obs_event(self, event_key, derivs=False):
+        """The observation event of photons arriving at the detector."""
+
+        derivs = derivs or self.ALL_DERIVS
+
+        # Gridded events always carry the same arrival vectors
+        if self._is_dispersed(event_key):
+            return self.obs_events[derivs]
+
+        # For others, check the target-based cache first
+        if event_key in self.gridless_arrivals:
+            event = self.gridless_arrivals[event_key]
+            return (event if derivs else event.wod)
+
+        # Occultation events depend on the source
+        if self._is_occultation(event_key):
+            source_key = event_key[0][:-1]
+        else:
+            # Gridless events depend on the last body
+            source_key = event_key[-1]
+
+        # Check the cache
+        if source_key in self.gridless_arrivals:
+            arrival = self.gridless_arrivals[source_key]
+            departure = None
+
+        # Otherwise, solve
+        else:
+            source = self.get_body_and_modifier(source_key)[0]
+            (departure,
+             arrival) = source.photon_to_event(self.obs_gridless_event,
+                                               derivs=True)
+            self.gridless_arrivals[source_key] = arrival
+
+        # Save in the arrivals dictionary for next time
+        self.gridless_arrivals[event_key] = arrival
+
+        # Save the departure event if any
+        if departure is not None and event_key not in self.surface_events[True]:
+            surface = self.get_surface(event_key[-1])
+            departure = departure.wrt(surface.origin, surface.frame)
+            self.surface_events[True ][event_key] = departure
+            self.surface_events[False][event_key] = departure.wod
+
+        return arrival
+
+    #===========================================================================
+    @functools.lru_cache()
+    def get_surface(self, surface_key):
+        """A surface based on its surface key."""
+
+        (body, modifier) = self.get_body_and_modifier(surface_key)
 
         if modifier is None:
             return body.surface
 
         if modifier == 'RING':
-            if event_key not in self.min_ring_radius:
-                self.min_ring_radius[event_key] = body.surface.radii[0]
-
             if body.ring_body is not None:
                 return body.ring_body.surface
 
@@ -327,333 +621,243 @@ class Backplane(object):
                 return Ansa(body.path, body.ring_frame)
 
         if modifier == 'LIMB':
-            return Limb(body.surface, limits=(0.,np.inf))
+            return Limb(body.surface)
 
     #===========================================================================
-    @staticmethod
-    def get_path(path_id):
-        """A path based on its ID."""
+    def get_antimask(self, surface_key):
+        """Prepare a rectangular antimask for a particular surface event.
 
-        return Body.lookup(path_id.upper()).path
-
-    #===========================================================================
-    def get_antimask(self, event_key):
-        """Prepare an antimask for a particular surface event."""
-
-        # The basic meshgrid is unmasked
-        if len(event_key) == 0:
-            return True
+        The antimask defines the bounding box of the meshgrid that intercepts
+        the given surface.
+        """
 
         # Return from the antimask cache if present
-        try:
-            return self.antimasks[event_key]
-        except KeyError:
-            pass
+        if surface_key in self.antimasks:
+            return self.antimasks[surface_key]
 
-        try:
-            return self.antimasks[event_key[1:]]
-        except KeyError:
-            pass
-
-        body_name = event_key[-1]
-
-        # For a name with a colon, we're done
-        if ':' in body_name:
+        # If the inventory is disabled, we're done
+        if self.inventory is None:
             return True
 
-        # Otherwise, use the inventory if available
-        if self.inventory is not None:
-            try:
-                body_dict = self.inventory[body_name]
+        # For a name with a colon, there is no antimask
+        if ':' in surface_key:
+            return True
 
-            # If it is not already in the inventory, try to make a new entry
-            except KeyError:
-              body_dict = None
-              if self.obs.INVENTORY_IMPLEMENTED:
-                try:
-                  body_dict = self.obs.inventory([body_name],
-                                                 return_type='full')[body_name]
-                except KeyError:
-                  pass
+        # Update the inventory if necessary
+        body_name = surface_key
+        if body_name not in self.inventory:
+            self.inventory.update(self.obs.inventory([body_name],
+                                                     return_type='full'))
 
-              self.inventory[body_name] = body_dict
+        # If it is absent from the inventory now, it's not in the image
+        if body_name not in self.inventory:
+            self.antimasks[body_name] = False
+            return False
 
-            if body_dict is None:
-                return False
+        body_dict = self.inventory[body_name]
+        if not body_dict['inside']:
+            self.antimasks[body_name] = False
+            return False
 
-            if not body_dict['inside']:
-                return False
+        u_min = body_dict['u_min'] - self.inventory_border
+        u_max = body_dict['u_max'] + self.inventory_border
+        v_min = body_dict['v_min'] - self.inventory_border
+        v_max = body_dict['v_max'] + self.inventory_border
 
-            u_min = body_dict['u_min'] - self.inventory_border
-            u_max = body_dict['u_max'] + self.inventory_border
-            v_min = body_dict['v_min'] - self.inventory_border
-            v_max = body_dict['v_max'] + self.inventory_border
+        antimask = np.ones(self.meshgrid.shape, dtype='bool')
+        antimask[self.meshgrid.uv.values[...,0] <  u_min] = False
+        antimask[self.meshgrid.uv.values[...,0] >= u_max] = False
+        antimask[self.meshgrid.uv.values[...,1] <  v_min] = False
+        antimask[self.meshgrid.uv.values[...,1] >= v_max] = False
 
-            antimask = np.ones(self.meshgrid.shape, dtype='bool')
-            antimask[self.meshgrid.uv.values[...,0] <  u_min] = False
-            antimask[self.meshgrid.uv.values[...,0] >= u_max] = False
-            antimask[self.meshgrid.uv.values[...,1] <  v_min] = False
-            antimask[self.meshgrid.uv.values[...,1] >= v_max] = False
-            return antimask
-
-            # Swap axes if necessary THIS IS NOT RIGHT!  ###TODO
-#             for c in self.obs.axes:
-#                 if c[0] == 'v':
-#                     antimask = antimask.swapaxes(0,1)
-#                     break
-#                 if c[0] == 'u':
-#                     break
-#
-#             return antimask
-
-        return True
+        self.antimasks[body_name] = antimask
+        return antimask
 
     #===========================================================================
-    def get_surface_event(self, event_key):
-        """The photon departure event from a surface based on its key."""
+    def get_surface_event(self, event_key, derivs=False, arrivals=False):
+        """The surface or path event surface based on an event key.
 
+        Inputs:
+            event_key       event key.
+            derivs          True for events with time and LOS derivs; False
+                            otherwise.
+            arrivals        True for an event requiring arrival vectors; False
+                            otherwise.
+        """
+
+        derivs = derivs or self.ALL_DERIVS
+
+        # Handle the empty event key (used for sky coordinates) quickly
         event_key = self.standardize_event_key(event_key)
+        if not event_key:
+            return self.get_obs_event(event_key, derivs)
 
-        # If the event already exists, return it
-        if event_key in self.surface_events:
-            return self.surface_events[event_key]
+        # Retrieve the event from the cache if it is available
+        if event_key in self.surface_events[derivs]:
+            event = self.surface_events[derivs][event_key]
 
-        # The Sun is treated as a path, not a surface, unless it is listed last
-        if event_key[0] == 'SUN' and len(event_key) > 1:
-            return self.get_path_event(event_key)
+            # Fill in the arrivals if needed
+            if arrivals and not event.has_arrivals():
+                source = Body.lookup(event_key[0][:-1])
+                event = source.photon_to_event(event,
+                                               antimask=event.antimask,
+                                               derivs=derivs)[1]
+                surface = self.get_surface(event_key[1])
+                event = event.wrt(surface.origin, surface.frame)
+                self._save_event(event_key, event, surface=surface,
+                                                   derivs=derivs)
 
-        # Look up the photon's departure surface
-        surface = self.get_surface(event_key)
+            # Fill in the perpendicular if needed
+            if event.perp is None:
+                event.perp = Vector3.ZAXIS
+                self.surface_events[derivs][event_key] = event
 
-        # Calculate derivatives for the first step from the observer,
-        # if allowed
-        if len(event_key) == 1 and surface.intercept_DERIVS_ARE_IMPLEMENTED:
+            return event
+
+        # Always include derivatives by default, except for shadowing events
+        is_shadowing   = self._is_shadowing(event_key)
+        is_occultation = self._is_occultation(event_key)
+        is_gridless    = self._is_gridless(event_key)
+
+        if not is_shadowing and not derivs:
             try:
-                event = self.get_surface_event_w_derivs(event_key)
-                return self.surface_events[event_key]
+                event = self.get_surface_event(event_key, derivs=True,
+                                                          arrivals=arrivals)
+                return event.wod
             except NotImplementedError:
                 pass
 
-        # Look up the photon's destination
-        dest = self.get_surface_event_with_arr(event_key[1:])
+        # Get the detection event at the next surface (or at the detector)
+        # For shadowing events, this is the event associated with the two-item
+        # key.
+        if is_shadowing:
+            two_item_key = event_key[::2]       # skip over middle item
+            detection = self.get_surface_event(two_item_key, derivs=derivs,
+                                                             arrivals=True)
 
-        # Define the antimask
-        antimask = self.get_antimask(event_key)
+        # For occultation events, the line of sight from the detector is
+        # defined by the source.
+        elif is_occultation:
+            source = Body.lookup(event_key[0][:-1])
+            if source in self.obs_occultation_events:
+                detection = self.obs_occultation_events[source]
+            else:
+                detection = source.photon_to_event(self.obs_gridless_event,
+                                                   derivs=True)
+                detection = event.wrt_frame(self.obs.frame)
+                self.obs_occultation_events[source] = detection
 
-        # Create the event and save it in the dictionary
-        event = surface.photon_to_event(dest, antimask=antimask)[0]
-        self.surface_events[event_key] = event
-        if event_key not in self.antimasks:
-            self.antimasks[event_key] = event.antimask
+        else:
+            detection = self.get_obs_event(event_key, derivs=derivs)
 
-        # Save extra information in the event object
+        # Solve for the event
+        if is_gridless:
+            # If gridless, the call to get_obs_event above filled in the event,
+            # but fill in the perpendicular if necessary
+            event = self.surface_events[derivs][event_key]
+            if event.perp is None:
+                event.perp = Vector3.ZAXIS
+                self.surface_events[derivs][event_key] = event
+
+        else:   # is_dispersed or is_occultation
+            event = self._get_los_event(event_key, detection, derivs)
+
+        # Fill in the arrivals recursively if needed
+        if arrivals and not event.has_arrivals():
+            event = self.get_surface_event(event_key, derivs=derivs,
+                                                      arrivals=arrivals)
+
+        return event
+
+    #===========================================================================
+    def _get_los_event(self, event_key, detection, derivs):
+        """The event defined by dispersed lighting over a surface."""
+
+        surface_key = event_key[1]
+        surface = self.get_surface(surface_key)
+
+        if self._is_dispersed(event_key):
+            antimask = self.get_antimask(event_key[-1]) # last item defines mask
+        else:
+            antimask = None
+
+        # Update the intercept dictionary if necessary
+        intercept_key = self.intercept_dict_key(event_key)
+        unmasked_event_key = self.unmasked_event_key(event_key)
+
+        if intercept_key in self.intercepts[derivs]:
+            event = self.intercepts[derivs][intercept_key]
+            if self.DIAGNOSTICS:
+                LOGGING.diagnostic('INTERCEPT REUSED', event_key,
+                                   'derivs=%s' % derivs)
+
+        else:
+            now = datetime.datetime.now()
+            event = surface.unmasked.photon_to_event(detection,
+                                                     antimask=antimask,
+                                                     derivs=derivs)[0]
+            if self.PERFORMANCE:
+                elapsed = (datetime.datetime.now() - now).total_seconds()
+                LOGGING.performance('INTERCEPT %6.3f' % elapsed, event_key,
+                                    'derivs=%s' % derivs)
+
+            # Save in the intercepts dictionary
+            self.intercepts[derivs][intercept_key] = event
+            if derivs:
+                self.intercepts[False][intercept_key] = event.wod
+
+            # Also save the unmasked event in the surface dictionary
+            self._save_event(unmasked_event_key, event, surface=surface,
+                                                        derivs=derivs)
+
+        # Apply the coordinates and mask
+        if event_key != unmasked_event_key:
+            event = surface.apply_coords_to_event(
+                                    event,
+                                    obs=self.get_obs_event(event_key, derivs))
+            self._save_event(event_key, event, surface=surface, derivs=derivs)
+
+        return event
+
+    #===========================================================================
+    def _save_event(self, event_key, event, surface, derivs):
+
+        body = self.get_body_and_modifier(event_key[1])[0]
+        event.insert_subfield('body', body)
         event.insert_subfield('event_key', event_key)
         event.insert_subfield('surface', surface)
 
-        body = Backplane.get_body_and_modifier(event_key)[0]
-        event.insert_subfield('body', body)
+        # Save the event
+        derivs = derivs or self.ALL_DERIVS
+        self.surface_events[derivs][event_key] = event
 
         # Save the antimask
-        if len(event_key) == 1 and event_key[0] not in self.antimasks:
-            self.antimasks[event_key] = event.antimask
+        if self._is_dispersed(event_key) and not self._is_shadowing(event_key):
+            surface_key = event_key[-1]
+            if surface_key not in self.antimasks:
+                self.antimasks[surface_key] = event.antimask
 
-        return event
-
-    #===========================================================================
-    def get_surface_event_w_derivs(self, event_key):
-        """The photon departure event from a surface including derivatives."""
-
-        event_key = self.standardize_event_key(event_key)
-
-        # If the event already exists, return it
-        if event_key in self.surface_events_w_derivs:
-            return self.surface_events_w_derivs[event_key]
-
-        # Look up the photon's departure surface
-        surface = self.get_surface(event_key)
-
-        # Look up the photons destination and prepare derivatives
-        dest = self.get_surface_event_w_derivs(event_key[1:])
-        dest = dest.with_time_derivs().with_los_derivs()
-
-        # Define the antimask
-        antimask = self.get_antimask(event_key)
-
-        # Create the event and save it in the dictionary
-        event = surface.photon_to_event(dest, derivs=True, antimask=antimask)[0]
-        if event_key not in self.antimasks:
-            self.antimasks[event_key] = event.antimask
-
-        # Save extra information in the event object
-        event.insert_subfield('event_key', event_key)
-        event.insert_subfield('surface', surface)
-
-        body = Backplane.get_body_and_modifier(event_key)[0]
-        event.insert_subfield('body', body)
-
-        self.surface_events_w_derivs[event_key] = event
-
-        # Make a copy without derivs
-        event_wo_derivs = event.wod
-        event_wo_derivs.insert_subfield('event_key', event_key)
-        event_wo_derivs.insert_subfield('surface', surface)
-        event_wo_derivs.insert_subfield('body', body)
-        self.surface_events[event_key] = event_wo_derivs
-
-        # Also save into the dictionary keyed by the string name alone
-        # Saves the bother of typing parentheses and a comma when it's not
-        # really necessary
-        if len(event_key) == 1:
-            self.surface_events_w_derivs[event_key[0]] = event
-            self.surface_events[event_key[0]] = event_wo_derivs
-
-            # Also save the antimask
-            self.antimasks[event_key[0]] = event.antimask
-
-        return event
+        # Save the without-derivs version if necessary
+        if derivs:
+            self.surface_events[False][event_key] = event.wod
 
     #===========================================================================
-    def get_path_event(self, event_key):
-        """The departure event from a specified path."""
-
-        event_key = self.standardize_event_key(event_key)
-
-        # If the event already exists, return it
-        if event_key in self.path_events:
-            return self.path_events[event_key]
-
-        # Create the event
-        dest = self.get_surface_event(event_key[1:])
-        path = Backplane.get_path(event_key[0])
-
-        event = path.photon_to_event(dest)[0]
-        event.insert_subfield('event_key', event_key)
-
-        self.path_events[event_key] = event
-
-        # For a tuple of length 1, also register under the name string
-        if len(event_key) == 1:
-            self.path_events[event_key[0]] = event
-
-        return event
-
-    #===========================================================================
-    def get_surface_event_with_arr(self, event_key):
-        """The specified event with arrival photons filled in."""
-
-        event = self.get_surface_event(event_key)
-        if event.arr is None and event.arr_ap is None:
-            new_event = AliasPath('SUN').photon_to_event(event,
-                                                    antimask=event.antimask)[1]
-            new_event.insert_subfield('event_key', event_key)
-            new_event.insert_subfield('surface', event.surface)
-            new_event.insert_subfield('body', event.body)
-
-            self.surface_events[event_key] = new_event
-            return new_event
-
-        return event
-
-    #===========================================================================
-    def get_gridless_event(self, event_key):
-        """The gridless event identifying a photon departure from a path."""
-
-        event_key = self.standardize_event_key(event_key)
-
-        # If the event already exists, return it
-        if event_key in self.gridless_events:
-            return self.gridless_events[event_key]
-
-        # Create the event and save it in the dictionary
-        dest = self.get_gridless_event(event_key[1:])
-        surface = self.get_surface(event_key)
-
-        (event, arrival) = surface.origin.photon_to_event(dest)
-        event = event.wrt_frame(surface.frame)
-        arrival = arrival.wrt_frame(self.obs.frame)
-
-        # Save extra information in the event object
-        body = Backplane.get_body_and_modifier(event_key)[0]
-
-        event.insert_subfield('event_key', event_key)
-        event.insert_subfield('surface', surface)
-        event.insert_subfield('body', body)
-
-        arrival.insert_subfield('event_key', event_key)
-        arrival.insert_subfield('surface', surface)
-        arrival.insert_subfield('body', body)
-
-        self.gridless_events[event_key] = event
-        self.gridless_arrivals[event_key] = arrival
-
-        return event
-
-    #===========================================================================
-    def get_gridless_event_with_arr(self, event_key):
-        """The gridless event with the arrival photons been filled in."""
-
-        event_key = self.standardize_event_key(event_key)
-
-        event = self.get_gridless_event(event_key)
-        if event.arr is not None:
-            return event
-
-        new_event = AliasPath('SUN').photon_to_event(event)[1]
-        new_event.insert_subfield('event_key', event_key)
-        new_event.insert_subfield('surface', event.surface)
-
-        body = Backplane.get_body_and_modifier(event_key)[0]
-        new_event.insert_subfield('body', body)
-
-        self.gridless_events[event_key] = new_event
-        return new_event
-
-    #===========================================================================
-    def apply_mask_to_event(self, event_key, mask):
-        """Apply the given mask to the event(s) associated with this event_key.
+    def get_gridless_event(self, event_key, derivs=False, arrivals=False):
+        """The gridless event associated with this event key, even if the event
+        key refers to dispersed or occultation lighting.
         """
 
-        event_key = self.standardize_event_key(event_key)
+        derivs = derivs or self.ALL_DERIVS
 
-        if event_key in self.surface_events:
-            event = self.surface_events[event_key]
-            new_event = event.mask_where(mask)
-            new_event.insert_subfield('event_key', event_key)
-            new_event.insert_subfield('surface', event.surface)
-            new_event.insert_subfield('body', event.body)
-            self.surface_events[event_key] = new_event
+        gridless_key = self.gridless_event_key(event_key)
+        return self.get_surface_event(gridless_key, derivs=derivs,
+                                                    arrivals=arrivals)
 
-        if event_key in self.surface_events_w_derivs:
-            event = self.surface_events_w_derivs[event_key]
-            new_event = event.mask_where(mask)
-            new_event.insert_subfield('event_key', event_key)
-            new_event.insert_subfield('surface', event.surface)
-            new_event.insert_subfield('body', event.body)
-            self.surface_events_w_derivs[event_key] = new_event
+    ############################################################################
+    # Backplane support
+    ############################################################################
 
-    #===========================================================================
-    def mask_as_boolean(self, mask):
-        """Convert a mask represented by a single boolean, NumPy array, or Qube
-        subclass into an unmasked Boolean.
-
-        A masked value is treated as equivalent to False.
-        """
-
-        # Undefined values are treated as False
-        if isinstance(mask, Qube):
-            return Boolean(mask.values.astype('bool') | mask.mask, False)
-
-        if isinstance(mask, np.ndarray):
-            return Boolean(mask)
-
-        # Convert a single value to a full array
-        if mask:
-            return Boolean(np.ones(self.shape, dtype='bool'))
-        else:
-            return Boolean(np.zeros(self.shape, dtype='bool'))
-
-    #===========================================================================
-    def register_backplane(self, key, backplane, expand=True):
+    def register_backplane(self, key, backplane, expand=False, derivs=False):
         """Insert this backplane into the dictionary.
 
         If expand is True and the backplane contains just a single value, the
@@ -665,6 +869,9 @@ class Backplane(object):
 
         elif isinstance(backplane, np.ndarray):
             backplane = Scalar(backplane)
+
+        # Collapse mask if possible
+        backplane = backplane.collapse_mask()
 
         # Under some circumstances a derived backplane can be a scalar
         if expand and backplane.shape == () and self.shape != ():
@@ -679,20 +886,40 @@ class Backplane(object):
 
         # For reference, we add the key as an attribute of each backplane
         # object
-        backplane = backplane.wod
         backplane.key = key
+        backplane = backplane.as_readonly(recursive=True)
+        self.backplanes[key] = backplane.wod
 
-        self.backplanes[key] = backplane
+        if backplane.derivs:
+            self.backplanes_with_derivs[key] = backplane
+
+        if derivs or self.ALL_DERIVS:
+            return backplane
+        else:
+            return backplane.wod
 
     #===========================================================================
-    def register_gridless_backplane(self, key, backplane):
-        """Insert this backplane into the dictionary.
+    def _remasked_backplane(self, key, backplane_key, derivs=False):
+        """Apply the mask of one backplane to another."""
 
-        Same as register_backplane() but without the expansion of a scalar
-        value.
-        """
+        derivs = derivs or self.ALL_DERIVS
 
-        self.register_backplane(key, backplane, expand=False)
+        array = self.evaluate(key, derivs=derivs)
+        mask = self.evaluate(backplane_key).mask
+        array = array.remask_or(mask, recursive=derivs)
+
+        new_key = key[:1] + (backplane_key,) + key[2:]
+        self.register_backplane(new_key, array)
+        return array
+
+    #===========================================================================
+    def get_backplane(self, key, derivs=False):
+        """Return the selected backplane from the cache."""
+
+        if (derivs or self.ALL_DERIVS) and key in self.backplanes_with_derivs:
+            return self.backplanes_with_derivs[key]
+
+        return self.backplanes[key]
 
     ############################################################################
     # Method to access a backplane or mask by key
@@ -708,11 +935,13 @@ class Backplane(object):
 
     CALLABLES = set()
 
-    #===========================================================================
-    def evaluate(self, backplane_key):
-        """Evaluates the backplane or mask based on the given key. Equivalent
-        to calling the function directly, but the name of the function is the
-        first argument in the tuple passed to the function.
+    def evaluate(self, backplane_key, derivs=False):
+        """Evaluate the backplane array based on the given "backplane_key". A
+        backplane_key takes the form of a tuple:
+            (function_name, event_key, ...)
+        where function_name is the name of any Backplane array method, and
+        the remaining items in the tuple are the input arguments to that method,
+        starting with the event_key.
         """
 
         if isinstance(backplane_key, str):
@@ -722,7 +951,14 @@ class Backplane(object):
         if func not in Backplane.CALLABLES:
             raise ValueError('unrecognized backplane function: ' + func)
 
-        return Backplane.__dict__[func].__call__(self, *backplane_key[1:])
+        # Evaluate...
+        backplane = Backplane.__dict__[func].__call__(self, *backplane_key[1:])
+
+        derivs = derivs or self.ALL_DERIVS
+        if derivs and backplane_key in self.backplanes_with_derivs:
+            backplane = self.backplanes_with_derivs[backplane_key]
+
+        return backplane
 
     #===========================================================================
     @staticmethod
@@ -742,361 +978,37 @@ class Backplane(object):
                     Backplane.CALLABLES.add(key)
 
 ################################################################################
-# UNIT TESTS
+# UNIT TESTS via gold_master
 ################################################################################
 
-import unittest
 import os
-
-import oops.config as config
-
-from polymath                           import Vector3
-
-from oops.config                        import ABERRATION
-from oops.meshgrid                      import Meshgrid
-from oops.event                         import Event
-
-from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
-from oops.backplane.exercise_backplanes import exercise_backplanes
-from oops.backplane.unittester_support  import Backplane_Settings
-
-UNITTEST_SATURN_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                        'cassini/ISS/W1573721822_1.IMG')
-UNITTEST_RHEA_FILESPEC = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                      'cassini/ISS/N1649465464_1.IMG')
-
-#*******************************************************************************
-class Test_Backplane_Surfaces(unittest.TestCase):
-
-    OLD_RHEA_SURFACE = None
-
-    #===========================================================================
-    def setUp(self):
-        global OLD_RHEA_SURFACE
-
-        from oops.surface.ellipsoid import Ellipsoid
-
-        if Backplane_Settings.EXERCISES_ONLY:
-            self.skipTest("")
-
-        # This only needed when this test is run before the SS has been
-        # defined by a host from_file() method
-        Body.define_solar_system('2000-01-01', '2020-01-01')
-
-        # Distort Rhea's shape for better Ellipsoid testing
-        rhea = Body.as_body('RHEA')
-        OLD_RHEA_SURFACE = rhea.surface
-        old_rhea_radii = OLD_RHEA_SURFACE.radii
-
-        new_rhea_radii = tuple(np.array([1.1, 1., 0.9]) * old_rhea_radii)
-        new_rhea_surface = Ellipsoid(rhea.path, rhea.frame, new_rhea_radii)
-        Body.as_body('RHEA').surface = new_rhea_surface
-
-  #      config.LOGGING.on('   ')
-        config.EVENT_CONFIG.collapse_threshold = 0.
-        config.SURFACE_PHOTONS.collapse_threshold = 0.
-
-    #===========================================================================
-    def tearDown(self):
-        global OLD_RHEA_SURFACE
-
-        config.LOGGING.off()
-        config.EVENT_CONFIG.collapse_threshold = 3.
-        config.SURFACE_PHOTONS.collapse_threshold = 3.
-
-        # Restore Rhea's shape
-        Body.as_body('RHEA').surface = OLD_RHEA_SURFACE
-
-        ABERRATION.old = False
-
-    #===========================================================================
-    def runTest(self):
-
-        from oops.surface.centricspheroid  import CentricSpheroid
-        from oops.surface.graphicspheroid  import GraphicSpheroid
-        from oops.surface.centricellipsoid import CentricEllipsoid
-        from oops.surface.graphicellipsoid import GraphicEllipsoid
-
-        import hosts.cassini.iss as iss
-
-        for ABERRATION.old in (False, True):
-
-            snap = iss.from_file(UNITTEST_SATURN_FILESPEC, fast_distortion=False)
-            meshgrid = Meshgrid.for_fov(snap.fov,
-                        undersample=Backplane_Settings.UNDERSAMPLE, swap=True)
-            uv0 = meshgrid.uv
-            bp = Backplane(snap, meshgrid)
-
-            # Actual (ra,dec)
-            ra = bp.right_ascension(apparent=False)
-            dec = bp.declination(apparent=False)
-
-            ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-            ev.neg_arr_j2000 = Vector3.from_ra_dec_length(ra, dec)
-            uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-            diff = uv - uv0
-            self.assertTrue(diff.norm().max() < 1.e-9)
-
-            # Apparent (ra,dec)  # test doesn't work for ABERRATION=old
-            if not ABERRATION.old:
-                ra = bp.right_ascension(apparent=True)
-                dec = bp.declination(apparent=True)
-
-                ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-                ev.neg_arr_ap_j2000 = Vector3.from_ra_dec_length(ra, dec)
-                uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-
-                diff = uv - uv0
-            self.assertTrue(diff.norm().max() < 1.e-9)
-
-            # RingPlane (rad, lon)
-            rad = bp.ring_radius('saturn:ring')
-            lon = bp.ring_longitude('saturn:ring', reference='node')
-
-            ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-            body = Body.as_body('SATURN_RING_PLANE')
-            (_, ev) = body.surface.photon_to_event_by_coords(ev, (rad,lon))
-
-            uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-            diff = uv - uv0
-            self.assertTrue(diff.norm().max() < 1.e-8)
-
-            # Ansa (rad, alt)
-            rad = bp.ansa_radius('saturn:ansa', radius_type='right')
-            alt = bp.ansa_altitude('saturn:ansa')
-
-            ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-            body = Body.as_body('SATURN_RING_PLANE')
-            surface = Ansa.for_ringplane(body.surface)
-            (_, ev) = surface.photon_to_event_by_coords(ev, (rad,alt))
-
-            uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-            diff = uv - uv0
-            self.assertTrue(diff.norm().max() < 1.e-8)
-
-            # Spheroid (lon,lat)
-            lat = bp.latitude('saturn', lat_type='squashed')
-            lon = bp.longitude('saturn', reference='iau', direction='east',
-                                         lon_type='centric')
-            ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-            body = Body.as_body('SATURN')
-            (_, ev) = body.surface.photon_to_event_by_coords(ev, (lon,lat))
-            uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-            diff = uv - uv0
-            self.assertTrue(diff.norm().max() < 1.e-8)
-
-            # CentricSpheroid (lon,lat)
-            lat = bp.latitude('saturn', lat_type='centric')
-            lon = bp.longitude('saturn', reference='iau', direction='east',
-                                         lon_type='centric')
-
-            ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-            body = Body.as_body('SATURN')
-            surface = CentricSpheroid(body.path, body.frame, body.surface.radii)
-            (_, ev) = surface.photon_to_event_by_coords(ev, (lon,lat))
-
-            uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-            diff = uv - uv0
-            self.assertTrue(diff.norm().max() < 1.e-8)
-
-            # GraphicSpheroid (lon,lat)
-            lat = bp.latitude('saturn', lat_type='graphic')
-            lon = bp.longitude('saturn', reference='iau', direction='east',
-                                         lon_type='centric')
-
-            ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-            body = Body.as_body('SATURN')
-            surface = GraphicSpheroid(body.path, body.frame, body.surface.radii)
-            (_, ev) = surface.photon_to_event_by_coords(ev, (lon,lat))
-
-            uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-            diff = uv - uv0
-            self.assertTrue(diff.norm().max() < 1.e-8)
-
-            # Rhea tests, with Rhea modified
-            body = Body.as_body('RHEA')
-            snap = iss.from_file(UNITTEST_RHEA_FILESPEC, fast_distortion=False)
-            meshgrid = Meshgrid.for_fov(snap.fov,
-                        undersample=Backplane_Settings.UNDERSAMPLE, swap=True)
-
-            uv0 = meshgrid.uv
-            bp = Backplane(snap, meshgrid)
-
-            # Ellipsoid (lon,lat)
-            lat = bp.latitude('rhea', lat_type='squashed')
-            lon = bp.longitude('rhea', reference='iau', direction='east',
-                                       lon_type='squashed')
-
-            ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-            body = Body.as_body('RHEA')
-            (_, ev) = body.surface.photon_to_event_by_coords(ev, (lon,lat))
-
-            uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-            diff = uv - uv0
-            #print(diff.norm().min(), diff.norm().max())
-            self.assertTrue(diff.norm().max() < 2.e-7)
-
-            # CentricEllipsoid (lon,lat)
-            lat = bp.latitude('rhea', lat_type='centric')
-            lon = bp.longitude('rhea', reference='iau', direction='east',
-                                       lon_type='centric')
-
-            ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-            body = Body.as_body('RHEA')
-            surface = CentricEllipsoid(body.path, body.frame, body.surface.radii)
-            (_, ev) = surface.photon_to_event_by_coords(ev, (lon,lat))
-
-            uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-            diff = uv - uv0
-            #print(diff.norm().min(), diff.norm().max())
-            self.assertTrue(diff.norm().max() < 2.e-7)
-
-            # GraphicEllipsoid (lon,lat)
-            lat = bp.latitude('rhea', lat_type='graphic')
-            lon = bp.longitude('rhea', reference='iau', direction='east',
-                                       lon_type='graphic')
-
-            ev = Event(snap.midtime, Vector3.ZERO, snap.path, snap.frame)
-            body = Body.as_body('RHEA')
-            surface = GraphicEllipsoid(body.path, body.frame, body.surface.radii)
-            (_, ev) = surface.photon_to_event_by_coords(ev, (lon,lat))
-
-            uv = snap.fov.uv_from_los(ev.neg_arr_ap)
-            diff = uv - uv0
-            #print(diff.norm().min(), diff.norm().max())
-            self.assertTrue(diff.norm().max() < 2.e-7)
-
-
-#*******************************************************************************
-class Test_Backplane_Borders(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-
-        # NOTE These tests are very sensitive to the specific kernel pool used.
-        import hosts.cassini.iss as iss
-
-        if Backplane_Settings.EXERCISES_ONLY:
-            self.skipTest('')
-
-        # These test assume undersample = 1.
-        if Backplane_Settings.UNDERSAMPLE != 1:
-            return
-
-        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                'cassini/ISS/W1573721822_1.IMG')
-
-        snap = iss.from_file(filespec)
-        meshgrid = Meshgrid.for_fov(snap.fov,
-                        undersample=Backplane_Settings.UNDERSAMPLE, swap=True)
-        bp = Backplane(snap, meshgrid, inventory=None)
-
-        # Test border of planet intercepted mask, inside
-        mask = bp.where_intercepted('saturn')
-
-        test = bp.border_inside(mask)
-        count = np.sum(test.vals)
-        self.assertTrue(count == 961)
-
-        # Test border of planet intercepted mask, outside
-        test = bp.border_outside(mask)
-        count = np.sum(test.vals)
-        self.assertTrue(count == 962)
-
-        # Test border of ring radius below 100 km
-        test = bp.border_below(('ring_radius', 'saturn:ring'), 100.e3)
-        count = np.sum(test.vals)
-        self.assertTrue(count == 1713)
-
-        # Test border of ring radius atop 100 km
-        test = bp.border_atop(('ring_radius', 'saturn:ring'), 100.e3)
-        count = np.sum(test.vals)
-        self.assertTrue(count == 1715)
-
-        # Test border of ring radius above 100 km
-        test = bp.border_above(('ring_radius', 'saturn:ring'), 100.e3)
-        count = np.sum(test.vals)
-        self.assertTrue(count == 1715)
-
-        # Test border of ring radius above 100 km via evaluate()
-        test = bp.evaluate(('border_above', ('ring_radius', 'saturn:ring'), 100.e3))
-        count = np.sum(test.vals)
-        self.assertTrue(count == 1715)
-
-
-#*******************************************************************************
-class Test_Backplane_Empty_Events(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-        import hosts.cassini.iss as iss
-
-        if Backplane_Settings.EXERCISES_ONLY:
-            self.skipTest('')
-
-        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                'cassini/ISS/W1573721822_1.IMG')
-
-        snap = iss.from_file(filespec)
-        meshgrid = Meshgrid.for_fov(snap.fov,
-                      undersample=Backplane_Settings.UNDERSAMPLE, swap=True)
-        bp = Backplane(snap, meshgrid, inventory=None)
-
-        # Test empty mask of planet ring radius below 10 km
-        test = bp.where_below(('ring_radius', 'saturn_main_rings'), 10.e3)
-        count = np.sum(test.vals)
-        total = np.size(test.vals)
-        percent = int(count / float(total) * 100. + 0.5)
-        self.assertTrue(percent == 0)
-
-        # Test empty ring radius for Pluto
-        test = bp.ring_radius('pluto:ring', rmax=1.e8)
-        total = np.size(test.mask)
-        masked = np.sum(test.mask)
-        percent = int(masked / float(total) * 100. + 0.5)
-        self.assertTrue(percent == 100)
-
-        # Test empty longitude for Pluto
-        test = bp.longitude('pluto')
-        total = np.size(test.mask)
-        masked = np.sum(test.mask)
-        percent = int(masked / float(total) * 100. + 0.5)
-        self.assertTrue(percent == 100)
-
-        # Test empty incidence angle for Pluto
-        test = bp.incidence_angle('pluto')
-        total = np.size(test.mask)
-        masked = np.sum(test.mask)
-        percent = int(masked / float(total) * 100. + 0.5)
-        self.assertTrue(percent == 100)
-
-
-#*******************************************************************************
-class Test_Backplane_Exercises(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-        import hosts.cassini.iss as iss
-
-        if Backplane_Settings.NO_EXERCISES:
-            self.skipTest('')
-
-#        iss.initialize(asof='2019-09-01', mst_pck=True)
-
-        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                'cassini/ISS/W1573721822_1.IMG')
-
-        obs = iss.from_file(filespec)
-        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-                                 planet_key='saturn',
-                                 moon_key='epimetheus',
-                                 ring_key='saturn_main_rings')
-
-
-##############################################
-from oops.backplane.unittester_support import backplane_unittester_args
-
+import unittest
+import oops.backplane.gold_master as gm
+from oops.unittester_support import OOPS_TEST_DATA_PATH
+
+class Test_Backplane_via_gold_master(unittest.TestCase):
+
+  def runTest(self):
+
+    # The d/dv numerical ring derivatives are extra-uncertain due to the high
+    # foreshortening in the vertical direction.
+
+    gm.override('SATURN:RING longitude d/dv self-check (deg/pix)', 0.1)
+    gm.override('SATURN:RING azimuth d/dv self-check (deg/pix)', 0.1)
+    gm.override('SATURN_MAIN_RINGS longitude d/dv self-check (deg/pix)', 1.)
+    gm.override('SATURN_MAIN_RINGS azimuth d/dv self-check (deg/pix)', 1.)
+    gm.override('SATURN:RING distance d/dv self-check (km/pix)', 0.3)
+    gm.override('SATURN_MAIN_RINGS distance d/dv self-check (km/pix)', 0.3)
+
+    gm.execute_as_unittest(self,
+                obspath = os.path.join(OOPS_TEST_DATA_PATH,
+                                       'cassini/ISS/W1573721822_1.IMG'),
+                module  = 'hosts.cassini.iss',
+                planet  = 'SATURN',
+                moon    = 'EPIMETHEUS',
+                ring    = 'SATURN_MAIN_RINGS')
+
+########################################
 if __name__ == '__main__':
-    backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################

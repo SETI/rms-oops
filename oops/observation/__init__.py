@@ -2,8 +2,6 @@
 # oops/observation/__init__.py: Abstract class Observation
 ################################################################################
 
-from __future__ import print_function
-
 import numpy as np
 import numbers
 
@@ -81,6 +79,8 @@ class Observation(object):
     """
 
     INVENTORY_IMPLEMENTED = False
+
+    DEBUG = False       # True to log iterative convergence steps
 
     ############################################################################
     # Methods to be defined for each subclass
@@ -424,8 +424,8 @@ class Observation(object):
         return tfrac * (time0 + time1)
 
     #===========================================================================
-    def meshgrid(self, origin=0.5, undersample=1, oversample=1, limit=None,
-                       fov_keywords={}):
+    def meshgrid(self, origin=None, undersample=1, oversample=1, limit=None,
+                       center_uv=None, fov_keywords={}):
         """A Meshgrid shaped to broadcast to the observation's shape.
 
         This works like Meshgrid.for_fov() except that the (u,v) axes are
@@ -434,12 +434,8 @@ class Observation(object):
 
         Input:
             origin      A single value, tuple or Pair defining the origin of the
-                        grid. Default is 0.5, which places the first sample in
-                        the middle of the first pixel.
-
-            limit       A single value, tuple or Pair defining the upper limits
-                        of the meshgrid. By default, this is the shape of the
-                        FOV.
+                        grid. Default is to place the first sample in the middle
+                        of the first pixel, allowing for under- or oversampling.
 
             undersample A single value, tuple or Pair defining the magnitude of
                         under-sampling to be performed. For example, a value of
@@ -450,69 +446,26 @@ class Observation(object):
                         over-sampling to be performed. For example, a value of
                         2 would create a 2x2 array of samples inside each pixel.
 
+            limit       A single value, tuple or Pair defining the upper limits
+                        of the meshgrid. By default, this is the shape of the
+                        FOV.
+
+            center_uv   Reference point at the center of the FOV; use None for
+                        the default, which depends on the origin and limit.
+
             fov_keywords  an optional dictionary of parameters passed to the
                         FOV methods, containing parameters that might affect
                         the properties of the FOV.
         """
 
-        # Convert inputs to NumPy 2-element arrays
-        if limit is None:
-            limit = self.uv_shape
-        if isinstance(limit, numbers.Number):
-            limit = (limit, limit)
-        limit = Pair.as_pair(limit).vals.astype('float')
-
-        if isinstance(origin, numbers.Number):
-            origin = (origin, origin)
-        origin = Pair.as_pair(origin).vals.astype('float')
-
-        if isinstance(undersample, numbers.Number):
-            undersample = (undersample, undersample)
-        undersample = Pair.as_pair(undersample).vals.astype('float')
-
-        if isinstance(oversample, numbers.Number):
-            oversample = (oversample, oversample)
-        oversample = Pair.as_pair(oversample).vals.astype('float')
-
-        # Construct the 1-D index arrays
-        step = undersample/oversample
-        limit = limit + step * 1.e-10   # Allow a little slop at the upper end
-
-        urange = np.arange(origin[0], limit[0], step[0])
-        vrange = np.arange(origin[1], limit[1], step[1])
-
-        usize = urange.size
-        vsize = vrange.size
-
-        # Construct the empty array of values
-        shape_list = len(self.shape) * [1]
-        if self.u_axis >= 0:
-            shape_list[self.u_axis] = usize
-        if self.v_axis >= 0:
-            shape_list[self.v_axis] = vsize
-
-        values = np.empty(tuple(shape_list + [2]))
-
-        # Populate the array
-        if self.u_axis >= 0:
-            shape_list = len(self.shape) * [1]
-            shape_list[self.u_axis] = usize
-            uvalues = urange.reshape(tuple(shape_list))
-            values[...,0] = uvalues
-        else:
-            values[...,0] = 0.5
-
-        if self.v_axis >= 0:
-            shape_list = len(self.shape) * [1]
-            shape_list[self.v_axis] = vsize
-            vvalues = vrange.reshape(tuple(shape_list))
-            values[...,1] = vvalues
-        else:
-            values[...,1] = 0.5
-
-        # Return the Meshgrid
-        grid = Pair(values)
-        return Meshgrid(self.fov, grid, fov_keywords)
+        return Meshgrid.for_shape(self.fov, self.shape,
+                                  self.u_axis, self.v_axis,
+                                  origin=origin,
+                                  undersample=undersample,
+                                  oversample=oversample,
+                                  limit=limit,
+                                  center_uv=center_uv,
+                                  fov_keywords=fov_keywords)
 
     #===========================================================================
     def timegrid(self, meshgrid, oversample=1, tfrac_limits=(0,1)):
@@ -683,7 +636,8 @@ class Observation(object):
             return indices.to_scalar(axis, recursive=derivs)
 
         if isinstance(indices, numbers.Real):
-            assert axis == 0
+            if axis not in (0, -1):
+                raise IndexError('index out of range: ' + str(indices))
             return Scalar(indices)
 
         indices = np.array(indices)
@@ -838,6 +792,7 @@ class Observation(object):
         # Iterate to solution...
         guess = None
         max_dt = np.inf
+        converged = False
         for count in range(iters):
 
             # Locate the object in the field of view
@@ -855,15 +810,24 @@ class Observation(object):
 
             # Test for convergence
             prev_max_dt = max_dt
-            max_dt = abs(new_obs_time - obs_time).max()
+            max_dt = abs(new_obs_time - obs_time).max(builtins=True, masked=-1.)
             obs_time = new_obs_time
 
-            if LOGGING.observation_iterations:
-                print(LOGGING.prefix, 'Observation.uv_from_path', count+1,
-                                      max_dt)
+            if LOGGING.observation_iterations or Observation.DEBUG:
+                LOGGING.convergence('Observation.uv_from_path',
+                                    'iter=%d; change=%.6g' % (count+1,
+                                                              max_dt))
 
-            if max_dt <= dlt_precision or max_dt >= prev_max_dt:
+            if max_dt <= dlt_precision:
+                converged = True
                 break
+
+            if max_dt >= prev_max_dt:
+                break
+
+        if not converged:
+            LOGGING.warn('Observation.uv_from_path did not converge;',
+                         'iter=%d; change=%.6g' % (count+1, max_dt))
 
         # Return the results
         obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
