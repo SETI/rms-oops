@@ -1,5 +1,5 @@
 ################################################################################
-# hosts/galileo/iss.py
+# hosts/galileo/ssi/__init__.py
 ################################################################################
 import numpy as np
 import julian
@@ -8,8 +8,8 @@ import vicar
 import pdstable
 import pdsparser
 import oops
-#import pds3
 
+from hosts.pds3 import PDS3
 from hosts.galileo import Galileo
 
 ################################################################################
@@ -37,12 +37,9 @@ def from_file(filespec, fast_distortion=True,
                         # unless initialize() is called explicitly.
 
     # Load the PDS label
-#    label = PDS3.get_label(filespec)
-    lbl_filespec = filespec.replace('.img', '.LBL')
-    recs = pdsparser.PdsLabel.load_file(lbl_filespec)
-    label = pdsparser.PdsLabel.from_string(recs).as_dict()
+    label = PDS3.get_label(filespec)
 
-    # Load the dta array
+    # Load the data array
     vic = vicar.VicarImage.from_file(filespec, extraneous='warn')
     vicar_dict = vic.as_dict()
 
