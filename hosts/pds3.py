@@ -10,7 +10,7 @@ from pathlib import Path
 
 #===============================================================================
 class PDS3(object):
-    """An instance-free class to for PDS3 label management methods."""
+    """An instance-free class for PDS3 label management methods."""
 
     #===========================================================================
     @staticmethod
@@ -39,7 +39,7 @@ class PDS3(object):
     #===========================================================================
     @staticmethod
     def find_label(filespec):
-        """Find the PDS3 label corresponding to the given file spec."""
+        """Find the PDS3 label corresponding to the given filespec."""
 
         # Construct candidate label filenames
         spec = Path(filespec)
@@ -64,7 +64,7 @@ class PDS3(object):
     def get_label(filespec):
         """Find the PDS3 label, clean it, load it, and parse into dictionary."""
 
-        assert os.path.isfile(filespec)
+        assert os.path.isfile(filespec), f'Not found: {filespec}'
 
         # Find the label
         labelspec = PDS3.find_label(filespec)
@@ -92,19 +92,19 @@ class Test_PDS3(unittest.TestCase):
     #===========================================================================
     def runTest(self):
 
+        # Test extension replacement
         filespec = 'cassini/ISS/W1575634136_1.IMG'
         label_dict = PDS3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
         self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
 
+        # Test .LBL file input
         filespec = 'cassini/ISS/W1575634136_1.LBL'
         label_dict = PDS3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
         self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
 
-#        This tests a failure mode
-#        filespec = 'nofile.crap'
-#        label_dict = PDS3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
-#        self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
-
+        # Test non-existent file
+        filespec = 'nofile.crap'
+        self.assertRaises(AssertionError, PDS3.get_label, os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
 
 
 ##############################################
