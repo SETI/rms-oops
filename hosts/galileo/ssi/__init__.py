@@ -68,6 +68,7 @@ def from_file(filespec, fast_distortion=True,
                                filespec = filespec,
                                basename = os.path.basename(filespec))
 
+    from IPython import embed; print('+++++++++++++'); embed()
     result.insert_subfield('spice_kernels',
                            Galileo.used_kernels(result.time, 'iss',
                                                 return_all_planets))
