@@ -5,10 +5,10 @@
 import numpy as np
 from polymath import Qube, Scalar, Vector3, Matrix3
 
-from .           import Frame
-from ..event     import Event
-from ..path      import AliasPath, Path
-from ..transform import Transform
+from oops.event     import Event
+from oops.frame     import Frame
+from oops.path      import Path
+from oops.transform import Transform
 
 class TrackerFrame(Frame):
     """A Frame subclass that ensures, via a small rotation, that a designated
@@ -65,7 +65,8 @@ class TrackerFrame(Frame):
         self.reference_xform = Transform(fixed_xform.matrix, Vector3.ZERO,
                                          self.wayframe, self.reference,
                                          self.origin)
-        assert fixed_xform.omega == Vector3.ZERO
+        if fixed_xform.omega != Vector3.ZERO:
+            raise ValueError('TrackerFrame reference frame must be inertial')
 
         # Convert the matrix to three axis vectors
         self.reference_rows = Vector3(self.reference_xform.matrix.values)
@@ -84,7 +85,9 @@ class TrackerFrame(Frame):
 
     # Unpickled frames will always have temporary IDs to avoid conflicts
     def __getstate__(self):
-        return (self.fixed_frame, self.target_path, self.observer_path,
+        return (Frame.as_primary_frame(self.fixed_frame),
+                Path.as_primary_path(self.target_path),
+                Path.as_primary_path(self.observer_path),
                 self.epoch, self.shape)
 
     def __setstate__(self, state):
@@ -135,7 +138,7 @@ import unittest
 class Test_TrackerFrame(unittest.TestCase):
 
     def setUp(self):
-        from ..body import Body
+        from oops.body import Body
 
         Body.reset_registry()
         Body.define_solar_system('1990-01-01', '2020-01-01')
@@ -145,8 +148,8 @@ class Test_TrackerFrame(unittest.TestCase):
 
     def runTest(self):
 
-        _tracker = TrackerFrame("J2000", "MARS", "EARTH", 0., frame_id="TEST")
-        mars = AliasPath("MARS")
+        _ = TrackerFrame("J2000", "MARS", "EARTH", 0., frame_id="TEST")
+        mars = Path.as_path("MARS")
 
         obs_event = Event(0., Vector3.ZERO, "EARTH", "J2000")
         (path_event, obs_event) = mars.photon_to_event(obs_event)

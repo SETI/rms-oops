@@ -3,12 +3,11 @@
 ################################################################################
 
 from polymath import Scalar
-
-from . import Calibration
+from oops.calibration import Calibration
 
 class ExtendedSource(Calibration):
     """A Calibration subclass in which every pixel is multiplied by a constant
-    scale factor.
+    scale factor. DEPRECATED. Use FlatCalib.
 
     Within a possibly distorted field of view, this is the proper calibration to
     use for extended sources.
@@ -64,6 +63,19 @@ class ExtendedSource(Calibration):
         """
 
         return value / self.factor
+
+    #===========================================================================
+    def extended_from_dn(self, dn, uv_pair):
+        return self.value_from_dn(dn, uv_pair)
+
+    def dn_from_extended(self, value, uv_pair):
+        return self.dn_from_value(value, uv_pair)
+
+    def point_from_dn(self, dn, uv_pair):
+        return self.value_from_dn(dn, uv_pair)
+
+    def dn_from_point(self, value, uv_pair):
+        return self.dn_from_value(value, uv_pair)
 
 ################################################################################
 # UNIT TESTS

@@ -3,200 +3,124 @@
 ################################################################################
 
 import numpy as np
-from polymath import Scalar, Vector3
+from polymath               import Scalar, Vector3
+from oops.frame             import Frame
+from oops.path              import Path
+from oops.surface.ellipsoid import Ellipsoid
 
-from .           import Surface
-from .ellipsoid  import Ellipsoid
-from ..constants import PI, HALFPI
+class GraphicEllipsoid(Ellipsoid):
+    """A variant of Ellipsoid in which latitudes and longitudes are
+    planetographic, meaning that their direction is defined by the local
+    surface normal.
 
-class GraphicEllipsoid(Surface):
-    """A variant of Ellipsoid in which latitudes are planetographic."""
-
-    COORDINATE_TYPE = "spherical"
-    IS_VIRTUAL = False
-
-    #===========================================================================
-    def __init__(self, origin, frame, radii, exclusion=0.95):
-        """Constructor for a GraphicEllipsoid object.
-
-        Input:
-            origin      the Path object or ID defining the center of the
-                        ellipsoid.
-            frame       the Frame object or ID defining the coordinate frame in
-                        which the ellipsoid is fixed, with the shortest radius
-                        of the ellipsoid along the Z-axis and the longest radius
-                        along the X-axis.
-            radii       a tuple (a,b,c) containing the radii from longest to
-                        shortest, in km.
-            exclusion   the fraction of the polar radius within which
-                        calculations of intercept_normal_to() are suppressed.
-                        Values of less than 0.9 are not recommended because
-                        the problem becomes numerically unstable.
-        """
-
-        self.ellipsoid = Ellipsoid(origin, frame, radii, exclusion)
-        self.origin = self.ellipsoid.origin
-        self.frame  = self.ellipsoid.frame
-        self.req_sq = self.ellipsoid.req_sq
-        self.unsquash = self.ellipsoid.unsquash
-
-        self.squash_z_sq = self.ellipsoid.squash_z**2
-        self.unsquash_z_sq = self.ellipsoid.unsquash_z**2
-
-        self.squash_y_sq = self.ellipsoid.squash_y**2
-        self.unsquash_y_sq = self.ellipsoid.unsquash_y**2
-
-        self.radii = self.ellipsoid.radii
-
-    def __getstate__(self):
-        return (self.origin, self.frame, self.radii, self.exclusion)
-
-    def __setstate__(self, state):
-        self.__init__(*state)
+    Note that planetographic longitude differs from conventional
+    (planetocentric) longitude for triaxial ellipsoids, and is an unconventional
+    choice. Use method lon_to_centric() if you wish to convert it to centric
+    longitude.
+    """
 
     #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
-                                  derivs=False):
-        """Convert positions in the internal frame to surface coordinates.
+                                  derivs=False, hints=None, groundtrack=False):
+        """Surface coordinates associated with a position vector.
 
         Input:
-            pos         a Vector3 of positions at or near the surface.
-            obs         a Vector3 of observer positions. Ignored for solid
-                        surfaces but needed for virtual surfaces.
+            pos         a Vector3 of positions at or near the surface, relative
+                        to this surface's origin and frame.
+            obs         a Vector3 of observer position relative to this
+                        surface's origin and frame; ignored here.
             time        a Scalar time at which to evaluate the surface; ignored.
             axes        2 or 3, indicating whether to return a tuple of two or
                         three Scalar objects.
             derivs      True to propagate any derivatives inside pos and obs
                         into the returned coordinates.
+            hints       if provided, the value of the coefficient p such that
+                            ground + p * normal(ground) = pos
+                        for the ground point on the body surface.
+            groundtrack True to return the intercept on the surface along with
+                        the coordinates.
 
-        Return:         coordinate values packaged as a tuple containing two or
-                        three Scalars, one for each coordinate.
+        Return:         a tuple of two to four items:
+            lon         longitude at the surface in radians.
+            lat         latitude at the surface in radians.
+            z           vertical altitude in km normal to the surface; included
+                        if axes == 3.
+            groundtrack intecept point on the surface (where z == 0); included
+                        if input groundtrack is True.
         """
 
-        coords = self.ellipsoid.coords_from_vector3(pos, obs=obs, axes=axes,
-                                                    derivs=derivs)
-        graphic_lon = self.ellipsoid.lon_to_graphic(coords[0], derivs=derivs)
-        graphic_lat = self.ellipsoid.lat_to_graphic(coords[1], coords[0],
-                                                    derivs=derivs)
-        return (graphic_lon, graphic_lat,) + coords[2:]
+        # Validate inputs
+        self._coords_from_vector3_check(axes)
+
+        pos = Vector3.as_vector3(pos, recursive=derivs)
+
+        # Use the quick solution for the body points if hints are provided
+        if hints is not None:
+            p = Scalar.as_scalar(hints, recursive=derivs)
+            denom = Vector3.ONES + p * self.unsquash_sq
+            track = pos.element_div(denom)
+        else:
+            (track, p) = self.intercept_normal_to(pos, guess=True)
+
+        # Derive the coordinates
+        normal = track.element_mul(self.unsquash_sq)
+        (x,y,z) = normal.to_scalars()
+        lat = (z/normal.norm()).arcsin()
+        lon = y.arctan2(x) % Scalar.TWOPI
+
+        results = (lon, lat)
+
+        if axes == 3:
+            r = (pos - track).norm() * p.sign()
+            results += (r,)
+
+        if groundtrack:
+            results += (track,)
+
+        return results
 
     #===========================================================================
-    def vector3_from_coords(self, coords, obs=None, time=None, derivs=False):
-        """Convert surface coordinates to positions in the internal frame.
+    def vector3_from_coords(self, coords, obs=None, time=None, derivs=False,
+                                          groundtrack=False):
+        """The position where a point with the given coordinates falls relative
+        to this surface's origin and frame.
 
         Input:
-            coords      a tuple of two or three Scalars defining the
-                        coordinates.
-            obs         position of the observer in the surface frame. Ignored
-                        for solid surfaces but needed for virtual surfaces.
+            coords      a tuple of two or three Scalars defining coordinates at
+                        or near this surface.
+                lon     longitude at the surface in radians.
+                lat     latitude at the surface in radians.
+                z       vertical altitude in km normal to the body surface.
+            obs         a Vector3 of observer position relative to this
+                        surface's origin and frame; ignored here.
             time        a Scalar time at which to evaluate the surface; ignored.
             derivs      True to propagate any derivatives inside the coordinates
                         and obs into the returned position vectors.
+            groundtrack True to include the associated groundtrack points on the
+                        body surface in the returned result.
 
-        Return:         a Vector3 of intercept points defined by the
-                        coordinates.
+        Return:         pos or (pos, groundtrack), where
+            pos         a Vector3 of points defined by the coordinates, relative
+                        to this surface's origin and frame.
+            groundtrack True to include the associated groundtrack points on the
+                        body surface in the returned result.
 
         Note that the coordinates can all have different shapes, but they must
         be broadcastable to a single shape.
         """
 
-        squashed_lon = self.ellipsoid.lon_from_graphic(coords[0], derivs=derivs)
-        squashed_lat = self.ellipsoid.lat_from_graphic(coords[1], squashed_lon,
-                                                       derivs=derivs)
+        # Validate inputs
+        self._vector3_from_coords_check(coords)
+
+        (lon, lat) = coords[:2]
+        squashed_lon = Ellipsoid.lon_from_graphic(self, lon, derivs=derivs)
+        squashed_lat = Ellipsoid.lat_from_graphic(self, lat, squashed_lon,
+                                                        derivs=derivs)
         new_coords = (squashed_lon, squashed_lat,) + coords[2:]
 
-        return self.ellipsoid.vector3_from_coords(new_coords, obs=obs,
-                                                  derivs=derivs)
-
-    #===========================================================================
-    def intercept(self, obs, los, time=None, derivs=False, guess=None):
-        """The position where a specified line of sight intercepts the surface.
-
-        Input:
-            obs         observer position as a Vector3.
-            los         line of sight as a Vector3.
-            time        a Scalar time at which to evaluate the surface; ignored.
-            derivs      True to propagate any derivatives inside obs and los
-                        into the returned intercept point.
-            guess       optional initial guess at the coefficient t such that:
-                            intercept = obs + t * los
-
-        Return:         a tuple (pos, t) where
-            pos         a Vector3 of intercept points on the surface, in km.
-            t           a Scalar such that:
-                            intercept = obs + t * los
-        """
-
-        return self.ellipsoid.intercept(obs, los, derivs=derivs, guess=guess)
-
-    #===========================================================================
-    def normal(self, pos, time=None, derivs=False):
-        """The normal vector at a position at or near a surface.
-
-        Input:
-            pos         a Vector3 of positions at or near the surface.
-            time        a Scalar time at which to evaluate the surface; ignored.
-            derivs      True to propagate any derivatives of pos into the
-                        returned normal vectors.
-
-        Return:         a Vector3 containing directions normal to the surface
-                        that pass through the position. Lengths are arbitrary.
-        """
-
-        return self.ellipsoid.normal(pos, derivs=derivs)
-
-    #===========================================================================
-    def intercept_with_normal(self, normal, time=None, derivs=False,
-                                    guess=None):
-        """Intercept point where the normal vector parallels the given vector.
-
-        Input:
-            normal      a Vector3 of normal vectors.
-            time        a Scalar time at which to evaluate the surface; ignored.
-            derivs      True to propagate derivatives in the normal vector into
-                        the returned intercepts.
-            guess       optional initial guess a coefficient array p such that:
-                            pos = intercept + p * normal(intercept);
-                        use guess=False for the converged value of p to be
-                        returned even if an initial guess was not provided.
-
-        Return:         a Vector3 of surface intercept points, in km. Where no
-                        solution exists, the returned Vector3 will be masked.
-
-                        If guess is not None, then it instead returns a tuple
-                        (intercepts, p), where p is the converged solution such
-                        that
-                            pos = intercept + p * normal(intercept).
-        """
-
-        return self.ellipsoid.intercept_with_normal(normal, derivs=derivs,
-                                                    guess=guess)
-
-    #===========================================================================
-    def intercept_normal_to(self, pos, time=None, derivs=False, guess=None):
-        """Intercept point whose normal vector passes through a given position.
-
-        Input:
-            pos         a Vector3 of positions near the surface.
-            time        a Scalar time at which to evaluate the surface; ignored.
-            derivs      True to propagate derivatives in pos into the returned
-                        intercepts.
-            guess       optional initial guess a coefficient array p such that:
-                            intercept = pos + p * normal(intercept);
-                        use guess=False for the converged value of p to be
-                        returned even if an initial guess was not provided.
-
-        Return:         a vector3 of surface intercept points, in km. Where no
-                        solution exists, the returned vector will be masked.
-
-                        If guess is not None, then it instead returns a tuple
-                        (intercepts, p), where p is the converged solution such
-                        that
-                            intercept = pos + p * normal(intercept).
-        """
-
-        return self.ellipsoid.intercept_normal_to(pos, derivs=derivs,
-                                                  guess=guess)
+        return Ellipsoid.vector3_from_coords(self, new_coords, obs=obs,
+                                                   derivs=derivs,
+                                                   groundtrack=groundtrack)
 
     ############################################################################
     # Longitude conversions
@@ -212,7 +136,7 @@ class GraphicEllipsoid(Surface):
         Return          planetocentric longitude.
         """
 
-        lon = Scalar.as_scalar(lon, derivs)
+        lon = Scalar.as_scalar(lon, recursive=derivs)
         return (lon.sin() * self.squash_y_sq).arctan2(lon.cos())
 
     #===========================================================================
@@ -226,7 +150,7 @@ class GraphicEllipsoid(Surface):
         Return          planetographic longitude.
         """
 
-        lon = Scalar.as_scalar(lon, derivs)
+        lon = Scalar.as_scalar(lon, recursive=derivs)
         return (lon.sin() * self.unsquash_y_sq).arctan2(lon.cos())
 
     #===========================================================================
@@ -240,7 +164,7 @@ class GraphicEllipsoid(Surface):
         Return          planetographic longitude.
         """
 
-        return Scalar.as_scalar(lon, derivs)
+        return Scalar.as_scalar(lon, recursive=derivs)
 
     #===========================================================================
     def lon_from_graphic(self, lon, derivs=False):
@@ -253,7 +177,7 @@ class GraphicEllipsoid(Surface):
         Return          planetographic longitude.
         """
 
-        return Scalar.as_scalar(lon, derivs)
+        return Scalar.as_scalar(lon, recursive=derivs)
 
     ############################################################################
     # Latitude conversions
@@ -271,12 +195,12 @@ class GraphicEllipsoid(Surface):
         """
 
         # This could be done more efficiently I'm sure
-        squashed_lon = self.ellipsoid.lon_from_graphic(lon, derivs=derivs)
-        squashed_lat = self.ellipsoid.lat_from_graphic(lat, squashed_lon,
-                                                       derivs=derivs)
+        squashed_lon = Ellipsoid.lon_from_graphic(self, lon, derivs=derivs)
+        squashed_lat = Ellipsoid.lat_from_graphic(self, lat, squashed_lon,
+                                                        derivs=derivs)
 
-        return self.ellipsoid.lat_to_centric(squashed_lat, squashed_lon,
-                                             derivs=derivs)
+        return Ellipsoid.lat_to_centric(self, squashed_lat, squashed_lon,
+                                              derivs=derivs)
 
     #===========================================================================
     def lat_from_centric(self, lat, lon, derivs=False):
@@ -290,12 +214,12 @@ class GraphicEllipsoid(Surface):
         Return          planetographic latitude.
         """
 
-        squashed_lon = self.ellipsoid.lon_from_graphic(lon, derivs=derivs)
-        squashed_lat = self.ellipsoid.lat_from_centric(lat, squashed_lon,
-                                                       derivs=derivs)
+        squashed_lon = Ellipsoid.lon_from_graphic(self, lon, derivs=derivs)
+        squashed_lat = Ellipsoid.lat_from_centric(self, lat, squashed_lon,
+                                                        derivs=derivs)
 
-        return self.ellipsoid.lat_to_graphic(squashed_lat, squashed_lon,
-                                             derivs=derivs)
+        return Ellipsoid.lat_to_graphic(self, squashed_lat, squashed_lon,
+                                              derivs=derivs)
 
     #===========================================================================
     def lat_to_graphic(self, lat, lon, derivs=False):
@@ -309,7 +233,7 @@ class GraphicEllipsoid(Surface):
         Return          planetographic latitude.
         """
 
-        return Scalar.as_scalar(lat, derivs)
+        return Scalar.as_scalar(lat, recursive=derivs)
 
     #===========================================================================
     def lat_from_graphic(self, lat, lon, derivs=False):
@@ -323,7 +247,7 @@ class GraphicEllipsoid(Surface):
         Return          planetographic latitude.
         """
 
-        return Scalar.as_scalar(lat, derivs)
+        return Scalar.as_scalar(lat, recursive=derivs)
 
 ################################################################################
 # UNIT TESTS
@@ -335,36 +259,67 @@ class Test_GraphicEllipsoid(unittest.TestCase):
 
     def runTest(self):
 
-        from ..frame import Frame
-        from ..path import Path
-
         np.random.seed(6926)
 
         REQ  = 60268.
         RMID = 54364.
         RPOL = 50000.
         planet = GraphicEllipsoid("SSB", "J2000", (REQ, RMID, RPOL))
+        ellipsoid = Ellipsoid("SSB", "J2000", (REQ, RMID, RPOL))
 
         # Coordinate/vector conversions
         NPTS = 10000
+
+        lon = Scalar(np.random.rand(NPTS) * Scalar.TWOPI)
+        lat = Scalar(np.random.rand(NPTS) * Scalar.PI - Scalar.HALFPI)
+        track = planet.vector3_from_coords((lon,lat))
+        (lon2, lat2) = planet.coords_from_vector3(track, axes=2)
+        self.assertTrue((lon - lon2).abs().max() < 1.e-15)
+        self.assertTrue((lat - lat2).abs().max() < 1.e-11)
+
+        track2 = planet.vector3_from_coords((lon2,lat2))
+        self.assertTrue((track2 - track).norm() < 1.e-6)
+
+        lon = Scalar(np.random.rand(NPTS) * Scalar.TWOPI)
+        lat = Scalar(np.random.rand(NPTS) * Scalar.PI - Scalar.HALFPI)
+        z = Scalar(np.random.rand(NPTS) * 1000.)
+        test = planet.vector3_from_coords((lon,lat,z))
+        track = planet.vector3_from_coords((lon,lat))
+        diff = test - track
+        self.assertTrue((diff.norm()).abs() - z < 3.e-11)
+        self.assertTrue(diff.sep(planet.normal(track)).max() < 1.e-10)
+
+        (lon2, lat2, z2) = planet.coords_from_vector3(test, axes=3)
+        (lon3, lat3, z3) = planet.coords_from_vector3(track, axes=3)
+        self.assertTrue((lon - lon2).abs().max() < 1.e-15)
+        self.assertTrue((lat - lat2).abs().max() < 3.e-12)
+        self.assertTrue((lon3 - lon2).abs().max() < 1.e-15)
+        self.assertTrue((lat3 - lat2).abs().max() < 3.e-12)
+        self.assertTrue(z3.abs().max() < 1.e-10)
+        self.assertTrue((z2 - z).abs().max() < 1.e-10)
+
+        (_, track1) = planet.vector3_from_coords((lon,lat,z), groundtrack=True)
+        (_, _, track2) = planet.coords_from_vector3(test, axes=2, groundtrack=True)
+        self.assertTrue((track1 - track2).norm().max() < 1.e-10)
+
         pos = (2 * np.random.rand(NPTS,3) - 1.) * REQ   # range is -REQ to REQ
 
-        (lon,lat,elev) = planet.coords_from_vector3(pos, axes=3)
+        (lon,lat,elev,track) = planet.coords_from_vector3(pos, axes=3, groundtrack=True)
         test = planet.vector3_from_coords((lon,lat,elev))
         self.assertTrue(abs(test - pos).max() < 1.e-8)
 
         # Make sure longitudes convert to planetocentric and back
-        test_lon = np.arctan2(pos[...,1], pos[...,0])
+        test_lon = np.arctan2(track.vals[...,1], track.vals[...,0]) % Scalar.TWOPI
         centric_lon = planet.lon_to_centric(lon)
-        diffs = (centric_lon - test_lon + HALFPI) % PI - HALFPI
+        diffs = (centric_lon - test_lon + Scalar.HALFPI) % Scalar.PI - Scalar.HALFPI
         self.assertTrue(abs(diffs).max() < 1.e-8)
 
         test_lon2 = planet.lon_from_centric(centric_lon)
-        diffs = (test_lon2 - lon + HALFPI) % PI - HALFPI
+        diffs = (test_lon2 - lon + Scalar.HALFPI) % Scalar.PI - Scalar.HALFPI
         self.assertTrue(abs(diffs).max() < 1.e-8)
 
         # Make sure latitudes convert to planetocentric and back
-        test_lat = np.arcsin(pos[...,2] / np.sqrt(np.sum(pos**2, axis=-1)))
+        test_lat = np.arcsin(track.vals[...,2] / np.sqrt(np.sum(track.vals**2, axis=-1)))
         centric_lat = planet.lat_to_centric(lat,lon)
         self.assertTrue(abs(centric_lat - test_lat).max() < 1.e-8)
 
@@ -372,14 +327,14 @@ class Test_GraphicEllipsoid(unittest.TestCase):
         self.assertTrue(abs(test_lat2 - lat).max() < 1.e-8)
 
         # Make sure longitudes convert to planetographic and back
-        normals = planet.normal(pos)
-        test_lon = np.arctan2(normals.vals[...,1], normals.vals[...,0])
+        normals = planet.normal(track)
+        test_lon = np.arctan2(normals.vals[...,1], normals.vals[...,0]) % Scalar.TWOPI
         graphic_lon = planet.lon_to_graphic(lon)
-        diffs = (graphic_lon - test_lon + HALFPI) % PI - HALFPI
+        diffs = (graphic_lon - test_lon + Scalar.HALFPI) % Scalar.PI - Scalar.HALFPI
         self.assertTrue(abs(diffs).max() < 1.e-8)
 
         test_lon2 = planet.lon_from_centric(centric_lon)
-        diffs = (test_lon2 - lon + HALFPI) % PI - HALFPI
+        diffs = (test_lon2 - lon + Scalar.HALFPI) % Scalar.PI - Scalar.HALFPI
         self.assertTrue(abs(diffs).max() < 1.e-8)
 
         # Make sure latitudes convert to planetographic and back
@@ -478,8 +433,8 @@ class Test_GraphicEllipsoid(unittest.TestCase):
         # Test normal()
         cept = Vector3(np.random.random((100,3))).unit().element_mul(planet.radii)
         perp = planet.normal(cept)
-        test1 = cept.element_mul(planet.ellipsoid.unsquash).unit()
-        test2 = perp.element_mul(planet.ellipsoid.squash).unit()
+        test1 = cept.element_mul(ellipsoid.unsquash).unit()
+        test2 = perp.element_mul(ellipsoid.squash).unit()
 
         self.assertTrue(abs(test1 - test2).max() < 1.e-12)
 
@@ -488,13 +443,13 @@ class Test_GraphicEllipsoid(unittest.TestCase):
         cept1 = planet.vector3_from_coords((lon+eps,lat,0.))
         cept2 = planet.vector3_from_coords((lon-eps,lat,0.))
 
-        self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI).max() < 3.e-8)
+        self.assertTrue(abs((cept2 - cept1).sep(perp) - Scalar.HALFPI).max() < 3.e-8)
 
         (lon,lat) = planet.coords_from_vector3(cept, axes=2)
         cept1 = planet.vector3_from_coords((lon,lat+eps,0.))
         cept2 = planet.vector3_from_coords((lon,lat-eps,0.))
 
-        self.assertTrue(abs((cept2 - cept1).sep(perp) - HALFPI).max() < 1.e-8)
+        self.assertTrue(abs((cept2 - cept1).sep(perp) - Scalar.HALFPI).max() < 1.e-8)
 
         # Test intercept_with_normal()
         vector = Vector3(np.random.random((100,3)))
@@ -507,8 +462,8 @@ class Test_GraphicEllipsoid(unittest.TestCase):
         cept = planet.intercept_normal_to(pos)
         sep = (pos - cept).sep(planet.normal(cept))
         self.assertTrue(sep.max() < 3.e-12)
-        self.assertTrue(abs(cept.element_mul(planet.ellipsoid.unsquash).norm() -
-                        planet.ellipsoid.req).max() < 1.e-6)
+        self.assertTrue(abs(cept.element_mul(ellipsoid.unsquash).norm() -
+                        ellipsoid.req).max() < 1.e-6)
 
         # Test normal() derivative
         cept = Vector3(np.random.random((100,3))).unit().element_mul(planet.radii)
@@ -526,9 +481,9 @@ class Test_GraphicEllipsoid(unittest.TestCase):
         # Test intercept_normal_to() derivative
         pos = Vector3(np.random.random((3,3)) * 4.*REQ + REQ)
         pos.insert_deriv('pos', Vector3.IDENTITY, override=True)
-        (cept,t) = planet.intercept_normal_to(pos, derivs=True, guess=False)
-        self.assertTrue(abs(cept.element_mul(planet.ellipsoid.unsquash).norm() -
-                        planet.ellipsoid.req).max() < 1.e-6)
+        (cept,t) = planet.intercept_normal_to(pos, derivs=True, guess=True)
+        self.assertTrue(abs(cept.element_mul(ellipsoid.unsquash).norm() -
+                        ellipsoid.req).max() < 1.e-6)
 
         eps = 1.
         dpos = ((eps,0,0), (0,eps,0), (0,0,eps))
@@ -539,7 +494,7 @@ class Test_GraphicEllipsoid(unittest.TestCase):
             (cept2,t2) = planet.intercept_normal_to(pos - dpos[i], derivs=False,
                                                     guess=t)
             dcept_dpos = (cept1 - cept2) / (2*eps)
-            self.assertTrue(abs(dcept_dpos.sep(perp) - HALFPI).max() < 1.e-5)
+            self.assertTrue(abs(dcept_dpos.sep(perp) - Scalar.HALFPI).max() < 1.e-5)
 
             ref = Vector3(cept.d_dpos.vals[...,i], cept.d_dpos.mask)
             self.assertTrue(abs(dcept_dpos - ref).max() < 1.e-5)

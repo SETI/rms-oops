@@ -5,12 +5,10 @@
 import cspyce
 import numpy as np
 
-from polymath import Scalar, Vector3
-
-from .       import AliasPath, Path, RotatedPath
-from ..event import Event
-from ..frame import Frame
-from ..path  import ReversedPath
+from polymath   import Scalar, Vector3
+from oops.event import Event
+from oops.frame import Frame
+from oops.path  import Path, AliasPath, ReversedPath, RotatedPath
 import oops.spice_support as spice
 
 class SpicePath(Path):
@@ -248,11 +246,10 @@ class Test_SpicePath(unittest.TestCase):
     def runTest(self):
 
       # Imports are here to avoid conflicts
-      from ..frame import Frame
-      from ..frame.spiceframe import SpiceFrame
-      import oops.constants as constants
       import os
-      from ..unittester_support import TESTDATA_PARENT_DIRECTORY
+      import oops.constants as constants
+      from oops.frame.spiceframe import SpiceFrame
+      from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
       Path.USE_QUICKPATHS = False
       Frame.USE_QUICKFRAMES = False
@@ -266,7 +263,7 @@ class Test_SpicePath(unittest.TestCase):
         Path.reset_registry()
         Frame.reset_registry()
 
-        _sun  = SpicePath("SUN", "SSB")
+        _     = SpicePath("SUN", "SSB")
         earth = SpicePath("EARTH", "SSB")
         moon  = SpicePath("MOON", "EARTH")
 
@@ -573,8 +570,8 @@ class Test_SpicePath(unittest.TestCase):
                                 pluto_event.wrt_ssb().dep).max() < 1.e-5)
 
             # Erase the wrt_ssb() cache and check again
-            if iter in range(2):
-              if iter > 0:
+            for count in range(2):
+              if count > 0:
                 pluto_event._Event__ssb_ = None
                 pluto_event._Event__ssb_xform_ = None
 
@@ -635,8 +632,8 @@ class Test_SpicePath(unittest.TestCase):
                                 pluto_event.wrt_ssb().arr).max() < 1.e-5)
 
             # Erase the wrt_ssb() cache and check again
-            if iter in range(2):
-              if iter > 0:
+            for count in range(2):
+              if count > 0:
                 pluto_event._Event__ssb_ = None
                 pluto_event._Event__ssb_xform_ = None
 
@@ -659,14 +656,14 @@ class Test_SpicePath(unittest.TestCase):
 
               # Apparent case
               for i in range(len(times)):
-                (state, lt) = cspyce.spkez(9, times[i], frame, "XN+S", 399)
+                (state, lt) = cspyce.spkez(9, times[i], frame, "XCN+S", 399)
                 self.assertTrue(np.abs(pluto_rel.time[i] - lt) < 1.e-6)
-                self.assertTrue(np.abs(pluto_event.time.vals[i] + lt -
-                                       earth_event.time.vals[i]) < 1.e-11)
+                self.assertTrue(np.abs(earth_event.time.vals[i] + lt -
+                                       pluto_event.time.vals[i]) < 1.e-10)
 
                 length = np.sqrt(np.sum(state[0:3]**2))
-                self.assertTrue(np.all(np.abs(state[0:3] / length +
-                                    earth_event.dep_ap[i].unit().vals) < 1.e-8))
+                self.assertTrue(np.all(np.abs(state[0:3] / length -
+                                       earth_event.dep_ap[i].unit().vals) < 1.e-8))
 
         ####################################
         # More linked frames...

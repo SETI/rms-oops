@@ -2,16 +2,14 @@
 # oops/observation/__init__.py: Abstract class Observation
 ################################################################################
 
-from __future__ import print_function
-
 import numpy as np
 import numbers
 
-from polymath import Scalar, Pair, Vector, Vector3
+from polymath import Scalar, Pair, Vector, Vector3, Qube
 
-from ..config   import LOGGING, PATH_PHOTONS
-from ..event    import Event
-from ..meshgrid import Meshgrid
+from oops.config   import LOGGING, PATH_PHOTONS
+from oops.event    import Event
+from oops.meshgrid import Meshgrid
 
 class Observation(object):
     """An Observation is an abstract class that defines the timing and pointing
@@ -82,6 +80,8 @@ class Observation(object):
 
     INVENTORY_IMPLEMENTED = False
 
+    DEBUG = False       # True to log iterative convergence steps
+
     ############################################################################
     # Methods to be defined for each subclass
     ############################################################################
@@ -92,7 +92,7 @@ class Observation(object):
         pass
 
     #===========================================================================
-    def uvt(self, indices, remask=False):
+    def uvt(self, indices, remask=False, derivs=True):
         """Coordinates (u,v) and time t for indices into the data array.
 
         This method supports non-integer index values.
@@ -100,6 +100,7 @@ class Observation(object):
         Input:
             indices     a Scalar or Vector of array indices.
             remask      True to mask values outside the field of view.
+            derivs      True to include derivatives in the returned values.
 
         Return:         (uv, time)
             uv          a Pair defining the values of (u,v) within the FOV that
@@ -108,45 +109,29 @@ class Observation(object):
                         with the array indices.
         """
 
-        raise NotImplementedError("uvt() is not implemented")
+        raise NotImplementedError(type(self).__name__ + '.uvt ' +
+                                  'is not implemented')
 
     #===========================================================================
     def uvt_range(self, indices, remask=False):
-        """Ranges of FOV coordinates and time for integer array indices.
+        """Ranges of (u,v) spatial coordinates and time for integer array
+        indices.
 
         Input:
-            indices     a Scalar or Vector of array indices.
+            indices     a Vector of array indices.
             remask      True to mask values outside the field of view.
 
         Return:         (uv_min, uv_max, time_min, time_max)
-            uv_min      a Pair defining the minimum values of FOV (u,v)
-                        associated the pixel.
-            uv_max      a Pair defining the maximum values of FOV (u,v)
-                        associated the pixel.
+            uv_min      a Pair defining the minimum values of (u,v) associated
+                        the pixel.
+            uv_max      a Pair defining the maximum values of (u,v).
             time_min    a Scalar defining the minimum time associated with the
-                        array indices. It is given in seconds TDB.
+                        pixel. It is given in seconds TDB.
             time_max    a Scalar defining the maximum time value.
         """
 
-        raise NotImplementedError("uvt_range() is not implemented")
-
-    #===========================================================================
-    def uv_range_at_tstep(self, tstep, remask=False):
-        """A tuple defining the range of FOV (u,v) coordinates active at a
-        particular time step.
-
-        Input:
-            tstep       a Scalar or Pair time step index.
-            remask      True to mask values outside the time interval.
-
-        Return:         a tuple (uv_min, uv_max)
-            uv_min      a Pair defining the minimum values of FOV (u,v)
-                        coordinates active at this time step.
-            uv_min      a Pair defining the maximum values of FOV (u,v)
-                        coordinates active at this time step (exclusive).
-        """
-
-        raise NotImplementedError("uv_range_at_tstep() is not implemented")
+        raise NotImplementedError(type(self).__name__ + '.uvt_range ' +
+                                  'is not implemented')
 
     #===========================================================================
     def time_range_at_uv(self, uv_pair, remask=False):
@@ -161,7 +146,85 @@ class Observation(object):
                         time of each (u,v) pair, as seconds TDB.
         """
 
-        raise NotImplementedError("time_range_at_uv() is not implemented")
+        raise NotImplementedError(type(self).__name__ + '.time_range_at_uv ' +
+                                  'is not implemented')
+
+    #===========================================================================
+    def time_range_at_uv_0d(self, uv_pair, remask=False):
+        """time_range_at_uv() for some observations in which the spatial and
+        time axes are independent.
+
+        Input:
+            uv_pair     a Pair of spatial (u,v) data array coordinates,
+                        truncated to integers if necessary.
+
+        Return:         a tuple containing Scalars of the start time and stop
+                        time of each (u,v) pair, as seconds TDB.
+        """
+
+        time_min = Scalar(self.time[0])     # shapeless scalars
+        time_max = Scalar(self.time[1])
+
+        if remask:
+            uv_pair = Pair.as_pair(uv_pair, recursive=False)
+            new_mask = self.fov.uv_is_outside(uv_pair)
+            if new_mask.any_true_or_masked():
+                new_mask = Qube.or_(new_mask.vals, new_mask.mask)
+                time_min = Scalar.filled(uv_pair.shape, self.time[0],
+                                                        mask=new_mask)
+                time_max = Scalar.filled(uv_pair.shape, self.time[1],
+                                                        mask=new_mask)
+
+        return (time_min, time_max)
+
+    #===========================================================================
+    def time_range_at_uv_1d(self, uv_pair, axis=0, remask=False):
+        """time_range_at_uv() for some observations with a 1-D cadence.
+
+        Input:
+            uv_pair     a Pair of spatial (u,v) data array coordinates,
+                        truncated to integers if necessary.
+            axis        0 or 1, indicating the uv axis associated with the
+                        cadence.
+
+        Return:         a tuple containing Scalars of the start time and stop
+                        time of each (u,v) pair, as seconds TDB.
+        """
+
+        uv_pair = Pair.as_pair(uv_pair, recursive=False)
+        tstep = uv_pair.to_scalar(axis)
+
+        # Re-mask the time-independent axis if necessary
+        if remask:
+            not_t_vals = uv_pair.vals[..., 1-axis]
+            not_t_max = self.uv_shape[1-axis]
+            new_mask = Qube.or_(not_t_vals < 0, not_t_vals > not_t_max)
+            tstep = tstep.remask_or(new_mask)
+
+        return self.cadence.time_range_at_tstep(tstep, remask=remask)
+
+    #===========================================================================
+    def time_range_at_uv_2d(self, uv_pair, fast=1, remask=False):
+        """time_range_at_uv() for some observations with a 2-D cadence.
+
+        Input:
+            uv_pair     a Pair of spatial (u,v) data array coordinates,
+                        truncated to integers if necessary.
+            fast        0 or 1, indicating the uv axis associated with the
+                        fast index of the cadence. The slow index is always
+                        1 - fast.
+
+        Return:         a tuple containing Scalars of the start time and stop
+                        time of each (u,v) pair, as seconds TDB.
+        """
+
+        uv_pair = Pair.as_pair(uv_pair, recursive=False)
+
+        if fast == 1:
+            return self.cadence.time_range_at_tstep(uv_pair, remask=remask)
+        else:
+            return self.cadence.time_range_at_tstep(uv_pair.swapxy(),
+                                                    remask=remask)
 
     #===========================================================================
     def uv_range_at_time(self, time, remask=False):
@@ -179,69 +242,103 @@ class Observation(object):
                         specified time.
         """
 
-        raise NotImplementedError("uv_at_time() is not implemented")
+        raise NotImplementedError(type(self).__name__ + '.uv_range_at_time ' +
+                                  'is not implemented')
 
     #===========================================================================
-    def uv_range_at_time_0d(self, time, remask, scalar_time):
+    def uv_range_at_time_0d(self, time, uv_shape, remask=False):
         """uv_range_at_time() for an observation in which any time-dependence is
-        decoupled from the spatial axes."""
+        decoupled from the spatial axes.
+
+        Input:
+            time        time Scalar.
+            uv_shape    shape of the active detector(s) within the FOV.
+            remask      True to mask times that are out of range.
+        """
 
         # Without re-masking, shapeless Pairs are OK
         if not remask:
-            return scalar_time
+            return (Pair.INT00, Pair.as_pair(uv_shape))
 
         # Define the new mask
         time = Scalar.as_scalar(time, derivs=False)
-        new_mask = time.mask | self.cadence.time_is_outside(time).vals
+        new_mask = Qube.or_(time.mask, self.cadence.time_is_outside(time).vals)
 
         # Without any mask, shapeless Pairs are OK
         if not np.any(new_mask):
-            return scalar_time
+            return (Pair.INT00, Pair.as_pair(uv_shape))
 
         # Construct the array of results if necessary
-        uv_min = Pair(np.zeros(time.shape + (2,), dtype='int'), new_mask)
-
-        return (uv_min, uv_min + Pair(self.uv_shape))
+        uv_min = Pair.zeros(time.shape, dtype='int', mask=new_mask)
+        return (uv_min, uv_min + Pair.as_pair(uv_shape))
 
     #===========================================================================
-    def uv_range_at_time_1d(self, time, remask=False, time_uv_axis=0):
+    def uv_range_at_time_1d(self, time, uv_shape, axis=0, remask=False):
         """uv_range_at_time() for some observations with a 1-D cadence.
 
-        This only works if cadence.is_unique.
+        Input:
+            time        time Scalar.
+            uv_shape    shape of the active detector(s) within the FOV.
+            axis        0 or 1, indicating the uv axis associated with the
+                        cadence. Alternatively, -1 indicates that time axis is
+                        not associated with a spatial axis.
+            remask      True to mask times that are out of range.
         """
 
-        time = Scalar.as_scalar(time, derivs=False)
-        tstep = self.cadence.tstep_at_time(time, remask=remask)
-        tstep_int = tstep.int(top=self.cadence.shape[0], remask=remask)
+        if axis < 0:
+            return self.uv_range_at_time_0d(time, uv_shape, remask=remask)
 
-        uv_min_vals = np.zeros(tstep.shape + (2,), dtype='int')
-        uv_min_vals[..., time_uv_axis] = tstep_int
+        (tstep_min,
+         tstep_max) = self.cadence.tstep_range_at_time(time, remask=remask)
 
-        # OK for these two to share the same mask, I think
-        uv_min = Pair(uv_min_vals, tstep.mask)
+        uv_min_vals = np.zeros(tstep_min.shape + (2,), dtype='int')
+        uv_max_vals = np.empty(tstep_min.shape + (2,), dtype='int')
 
-        return (uv_min, uv_min + self.fov.uv_shape)
+        uv_min_vals[..., axis] = tstep_min.vals
+        uv_max_vals[..., axis] = tstep_max.vals
+        uv_max_vals[..., 1-axis] = uv_shape[1-axis]
+
+        uv_min = Pair(uv_min_vals, tstep_min.mask)
+        uv_max = Pair(uv_max_vals, tstep_min.mask)
+        return (uv_min, uv_max)
 
     #===========================================================================
-    def uv_range_at_time_2d(self, time, remask=False, slow_uv_axis=0,
-                                                      fast_uv_axis=1):
-        """uv_range_at_time() for some observations with a 2-D cadence."""
+    def uv_range_at_time_2d(self, time, uv_shape, slow=0, fast=1, remask=False):
+        """uv_range_at_time() for some observations with a 2-D cadence.
 
-        time = Scalar.as_scalar(time, derivs=False)
-        tstep_pair = self.cadence.tstep_at_time(time, remask=remask)
-        tstep_int = tstep_pair.int(top=self.cadence.shape, remask=remask)
+        Input:
+            time        time Scalar.
+            uv_shape    shape of the active detector(s) within the FOV.
+            slow, fast  0 or 1, indicating the uv axes associated with the slow
+                        and fast indices of the cadence. Alternatively, -1
+                        indicates that time axis is not associated with a
+                        spatial axis.
+            remask      True to mask times that are out of range.
+        """
 
-        # Construct the result array
-        uv_min_vals = np.zeros(tstep_pair.shape + (2,), dtype='int')
+        (tstep_min,
+         tstep_max) = self.cadence.tstep_range_at_time(time, remask=remask)
 
-        if slow_uv_axis != -1:
-            uv_min_vals[..., slow_uv_axis] = tstep_int.vals[0]
+        if slow == 0 and fast == 1:
+            return (tstep_min, tstep_max)
+        elif slow == 1 and fast == 0:
+            return (tstep_min.swapxy(), tstep_max.swapxy())
 
-        if fast_uv_axis != -1:
-            uv_min_vals[..., fast_uv_axis] = tstep_int.vals[1]
+        uv_min_vals = np.zeros(tstep_min.shape + (2,), dtype='int')
+        uv_max_vals = np.empty(tstep_min.shape + (2,), dtype='int')
+        uv_max_vals[..., 0] = uv_shape[0]
+        uv_max_vals[..., 1] = uv_shape[1]
 
-        uv_min = Pair(uv_min_vals, tstep_int.mask)
-        return (uv_min, uv_min + self.fov.uv_shape)
+        if slow >= 0:
+            uv_min_vals[..., slow] = tstep_min.vals[..., 0]
+            uv_max_vals[..., slow] = tstep_max.vals[..., 0]
+        if fast >= 0:
+            uv_min_vals[..., fast] = tstep_min.vals[..., 1]
+            uv_max_vals[..., fast] = tstep_max.vals[..., 1]
+
+        uv_min = Pair(uv_min_vals, tstep_min.mask)
+        uv_max = Pair(uv_max_vals, tstep_min.mask)
+        return (uv_min, uv_max)
 
     #===========================================================================
     def time_shift(self, dtime):
@@ -254,7 +351,8 @@ class Observation(object):
         Return:         a (shallow) copy of the object with a new time.
         """
 
-        raise NotImplementedError("time_shift() is not implemented")
+        raise NotImplementedError(type(self).__name__ + '.time_shift ' +
+                                  'is not implemented')
 
     ############################################################################
     # Subfield support methods
@@ -300,7 +398,7 @@ class Observation(object):
         """
 
         # Interpret the (u,v) coordinates
-        uv_pair = Pair.as_pair(uv_pair)
+        uv_pair = Pair.as_pair(uv_pair, recursive=False)
         (u,v) = uv_pair.to_scalars()
 
         # Create the mask
@@ -326,8 +424,8 @@ class Observation(object):
         return tfrac * (time0 + time1)
 
     #===========================================================================
-    def meshgrid(self, origin=0.5, undersample=1, oversample=1, limit=None,
-                       fov_keywords={}):
+    def meshgrid(self, origin=None, undersample=1, oversample=1, limit=None,
+                       center_uv=None, fov_keywords={}):
         """A Meshgrid shaped to broadcast to the observation's shape.
 
         This works like Meshgrid.for_fov() except that the (u,v) axes are
@@ -336,12 +434,8 @@ class Observation(object):
 
         Input:
             origin      A single value, tuple or Pair defining the origin of the
-                        grid. Default is 0.5, which places the first sample in
-                        the middle of the first pixel.
-
-            limit       A single value, tuple or Pair defining the upper limits
-                        of the meshgrid. By default, this is the shape of the
-                        FOV.
+                        grid. Default is to place the first sample in the middle
+                        of the first pixel, allowing for under- or oversampling.
 
             undersample A single value, tuple or Pair defining the magnitude of
                         under-sampling to be performed. For example, a value of
@@ -352,69 +446,26 @@ class Observation(object):
                         over-sampling to be performed. For example, a value of
                         2 would create a 2x2 array of samples inside each pixel.
 
+            limit       A single value, tuple or Pair defining the upper limits
+                        of the meshgrid. By default, this is the shape of the
+                        FOV.
+
+            center_uv   Reference point at the center of the FOV; use None for
+                        the default, which depends on the origin and limit.
+
             fov_keywords  an optional dictionary of parameters passed to the
                         FOV methods, containing parameters that might affect
                         the properties of the FOV.
         """
 
-        # Convert inputs to NumPy 2-element arrays
-        if limit is None:
-            limit = self.uv_shape
-        if isinstance(limit, numbers.Number):
-            limit = (limit, limit)
-        limit = Pair.as_pair(limit).vals.astype('float')
-
-        if isinstance(origin, numbers.Number):
-            origin = (origin, origin)
-        origin = Pair.as_pair(origin).vals.astype('float')
-
-        if isinstance(undersample, numbers.Number):
-            undersample = (undersample, undersample)
-        undersample = Pair.as_pair(undersample).vals.astype('float')
-
-        if isinstance(oversample, numbers.Number):
-            oversample = (oversample, oversample)
-        oversample = Pair.as_pair(oversample).vals.astype('float')
-
-        # Construct the 1-D index arrays
-        step = undersample/oversample
-        limit = limit + step * 1.e-10   # Allow a little slop at the upper end
-
-        urange = np.arange(origin[0], limit[0], step[0])
-        vrange = np.arange(origin[1], limit[1], step[1])
-
-        usize = urange.size
-        vsize = vrange.size
-
-        # Construct the empty array of values
-        shape_list = len(self.shape) * [1]
-        if self.u_axis >= 0:
-            shape_list[self.u_axis] = usize
-        if self.v_axis >= 0:
-            shape_list[self.v_axis] = vsize
-
-        values = np.empty(tuple(shape_list + [2]))
-
-        # Populate the array
-        if self.u_axis >= 0:
-            shape_list = len(self.shape) * [1]
-            shape_list[self.u_axis] = usize
-            uvalues = urange.reshape(tuple(shape_list))
-            values[...,0] = uvalues
-        else:
-            values[...,0] = 0.5
-
-        if self.v_axis >= 0:
-            shape_list = len(self.shape) * [1]
-            shape_list[self.v_axis] = vsize
-            vvalues = vrange.reshape(tuple(shape_list))
-            values[...,1] = vvalues
-        else:
-            values[...,1] = 0.5
-
-        # Return the Meshgrid
-        grid = Pair(values)
-        return Meshgrid(self.fov, grid, fov_keywords)
+        return Meshgrid.for_shape(self.fov, self.shape,
+                                  self.u_axis, self.v_axis,
+                                  origin=origin,
+                                  undersample=undersample,
+                                  oversample=oversample,
+                                  limit=limit,
+                                  center_uv=center_uv,
+                                  fov_keywords=fov_keywords)
 
     #===========================================================================
     def timegrid(self, meshgrid, oversample=1, tfrac_limits=(0,1)):
@@ -501,7 +552,8 @@ class Observation(object):
         # Handle a 2-D observation
         if (self.t_axis[0] not in (self.u_axis, self.v_axis) or
             self.t_axis[1] not in (self.u_axis, self.v_axis)):
-                raise NotImplementedError('timegrid not implemented for ' +
+                raise NotImplementedError('Observation.timegrid not ' +
+                                          'implemented for ' +
                                           't axes (%d,%d), ' % self.t_axis,
                                           'u axis %d, ' % self.u_axis,
                                           'v axis %d'   % self.v_axis)
@@ -572,16 +624,20 @@ class Observation(object):
 
     #===========================================================================
     @staticmethod
-    def scalar_from_indices(indices, axis, recursive=True):
+    def scalar_from_indices(indices, axis, derivs=True):
         """Utility to return the selected Scalar from a Scalar or Vector of
         indices, np.ndarray, or a number.
         """
 
+        if axis < 0:
+            return None
+
         if isinstance(indices, (Scalar, Pair, Vector)):
-            return indices.to_scalar(axis, recursive=recursive)
+            return indices.to_scalar(axis, recursive=derivs)
 
         if isinstance(indices, numbers.Real):
-            assert axis == 0
+            if axis not in (0, -1):
+                raise IndexError('index out of range: ' + str(indices))
             return Scalar(indices)
 
         indices = np.array(indices)
@@ -657,8 +713,8 @@ class Observation(object):
 
             # Convert to FOV coordinates
             prev_uv = uv
-            uv = self.fov.uv_from_los_t(obs_event.neg_arr_ap,
-                                        tfrac=tfrac, time=time, derivs=derivs)
+            uv = self.fov.uv_from_los_t(obs_event.neg_arr_ap, time=obs_time,
+                                        derivs=derivs)
 
             # If this is the last iteration, we're done
             if count + 1 == iters:
@@ -736,13 +792,15 @@ class Observation(object):
         # Iterate to solution...
         guess = None
         max_dt = np.inf
+        converged = False
         for count in range(iters):
 
             # Locate the object in the field of view
             obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
-            (path_event, obs_event) = path.photon_to_event(obs_event,
-                                        derivs=False, guess=guess,
-                                        quick=quick, converge=converge)
+            (path_event,
+             obs_event) = path.photon_to_event(obs_event,
+                                               derivs=False, guess=guess,
+                                               quick=quick, converge=converge)
             guess = path_event.time
             (uv_min, uv_max) = self.uv_at_time(obs_event.time)
 
@@ -752,21 +810,32 @@ class Observation(object):
 
             # Test for convergence
             prev_max_dt = max_dt
-            max_dt = abs(new_obs_time - obs_time).max()
+            max_dt = abs(new_obs_time - obs_time).max(builtins=True, masked=-1.)
             obs_time = new_obs_time
 
-            if LOGGING.observation_iterations:
-                print(LOGGING.prefix, "Observation.uv_from_path", count, max_dt)
+            if LOGGING.observation_iterations or Observation.DEBUG:
+                LOGGING.convergence('Observation.uv_from_path',
+                                    'iter=%d; change=%.6g' % (count+1,
+                                                              max_dt))
 
-            if max_dt <= dlt_precision or max_dt >= prev_max_dt:
+            if max_dt <= dlt_precision:
+                converged = True
                 break
+
+            if max_dt >= prev_max_dt:
+                break
+
+        if not converged:
+            LOGGING.warn('Observation.uv_from_path did not converge;',
+                         'iter=%d; change=%.6g' % (count+1, max_dt))
 
         # Return the results
         obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
 
-        (path_event, obs_event) = path.photon_to_event(obs_event,
-                                        derivs=derivs, guess=guess,
-                                        quick=quick, converge=converge)
+        (path_event,
+         obs_event) = path.photon_to_event(obs_event,
+                                           derivs=derivs, guess=guess,
+                                           quick=quick, converge=converge)
 
         return self.fov.uv_from_los_t(obs_event.neg_arr_ap, time=obs_time,
                                       derivs=derivs)
@@ -803,9 +872,8 @@ class Observation(object):
                         found.
         """
 
-        raise NotImplementedError(
-                'Observation subclass "%s" ' % type(self).__name__ +
-                'does not implement method uv_from_coords()')
+        raise NotImplementedError(type(self).__name__ + '.uv_from_coords '
+                                  'is not implemented')
 
     #===========================================================================
     def inventory(self, bodies, tfrac=0.5, time=None, expand=0.,
@@ -884,9 +952,8 @@ class Observation(object):
                                            in each direction.
         """
 
-        raise NotImplementedError(
-                'Observation subclass "%s" ' % type(self).__name__ +
-                'does not implement method inventory()')
+        raise NotImplementedError(type(self).__name__ + '.inventory '
+                                  'is not implemented')
 
 ################################################################################
 # UNIT TESTS

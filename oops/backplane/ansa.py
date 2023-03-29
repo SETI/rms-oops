@@ -2,77 +2,92 @@
 # oops/backplanes/ansa_backplanes.py: Ansa backplanes
 ################################################################################
 
-from polymath import Scalar, Pair, Vector3
+from polymath import Scalar, Pair
 
-from .           import Backplane
-from ..event     import Event
-from ..path      import AliasPath
-from ..constants import TWOPI
+from oops.backplane import Backplane
 
-#===============================================================================
-def ansa_radius(self, event_key, radius_type='positive', rmax=None,
-                      lock_limits=False):
+# Backplane names that can be "nested", such that the array mask propagates
+# forward to each new backplane array that refers to it.
+ANSA_BACKPLANES = ('ansa_radius',)
+
+def ansa_radius(self, event_key, radius_type='positive', rmax=None):
     """Radius of the ring ansa intercept point in the image.
 
     Input:
         event_key       key defining the ring surface event.
-        radius_type     'right' for radii increasing rightward when prograde
-                                rotation pole is 'up';
-                        'left' for the opposite of 'right';
+        radius_type     'right'    for radii increasing rightward when prograde
+                                   rotation pole is 'up';
+                        'left'     for the opposite of 'right';
                         'positive' for all radii using positive values.
-        rmax            maximum absolute value of the radius in km; None to
-                        allow it to be defined by the event_key.
-        lock_limits     if True, the rmax value will be applied to the default
-                        event, so that all backplanes generated from this
-                        event_key will have the same limits. This option can
-                        only be applied the first time this event_key is used.
+        rmax            maximum absolute value of the radius in km, if any.
     """
 
-    # Look up under the desired radius type
-    event_key = self.standardize_event_key(event_key)
-    key0 = ('ansa_radius', event_key)
-    key = key0 + (radius_type, rmax)
+    # Validate inputs
+    if radius_type not in ('right', 'left', 'positive'):
+        raise ValueError('invalid radius_type: ' + repr(radius_type))
+
+    # Look up under the desired radius type and maximum
+    event_key = self.standardize_event_key(event_key, default='ANSA')
+    key = ('ansa_radius', event_key, radius_type, rmax)
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
-    # If not found, look up the default 'right'
-    assert radius_type in ('right', 'left', 'positive')
-
-    key_default = key0 + ('right', None)
+    # Make sure the default is available
+    key_default = ('ansa_radius', event_key, 'right', None)
     if key_default not in self.backplanes:
-        self._fill_ansa_intercepts(event_key, rmax, lock_limits)
+        self._fill_ansa_intercepts(event_key)
 
-    key_right = key0 + ('right', rmax)
-    backplane = self.backplanes[key_right]
+    # Get the unmasked backplane array
+    radius = self.get_backplane(key_default)
 
+    # Make sure the selected radius_type is available
     if radius_type == 'left':
-        self.register_backplane(key, -backplane)
+        radius = self.register_backplane(key[:3] + (None,), -radius)
     elif radius_type == 'positive':
-        self.register_backplane(key, backplane.abs())
+        radius = self.register_backplane(key[:3] + (None,), radius.abs())
 
-    return self.backplanes[key]
+    # If rmax is None, we're done
+    if rmax is None:
+        return radius
+
+    # Otherwise, apply the mask
+    mask = (radius.vals > rmax) | (radius.vals < -rmax)
+    radius = radius.remask_or(mask)
+    return self.register_backplane(key, radius)
 
 #===============================================================================
 def ansa_altitude(self, event_key):
     """Elevation of the ring ansa intercept point in the image.
 
     Input:
-        event_key       key defining the ring surface event.
+        event_key       key defining the limb surface event. Alternatively, a
+                        ansa_radius backplane key, in which case this backplane
+                        inherits the mask of the given backplane array.
     """
 
-    event_key = self.standardize_event_key(event_key)
-    key = ('ansa_altitude', event_key)
-    if key not in self.backplanes:
-        self._fill_ansa_intercepts(event_key)
+    (event_key,
+     backplane_key) = self._event_and_backplane_keys(event_key, ANSA_BACKPLANES,
+                                                     default='ANSA')
 
-    return self.backplanes[key]
+    key = ('ansa_altitude', event_key)
+    if backplane_key:
+        return self._remasked_backplane(key, backplane_key)
+
+    # If this backplane array is already defined, return it
+    if key in self.backplanes:
+        return self.get_backplane(key)
+
+    self._fill_ansa_intercepts(event_key)
+    return self.get_backplane(key)
 
 #===============================================================================
 def ansa_longitude(self, event_key, reference='node'):
     """Longitude of the ansa intercept point in the image.
 
     Input:
-        event_key       key defining the ring surface event.
+        event_key       key defining the limb surface event. Alternatively, a
+                        ansa_radius backplane key, in which case this backplane
+                        inherits the mask of the given backplane array.
         reference       defines the location of zero longitude.
                         'aries' for the First point of Aries;
                         'node'  for the J2000 ascending node;
@@ -83,75 +98,65 @@ def ansa_longitude(self, event_key, reference='node'):
                                 solar hour angle.
     """
 
-    event_key = self.standardize_event_key(event_key)
-    assert reference in {'aries', 'node', 'obs', 'oha', 'sun', 'sha'}
+    if reference not in ('aries', 'node', 'obs', 'oha', 'sun', 'sha'):
+        raise ValueError('invalid longitude reference: ' + repr(reference))
 
-    # Look up under the desired reference
-    key0 = ('ansa_longitude', event_key)
-    key = key0 + (reference,)
+    (event_key,
+     backplane_key) = self._event_and_backplane_keys(event_key, ANSA_BACKPLANES,
+                                                     default='ANSA')
+
+    key = ('ansa_longitude', event_key, reference)
+    if backplane_key:
+        return self._remasked_backplane(key, backplane_key)
+
+    # If this backplane array is already defined, return it
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     # If it is not found with reference J2000, fill in those backplanes
-    key_node = key0 + ('node',)
+    key_node = ('ansa_longitude', event_key, 'node')
     if key_node not in self.backplanes:
         self._fill_ansa_longitudes(event_key)
 
     # Now apply the reference longitude
     if reference == 'node':
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
     if reference == 'aries':
         ref_lon = self._aries_ring_longitude(event_key)
     elif reference == 'sun':
-        ref_lon = self._sub_solar_ansa_longitude(event_key)
+        ref_lon = self._sub_solar_longitude(event_key)
     elif reference == 'sha':
-        ref_lon = self._sub_solar_ansa_longitude(event_key) - Scalar.PI
+        ref_lon = self._sub_solar_longitude(event_key) - Scalar.PI
     elif reference == 'obs':
-        ref_lon = self._sub_observer_ansa_longitude(event_key)
+        ref_lon = self._sub_observer_longitude(event_key)
     elif reference == 'oha':
-        ref_lon = self._sub_observer_ansa_longitude(event_key) - Scalar.PI
+        ref_lon = self._sub_observer_longitude(event_key) - Scalar.PI
 
-    lon = (self.backplanes[key_node] - ref_lon) % TWOPI
-    self.register_backplane(key, lon)
-
-    return self.backplanes[key]
+    longitude = (self.get_backplane(key_node) - ref_lon) % Scalar.TWOPI
+    return self.register_backplane(key, longitude)
 
 #===============================================================================
-def _fill_ansa_intercepts(self, event_key, rmax=None, lock_limits=False):
+def _fill_ansa_intercepts(self, event_key):
     """Internal method to fill in the ansa intercept geometry backplanes.
 
     Input:
+        radius_type     'right'    for radii increasing rightward when prograde
+                                   rotation pole is 'up';
+                        'left'     for the opposite of 'right';
+                        'positive' for all radii using positive values.
         rmax            maximum absolute value of the radius in km; None to
                         allow it to be defined by the event_key.
-        lock_limits     if True, the rmax value will be applied to the
-                        default event, so that all backplanes generated
-                        from this event_key will have the same limits. This
-                        option can only be applied the first time this
-                        event_key is used.
     """
 
-    # Don't allow lock_limits if the backplane was already generated
-    if rmax is None:
-        lock_limits = False
-
-    if lock_limits and event_key in self.surface_events:
-        raise ValueError('lock_limits option disallowed for pre-existing ' +
-                         'ansa event key ' + str(event_key))
+    # Validate the surface type
+    surface = self.get_surface(event_key[1])
+    if surface.COORDINATE_TYPE != 'cylindrical':
+        raise ValueError('invalid coordinate type for ansa geometry: '
+                         + surface.COORDINATE_TYPE)
 
     # Get the ansa intercept coordinates
     event = self.get_surface_event(event_key)
-    if event.surface.COORDINATE_TYPE != 'cylindrical':
-        raise ValueError('ansa intercepts require a "cylindrical" ' +
-                         'surface type')
-
-    # Limit the event if necessary
-    if lock_limits:
-
-        # Apply the upper limit to the event
-        radius = event.coord1.abs()
-        self.apply_mask_to_event(event_key, radius > rmax)
-        event = self.get_surface_event(event_key)
 
     # Register the default backplanes
     self.register_backplane(('ansa_radius', event_key, 'right', None),
@@ -159,128 +164,184 @@ def _fill_ansa_intercepts(self, event_key, rmax=None, lock_limits=False):
     self.register_backplane(('ansa_altitude', event_key),
                             event.coord2)
 
-    # Apply a mask just to these backplanes if necessary
-    if rmax is not None:
-        mask = (event.coord1 > rmax)
-        self.register_backplane(('ansa_radius', event_key, 'right', rmax),
-                                event.coord1.mask_where(mask))
-        self.register_backplane(('ansa_altitude', event_key, rmax),
-                                event.coord2.mask_where(mask))
-
 #===============================================================================
 def _fill_ansa_longitudes(self, event_key):
     """Internal method to fill in the ansa intercept longitude backplane."""
 
+    # Validate the surface type
+    surface = self.get_surface(event_key[1])
+    if surface.COORDINATE_TYPE != 'cylindrical':
+        raise ValueError('invalid coordinate type for ansa geometry: '
+                         + surface.COORDINATE_TYPE)
+
     # Get the ansa intercept event
-    event_key = self.standardize_event_key(event_key)
     event = self.get_surface_event(event_key)
-    assert event.surface.COORDINATE_TYPE == 'cylindrical'
 
     # Get the longitude in the associated ring plane
-    lon = event.surface.ringplane.coords_from_vector3(event.pos, axes=2)[1]
-    self.register_backplane(('ansa_longitude', event_key, 'node'),
-                            lon)
-
-#===============================================================================
-def _sub_observer_ansa_longitude(self, event_key):
-    """Sub-observer longitude evaluated at the ansa intercept time.
-
-    Used only internally. DEPRECATED.
-    """
-
-    event_key = self.standardize_event_key(event_key)
-    key = ('_sub_observer_ansa_longitude', event_key)
-    if key in self.backplanes:
-        return self.backplanes[key]
-
-    # At each intercept time, determine the outgoing direction to the
-    # observer from the center of the planet
-    event = self.get_surface_event(event_key)
-    center_event = Event(event.time, Vector3.ZERO,
-                                     event.origin, event.frame)
-    center_event = self.obs_event.origin.photon_from_event(center_event)[1]
-
-    surface = self.get_surface(event_key).ringplane
-    (r,lon) = surface.coords_from_vector3(center_event.apparent_dep(),
-                                          axes=2)
-
-    self.register_gridless_backplane(key, lon)
-    return self.backplanes[key]
-
-#===============================================================================
-def _sub_solar_ansa_longitude(self, event_key):
-    """Sub-solar longitude evaluated at the ansa intercept time.
-
-    Used only internally. DEPRECATED.
-    """
-
-    event_key = self.standardize_event_key(event_key)
-    key = ('_sub_solar_ansa_longitude', event_key)
-    if key in self.backplanes:
-        return self.backplanes[key]
-
-    # At each intercept time, determine the incoming direction from the
-    # Sun to the center of the planet
-    event = self.get_surface_event(event_key)
-    center_event = Event(event.time, Vector3.ZERO,
-                                     event.origin, event.frame)
-    center_event = AliasPath('SUN').photon_to_event(center_event)[1]
-
-    surface = self.get_surface(event_key).ringplane
-    (r,lon) = surface.coords_from_vector3(-center_event.apparent_arr(),
-                                          axes=2)
-
-    self.register_gridless_backplane(key, lon)
-    return self.backplanes[key]
+    lon = event.surface.ringplane.coords_from_vector3(event.state, axes=2,
+                                                      derivs=self.ALL_DERIVS)[1]
+    self.register_backplane(('ansa_longitude', event_key, 'node'), lon)
 
 #===============================================================================
 def ansa_radial_resolution(self, event_key):
     """Projected radial resolution in km/pixel at the ring ansa intercept.
 
     Input:
-        event_key       key defining the ring surface event.
+        event_key       key defining the limb surface event. Alternatively, a
+                        ansa_radius backplane key, in which case this backplane
+                        inherits the mask of the given backplane array.
     """
 
-    event_key = self.standardize_event_key(event_key)
+    (event_key,
+     backplane_key) = self._event_and_backplane_keys(event_key, ANSA_BACKPLANES,
+                                                     default='ANSA')
+
     key = ('ansa_radial_resolution', event_key)
+    if backplane_key:
+        return self._remasked_backplane(key, backplane_key)
+
+    # If this backplane array is already defined, return it
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
-    event = self.get_surface_event_w_derivs(event_key)
-    assert event.surface.COORDINATE_TYPE == 'cylindrical'
+    event = self.get_surface_event(event_key, derivs=True)
+    if event.surface.COORDINATE_TYPE != 'cylindrical':
+        raise ValueError('invalid coordinate type for ansa geometry: '
+                         + event.surface.COORDINATE_TYPE)
 
-    r = event.coord1
-    dr_duv = r.d_dlos.chain(self.dlos_duv)
-    res = dr_duv.join_items(Pair).norm()
+    radius = event.coord1
+    dr_duv = radius.d_dlos.chain(self.dlos_duv)
+    resolution = dr_duv.join_items(Pair).norm()
 
-    self.register_backplane(key, res)
-    return self.backplanes[key]
+    return self.register_backplane(key, resolution)
 
 #===============================================================================
 def ansa_vertical_resolution(self, event_key):
     """Projected radial resolution in km/pixel at the ring ansa intercept.
 
     Input:
-        event_key       key defining the ring surface event.
+        event_key       key defining the limb surface event. Alternatively, a
+                        ansa_radius backplane key, in which case this backplane
+                        inherits the mask of the given backplane array.
     """
 
-    event_key = self.standardize_event_key(event_key)
+    (event_key,
+     backplane_key) = self._event_and_backplane_keys(event_key, ANSA_BACKPLANES,
+                                                     default='ANSA')
+
     key = ('ansa_vertical_resolution', event_key)
+    if backplane_key:
+        return self._remasked_backplane(key, backplane_key)
+
+    # If this backplane array is already defined, return it
     if key in self.backplanes:
-        return self.backplanes[key]
+        return self.get_backplane(key)
 
-    event = self.get_surface_event_w_derivs(event_key)
-    assert event.surface.COORDINATE_TYPE == 'cylindrical'
+    event = self.get_surface_event(event_key, derivs=True)
+    if event.surface.COORDINATE_TYPE != 'cylindrical':
+        raise ValueError('invalid coordinate type for ansa geometry: '
+                         + event.surface.COORDINATE_TYPE)
 
-    z = event.coord2
-    dz_duv = z.d_dlos.chain(self.dlos_duv)
-    res = dz_duv.join_items(Pair).norm()
+    altitude = event.coord2
+    dz_duv = altitude.d_dlos.chain(self.dlos_duv)
+    resolution = dz_duv.join_items(Pair).norm()
 
-    self.register_backplane(key, res)
-    return self.backplanes[key]
+    return self.register_backplane(key, resolution)
 
 ################################################################################
 
+# Add these functions to the Backplane module
 Backplane._define_backplane_names(globals().copy())
+
+################################################################################
+# GOLD MASTER TESTS
+################################################################################
+
+import numpy as np
+from oops.backplane.gold_master import register_test_suite
+from oops.constants import PI
+
+def ansa_test_suite(bpt):
+
+    bp = bpt.backplane
+    for name in bpt.ansa_names:
+        bpt.gmtest(bp.ansa_radius(name),
+                   name + ' radius (km)',
+                   limit=0.1, radius=1)
+        bpt.gmtest(bp.ansa_altitude(name),
+                   name + ' altitude (km)',
+                   limit=0.1, radius=1)
+        bpt.gmtest(bp.ansa_radial_resolution(name),
+                   name + ' radial resolution (km)',
+                   limit=0.003, radius=1.5)
+        bpt.gmtest(bp.ansa_vertical_resolution(name),
+                   name + ' vertical resolution (km)',
+                   limit=0.003, radius=1.5)
+
+        bpt.gmtest(bp.ansa_longitude(name, 'node'),
+                   name + ' longitude wrt node (deg)',
+                   method='mod360', limit=0.001, radius=1)
+        bpt.gmtest(bp.ansa_longitude(name, 'aries'),
+                   name + ' longitude wrt Aries (deg)',
+                   method='mod360', limit=0.001, radius=1)
+
+        longitude = bp.ansa_longitude(name, 'obs')
+        bpt.gmtest(longitude,
+                   name + ' longitude wrt observer (deg)',
+                   method='mod360', limit=0.001, radius=1)
+        bpt.compare(longitude - bp.ansa_longitude(name, 'oha'),
+                    PI,
+                    name + ' longitude wrt observer minus wrt OHA (deg)',
+                    method='mod360', limit=1.e-13)
+
+        longitude = bp.ansa_longitude(name, 'sun')
+        bpt.gmtest(longitude,
+                   name + ' longitude wrt Sun (deg)',
+                   method = 'mod360', limit = 0.001, radius = 1)
+        bpt.compare(longitude - bp.ansa_longitude(name, 'sha'),
+                    PI,
+                    name + ' longitude wrt Sun minus wrt SHA (deg)',
+                    method='mod360', limit=1.e-13)
+
+    # Derivative tests
+    if bpt.derivs:
+      (bp, bp_u0, bp_u1, bp_v0, bp_v1) = bpt.backplanes
+      pixel_duv = np.abs(bp.obs.fov.uv_scale.vals)
+
+      for name in bpt.ansa_names:
+
+        (ulimit, vlimit) = bp.center_distance(name) * pixel_duv * 1.e-3
+
+        # ansa_radius
+        rad = bp.ansa_radius(name)
+        drad_duv = rad.d_dlos.chain(bp.dlos_duv)
+        (drad_du, drad_dv) = drad_duv.extract_denoms()
+
+        drad = bp_u1.ansa_radius(name) - bp_u0.ansa_radius(name)
+        bpt.compare(drad.wod/bpt.duv, drad_du,
+                    name + ' radius d/du self-check (km/pix)',
+                    limit=ulimit, radius=1)
+
+        drad = bp_v1.ansa_radius(name) - bp_v0.ansa_radius(name)
+        bpt.compare(drad.wod/bpt.duv, drad_dv,
+                    name + ' radius d/dv self-check (km/pix)',
+                    limit=vlimit, radius=1)
+
+        # ansa_altitude
+        alt = bp.ansa_altitude(name)
+        dalt_duv = alt.d_dlos.chain(bp.dlos_duv)
+        (dalt_du, dalt_dv) = dalt_duv.extract_denoms()
+
+        dalt = bp_u1.ansa_altitude(name) - bp_u0.ansa_altitude(name)
+        bpt.compare(dalt.wod/bpt.duv, dalt_du,
+                    name + ' altitude d/du self-check (km/pix)',
+                    limit=ulimit, radius=1)
+
+        dalt = bp_v1.ansa_altitude(name) - bp_v0.ansa_altitude(name)
+        bpt.compare(dalt.wod/bpt.duv, dalt_dv,
+                    name + ' altitude d/dv self-check (km/pix)',
+                    limit=vlimit, radius=1)
+
+register_test_suite('ansa', ansa_test_suite)
 
 ################################################################################

@@ -11,6 +11,7 @@ import datetime
 import numbers
 import os
 import unittest
+import warnings
 
 import interval
 import julian
@@ -1486,13 +1487,19 @@ def furnish_kernels(kernel_list, fast=True):
             abspath_list.append(abspath)
             abspath_types[abspath] = kernel.kernel_type     # track kernel types
 
-            # Save the info for each furnished file
-            basename = os.path.basename(abspath)
-            if basename in FURNISHED_INFO:
-                if kernel not in FURNISHED_INFO[basename]:
-                    FURNISHED_INFO[basename].append(kernel)
+            # Save the info for each furnished file if it exists
+            if os.path.exists(abspath):
+                basename = os.path.basename(abspath)
+                if basename in FURNISHED_INFO:
+                    if kernel not in FURNISHED_INFO[basename]:
+                        FURNISHED_INFO[basename].append(kernel)
+                else:
+                    FURNISHED_INFO[basename] = [kernel]
+
+            # Otherwise flag it and remove from abspath_list
             else:
-                FURNISHED_INFO[basename] = [kernel]
+                warnings.warn('SPICE kernel not found: ' + abspath, RuntimeWarning)
+                abspath_list.remove(abspath)
 
     # Furnish the kernel files...
     if DEBUG:

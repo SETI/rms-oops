@@ -4,14 +4,12 @@
 
 import numpy as np
 import julian
-import pdstable
 import cspyce
 from polymath import *
 import os.path
-import pdsparser
 import oops
 
-from . import JIRAM
+from hosts.juno.jiram import JIRAM
 
 ################################################################################
 # Standard class methods
@@ -19,9 +17,8 @@ from . import JIRAM
 
 #===============================================================================
 def from_file(filespec, label, fast_distortion=True,
-              return_all_planets=False, **parameters):
-    """
-    A general, static method to return a Snapshot object based on a given
+                               return_all_planets=False, **parameters):
+    """A general, static method to return a Snapshot object based on a given
     JIRAM image or spectrum file.
 
     Inputs:
@@ -47,12 +44,12 @@ def from_file(filespec, label, fast_distortion=True,
     for i in range(meta.nframelets):
         fmeta = Metadata(flabels[i])
 
-        item = (oops.obs.Snapshot(("v","u"),
+        item = oops.obs.Snapshot(('v','u'),
                                  fmeta.tstart, fmeta.exposure, fmeta.fov,
-                                 "JUNO", "JUNO_JIRAM_I_" + fmeta.filter_frame,
-                                 instrument = "JIRAM_I",
+                                 'JUNO', 'JUNO_JIRAM_I_' + fmeta.filter_frame,
+                                 instrument = 'JIRAM_I',
                                  filter = fmeta.filter,
-                                 data = framelets[:,:,i]))
+                                 data = framelets[:,:,i])
 
 #        item.insert_subfield('spice_kernels', \
 #                   Juno.used_kernels(item.time, 'jiram', return_all_planets))
@@ -62,11 +59,9 @@ def from_file(filespec, label, fast_distortion=True,
 
     return obs
 
-
 #===============================================================================
 def _load_data(filespec, label, meta):
-    """
-    Loads the data array from the file and splits into individual framelets.
+    """Load the data array from the file and splits into individual framelets.
 
     Input:
         filespec        Full path to the data file.
@@ -108,9 +103,7 @@ def _load_data(filespec, label, meta):
 
         framelet_labels.append(framelet_label)
 
-
     return (framelets, framelet_labels)
-
 
 
 #*******************************************************************************
@@ -118,8 +111,7 @@ class Metadata(object):
 
     #===========================================================================
     def __init__(self, label):
-        """
-        Uses the label to assemble the image metadata.
+        """Use the label to assemble the image metadata.
 
         Input:
             label           The label dictionary.
@@ -131,7 +123,6 @@ class Metadata(object):
                             order, or None if no time backplane is found in
                             the file.
             nframelets
-
         """
 
         # image dimensions
@@ -146,8 +137,8 @@ class Metadata(object):
         try:
             self.exposure = label['EXPOSURE_DURATION']
         except:
-            print('No exposure information')
-            self.exposure = 1.      # This should go away after the labels are
+##            print('No exposure information')
+            self.exposure = 1.      # TODO: This should go away after the labels are
                                     # redelivered
 
         # Filters
@@ -199,22 +190,18 @@ class Metadata(object):
         return
 
 
-
 #*******************************************************************************
 class IMG(object):
-    """
-    A instance-free class to hold IMG instrument parameters.
-    """
+    """An instance-free class to hold IMG instrument parameters."""
 
     initialized = False
 
     #===========================================================================
     @staticmethod
     def initialize(time, ck='reconstructed', planets=None, asof=None,
-               spk='reconstructed', gapfill=True,
-               mst_pck=True, irregulars=True):
-        """
-        Initialize key information about the IMG instrument.
+                         spk='reconstructed', gapfill=True,
+                         mst_pck=True, irregulars=True):
+        """Initialize key information about the IMG instrument.
 
         Must be called first. After the first call, later calls to this function
         are ignored.
@@ -241,28 +228,72 @@ class IMG(object):
 
         # initialize JIRAM
         JIRAM.initialize(ck=ck, planets=planets, asof=asof,
-                     spk=spk, gapfill=gapfill,
-                     mst_pck=mst_pck, irregulars=irregulars)
+                         spk=spk, gapfill=gapfill,
+                         mst_pck=mst_pck, irregulars=irregulars)
 
         # Construct the SpiceFrames
         JIRAM.create_frame(time, 'I_MBAND')
         JIRAM.create_frame(time, 'I_LBAND')
 
-
         IMG.initialized = True
-
 
     #===========================================================================
     @staticmethod
     def reset():
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        """
-        Resets the internal IMG parameters. Can be useful for
-        debugging.
+        """Reset the internal IMG parameters.
+
+        Can be useful for debugging.
         """
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         IMG.initialized = False
 
         JIRAM.reset()
 
+################################################################################
+# UNIT TESTS
+################################################################################
+import unittest
+import os.path
 
+import hosts.juno.jiram as jiram
+
+from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+from oops.backplane.exercise_backplanes import exercise_backplanes
+from oops.backplane.unittester_support  import Backplane_Settings
+
+
+#*******************************************************************************
+class Test_Juno_JIRAM_IMG_Backplane_Exercises(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+
+        if Backplane_Settings.NO_EXERCISES:
+            self.skipTest('')
+
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'juno/jiram')
+
+        # Moon image
+        file = os.path.join(root, 'JNOJIR_2000/DATA/JIR_IMG_RDR_2013282T133843_V03.IMG')
+        obs = jiram.from_file(file)[1]
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
+                                 planet_key='MOON')
+
+        # Europa image
+        file = os.path.join(root, 'JNOJIR_2008/DATA/JIR_IMG_RDR_2017244T104633_V01.IMG')
+        obs = jiram.from_file(file)[1]
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
+                                 planet_key='EUROPA')
+
+        # Jupiter image
+        file = os.path.join(root, 'JNOJIR_2014/DATA/JIR_IMG_RDR_2018197T055537_V01.IMG')
+        obs = jiram.from_file(file)[0]
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
+                                 planet_key='JUPITER')
+
+
+##############################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
+################################################################################

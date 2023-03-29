@@ -6,9 +6,9 @@ from __future__ import division
 import numpy as np
 import numbers
 
-from .qube   import Qube
-from .vector import Vector
-from .units  import Units
+from polymath.qube   import Qube
+from polymath.scalar import Scalar
+from polymath.vector import Vector
 
 class Pair(Vector):
     """A PolyMath subclass containing coordinate pairs or 2-vectors.
@@ -22,7 +22,8 @@ class Pair(Vector):
     BOOLS_OK = False    # True to allow booleans.
 
     UNITS_OK = True     # True to allow units; False to disallow them.
-    DERIVS_OK = True    # True to allow derivatives; False to disallow them.
+    DERIVS_OK = True    # True to allow derivatives and to allow this class to
+                        # have a denominator; False to disallow them.
 
     DEFAULT_VALUE = np.array([1,1])
 
@@ -47,11 +48,11 @@ class Pair(Vector):
         if isinstance(arg, Qube):
 
             # Collapse a 1x2 or 2x1 Matrix down to a Pair
-            if arg.numer in ((1,2), (2,1)):
-                return arg.flatten_numer(Pair, recursive)
+            if arg._numer_ in ((1,2), (2,1)):
+                return arg.flatten_numer(Pair, recursive=recursive)
 
             # For any suitable Qube, move numerator items to the denominator
-            if arg.rank > 1 and arg.numer[0] == 2:
+            if arg.rank > 1 and arg._numer_[0] == 2:
                 arg = arg.split_items(1, Pair)
 
             arg = Pair(arg._values_, arg._mask_, example=arg)
@@ -101,20 +102,21 @@ class Pair(Vector):
 
         # Roll the array axis to the end
         lshape = len(self._values_.shape)
-        new_values = np.rollaxis(self._values_, lshape - self.drank - 1, lshape)
+        new_values = np.rollaxis(self._values_, lshape - self._drank_ - 1,
+                                                lshape)
 
         # Swap the axes
         new_values = new_values[..., ::-1]
 
         # Roll the axis back
-        new_values = np.rollaxis(new_values, -1, lshape - self.drank - 1)
+        new_values = np.rollaxis(new_values, -1, lshape - self._drank_ - 1)
 
         # Construct the object
         obj = Pair(new_values, self._mask_, example=self)
 
         # Fill in the derivatives if necessary
         if recursive:
-            for (key, deriv) in self.derivs.items():
+            for (key, deriv) in self._derivs_.items():
                 obj.insert_deriv(key, deriv.swapxy(False))
 
         return obj
@@ -128,13 +130,14 @@ class Pair(Vector):
 
         # Roll the array axis to the end
         lshape = len(self._values_.shape)
-        new_values = np.rollaxis(self._values_, lshape - self.drank - 1, lshape)
+        new_values = np.rollaxis(self._values_, lshape - self._drank_ - 1,
+                                                lshape)
 
         # Swap the axes and negate the new y
         new_values = new_values[..., ::-1]
 
         # Roll the axis back
-        new_values = np.rollaxis(new_values, -1, lshape - self.drank - 1)
+        new_values = np.rollaxis(new_values, -1, lshape - self._drank_ - 1)
 
         # Construct the object
         new_values[...,1] = -new_values[...,1]      # negate the new y-axis
@@ -142,10 +145,24 @@ class Pair(Vector):
 
         # Fill in the derivatives if necessary
         if recursive:
-            for (key, deriv) in self.derivs.items():
+            for (key, deriv) in self._derivs_.items():
                 obj.insert_deriv(key, deriv.rot90(False))
 
         return obj
+
+    #===========================================================================
+    def angle(self, recursive=True):
+        """Polar angle of this Pair as measured from the X-axis toward the
+        Y-axis.
+
+        The returned value will always fall between zero and 2*pi.
+
+        Inputs:
+            recursive   True to include the derivatives. Default is True.
+        """
+
+        (x, y) = self.to_scalars(recursive=recursive)
+        return y.arctan2(x) % Scalar.TWOPI
 
     #===========================================================================
     def clip2d(self, lower, upper, remask=False):
@@ -168,16 +185,18 @@ class Pair(Vector):
         # Make sure the lower limit is either None or an unmasked Pair
         if lower is not None:
             lower = Pair.as_pair(lower)
-            if lower.shape:
-                raise ValueError('Lower limit must contain exactly two values')
+            if lower._shape_:
+                raise ValueError('Pair.clip2d() lower limit must contain '
+                                 'exactly two values')
             if lower._mask_:
                 lower = None
 
         # Make sure the upper limit is either None or an unmasked Pair
         if upper is not None:
             upper = Pair.as_pair(upper)
-            if upper.shape:
-                raise ValueError('Upper limit must contain exactly two values')
+            if upper._shape_:
+                raise ValueError('Pair.clip2d() upper limit must contain '
+                                 'exactly two values')
             if upper._mask_:
                 upper = None
 
@@ -198,63 +217,6 @@ class Pair(Vector):
         result = self
         result = result.clip_component(0, lower0, upper0, remask)
         result = result.clip_component(1, lower1, upper1, remask)
-        return result
-
-    #===========================================================================
-    def int(self, top=None, remask=False):
-        """An integer (floor) version of this Pair.
-
-        If this object already contains integers, it is returned as is.
-        Otherwise, a copy is returned. Derivatives are always removed. Units
-        are disallowed.
-
-        Inputs:
-            top         Nominal maximum integer values as a single int or
-                        tuple of two ints. This is used for handling an
-                        inclusive integer range. Where this exact value is
-                        given as input, self-1 is returned instead of
-                        self.
-            remask      If True, values less than zero or greater than the
-                        specified top value (if provided) are masked.
-        """
-
-        Units.require_unitless(self.units)
-
-        if self.is_int():
-            result = self
-            copied = False
-        else:
-            result = self.wod.as_int()
-            copied = True
-
-        if top is not None:
-            # Make sure it has been copied before modifying
-            if not copied:
-                result = result.copy()
-
-            if isinstance(top, Qube):
-                top = top._values_
-
-            if isinstance(top, numbers.Real):
-                top = np.array((top,top))
-
-            if not isinstance(top, np.ndarray):
-                top = np.array(top)
-
-            result.vals[self.vals[...,0] == top[...,0],0] -= 1
-            result.vals[self.vals[...,1] == top[...,1],1] -= 1
-
-            if remask:
-                mask = ((self.vals[...,0] < 0.) |
-                        (self.vals[...,1] < 0.) |
-                        (self.vals[...,0] > top[0]) |
-                        (self.vals[...,1] > top[1]))
-                result = result.mask_where(mask, remask=True)
-
-        elif remask:
-            mask = (result.vals[...,0] < 0.) | (result.vals[...,1] < 0.)
-            result = result.mask_where(mask, remask=True)
-
         return result
 
 ################################################################################

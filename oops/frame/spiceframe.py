@@ -5,16 +5,13 @@
 import numpy as np
 import cspyce
 
-from polymath import Scalar, Vector3, Matrix3, Quaternion
-
-from scipy.interpolate import UnivariateSpline
-
-from .                import Frame
-from ..config         import QUICK
-from ..path           import Path
-from ..path.spicepath import SpicePath
-from ..transform      import Transform
-from ..constants      import DPR
+from polymath            import Matrix3, Quaternion, Scalar, Vector3
+from scipy.interpolate   import UnivariateSpline
+from oops.config         import QUICK
+from oops.frame          import Frame
+from oops.path           import Path
+from oops.path.spicepath import SpicePath
+from oops.transform      import Transform
 import oops.spice_support as spice
 
 class SpiceFrame(Frame):
@@ -87,7 +84,10 @@ class SpiceFrame(Frame):
         self.keys = set()
 
         # Save interpolation method
-        assert omega_type in ('tabulated', 'numerical', 'zero')
+        if omega_type not in ('tabulated', 'numerical', 'zero'):
+            raise ValueError('invalid SpiceFrame omega_type: '
+                             + repr(omega_type))
+
         self.omega_tabulated = (omega_type == 'tabulated')
         self.omega_numerical = (omega_type == 'numerical')
         self.omega_zero = (omega_type == 'zero')
@@ -398,6 +398,7 @@ class SpiceFrame(Frame):
 # confident that cspyce produces valid results.
 
 import unittest
+from oops.constants import DPR
 
 class Test_SpiceFrame(unittest.TestCase):
 
@@ -406,11 +407,10 @@ class Test_SpiceFrame(unittest.TestCase):
         np.random.seed(6242)
 
         # Imports are here to avoid conflicts
-        import os.path
-        from ..path           import Path
-        from ..path.spicepath import SpicePath
-        from ..frame          import QuickFrame
-        from ..event          import Event
+        import os
+        from oops.event          import Event
+        from oops.frame          import QuickFrame
+        from oops.path.spicepath import SpicePath
 
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls'))
@@ -709,7 +709,7 @@ class Test_SpiceFrame(unittest.TestCase):
         quickdict['quickframe_numerical_omega'] = True
         wac1b = QuickFrame(wac1, (TDB-100.,TDB+100.), quickdict)
 
-        _wac3a = QuickFrame(wac3, (TDB-100.,TDB+100.), quickdict)
+        _ = QuickFrame(wac3, (TDB-100.,TDB+100.), quickdict)
 
         # Test a single time
         time = TDB - 44.

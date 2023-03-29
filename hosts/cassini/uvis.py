@@ -33,7 +33,6 @@ def from_file(filespec, data=True, enclose=False, **parameters):
                         multiple windows are used, the function returns a tuple
                         of observations rather than a single observation.
     """
-
     UVIS.initialize()   # Define everything the first time through; use defaults
                         # unless initialize() is called explicitly.
 
@@ -43,25 +42,25 @@ def from_file(filespec, data=True, enclose=False, **parameters):
     # Deal with corrupt syntax
     for i in range(len(recs)):
         rec = recs[i]
-        if "CORE_UNIT" in rec:
+        if 'CORE_UNIT' in rec:
             if '"COUNTS/BIN"' not in rec:
                 recs[i] = rec.replace('COUNTS/BIN', '"COUNTS/BIN"')
-        if rec.startswith("ODC_ID"):
-            recs[i] = rec.replace(",", "")
+        if rec.startswith('ODC_ID'):
+            recs[i] = rec.replace(',', '')
 
     # Get the label dictionary and data array dimensions
     label = pdsparser.PdsLabel.from_string(recs).as_dict()
 
     # Load any needed SPICE kernels
-    tstart = julian.tdb_from_tai(julian.tai_from_iso(label["START_TIME"]))
-    tstop  = julian.tdb_from_tai(julian.tai_from_iso(label["STOP_TIME"]))
+    tstart = julian.tdb_from_tai(julian.tai_from_iso(label['START_TIME']))
+    tstop  = julian.tdb_from_tai(julian.tai_from_iso(label['STOP_TIME']))
     Cassini.load_cks( tstart, tstop)
     Cassini.load_spks(tstart, tstop)
 
     # Figure out the PDS object class and return the observation(s)
-    if "QUBE" in label:
+    if 'QUBE' in label:
         return get_qube(filespec, tstart, label, data, enclose)
-    elif "TIME_SERIES" in label:
+    elif 'TIME_SERIES' in label:
         return get_time_series(filespec, tstart, label, data)
     else:
         return get_spectrum(filespec, tstart, label, data)
@@ -73,17 +72,17 @@ def get_qube(filespec, tstart, label, data, enclose):
     global DEBUG
 
     # Determine the detector and mode
-    detector = label["PRODUCT_ID"][:3]
-    assert detector in ("EUV", "FUV")
+    detector = label['PRODUCT_ID'][:3]
+    assert detector in ('EUV', 'FUV')
 
-    resolution = label["SLIT_STATE"]
+    resolution = label['SLIT_STATE']
 
     # Define the instrument frame
     frame_id = UVIS.frame_ids[detector]
 
     # Get array shape
-    info = label["QUBE"]
-    (bands,lines,samples) = info["CORE_ITEMS"]
+    info = label['QUBE']
+    (bands,lines,samples) = info['CORE_ITEMS']
     assert lines in (1,64)
 
     if lines == 1:
@@ -92,21 +91,21 @@ def get_qube(filespec, tstart, label, data, enclose):
         shape = (lines, samples, bands)
 
     # Define the cadence
-    texp = label["INTEGRATION_DURATION"]
+    texp = label['INTEGRATION_DURATION']
     cadence = oops.cadence.Metronome(tstart, texp, texp, samples)
 
     # Define the full FOV
-    fov = UVIS.fovs[(detector, label["SLIT_STATE"], lines)]
+    fov = UVIS.fovs[(detector, label['SLIT_STATE'], lines)]
 
     # Load the data array if necessary
-    info = label["QUBE"]
-    assert info["CORE_ITEM_TYPE"] == "MSB_UNSIGNED_INTEGER"
-    assert info["CORE_ITEM_BYTES"] == 2
-    assert info["SUFFIX_ITEMS"] == [0,0,0]
+    info = label['QUBE']
+    assert info['CORE_ITEM_TYPE'] == 'MSB_UNSIGNED_INTEGER'
+    assert info['CORE_ITEM_BYTES'] == 2
+    assert info['SUFFIX_ITEMS'] == [0,0,0]
 
     if data:
         array_null = 65535                  # Incorrectly -1 in many labels
-        array = load_data(filespec, label["^QUBE"], ">u2")
+        array = load_data(filespec, label['^QUBE'], '>u2')
 
         # Re-shape into something sensible
         # Note that the axis order in the label is first-index-fastest
@@ -120,13 +119,13 @@ def get_qube(filespec, tstart, label, data, enclose):
 
     # Identify the window(s) used
     # Note that these are either integers or lists of integers
-    line0 = info["UL_CORNER_LINE"]
-    line1 = info["LR_CORNER_LINE"]
-    line_bin = info["LINE_BIN"]
+    line0 = info['UL_CORNER_LINE']
+    line1 = info['LR_CORNER_LINE']
+    line_bin = info['LINE_BIN']
 
-    band0 = info["UL_CORNER_BAND"]
-    band1 = info["LR_CORNER_BAND"]
-    band_bin = info["BAND_BIN"]
+    band0 = info['UL_CORNER_BAND']
+    band1 = info['LR_CORNER_BAND']
+    band_bin = info['BAND_BIN']
 
     # Check the outer periphery of the data array in DEBUG mode
     if DEBUG and data:
@@ -181,8 +180,7 @@ def get_one_qube(label, detector, resolution,
                  lines, line0, line1, line_bin,
                  bands, band0, band1, band_bin,
                  rebin):
-    """A single Observation object for the identified window of the UVIS qube.
-    """
+    """A single Observation object for the identified window of the UVIS qube."""
 
     global DEBUG
 
@@ -232,27 +230,27 @@ def get_one_qube(label, detector, resolution,
 
     # Create the Observation
     if lines == 1:
-        obs = oops.obs.Pixel(("t","b"), cadence, fov, "CASSINI", frame_id)
+        obs = oops.obs.Pixel(('t','b'), cadence, fov, 'CASSINI', frame_id)
     else:
-        obs = oops.obs.Slit(("v","ut","b"), 1, cadence, fov,
-                             "CASSINI", frame_id)
+        obs = oops.obs.TimedImage(('v','ut','b'), 1, cadence, fov,
+                                  'CASSINI', frame_id)
 
-    obs.insert_subfield("dict", label)
-    obs.insert_subfield("instrument", "UVIS")
-    obs.insert_subfield("detector", detector)
-    obs.insert_subfield("sampling", resolution)
-    obs.insert_subfield("product_type", "QUBE")
+    obs.insert_subfield('dict', label)
+    obs.insert_subfield('instrument', 'UVIS')
+    obs.insert_subfield('detector', detector)
+    obs.insert_subfield('sampling', resolution)
+    obs.insert_subfield('product_type', 'QUBE')
 
-    obs.insert_subfield("line_window", (line0,line1))
-    obs.insert_subfield("line_bin", line_bin)
+    obs.insert_subfield('line_window', (line0,line1))
+    obs.insert_subfield('line_bin', line_bin)
 
-    obs.insert_subfield("band_window", (band0,band1))
-    obs.insert_subfield("band_bin", band_bin)
+    obs.insert_subfield('band_window', (band0,band1))
+    obs.insert_subfield('band_bin', band_bin)
 
-    obs.insert_subfield("samples", samples)
+    obs.insert_subfield('samples', samples)
 
     if array is not None:
-        obs.insert_subfield("data", array)
+        obs.insert_subfield('data', array)
 
     # Update the observation shape
     obs.shape = shape
@@ -264,54 +262,54 @@ def get_time_series(filespec, tstart, label, data):
     """The observation object given that it is a TIME_SERIES."""
 
     # Determine the detector
-    product_id = label["PRODUCT_ID"]
-    if product_id.startswith("HSP"):
-        detector = "HSP"
-    elif product_id.startswith("HDAC"):
-        detector = "HDAC"
+    product_id = label['PRODUCT_ID']
+    if product_id.startswith('HSP'):
+        detector = 'HSP'
+    elif product_id.startswith('HDAC'):
+        detector = 'HDAC'
     else:
-        raise ValueError("Time series is neither HSP nor HDAC: " + filespec)
+        raise ValueError('Time series is neither HSP nor HDAC: ' + filespec)
 
     # Define the instrument frame
     frame_id = UVIS.frame_ids[detector]
 
     # Get the array shape
-    info = label["TIME_SERIES"]
-    samples = info["ROWS"]
+    info = label['TIME_SERIES']
+    samples = info['ROWS']
 
     # Define the cadence
-    assert info["COLUMNS"] == 1
-    assert (info["SAMPLING_PARAMETER_UNIT"] == "MILLISECOND" or
-            info["SAMPLING_PARAMETER_UNIT"] == "MILLISECONDS")
-    texp = info["SAMPLING_PARAMETER_INTERVAL"] * 0.001
+    assert info['COLUMNS'] == 1
+    assert (info['SAMPLING_PARAMETER_UNIT'] == 'MILLISECOND' or
+            info['SAMPLING_PARAMETER_UNIT'] == 'MILLISECONDS')
+    texp = info['SAMPLING_PARAMETER_INTERVAL'] * 0.001
 
     cadence = oops.cadence.Metronome(tstart, texp, texp, samples)
 
     # Define the observation
-    fov = UVIS.fovs[(detector, "", 1)]
-    obs = oops.obs.Pixel(("t",), cadence, fov, "CASSINI", frame_id)
+    fov = UVIS.fovs[(detector, '', 1)]
+    obs = oops.obs.Pixel(('t',), cadence, fov, 'CASSINI', frame_id)
 
-    obs.insert_subfield("dict", label)
-    obs.insert_subfield("instrument", "UVIS")
-    obs.insert_subfield("detector", detector)
-    obs.insert_subfield("product_type", "TIME_SERIES")
+    obs.insert_subfield('dict', label)
+    obs.insert_subfield('instrument', 'UVIS')
+    obs.insert_subfield('detector', detector)
+    obs.insert_subfield('product_type', 'TIME_SERIES')
 
-    obs.insert_subfield("line_window", None)
-    obs.insert_subfield("line_bin", None)
+    obs.insert_subfield('line_window', None)
+    obs.insert_subfield('line_bin', None)
 
-    obs.insert_subfield("band_window", None)
-    obs.insert_subfield("band_bin", None)
+    obs.insert_subfield('band_window', None)
+    obs.insert_subfield('band_bin', None)
 
-    obs.insert_subfield("samples", samples)
+    obs.insert_subfield('samples', samples)
 
     # Load the data array if necessary
     if data:
-        column = info["PHOTOMETER_COUNTS"]
-        assert column["DATA_TYPE"] == "MSB_UNSIGNED_INTEGER"
-        assert column["BYTES"] == 2
+        column = info['PHOTOMETER_COUNTS']
+        assert column['DATA_TYPE'] == 'MSB_UNSIGNED_INTEGER'
+        assert column['BYTES'] == 2
 
-        array = load_data(filespec, label["^TIME_SERIES"], ">u2")
-        obs.insert_subfield("data", array)
+        array = load_data(filespec, label['^TIME_SERIES'], '>u2')
+        obs.insert_subfield('data', array)
 
     # Update the observation shape
     obs.shape = (samples,)
@@ -323,60 +321,60 @@ def get_spectrum(filespec, tstart, label, data):
     """The observation object given that it is a SPECTRUM."""
 
     # Determine the detector
-    detector = label["PRODUCT_ID"][:3]
-    assert detector in ("EUV", "FUV")
+    detector = label['PRODUCT_ID'][:3]
+    assert detector in ('EUV', 'FUV')
 
     # Define the instrument frame
     frame_id = UVIS.frame_ids[detector]
 
     # Get array shape
-    info = label["SPECTRUM"]
-    bands = info["ROWS"]
+    info = label['SPECTRUM']
+    bands = info['ROWS']
 
     # Define the cadence (such as it is)
-    assert info["COLUMNS"] == 1
-    texp = label["INTEGRATION_DURATION"]
+    assert info['COLUMNS'] == 1
+    texp = label['INTEGRATION_DURATION']
     cadence = oops.cadence.Metronome(tstart, texp, texp, 1)
 
     # Define the FOV
-    resolution = label["SLIT_STATE"]
+    resolution = label['SLIT_STATE']
     fov = UVIS.fovs[(detector, resolution, 64)]
 
-    line0 = info["UL_CORNER_SPATIAL"]
-    line1 = info["LR_CORNER_SPATIAL"] + 1
+    line0 = info['UL_CORNER_SPATIAL']
+    line1 = info['LR_CORNER_SPATIAL'] + 1
     if (line0,line1) != (0,64):
         fov = oops.fov.SliceFOV(fov, (0,line0), (1,line1-line0))
 
-    line_bin = info["BIN_SPATIAL"]
+    line_bin = info['BIN_SPATIAL']
     if line_bin != 1:
         fov = oops.fov.SubsampledFOV(fov, (1,line_bin))
 
     # Define the observation
-    obs = oops.obs.Pixel(("b",), cadence, fov, "CASSINI", frame_id)
+    obs = oops.obs.Pixel(('b',), cadence, fov, 'CASSINI', frame_id)
 
-    obs.insert_subfield("dict", label)
-    obs.insert_subfield("instrument", "UVIS")
-    obs.insert_subfield("detector", detector)
-    obs.insert_subfield("sampling", resolution)
-    obs.insert_subfield("product_type", "SPECTRUM")
+    obs.insert_subfield('dict', label)
+    obs.insert_subfield('instrument', 'UVIS')
+    obs.insert_subfield('detector', detector)
+    obs.insert_subfield('sampling', resolution)
+    obs.insert_subfield('product_type', 'SPECTRUM')
 
-    obs.insert_subfield("line_window", (line0,line1))
-    obs.insert_subfield("line_bin", line_bin)
+    obs.insert_subfield('line_window', (line0,line1))
+    obs.insert_subfield('line_bin', line_bin)
 
-    obs.insert_subfield("band_window", (info["UL_CORNER_SPECTRAL"],
-                                        info["LR_CORNER_SPECTRAL"]+1))
-    obs.insert_subfield("band_bin", info["BIN_SPECTRAL"])
+    obs.insert_subfield('band_window', (info['UL_CORNER_SPECTRAL'],
+                                        info['LR_CORNER_SPECTRAL']+1))
+    obs.insert_subfield('band_bin', info['BIN_SPECTRAL'])
 
-    obs.insert_subfield("samples", 1)
+    obs.insert_subfield('samples', 1)
 
     # Load the data array if necessary
     if data:
-        column = info["SPECTRUM"]
-        assert column["DATA_TYPE"] == "MSB_UNSIGNED_INTEGER"
-        assert column["BYTES"] == 2
+        column = info['SPECTRUM']
+        assert column['DATA_TYPE'] == 'MSB_UNSIGNED_INTEGER'
+        assert column['BYTES'] == 2
 
-        array = load_data(filespec, label["^SPECTRUM"], ">u2")
-        obs.insert_subfield("data", array)
+        array = load_data(filespec, label['^SPECTRUM'], '>u2')
+        obs.insert_subfield('data', array)
 
     # Update the observation shape
     obs.shape = (bands,)
@@ -392,9 +390,9 @@ def load_data(filespec, body, dtype):
     if not os.path.exists(data_filespec):
         data_filespec = os.path.join(head, body.lower())
     if not os.path.exists(data_filespec):
-        f = open(data_filespec,"r")     # raise IOError
+        f = open(data_filespec,'r')     # raise IOError
 
-    return np.fromfile(data_filespec, sep="", dtype=dtype)
+    return np.fromfile(data_filespec, sep='', dtype=dtype)
 
 #===============================================================================
 def initialize(ck='reconstructed', planets=None, asof=None,
@@ -419,39 +417,36 @@ def initialize(ck='reconstructed', planets=None, asof=None,
         irregulars  True to include the irregular satellites;
                     False otherwise.
     """
-
     UVIS.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
                     gapfill=gapfill, mst_pck=mst_pck, irregulars=irregulars)
 
 #===============================================================================
-#===============================================================================
 class UVIS(object):
-    """A instance-free class to hold Cassini UVIS instrument parameters.
-    """
+    """An instance-free class to hold Cassini UVIS instrument parameters."""
 
     instrument_kernel = None
     fovs = {}
     initialized = False
 
     # Map NAIF body names (following "CASSINI_UVIS_") to (detector, resolution)
-    abbrevs = {"CASSINI_UVIS_FUV_HI" : ("FUV", "HIGH_RESOLUTION"),
-               "CASSINI_UVIS_FUV_LO" : ("FUV", "LOW_RESOLUTION"),
-               "CASSINI_UVIS_FUV_OCC": ("FUV", "OCCULTATION"),
-               "CASSINI_UVIS_EUV_HI" : ("EUV", "HIGH_RESOLUTION"),
-               "CASSINI_UVIS_EUV_LO" : ("EUV", "LOW_RESOLUTION"),
-               "CASSINI_UVIS_EUV_OCC": ("EUV", "OCCULTATION"),
-               "CASSINI_UVIS_SOLAR"  : ("SOLAR",   ""),
-               "CASSINI_UVIS_SOL_OFF": ("SOL_OFF", ""),
-               "CASSINI_UVIS_HSP"    : ("HSP",     ""),
-               "CASSINI_UVIS_HDAC"   : ("HDAC",    "")}
+    abbrevs = {'CASSINI_UVIS_FUV_HI' : ('FUV', 'HIGH_RESOLUTION'),
+               'CASSINI_UVIS_FUV_LO' : ('FUV', 'LOW_RESOLUTION'),
+               'CASSINI_UVIS_FUV_OCC': ('FUV', 'OCCULTATION'),
+               'CASSINI_UVIS_EUV_HI' : ('EUV', 'HIGH_RESOLUTION'),
+               'CASSINI_UVIS_EUV_LO' : ('EUV', 'LOW_RESOLUTION'),
+               'CASSINI_UVIS_EUV_OCC': ('EUV', 'OCCULTATION'),
+               'CASSINI_UVIS_SOLAR'  : ('SOLAR',   ''),
+               'CASSINI_UVIS_SOL_OFF': ('SOL_OFF', ''),
+               'CASSINI_UVIS_HSP'    : ('HSP',     ''),
+               'CASSINI_UVIS_HDAC'   : ('HDAC',    '')}
 
     # Map detector to NAIF frame ID
-    frame_ids = {"FUV"    : "CASSINI_UVIS_FUV",
-                 "EUV"    : "CASSINI_UVIS_EUV",
-                 "SOLAR"  : "CASSINI_UVIS_SOLAR",
-                 "SOL_OFF": "CASSINI_UVIS_SOL_OFF",
-                 "HSP"    : "CASSINI_UVIS_HSP",
-                 "HDAC"   : "CASSINI_UVIS_HDAC"}
+    frame_ids = {'FUV'    : 'CASSINI_UVIS_FUV',
+                 'EUV'    : 'CASSINI_UVIS_EUV',
+                 'SOLAR'  : 'CASSINI_UVIS_SOLAR',
+                 'SOL_OFF': 'CASSINI_UVIS_SOL_OFF',
+                 'HSP'    : 'CASSINI_UVIS_HSP',
+                 'HDAC'   : 'CASSINI_UVIS_HDAC'}
 
     #===========================================================================
     @staticmethod
@@ -489,10 +484,10 @@ class UVIS(object):
         Cassini.load_instruments(asof=asof)
 
         # Load the instrument kernel
-        UVIS.instrument_kernel = Cassini.spice_instrument_kernel("UVIS")[0]
+        UVIS.instrument_kernel = Cassini.spice_instrument_kernel('UVIS')[0]
 
         # TEMPORARY FIX to a loader problem
-        ins = UVIS.instrument_kernel["INS"]
+        ins = UVIS.instrument_kernel['INS']
         ins['CASSINI_UVIS_FUV_HI']  = ins[-82840]
         ins['CASSINI_UVIS_FUV_LO']  = ins[-82841]
         ins['CASSINI_UVIS_FUV_OCC'] = ins[-82842]
@@ -512,16 +507,16 @@ class UVIS(object):
             ignore = oops.frame.SpiceFrame(UVIS.frame_ids[detector])
 
             # Get the FOV angles
-            info = UVIS.instrument_kernel["INS"][key]
+            info = UVIS.instrument_kernel['INS'][key]
 
-            if info["FOV_SHAPE"] == "RECTANGLE":
-                u_angle = 2. * info["FOV_CROSS_ANGLE"] * oops.RPD
-                v_angle = 2. * info["FOV_REF_ANGLE"] * oops.RPD
-            elif info["FOV_SHAPE"] == "CIRCLE":
-                u_angle = 2. * info["FOV_REF_ANGLE"] * oops.RPD
+            if info['FOV_SHAPE'] == 'RECTANGLE':
+                u_angle = 2. * info['FOV_CROSS_ANGLE'] * oops.RPD
+                v_angle = 2. * info['FOV_REF_ANGLE'] * oops.RPD
+            elif info['FOV_SHAPE'] == 'CIRCLE':
+                u_angle = 2. * info['FOV_REF_ANGLE'] * oops.RPD
                 v_angle = u_angle
             else:
-                raise ValueError("Unrecognized FOV_SHAPE: " + info["FOV_SHAPE"])
+                raise ValueError('Unrecognized FOV_SHAPE: ' + info['FOV_SHAPE'])
 
             # Define the frame for 1 or 64 lines
             # Not every combination is really used but that doesn't matter
@@ -547,15 +542,38 @@ class UVIS(object):
 ################################################################################
 # UNIT TESTS
 ################################################################################
-
 import unittest
+import os.path
 
+from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+from oops.backplane.exercise_backplanes import exercise_backplanes
+from oops.backplane.unittester_support  import Backplane_Settings
+
+
+#*******************************************************************************
 class Test_Cassini_UVIS(unittest.TestCase):
 
+    #===========================================================================
+    def runTest(self):
+        pass
+
+
+#*******************************************************************************
+class Test_Cassini_UVIS_Backplane_Exercises(unittest.TestCase):
+
+    #===========================================================================
     def runTest(self):
 
-        # TBD
-        pass
+        if Backplane_Settings.NO_EXERCISES:
+            self.skipTest('')
+
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'cassini/UVIS')
+
+        file = os.path.join(root, 'HSP2014_197_21_29.DAT')
+        obs = from_file(file)
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
+                                 ring_key='saturn_main_rings')
+
 
 ############################################
 if __name__ == '__main__':

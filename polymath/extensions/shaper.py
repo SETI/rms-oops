@@ -2,8 +2,9 @@
 # polymath/extensions/shaper.py: re-shaping operations
 ################################################################################
 
+import numbers
 import numpy as np
-from ..qube import Qube
+from polymath.qube import Qube
 
 def reshape(self, shape, recursive=True):
     """A shallow copy of the object with a new leading shape.
@@ -18,14 +19,16 @@ def reshape(self, shape, recursive=True):
 
     if np.isscalar(shape):
         shape = (shape,)
+    elif not isinstance(shape, tuple):
+        shape = tuple(shape)
 
     if shape == self._shape_:
         return self
 
-    if np.isscalar(self._values_):
-        new_values = np.array([self._values_]).reshape(shape)
+    if shape:
+        new_values = np.asarray(self._values_).reshape(shape + self.item)
     else:
-        new_values = self._values_.reshape(shape + self.item)
+        new_values = np.asarray(self._values_).ravel()[0]
 
     if np.isscalar(self._mask_):
         new_mask = self._mask_
@@ -66,29 +69,21 @@ def swap_axes(self, axis1, axis2, recursive=True):
 
     # Validate first axis
     len_shape = len(self._shape_)
-    if axis1 < 0:
-        a1 = axis1 + len_shape
-    else:
-        a1 = axis1
-
+    a1 = axis1 % len_shape
     if a1 < 0 or a1 >= len_shape:
-        raise ValueError('axis1 argument out of range (%d,%d): %d' %
-                         (-len_shape, len_shape, axis1))
+        raise ValueError('axis1 out of range (%d,%d) in %s.swap_axes(): %d'
+                         % (-len_shape, len_shape, type(self).__name__, axis1))
 
     # Validate second axis
-    if axis2 < 0:
-        a2 = axis2 + len_shape
-    else:
-        a2 = axis2
-
+    a2 = axis2 % len_shape
     if a2 < 0 or a2 >= len_shape:
-        raise ValueError('axis2 argument out of range (%d,%d): %d' %
-                         (-len_shape, len_shape, axis2))
+        raise ValueError('axis2 out of range (%d,%d) in %s.swap_axes(): %d'
+                         % (-len_shape, len_shape, type(self).__name__, axis2))
 
     if a1 == a2:
         return self
 
-    new_values = self._values_.swapaxes(a1, a2)
+    new_values = np.swapaxes(self._values_, a1, a2)
 
     if np.isscalar(self._mask_):
         new_mask = self._mask_
@@ -116,16 +111,16 @@ def roll_axis(self, axis, start=0, recursive=True, rank=None):
                     default is zero.
         recursive   True to perform the same axis roll on the derivatives.
                     Otherwise, derivatives are deleted from the returned object.
-        rank        rank to assume for the object, which could be larger then
+        rank        rank to assume for the object, which could be larger than
                     len(self.shape) because of broadcasting.
     """
 
     # Validate the rank
     len_shape = len(self._shape_)
-    if rank is None:
-        rank = len_shape
+    rank = rank or len_shape
     if rank < len_shape:
-        raise ValueError('roll rank %d is too small for object' % rank)
+        raise ValueError('%s.roll_axis() rank %d is too small for object '
+                         'shape %s' % (type(self).__name__, rank, self._shape_))
 
     if len_shape == 0:
         rank = 1
@@ -137,16 +132,15 @@ def roll_axis(self, axis, start=0, recursive=True, rank=None):
         a1 = axis
 
     if a1 < 0 or a1 >= rank:
-        raise ValueError('roll axis %d out of range' % axis)
+        raise ValueError('%s.roll_axis() axis out of range (%d,%d): %d'
+                         % (type(self).__name__, -rank, rank, axis))
 
     # Identify the start axis, which could be negative
-    if start < 0:
-        a2 = start + rank
-    else:
-        a2 = start
+    a2 = start & rank
 
     if a2 < 0 or a2 >= rank + 1:
-        raise ValueError('roll axis %d out of range' % start)
+        raise ValueError('%s.roll_axis() start out of range (%d,%d): %d'
+                         % (type(self).__name__, -rank, rank+1, a2))
 
     # No need to modify a shapeless object
     if not self._shape_:
@@ -172,6 +166,68 @@ def roll_axis(self, axis, start=0, recursive=True, rank=None):
     if recursive:
         for (key, deriv) in self._derivs_.items():
             obj.insert_deriv(key, deriv.roll_axis(a1, a2, False, rank))
+
+    return obj
+
+#===============================================================================
+def move_axis(self, source, destination, recursive=True, rank=None):
+    """A shallow copy of the object with the specified axis rolled to a new
+    position.
+
+    Input:
+        axis        the axis to roll.
+        source      axis to move or tuple of axes to move.
+        destination destination of moved axis or axes.
+        recursive   True to perform the same axis roll on the derivatives.
+                    Otherwise, derivatives are deleted from the returned object.
+        rank        rank to assume for the object, which could be larger than
+                    len(self.shape) because of broadcasting.
+    """
+
+    # Validate the rank
+    len_shape = len(self._shape_)
+    rank = rank or len_shape
+    if rank < len_shape:
+        raise ValueError('%s.move_axis() rank %d is too small for object '
+                         'shape %s' % (type(self).__name__, rank, self._shape_))
+
+    if len_shape == 0:
+        rank = 1
+
+    # Identify the axes, which could be negative
+    if isinstance(source, numbers.Integral):
+        source = (source,)
+    if isinstance(destination, numbers.Integral):
+        destination = (destination,)
+
+    source = tuple([x % rank for x in source])
+    destination = tuple([x % rank for x in destination])
+
+    # No need to modify a shapeless object
+    if not self._shape_:
+        return self
+
+    # Add missing axes if necessary
+    if len_shape < rank:
+        self = self.reshape((rank - len_shape) * (1,) + self._shape_,
+                            recursive=recursive)
+
+    # Move the values and mask of the object
+    new_values = np.moveaxis(self._values_, source, destination)
+
+    if np.isscalar(self._mask_):
+        new_mask = self._mask_
+    else:
+        new_mask = np.moveaxis(self._mask_, source, destination)
+
+    obj = Qube.__new__(type(self))
+    obj.__init__(new_values, new_mask, example=self)
+    obj._readonly_ = self._readonly_
+
+    if recursive:
+        for (key, deriv) in self._derivs_.items():
+            obj.insert_deriv(key, deriv.move_axis(source, destination,
+                                                  False, rank))
 
     return obj
 
@@ -203,8 +259,8 @@ def stack(*args, **keywords):
 
     # No other keyword is allowed
     if keywords:
-      raise TypeError(('stack() got an unexpected keyword argument ' +
-                       '"%s"') % keywords.keys()[0])
+      raise TypeError('stack() got an unexpected keyword argument "%s"'
+                      % list(keywords.keys())[0])
 
     args = list(args)
 
@@ -212,7 +268,6 @@ def stack(*args, **keywords):
     # Only use class Qube if no suitable subclass was found
     floats_found = False
     ints_found = False
-    _bools_found = False
 
     float_arg = None
     int_arg = None
@@ -235,7 +290,8 @@ def stack(*args, **keywords):
         if denom is None:
             denom = arg._denom_
         elif denom != arg._denom_:
-            raise ValueError('incompatible denominators in stack()')
+            raise ValueError('incompatible denominators for stack(): %s, %s'
+                             % (denom, arg._denom_))
 
         if arg.is_float():
             floats_found = True
@@ -248,7 +304,6 @@ def stack(*args, **keywords):
                 int_arg = arg
                 subclass_indx = i
         elif arg.is_bool() and int_arg is None and float_arg is None:
-            _bools_found = True
             if bool_arg is None or not qubed:
                 bool_arg = arg
                 subclass_indx = i
@@ -287,7 +342,7 @@ def stack(*args, **keywords):
             mask_array_found = True
 
     # Construct the mask
-    if  mask_array_found or (mask_false_found and mask_true_found):
+    if mask_array_found or (mask_false_found and mask_true_found):
         mask = np.zeros((len(args),) + args[subclass_indx].shape,
                         dtype=np.bool_)
         for i in range(len(args)):
@@ -324,7 +379,7 @@ def stack(*args, **keywords):
         for arg in args:
             if arg is None:
                 continue
-            keys += arg.derivs.keys()
+            keys += arg._derivs_.keys()
 
         keys = set(keys)        # remove duplicates
 
@@ -335,7 +390,7 @@ def stack(*args, **keywords):
                 if arg is None:
                     deriv_list.append(None)
                 else:
-                    deriv_list.append(arg.derivs.get(key, None))
+                    deriv_list.append(arg._derivs_.get(key, None))
 
             derivs[key] = Qube.stack(*deriv_list, recursive=False)
 

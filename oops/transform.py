@@ -263,8 +263,8 @@ class Transform(object):
                         reference frame.
 
                         If derivs is True, then the returned position has a
-                        subfield "d_dt", a Vector3 representing the partial
-                        derivatives with respect to time.
+                        subfield "d_dt", a Vector3 representing the derivatives
+                        with respect to time.
         """
 
         if pos is None:
@@ -342,7 +342,9 @@ class Transform(object):
         #      = N M [(V0 - omega x P0) - MT M ([MT kappa] x P0)]
         #      = N M [(V0 - [omega + MT kappa] x P0)]
 
-        assert self.reference == arg.frame
+        if self.reference != arg.frame:
+            raise ValueError('frame mismatch in rotate_transform: %s, %s'
+                             % (self.reference, arg.frame))
 
         if self.origin is None:
             origin = arg.origin
@@ -382,7 +384,6 @@ class Test_Transform(unittest.TestCase):
 
         # Additional imports needed for testing
         from oops.frame import Frame, Wayframe
-        from oops.frame.spinframe import SpinFrame
 
         # Fake out the FRAME REGISTRY with something that has .shape = ()
         Frame.WAYFRAME_REGISTRY["TEST"] = Wayframe("J2000")

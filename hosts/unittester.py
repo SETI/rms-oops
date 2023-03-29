@@ -4,9 +4,13 @@
 
 import unittest
 
-from juno.junocam   import Test_Juno_Junocam
-#from cassini.iss    import Test_Cassini_ISS
-#from hst            import Test_HST
+from hosts.juno.unittester         import *
+#from hosts.cassini.unittester     import *
+#from hosts.hst.unittester         import *
+#from hosts.voyager.unittester     import *
+#from hosts.newhorizons.unittester import *
+#from hosts.keck.unittester        import *
+from hosts.solar.unittester        import *
 
 ########################################
 if __name__ == '__main__':

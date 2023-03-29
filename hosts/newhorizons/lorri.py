@@ -479,7 +479,7 @@ class LORRI(object):
         LORRI.fovs['4X4', 'flat'] = oops.fov.SubsampledFOV(full_fov_flat, 4)
 
         # Construct a SpiceFrame
-        lorri_flipped = oops.frame.SpiceFrame('NH_LORRI', 
+        lorri_flipped = oops.frame.SpiceFrame('NH_LORRI',
                                                     frame_id='NH_LORRI_FLIPPED')
 
         # The SPICE IK gives the boresight along -Z, so flip axes
@@ -525,7 +525,7 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
 
     def runTest(self):
 
-        from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
         import cspyce
 
         snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,

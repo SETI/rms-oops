@@ -2,13 +2,14 @@
 # hosts/cassini/iss.py
 ################################################################################
 
+import os
 import numpy as np
 import julian
 import vicar
 import pdstable
 import oops
 
-from . import Cassini
+from hosts.cassini import Cassini
 
 ################################################################################
 # Standard class methods
@@ -36,27 +37,27 @@ def from_file(filespec, fast_distortion=True,
     vicar_dict = vic.as_dict()
 
     # Get key information from the header
-    tstart = julian.tdb_from_tai(julian.tai_from_iso(vic["START_TIME"]))
-    texp = max(1.e-3, vicar_dict["EXPOSURE_DURATION"]) / 1000.
-    mode = vicar_dict["INSTRUMENT_MODE_ID"]
+    tstart = julian.tdb_from_tai(julian.tai_from_iso(vic['START_TIME']))
+    texp = max(1.e-3, vicar_dict['EXPOSURE_DURATION']) / 1000.
+    mode = vicar_dict['INSTRUMENT_MODE_ID']
 
-    name = vicar_dict["INSTRUMENT_NAME"]
-    if "WIDE" in name:
-        camera = "WAC"
+    name = vicar_dict['INSTRUMENT_NAME']
+    if 'WIDE' in name:
+        camera = 'WAC'
     else:
-        camera = "NAC"
+        camera = 'NAC'
 
-    filter1, filter2 = vicar_dict["FILTER_NAME"]
+    filter1, filter2 = vicar_dict['FILTER_NAME']
 
     gain_mode = None
 
-    if vicar_dict["GAIN_MODE_ID"][:3] == "215":
+    if vicar_dict['GAIN_MODE_ID'][:3] == '215':
         gain_mode = 0
-    elif vicar_dict["GAIN_MODE_ID"][:2] == "95":
+    elif vicar_dict['GAIN_MODE_ID'][:2] == '95':
         gain_mode = 1
-    elif vicar_dict["GAIN_MODE_ID"][:2] == "29":
+    elif vicar_dict['GAIN_MODE_ID'][:2] == '29':
         gain_mode = 2
-    elif vicar_dict["GAIN_MODE_ID"][:2] == "12":
+    elif vicar_dict['GAIN_MODE_ID'][:2] == '12':
         gain_mode = 3
 
     # Make sure the SPICE kernels are loaded
@@ -64,12 +65,13 @@ def from_file(filespec, fast_distortion=True,
     Cassini.load_spks(tstart, tstart + texp)
 
     # Create a Snapshot
-    result = oops.obs.Snapshot(("v","u"), tstart, texp,
+    result = oops.obs.Snapshot(('v','u'), tstart, texp,
                                ISS.fovs[camera,mode, fast_distortion],
-                               "CASSINI", "CASSINI_ISS_" + camera,
+                               path = 'CASSINI',
+                               frame = 'CASSINI_ISS_' + camera,
                                dict = vicar_dict,       # Add the VICAR dict
                                data = vic.data_2d,      # Add the data array
-                               instrument = "ISS",
+                               instrument = 'ISS',
                                detector = camera,
                                sampling = mode,
                                filter1 = filter1,
@@ -86,15 +88,16 @@ def from_file(filespec, fast_distortion=True,
 
 #===============================================================================
 def from_index(filespec, **parameters):
-    """A static method to return a list of Snapshot objects, one for each row
-    in an ISS index file. The filespec refers to the label of the index file.
-    """
+    """A static method to return a list of Snapshot objects.
 
+    One object for each row in an ISS index file. The filespec refers to the
+    label of the index file.
+    """
     ISS.initialize()    # Define everything the first time through
 
     # Read the index file
     COLUMNS = []        # Return all columns
-    TIMES = ["START_TIME"]
+    TIMES = ['START_TIME']
     table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
     row_dicts = table.dicts_by_row()
 
@@ -102,22 +105,22 @@ def from_index(filespec, **parameters):
     snapshots = []
     for row_dict in row_dicts:
 
-        tstart = julian.tdb_from_tai(row_dict["START_TIME"])
-        texp = max(1.e-3, row_dict["EXPOSURE_DURATION"]) / 1000.
-        mode = row_dict["INSTRUMENT_MODE_ID"]
+        tstart = julian.tdb_from_tai(row_dict['START_TIME'])
+        texp = max(1.e-3, row_dict['EXPOSURE_DURATION']) / 1000.
+        mode = row_dict['INSTRUMENT_MODE_ID']
 
-        name = row_dict["INSTRUMENT_NAME"]
-        if "WIDE" in name:
-            camera = "WAC"
+        name = row_dict['INSTRUMENT_NAME']
+        if 'WIDE' in name:
+            camera = 'WAC'
         else:
-            camera = "NAC"
+            camera = 'NAC'
 
-        item = oops.obs.Snapshot(("v","u"), tstart, texp,
+        item = oops.obs.Snapshot(('v','u'), tstart, texp,
                                  ISS.fovs[camera,mode,False],
-                                 "CASSINI", "CASSINI_ISS_" + camera,
+                                 'CASSINI', 'CASSINI_ISS_' + camera,
                                  dict = row_dict,       # Add index dictionary
                                  index_dict = row_dict, # Old name
-                                 instrument = "ISS",
+                                 instrument = 'ISS',
                                  detector = camera,
                                  sampling = mode)
 
@@ -130,8 +133,8 @@ def from_index(filespec, **parameters):
         snapshots.append(item)
 
     # Make sure all the SPICE kernels are loaded
-    tdb0 = row_dicts[ 0]["START_TIME"]
-    tdb1 = row_dicts[-1]["START_TIME"]
+    tdb0 = row_dicts[ 0]['START_TIME']
+    tdb1 = row_dicts[-1]['START_TIME']
 
     Cassini.load_cks( tdb0, tdb1)
     Cassini.load_spks(tdb0, tdb1)
@@ -163,16 +166,13 @@ def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
         irregulars  True to include the irregular satellites;
                     False otherwise.
     """
-
     ISS.initialize(ck=ck, planets=planets, offset_wac=offset_wac, asof=asof,
                    spk=spk, gapfill=gapfill,
                    mst_pck=mst_pck, irregulars=irregulars)
 
 #===============================================================================
-#===============================================================================
 class ISS(object):
-    """A instance-free class to hold Cassini ISS instrument parameters.
-    """
+    """An instance-free class to hold Cassini ISS instrument parameters."""
 
     instrument_kernel = None
     fovs = {}
@@ -288,11 +288,10 @@ class ISS(object):
     def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
                    spk='reconstructed', gapfill=True,
                    mst_pck=True, irregulars=True):
-        """Initialize key information about the ISS instrument; fill in key
-        information about the WAC and NAC.
+        """Initialize key information about the ISS instrument.
 
-        Must be called first. After the first call, later calls to this function
-        are ignored.
+        Fills in key information about the WAC and NAC.  Must be called first.
+        After the first call, later calls to this function are ignored.
 
         Input:
             ck,spk      'predicted', 'reconstructed', or 'none', depending on
@@ -322,19 +321,19 @@ class ISS(object):
         Cassini.load_instruments(asof=asof)
 
         # Load the instrument kernel
-        ISS.instrument_kernel = Cassini.spice_instrument_kernel("ISS")[0]
+        ISS.instrument_kernel = Cassini.spice_instrument_kernel('ISS')[0]
 
         # Construct a Polynomial FOV for each camera
-        for detector in ["NAC", "WAC"]:
-            info = ISS.instrument_kernel["INS"]["CASSINI_ISS_" + detector]
+        for detector in ['NAC', 'WAC']:
+            info = ISS.instrument_kernel['INS']['CASSINI_ISS_' + detector]
 
             # Full field of view
-            lines = info["PIXEL_LINES"]
-            samples = info["PIXEL_SAMPLES"]
+            lines = info['PIXEL_LINES']
+            samples = info['PIXEL_SAMPLES']
 
-            xfov = info["FOV_REF_ANGLE"]
-            yfov = info["FOV_CROSS_ANGLE"]
-            assert info["FOV_ANGLE_UNITS"] == "DEGREES"
+            xfov = info['FOV_REF_ANGLE']
+            yfov = info['FOV_CROSS_ANGLE']
+            assert info['FOV_ANGLE_UNITS'] == 'DEGREES'
 
             uscale = np.arctan(np.tan(xfov * oops.RPD) / (samples/2.))
             vscale = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
@@ -352,39 +351,39 @@ class ISS(object):
             full_fov_none = oops.fov.FlatFOV((uscale,vscale), (samples,lines))
 
             # Load the dictionary, include the subsampling modes
-            ISS.fovs[detector, "FULL", False] = full_fov
-            ISS.fovs[detector, "SUM2", False] = oops.fov.SubsampledFOV(full_fov, 2)
-            ISS.fovs[detector, "SUM4", False] = oops.fov.SubsampledFOV(full_fov, 4)
-            ISS.fovs[detector, "FULL", True] = full_fov_fast
-            ISS.fovs[detector, "SUM2", True] = oops.fov.SubsampledFOV(full_fov_fast, 2)
-            ISS.fovs[detector, "SUM4", True] = oops.fov.SubsampledFOV(full_fov_fast, 4)
-            ISS.fovs[detector, "FULL", None] = full_fov_none
-            ISS.fovs[detector, "SUM2", None] = oops.fov.SubsampledFOV(full_fov_none, 2)
-            ISS.fovs[detector, "SUM4", None] = oops.fov.SubsampledFOV(full_fov_none, 4)
+            ISS.fovs[detector, 'FULL', False] = full_fov
+            ISS.fovs[detector, 'SUM2', False] = oops.fov.SubsampledFOV(full_fov, 2)
+            ISS.fovs[detector, 'SUM4', False] = oops.fov.SubsampledFOV(full_fov, 4)
+            ISS.fovs[detector, 'FULL', True] = full_fov_fast
+            ISS.fovs[detector, 'SUM2', True] = oops.fov.SubsampledFOV(full_fov_fast, 2)
+            ISS.fovs[detector, 'SUM4', True] = oops.fov.SubsampledFOV(full_fov_fast, 4)
+            ISS.fovs[detector, 'FULL', None] = full_fov_none
+            ISS.fovs[detector, 'SUM2', None] = oops.fov.SubsampledFOV(full_fov_none, 2)
+            ISS.fovs[detector, 'SUM4', None] = oops.fov.SubsampledFOV(full_fov_none, 4)
 
-            ISS.fovs[detector, "FULL"] = full_fov_none
-            ISS.fovs[detector, "SUM2"] = oops.fov.SubsampledFOV(full_fov_none, 2)
-            ISS.fovs[detector, "SUM4"] = oops.fov.SubsampledFOV(full_fov_none, 4)
+            ISS.fovs[detector, 'FULL'] = full_fov_none
+            ISS.fovs[detector, 'SUM2'] = oops.fov.SubsampledFOV(full_fov_none, 2)
+            ISS.fovs[detector, 'SUM4'] = oops.fov.SubsampledFOV(full_fov_none, 4)
 
         # Construct a SpiceFrame for each camera
         # Deal with the fact that the instrument's internal
         # coordinate  system is rotated 180 degrees
         rot180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
-        nac_flipped = oops.frame.SpiceFrame("CASSINI_ISS_NAC",
-                                            frame_id="CASSINI_ISS_NAC_FLIPPED")
-        wac_flipped = oops.frame.SpiceFrame("CASSINI_ISS_WAC",
-                                            frame_id="CASSINI_ISS_WAC_FLIPPED")
+        nac_flipped = oops.frame.SpiceFrame('CASSINI_ISS_NAC',
+                                            frame_id='CASSINI_ISS_NAC_FLIPPED')
+        wac_flipped = oops.frame.SpiceFrame('CASSINI_ISS_WAC',
+                                            frame_id='CASSINI_ISS_WAC_FLIPPED')
         nac_frame = oops.frame.Cmatrix(rot180, nac_flipped,
-                                       frame_id="CASSINI_ISS_NAC")
+                                       frame_id='CASSINI_ISS_NAC')
 
         if offset_wac:
 
             # Apply offset for WAC relative to NAC
-            info = ISS.instrument_kernel["INS"]["CASSINI_ISS_NAC"]
-            xfov = info["FOV_REF_ANGLE"]
-            yfov = info["FOV_CROSS_ANGLE"]
-            lines = info["PIXEL_LINES"]
-            samples = info["PIXEL_SAMPLES"]
+            info = ISS.instrument_kernel['INS']['CASSINI_ISS_NAC']
+            xfov = info['FOV_REF_ANGLE']
+            yfov = info['FOV_CROSS_ANGLE']
+            lines = info['PIXEL_LINES']
+            samples = info['PIXEL_SAMPLES']
 
             xpixel = np.arctan(np.tan(xfov * oops.RPD) / (samples/2.))
             ypixel = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
@@ -393,20 +392,21 @@ class ISS(object):
             xshift = -7. * xpixel
             yshift = 4.4 * ypixel
             wac_frame_no = oops.frame.Cmatrix(rot180, wac_flipped,
-                                           frame_id="CASSINI_ISS_WAC-NO_OFFSET")
+                                              frame_id='CASSINI_ISS_WAC-NO_OFFSET')
             wac_frame = oops.frame.Navigation((xshift,yshift), wac_frame_no,
-                                              frame_id="CASSINI_ISS_WAC")
+                                               frame_id='CASSINI_ISS_WAC')
         else:
             wac_frame = oops.frame.Cmatrix(rot180, wac_flipped,
-                                           frame_id="CASSINI_ISS_WAC")
+                                           frame_id='CASSINI_ISS_WAC')
 
         ISS.initialized = True
 
     #===========================================================================
     @staticmethod
     def reset():
-        """Resets the internal Cassini ISS parameters. Can be useful for
-        debugging.
+        """Reset the internal Cassini ISS parameters.
+
+        Can be useful for debugging.
         """
 
         ISS.instrument_kernel = None
@@ -418,24 +418,52 @@ class ISS(object):
 ################################################################################
 # UNIT TESTS
 ################################################################################
-
-import unittest
-import os.path
-
-class Test_Cassini_ISS(unittest.TestCase):
-
-    def runTest(self):
-
-        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-
-        snapshots = from_index(os.path.join(TESTDATA_PARENT_DIRECTORY, "cassini/ISS/index.lbl"))
-        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY, "cassini/ISS/W1575634136_1.IMG"))
-        snapshot3940 = snapshots[3940]  #should be same as snapshot
-
-        self.assertTrue(abs(snapshot.time[0] - snapshot3940.time[0]) < 1.e-3)
-        self.assertTrue(abs(snapshot.time[1] - snapshot3940.time[1]) < 1.e-3)
-
-############################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
+#
+# import unittest
+# import os.path
+#
+# from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+# from oops.backplane.exercise_backplanes import exercise_backplanes
+# from oops.backplane.unittester_support  import Backplane_Settings
+#
+#
+# #*******************************************************************************
+# class Test_Cassini_ISS(unittest.TestCase):
+#
+#     def runTest(self):
+#
+#         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+#
+#         snapshots = from_index(os.path.join(TESTDATA_PARENT_DIRECTORY,
+#                                             'cassini/ISS/index.lbl'))
+#         snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
+#                                           'cassini/ISS/W1575634136_1.IMG'))
+#         snapshot3940 = snapshots[3940]  #should be same as snapshot
+#
+#         self.assertTrue(abs(snapshot.time[0] - snapshot3940.time[0]) < 1.e-3)
+#         self.assertTrue(abs(snapshot.time[1] - snapshot3940.time[1]) < 1.e-3)
+#
+#
+# #*******************************************************************************
+# class Test_Cassini_ISS_Backplane_Exercises(unittest.TestCase):
+#
+#     #===========================================================================
+#     def runTest(self):
+#
+#         if Backplane_Settings.NO_EXERCISES:
+#             self.skipTest('')
+#
+#         root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'cassini/ISS')
+#         file = os.path.join(root, 'N1460072401_1.IMG')
+#         obs = from_file(file)
+#         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
+#                                  planet_key='SATURN')
+#
+#
+# ############################################
+# from oops.backplane.unittester_support import backplane_unittester_args
+#
+# if __name__ == '__main__':
+#     backplane_unittester_args()
+#     unittest.main(verbosity=2)
 ################################################################################

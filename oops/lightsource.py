@@ -53,7 +53,7 @@ class LightSource(object):
         self.source = None
         try:
             pair = Pair.as_pair(source)
-        except ValueError:
+        except (ValueError, TypeError):
             pass
         else:
             (ra, dec) = pair.values * RPD
@@ -66,7 +66,7 @@ class LightSource(object):
             try:
                 self.source = Vector3.as_vector3(source).unit()
                 self.source_is_moving = False
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
 
         # Interpret the source as a path
@@ -101,7 +101,7 @@ class LightSource(object):
         """Solve for a photon arrival event from this lightsource.
 
         Input parameters are identical to the Path method of the same name, but
-        only the arrival event is returned.
+        for LightSources not identified with paths, the departure event is None.
 
         Input:
             event       the event of the observation.
@@ -151,16 +151,17 @@ class LightSource(object):
         """
 
         if self.source_is_moving:
-            return self.source.solve_photon(event, -1, derivs, guess, antimask,
-                                                       quick, converge)[1]
+            return self.source.solve_photon(event, -1, derivs=derivs,
+                                            guess=guess, antimask=antimask,
+                                            quick=quick, converge=converge)
 
         if derivs:
-            new_event = event.copy()
+            arrival = event.copy()
         else:
-            new_event = event.wod.copy()
+            arrival = event.wod.copy()
 
-        new_event.neg_arr_j2000 = self.source
-        return new_event
+        arrival.neg_arr_j2000 = self.source
+        return (None, arrival)
 
     #===========================================================================
     def as_path(self):

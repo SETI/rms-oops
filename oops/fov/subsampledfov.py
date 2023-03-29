@@ -3,8 +3,7 @@
 ################################################################################
 
 from polymath import Pair
-
-from . import FOV
+from oops.fov import FOV
 
 class SubsampledFOV(FOV):
     """Subclass of FOV in which the pixels of a given base FOV class are
@@ -27,17 +26,15 @@ class SubsampledFOV(FOV):
         """
 
         self.fov = fov
-        self.rescale  = Pair.as_pair(rescale)
+        self.rescale  = Pair.as_pair(rescale).as_readonly()
         self.rescale2 = self.rescale.vals[0] * self.rescale.vals[1]
 
         # Required fields
         self.uv_scale = self.fov.uv_scale.element_mul(self.rescale)
         self.uv_los   = self.fov.uv_los.element_div(self.rescale)
-        self.uv_area  = self.fov.uv_area  * self.rescale2
+        self.uv_area  = self.fov.uv_area * self.rescale2
 
-        self.uv_shape = (self.fov.uv_shape.element_div(self.rescale)).as_int()
-
-        assert self.rescale.element_mul(self.uv_shape) == self.fov.uv_shape
+        self.uv_shape = self.fov.uv_shape.element_div(self.rescale).as_int()
 
     def __getstate__(self):
         return (self.fov, self.rescale)
@@ -46,20 +43,18 @@ class SubsampledFOV(FOV):
         self.__init__(*state)
 
     #===========================================================================
-    def xy_from_uvt(self, uv_pair, tfrac=0.5, time=None, derivs=False,
-                          **keywords):
+    def xy_from_uvt(self, uv_pair, time=None, derivs=False, remask=False,
+                                                            **keywords):
         """The (x,y) camera frame coordinates given the FOV coordinates (u,v) at
         the specified time.
 
         Input:
             uv_pair     (u,v) coordinate Pair in the FOV.
-            tfrac       Scalar of fractional times during the exposure, where
-                        tfrac=0 at the beginning and 1 at the end. Default is
-                        0.5.
-            time        Scalar of optional absolute time in seconds. Only one of
-                        tfrac and time can be specified; the other must be None.
+            time        Scalar of optional absolute time in seconds.
             derivs      If True, any derivatives in (u,v) get propagated into
                         the returned (x,y) Pair.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
             **keywords  Additional keywords arguments are passed directly to the
                         reference FOV.
 
@@ -69,23 +64,22 @@ class SubsampledFOV(FOV):
 
         uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
         return self.fov.xy_from_uvt(self.rescale.element_mul(uv_pair),
-                                    tfrac, time, derivs=derivs, **keywords)
+                                    time=time, derivs=derivs, remask=remask,
+                                    **keywords)
 
     #===========================================================================
-    def uv_from_xyt(self, xy_pair, tfrac=0.5, time=None, derivs=False,
-                          **keywords):
+    def uv_from_xyt(self, xy_pair, time=None, derivs=False, remask=False,
+                                                            **keywords):
         """The (u,v) FOV coordinates given the (x,y) camera frame coordinates at
         the specified time.
 
         Input:
             xy_pair     (x,y) Pair in FOV coordinates.
-            tfrac       Scalar of fractional times during the exposure, where
-                        tfrac=0 at the beginning and 1 at the end. Default is
-                        0.5.
-            time        Scalar of optional absolute time in seconds. Only one of
-                        tfrac and time can be specified; the other must be None.
+            time        Scalar of optional absolute time in seconds.
             derivs      If True, any derivatives in (x,y) get propagated into
                         the returned (u,v) Pair.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
             **keywords  Additional keywords arguments are passed directly to the
                         reference FOV.
 
@@ -94,8 +88,8 @@ class SubsampledFOV(FOV):
         """
 
         xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
-        uv_pair = self.fov.uv_from_xyt(xy_pair, tfrac=tfrac, time=time,
-                                                    derivs=derivs, **keywords)
+        uv_pair = self.fov.uv_from_xyt(xy_pair, time=time, derivs=derivs,
+                                                remask=remask, **keywords)
         uv_new = uv_pair.element_div(self.rescale)
 
         return uv_new
@@ -111,7 +105,8 @@ class Test_SubsampledFOV(unittest.TestCase):
     def runTest(self):
 
         # Imports just required for unit testing
-        from .flatfov import FlatFOV
+        from oops.fov.flatfov import FlatFOV
+        from oops.config      import AREA_FACTOR
 
         # Centered sub-sampling...
 
@@ -162,10 +157,16 @@ class Test_SubsampledFOV(unittest.TestCase):
         xy = (64/2048., 32/2048.)
         self.assertEqual(flat.uv_from_xy(xy), test.uv_from_xy(xy) * 2.)
 
-        self.assertEqual(test.uv_area, 4*flat.uv_area)
+        try:
+            AREA_FACTOR.old = True
 
-        self.assertEqual(flat.area_factor((32,32)), 1.)
-        self.assertEqual(test.area_factor((16,16)), 1.)
+            self.assertEqual(test.uv_area, 4*flat.uv_area)
+
+            self.assertEqual(flat.area_factor((32,32)), 1.)
+            self.assertEqual(test.area_factor((16,16)), 1.)
+
+        finally:
+            AREA_FACTOR.old = False
 
 ########################################
 if __name__ == '__main__':

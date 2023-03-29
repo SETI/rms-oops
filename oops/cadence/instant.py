@@ -4,18 +4,15 @@
 
 import numpy as np
 from polymath import Scalar
-
-from . import Cadence
+from oops.cadence import Cadence
 
 class Instant(Cadence):
-    """NOTE: This is a work in progress. Not fully tested. To be used by the
+    """TODO: This is a work in progress. Not fully tested. To be used by the
     InSitu Observation subclass. DO NOT USE.
 
     A Cadence subclas that represents the timing of an observation as a Scalar
     time of arbitrary shape.
     """
-
-    PACKRAT_ARGS = ['tdb', '+is_continuous']
 
     #===========================================================================
     def __init__(self, tdb):
@@ -50,8 +47,8 @@ class Instant(Cadence):
             remask      True to mask values outside the time limits.
             derivs      True to include derivatives of tstep in the returned
                         time.
-            inclusive   True to treat the maximum index of the cadence as inside
-                        the cadence; False to treat it as outside.
+            inclusive   True to treat the end time of the cadence as part of the
+                        cadence; False to exclude it.
 
         Return:         a Scalar of times in seconds TDB.
         """
@@ -59,17 +56,14 @@ class Instant(Cadence):
         return self.tdb     #### Shouldn't this be self.tdb[tstep.int()]?
 
     #===========================================================================
-    def time_range_at_tstep(self, tstep, remask=False, inclusive=True,
-                                         shift=True):
+    def time_range_at_tstep(self, tstep, remask=False, inclusive=True):
         """The range of times for the given time step.
 
         Input:
             tstep       a Pair of time step index values.
             remask      True to mask values outside the time limits.
-            inclusive   True to treat the maximum index of the cadence as inside
-                        the cadence; False to treat it as outside.
-            shift       True to identify the end moment of the cadence as being
-                        part of the last time step.
+            inclusive   True to treat the end time of the cadence as part of the
+                        cadence; False to exclude it.
 
         Return:         (time_min, time_max)
             time_min    a Scalar defining the minimum time associated with the
@@ -90,9 +84,8 @@ class Instant(Cadence):
             remask      True to mask time values not sampled within the cadence.
             derivs      True to include derivatives of tstep in the returned
                         time.
-            inclusive   True to treat the end time of an interval as inside the
-                        cadence; False to treat it as outside. The start time of
-                        an interval is always treated as inside.
+            inclusive   True to treat the end time of the cadence as part of the
+                        cadence; False to exclude it.
 
         Return:         a Pair of time step index values.
         """
@@ -100,14 +93,36 @@ class Instant(Cadence):
         return Scalar(np.zeros(self.shape), self.tdb != time)
 
     #===========================================================================
+    def tstep_range_at_time(self, time, remask=False, inclusive=True):
+        """Integer range of time steps active at the given time.
+
+        Input:
+            time        a Scalar of times in seconds TDB.
+            remask      True to mask time values not sampled within the cadence.
+            inclusive   True to treat the end time of the cadence as part of the
+                        cadence; False to exclude it.
+
+        Return:         (tstep_min, tstep_max)
+            tstep_min   minimum integer time step of active range.
+            tstep_max   maximum integer time step of active range.
+
+
+        All returned values will be in the range (0, steps-1) inclusive.
+        regardless of mask. If the time is not inside the cadence, tstep_max <
+        tstep_min.
+        """
+
+        ### TDB
+        raise NotImplementedError('not implemented')
+
+    #===========================================================================
     def time_is_outside(self, time, inclusive=True):
         """A Boolean mask of times that fall outside the cadence.
 
         Input:
             time        a Scalar of times in seconds TDB.
-            inclusive   True to treat the end time of an interval as inside;
-                        False to treat it as outside. The start time of an
-                        interval is always treated as inside.
+            inclusive   True to treat the end time of the cadence as part of the
+                        cadence; False to exclude it.
 
         Return:         a Boolean array indicating which time values are not
                         sampled by the cadence.

@@ -5,12 +5,12 @@
 import numpy as np
 from polymath import Scalar, Vector3, Matrix3
 
-from .          import Path
-from ..body     import Body
-from ..event    import Event
-from ..fittable import Fittable
-from ..frame    import Frame
-from ..gravity  import Gravity
+from oops.body     import Body
+from oops.event    import Event
+from oops.fittable import Fittable
+from oops.frame    import Frame
+from oops.gravity  import Gravity
+from oops.path     import Path
 
 SEMIM = 0   # elements[SEMIM] = semimajor axis (km)
 MEAN0 = 1   # elements[MEAN0] = mean longitude at epoch (radians)
@@ -110,8 +110,10 @@ class KeplerPath(Path, Fittable):
 
         self.nwobbles = len(wobbles)
         for name in self.wobbles:
-            assert name in ('mean', 'peri', 'node', 'a', 'e', 'i', 'e2d', 'i2d',
-                            'pole')
+            if name not in {'mean', 'peri', 'node', 'a', 'e', 'i', 'e2d', 'i2d',
+                            'pole'}:
+                raise ValueError('invalid name for wobble in KeplerPath: '
+                                 + repr(name))
 
         self.nparams = NELEMENTS + self.nwobbles * NWOBBLES
         self.param_name = "elements"
@@ -128,7 +130,9 @@ class KeplerPath(Path, Fittable):
             self.to_j2000 = Matrix3.IDENTITY
         else:
             self.observer = Path.as_path(observer)
-            assert self.observer.shape == ()
+            if self.observer.shape:
+                raise ValueError('KeplerPath requires a shapeless observer')
+
             self.origin = self.observer
             self.frame = frame or Frame.J2000
             frame = self.frame.wrt(self.planet.ring_frame)
@@ -174,8 +178,10 @@ class KeplerPath(Path, Fittable):
 
     # Unpickled paths will always have temporary IDs to avoid conflicts
     def __getstate__(self):
-        return (self.planet, self.epoch, self.elements, self.observer,
-                self.wobbles, self.frame)
+        return (self.planet, self.epoch, self.elements,
+                Path.as_primary_path(self.observer),
+                self.wobbles,
+                Frame.as_primary_frame(self.frame))
 
     def __setstate__(self, state):
         # If this path matches a pre-existing path, re-use its ID
@@ -218,7 +224,9 @@ class KeplerPath(Path, Fittable):
         global NELEMENTS
 
         self.elements = np.asfarray(elements)
-        assert self.elements.shape == (self.nparams,)
+        if self.elements.shape != (self.nparams,):
+            raise ValueError('revised KeplerPath elements do not match shape '
+                             'of original')
 
         # Make copies of the orbital elements for convenience
         self.a = self.elements[SEMIM]
@@ -815,8 +823,6 @@ class KeplerPath(Path, Fittable):
         node = self.node_at_time(time)
         cos_node = np.cos(node)
         sin_node = np.sin(node)
-        _node_in_j2000 = (cos_node * x_axis_in_j2000 +
-                          sin_node * y_axis_in_j2000)
 
         # This vector is 90 degrees behind of the node in the reference equator
         target_in_j2000 = ( sin_node * x_axis_in_j2000 +
@@ -923,8 +929,6 @@ def _pos_derivative_test(kep, t, delta=1.e-5):
 
     # Save the position and its derivatives
     event = kep.event_at_time(t, partials=True)
-    _xyz = event.pos.vals
-    _d_xyz_dt = event.vel.vals
     d_xyz_d_elem = event.pos.d_delements.vals
     pos_norm = event.pos.norm().vals
 
@@ -965,11 +969,10 @@ def _pos_derivative_test(kep, t, delta=1.e-5):
     return errors
 
 #===============================================================================
-#===============================================================================
 class Test_KeplerPath(unittest.TestCase):
 
     def setUp(self):
-        from ..body import Body
+        from oops.body import Body
 
         Body.reset_registry()
         Body.define_solar_system("2000-01-01", "2010-01-01")
@@ -978,7 +981,7 @@ class Test_KeplerPath(unittest.TestCase):
         pass
 
     def runTest(self):
-        from ..body import Body
+        from oops.body import Body
 
         # SEMIM = 0    elements[SEMIM] = semimajor axis (km)
         # MEAN0 = 1    elements[MEAN0] = mean longitude at epoch (radians)

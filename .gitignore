@@ -14,3 +14,7 @@ oops/backplane-unittest-results*
 *.png
 *venv*
 **/.vscode
+*.json
+*.bbprojectd
+.coverage
+htmlcov

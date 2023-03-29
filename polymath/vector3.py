@@ -6,11 +6,9 @@ from __future__ import division
 import numpy as np
 import numbers
 
-from .qube   import Qube
-from .scalar import Scalar
-from .vector import Vector
-
-TWOPI = 2. * np.pi
+from polymath.qube   import Qube
+from polymath.scalar import Scalar
+from polymath.vector import Vector
 
 class Vector3(Vector):
     """A vector with a fixed length of three."""
@@ -23,7 +21,8 @@ class Vector3(Vector):
     BOOLS_OK = False    # True to allow booleans.
 
     UNITS_OK = True     # True to allow units; False to disallow them.
-    DERIVS_OK = True    # True to allow derivatives; False to disallow them.
+    DERIVS_OK = True    # True to allow derivatives and to allow this class to
+                        # have a denominator; False to disallow them.
 
     DEFAULT_VALUE = np.array([1.,1.,1.])
 
@@ -39,11 +38,11 @@ class Vector3(Vector):
         if isinstance(arg, Qube):
 
             # Collapse a 1x3 or 3x1 Matrix down to a Vector
-            if arg.numer in ((1,3), (3,1)):
-                return arg.flatten_numer(Vector3, recursive)
+            if arg._numer_ in ((1,3), (3,1)):
+                return arg.flatten_numer(Vector3, recursive=recursive)
 
             # For any suitable Qube, move numerator items to the denominator
-            if arg.rank > 1 and arg.numer[0] == 3:
+            if arg.rank > 1 and arg._numer_[0] == 3:
                 arg = arg.split_items(1, Vector3)
 
             arg = Vector3(arg)
@@ -95,20 +94,20 @@ class Vector3(Vector):
                         derivatives in ra, dec and length. Default is True.
         """
 
-        ra  = Scalar.as_scalar(ra, recursive)
-        dec = Scalar.as_scalar(dec, recursive)
+        ra  = Scalar.as_scalar(ra, recursive=recursive)
+        dec = Scalar.as_scalar(dec, recursive=recursive)
 
         cos_dec = dec.cos()
         x = cos_dec * ra.cos()
         y = cos_dec * ra.sin()
         z = dec.sin()
 
-        result = Vector3.from_scalars(x, y, z, recursive)
+        result = Vector3.from_scalars(x, y, z, recursive=recursive)
 
         if isinstance(length, numbers.Real) and length == 1.:
             return result
         else:
-            return Scalar.as_scalar(length, recursive) * result
+            return Scalar.as_scalar(length, recursive=recursive) * result
 
     #===========================================================================
     def to_ra_dec_length(self, recursive=True):
@@ -118,10 +117,10 @@ class Vector3(Vector):
             recursive   True to include the derivatives. Default is True.
         """
 
-        (x,y,z) = self.to_scalars(recursive)
-        length = self.norm(recursive)
+        (x,y,z) = self.to_scalars(recursive=recursive)
+        length = self.norm(recursive=recursive)
 
-        ra = y.arctan2(x) % TWOPI
+        ra = y.arctan2(x) % Scalar.TWOPI
         dec = (z/length).arcsin()
 
         return (ra, dec, length)
@@ -141,14 +140,14 @@ class Vector3(Vector):
                         derivatives in radius, longitude and z. Default is True.
         """
 
-        radius  = Scalar.as_scalar(radius, recursive)
-        longitude = Scalar.as_scalar(longitude, recursive)
-        z = Scalar.as_scalar(z, recursive)
+        radius  = Scalar.as_scalar(radius, recursive=recursive)
+        longitude = Scalar.as_scalar(longitude, recursive=recursive)
+        z = Scalar.as_scalar(z, recursive=recursive)
 
-        x = radius * longitude.cos(recursive)
-        y = radius * longitude.sin(recursive)
+        x = radius * longitude.cos(recursive=recursive)
+        y = radius * longitude.sin(recursive=recursive)
 
-        return Vector3.from_scalars(x, y, z, recursive)
+        return Vector3.from_scalars(x, y, z, recursive=recursive)
 
     #===========================================================================
     def to_cylindrical(self, recursive=True):
@@ -158,12 +157,39 @@ class Vector3(Vector):
             recursive   True to include the derivatives. Default is True.
         """
 
-        (x,y,z) = self.to_scalars(recursive)
-        radius = (x**2 + y**2).sqrt(recursive)
+        (x,y,z) = self.to_scalars(recursive=recursive)
+        radius = (x**2 + y**2).sqrt(recursive=recursive)
 
-        longitude = y.arctan2(x,recursive) % TWOPI
+        longitude = y.arctan2(x, recursive=recursive) % Scalar.TWOPI
 
         return (radius, longitude, z)
+
+    #===========================================================================
+    def longitude(self, recursive=True):
+        """Longitude (or right ascension) of this Vector3 as projected onto the
+        X/Y plane.
+
+        The returned value will always fall between zero and 2*pi.
+
+        Inputs:
+            recursive   True to include the derivatives. Default is True.
+        """
+
+        x = self.to_scalar(0, recursive=recursive)
+        y = self.to_scalar(1, recursive=recursive)
+        return y.arctan2(x) % Scalar.TWOPI
+
+    #===========================================================================
+    def latitude(self, recursive=True):
+        """Latitude (or declination) of this Vector3 relative to the Z-axis.
+
+        Inputs:
+            recursive   True to include the derivatives. Default is True.
+        """
+
+        z = self.to_scalar(2, recursive=recursive)
+        length = self.norm(recursive=recursive)
+        return (z/length).arcsin()
 
     ### Most operations are inherited from Vector. These include:
     #     def extract_scalar(self, axis, recursive=True)

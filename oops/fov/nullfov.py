@@ -3,8 +3,7 @@
 ################################################################################
 
 from polymath import Boolean, Scalar, Pair, Vector3
-
-from . import FOV
+from oops.fov import FOV
 
 class NullFOV(FOV):
     """A subclass of FOV that describes an instrument with no field of view,
@@ -27,16 +26,17 @@ class NullFOV(FOV):
         self.__init__()
 
     #===========================================================================
-    def xy_from_uvt(self, uv_pair, tfrac=0.5, time=None, derivs=False):
-        """The (x,y) camera frame coordinates given FOV coordinates (u,v).
+    def xy_from_uvt(self, uv_pair, time=None, derivs=False, remask=False):
+        """The (x,y) camera frame coordinates given the FOV coordinates (u,v) at
+        the specified time.
 
         Input:
             uv_pair     (u,v) coordinate Pair in the FOV.
-            tfrac       Scalar of fractional times during the exposure. Ignored
-                        by NullFOV.
             time        Scalar of optional absolute times. Ignored by NullFOV.
             derivs      If True, any derivatives in (u,v) get propagated into
                         the returned (x,y) Pair.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
 
         Return:         Pair of same shape as uv_pair, giving the transformed
                         (x,y) coordinates in the camera's frame.
@@ -45,16 +45,17 @@ class NullFOV(FOV):
         return Pair.ZEROS
 
     #===========================================================================
-    def uv_from_xyt(self, xy_pair, tfrac=0.5, time=None, derivs=False):
-        """The (u,v) FOV coordinates given (x,y) camera frame coordinates.
+    def uv_from_xyt(self, xy_pair, time=None, derivs=False, remask=False):
+        """The (u,v) FOV coordinates given the (x,y) camera frame coordinates at
+        the specified time.
 
         Input:
             xy_pair     (x,y) Pair in FOV coordinates.
-            tfrac       Scalar of fractional times during the exposure. Ignored
-                        by NullFOV.
             time        Scalar of optional absolute times. Ignored by NullFOV.
             derivs      If True, any derivatives in (x,y) get propagated into
                         the returned (u,v) Pair.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
 
         Return:         Pair of same shape as xy_pair, giving the computed (u,v)
                         FOV coordinates.
@@ -66,16 +67,16 @@ class NullFOV(FOV):
     # Overrides of the default FOV functions
     ############################################################################
 
-    def area_factor(self, uv_pair, tfrac=0.5, time=None):
+    def area_factor(self, uv_pair, time=None, remask=False):
         """The relative area of a pixel or other sensor at (u,v).
 
         Results are scaled to the nominal pixel area.
 
         Input:
             uv_pair     Pair of (u,v) coordinates.
-            tfrac       Scalar of fractional times during the exposure. Ignored
-                        by NullFOV.
             time        Scalar of optional absolute times. Ignored by NullFOV.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
 
         Return:         relative area of the pixel at (u,v), as a Scalar.
         """
@@ -120,9 +121,9 @@ class NullFOV(FOV):
         return Pair.ZEROS
 
     #===========================================================================
-    def los_from_uvt(self, uv_pair, tfrac=0.5, time=None, derivs=False):
-        """The line of sight vector given FOV coordinates (u,v) at fractional time
-        tfrac.
+    def los_from_uvt(self, uv_pair, time=None, derivs=False, remask=False):
+        """The line of sight vector given FOV coordinates (u,v) at the specified
+        time.
 
         The los points in the direction specified by coordinate Pair (u,v).
         Note that this is the direction _opposite_ to that of the arriving
@@ -130,11 +131,11 @@ class NullFOV(FOV):
 
         Input:
             uv_pair     Pair of (u,v) coordinates.
-            tfrac       Scalar of fractional times during the exposure. Ignored
-                        by NullFOV.
             time        Scalar of optional absolute times. Ignored by NullFOV.
             derivs      If True, any derivatives in (u,v) get propagated into
                         the returned line of sight.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
 
         Return:         Vector3 direction of the line of sight in the camera's
                         frame.
@@ -143,9 +144,9 @@ class NullFOV(FOV):
         return Vector3.ZAXIS
 
     #===========================================================================
-    def uv_from_los_t(self, los, tfrac=0.5, time=None, derivs=False):
-        """The FOV coordinates (u,v) given a line of sight vector at fractional
-        time tfrac.
+    def uv_from_los_t(self, los, time=None, derivs=False, remask=False):
+        """The FOV coordinates (u,v) given a line of sight vector at the
+        specified time.
 
         The los points in the direction specified by coordinate Pair (u,v).
         Note that this is the direction _opposite_ to that of the arriving
@@ -154,11 +155,11 @@ class NullFOV(FOV):
         Input:
             los         Vector3 direction of the line of sight in the camera's
                         coordinate frame.
-            tfrac       Scalar of fractional times during the exposure. Ignored
-                        by NullFOV.
             time        Scalar of optional absolute times. Ignored by NullFOV.
             derivs      If True, any derivatives in (u,v) get propagated into
                         the returned line of sight.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
 
         Return:         Pair of (u,v) coordinates in the FOV.
         """
@@ -166,17 +167,13 @@ class NullFOV(FOV):
         return Pair.ONES
 
     #===========================================================================
-    def uv_is_outside(self, uv_pair, tfrac=0.5, time=None, inclusive=True,
+    def uv_is_outside(self, uv_pair, time=None, inclusive=True,
                             uv_min=None, uv_max=None):
         """A Boolean mask identifying coordinates outside the FOV.
 
         Input:
             uv_pair     a Pair of (u,v) coordinates.
-            tfrac       Scalar of fractional times during the exposure, where
-                        tfrac=0 at the beginning and 1 at the end. Default is
-                        0.5.
-            time        Scalar of optional absolute time in seconds. Only one of
-                        tfrac and time can be specified; the other must be None.
+            time        Scalar of optional absolute times. Ignored by NullFOV.
             inclusive   True to interpret coordinate values at the upper end of
                         each range as inside the FOV; False to interpret them as
                         outside.
@@ -220,14 +217,12 @@ class NullFOV(FOV):
         return Boolean.TRUE
 
     #===========================================================================
-    def xy_is_outside(self, xy_pair, tfrac=0.5, time=None, inclusive=True,
+    def xy_is_outside(self, xy_pair, time=None, inclusive=True,
                             uv_min=None, uv_max=None):
         """A boolean mask identifying coordinates outside the FOV.
 
         Input:
             xy_pair     a Pair of (x,y) coordinates, assuming z == 1.
-            tfrac       Scalar of fractional times during the exposure. Ignored
-                        by NullFOV.
             time        Scalar of optional absolute times. Ignored by NullFOV.
             inclusive   True to interpret coordinate values at the upper end of
                         each range as inside the FOV; False to interpet them as
@@ -244,14 +239,12 @@ class NullFOV(FOV):
         return Boolean.TRUE
 
     #===========================================================================
-    def los_is_outside(self, los, tfrac=0.5, time=None, inclusive=True,
+    def los_is_outside(self, los, time=None, inclusive=True,
                              uv_min=None, uv_max=None):
         """A boolean mask identifying lines of sight outside the FOV.
 
         Input:
             los         an outward line-of-sight vector.
-            tfrac       Scalar of fractional times during the exposure. Ignored
-                        by NullFOV.
             time        Scalar of optional absolute times. Ignored by NullFOV.
             inclusive   True to interpret coordinate values at the upper end of
                         each range as inside the FOV; False to interpet them as

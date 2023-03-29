@@ -42,9 +42,11 @@ if __name__ == '__main__':
     from unit_tests.test_qube_getitem          import *
     from unit_tests.test_qube_getstate         import *
     from unit_tests.test_qube_identity         import *
+    from unit_tests.test_qube_iterate          import *
     from unit_tests.test_qube_items            import *
     from unit_tests.test_qube_types            import *
     from unit_tests.test_qube_masking          import *
+    from unit_tests.test_qube_power            import *
     from unit_tests.test_qube_readonly         import *
     from unit_tests.test_qube_reshaping        import *
     from unit_tests.test_qube_setitem          import *

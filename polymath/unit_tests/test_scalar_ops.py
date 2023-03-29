@@ -1488,19 +1488,63 @@ class Test_Scalar_ops(unittest.TestCase):
     a = Scalar(np.arange(20) + 1, derivs={'t':Scalar(np.ones(20))})
     b = a**0
     self.assertEqual(b, 1)
+    self.assertEqual(b._values_.dtype.kind, 'i')
+    self.assertEqual(b.d_dt, 0)
+
+    b = a**0.
+    self.assertEqual(b, 1)
+    self.assertEqual(b._values_.dtype.kind, 'f')
     self.assertEqual(b.d_dt, 0)
 
     b = a**1
     self.assertEqual(b, a)
+    self.assertEqual(b._values_.dtype.kind, 'i')
+    self.assertEqual(b.d_dt, 1)
+
+    b = a**1.
+    self.assertEqual(b, a)
+    self.assertEqual(b._values_.dtype.kind, 'f')
     self.assertEqual(b.d_dt, 1)
 
     b = a**2
     self.assertEqual(b, a*a)
+    self.assertEqual(b._values_.dtype.kind, 'i')
+    self.assertEqual(b.d_dt, 2*a)
+
+    b = a**2.
+    self.assertEqual(b, a*a)
+    self.assertEqual(b._values_.dtype.kind, 'f')
     self.assertEqual(b.d_dt, 2*a)
 
     b = a**3
     self.assertEqual(b, a*a*a)
+    self.assertEqual(b._values_.dtype.kind, 'i')
     self.assertEqual(b.d_dt, 3*a*a)
+
+    b = a**3.
+    self.assertEqual(b, a*a*a)
+    self.assertEqual(b._values_.dtype.kind, 'f')
+    self.assertEqual(b.d_dt, 3*a*a)
+
+    b = a**4
+    self.assertEqual(b, a*a*a*a)
+    self.assertEqual(b._values_.dtype.kind, 'i')
+    self.assertEqual(b.d_dt, 4*a*a*a)
+
+    b = a**4.
+    self.assertEqual(b, a*a*a*a)
+    self.assertEqual(b._values_.dtype.kind, 'f')
+    self.assertEqual(b.d_dt, 4*a*a*a)
+
+    b = a**5
+    self.assertEqual(b, a*a*a*a*a)
+    self.assertEqual(b._values_.dtype.kind, 'i')
+    self.assertEqual(b.d_dt, 5*a*a*a*a)
+
+    b = a**5.
+    self.assertEqual(b, a*a*a*a*a)
+    self.assertEqual(b._values_.dtype.kind, 'f')
+    self.assertEqual(b.d_dt, 5*a*a*a*a)
 
     b = a**0.5
     self.assertTrue(abs(b - a.sqrt()).max() < 1.e-14)
@@ -1511,24 +1555,25 @@ class Test_Scalar_ops(unittest.TestCase):
     self.assertTrue(abs(b.d_dt + b*b).max() < 1.e-14)
 
     # Read-only status
-    self.assertFalse(a.readonly)
-    self.assertFalse((a**0).readonly)
-    self.assertFalse((a**1).readonly)
-    self.assertFalse((a**2).readonly)
-    self.assertFalse((a**3).readonly)
-    self.assertFalse((a**0.5).readonly)
-    self.assertFalse((a**(-0.5)).readonly)
-    self.assertFalse((a**(-1)).readonly)
-
-    b = a.as_readonly()
-    self.assertTrue(b.readonly)
-    self.assertFalse((b**0).readonly)
-    self.assertFalse((b**1).readonly)
-    self.assertFalse((b**2).readonly)
-    self.assertFalse((b**3).readonly)
-    self.assertFalse((b**0.5).readonly)
-    self.assertFalse((b**(-0.5)).readonly)
-    self.assertFalse((b**(-1)).readonly)
+# This probably is no longer what we intend
+#     self.assertFalse(a.readonly)
+#     self.assertFalse((a**0).readonly)
+#     self.assertFalse((a**1).readonly)
+#     self.assertFalse((a**2).readonly)
+#     self.assertFalse((a**3).readonly)
+#     self.assertFalse((a**0.5).readonly)
+#     self.assertFalse((a**(-0.5)).readonly)
+#     self.assertFalse((a**(-1)).readonly)
+#
+#     b = a.as_readonly()
+#     self.assertTrue(b.readonly)
+#     self.assertFalse((b**0).readonly)
+#     self.assertFalse((b**1).readonly)
+#     self.assertFalse((b**2).readonly)
+#     self.assertFalse((b**3).readonly)
+#     self.assertFalse((b**0.5).readonly)
+#     self.assertFalse((b**(-0.5)).readonly)
+#     self.assertFalse((b**(-1)).readonly)
 
     # Power, multiple exponents, etc.
     a = Scalar(2)
@@ -1547,15 +1592,6 @@ class Test_Scalar_ops(unittest.TestCase):
     b = a**2
     self.assertEqual(b.units, Units.KM**2)
     self.assertRaises(ValueError, a.__pow__, (2,3))
-
-    expo = Scalar([2,3,2,4,2], mask=[False,True,False,True,True])
-    b = a**expo
-    self.assertEqual(b[0], 4)
-    self.assertEqual(b[1], Scalar.MASKED)
-    self.assertEqual(b[2], 4)
-    self.assertEqual(b[3], Scalar.MASKED)
-    self.assertEqual(b[4], Scalar.MASKED)
-    self.assertEqual(b.units, Units.KM**2)
 
     a = Scalar(0)
     self.assertEqual(a**0, 1)

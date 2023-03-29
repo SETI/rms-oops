@@ -5,11 +5,11 @@
 import numpy as np
 from polymath import Pair
 
-from . import FOV
+from oops.fov import FOV
 
 class FlatFOV(FOV):
     """FOV subclass that describes a field of view that is free of distortion,
-    implementing an exact pinhole camera model.
+    implementing an exact pinhole ("gnomonic") camera model.
     """
 
     #===========================================================================
@@ -68,42 +68,49 @@ class FlatFOV(FOV):
         self.__init__(*state)
 
     #===========================================================================
-    def xy_from_uvt(self, uv_pair, tfrac=0.5, time=None, derivs=False):
+    def xy_from_uvt(self, uv_pair, time=None, derivs=False, remask=False):
         """The (x,y) camera frame coordinates given FOV coordinates (u,v).
 
         Input:
             uv_pair     (u,v) coordinate Pair in the FOV.
-            tfrac       Scalar of fractional times during the exposure. Ignored
-                        by FlatFOV.
             time        Scalar of optional absolute times. Ignored by FlatFOV.
             derivs      If True, any derivatives in (u,v) get propagated into
                         the returned (x,y) Pair.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
 
         Return:         Pair of same shape as uv_pair, giving the transformed
                         (x,y) coordinates in the camera's frame.
         """
 
         uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
+        if remask:
+            uv_pair = uv_pair.mask_or(self.is_outside(uv_pair).vals)
+
         return (uv_pair - self.uv_los).element_mul(self.uv_scale)
 
     #===========================================================================
-    def uv_from_xyt(self, xy_pair, tfrac=0.5, time=None, derivs=False):
+    def uv_from_xyt(self, xy_pair, time=None, derivs=False, remask=False):
         """The (u,v) FOV coordinates given (x,y) camera frame coordinates.
 
         Input:
             xy_pair     (x,y) Pair in FOV coordinates.
-            tfrac       Scalar of fractional times during the exposure. Ignored
-                        by FlatFOV.
             time        Scalar of optional absolute times. Ignored by FlatFOV.
             derivs      If True, any derivatives in (x,y) get propagated into
                         the returned (u,v) Pair.
+            remask      True to mask (u,v) coordinates outside the field of
+                        view; False to leave them unmasked.
 
         Return:         Pair of same shape as xy_pair, giving the computed (u,v)
                         FOV coordinates.
         """
 
         xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
-        return xy_pair.element_div(self.uv_scale) + self.uv_los
+        uv_pair = xy_pair.element_div(self.uv_scale) + self.uv_los
+        if remask:
+            uv_pair = uv_pair.mask_or(self.is_outside(uv_pair).vals)
+
+        return uv_pair
 
 ################################################################################
 # UNIT TESTS
@@ -114,6 +121,8 @@ import unittest
 class Test_FlatFOV(unittest.TestCase):
 
     def runTest(self):
+
+        from oops.config import AREA_FACTOR
 
         test = FlatFOV((1/2048.,-1/2048.), 101, (50,75))
 
@@ -132,11 +141,16 @@ class Test_FlatFOV(unittest.TestCase):
         uv_test = test.uv_from_xy(xy)
         self.assertEqual(uv_test, Pair(buffer))
 
-        self.assertEqual(test.area_factor(buffer), 1.)
+        try:
+            AREA_FACTOR.old = True
+            self.assertEqual(test.area_factor(buffer), 1.)
 
-        test2 = FlatFOV((1/2048.,-1/2048.), 101, (50,75),
-                        uv_area=test.uv_area*2)
-        self.assertEqual(test2.area_factor(buffer), 0.5)
+            test2 = FlatFOV((1/2048.,-1/2048.), 101, (50,75),
+                            uv_area=test.uv_area*2)
+            self.assertEqual(test2.area_factor(buffer), 0.5)
+
+        finally:
+            AREA_FACTOR.old = False
 
 ########################################
 if __name__ == '__main__':

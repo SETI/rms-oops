@@ -5,40 +5,12 @@
 import numpy as np
 import numbers
 import sys
-from ..qube import Qube
-from ..units import Units
+from polymath.qube import Qube
+from polymath.units import Units
 
 PYTHON2 = (sys.version_info[0] < 3)
 
 #===============================================================================
-def _mean(arg, axis=None, recursive=True):
-    """The mean of the unmasked values.
-
-    Input:
-        arg         the object for which to calculate the mean or sum.
-        axis        an integer axis or a tuple of axes. The mean is determined
-                    across these axes, leaving any remaining axes in the
-                    returned value. If None (the default), then the mean is
-                    performed across all axes of the object.
-        recursive   True to construct the mean of the derivatives.
-    """
-
-    return _mean_or_sum(arg, axis, recursive, _combine_as_mean=True)
-
-def _sum(arg, axis=None, recursive=True):
-    """The sum of the unmasked values.
-
-    Input:
-        arg         the object for which to calculate the mean or sum.
-        axis        an integer axis or a tuple of axes. The mean is determined
-                    across these axes, leaving any remaining axes in the
-                    returned value. If None (the default), then the mean is
-                    performed across all axes of the object.
-        recursive   True to construct the mean of the derivatives.
-    """
-
-    return _mean_or_sum(arg, axis, recursive, _combine_as_mean=False)
-
 def _mean_or_sum(arg, axis=None, recursive=True, _combine_as_mean=False):
     """The mean or sum of the unmasked values. Internal method.
 
@@ -53,8 +25,10 @@ def _mean_or_sum(arg, axis=None, recursive=True, _combine_as_mean=False):
                     True to combine as a mean; False to combine as a sum.
     """
 
-    if arg.size == 0 or np.all(arg._mask_):
-        return arg.masked_single()
+    arg._check_axis(axis, 'mean()' if _combine_as_mean else 'sum()')
+
+    if arg._size_ == 0:
+        return arg._zero_sized_result(axis=axis)
 
     # Select the NumPy function
     if _combine_as_mean:
@@ -73,13 +47,19 @@ def _mean_or_sum(arg, axis=None, recursive=True, _combine_as_mean=False):
 
     # If there's no mask, this is easy
     if not np.any(arg._mask_):
-        obj = Qube(func(arg._values_, axis=new_axis), False,
-                   example=arg)
+        obj = Qube(func(arg._values_, axis=new_axis), False, example=arg)
+
+    # Handle a fully masked object
+    elif np.all(arg._mask_):
+        obj = Qube(func(arg._values_, axis=new_axis), True, example=arg)
 
     # If we are averaging over all axes, this is fairly easy
     elif axis is None:
-        obj = Qube(func(arg._values_[arg.antimask], axis=0), False,
-                   example=arg)
+        if arg._shape_ == ():
+            obj = arg
+        else:
+            obj = Qube(func(arg._values_[arg.antimask], axis=0), False,
+                       example=arg)
 
     # At this point, we have handled the cases mask==True and mask==False,
     # so the mask must be an array. Also, there must be at least one
@@ -130,6 +110,58 @@ def _mean_or_sum(arg, axis=None, recursive=True, _combine_as_mean=False):
     return obj
 
 #===============================================================================
+def _check_axis(arg, axis, op):
+    """Validate the axis as None, an int, or a tuple of ints."""
+
+    if axis is None:    # can't be a problem
+        return
+
+    # Fix up the axis argument
+    if isinstance(axis, tuple):
+        axis_for_show = axis
+    elif isinstance(axis, list):
+        axis_for_show = tuple(axis)
+    else:
+        axis_for_show = axis
+        axis = (axis,)
+
+    # Check for duplicates
+    # Check for in-range values
+    selections = len(arg._shape_) * [False]
+    for i in axis:
+        try:
+            _ = selections[i]
+        except IndexError:
+            raise IndexError('axis is out of range (%d,%d) in %s.%s: %d'
+                             % (-len(arg._shape_), -len(arg._shape_),
+                                type(arg).__name__, op, i))
+
+        if selections[i]:
+            raise IndexError('duplicated axis in %s.%s: %s'
+                             % (type(arg).__name__, op, axis_for_show))
+
+        selections[i] = True
+
+#===============================================================================
+def _zero_sized_result(self, axis):
+    """A zero-sized result obtained by collapsing one or more axes of an object
+    that already has size zero.
+    """
+
+    if axis is None:
+        return self.flatten().as_size_zero()
+
+    # Construct an index to obtain the correct shape
+    indx = len(self.shape) * [slice(None)]
+    if isinstance(axis, (list, tuple)):
+        for i in axis:
+            indx[i] = 0
+        else:
+            indx[i] = 0
+
+    return self[tuple(indx)]
+
+#===============================================================================
 @staticmethod
 def dot(arg1, arg2, axis1=-1, axis2=0, classes=(), recursive=True):
     """The dot product of two objects.
@@ -151,8 +183,7 @@ def dot(arg1, arg2, axis1=-1, axis2=0, classes=(), recursive=True):
 
     # At most one object can have a denominator.
     if arg1._drank_ and arg2._drank_:
-        raise ValueError('at most one object in dot() can have a ' +
-                         'denominator')
+        Qube._raise_dual_denoms('dot()', arg1, arg2)
 
     # Position axis1 from left
     if axis1 >= 0:
@@ -160,8 +191,9 @@ def dot(arg1, arg2, axis1=-1, axis2=0, classes=(), recursive=True):
     else:
         a1 = axis1 + arg1._nrank_
     if a1 < 0 or a1 >= arg1._nrank_:
-        raise ValueError('first axis is out of range (%d,%d): %d' %
-                         (-arg1._nrank_, arg1._nrank_, axis1))
+        raise ValueError('first axis is out of range (%d,%d) in %s.dot(): %d'
+                         % (-arg1._nrank_, arg1._nrank_, type(arg1).__name__,
+                            axis1))
     k1 = a1 + len(arg1._shape_)
 
     # Position axis2 from item left
@@ -170,14 +202,16 @@ def dot(arg1, arg2, axis1=-1, axis2=0, classes=(), recursive=True):
     else:
         a2 = axis2 + arg2._nrank_
     if a2 < 0 or a2 >= arg2._nrank_:
-        raise ValueError('second axis out of range (%d,%d): %d' %
-                         (-arg2._nrank_, arg2._nrank_, axis2))
+        raise ValueError('second axis is out of range (%d,%d) in %s.dot(): %d'
+                         % (-arg2._nrank_, arg2._nrank_, type(arg2).__name__,
+                            axis2))
     k2 = a2 + len(arg2._shape_)
 
     # Confirm that the axis lengths are compatible
     if arg1._numer_[a1] != arg2._numer_[a2]:
-        raise ValueError('axes have different lengths: %d, %d' %
-                         (arg1._numer_[a1], arg2._numer_[a2]))
+        raise ValueError('%s.dot() axes have different lengths: %d, %d' %
+                         (type(arg1).__name__, arg1._numer_[a1],
+                          arg2._numer_[a2]))
 
     # Re-shape the value arrays (shape, numer1, numer2, denom1, denom2)
     shape1 = (arg1._shape_ + arg1._numer_ + (arg2._nrank_ - 1) * (1,) +
@@ -205,7 +239,7 @@ def dot(arg1, arg2, axis1=-1, axis2=0, classes=(), recursive=True):
     new_drank = arg1._drank_ + arg2._drank_
 
     obj = Qube(new_values,
-               arg1._mask_ | arg2._mask_,
+               Qube.or_(arg1._mask_, arg2._mask_),
                units=Units.mul_units(arg1._units_, arg2._units_),
                nrank=new_nrank, drank=new_drank, example=arg1)
     obj = obj.cast(classes)
@@ -251,7 +285,8 @@ def norm(arg, axis=-1, classes=(), recursive=True):
     """
 
     if arg._drank_ != 0:
-        raise ValueError('norm() does not allow denominators')
+        raise ValueError('%s.norm() does not support denominators'
+                         % type(arg).__name__)
 
     # Position axis from left
     if axis >= 0:
@@ -259,8 +294,9 @@ def norm(arg, axis=-1, classes=(), recursive=True):
     else:
         a1 = axis + arg._nrank_
     if a1 < 0 or a1 >= arg._nrank_:
-        raise ValueError('axis is out of range (%d,%d): %d' %
-                         (-arg._nrank_, arg._nrank_, axis))
+        raise ValueError('axis is out of range (%d,%d) in %s.norm(): %d'
+                         % (-arg._nrank_, arg._nrank_, type(arg).__name__,
+                            axis))
     k1 = a1 + len(arg._shape_)
 
     # Evaluate the norm
@@ -298,7 +334,8 @@ def norm_sq(arg, axis=-1, classes=(), recursive=True):
     """
 
     if arg._drank_ != 0:
-        raise ValueError('norm_sq() does not allow denominators')
+        raise ValueError('%s.norm_sq() does not support denominators'
+                         % type(arg).__name__)
 
     # Position axis from left
     if axis >= 0:
@@ -306,8 +343,9 @@ def norm_sq(arg, axis=-1, classes=(), recursive=True):
     else:
         a1 = axis + arg._nrank_
     if a1 < 0 or a1 >= arg._nrank_:
-        raise ValueError('axis is out of range (%d,%d): %d' %
-                         (-arg._nrank_, arg._nrank_, axis))
+        raise ValueError('axis is out of range (%d,%d) in %s.norm_sq(): %d'
+                         % (-arg._nrank_, arg._nrank_, type(arg).__name__,
+                            axis))
     k1 = a1 + len(arg._shape_)
 
     # Evaluate the norm
@@ -350,8 +388,7 @@ def cross(arg1, arg2, axis1=-1, axis2=0, classes=(), recursive=True):
 
     # At most one object can have a denominator.
     if arg1._drank_ and arg2._drank_:
-        raise ValueError('at most one object in cross() can have a ' +
-                         'denominator')
+        Qube._raise_dual_denoms('cross()', arg1, arg2)
 
     # Position axis1 from left
     if axis1 >= 0:
@@ -359,8 +396,9 @@ def cross(arg1, arg2, axis1=-1, axis2=0, classes=(), recursive=True):
     else:
         a1 = axis1 + arg1._nrank_
     if a1 < 0 or a1 >= arg1._nrank_:
-        raise ValueError('first axis is out of range (%d,%d): %d' %
-                         (-arg1._nrank_, arg1._nrank_, axis1))
+        raise ValueError('first axis is out of range (%d,%d) in %s.cross(): %d'
+                         % (-arg1._nrank_, arg1._nrank_, type(arg1).__name__,
+                            axis1))
     k1 = a1 + len(arg1._shape_)
 
     # Position axis2 from item left
@@ -369,15 +407,18 @@ def cross(arg1, arg2, axis1=-1, axis2=0, classes=(), recursive=True):
     else:
         a2 = axis2 + arg2._nrank_
     if a2 < 0 or a2 >= arg2._nrank_:
-        raise ValueError('second axis out of range (%d,%d): %d' %
-                         (-arg2._nrank_, arg2._nrank_, axis2))
+        raise ValueError('second axis is out of range (%d,%d) in %s.cross(): %d'
+                         % (-arg2._nrank_, arg2._nrank_, type(arg2).__name__,
+                            axis2))
     k2 = a2 + len(arg2._shape_)
 
     # Confirm that the axis lengths are compatible
     if ((arg1._numer_[a1] != arg2._numer_[a2]) or
         (arg1._numer_[a1] not in (2,3))):
-        raise ValueError('invalid axis length for cross product: %d, %d' %
-                         (arg1._numer_[a1], arg2._numer_[a2]))
+        raise ValueError('invalid axis length for %s.cross(): %d, %d; '
+                         'must be 2 or 3'
+                         % (type(arg1).__name__, arg1._numer_[a1],
+                            arg2._numer_[a2]))
 
     # Re-shape the value arrays (shape, numer1, numer2, denom1, denom2)
     shape1 = (arg1._shape_ + arg1._numer_ + (arg2._nrank_ - 1) * (1,) +
@@ -410,7 +451,7 @@ def cross(arg1, arg2, axis1=-1, axis2=0, classes=(), recursive=True):
 
     # Construct the object and cast
     obj = Qube(new_values,
-               arg1._mask_ | arg2._mask_,
+               Qube.or_(arg1._mask_, arg2._mask_),
                units=Units.mul_units(arg1._units_, arg2._units_),
                nrank=new_nrank, drank=new_drank, example=arg1)
     obj = obj.cast(classes)
@@ -444,7 +485,8 @@ def cross_3x3(a,b):
     """
 
     (a,b) = np.broadcast_arrays(a,b)
-    assert a.shape[-1] == b.shape[-1] == 3
+    if not (a.shape[-1] == b.shape[-1] == 3):
+        raise ValueError('cross_3x3 requires 3x3 arrays')
 
     new_values = np.empty(a.shape)
     new_values[...,0] = a[...,1] * b[...,2] - a[...,2] * b[...,1]
@@ -459,7 +501,8 @@ def cross_2x2(a, b):
     """
 
     (a,b) = np.broadcast_arrays(a,b)
-    assert a.shape[-1] == b.shape[-1] == 2
+    if not (a.shape[-1] == b.shape[-1] == 2):
+        raise ValueError('cross_2x2 requires 2x2 arrays')
 
     return a[...,0] * b[...,1] - a[...,1] * b[...,0]
 
@@ -484,7 +527,7 @@ def outer(arg1, arg2, classes=(), recursive=True):
     # At most one object can have a denominator. This is sufficient
     # to track first derivatives
     if arg1._drank_ and arg2._drank_:
-        raise ValueError('at most one object in outer() can have a denominator')
+        Qube._raise_dual_denoms('outer()', arg1, arg2)
 
     # Re-shape the value arrays (shape, numer1, numer2, denom1, denom2)
     shape1 = (arg1._shape_ + arg1._numer_ + arg2._nrank_ * (1,) +
@@ -503,7 +546,7 @@ def outer(arg1, arg2, classes=(), recursive=True):
     new_drank = arg1._drank_ + arg2._drank_
 
     obj = Qube(new_values,
-               arg1._mask_ | arg2._mask_,
+               Qube.or_(arg1._mask_, arg2._mask_),
                units=Units.mul_units(arg1._units_, arg2._units_),
                nrank=new_nrank, drank=new_drank, example=arg1)
     obj = obj.cast(classes)
@@ -552,8 +595,10 @@ def as_diagonal(arg, axis, classes=(), recursive=True):
     else:
         a1 = axis + arg._nrank_
     if a1 < 0 or a1 >= arg._nrank_:
-        raise ValueError('axis is out of range (%d,%d): %d',
-                         (-arg._nrank_, arg._nrank_, axis))
+        raise ValueError('axis is out of range (%d,%d) in %s.as_diagonal(): %d'
+                         % (-arg._nrank_, arg._nrank_, type(arg).__name__,
+                            axis))
+
     k1 = a1 + len(arg._shape_)
 
     # Roll this axis to the end
@@ -594,9 +639,7 @@ def rms(self):
     """
 
     # Evaluate the norm
-    sum_sq = self._values_**2
-    for r in range(self._rank_):
-        sum_sq = np.sum(sum_sq, axis=-1)
+    sum_sq = np.sum(self._values_**2, axis=tuple(range(-self._rank_,0)))
 
     return Qube.SCALAR_CLASS(np.sqrt(sum_sq/self.isize), self._mask_)
 

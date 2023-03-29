@@ -4,20 +4,26 @@
 
 import numpy as np
 import numbers
-from ..qube import Qube
+from polymath.qube import Qube
 
 def __getitem__(self, indx):
 
-    # A single value can only be indexed with True or False
-    if not self._shape_:
-        if isinstance(indx, tuple) and len(indx) == 1:
-            indx = indx[0]
-        if Qube.is_one_true(indx):
-            return self
-        if Qube.is_one_false(indx):
-            return self.as_all_masked()
+    # Handle indexing of a shapeless object
+    if self._shape_ == ():
+        (masked, size_zero,
+         shape_before, shape_after) = self._prep_scalar_index(indx)
 
-        raise IndexError('too many indices')
+        if size_zero:
+            result = self.as_size_zero()
+        elif masked:
+            result = self.as_all_masked()
+        else:
+            result = self
+
+        if shape_before or shape_after:
+            result = result.reshape(shape_before + shape_after)
+
+        return result
 
     # Interpret and adapt the index
     (pre_index, post_mask, has_ellipsis,
@@ -90,29 +96,42 @@ def __setitem__(self, indx, arg):
 
     self.require_writable()
 
-    # Handle shapeless objects and a single index of True or False
-    test_index = None
-    if isinstance(indx, (bool, np.bool_)):
-        test_index = bool(indx)
-    elif (isinstance(indx, tuple)
-          and len(indx) == 1
-          and isinstance(indx[0], (bool, np.bool_))):
-        test_index = bool(indx[0])
-
-    if test_index is not None:
-        if not test_index:                      # immediate return on False
+    # Handle indexing of a shapeless object, and indices consistent with
+    # shapeless indexing
+    try:
+        (masked, size_zero,
+         shape_before, shape_after) = self._prep_scalar_index(indx)
+    except IndexError:
+        if self._shape_ == ():
+            raise
+    else:
+        if masked or size_zero:
             return
 
-        if not self._shape_:                    # immediate copy on True
-            arg = self.as_this_type(arg)
-            self._values_ = arg._values_
-            self._mask_   = arg._mask_
-            self._cache_.clear()
-            return
+        arg = self.as_this_type(arg, recursive=True)
 
-    # No other index is allowed for a shapeless object
-    if not self._shape_:
-        raise IndexError('too many indices')
+        # Shapes need to match
+        if shape_after:
+            arg = arg.reshape(arg._shape_[:-len(shape_after)])
+                # raises ValueError if the reshape fails
+
+        arg = arg.broadcast_to(self._shape_, recursive=True, _protected=False)
+        arg = arg.copy(recursive=True)
+
+        self._values_ = arg._values_
+        self._mask_   = arg._mask_
+        self._cache_.clear()
+
+        # Set pre-existing derivatives to zero
+        for key, self_deriv in self._derivs_.items():
+            if key not in arg._derivs_:
+                self.insert_deriv(key, self_deriv.zero(), override=True)
+
+        # Insert new derivatives
+        for key, arg_deriv in arg._derivs_.items():
+            self.insert_deriv(key, arg_deriv)
+
+        return
 
     # Interpret the index
     (pre_index, post_mask, has_ellipsis,
@@ -124,12 +143,6 @@ def __setitem__(self, indx, arg):
 
     # Convert the argument to this type
     arg = self.as_this_type(arg, recursive=True)
-
-    # Derivatives must match
-    for key in self._derivs_:
-        if key not in arg._derivs_:
-            raise ValueError('missing derivative d_d%s in replacement' %
-                             key)
 
     # Create the values index
     if has_ellipsis and self._rank_:
@@ -173,13 +186,14 @@ def __setitem__(self, indx, arg):
         arg_mask = arg._mask_
 
     # Set the new values and mask
-    if not np.any(post_mask):               # post-mask is False
+    if not np.any(post_mask):                # post-mask is False
 
         self._values_[vals_index] = arg_values
         if np.shape(self._mask_):
+            self._mask_ = self._mask_.copy() # copy; it might be shared
             self._mask_[pre_index] = arg_mask
 
-    else:                                   # post-mask is an array
+    else:                                    # post-mask is an array
 
         # antimask is False wherever the index is masked
         antimask = np.logical_not(post_mask)
@@ -201,13 +215,32 @@ def __setitem__(self, indx, arg):
             else:
                 selection[antimask] = arg_mask
 
+            self._mask_ = self._mask_.copy()    # copy; it might be shared
             self._mask_[pre_index] = selection
 
     self._cache_.clear()
 
-    # Also update the derivatives (ignoring those not in self)
-    for (key, self_deriv) in self._derivs_.items():
-        self._derivs_[key][indx] = arg._derivs_[key]
+    # Also update the derivatives
+    for key, self_deriv in self._derivs_.items():
+        if key in arg._derivs_:
+            self_deriv[indx] = arg._derivs_[key]
+        else:           # missing means value = 0, but copy mask
+            arg_deriv = self_deriv.zeros(arg._shape_,
+                                         numer=self_deriv._numer_,
+                                         denom=self_deriv._denom_,
+                                         mask=arg._mask_)
+            self_deriv[indx] = arg_deriv
+
+    # Insert derivatives missing from self
+    for key, arg_deriv in arg._derivs_.items():
+        if key not in self._derivs_:
+            # Create a zero-valued derivative, then update through index
+            self_deriv = arg_deriv.zeros(self._shape_,
+                                         numer=arg_deriv._numer_,
+                                         denom=arg_deriv._denom_,
+                                         mask=self._mask_)
+            self_deriv[indx] = arg_deriv
+            self.insert_deriv(key, self_deriv)
 
     return
 
@@ -264,7 +297,7 @@ def _prep_index(self, indx):
             expanded += [item]
 
     # At this point, every item in the index list is a slice, Ellipsis, None, or
-    # a Qube subclass. Ever item will consume exactly one axis of the object,
+    # a Qube subclass. Each item will consume exactly one axis of the object,
     # except for multidimensional boolean arrays, ellipses, and None.
 
     # Identify the axis of this object consumed by each index item.
@@ -278,8 +311,8 @@ def _prep_index(self, indx):
 
         if type(item) == type(Ellipsis):
             if ellipsis_k >= 0:
-                raise IndexError("an index can only have a single " +
-                                 "ellipsis ('...')")
+                raise IndexError('an index can only have a single '
+                                 'ellipsis ("...")')
             ellipsis_k = k
 
         elif isinstance(item, Qube) and item._shape_ and item.is_bool():
@@ -340,14 +373,14 @@ def _prep_index(self, indx):
                 item_shape = item._shape_
                 for k,item_length in enumerate(item_shape):
                   if self._shape_[inloc + k] != item_length:
-                    raise IndexError((
-                        'boolean index did not match indexed array along ' +
-                        'dimension %d; dimension is %d but corresponding ' +
-                        'boolean dimension is %d') % (inloc + k,
-                            self._shape_[inloc + k], item_length))
+                    raise IndexError(
+                        'boolean index did not match indexed array along '
+                        'dimension %d; dimension is %d but corresponding '
+                        'boolean dimension is %d'
+                        % (inloc + k, self._shape_[inloc + k], item_length))
 
                 # Update index and mask
-                index = item._values_ | item._mask_     # True or masked
+                index = Qube.or_(item._values_, item._mask_)  # True or masked
                 pre_index += [index]
 
                 if np.shape(item._mask_):               # mask is an array
@@ -392,7 +425,7 @@ def _prep_index(self, indx):
                                       (index_vals < -axis_length))
                 any_out_of_bounds = np.any(out_of_bounds_mask)
                 if any_out_of_bounds:
-                    mask_vals = mask_vals | out_of_bounds_mask
+                    mask_vals = Qube.or_(mask_vals, out_of_bounds_mask)
                     any_masked = True
                 else:
                     any_masked = np.any(mask_vals)
@@ -459,7 +492,7 @@ def _prep_index(self, indx):
             pre_index += [item]
 
         else:
-            raise IndexError('invalid index type: ' + str(type(item)))
+            raise IndexError('invalid index type: ' + type(item).__name__)
 
     # Get the shape of the array indices
     array_shape = Qube.broadcasted_shape(*array_shapes)
@@ -486,5 +519,77 @@ def _prep_index(self, indx):
 
   except Exception as e:
     raise IndexError(e)
+
+#===============================================================================
+def _prep_scalar_index(self, indx):
+    """Prepare the index, assumed suitable for a shapeless object.
+
+    A single value can only be indexed with True, False, Ellipsis, an empty
+    slice, and None.
+
+    Input:
+        indx            index to prepare.
+
+    Return:
+        masked          True if this object should be masked.
+        size_zero       True if this object should have size zero.
+        shape_before    new shape due to occurrences of None or False before any
+                        Ellipsis.
+        shape_before    new shape due to occurrences of None or False after any
+                        Ellipsis.
+
+    An index of False returns an object of size zero. An index if Boolean.MASKED
+    returns a fully masked object.
+    """
+
+    if not isinstance(indx, (tuple,list)):
+        indx = (indx,)
+
+    has_ellipsis = False
+    has_bool = False
+    masked = False
+    size_zero = False
+    shapes = {False: [], True: []}
+
+    for item in indx:
+
+        # Handle Boolean(True), Boolean(False), Boolean.MASKED
+        if isinstance(item, Qube):
+            if item._shape_:
+                raise IndexError('invalid index shape: ' + str(item._shape_))
+            if not item.is_bool():
+                raise IndexError('too many indices')
+            if item._mask_:
+                masked = True
+                item = True
+            else:
+                item = item._values_
+
+        # Handle Python boolean
+        if isinstance(item, (bool, np.bool_)):
+            if has_bool:
+                raise IndexError('too many indices')
+            size_zero = not item
+            if size_zero:
+                shapes[has_ellipsis].append(0)
+            has_bool = True
+
+        elif item is Ellipsis:
+            if has_ellipsis:
+                raise IndexError('an index can only have a single '
+                                 'ellipsis ("...")')
+            has_ellipsis = True
+
+        elif item is None:
+            shapes[has_ellipsis].append(1)
+
+        elif isinstance(item, slice):
+            if item != slice(None, None, None):
+                raise IndexError('too many indices')
+
+        else:
+            raise IndexError('invalid index type: ' + type(item).__name__)
+
+    return (masked, size_zero, tuple(shapes[False]), tuple(shapes[True]))
 
 ################################################################################
