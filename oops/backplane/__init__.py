@@ -750,8 +750,6 @@ class Backplane(object):
         else:
             detection = self.get_obs_event(event_key, derivs=derivs)
 
-#        if event_key == ('SUN-', 'JUPITER:ANSA'):
-#            print(0)
         # Solve for the event
         if is_gridless:
             # If gridless, the call to get_obs_event above filled in the event,
@@ -988,11 +986,8 @@ import unittest
 import oops.backplane.gold_master as gm
 from oops.unittester_support import OOPS_TEST_DATA_PATH
 
-
-#===============================================================================
 class Test_Backplane_via_gold_master(unittest.TestCase):
 
-  #===========================================================================
   def runTest(self):
 
     # The d/dv numerical ring derivatives are extra-uncertain due to the high
