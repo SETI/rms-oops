@@ -10,7 +10,10 @@ import oops.backplane.gold_master as gm
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
-#gm,set_default args module ....
+# Because JunoCam has such a large, distorted FOV, we need to assign the
+# backplanes an especially large inventory border: border=10 seems to work.
+# However, inventory=False is safer still.
+gm.set_default_args(module='hosts.juno.junocam', inventory=False, border=10)
 
 ###################################################################
 name = 'JNCR_2016347_03C00192_V01'
@@ -23,10 +26,9 @@ gm.define_standard_obs(name,
         obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                'juno/junocam/03/' + name + '.img'),
         index   = 5,
-#        module  = 'hosts.juno.junocam',
-        planet  = 'JUPITER',
-        moon    = '',
-        ring    = '',
+        planets  = 'JUPITER',
+        moons    = '',
+        rings    = '',
         kwargs  = {'snap':False, 'inventory':False, 'border':10})
 
 gm.override('Celestial north minus east angles (deg)', 8., names=name)
@@ -46,10 +48,9 @@ gm.override('JUPITER:RING emission angle, ring minus center (deg)', 8., names=na
 #        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
 #                               'juno/junocam/19/' + name + '.img'),
 #        index   = 7,
-##        module  = 'hosts.juno.junocam',
-#        planet  = 'JUPITER',
-#        moon    = '',
-#        ring    = '',
+#        planets  = 'JUPITER',
+#        moons    = '',
+#        rings    = '',
 #        kwargs  = {'snap':False, 'inventory':False, 'border':10})
 #
 #gm.override('Celestial north minus east angles (deg)', 8., names=name)
@@ -69,10 +70,9 @@ gm.define_standard_obs(name,
         obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                'juno/junocam/20/' + name + '.img'),
         index   = 2,
-#        module  = 'hosts.juno.junocam',
-        planet  = 'JUPITER',
-        moon    = '',
-        ring    = '',
+        planets  = 'JUPITER',
+        moons    = '',
+        rings    = '',
         kwargs  = {'snap':False, 'inventory':False, 'border':10})
 
 # this one has ansa problems because so high above equator 

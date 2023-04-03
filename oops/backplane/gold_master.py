@@ -956,26 +956,29 @@ class BackplaneTest(object):
 
         # Fill in all the backplane surface names
         for body in planets + moons:
-            self.body_names.append(body)
-            self.limb_names.append(body + ':LIMB')
+            if body:
+                self.body_names.append(body)
+                self.limb_names.append(body + ':LIMB')
 
-            if Body.lookup(body).ring_body:
-                self.ring_names.append(body + ':RING')
-                self.ansa_names.append(body + ':ANSA')
-                self.planet_ring_pairs.append((body, body + ':RING'))
+                if Body.lookup(body).ring_body:
+                    self.ring_names.append(body + ':RING')
+                    self.ansa_names.append(body + ':ANSA')
+                    self.planet_ring_pairs.append((body, body + ':RING'))
 
         for moon in moons:
-            planet = Body.lookup(moon).parent.name.upper()
-            self.planet_moon_pairs.append((planet, moon))
+            if moon:
+                planet = Body.lookup(moon).parent.name.upper()
+                self.planet_moon_pairs.append((planet, moon))
 
         for ring in rings:
-            self.ring_names.append(ring)
-            self.ansa_names.append(ring + ':ANSA')
+            if ring:
+                self.ring_names.append(ring)
+                self.ansa_names.append(ring + ':ANSA')
 
-            planet = Body.lookup(ring).parent.name.upper()
-            pair = (planet, ring)
-            if pair not in self.planet_ring_pairs:
-                self.planet_ring_pairs.append(pair)
+                planet = Body.lookup(ring).parent.name.upper()
+                pair = (planet, ring)
+                if pair not in self.planet_ring_pairs:
+                    self.planet_ring_pairs.append(pair)
 
         # Create backplane object plus four with offset meshgrids
         EPS = 1.e-5
