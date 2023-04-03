@@ -78,9 +78,11 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
     else:
         lab02 = vicar_dict['LAB02']
         lab03 = vicar_dict['LAB03']
-        stop_time = '19%s-%sT%s' + (lab02[47:49],lab02[50:53],lab02[54:62])
+        stop_time = '19%s-%sT%s' % (lab02[47:49],lab02[50:53],lab02[54:62])
         texp = max(1.e-3, float(lab03[14:24])) / 1000.
-        spacecraft = 'VOYAGER' + lab02[4]
+        vgr = lab02[4]
+        ivgr = int(lab02[4])
+        spacecraft = 'VOYAGER' + vgr
         camera = lab03[0] + 'AC'
 
         if stop_time < '1980':
@@ -92,7 +94,7 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
         else:
             planet = 'NEPTUNE'
 
-        target = vicar_dict['lab05'][31:43].rstrip()
+        target = vicar_dict['LAB05'][31:43].rstrip()
         target = target.replace('_', ' ')
 
         filter = lab03[37:43].rstrip()
