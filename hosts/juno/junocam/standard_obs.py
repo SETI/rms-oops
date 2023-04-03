@@ -10,6 +10,8 @@ import oops.backplane.gold_master as gm
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
+#gm,set_default args module ....
+
 ###################################################################
 name = 'JNCR_2016347_03C00192_V01'
 ###################################################################
@@ -21,7 +23,7 @@ gm.define_standard_obs(name,
         obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                'juno/junocam/03/' + name + '.img'),
         index   = 5,
-        module  = 'hosts.juno.junocam',
+#        module  = 'hosts.juno.junocam',
         planet  = 'JUPITER',
         moon    = '',
         ring    = '',
@@ -44,7 +46,7 @@ gm.override('JUPITER:RING emission angle, ring minus center (deg)', 8., names=na
 #        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
 #                               'juno/junocam/19/' + name + '.img'),
 #        index   = 7,
-#        module  = 'hosts.juno.junocam',
+##        module  = 'hosts.juno.junocam',
 #        planet  = 'JUPITER',
 #        moon    = '',
 #        ring    = '',
@@ -67,7 +69,7 @@ gm.define_standard_obs(name,
         obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                'juno/junocam/20/' + name + '.img'),
         index   = 2,
-        module  = 'hosts.juno.junocam',
+#        module  = 'hosts.juno.junocam',
         planet  = 'JUPITER',
         moon    = '',
         ring    = '',
