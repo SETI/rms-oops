@@ -310,17 +310,8 @@ def ansa_test_suite(bpt):
 
       for name in bpt.ansa_names:
 
-### This assumes center_distance is gridless, but is gridded for 'SUN-'
-### and gives an error from junocam/gold_master.py.  This is easily fixed below,
-### but I think the real problem is that center_distance should never have
-### a grid.
-        (ulimit, vlimit) = bp.center_distance(name) * pixel_duv * 1.e-3
-
-### this addresses the immediate problem, but I think dist should have
-### only a single value
-#        dist = bp.center_distance(name)
-#        ulimit = dist * pixel_duv[0] * 1.e-3
-#        vlimit = dist * pixel_duv[1] * 1.e-3
+        ulimit = bp.center_distance(name).max() * pixel_duv[0] * 1.e-3
+        vlimit = bp.center_distance(name).max() * pixel_duv[1] * 1.e-3
 
         # ansa_radius
         rad = bp.ansa_radius(name)

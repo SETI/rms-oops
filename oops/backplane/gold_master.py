@@ -10,71 +10,91 @@
 
 import unittest
 import oops.backplane.gold_master as gm
+
 class Test_<your test name>(unittest.TestCase):
+
     def runTest(self):
-        gm.execute_as_unittest(self,
+
+        # Define the default observation
+        gm.define_default_obs(
                 obspath = 'file path inside the test_data directory',
                 index   = (index to apply to result of from_file, or None),
-                module  = 'hosts.xxx.yyy',
-                planet  = 'SATURN',             # for example
-                moon    = 'ENCELADUS',          # for example
-                ring    = 'SATURN_MAIN_RINGS',  # for example, optional
-                kwargs  = {},                   # other from_file inputs
-                <overrides of any default gold_master input arguments>)
+                planets = ['SATURN'],               # for example
+                moons   = ['ENCELADUS'],            # for example
+                rings   = ['SATURN_MAIN_RINGS'],    # for example, optional
+                kwargs  = {})                       # other from_file inputs
+
+        # Change any other default parameters, at least this one...
+        gm.set_default_args(module='hosts.xxx.yyy', ...)
+
+        gm.execute_as_unittest(self)
+
 ####################################
 # Case 2: Multiple tests
 ####################################
+
 import unittest
 import oops.backplane.gold_master as gm
+
 class Test_<your test name>(unittest.TestCase):
+
     def setUp():
+
+        # Define the standard observations
         gm.define_standard_obs('obs1',
                 obspath = 'file path inside the test_data directory',
                 index   = (index to apply to result of from_file, or None),
-                module  = 'hosts.xxx.yyy',
-                planet  = 'SATURN',             # for example
-                moon    = 'ENCELADUS',          # for example
-                ring    = 'SATURN_MAIN_RINGS',  # for example, optional
-                kwargs  = {})                   # other from_file inputs
+                planets = ['SATURN'],               # for example
+                moons   = ['ENCELADUS'],            # for example
+                rings   = ]'SATURN_MAIN_RINGS'],    # for example, optional
+                kwargs  = {})                       # other from_file inputs
+
         gm.define_standard_obs('obs2', ...)
+
         gm.define_standard_obs('obs3', ...)
+
+        # Change any other default parameters, at least this one...
+        gm.set_default_args(module='hosts.xxx.yyy', ...)
+
     def run_test1(self):
-        gm.execute_standard_unittest(
-                    'obs1'
-                    <overrides of any default gold_master input arguments>)
+        gm.execute_as_unittest(self, 'obs1')
+
     def run_test2(self):
-        gm.execute_standard_unittest(
-                    'obs2'
-                    <overrides of any default gold_master input arguments>)
+        gm.execute_as_unittest(self, 'obs2')
+
     def run_test3(self):
-        gm.execute_standard_unittest(
-                    'obs3'
-                    <overrides of any default gold_master input arguments>)
+        gm.execute_as_unittest(self, 'obs3')
+
 ########################################################################
 # How to have a gold master tester program dedicated to an instrument...
 ########################################################################
+
 import os
 import oops.backplane.gold_master as gm
-# Define the default observation for testing; note that this can be
-# overridden on the command line.
-gm.define_standard_obs(
-                'default',
-                obspath = 'file path inside the test_data directory',
-                index   = (index to apply to result of from_file, or None),
-                module  = 'hosts.xxx.yyy',
-                planet  = 'SATURN'            # for example
-                moon    = 'ENCELADUS'         # for example
-                ring    = 'SATURN_MAIN_RINGS' # for example, optional
-                kwargs  = {})                 # other from_file inputs
-        gm.define_standard_obs('test2', ...)
-        gm.define_standard_obs('test3', ...)
-# Change any other default parameters, if necessary...
-gm.set_default_args(arg = default_value, ...)
+
+# Define the default observation and any number of others for testing;
+# note that the selection can be overridden on the command line.
+
+gm.define_default_obs(
+            obspath = 'file path inside the test_data directory',
+            index   = (index to apply to result of from_file, or None),
+            planets = ['SATURN'],               # for example
+            moons   = ['ENCELADUS'],            # for example
+            rings   = ['SATURN_MAIN_RINGS'],    # for example, optional
+            kwargs  = {})                       # other from_file inputs
+gm.define_standard_obs('test2', ...)
+gm.define_standard_obs('test3', ...)
+
+# Change any other default parameters, at least this one...
+gm.set_default_args(module='hosts.xxx.yyy', ...)
+
 if __name__ == '__main__':
     gm.execute_as_command()
+
 ########################################################################
 # Log file format
 ########################################################################
+
 A single record of the log file has this format:
     "<time> | oops.backplane.gold_master | <level> | <suite> | <message>"
 where
@@ -82,6 +102,7 @@ where
     <level> is one of "DEBUG", "INFO", "WARNING", "ERROR", "FATAL".
     <suite> is the name of the test suite, e.g., "ring".
     <message> is a descriptive message.
+
 For comparison tests, the message has the following format:
     <status>: "<title>"; diff=<diff1>/<diff2>/<limit>; ...
                          offset=<offset>/<radius>; ...
@@ -107,6 +128,7 @@ where:
     <count2>  the number of discrepant pixels that cannot be accommodated by an
               offset.
     <pixels>  the total number of pixels tested.
+
 Note that <diff2> and <count2> are not listed if not offset is required. Also,
 note that the offset values are not listed in this case.
 """
@@ -124,6 +146,7 @@ import PIL.Image
 import sys
 import warnings
 
+from collections   import defaultdict
 from scipy.ndimage import minimum_filter, maximum_filter
 from scipy.ndimage import zoom as zoom_image
 
@@ -135,22 +158,96 @@ from oops.constants   import DPR
 from oops.observation import Observation
 
 from oops.unittester_support import (OOPS_TEST_DATA_PATH,
-                                     OOPS_TEST_DATA_PATH_,
                                      OOPS_GOLD_MASTER_PATH,
                                      OOPS_BACKPLANE_OUTPUT_PATH)
 
 ################################################################################
+# Use set_default_obs() and set_standard_obs() to define the observation used
+# for unit tests and as the default for a run from the command line.
+################################################################################
+
+# This is a dictionary test name -> key inputs for test
+STANDARD_OBS_INFO = {}
+
+def set_default_obs(obspath, index, planets, moons=[], rings=[], kwargs={}):
+    """Set the details of the default observation to be used for the gold master
+    test.
+
+    These are the default observation file path and module to use if they are
+    not specified in the command line.
+
+    The specified planets, moons, and rings are used as the defaults when the
+    observation is unspecified, but can be overridden at the command line.
+
+    Options:
+        obspath         file path to the default data object to be used.
+        index           index to apply if from_file returns a list. If None,
+                        backplanes will be generated for every Observation
+                        returned by from_file.
+        planets         name of the default planet, or list of planet names.
+        moons           name of the default moon, if any, or list of moon names.
+        rings           name of the default ring, if any, or list of ring names.
+                        Backplane arrays are always generated for the full ring
+                        plane of the specified planet.
+        kwargs          an optional dictionary of keyword arguments to be passed
+                        to from_file.
+    """
+
+    define_standard_obs('default', obspath=obspath, index=index,
+                                   planets=planets, moons=moons, rings=rings,
+                                   kwargs=kwargs)
+
+def define_standard_obs(obsname, obspath, index, planets, moons=[], rings=[],
+                        kwargs={}):
+    """Set the details of a standard gold master test.
+
+    These are the observation file path and module to use when a test is
+    identified by name.
+
+    The specified planets, moons, and rings are used as the defaults when the
+    observation is unspecified, but can be overridden at the command line.
+
+    Options:
+        obsname         name given for this observation.
+        obspath         file path to the default data object to be used.
+        index           index to apply if from_file returns a list. If None,
+                        backplanes will be generated for every Observation
+                        returned by from_file.
+        planets         name of the default planet, or list of planet names.
+        moons           optional name of the default moon, if any, or list of
+                        moon names.
+        rings           optional name of the default ring, if any, or list of
+                        ring names. Backplane arrays are always generated for
+                        the full ring plane of the specified planet.
+        kwargs          an optional dictionary of keyword arguments to be passed
+                        to from_file.
+    """
+
+    global STANDARD_OBS_INFO
+
+    planets = planets if isinstance(planets, (list,tuple)) else (planets,)
+    moons   = moons   if isinstance(moons,   (list,tuple)) else (moons,)
+    rings   = rings   if isinstance(rings,   (list,tuple)) else (rings,)
+
+    STANDARD_OBS_INFO[obsname] = {}
+    STANDARD_OBS_INFO[obsname]['obspath'] = obspath
+    STANDARD_OBS_INFO[obsname]['index']   = index
+    STANDARD_OBS_INFO[obsname]['planets'] = planets
+    STANDARD_OBS_INFO[obsname]['moons']   = moons
+    STANDARD_OBS_INFO[obsname]['rings']   = rings
+    STANDARD_OBS_INFO[obsname]['kwargs']  = kwargs
+
+################################################################################
 # The "default defaults" are defined here. A call to set_default_args() can be
-# used to replace them for some specific test.
-#
-# Use set_default_obs() to define the observation used for unit tests and as the
-# default for a run from the command line.
+# used to replace them for some specific test. These defaults are required to be
+# identical for all standard observations.
 ################################################################################
 
 DEFAULTS = {
-    'planet'        : [],
-    'moon'          : [],
-    'ring'          : [],
+    'planets'       : [],           # used only if no standard obs is named
+    'moons'         : [],           # ditto
+    'rings'         : [],           # ditto
+    'module'        : '',
     'task'          : 'compare',
     'tolerance'     : 1,
     'radius'        : 1,
@@ -169,34 +266,21 @@ DEFAULTS = {
     'level'         : 'debug',
 }
 
-# Note that default values of output, info, convergence, diagnostics,
-# internals, performance, and platform cannot be overridden here.
-
-# This is a dictionary test name -> key inputs for test
-STANDARD_OBS = {
-    'default': {
-        'obspath'   : os.path.join(OOPS_TEST_DATA_PATH,
-                                   'cassini/ISS/W1573721822_1.IMG'),
-        'index'     : None,
-        'module'    : 'hosts.cassini.iss',
-        'planet'    : 'SATURN',
-        'moon'      : 'EPIMETHEUS',
-        'ring'      : 'SATURN_MAIN_RINGS',
-        'kwargs'    : {},
-    }
-}
-
+# Note that default values of output, convergence, diagnostics, internals,
+# performance, and platform cannot be overridden here.
 
 def set_default_args(**options):
     """Set the default command-line arguments for a gold master test.
+
     Options:
-        planet          name of a planet for which to generate backplane arrays,
-                        or else a list of planet names.
-        moon            name of a moon for which to generate backplane arrays,
-                        or else a list of moon names.
-        ring            name of a ring for which to generate backplane arrays,
-                        or else a list of ring names. Backplane arrays are
-                        always generated for the default ring of each planet.
+        planets         name(s) of the planet(s) to use if if this run does not
+                        employ a standard observation.
+        moons           name(s) of the moon(s) to use if if this run does not
+                        employ a standard observation.
+        rings           name(s) of the ring(s) to use if if this run does not
+                        employ a standard observation.
+        module          Name of the module containing the "from_file" method,
+                        e.g., "hosts.cassini.iss".
         task            name of the default test to perform, one of "preview",
                         "compare", and "adopt"; default is "compare".
         tolerance       factor to apply to the defined error allowances for all
@@ -209,6 +293,8 @@ def set_default_args(**options):
                         [] (the default) to include all test suites.
         du, dv          pixel offsets to apply to the origin of the meshgrid,
                         for testing sensitivity to pointing offsets; default 0.
+        derivs          True to include the unit tests of the derivatives, False
+                        otherwise.
         undersample     undersample factor for backplane tests and browse
                         images; default 16.
         inventory       True to use an inventory when generating backplanes.
@@ -216,85 +302,16 @@ def set_default_args(**options):
         browse          True to save browse images; default True.
         zoom            zoom factor for browse images; default 1.
         browse_format   browse image format, one of "png", "jpg", or "tiff".
-        output          default directory for saving test arrays and browse
-                        products; default defined by environment variable
-                        "OOPS_BACKPLANE_OUTPUT_PATH".
         verbose         True to print output to the terminal by default.
         log             True to save a log file by default.
+        level           Minimum level for messages to be logged: "debug",
+                        "info", "warning", "error", or an integer 1-30.
     """
 
     global DEFAULTS
 
     for key, value in options.items():
         DEFAULTS[key] = value
-
-
-def set_default_obs(obspath, index, module, planet, moon=[], ring=[],
-                    kwargs={}):
-    """Set the details of the default observation to be used for the gold master
-    test.
-    These are the default observation file path and module to use if they are
-    not specified in the command line.
-    The specified planet, moon, and ring are used as the defaults when the
-    observation is unspecified, but can be overridden at the command line.
-    Options:
-        obspath         file path to the default data object to be used.
-        index           index to apply if from_file returns a list. If None,
-                        backplanes will be generated for every Observation
-                        returned by from_file.
-        module          name of the default module to import, e.g.,
-                        "hosts.cassini.iss". This module must have a "from_file"
-                        method.
-        planet          name of the default planet, or list of planet names.
-        moon            name of the default moon, if any, or list of moon names.
-        ring            name of the default ring, if any, or list of ring names.
-                        Backplane arrays are always generated for the full ring
-                        plane of the specified planet.
-        kwargs          an optional dictionary of keyword arguments to be passed
-                        to from_file.
-    """
-
-    define_standard_obs('default', obspath=obspath, index=index, module=module,
-                                   planet=planet, moon=moon, ring=ring,
-                                   kwargs=kwargs)
-
-
-def define_standard_obs(name, obspath, index, module, planet, moon=[], ring=[],
-                              kwargs={}):
-    """Set the details of a standard gold master test.
-    These are the observation file path and module to use when a test is
-    identified by name.
-    The specified planet, moon, and ring are used as the defaults when the
-    observation is unspecified, but can be overridden at the command line.
-    Options:
-        name            name given for this test.
-        obspath         file path to the default data object to be used.
-        index           index to apply if from_file returns a list. If None,
-                        backplanes will be generated for every Observation
-                        returned by from_file.
-        module          name of the default module to import, e.g.,
-                        "hosts.cassini.iss". This module must have a "from_file"
-                        method.
-        planet          name of the default planet, or list of planet names.
-        moon            name of the default moon, if any, or list of moon names.
-        ring            name of the default ring, if any, or list of ring names.
-                        Backplane arrays are always generated for the full ring
-                        plane of the specified planet.
-        kwargs          an optional dictionary of keyword arguments to be passed
-                        to from_file.
-    """
-
-    global STANDARD_OBS
-
-    STANDARD_OBS[name] = {}
-    STANDARD_OBS[name]['obspath'] = obspath
-    STANDARD_OBS[name]['index']   = index
-    STANDARD_OBS[name]['module']  = module
-    STANDARD_OBS[name]['planet']  = planet
-    STANDARD_OBS[name]['moon']    = moon if moon else []
-    STANDARD_OBS[name]['ring']    = ring if ring else []
-    STANDARD_OBS[name]['kwargs']  = kwargs
-
 
 ################################################################################
 # Overrides of specific tests
@@ -303,44 +320,40 @@ def define_standard_obs(name, obspath, index, module, planet, moon=[], ring=[],
 # the hard-wired limit.
 ################################################################################
 
-TEST_OVERRIDES = {}
+TEST_OVERRIDES = defaultdict(dict)
 
 def override(title, value, names=None):
     """Override the hard-wired comparison values for specific tests.
+
     Input:
         title       the exact title of a test, e.g.,
                     "JUPITER:RING incidence angle, ring minus center (deg)".
         value       the revised comparison value, or None to suppress the test
                     entirely.
-        names       if specified, this override applies only the the named
-                    standard observations.
+        names       name(s) of one or more standard observations; None to
+                    apply to all standard observations.
     """
 
-    global TEST_OVERRIDES, STANDARD_OBS
+    global TEST_OVERRIDES
 
-    # Force names to be a list, use all standard obs by default
-    if names is not None:
-        if not isinstance(names, list):
-            names = [names]
+    if not names:
+        obsnames = list(STANDARD_OBS_INFO.keys())
+    elif isinstance(names, str):
+        obsnames = [names]
     else:
-        names = list(STANDARD_OBS.keys())
+        obsnames = names
 
-    # Set overrides
-    for name in names:
-#        from IPython import embed; print('+++++++++++++'); embed()
-        if not name in TEST_OVERRIDES.keys():
-            TEST_OVERRIDES[name] = {}
-        TEST_OVERRIDES[name][title] = value
-
+    for obsname in obsnames:
+        TEST_OVERRIDES[obsname][title] = value
 
 ################################################################################
 # Command line execution
 ################################################################################
 
-#===============================================================================
-def execute_as_command(**options):
+def execute_as_command():
     """Parse command-line arguments for gold master testing of one or more
     backplanes and then run the tests.
+
     A "Namespace" object is returned, containing all of the command line
     attributes, plus:
         from_file       the "from_file" function of the selected module.
@@ -351,53 +364,55 @@ def execute_as_command(**options):
         **options       overrides for any default gold_master input arguments.
     """
 
-    global STANDARD_OBS
-
     # Define parser...
-    parser = argparse.ArgumentParser(description='''Gold Master backplane
-                                                    test utility.''')
+    parser = argparse.ArgumentParser(
+                    description='Gold Master backplane test utility%s.'
+                                % ('' if not DEFAULTS['module'] else
+                                   ' for module ' + DEFAULTS['module']))
 
     # Data objects
     gr = parser.add_argument_group('Data objects')
     gr.add_argument('obspath', type=str, nargs='*', metavar='filepath',
-                    default=None,
-                    help='''File path to the data object(s) to be used;
-                            default is %s.'''
-                            % repr(STANDARD_OBS['default']['obspath']))
-    gr.add_argument('--index', type=int, metavar='N', default=None,
-                    help='''Index to use if the from_file method returns a list;
-                            by default, backplane arrays will be generated for
-                            each Observation object returned by from_file.''')
-    gr.add_argument('--name', type=str, default=None,
-###    gr.add_argument('--name', type=str, default='default',
-                    help='''The name of the defined standard observation to use
-                            if a file path is not given explicitly. Default is
-                            "default".''')
-    gr.add_argument('--module', type=str, default=None, metavar='hosts...',
+                    help='''File path to the data object(s) to be used in place
+                            of a standard observation.''')
+    gr.add_argument('--index', type=int, metavar='N',
+                    help='''Index to use for a specified filepath; otherwise,
+                            backplane arrays will be generated for each
+                            observation in the file.''')
+    gr.add_argument('--module', type=str, metavar='hosts...',
                     help='''Name of the module containing the "from_file"
-                            method for any file paths specified; default is
-                            "%s".'''
-                            % STANDARD_OBS['default']['module'])
+                            method for the filepaths specified%s.'''
+                         % ('' if DEFAULTS['module'] is None else
+                            '; default is ' + DEFAULTS['module'] + '.'))
+    gr.add_argument('--name', '-n', type=str, nargs='*',
+                    default=list(STANDARD_OBS_INFO.keys()),
+                    help='''Name(s) of the pre-defined standard observation to
+                            use if a file path is not given explicitly. Default
+                            is to use all of the standard observations.''')
 
     # Backplane targets
     gr = parser.add_argument_group('Backplane targets')
     gr.add_argument('-p', '--planet', type=str, nargs='*', metavar='name',
-                    default=None,
+                    default=DEFAULTS['planets'], dest='planets',
                     help='''Name(s) of one or more planets for which to generate
-                            backplane arrays; default is %s.'''
-                         % repr(STANDARD_OBS['default']['planet']))
-    gr.add_argument('-m', '--moon', type=str,nargs='*', metavar='name',
-                    default=None,
+                            backplane arrays. Defaults are defined by the named
+                            standard observation(s)%s.'''
+                         % ('' if DEFAULTS['planets'] is None else
+                            '; otherwise ' + ', '.join(DEFAULTS['planets'])))
+    gr.add_argument('-m', '--moon', type=str, nargs='*', metavar='name',
+                    default=DEFAULTS['moons'], dest='moons',
                     help='''Name(s) of one or more moons for which to generate
-                            backplane arrays; default is %s.'''
-                         % repr(STANDARD_OBS['default']['moon']))
+                            backplane arrays. Defaults are defined by the named
+                            standard observation(s)%s.'''
+                         % ('' if DEFAULTS['moons'] is None else
+                            '; otherwise ' + ', '.join(DEFAULTS['moons'])))
     gr.add_argument('-r', '--ring', type=str, nargs='*', metavar='name',
-                    default=None,
+                    default=DEFAULTS['rings'], dest='rings',
                     help='''Name(s) of one or more rings for which to generate
                             backplane arrays. Arrays are always generated for
-                            the default equatorial ring of the planet.
-                            The default is %s.'''
-                         % repr(STANDARD_OBS['default']['ring']))
+                            the default equatorial ring of the planet.'''
+                         + ('' if DEFAULTS['rings'] is None else ' Default is '
+                                + ', '.join(DEFAULTS['rings']) + '.'))
 
     # Testing options
     gr = parser.add_argument_group('Testing options')
@@ -548,88 +563,16 @@ def execute_as_command(**options):
 
     args = parser.parse_args()
     args.testcase = None
-
-    # If --name given and it is overridden, only run test with matching
-    # overidden name
-    if args.name is not None:
-        if 'name' in options.keys():
-            if args.name != options['name']:
-                return
-    else:
-        args.name = 'default'
-
-    # Fill in any overrides
-    for key, value in options.items():
-        setattr(args, key, value)
-
-    # Run tests
     args = _clean_up_args(args)
     run_tests(args)
-
-#===============================================================================
-def execute_standard_command(names=None, exclude=None, **options):
-    """Run the gold master test suites for one or more observations.
-
-    Inputs:
-        names           names of standard observations to run.
-        exclude         names of standard observations to exclude.
-        **options       overrides for any default gold_master input arguments.
-    """
-
-    global STANDARD_OBS
-
-    # Force exclude to be a list
-    if exclude is None:
-        exclude = []
-    else:
-        if not isinstance(exclude, list):
-            exclude = [exclude]
-
-    # Force names to be a list, use all standard obs by default
-    if names is not None:
-        if not isinstance(names, list):
-            names = [names]
-    else:
-        names = list(STANDARD_OBS.keys())
-
-    # Run tests
-    for name in names:
-        if name not in exclude:
-            test = STANDARD_OBS[name]
-            execute_as_command(name=name, obspath = test['obspath'],
-                                          module  = test['module'],
-                                          planet  = test['planet'],
-                                          moon    = test['moon'],
-                                          ring    = test['ring'],
-                                          index   = test['index'],
-                                          kwargs  = test['kwargs'],
-                                          **options)
 
 ################################################################################
 # unittest module support
 ################################################################################
 
-#===============================================================================
-def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
-                        index=None, kwargs={}, **options):
-    """Run the gold master test suites for one or more observations as a unit
-    test.
-
-    Inputs:
-        testcase        the unittest TestCase object.
-        obspath         file path to the default data object to be used.
-        module          name of the default module to import, e.g.,
-                        "hosts.cassini.iss". This module must have a "from_file"
-                        method.
-        planet          name of the default planet, or list of planet names.
-        moon            name of the default moon, if any, or list of moon names.
-        ring            name of the default ring, if any, or list of ring names.
-                        Backplane arrays are always generated for the full ring
-                        plane of the specified planet.
-        index           index to use if obspath returns a list; otherwise, None
-        kwargs          an optional dictionary of keyword arguments to be passed
-                        to from_file.
-        **options       overrides for any default gold_master input arguments.
+def execute_as_unittest(testcase, obsname='default'):
+    """Run the gold master test suites for all of the defined standard
+    observations.
     """
 
     try:
@@ -639,10 +582,7 @@ def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
             setattr(args, key, value)
 
         # Set the default observation details
-        args.name = ''      # use blank as a temporary name here
-        define_standard_obs('', obspath, index, module,
-                                planet=planet, moon=moon, ring=ring,
-                                kwargs={})
+        args.name = [obsname]
 
         # These values in the DEFAULTS dictionary are overridden
         args.browse = False
@@ -650,6 +590,7 @@ def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
         args.verbose = True
 
         # These have no entry in the DEFAULTS dictionary
+        args.obspath = None
         args.output = None
         args.convergence = False
         args.diagnostics = False
@@ -659,10 +600,6 @@ def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
         args.platform = None
         args.save_sampled = False
 
-        # Fill in any overrides
-        for key, value in options.items():
-            setattr(args, key, value)
-
         # These options are mandatory
         args.testcase = testcase
         args.task = 'compare'
@@ -671,7 +608,6 @@ def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
         args.du = 0.
         args.dv = 0.
         args.derivs = True
-        args.obspath = ''           # filled in by _clean_up_args
 
         # Clean up, also filling in observation, module, planet(s), moon(s),
         # ring(s)
@@ -683,81 +619,30 @@ def execute_as_unittest(testcase, obspath, module, planet, moon=[], ring=[],
     run_tests(args)
 
 #===============================================================================
-def execute_standard_unittest(testcase, names=None, exclude=None, **options):
-    """Run the gold master test suites for one or more observations as a unit
-    test.
-    Inputs:
-        testcase        the unittest TestCase object.
-        names           names of standard observations to run.
-        exclude         names of standard observations to exclude.
-        **options       overrides for any default gold_master input arguments.
-    """
-
-    global STANDARD_OBS
-
-    # Force exclude to be a list
-    if exclude is None:
-        exclude = []
-    else:
-        if not isinstance(exclude, list):
-            exclude = [exclude]
-
-    # Force names to be a list, use all standard obs by default
-    if names is not None:
-        if not isinstance(names, list):
-            names = [names]
-    else:
-        names = list(STANDARD_OBS.keys())
-
-    # Run tests
-    for name in names:
-        if name not in exclude:
-            test = STANDARD_OBS[name]
-            execute_as_unittest(testcase, obspath = test['obspath'],
-                                          module  = test['module'],
-                                          planet  = test['planet'],
-                                          moon    = test['moon'],
-                                          ring    = test['ring'],
-                                          index   = test['index'],
-                                          kwargs  = test['kwargs'],
-                                          **options)
-
-#===============================================================================
 def _clean_up_args(args):
     """Clean up arguments given in the command line."""
 
-    global DEFAULTS, STANDARD_TESTS, TEST_SUITES
+    global DEFAULTS, TEST_SUITES
 
-    # Define the observation if necessary
-    if not args.obspath:
-        args.obspath = STANDARD_OBS[args.name]['obspath']
-        args.index   = STANDARD_OBS[args.name]['index']
-        args.module  = STANDARD_OBS[args.name]['module']
-        if args.planet is None:
-            args.planet = STANDARD_OBS[args.name]['planet']
-        if args.moon is None:
-            args.moon = STANDARD_OBS[args.name]['moon']
-        if args.ring is None:
-            args.ring = STANDARD_OBS[args.name]['ring']
-    else:
+    # Define the module and observation if not a standard one
+    args.module = args.module or DEFAULTS['module']
+
+    # Given obspaths, define temporary "standard observations" and then use
+    # their names.
+    if args.obspath:
+        if args.name is not None:
+            raise ValueError('an observation filepath and a standard '
+                             'observation name cannot be specified together.')
+
         if isinstance(args.obspath, str):
             args.obspath = [args.obspath]
-        if args.planet is None:
-            args.planet = DEFAULTS['planet']
-        if args.moon is None:
-            args.moon = DEFAULTS['moon']
-        if args.ring is None:
-            args.ring = DEFAULTS['ring']
 
-    # Clean up the inputs
-    if isinstance(args.obspath, str):
-        args.obspath = [args.obspath]
-    if isinstance(args.planet, str):
-        args.planet = [args.planet]
-    if isinstance(args.moon, str):
-        args.moon = [args.moon] if args.moon else []
-    if isinstance(args.ring, str):
-        args.ring = [args.ring] if args.ring else []
+        for obspath in args.obspaths:
+            define_standard_obs(obspath, obspath, index=args.index,
+                                planets=args.planets, moons=args.moons,
+                                rings=args.rings)
+
+        args.name = args.obspath        # using obspath as the temporary name
 
     # --output
     if args.output is None:
@@ -802,35 +687,17 @@ def _clean_up_args(args):
         args.derivs = False
         args.save_sampled = False
 
-    # Planet, moon and ring must be lists
-    if args.planet:
-        if isinstance(args.planet, str):
-            args.planet = [args.planet]
-    else:
-        args.planet = []
-
-    if args.moon:
-        if isinstance(args.moon, str):
-            args.moon = [args.moon]
-    else:
-        args.moon = []
-
-    if args.ring:
-        if isinstance(args.ring, str):
-            args.ring = [args.ring]
-    else:
-        args.ring = []
-
     # Get the from_file method
-    if not hasattr(args, 'module') or not args.module:
-        args.module = STANDARD_OBS['default']['module']
-
     module = importlib.import_module(args.module)
     args.from_file = module.from_file
 
-    # Get the absolute file paths
-    args.abspaths = []
-    for obspath in args.obspath:
+    # Define the BackplaneTest objects
+    args.backplane_tests = []
+    for obsname in args.name:
+        obspath = STANDARD_OBS_INFO[obsname]['obspath']
+        index   = STANDARD_OBS_INFO[obsname]['index']
+        kwargs  = STANDARD_OBS_INFO[obsname]['kwargs']
+
         abspath = os.path.abspath(os.path.realpath(obspath))
         if args.task in ('compare', 'adopt'):
             if not OOPS_TEST_DATA_PATH:
@@ -843,53 +710,24 @@ def _clean_up_args(args):
         if not os.path.exists(abspath):
             raise FileNotFoundError('No such file: ' + obspath)
 
-        args.abspaths.append(abspath)
+        # Allow overrides of bodies
+        planets = args.planets or STANDARD_OBS_INFO[obsname]['planets']
+        moons   = args.moons   or STANDARD_OBS_INFO[obsname]['moons']
+        rings   = args.rings   or STANDARD_OBS_INFO[obsname]['rings']
 
-    # Create placeholders for the backplane surface names
-    args.body_names = []
-    args.limb_names = []
-    args.ring_names = []
-    args.ansa_names = []
-    args.planet_moon_pairs = []     # list of (planet, moon) tuples
-    args.planet_ring_pairs = []     # list of (planet, ring) tuples
+        result = args.from_file(abspath, **kwargs)
+        if index is not None:
+            result = result[index]
 
-    # Define the BackplaneTest objects
-    args.backplane_tests = []
-    for abspath in args.abspaths:
-        result = args.from_file(abspath, **STANDARD_OBS[args.name]['kwargs'])
-        if args.index is not None:
-            result = result[args.index]
-
+        overrides = TEST_OVERRIDES[obsname]
         if isinstance(result, Observation):
-            bpt = BackplaneTest(result, args)
+            bpt = BackplaneTest(result, planets, moons, rings, overrides, args)
             args.backplane_tests.append(bpt)
         else:
             for k, obs in enumerate(result):
-                bpt = BackplaneTest(obs, args, suffix='_' + str(k))
+                bpt = BackplaneTest(obs, planets, moons, rings, overrides, args,
+                                    suffix='_' + str(k))
                 args.backplane_tests.append(bpt)
-
-    # Fill in all the backplane surface names
-    for body in args.planet + args.moon:
-        args.body_names.append(body)
-        args.limb_names.append(body + ':LIMB')
-
-        if Body.lookup(body).ring_body:
-            args.ring_names.append(body + ':RING')
-            args.ansa_names.append(body + ':ANSA')
-            args.planet_ring_pairs.append((body, body + ':RING'))
-
-    for moon in args.moon:
-        planet = Body.lookup(moon).parent.name.upper()
-        args.planet_moon_pairs.append((planet, moon))
-
-    for ring in args.ring:
-        args.ring_names.append(ring)
-        args.ansa_names.append(ring + ':ANSA')
-
-        planet = Body.lookup(ring).parent.name.upper()
-        pair = (planet, ring)
-        if pair not in args.planet_ring_pairs:
-            args.planet_ring_pairs.append(pair)
 
     # Set the status of "No gold master"
     _BackplaneComparison.set_no_gold_master_status(args.ignore_missing)
@@ -941,6 +779,7 @@ TEST_SUITES = {}            # dictionary of all test suites
 
 def register_test_suite(name, func):
     """Add the given function to the dictionary of exercise tests.
+
     This must be called for each defined test suite.
     """
 
@@ -977,6 +816,7 @@ class _BackplaneComparison(object):
 
     def __init__(self, **kwargs):
         """Container for comparison info.
+
         status is one of:
             "Success"               test passed;
             "Value mismatch"        values differ;
@@ -985,6 +825,7 @@ class _BackplaneComparison(object):
             "Shape mismatch"        shapes do not match;
             "No gold master"        gold master info is missing;
             "Invalid gold master"   gold master cannot be read.
+
         title        = title of the test.
         suite        = name of test suite.
         limit        = maximum allowed difference.
@@ -993,15 +834,19 @@ class _BackplaneComparison(object):
         radius       = allowed offset distance in pixels.
         mask         = optional mask to exclude pixels from comparison.
         pickle_path  = path to the pickle file, if any.
+
         max_diff1    = the largest difference between unmasked pixels of array
                        and master, initially.
         diff_errors1 = the initial number of value discrepancies.
         mask_errors1 = the number of mask discrepancies.
+
         distance     = the largest offset adequate to eliminate a value
                        discrepancy; zero if no offset is adequate.
+
         max_diff2    = the final largest difference.
         diff_errors2 = the final number of value discrepancies.
         mask_errors2 = the final number of mask discrepancies.
+
         pixels       = the total number of pixels.
         """
 
@@ -1036,6 +881,7 @@ class _BackplaneComparison(object):
     @staticmethod
     def set_no_gold_master_status(is_ok=False):
         """Set the success value of status "No gold master".
+
         This is defined globally by input argument "ignore_missing".
         """
 
@@ -1069,10 +915,15 @@ class BackplaneTest(object):
     observation.
     """
 
-    def __init__(self, obs, args, suffix=''):
+    def __init__(self, obs, planets, moons, rings, overrides, args, suffix=''):
         """Construct a BackplaneTest for the given observation.
+
         Input:
             obs         Observation.
+            planets     list of one or more planet names to use in backplanes.
+            moons       list of one or more moon names to use in backplanes.
+            rings       list of one or more ring names to use in backplanes.
+            overrides   dictionary of test overrides for this observation.
             args        A Namespace object containing the command line inputs.
             suffix      a suffix string used to distinguish between multiple
                         Observations all defined within the same data file; it
@@ -1081,6 +932,7 @@ class BackplaneTest(object):
         """
 
         self.obs = obs
+        self.overrides = overrides
         self.args = args
         self.suffix = suffix
 
@@ -1093,12 +945,37 @@ class BackplaneTest(object):
         self.undersample = args.undersample
         self.inventory   = args.inventory
         self.border      = args.border
-        self.body_names  = args.body_names
-        self.limb_names  = args.limb_names
-        self.ring_names  = args.ring_names
-        self.ansa_names  = args.ansa_names
-        self.planet_moon_pairs = args.planet_moon_pairs
-        self.planet_ring_pairs = args.planet_ring_pairs
+
+        # Identify the planet, body and ring names
+        self.body_names = []
+        self.limb_names = []
+        self.ring_names = []
+        self.ansa_names = []
+        self.planet_moon_pairs = []
+        self.planet_ring_pairs = []
+
+        # Fill in all the backplane surface names
+        for body in planets + moons:
+            self.body_names.append(body)
+            self.limb_names.append(body + ':LIMB')
+
+            if Body.lookup(body).ring_body:
+                self.ring_names.append(body + ':RING')
+                self.ansa_names.append(body + ':ANSA')
+                self.planet_ring_pairs.append((body, body + ':RING'))
+
+        for moon in moons:
+            planet = Body.lookup(moon).parent.name.upper()
+            self.planet_moon_pairs.append((planet, moon))
+
+        for ring in rings:
+            self.ring_names.append(ring)
+            self.ansa_names.append(ring + ':ANSA')
+
+            planet = Body.lookup(ring).parent.name.upper()
+            pair = (planet, ring)
+            if pair not in self.planet_ring_pairs:
+                self.planet_ring_pairs.append(pair)
 
         # Create backplane object plus four with offset meshgrids
         EPS = 1.e-5
@@ -1264,10 +1141,8 @@ class BackplaneTest(object):
                     if LATEST_TITLE:
                         LOGGING.exception(e, '%s | Fatal error in %s'
                                              % (TEST_SUITE, LATEST_TITLE))
-                    elif TEST_SUITE:
-                        LOGGING.exception(e, '%s | Fatal error' % TEST_SUITE)
                     else:
-                        LOGGING.exception(e)
+                        LOGGING.exception(e, '%s | Fatal error' % TEST_SUITE)
 
             # Wrap up
             if self.task in ('preview', 'compare'):
@@ -1359,6 +1234,7 @@ class BackplaneTest(object):
     def _sort_key(key):
         """Key function for the sort operation, needed to handle occurrences of
         Frames, Paths, and None in some dictionary keys.
+
         Also allow sorting among numbers, strings and tuples: numbers first,
         strings second, objects third, tuples fourth.
         """
@@ -1381,8 +1257,10 @@ class BackplaneTest(object):
     def compare(self, array, master, title, limit=0., method='', operator='=',
                                             radius=0., mask=False):
         """Compare two backplane arrays and log the results.
+
         Note that the array can be a backplane that has been undersampled. The
         gold master array can be either full-resolution or undersampled.
+
         Inputs:
             array       backplane array to be compared.
             master      reference value or gold master array.
@@ -1434,6 +1312,7 @@ class BackplaneTest(object):
                                    radius=0., mask=False):
         """Compare a backplane array against its gold master. Save the array,
         browse image, and sampled master.
+
         Inputs:
             array       backplane array to be tested.
             title       title string describing the test; must be unique.
@@ -1854,16 +1733,12 @@ class BackplaneTest(object):
             comparison.max_diff2 = max(0, np.max(diffs_below),
                                           np.max(diffs_above))
 
-            limit = comparison.limit
-            if not isinstance(limit, float):
-                limit = limit[diff_error_mask]
-
             if comparison.operator[-1] == '=':
-                diff_error_mask_below = diffs_below > limit
-                diff_error_mask_above = diffs_above > limit
+                diff_error_mask_below = diffs_below > comparison.limit
+                diff_error_mask_above = diffs_above > comparison.limit
             else:
-                diff_error_mask_below = diffs_below >= limit
-                diff_error_mask_above = diffs_above >= limit
+                diff_error_mask_below = diffs_below >= comparison.limit
+                diff_error_mask_above = diffs_above >= comparison.limit
 
             comparison.diff_errors2 = (np.sum(diff_error_mask_below) +
                                        np.sum(diff_error_mask_above))
@@ -1876,7 +1751,7 @@ class BackplaneTest(object):
                                mask):
         """Initial steps for both compare() and gmtest()."""
 
-        global TEST_OVERRIDES, TEST_SUITE
+        global TEST_SUITE
 
         # Validate comparison options
         if method not in ('', 'mod360', 'degrees', 'border'):
@@ -1894,22 +1769,20 @@ class BackplaneTest(object):
                              + 'is incompatible with method "border"')
 
         # Validate limit
-        name = self.args.name
-        if name in TEST_OVERRIDES.keys():
-            if title in TEST_OVERRIDES[name]:
-                limit = TEST_OVERRIDES[name][title]
-            elif isinstance(limit, Qube):
-                if np.any(limit.mask):
-                    limit = 0.
-                else:
-                    limit = abs(limit.vals * self.args.tolerance)
+        if title in self.overrides:
+            limit = self.overrides[title]
+        elif isinstance(limit, Qube):
+            if np.any(limit.mask):
+                limit = 0.
             else:
-                    limit = abs(limit * self.args.tolerance)
+                limit = abs(limit.vals * self.args.tolerance)
+        else:
+                limit = abs(limit * self.args.tolerance)
 
         # Warn about duplicated titles
         if title in self.results:
             LOGGING.error(TEST_SUITE, f'| Duplicated title: "{title}";',
-                          comparison.text)
+                          title)
 
         # Validate array
         if not isinstance(array, Qube):
@@ -1954,6 +1827,7 @@ class BackplaneTest(object):
     #===========================================================================
     def _summarize(self, array, title, method):
         """Save the summary info for this backplane array.
+
         For boolean arrays, the saved tuple is
             (False count, True count, masked count, total pixels)
         For floats, the saved tuple is:
@@ -2028,6 +1902,7 @@ class BackplaneTest(object):
     #===========================================================================
     def _log_comparison(self, comparison, status=''):
         """Log this comparison info.
+
         A single record of the log file has this format:
           "<time> | oops.backplane.gold_master | <level> | <suite> | <message>"
         where
@@ -2035,6 +1910,7 @@ class BackplaneTest(object):
           <level> is one of "DEBUG", "INFO", "WARNING", "ERROR", "FATAL".
           <suite> is the name of the test suite, e.g., "ring".
           <message> is a descriptive message.
+
         For comparisons, the message has the following format:
           <status>: "<title>"; diff=<diff1>/<diff2>/<limit>; ...
                                offset=<offset>/<radius>; ...
@@ -2061,6 +1937,7 @@ class BackplaneTest(object):
           <count2>  the number of discrepant pixels that cannot be accommodated
                     by an offset.
           <pixels>  the total number of pixels tested.
+
         Note that <diff2> and <count2> are not listed if not offset is required.
         Also, note that the offset values are not listed in this case.
         """
@@ -2174,6 +2051,7 @@ class BackplaneTest(object):
     #===========================================================================
     def _basename(self, title, gold=False):
         """Convert a title to a file basename.
+
         if gold is True, the Linux shell-friendly basename is always returned,
         regardless of the platform. Otherwise, the platform-specific basename is
         returned.
@@ -2390,6 +2268,17 @@ class BackplaneTest(object):
 if __name__ == '__main__':
 
     import oops.backplane.gold_master as gm
+
+    # Define the default observation
+    gm.set_default_obs(
+            obspath = os.path.join(OOPS_TEST_DATA_PATH,
+                                   'cassini/ISS/W1573721822_1.IMG'),
+            index   = None,
+            planets = ['SATURN'],
+            moons   = ['EPIMETHEUS'],
+            rings   = ['SATURN_MAIN_RINGS'])
+
+    gm.set_default_args(module='hosts.cassini.iss')
 
     # The d/dv numerical ring derivatives are extra-uncertain due to the high
     # foreshortening in the vertical direction.
