@@ -82,8 +82,17 @@ def find_label(filespec):
     return filespec
 
 #===========================================================================
-def get_label(filespec):
-    """Find the PDS3 label, clean it, load it, and parse into dictionary."""
+def get_label(filespec, cleaners=None, no_standard=False):
+    """
+    Find the PDS3 label, clean it, load it, and parse into dictionary.
+
+    Inputs:
+        filespec:       File specification for the label.
+        cleaners:       List of functions that take a label line as input and
+                        return a cleaned line.  By default, these functions
+                        are appended to a list of standard cleaner functions.
+        no_standard:    If True, the standard cleaners are not used.
+    """
 
     assert os.path.isfile(filespec), f'Not found: {filespec}'
 
@@ -91,7 +100,8 @@ def get_label(filespec):
     labelspec = find_label(filespec)
 
     # Load and clean the PDS label
-    lines = clean_label(pdsparser.PdsLabel.load_file(labelspec))
+    lines = clean_label(pdsparser.PdsLabel.load_file(labelspec),
+                        cleaners=cleaners, no_standard=no_standard)
 
     # Parse the label into a dictionary
     return pdsparser.PdsLabel.from_string(lines).as_dict()
@@ -107,8 +117,25 @@ from hosts                   import pds3
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 
+#===========================================================================
+def clean_VIMS(line):
+    line = line.replace('(N/A',  '("N/A"')
+    line = line.replace('N/A)',  '"N/A")')
+    return line
+
+#===========================================================================
+def clean_UVIS(line):
+    if 'CORE_UNIT' in line:
+        if '"COUNTS/BIN"' not in line:
+            lines = line.replace('COUNTS/BIN', '"COUNTS/BIN"')
+    if line.startswith('ODC_ID'):
+        line = line.replace(',', '')
+    return line
+
+
 #===============================================================================
 class Test_PDS3(unittest.TestCase):
+
 
     #===========================================================================
     def runTest(self):
@@ -129,12 +156,14 @@ class Test_PDS3(unittest.TestCase):
 
         # Test Cassini VIMS file
         filespec = 'cassini/VIMS/v1793917030_1.lbl'
-        label_dict = pds3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
+        label_dict = pds3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec),
+                                    cleaners=[clean_VIMS])
         self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
 
         # Test Cassini UVIS file
         filespec = 'cassini/UVIS/HSP2014_197_21_29.LBL'
-        label_dict = pds3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
+        label_dict = pds3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec),
+                                                 cleaners=[clean_UVIS])
         self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
 
 ##############################################
