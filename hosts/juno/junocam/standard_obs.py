@@ -59,28 +59,28 @@ gm.override('JUPITER:RING emission angle, ring minus center (deg)', 8., names=na
 #gm.override('JUPITER:RING emission angle, ring minus center (deg)', 8., names=name)
 
 
-###################################################################
-name = 'JNCR_2019149_20G00008_V01'
-###################################################################
-# To preview and adopt gold masters:
-#  python gold_master.py --name JNCR_2019149_20G00008_V01 --preview
-#  python gold_master.py --name JNCR_2019149_20G00008_V01 --adopt
-
-gm.define_standard_obs(name,
-        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                               'juno/junocam/20/' + name + '.img'),
-        index   = 2,
-        planets  = 'JUPITER',
-        moons    = '',
-        rings    = '',
-        kwargs  = {'snap':False, 'inventory':False, 'border':10})
-
-# this one has ansa problems because so high above equator 
-
-gm.override('Celestial north minus east angles (deg)', 8., names=name)
-gm.override('JUPITER longitude d/dv self-check (deg/pix)', 0.3, names=name)
-gm.override('JUPITER:RING azimuth d/du self-check (deg/pix)', 0.1, names=name)
-gm.override('JUPITER:RING emission angle, ring minus center (deg)', 8., names=name)
+####################################################################
+#name = 'JNCR_2019149_20G00008_V01'
+####################################################################
+## To preview and adopt gold masters:
+##  python gold_master.py --name JNCR_2019149_20G00008_V01 --preview
+##  python gold_master.py --name JNCR_2019149_20G00008_V01 --adopt
+#
+#gm.define_standard_obs(name,
+#        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
+#                               'juno/junocam/20/' + name + '.img'),
+#        index   = 2,
+#        planets  = 'JUPITER',
+#        moons    = '',
+#        rings    = '',
+#        kwargs  = {'snap':False, 'inventory':False, 'border':10})
+#
+## this one has ansa problems because so high above equator 
+#
+#gm.override('Celestial north minus east angles (deg)', 8., names=name)
+#gm.override('JUPITER longitude d/dv self-check (deg/pix)', 0.3, names=name)
+#gm.override('JUPITER:RING azimuth d/du self-check (deg/pix)', 0.1, names=name)
+#gm.override('JUPITER:RING emission angle, ring minus center (deg)', 8., names=name)
 
 
 
