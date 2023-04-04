@@ -9,51 +9,17 @@ import pdsparser
 from pathlib import Path
 
 #===============================================================================
-def clean_comments(lines):
-    """
-    Standard cleaner to handle commenting errors that could affect any host.
-    """
-    # Close-comment w/o open-comment
-    for i in range(len(lines)):
-        line = lines[i]
-        if line.strip().endswith('*/') and '/*' not in line:
-            lines[i] = '\n'
-
-    return lines
-
-#===============================================================================
-def call_cleaners(cleaners, lines):
-    """
-    Call the given cleaner functions.
-
-    Inputs:
-        cleaners:       List of cleaner functions.
-        lines:          List of lines comprising the label.
-    """
-    for cleaner in cleaners:
-        lines = cleaner(lines)
-
-    return lines
-
-#===============================================================================
-def clean_label(lines, cleaner=None, no_standard=False):
+def clean_label(lines, cleaner=None):
     """
     Correct known errors in PDS3 labels.
 
     Inputs:
-        lines:          List of lines comprising the label.
-        cleaner:        Function that takes a line as input and
-                        return a cleaned line.
-        no_standard:    If True, the standard cleaners are not used.
+        lines:          List of strings comprising the label.
+        cleaner:        Function that takes a label as input and
+                        return a cleaned label.
     """
-    # Call standard cleaners
-    standard_cleaners = [clean_comments]
-    if not no_standard:
-        lines = call_cleaners(standard_cleaners, lines)
-
-    # Call custom cleaner
     if cleaner is not None:
-        lines = call_cleaners([cleaner], lines)
+        lines = cleaner(lines)
 
     return lines
 
@@ -77,14 +43,14 @@ def find_label(filespec):
     return filespec
 
 #===============================================================================
-def get_label(filespec, cleaner=None, no_standard=False):
+def get_label(filespec, cleaner=None):
     """
     Find the PDS3 label, clean it, load it, and parse into dictionary.
 
     Inputs:
         filespec:       File specification for the label.
-        cleaner:        Function that takes a line as input and
-                        return a cleaned line.
+        cleaner:        Function that takes a label as input and
+                        return a cleaned label.
         no_standard:    If True, the standard cleaners are not used.
     """
     assert os.path.isfile(filespec), f'Not found: {filespec}'
@@ -93,8 +59,7 @@ def get_label(filespec, cleaner=None, no_standard=False):
     labelspec = find_label(filespec)
 
     # Load and clean the PDS label
-    lines = clean_label(pdsparser.PdsLabel.load_file(labelspec),
-                        cleaner=cleaner, no_standard=no_standard)
+    lines = clean_label(pdsparser.PdsLabel.load_file(labelspec), cleaner=cleaner)
 
     # Parse the label into a dictionary
     return pdsparser.PdsLabel.from_string(lines).as_dict()
@@ -115,16 +80,18 @@ def clean_VIMS(lines):
         lines[i] = lines[i].replace('(N/A',  '("N/A"')
         lines[i] = lines[i].replace('N/A)',  '"N/A")')
 
+        if lines[i].strip().endswith('*/') and '/*' not in lines[i]:
+            lines[i] = '\n'
+
     return lines
 
 #===========================================================================
 def clean_UVIS(lines):
     for i in range(len(lines)):
-        line = lines[i]
-        if 'CORE_UNIT' in line:
-            if '"COUNTS/BIN"' not in line:
-                liness[i] = line.replace('COUNTS/BIN', '"COUNTS/BIN"')
-        if line.startswith('ODC_ID'):
+        if 'CORE_UNIT' in lines[i]:
+            if '"COUNTS/BIN"' not in lines[i]:
+                lines[i] = lines[i].replace('COUNTS/BIN', '"COUNTS/BIN"')
+        if lines[i].startswith('ODC_ID'):
             lines[i] = lines[i].replace(',', '')
 
     return lines
