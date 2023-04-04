@@ -9,7 +9,7 @@ import pdstable
 import pdsparser
 import oops
 
-from hosts.pds3 import PDS3
+from hosts         import pds3
 from hosts.galileo import Galileo
 
 ################################################################################
@@ -37,7 +37,7 @@ def from_file(filespec, fast_distortion=True,
                         # unless initialize() is called explicitly.
 
     # Load the PDS label
-    label = PDS3.get_label(filespec)
+    label = pds3.get_label(filespec)
 
     # Load the data array
     vic = vicar.VicarImage.from_file(filespec, extraneous='warn')
@@ -68,7 +68,6 @@ def from_file(filespec, fast_distortion=True,
                                filespec = filespec,
                                basename = os.path.basename(filespec))
 
-    from IPython import embed; print('+++++++++++++'); embed()
     result.insert_subfield('spice_kernels',
                            Galileo.used_kernels(result.time, 'iss',
                                                 return_all_planets))

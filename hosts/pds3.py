@@ -1,5 +1,5 @@
 ################################################################################
-# oops/inst/pds3.py
+# hosts/pds3.py
 #
 # Utility functions for finding and loading PDS3 labels in host modules.
 #
@@ -8,72 +8,103 @@ import os
 import pdsparser
 from pathlib import Path
 
-#===============================================================================
-class PDS3(object):
-    """An instance-free class for PDS3 label management methods."""
 
-    #===========================================================================
-    @staticmethod
-    def clean_label(lines):
-        """Correct common errors in PDS3 labels."""
+#===========================================================================
+def clean_comments(line):
+    """
+    Standard cleaner to handle commenting errors that could affect any host.
+    """
 
-        for i in range(len(lines)):
+    # Close-comment w/o open-comment
+    if line.strip().endswith('*/') and '/*' not in line:
+        line = '\n'
 
-            # Relevant to Cassini VIMS
-            line = lines[i]
-            lines[i] = line.replace('(N/A',  '("N/A"')
-            lines[i] = line.replace('N/A)',  '"N/A")')
+    return line
 
-            if line.strip().endswith('*/') and '/*' not in line:
-                lines[i] = '\n'
+#===========================================================================
+def call_cleaners(cleaners, lines):
+    """
+    Call the given cleaner functions.
 
-            # Relevant to Cassini UVIS
-            if 'CORE_UNIT' in line:
-                if '"COUNTS/BIN"' not in line:
-                    lines[i] = line.replace('COUNTS/BIN', '"COUNTS/BIN"')
-            if line.startswith('ODC_ID'):
-                lines[i] = line.replace(',', '')
+    Inputs:
+        cleaners:       List of cleaner functions.
+        lines:          List of lines comprising the label.
+    """
 
-        return lines
+    for i in range(len(lines)):
+        for cleaner in cleaners:
+            lines[i] = cleaner(lines[i])
 
-    #===========================================================================
-    @staticmethod
-    def find_label(filespec):
-        """Find the PDS3 label corresponding to the given filespec."""
+    return lines
 
-        # Construct candidate label filenames
-        spec = Path(filespec)
+#===========================================================================
+def clean_label(lines, cleaners=None, no_standard=False):
+    """
+    Correct known errors in PDS3 labels.
 
-        labelspecs = [
-            spec.with_suffix('.lbl'),
-            spec.with_suffix('.LBL') ]
+    Inputs:
+        lines:          List of lines comprising the label.
+        cleaners:       List of functions that take a line as input and
+                        return a cleaned line.  By default, these functions
+                        are appended to a list of standard cleaner functions.
+        no_standard:    If True, the standard cleaners are not used.
+    """
 
-        if filespec.upper().endswith('.LBL'):
-            labelspecs.append(filespec)
+    # Call standard cleaners
+    standard_cleaners = [clean_comments]
+    if not no_standard:
+        lines = call_cleaners(standard_cleaners, lines)
 
-        # Check candidates; return first one that exists
-        for labelspec in labelspecs:
-            if os.path.isfile(labelspec):
-                return labelspec
+    # Call custom cleaners
+    if cleaners is not None:
+        lines = call_cleaners(cleaners, lines)
 
-        # If no successful candidate, assume attached label
-        return filespec
+    return lines
 
-    #===========================================================================
-    @staticmethod
-    def get_label(filespec):
-        """Find the PDS3 label, clean it, load it, and parse into dictionary."""
+#===========================================================================
+def find_label(filespec):
+    """Find the PDS3 label corresponding to the given filespec."""
 
-        assert os.path.isfile(filespec), f'Not found: {filespec}'
+    # Construct candidate label filenames
+    spec = Path(filespec)
+    labelspecs = [
+        spec.with_suffix('.lbl'),
+        spec.with_suffix('.LBL') ]
+    if filespec.upper().endswith('.LBL'):
+        labelspecs.append(filespec)
 
-        # Find the label
-        labelspec = PDS3.find_label(filespec)
+    # Check candidates; return first one that exists
+    for labelspec in labelspecs:
+        if os.path.isfile(labelspec):
+            return labelspec
 
-        # Load and clean the PDS label
-        lines = PDS3.clean_label(pdsparser.PdsLabel.load_file(labelspec))
+    # If no successful candidate, assume attached label
+    return filespec
 
-        # Parse the label into a dictionary
-        return pdsparser.PdsLabel.from_string(lines).as_dict()
+#===========================================================================
+def get_label(filespec, cleaners=None, no_standard=False):
+    """
+    Find the PDS3 label, clean it, load it, and parse into dictionary.
+
+    Inputs:
+        filespec:       File specification for the label.
+        cleaners:       List of functions that take a label line as input and
+                        return a cleaned line.  By default, these functions
+                        are appended to a list of standard cleaner functions.
+        no_standard:    If True, the standard cleaners are not used.
+    """
+
+    assert os.path.isfile(filespec), f'Not found: {filespec}'
+
+    # Find the label
+    labelspec = find_label(filespec)
+
+    # Load and clean the PDS label
+    lines = clean_label(pdsparser.PdsLabel.load_file(labelspec),
+                        cleaners=cleaners, no_standard=no_standard)
+
+    # Parse the label into a dictionary
+    return pdsparser.PdsLabel.from_string(lines).as_dict()
 
 
 ################################################################################
@@ -82,11 +113,27 @@ class PDS3(object):
 import unittest
 import os.path
 
-from hosts.pds3              import PDS3
+from hosts                   import pds3
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 
-#*******************************************************************************
+#===========================================================================
+def clean_VIMS(line):
+    line = line.replace('(N/A',  '("N/A"')
+    line = line.replace('N/A)',  '"N/A")')
+    return line
+
+#===========================================================================
+def clean_UVIS(line):
+    if 'CORE_UNIT' in line:
+        if '"COUNTS/BIN"' not in line:
+            lines = line.replace('COUNTS/BIN', '"COUNTS/BIN"')
+    if line.startswith('ODC_ID'):
+        line = line.replace(',', '')
+    return line
+
+
+#===============================================================================
 class Test_PDS3(unittest.TestCase):
 
     #===========================================================================
@@ -94,18 +141,29 @@ class Test_PDS3(unittest.TestCase):
 
         # Test extension replacement
         filespec = 'cassini/ISS/W1575634136_1.IMG'
-        label_dict = PDS3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
+        label_dict = pds3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
         self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
 
         # Test .LBL file input
         filespec = 'cassini/ISS/W1575634136_1.LBL'
-        label_dict = PDS3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
+        label_dict = pds3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
         self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
 
         # Test non-existent file
         filespec = 'nofile.crap'
-        self.assertRaises(AssertionError, PDS3.get_label, os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
+        self.assertRaises(AssertionError, pds3.get_label, os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
 
+        # Test Cassini VIMS file
+        filespec = 'cassini/VIMS/v1793917030_1.lbl'
+        label_dict = pds3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec),
+                                    cleaners=[clean_VIMS])
+        self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
+
+        # Test Cassini UVIS file
+        filespec = 'cassini/UVIS/HSP2014_197_21_29.LBL'
+        label_dict = pds3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec),
+                                                 cleaners=[clean_UVIS])
+        self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
 
 ##############################################
 if __name__ == '__main__': # pragma: no cover
