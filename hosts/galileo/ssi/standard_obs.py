@@ -21,10 +21,9 @@ gm.define_standard_obs(name,
         obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                'galileo/GO_0017/G1/GANYMEDE/' + name + '.img'),
         index   = 5,
-        module  = 'hosts.galileo.ssi',
-        planet  = '',
-        moon    = 'GANYMEDE',
-        ring    = '',
+        planets  = '',
+        moons    = 'GANYMEDE',
+        rings    = '',
         kwargs  = {'snap':False, 'inventory':False, 'border':10})
 
 #gm.override('Celestial north minus east angles (deg)', 8., names=name)
