@@ -306,16 +306,16 @@ import unittest
 import os.path
 import oops.backplane.gold_master as gm
 
-from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+from hosts.galileo.ssi          import standard_obs
 
 
 #===============================================================================
 class Test_Galileo_SSI_GoldMaster(unittest.TestCase):
 
     #===========================================================================
-    def runTest(self):
-        from hosts.galileo.ssi import standard_obs
-        gm.execute_standard_unittest(unittest.TestCase, exclude='default')
+    def test_C0349632100R(self):
+        gm.execute_as_unittest(self, 'C0349632100R')
 
 ############################################
 
