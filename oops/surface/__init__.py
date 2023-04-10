@@ -582,6 +582,7 @@ class Surface(object):
                                              coords=True)
 
         # Shrink the event
+        original_shape = link.shape
         link = link.shrink(antimask)
 
         # Define quantities with respect to SSB in J2000
@@ -771,8 +772,8 @@ class Surface(object):
         new_link = link.replace(link_key + '_lt', lt)
 
         # Unshrink
-        surface_event = surface_event.unshrink(antimask)
-        new_link = new_link.unshrink(antimask)
+        surface_event = surface_event.unshrink(antimask, shape=original_shape)
+        new_link = new_link.unshrink(antimask, shape=original_shape)
 
         return (surface_event, new_link)
 
@@ -1118,8 +1119,8 @@ class Surface(object):
                                 link_key + '_lt', lt)
 
         # Unshrink
-        surface_event = surface_event.unshrink(antimask)
-        new_link = new_link.unshrink(antimask)
+        surface_event = surface_event.unshrink(antimask, unshrunk_link.shape)
+        new_link = new_link.unshrink(antimask, unshrunk_link.shape)
 
         return (surface_event, new_link)
 
@@ -1447,8 +1448,8 @@ class Surface(object):
                                 link_key + '_lt', lt)
 
         # Unshrink
-        surface_event = surface_event.unshrink(antimask)
-        new_link = new_link.unshrink(antimask)
+        surface_event = surface_event.unshrink(antimask, unshrunk_link.shape)
+        new_link = new_link.unshrink(antimask, unshrunk_link.shape)
 
         return (surface_event, new_link)
 
