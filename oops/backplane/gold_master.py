@@ -754,13 +754,17 @@ def run_tests(args):
     LOGGING.all(args.performance, category='performance')
 
     LOGGING.reset()         # zero out error and warning counts
+
+    errors = 0
     try:
         for bpt in args.backplane_tests:
             bpt.run_tests()
+            errors += bpt.errors
     except Exception as e:
         LOGGING.exception(e)
+    errors += LOGGING.errors
 
-    if LOGGING.errors > 0:
+    if errors > 0:
         if args.testcase is not None:
             args.testcase.assertTrue(False, 'gold_master tests FAILED')
         else:
@@ -1045,6 +1049,7 @@ class BackplaneTest(object):
         self.gold_summary_ = None
         self.summary = {}
         self.results = {}
+        self.errors = 0
 
     ############################################################################
     # Test runner for one BackplaneTest
@@ -1234,6 +1239,7 @@ class BackplaneTest(object):
                 LOGGING.logger.removeHandler(handler)
                 handler.close()
 
+            self.errors = LOGGING.errors
             LOGGING.pop()
 
     @staticmethod
