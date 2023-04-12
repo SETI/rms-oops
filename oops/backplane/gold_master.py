@@ -104,7 +104,8 @@ where
     <message> is a descriptive message.
 
 For comparison tests, the message has the following format:
-    <status>: "<title>"; diff=<diff1>/<diff2>/<limit>; ...
+    <status>: "<title>"; min.max=<minval>,<maxval>; ...
+                         diff=<diff1>/<diff2>/<limit>; ...
                          offset=<offset>/<radius>; ...
                          pixels=<count1>/<count2>/<pixels>
 where:
@@ -116,6 +117,8 @@ where:
                                 agreement;
         "Value/mask mismatch"   if both the values and the mask disagree.
     <title>   is the title of the test.
+    <minval>  is the minumium value in the array.
+    <maxval>  is the maxumium value in the array.
     <diff1>   is the maximum discrepancy among the unmasked values.
     <diff2>   is the maximum discrepancy after we have expanded the
               comparison to include neighboring pixels, as defined by the
@@ -1915,7 +1918,8 @@ class BackplaneTest(object):
           <message> is a descriptive message.
 
         For comparisons, the message has the following format:
-          <status>: "<title>"; diff=<diff1>/<diff2>/<limit>; ...
+          <status>: "<title>"; min.max=<minval>,<maxval>; ...
+                               diff=<diff1>/<diff2>/<limit>; ...
                                offset=<offset>/<radius>; ...
                                pixels=<count1>/<count2>/<pixels>
         where:
@@ -1927,6 +1931,8 @@ class BackplaneTest(object):
                                     agreement;
             "Value/mask mismatch"   if both the values and the mask disagree.
           <title>   is the title of the test.
+          <minval>  is the minumium value in the array.
+          <maxval>  is the maxumium value in the array.
           <diff1>   is the maximum discrepancy among the unmasked values.
           <diff2>   is the maximum discrepancy after we have expanded the
                     comparison to include neighboring pixels, as defined by the
@@ -2018,8 +2024,7 @@ class BackplaneTest(object):
                     LOGGING.info(TEST_SUITE, '|', label, path, force=True)
                     path_logged = True
 
-            if path_logged:
-                LOGGING.literal()
+            LOGGING.literal()
 
     #===========================================================================
     @staticmethod

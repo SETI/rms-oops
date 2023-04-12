@@ -456,13 +456,13 @@ class Test_Juno_Junocam_GoldMaster(unittest.TestCase):
     def test_JNCR_2020366_31C00065_V01(self):
         gm.execute_as_unittest(self, 'JNCR_2020366_31C00065_V01')
 
-#    #===========================================================================
-#    def test_JNCR_2019096_19M00012_V02(self):
-#        gm.execute_as_unittest(self, 'JNCR_2019096_19M00012_V02')
+    #===========================================================================
+    def test_JNCR_2019096_19M00012_V02(self):
+        gm.execute_as_unittest(self, 'JNCR_2019096_19M00012_V02')
 
-#    #===========================================================================
-#    def test_JNCR_2019149_20G00008_V01(self):
-#        gm.execute_as_unittest(self, 'JNCR_2019149_20G00008_V01')
+    #===========================================================================
+    def test_JNCR_2019149_20G00008_V01(self):
+        gm.execute_as_unittest(self, 'JNCR_2019149_20G00008_V01')
 
 
 

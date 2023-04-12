@@ -245,8 +245,8 @@ def limb_test_suite(bpt):
 
       for name in bpt.limb_names:
 
-        ulimit = bp.center_distance(name) * pixel_duv[0] * 1.e-3
-        vlimit = bp.center_distance(name) * pixel_duv[1] * 1.e-3
+        ulimit = bp.center_distance(name).max() * pixel_duv[0] * 1.e-3
+        vlimit = bp.center_distance(name).max() * pixel_duv[1] * 1.e-3
 
         # limb_altitude
         alt = bp.limb_altitude(name)
