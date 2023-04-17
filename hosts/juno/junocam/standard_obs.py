@@ -28,8 +28,7 @@ gm.define_standard_obs(name,
         index   = 5,
         planets  = 'JUPITER',
         moons    = '',
-        rings    = '',
-        kwargs  = {'snap':False, 'inventory':False, 'border':10})
+        rings    = '')
 
 gm.override('JUPITER:RING emission angle, ring minus center (deg)', 7., names=name)
 gm.override('JUPITER:RING azimuth d/du self-check (deg/pix)', .07, names=name)
@@ -50,8 +49,7 @@ gm.define_standard_obs(name,
         index   = 12,
         planets  = 'JUPITER',
         moons    = '',
-        rings    = '',
-        kwargs  = {'snap':False, 'inventory':False, 'border':10})
+        rings    = '')
 
 gm.override('JUPITER:RING emission angle, ring minus center (deg)', 24., names=name)
 gm.override('Celestial north minus east angles (deg)', 8., names=name)
@@ -72,8 +70,7 @@ gm.define_standard_obs(name,
         index   = 7,
         planets  = 'JUPITER',
         moons    = '',
-        rings    = '',
-        kwargs  = {'snap':False, 'inventory':False, 'border':10})
+        rings    = '')
 
 gm.override('JUPITER:RING emission angle, ring minus center (deg)', 31., names=name)
 gm.override('JUPITER:RING longitude d/dv self-check (deg/pix)', .09, names=name)
@@ -95,8 +92,7 @@ gm.define_standard_obs(name,
         index   = 2,
         planets  = 'JUPITER',
         moons    = '',
-        rings    = '',
-        kwargs  = {'snap':False, 'inventory':False, 'border':10})
+        rings    = '')
 
 gm.override('JUPITER:ANSA radius d/du self-check (km/pix)', 1.9, names=name)
 gm.override('JUPITER:ANSA radius d/dv self-check (km/pix)', 1.8, names=name)
