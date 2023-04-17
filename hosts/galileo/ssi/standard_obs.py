@@ -10,6 +10,8 @@ import oops.backplane.gold_master as gm
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
+gm.set_default_args(module='hosts.galileo.ssi', inventory=False, border=4)
+
 ###################################################################
 name = 'C0349632100R'
 ###################################################################
@@ -20,11 +22,10 @@ name = 'C0349632100R'
 gm.define_standard_obs(name,
         obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                'galileo/GO_0017/G1/GANYMEDE/' + name + '.img'),
-        index   = 5,
+        index   = None,
         planets  = '',
         moons    = 'GANYMEDE',
-        rings    = '',
-        kwargs  = {'snap':False, 'inventory':False, 'border':10})
+        rings    = '')
 
 #gm.override('Celestial north minus east angles (deg)', 8., names=name)
 #gm.override('JUPITER longitude d/dv self-check (deg/pix)', 0.3, names=name)
