@@ -11,6 +11,17 @@ class Test_Backplane_via_gold_master(unittest.TestCase):
 
   def runTest(self):
 
+    # Define the default observation
+    gm.set_default_obs(
+            obspath = os.path.join(OOPS_TEST_DATA_PATH,
+                                   'cassini/ISS/W1573721822_1.IMG'),
+            index   = None,
+            planets = ['SATURN'],
+            moons   = ['EPIMETHEUS'],
+            rings   = ['SATURN_MAIN_RINGS'])
+
+    gm.set_default_args(module='hosts.cassini.iss')
+
     # The d/dv numerical ring derivatives are extra-uncertain due to the high
     # foreshortening in the vertical direction.
 
@@ -23,13 +34,7 @@ class Test_Backplane_via_gold_master(unittest.TestCase):
     gm.override('SATURN:RING distance d/dv self-check (km/pix)', 0.3)
     gm.override('SATURN:RING longitude d/dv self-check (deg/pix)', 0.1)
 
-    gm.execute_as_unittest(self,
-                obspath = os.path.join(OOPS_TEST_DATA_PATH,
-                                       'cassini/ISS/W1573721822_1.IMG'),
-                module  = 'hosts.cassini.iss',
-                planet  = 'SATURN',
-                moon    = 'EPIMETHEUS',
-                ring    = 'SATURN_MAIN_RINGS')
+    gm.execute_as_unittest(self)
 
 ########################################
 if __name__ == '__main__':
