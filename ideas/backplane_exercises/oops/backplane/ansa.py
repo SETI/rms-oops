@@ -2,9 +2,11 @@
 # oops/backplanes/ansa_backplanes.py: Ansa backplanes
 ################################################################################
 
-from polymath import Scalar, Pair
+from polymath import Scalar, Pair, Vector3
 
 from oops.backplane import Backplane
+from oops.event     import Event
+from oops.path      import AliasPath
 
 # Backplane names that can be "nested", such that the array mask propagates
 # forward to each new backplane array that refers to it.
@@ -27,7 +29,7 @@ def ansa_radius(self, event_key, radius_type='positive', rmax=None):
         raise ValueError('invalid radius_type: ' + repr(radius_type))
 
     # Look up under the desired radius type and maximum
-    event_key = self.standardize_event_key(event_key, default='ANSA')
+    event_key = self.standardize_event_key(event_key)
     key = ('ansa_radius', event_key, radius_type, rmax)
     if key in self.backplanes:
         return self.get_backplane(key)
@@ -65,10 +67,8 @@ def ansa_altitude(self, event_key):
                         inherits the mask of the given backplane array.
     """
 
-    (event_key,
-     backplane_key) = self._event_and_backplane_keys(event_key, ANSA_BACKPLANES,
-                                                     default='ANSA')
-
+    (event_key, backplane_key) = self._event_and_backplane_keys(event_key,
+                                                                ANSA_BACKPLANES)
     key = ('ansa_altitude', event_key)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
@@ -101,10 +101,8 @@ def ansa_longitude(self, event_key, reference='node'):
     if reference not in ('aries', 'node', 'obs', 'oha', 'sun', 'sha'):
         raise ValueError('invalid longitude reference: ' + repr(reference))
 
-    (event_key,
-     backplane_key) = self._event_and_backplane_keys(event_key, ANSA_BACKPLANES,
-                                                     default='ANSA')
-
+    (event_key, backplane_key) = self._event_and_backplane_keys(event_key,
+                                                                ANSA_BACKPLANES)
     key = ('ansa_longitude', event_key, reference)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
@@ -149,14 +147,11 @@ def _fill_ansa_intercepts(self, event_key):
                         allow it to be defined by the event_key.
     """
 
-    # Validate the surface type
-    surface = self.get_surface(event_key[1])
-    if surface.COORDINATE_TYPE != 'cylindrical':
-        raise ValueError('invalid coordinate type for ansa geometry: '
-                         + surface.COORDINATE_TYPE)
-
     # Get the ansa intercept coordinates
     event = self.get_surface_event(event_key)
+    if event.surface.COORDINATE_TYPE != 'cylindrical':
+        raise ValueError('invalid coordinate type for ansa geometry: '
+                         + event.surface.COORDINATE_TYPE)
 
     # Register the default backplanes
     self.register_backplane(('ansa_radius', event_key, 'right', None),
@@ -168,14 +163,12 @@ def _fill_ansa_intercepts(self, event_key):
 def _fill_ansa_longitudes(self, event_key):
     """Internal method to fill in the ansa intercept longitude backplane."""
 
-    # Validate the surface type
-    surface = self.get_surface(event_key[1])
-    if surface.COORDINATE_TYPE != 'cylindrical':
-        raise ValueError('invalid coordinate type for ansa geometry: '
-                         + surface.COORDINATE_TYPE)
-
     # Get the ansa intercept event
+    event_key = self.standardize_event_key(event_key)
     event = self.get_surface_event(event_key)
+    if event.surface.COORDINATE_TYPE != 'cylindrical':
+        raise ValueError('invalid coordinate type for ansa geometry: '
+                         + event.surface.COORDINATE_TYPE)
 
     # Get the longitude in the associated ring plane
     lon = event.surface.ringplane.coords_from_vector3(event.state, axes=2,
@@ -192,10 +185,8 @@ def ansa_radial_resolution(self, event_key):
                         inherits the mask of the given backplane array.
     """
 
-    (event_key,
-     backplane_key) = self._event_and_backplane_keys(event_key, ANSA_BACKPLANES,
-                                                     default='ANSA')
-
+    (event_key, backplane_key) = self._event_and_backplane_keys(event_key,
+                                                                ANSA_BACKPLANES)
     key = ('ansa_radial_resolution', event_key)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
@@ -225,10 +216,8 @@ def ansa_vertical_resolution(self, event_key):
                         inherits the mask of the given backplane array.
     """
 
-    (event_key,
-     backplane_key) = self._event_and_backplane_keys(event_key, ANSA_BACKPLANES,
-                                                     default='ANSA')
-
+    (event_key, backplane_key) = self._event_and_backplane_keys(event_key,
+                                                                ANSA_BACKPLANES)
     key = ('ansa_vertical_resolution', event_key)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
@@ -257,7 +246,6 @@ Backplane._define_backplane_names(globals().copy())
 # GOLD MASTER TESTS
 ################################################################################
 
-import numpy as np
 from oops.backplane.gold_master import register_test_suite
 from oops.constants import PI
 
@@ -303,46 +291,67 @@ def ansa_test_suite(bpt):
                     name + ' longitude wrt Sun minus wrt SHA (deg)',
                     method='mod360', limit=1.e-13)
 
-    # Derivative tests
-    if bpt.derivs:
-      (bp, bp_u0, bp_u1, bp_v0, bp_v1) = bpt.backplanes
-      pixel_duv = np.abs(bp.obs.fov.uv_scale.vals)
-
-      for name in bpt.ansa_names:
-
-        ulimit = bp.center_distance(name).max() * pixel_duv[0] * 1.e-3
-        vlimit = bp.center_distance(name).max() * pixel_duv[1] * 1.e-3
-
-        # ansa_radius
-        rad = bp.ansa_radius(name)
-        drad_duv = rad.d_dlos.chain(bp.dlos_duv)
-        (drad_du, drad_dv) = drad_duv.extract_denoms()
-
-        drad = bp_u1.ansa_radius(name) - bp_u0.ansa_radius(name)
-        bpt.compare(drad.wod/bpt.duv, drad_du,
-                    name + ' radius d/du self-check (km/pix)',
-                    limit=ulimit, radius=1)
-
-        drad = bp_v1.ansa_radius(name) - bp_v0.ansa_radius(name)
-        bpt.compare(drad.wod/bpt.duv, drad_dv,
-                    name + ' radius d/dv self-check (km/pix)',
-                    limit=vlimit, radius=1)
-
-        # ansa_altitude
-        alt = bp.ansa_altitude(name)
-        dalt_duv = alt.d_dlos.chain(bp.dlos_duv)
-        (dalt_du, dalt_dv) = dalt_duv.extract_denoms()
-
-        dalt = bp_u1.ansa_altitude(name) - bp_u0.ansa_altitude(name)
-        bpt.compare(dalt.wod/bpt.duv, dalt_du,
-                    name + ' altitude d/du self-check (km/pix)',
-                    limit=ulimit, radius=1)
-
-        dalt = bp_v1.ansa_altitude(name) - bp_v0.ansa_altitude(name)
-        bpt.compare(dalt.wod/bpt.duv, dalt_dv,
-                    name + ' altitude d/dv self-check (km/pix)',
-                    limit=vlimit, radius=1)
-
 register_test_suite('ansa', ansa_test_suite)
 
+################################################################################
+# UNIT TESTS
+################################################################################
+import unittest
+from oops.body import Body
+from oops.backplane.unittester_support import show_info
+from oops.constants import DPR
+
+#===============================================================================
+def exercise_resolution(bp,
+                        planet=None, moon=None, ring=None,
+                        undersample=16, use_inventory=False, inventory_border=2,
+                        **options):
+    """generic unit tests for orbit.py"""
+
+    if planet is not None and Body.lookup(planet).ring_body is not None:
+        test = bp.ansa_radial_resolution(planet+':ansa')
+        show_info(bp, 'Ansa radial resolution (km)', test, **options)
+        test = bp.ansa_vertical_resolution(planet+':ansa')
+        show_info(bp, 'Ansa vertical resolution (km)', test, **options)
+
+#===============================================================================
+def exercise_geometry(bp,
+                      planet=None, moon=None, ring=None,
+                      undersample=16, use_inventory=False, inventory_border=2,
+                      **options):
+    """generic unit tests for orbit.py"""
+
+    if planet is not None and Body.lookup(planet).ring_body is not None:
+        test = bp.ansa_radius(planet+':ansa')
+        show_info(bp, 'Ansa radius (km)', test,**options)
+        test = bp.ansa_altitude(planet+':ansa')
+        show_info(bp, 'Ansa altitude (km)', test,    **options)
+        test = bp.ansa_longitude(planet+':ansa', 'node')
+        show_info(bp, 'Ansa longitude wrt node (deg)', test*DPR,   **options)
+        test = bp.ansa_longitude(planet+':ansa', 'aries')
+        show_info(bp, 'Ansa longitude wrt Aries (deg)', test*DPR,  **options)
+        test = bp.ansa_longitude(planet+':ansa', 'obs')
+        show_info(bp, 'Ansa longitude wrt observer (deg)', test*DPR, **options)
+        test = bp.ansa_longitude(planet+':ansa', 'oha')
+        show_info(bp, 'Ansa longitude wrt OHA (deg)', test*DPR, **options)
+        test = bp.ansa_longitude(planet+':ansa', 'sun')
+        show_info(bp, 'Ansa longitude wrt Sun (deg)', test*DPR, **options)
+        test = bp.ansa_longitude(planet+':ansa', 'sha')
+        show_info(bp, 'Ansa longitude wrt SHA (deg)', test*DPR, **options)
+
+
+#*******************************************************************************
+class Test_Ansa(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+        from oops.backplane.unittester_support import Backplane_Settings
+        if Backplane_Settings.EXERCISES_ONLY:
+            self.skipTest("")
+        pass
+
+
+########################################
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
 ################################################################################

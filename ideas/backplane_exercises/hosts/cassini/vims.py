@@ -927,12 +927,13 @@ class VIMS(object):
 ################################################################################
 import unittest
 import os.path
-import oops.backplane.gold_master as gm
 
-from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+from oops.backplane.exercise_backplanes import exercise_backplanes
+from oops.backplane.unittester_support  import Backplane_Settings
 
 
-#===============================================================================
+#*******************************************************************************
 class Test_Cassini_VIMS(unittest.TestCase):
 
     #===========================================================================
@@ -940,43 +941,32 @@ class Test_Cassini_VIMS(unittest.TestCase):
         pass
 
 
-#===============================================================================
-class Test_Cassini_VIMS_GoldMaster_v1690952775(unittest.TestCase):
+#*******************************************************************************
+class Test_Cassini_VIMS_Backplane_Exercises(unittest.TestCase):
 
     #===========================================================================
     def runTest(self):
-        """
-        *** fails because vims needs updating ***
 
-        v1690952775 Compare w Gold Masters
+        if Backplane_Settings.NO_EXERCISES:
+            self.skipTest('')
 
-        To preview and regenerate gold masters (from pds-oops/oops/backplane/):
-            python gold_master.py \
-                ~/Dropbox-SETI/OOPS-Resources/test_data/cassini/VIMS/v1793917030_1.qub \
-                --module hosts.cassini.vims \
-                --planet SATURN \
-                --no-inventory \
-                --preview
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'cassini/VIMS')
 
-            python gold_master.py \
-                ~/Dropbox-SETI/OOPS-Resources/test_data/cassini/VIMS/v1793917030_1.qub \
-                --module hosts.cassini.vims \
-                --planet SATURN \
-                --no-inventory \
-                --adopt
-        """
-        gm.execute_as_unittest(self,
-                obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                       'cassini/VIMS/v1793917030_1.qub'),
-                index   = None,
-                module  = 'hosts.cassini.vims',
-                planet  = 'SATURN',
-                moon    = '',
-                ring    = '',
-                inventory=False, border=10)
+        file = os.path.join(root, 'v1690952775_1.qub')
+        (obs_vis, obs_ir) = from_file(file)
+        exercise_backplanes(obs_vis, use_inventory=True, inventory_border=4,
+                                     planet_key='SATURN')
+
+        file = os.path.join(root, 'v1793917030_1.qub')
+        (obs_vis, obs_ir) = from_file(file)
+        exercise_backplanes(obs_vis, use_inventory=True, inventory_border=4,
+                                     planet_key='SATURN')
 
 
 ############################################
+from oops.backplane.unittester_support import backplane_unittester_args
+
 if __name__ == '__main__':
+    backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################

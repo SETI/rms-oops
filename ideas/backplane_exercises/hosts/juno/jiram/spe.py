@@ -200,21 +200,33 @@ class SPE(object):
 ################################################################################
 import unittest
 import os.path
-import oops.backplane.gold_master as gm
+
 import hosts.juno.jiram as jiram
 
-from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+from oops.backplane.exercise_backplanes import exercise_backplanes
+from oops.backplane.unittester_support  import Backplane_Settings
 
 
-#===============================================================================
-class Test_Juno_JIRAM_IMG(unittest.TestCase):
+#*******************************************************************************
+class Test_Juno_JIRAM_SPE_Backplane_Exercises(unittest.TestCase):
 
     #===========================================================================
     def runTest(self):
-        pass
+
+        if Backplane_Settings.NO_EXERCISES:
+            self.skipTest('')
+
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'juno/jiram')
+        file = os.path.join(root, 'JNOJIR_2000/DATA/JIR_SPE_RDR_2013282T133845_V03.DAT')
+        (obs, slits) = jiram.from_file(file)
+        exercise_backplanes(obs, use_inventory=False, planet_key='MOON')
 
 
 ##############################################
+from oops.backplane.unittester_support import backplane_unittester_args
+
 if __name__ == '__main__':
+    backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################

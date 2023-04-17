@@ -255,21 +255,48 @@ class IMG(object):
 ################################################################################
 import unittest
 import os.path
-import oops.backplane.gold_master as gm
+
 import hosts.juno.jiram as jiram
 
-from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+from oops.backplane.exercise_backplanes import exercise_backplanes
+from oops.backplane.unittester_support  import Backplane_Settings
 
 
-#===============================================================================
-class Test_Juno_JIRAM_IMG(unittest.TestCase):
+#*******************************************************************************
+class Test_Juno_JIRAM_IMG_Backplane_Exercises(unittest.TestCase):
 
     #===========================================================================
     def runTest(self):
-        pass
+
+        if Backplane_Settings.NO_EXERCISES:
+            self.skipTest('')
+
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'juno/jiram')
+
+        # Moon image
+        file = os.path.join(root, 'JNOJIR_2000/DATA/JIR_IMG_RDR_2013282T133843_V03.IMG')
+        obs = jiram.from_file(file)[1]
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
+                                 planet_key='MOON')
+
+        # Europa image
+        file = os.path.join(root, 'JNOJIR_2008/DATA/JIR_IMG_RDR_2017244T104633_V01.IMG')
+        obs = jiram.from_file(file)[1]
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
+                                 planet_key='EUROPA')
+
+        # Jupiter image
+        file = os.path.join(root, 'JNOJIR_2014/DATA/JIR_IMG_RDR_2018197T055537_V01.IMG')
+        obs = jiram.from_file(file)[0]
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
+                                 planet_key='JUPITER')
 
 
 ##############################################
+from oops.backplane.unittester_support import backplane_unittester_args
+
 if __name__ == '__main__':
+    backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################

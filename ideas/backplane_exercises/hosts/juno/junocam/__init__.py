@@ -442,31 +442,60 @@ import unittest
 import oops.backplane.gold_master as gm
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-from hosts.juno.junocam      import standard_obs
 
-
-#===============================================================================
 class Test_Juno_Junocam_GoldMaster(unittest.TestCase):
 
-    #===========================================================================
-    def test_JNCR_2016347_03C00192_V01(self):
-        gm.execute_as_unittest(self, 'JNCR_2016347_03C00192_V01')
+    def runTest(self):
+
+        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
+                               'juno/junocam/03/JNCR_2016347_03C00192_V01.img')
+
+        gm.override('Celestial north minus east angles (deg)', 8.)
+        gm.override('JUPITER:RING azimuth minus longitude wrt Sun (deg)', None)
+        gm.override('JUPITER:RING emission angle, ring minus center (deg)', None)
+        gm.override('JUPITER:RING incidence angle, ring minus center (deg)', 3.)
+
+        gm.execute_as_unittest(self,
+                obspath = obspath,
+                index   = 5,
+                module  = 'hosts.juno.junocam',
+                planet  = 'JUPITER',
+                moon    = '',
+                ring    = '',
+                kwargs  = {'snap': False},
+                inventory=False, border=10)     # overrides of defaults
+
+################################################################################
+# OLD UNIT TESTS
+################################################################################
+import unittest
+import os.path
+
+from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+from oops.backplane.exercise_backplanes import exercise_backplanes
+from oops.backplane.unittester_support  import Backplane_Settings
+
+
+#*******************************************************************************
+class Test_Juno_Junocam_Backplane_Exercises(unittest.TestCase):
 
     #===========================================================================
-    def test_JNCR_2020366_31C00065_V01(self):
-        gm.execute_as_unittest(self, 'JNCR_2020366_31C00065_V01')
+    def runTest(self):
 
-    #===========================================================================
-    def test_JNCR_2019096_19M00012_V02(self):
-        gm.execute_as_unittest(self, 'JNCR_2019096_19M00012_V02')
+        if Backplane_Settings.NO_EXERCISES:
+            self.skipTest('')
 
-    #===========================================================================
-    def test_JNCR_2019149_20G00008_V01(self):
-        gm.execute_as_unittest(self, 'JNCR_2019149_20G00008_V01')
-
+        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'juno/junocam')
+        file = os.path.join(root, '03/JNCR_2016347_03C00192_V01.img')
+        obs = from_file(file)[5]
+        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
+                                 planet_key='JUPITER')
 
 
 ##############################################
+from oops.backplane.unittester_support import backplane_unittester_args
+
 if __name__ == '__main__':
+    backplane_unittester_args()
     unittest.main(verbosity=2)
 ################################################################################
