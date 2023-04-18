@@ -22,14 +22,44 @@ name = 'C0349632100R'
 gm.define_standard_obs(name,
         obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                'galileo/GO_0017/G1/GANYMEDE/' + name + '.img'),
-        index   = None,
+        index    = None,
         planets  = '',
         moons    = 'GANYMEDE',
         rings    = '')
 
-#gm.override('Celestial north minus east angles (deg)', 8., names=name)
-#gm.override('JUPITER longitude d/dv self-check (deg/pix)', 0.3, names=name)
-#gm.override('JUPITER:RING azimuth d/du self-check (deg/pix)', 0.1, names=name)
-#gm.override('JUPITER:RING emission angle, ring minus center (deg)', 8., names=name)
+###################################################################
+name = 'C0368369200R'
+###################################################################
+# To preview and adopt gold masters:
+#  python gold_master.py --name C0368369200R --preview
+#  python gold_master.py --name C0368369200R --adopt
 
+gm.define_standard_obs(name,
+        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
+                               'galileo/GO_0017/C3/JUPITER/' + name + '.img'),
+        index    = None,
+        planets  = '',
+        moons    = 'JUPITER',
+        rings    = '')
+
+gm.override('JUPITER:RING longitude d/du self-check (deg/pix)', .00025, names=name)
+gm.override('JUPITER:RING longitude d/dv self-check (deg/pix)', .00014, names=name)
+gm.override('JUPITER:RING azimuth d/du self-check (deg/pix)', .0026, names=name)
+gm.override('JUPITER:RING azimuth d/dv self-check (deg/pix)', .00026, names=name)
+gm.override('JUPITER longitude d/dv self-check (deg/pix)', .096, names=name)
+
+###################################################################
+name = 'C0061455700R'
+###################################################################
+# To preview and adopt gold masters:
+#  python gold_master.py --name C0061455700R --preview
+#  python gold_master.py --name C0061455700R --adopt
+
+gm.define_standard_obs(name,
+        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
+                               'galileo/GO_0004/EARTH/' + name + '.img'),
+        index    = None,
+        planets  = '',
+        moons    = 'EARTH',
+        rings    = '')
 

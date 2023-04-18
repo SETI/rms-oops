@@ -25,7 +25,7 @@ name = 'JNCR_2016347_03C00192_V01'
 gm.define_standard_obs(name,
         obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                'juno/junocam/03/' + name + '.img'),
-        index   = 5,
+        index    = 5,
         planets  = 'JUPITER',
         moons    = '',
         rings    = '')
@@ -46,7 +46,7 @@ name = 'JNCR_2020366_31C00065_V01'
 gm.define_standard_obs(name,
         obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                'juno/junocam/31/' + name + '.img'),
-        index   = 12,
+        index    = 12,
         planets  = 'JUPITER',
         moons    = '',
         rings    = '')
@@ -67,7 +67,7 @@ name = 'JNCR_2019096_19M00012_V02'
 gm.define_standard_obs(name,
         obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                'juno/junocam/19/' + name + '.img'),
-        index   = 7,
+        index    = 7,
         planets  = 'JUPITER',
         moons    = '',
         rings    = '')
@@ -89,7 +89,7 @@ name = 'JNCR_2019149_20G00008_V01'
 gm.define_standard_obs(name,
         obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                            'juno/junocam/20/' + name + '.img'),
-        index   = 2,
+        index    = 2,
         planets  = 'JUPITER',
         moons    = '',
         rings    = '')

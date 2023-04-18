@@ -2225,6 +2225,8 @@ class BackplaneTest(object):
                     value = value[:1] + value[:1] + value[1:]
                 self.gold_summary_[key] = value
 
+        if len(gold_summary_) != 4:
+            print(0)
         return self.gold_summary_
 
     #===========================================================================
