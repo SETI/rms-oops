@@ -104,7 +104,7 @@ where
     <message> is a descriptive message.
 
 For comparison tests, the message has the following format:
-    <status>: "<title>"; min.max=<minval>,<maxval>; ...
+    <status>: "<title>"; min,max=<minval>,<maxval>; ...
                          diff=<diff1>/<diff2>/<limit>; ...
                          offset=<offset>/<radius>; ...
                          pixels=<count1>/<count2>/<pixels>
@@ -754,17 +754,16 @@ def run_tests(args):
     LOGGING.all(args.performance, category='performance')
 
     LOGGING.reset()         # zero out error and warning counts
-
     errors = 0
+    had_exception = False
     try:
         for bpt in args.backplane_tests:
-            bpt.run_tests()
-            errors += bpt.errors
+            errors += bpt.run_tests()
     except Exception as e:
         LOGGING.exception(e)
-    errors += LOGGING.errors
+        had_exception = True
 
-    if errors > 0:
+    if errors or had_exception > 0:
         if args.testcase is not None:
             args.testcase.assertTrue(False, 'gold_master tests FAILED')
         else:
@@ -1222,6 +1221,7 @@ class BackplaneTest(object):
                     LOGGING.diagnostic('   ', key, '(%s)' % info)
 
                 LOGGING.diagnostic()
+                errors = LOGGING.errors
                 LOGGING.pop()
 
             seconds = (datetime.datetime.now() - start).total_seconds()
@@ -1239,8 +1239,10 @@ class BackplaneTest(object):
                 LOGGING.logger.removeHandler(handler)
                 handler.close()
 
-            self.errors = LOGGING.errors
+            errors = LOGGING.errors
             LOGGING.pop()
+
+        return errors
 
     @staticmethod
     def _sort_key(key):
@@ -1924,7 +1926,7 @@ class BackplaneTest(object):
           <message> is a descriptive message.
 
         For comparisons, the message has the following format:
-          <status>: "<title>"; min.max=<minval>,<maxval>; ...
+          <status>: "<title>"; min,max=<minval>,<maxval>; ...
                                diff=<diff1>/<diff2>/<limit>; ...
                                offset=<offset>/<radius>; ...
                                pixels=<count1>/<count2>/<pixels>
@@ -2023,12 +2025,10 @@ class BackplaneTest(object):
         LABELS = ('master:', 'array:', 'browse:', 'sampled master:')
 
         if self.args.fullpaths:
-            path_logged = False
             for (attr, label) in zip(ATTRS, LABELS):
                 if hasattr(comparison, attr):
                     path = getattr(comparison, attr)
                     LOGGING.info(TEST_SUITE, '|', label, path, force=True)
-                    path_logged = True
 
             LOGGING.literal()
 
