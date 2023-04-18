@@ -1435,10 +1435,9 @@ class BackplaneTest(object):
                     self._log_comparison(comparison, 'No gold master')
 
                 else:
-                    (min_val, max_val, masked,
-                                       unmasked) = self.gold_summary[title]
+                    (min_val, max_val, masked, total) = self.gold_summary[title]
                     # If gold master value is not shapeless...
-                    if min_val != max_val or masked + unmasked > 1:
+                    if min_val != max_val or total > 1:
                         self._log_comparison(comparison, 'Shape mismatch')
 
                     else:
