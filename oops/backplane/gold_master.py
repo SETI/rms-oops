@@ -2220,13 +2220,11 @@ class BackplaneTest(object):
         for key, value in self.gold_summary_.items():
             if len(value) == 3:
                 if value[0] is None:
-                    value = (0,0) + value[2:]
+                    value = (0,0) + value[1:]
                 else:
                     value = value[:1] + value[:1] + value[1:]
                 self.gold_summary_[key] = value
 
-        if len(gold_summary_) != 4:
-            print(0)
         return self.gold_summary_
 
     #===========================================================================

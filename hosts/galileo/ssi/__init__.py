@@ -317,6 +317,14 @@ class Test_Galileo_SSI_GoldMaster(unittest.TestCase):
     def test_C0349632100R(self):
         gm.execute_as_unittest(self, 'C0349632100R')
 
+    #===========================================================================
+    def test_C0368369200R(self):
+        gm.execute_as_unittest(self, 'C0368369200R')
+
+    #===========================================================================
+    def test_C0061455700R(self):
+        gm.execute_as_unittest(self, 'C0061455700R')
+
 ############################################
 
 if __name__ == '__main__':
