@@ -181,8 +181,7 @@ import os.path
 import oops.backplane.gold_master as gm
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-from hosts.juno.junocam      import standard_obs
-
+from hosts.juno.jiram        import standard_obs
 
 #===============================================================================
 class Test_Juno_JIRAM_GoldMaster(unittest.TestCase):
