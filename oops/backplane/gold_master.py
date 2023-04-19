@@ -1048,7 +1048,6 @@ class BackplaneTest(object):
         self.gold_summary_ = None
         self.summary = {}
         self.results = {}
-        self.errors = 0
 
     ############################################################################
     # Test runner for one BackplaneTest
