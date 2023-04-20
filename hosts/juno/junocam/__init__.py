@@ -442,28 +442,29 @@ import unittest
 import oops.backplane.gold_master as gm
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+from hosts.juno.junocam      import standard_obs
 
+
+#===============================================================================
 class Test_Juno_Junocam_GoldMaster(unittest.TestCase):
 
-    def runTest(self):
+    #===========================================================================
+    def test_JNCR_2016347_03C00192_V01(self):
+        gm.execute_as_unittest(self, 'JNCR_2016347_03C00192_V01')
 
-        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                               'juno/junocam/03/JNCR_2016347_03C00192_V01.img')
+    #===========================================================================
+    def test_JNCR_2020366_31C00065_V01(self):
+        gm.execute_as_unittest(self, 'JNCR_2020366_31C00065_V01')
 
-        gm.override('Celestial north minus east angles (deg)', 8.)
-        gm.override('JUPITER longitude d/dv self-check (deg/pix)', 0.3)
-        gm.override('JUPITER:RING azimuth d/du self-check (deg/pix)', 0.1)
-        gm.override('JUPITER:RING emission angle, ring minus center (deg)', 8.)
+    #===========================================================================
+    def test_JNCR_2019096_19M00012_V02(self):
+        gm.execute_as_unittest(self, 'JNCR_2019096_19M00012_V02')
 
-        gm.execute_as_unittest(self,
-                obspath = obspath,
-                index   = 5,
-                module  = 'hosts.juno.junocam',
-                planet  = 'JUPITER',
-                moon    = '',
-                ring    = '',
-                kwargs  = {'snap': False},
-                inventory=False, border=10)     # overrides of defaults
+    #===========================================================================
+    def test_JNCR_2019149_20G00008_V01(self):
+        gm.execute_as_unittest(self, 'JNCR_2019149_20G00008_V01')
+
+
 
 ##############################################
 if __name__ == '__main__':

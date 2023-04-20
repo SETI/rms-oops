@@ -9,7 +9,7 @@ import os
 import julian
 import pdsparser
 
-from . import Cassini
+from hosts.cassini import Cassini
 
 DEBUG = False       # True to assert that the data array must have null
                     # values outside the active windows
@@ -544,13 +544,12 @@ class UVIS(object):
 ################################################################################
 import unittest
 import os.path
+import oops.backplane.gold_master as gm
 
-from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
-from oops.backplane.exercise_backplanes import exercise_backplanes
-from oops.backplane.unittester_support  import Backplane_Settings
+from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
 
 
-#*******************************************************************************
+#===============================================================================
 class Test_Cassini_UVIS(unittest.TestCase):
 
     #===========================================================================
@@ -558,21 +557,40 @@ class Test_Cassini_UVIS(unittest.TestCase):
         pass
 
 
-#*******************************************************************************
-class Test_Cassini_UVIS_Backplane_Exercises(unittest.TestCase):
+#===============================================================================
+class Test_Cassini_UVIS_GoldMaster_HSP2014_197_21_29(unittest.TestCase):
 
     #===========================================================================
     def runTest(self):
+        """
+        **** fails because uvis needs updating ****
 
-        if Backplane_Settings.NO_EXERCISES:
-            self.skipTest('')
+        HSP2014_197_21_29 Compare w Gold Masters
 
-        root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'cassini/UVIS')
+        To preview and regenerate gold masters (from pds-oops/oops/backplane/):
+            python gold_master.py \
+                ~/Dropbox-SETI/OOPS-Resources/test_data/cassini/UVIS/HSP2014_197_21_29.DAT \
+                --module hosts.cassini.uvis \
+                --ring SATURN_MAIN_RINGS \
+                --no-inventory \
+                --preview
 
-        file = os.path.join(root, 'HSP2014_197_21_29.DAT')
-        obs = from_file(file)
-        exercise_backplanes(obs, use_inventory=True, inventory_border=4,
-                                 ring_key='saturn_main_rings')
+            python gold_master.py \
+                ~/Dropbox-SETI/OOPS-Resources/test_data/cassini/UVIS/HSP2014_197_21_29.DAT \
+                --module hosts.cassini.uvis \
+                --ring SATURN_MAIN_RINGS \
+                --no-inventory \
+                --adopt
+        """
+        gm.execute_as_unittest(self,
+                obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
+                                       'cassini/UVIS/HSP2014_197_21_29.DAT'),
+                index   = None,
+                module  = 'hosts.cassini.uvis',
+                planet  = '',
+                moon    = '',
+                ring    = 'SATURN_MAIN_RINGS',
+                inventory=False, border=10)
 
 
 ############################################
