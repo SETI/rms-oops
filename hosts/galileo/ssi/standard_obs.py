@@ -62,4 +62,3 @@ gm.define_standard_obs(name,
         planets  = '',
         moons    = 'EARTH',
         rings    = '')
-

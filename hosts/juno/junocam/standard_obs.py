@@ -46,7 +46,7 @@ name = 'JNCR_2020366_31C00065_V01'
 gm.define_standard_obs(name,
         obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                'juno/junocam/31/' + name + '.img'),
-        index    = 12,
+        index   = 12,
         planets  = 'JUPITER',
         moons    = '',
         rings    = '')

@@ -1,10 +1,12 @@
 ################################################################################
-# hosts/galileo/ssi/gold_master.py: Backplane gold master tester for Galileo SSI
+# hosts/galileo/unittester.py
 ################################################################################
-import oops.backplane.gold_master as gm
-from hosts.galileo.ssi import standard_obs
 
+import unittest
+
+from hosts.galileo.ssi import Test_Galileo_SSI_GoldMaster
+
+########################################
 if __name__ == '__main__':
-    gm.execute_as_command()
-
+    unittest.main(verbosity=2)
 ################################################################################
