@@ -5,7 +5,7 @@
 import unittest
 
 from hosts.juno.unittester         import *
-#from hosts.galileo.unittester      import *
+from hosts.galileo.unittester      import *
 #from hosts.cassini.unittester     import *
 #from hosts.hst.unittester         import *
 #from hosts.voyager.unittester     import *
