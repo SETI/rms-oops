@@ -15,7 +15,7 @@ from hosts.galileo import Galileo
 ################################################################################
 # Standard class methods
 ################################################################################
-def from_file(filespec, fast_distortion=True,
+def from_file(filespec,
               return_all_planets=False, full_fov=False, **parameters):
     """A general, static method to return a Snapshot object based on a given
     Galileo SSI image file.  By default, only the valid image region is
@@ -24,10 +24,6 @@ def from_file(filespec, fast_distortion=True,
     Inputs:
         full_fov:           If True, the full image is returned with a mask
                             describing the regions with no data.
-
-        fast_distortion     True to use a pre-inverted polynomial;
-                            False to use a dynamically solved polynomial;
-                            None to use a FlatFOV.
 
         return_all_planets  Include kernels for all planets not just
                             Jupiter or Saturn.
@@ -75,8 +71,7 @@ def from_file(filespec, fast_distortion=True,
     return result
 
 #===============================================================================
-def initialize(ck='reconstructed', planets=None, asof=None,
-               spk='reconstructed', gapfill=True,
+def initialize(planets=None, asof=None,
                mst_pck=True, irregulars=True):
     """Initialize key information about the SSI instrument.
 
@@ -84,21 +79,16 @@ def initialize(ck='reconstructed', planets=None, asof=None,
     are ignored.
 
     Input:
-        ck,spk      'predicted', 'reconstructed', or 'none', depending on which
-                    kernels are to be used. Defaults are 'reconstructed'. Use
-                    'none' if the kernels are to be managed manually.
         planets     A list of planets to pass to define_solar_system. None or
                     0 means all.
         asof        Only use SPICE kernels that existed before this date; None
                     to ignore.
-        gapfill     True to include gapfill CKs. False otherwise.
         mst_pck     True to include MST PCKs, which update the rotation models
                     for some of the small moons.
         irregulars  True to include the irregular satellites;
                     False otherwise.
     """
-    SSI.initialize(ck=ck, planets=planets, asof=asof,
-                   spk=spk, gapfill=gapfill,
+    SSI.initialize(planets=planets, asof=asof,
                    mst_pck=mst_pck, irregulars=irregulars)
 
 
@@ -245,8 +235,7 @@ class SSI(object):
 
     #===========================================================================
     @staticmethod
-    def initialize(ck='reconstructed', planets=None, asof=None,
-                   spk='reconstructed', gapfill=True,
+    def initialize(planets=None, asof=None,
                    mst_pck=True, irregulars=True):
         """Initialize key information about the SSI instrument.
 
@@ -254,15 +243,10 @@ class SSI(object):
         After the first call, later calls to this function are ignored.
 
         Input:
-            ck,spk      'predicted', 'reconstructed', or 'none', depending on
-                        which kernels are to be used. Defaults are
-                        'reconstructed'. Use 'none' if the kernels are to be
-                        managed manually.
             planets     A list of planets to pass to define_solar_system. None
                         or 0 means all.
             asof        Only use SPICE kernels that existed before this date;
                         None to ignore.
-            gapfill     True to include gapfill CKs. False otherwise.
             mst_pck     True to include MST PCKs, which update the rotation
                         models for some of the small moons.
             irregulars  True to include the irregular satellites;
@@ -274,8 +258,7 @@ class SSI(object):
             return
 
         # Initialize Galileo
-        Galileo.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
-                           gapfill=gapfill,
+        Galileo.initialize(planets=planets, asof=asof,
                            mst_pck=mst_pck, irregulars=irregulars)
         Galileo.load_instruments(asof=asof)
 

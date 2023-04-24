@@ -27,7 +27,7 @@ oops.spice.load_leap_seconds()
 
 # We load CK and SPK files on a very rough month-by-month basis. This is simpler
 # than a more granular approach involving detailed calendar calculations. We
-# divide the period October 1, 1997 to October 1, 2017 up into 240 "months" of
+# divide the period October 18, 1989 to September 21, 2003 up into "months" of
 # equal length. Given any TDB, we quickly determine the month within which it
 # falls. Each month is associated with a list of kernels that should be loaded
 # whenever information is needed about any time within that month +/- 12 hours.
@@ -43,7 +43,7 @@ class Galileo(object):
 
     START_TIME = '1989-10-18'
     STOP_TIME  = '2003-09-21'
-    MONTHS = 240        # 20 years * 12 months/year
+    MONTHS = 167        # 14 years * 12 months/year - 1 month
 
     TDB0 = julian.tdb_from_tai(julian.tai_from_iso(START_TIME))
     TDB1 = julian.tdb_from_tai(julian.tai_from_iso(STOP_TIME))
@@ -66,32 +66,25 @@ class Galileo(object):
     ############################################################################
 
     @staticmethod
-    def initialize(ck='reconstructed', planets=None, asof=None,
-                   spk='reconstructed', gapfill=True,
+    def initialize(planets=None, asof=None,
                    mst_pck=True, irregulars=True):
         """Intialize the Galileo mission internals.
 
         After the first call, later calls to this function are ignored.
 
         Input:
-            ck,spk      Used to specify which C and SPK kernels are used.:
-                        'reconstructed' for the reconstructed kernels (default);
-                        'predicted' for the predicted kernels;
-                        'none' to allow manual control of the C kernels.
             planets     A list of planets to pass to define_solar_system. None
                         or 0 means all.
             asof        Only use SPICE kernels that existed before this date;
                         None to ignore.
-            gapfill     True to include gapfill CKs. False otherwise.
             mst_pck     True to include MST PCKs, which update the rotation
                         models for some of the small moons.
             irregulars  True to include the irregular satellites;
                         False otherwise.
         """
+
         if Galileo.initialized:
             return
-
-        (ck, spk) = ('NONE', 'NONE')
 
         # Define some important paths and frames
         Body.define_solar_system(Galileo.START_TIME, Galileo.STOP_TIME,
@@ -104,35 +97,13 @@ class Galileo(object):
 
         spicedb.open_db()
 
-        spk = spk.upper()
-        if spk == 'NONE':
+        # This means no SPK will ever be loaded; handling is manual
+        Galileo.initialize_kernels([], Galileo.SPK_LIST)
+        Galileo.SPK_LOADED = np.ones(Galileo.MONTHS, dtype='bool')
 
-            # This means no SPK will ever be loaded; handling is manual
-            Galileo.initialize_kernels([], Galileo.SPK_LIST)
-            Galileo.SPK_LOADED = np.ones(Galileo.MONTHS, dtype='bool')
-        else:
-            kernels = spicedb.select_spk(-77, name='CAS-SPK-' + spk,
-                                              time=(Galileo.START_TIME,
-                                                    Galileo.STOP_TIME),
-                                              asof=asof)
-            Galileo.initialize_kernels(kernels, Galileo.SPK_LIST)
-
-        ck = ck.upper()
-        if ck == 'NONE':
-
-            # This means no CK will ever be loaded; handling is manual
-            Galileo.initialize_kernels([], Galileo.CK_LIST)
-            Galileo.CK_LOADED = np.ones(Galileo.MONTHS, dtype='bool')
-        else:
-            kernels = spicedb.select_ck(-77, name='CAS-CK-' + ck,
-                                             time=(Galileo.START_TIME,
-                                                   Galileo.STOP_TIME),
-                                             asof=asof)
-            Galileo.initialize_kernels(kernels, Galileo.CK_LIST)
-
-        # Load extra kernels if necessary
-        if gapfill and ck not in ('PREDICTED', 'NONE'):
-            _ = spicedb.furnish_ck(-77, name='CAS-CK-GAPFILL')
+        # This means no CK will ever be loaded; handling is manual
+        Galileo.initialize_kernels([], Galileo.CK_LIST)
+        Galileo.CK_LOADED = np.ones(Galileo.MONTHS, dtype='bool')
 
         spicedb.close_db()
 
@@ -216,29 +187,13 @@ class Galileo(object):
         cspyce.furnsh(kdir + 'SPK/de421.bsp')
         cspyce.furnsh(kdir + 'SPK/de432s.bsp')
 
-        [cspyce.furnsh(ckfile) for ckfile in glob.glob(kdir + 'CK/*.bc')]
-        [cspyce.furnsh(spkfile) for spkfile in glob.glob(kdir + 'SPK/*.bsp')]
+        for ckfile in glob.glob(kdir + 'CK/*.bc'):
+            cspyce.furnsh(ckfile)
 
+        for spkfile in glob.glob(kdir + 'SPK/*.bsp'):
+            cspyce.furnsh(spkfile)
 
         return
-
-## TODO:
-        # Find the range of months needed
-        m1 = int((t0 - Galileo.TDB0) // Galileo.DTDB)
-        m2 = int((t1 - Galileo.TDB0) // Galileo.DTDB) + 1
-
-        m1 = max(m1, 0)         # ignore time limits outside mission duration
-        m2 = min(m2, Galileo.MONTHS - 1)
-
-        # Load any months not already loaded
-        for m in range(m1, m2+1):
-          if not loaded[m]:
-            for kernel in lists[m]:
-                filespec = kernel.filespec
-                if filespec not in kernel_dict:
-                    spicedb.furnish_kernels([kernel])
-                    kernel_dict[filespec] = kernel
-                loaded[m] = True
 
     ############################################################################
     # Initialize the kernel lists
@@ -246,7 +201,7 @@ class Galileo(object):
 
     @staticmethod
     def initialize_kernels(kernels, lists):
-        """After initialization, lists[m] is a the KernelInfo objects needed
+        """After initialization, lists[m] is the KernelInfo objects needed
         within the specified month.
         """
         for i in range(Galileo.MONTHS):
@@ -269,12 +224,12 @@ class Galileo(object):
                 lists[m] += [kernel]
 
     ############################################################################
-    # Routines for managing the loading other kernels
+    # Routines for managing the loading of other kernels
     ############################################################################
 
     @staticmethod
     def load_instruments(instruments=[], asof=None):
-        """Load the SPICE kernels and defines the basic paths and frames for
+        """Load the SPICE kernels and define the basic paths and frames for
         the Galileo mission.
 
         It is generally only to be called once.
@@ -311,64 +266,6 @@ class Galileo(object):
     ############################################################################
     # Routines for managing text kernel information
     ############################################################################
-
-### TODO: finish these routines...
-
-    @staticmethod
-    def spice_instrument_kernel(inst, asof=None):
-        """A dictionary containing the Instrument Kernel information.
-
-        Also furnishes it for use by the SPICE tools.
-
-        Input:
-            inst        one of "ISS", "UVIS", "VIMS", "CIRS", etc.
-            asof        an optional date in the past, in ISO date or date-time
-                        format. If provided, then the information provided will
-                        be applicable as of that date. Otherwise, the most
-                        recent information is always provided.
-
-        Return:         a tuple containing:
-                            the dictionary generated by textkernel.from_file()
-                            the name of the kernel.
-        """
-        if asof is not None:
-            (day,sec) = julian.day_sec_from_iso(stop_time)
-            asof = julian.ymdhms_format_from_day_sec(day, sec)
-
-        spicedb.open_db()
-        kernel_info = spicedb.select_inst(-77, types='IK', inst=inst, asof=asof)
-        spicedb.furnish_kernels(kernel_info, fast=True)
-        spicedb.close_db()
-
-        return (spicedb.as_dict(kernel_info), spicedb.as_names(kernel_info)[0])
-
-    #===========================================================================
-    @staticmethod
-    def spice_frames_kernel(asof=None):
-        """A dictionary containing the Galileo Frames Kernel information.
-
-        Also furnishes the kernels for use by the SPICE tools.
-
-        Input:
-            asof        an optional date in the past, in ISO date or date-time
-                        format. If provided, then the information provided will
-                        be applicable as of that date. Otherwise, the most
-                        recent information is always provided.
-
-        Return:         a tuple containing:
-                            the dictionary generated by textkernel.from_file()
-                            an ordered list of the names of the kernels
-        """
-        if asof is not None:
-            (day,sec) = julian.day_sec_from_iso(stop_time)
-            asof = julian.ymdhms_format_from_day_sec(day, sec)
-
-        spicedb.open_db()
-        kernel_list = spicedb.select_inst(-77, types='FK', asof=asof)
-        spicedb.furnish_kernels(kernel_info, fast=True)
-        spicedb.close_db()
-
-        return (spicedb.as_dict(kernel_list), spicedb.as_names(kernel_list))
 
     #===========================================================================
     @staticmethod

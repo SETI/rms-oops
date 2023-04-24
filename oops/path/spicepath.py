@@ -55,7 +55,7 @@ class SpicePath(Path):
         self.spice_frame = spice_frame
         self.shortcut = shortcut
 
-       # Interpret the SPICE IDs
+        # Interpret the SPICE IDs
         (self.spice_target_id,
          self.spice_target_name) = spice.body_id_and_name(spice_id)
 
