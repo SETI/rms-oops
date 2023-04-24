@@ -307,7 +307,6 @@ import os.path
 import oops.backplane.gold_master as gm
 
 from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
-from hosts.galileo.ssi          import standard_obs
 
 
 #===============================================================================
@@ -315,14 +314,17 @@ class Test_Galileo_SSI_GoldMaster(unittest.TestCase):
 
     #===========================================================================
     def test_C0349632100R(self):
+        from hosts.galileo.ssi import standard_obs
         gm.execute_as_unittest(self, 'C0349632100R')
 
     #===========================================================================
     def test_C0368369200R(self):
+        from hosts.galileo.ssi import standard_obs
         gm.execute_as_unittest(self, 'C0368369200R')
 
     #===========================================================================
     def test_C0061455700R(self):
+        from hosts.galileo.ssi import standard_obs
         gm.execute_as_unittest(self, 'C0061455700R')
 
 ############################################

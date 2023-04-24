@@ -578,46 +578,46 @@ def execute_as_unittest(testcase, obsname='default'):
     observations.
     """
 
-    try:
-        # Initialize the command argument namespace
-        args = argparse.Namespace()
-        for key, value in DEFAULTS.items():
-            setattr(args, key, value)
+#    try:
+    # Initialize the command argument namespace
+    args = argparse.Namespace()
+    for key, value in DEFAULTS.items():
+        setattr(args, key, value)
 
-        # Set the default observation details
-        args.name = [obsname]
+    # Set the default observation details
+    args.name = [obsname]
 
-        # These values in the DEFAULTS dictionary are overridden
-        args.browse = False
-        args.log = False
-        args.verbose = True
+    # These values in the DEFAULTS dictionary are overridden
+    args.browse = False
+    args.log = False
+    args.verbose = True
 
-        # These have no entry in the DEFAULTS dictionary
-        args.obspath = None
-        args.output = None
-        args.convergence = False
-        args.diagnostics = False
-        args.internals = False
-        args.performance = False
-        args.fullpaths = False
-        args.platform = None
-        args.save_sampled = False
+    # These have no entry in the DEFAULTS dictionary
+    args.obspath = None
+    args.output = None
+    args.convergence = False
+    args.diagnostics = False
+    args.internals = False
+    args.performance = False
+    args.fullpaths = False
+    args.platform = None
+    args.save_sampled = False
 
-        # These options are mandatory
-        args.testcase = testcase
-        args.task = 'compare'
-        args.level = 'error'
-        args.verbose = True
-        args.du = 0.
-        args.dv = 0.
-        args.derivs = True
+    # These options are mandatory
+    args.testcase = testcase
+    args.task = 'compare'
+    args.level = 'error'
+    args.verbose = True
+    args.du = 0.
+    args.dv = 0.
+    args.derivs = True
 
-        # Clean up, also filling in observation, module, planet(s), moon(s),
-        # ring(s)
-        args = _clean_up_args(args)
+    # Clean up, also filling in observation, module, planet(s), moon(s),
+    # ring(s)
+    args = _clean_up_args(args)
 
-    except Exception as e:
-        testcase.assertTrue(False, str(e))
+#    except Exception as e:
+#        testcase.assertTrue(False, str(e))
 
     run_tests(args)
 
