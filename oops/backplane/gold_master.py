@@ -578,46 +578,51 @@ def execute_as_unittest(testcase, obsname='default'):
     observations.
     """
 
-#    try:
-    # Initialize the command argument namespace
-    args = argparse.Namespace()
-    for key, value in DEFAULTS.items():
-        setattr(args, key, value)
+    import traceback
 
-    # Set the default observation details
-    args.name = [obsname]
+    # This try-except is needed to ensure that a unit-test failure is
+    # triggered in the event of an error.
+    try:
+        # Initialize the command argument namespace
+        args = argparse.Namespace()
+        for key, value in DEFAULTS.items():
+            setattr(args, key, value)
 
-    # These values in the DEFAULTS dictionary are overridden
-    args.browse = False
-    args.log = False
-    args.verbose = True
+        # Set the default observation details
+        args.name = [obsname]
 
-    # These have no entry in the DEFAULTS dictionary
-    args.obspath = None
-    args.output = None
-    args.convergence = False
-    args.diagnostics = False
-    args.internals = False
-    args.performance = False
-    args.fullpaths = False
-    args.platform = None
-    args.save_sampled = False
+        # These values in the DEFAULTS dictionary are overridden
+        args.browse = False
+        args.log = False
+        args.verbose = True
 
-    # These options are mandatory
-    args.testcase = testcase
-    args.task = 'compare'
-    args.level = 'error'
-    args.verbose = True
-    args.du = 0.
-    args.dv = 0.
-    args.derivs = True
+        # These have no entry in the DEFAULTS dictionary
+        args.obspath = None
+        args.output = None
+        args.convergence = False
+        args.diagnostics = False
+        args.internals = False
+        args.performance = False
+        args.fullpaths = False
+        args.platform = None
+        args.save_sampled = False
 
-    # Clean up, also filling in observation, module, planet(s), moon(s),
-    # ring(s)
-    args = _clean_up_args(args)
+        # These options are mandatory
+        args.testcase = testcase
+        args.task = 'compare'
+        args.level = 'error'
+        args.verbose = True
+        args.du = 0.
+        args.dv = 0.
+        args.derivs = True
 
-#    except Exception as e:
-#        testcase.assertTrue(False, str(e))
+        # Clean up, also filling in observation, module, planet(s), moon(s),
+        # ring(s)
+        args = _clean_up_args(args)
+
+    except Exception as e:
+        traceback.print_exception(e)
+        testcase.assertTrue(False, str(e))
 
     run_tests(args)
 
