@@ -16,8 +16,6 @@ import oops
 
 from oops.body import Body
 
-TOUR = (2003 - 2000) * 365 * 86400      # Rough ET dividing Saturn from Jupiter
-
 ################################################################################
 # Routines for managing the loading of C and SP kernels
 ################################################################################
@@ -262,31 +260,5 @@ class Galileo(object):
         spicedb.open_db()
         _ = spicedb.furnish_inst(-77, inst=instruments, asof=asof)
         spicedb.close_db()
-
-    ############################################################################
-    # Routines for managing text kernel information
-    ############################################################################
-
-    #===========================================================================
-    @staticmethod
-    def used_kernels(time, inst, return_all_planets=False):
-        """The list of kernels associated with a Galileo observation at a
-        selected range of times.
-        """
-        if return_all_planets:
-            bodies = [1, 199, 2, 299, 3, 399, 4, 499, 5, 599, 6, 699,
-                      7, 799, 8, 899]
-            if time[0] >= TOUR:
-                bodies += Body.JUPITER_MOONS_LOADED
-            else:
-                bodies += Body.JUPITER_MOONS_LOADED
-        else:
-            if time[0] >= TOUR:
-                bodies = [6, 699] + Body.JUPITER_MOONS_LOADED
-            else:
-                bodies = [5, 599] + Body.JUPITER_MOONS_LOADED
-
-        return spicedb.used_basenames(time=time, inst=inst, sc=-77,
-                                      bodies=bodies)
 
 ################################################################################

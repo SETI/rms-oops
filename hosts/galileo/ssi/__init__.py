@@ -64,9 +64,9 @@ def from_file(filespec,
                                filespec = filespec,
                                basename = os.path.basename(filespec))
 
-    result.insert_subfield('spice_kernels',
-                           Galileo.used_kernels(result.time, 'iss',
-                                                return_all_planets))
+#    result.insert_subfield('spice_kernels',
+#                           Galileo.used_kernels(result.time, 'iss',
+#                                                return_all_planets))
 
     return result
 
