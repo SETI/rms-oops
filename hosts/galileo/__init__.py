@@ -16,6 +16,18 @@ import oops
 
 from oops.body import Body
 
+# Mission targets, rough time divisions
+TIMELINE = [ {'ET': 0, 'UTC': '1989-10-18T12:00:00.00', 'target': 'VENUS',   'moons': False},
+             {'ET': 0, 'UTC': '1990-07-08T12:00:00.00', 'target': 'EARTH',   'moons': True},
+             {'ET': 0, 'UTC': '1991-05-29T12:00:00.00', 'target': 'GASPRA',  'moons': False},
+             {'ET': 0, 'UTC': '1992-07-08T12:00:00.00', 'target': 'EARTH',   'moons': True},
+             {'ET': 0, 'UTC': '1993-04-28T12:00:00.00', 'target': 'IDA',     'moons': True},
+             {'ET': 0, 'UTC': '1994-07-16T12:00:00.00', 'target': 'SL9',     'moons': False},
+             {'ET': 0, 'UTC': '1994-07-22T12:00:00.00', 'target': 'JUPITER', 'moons': True}]
+for i in range(len(TIMELINE)):
+    TIMELINE[i]['ET'] = \
+        julian.tdb_from_tai(julian.tai_from_iso(TIMELINE[i]['UTC']))
+
 ################################################################################
 # Routines for managing the loading of C and SP kernels
 ################################################################################
@@ -260,5 +272,45 @@ class Galileo(object):
         spicedb.open_db()
         _ = spicedb.furnish_inst(-77, inst=instruments, asof=asof)
         spicedb.close_db()
+
+    ############################################################################
+    # Routines for managing text kernel information
+    ############################################################################
+
+    #===========================================================================
+    @staticmethod
+    def used_kernels(time, inst, return_all_planets=False):
+        """The list of kernels associated with a Cassini observation at a
+        selected range of times.
+        """
+        # Determine target based on mission phase or return_all_planets
+        return_all_planets = True
+        if return_all_planets:
+            targets = ['MERCURY', 'VENUS', 'EARTH', 'MARS', 'JUPITER', 'SATURN', 'URANUS', 'NEPTUNE']
+            moons = [False, False, True, True, True, True, True, True]
+        else:
+            times = np.array([TIMELINE[i]['ET'] for i in range(len(TIMELINE))])
+            i = np.max(np.where(time[0] >= times))
+            targets = [TIMELINE[i]['target']]
+            moons = [TIMELINE[i]['moons']]
+
+        # Specify desired body ids
+        bodies = []
+        for target,moon in zip(targets, moons):
+            body = cspyce.bodn2c(target)
+            barycenter = np.trunc(body/100).astype(int)
+            bodies += [barycenter, body]
+
+            # Add moons if requested; note special treament for Earth, which
+            # should be addressed
+            if moon:
+                try:
+                    bodies += getattr(Body, target+'_MOONS_LOADED')
+                except AttributeError:
+                    bodies += [301]
+
+        # Return relevent used kernels
+        return spicedb.used_basenames(time=time, inst=inst, sc=-82,
+                                      bodies=bodies)
 
 ################################################################################

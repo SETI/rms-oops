@@ -64,9 +64,9 @@ def from_file(filespec,
                                filespec = filespec,
                                basename = os.path.basename(filespec))
 
-#    result.insert_subfield('spice_kernels',
-#                           Galileo.used_kernels(result.time, 'iss',
-#                                                return_all_planets))
+    result.insert_subfield('spice_kernels',
+                           Galileo.used_kernels(result.time, 'ssi',
+                                                return_all_planets))
 
     return result
 
@@ -101,15 +101,6 @@ class Metadata(object):
 
         Input:
             label           The label dictionary.
-
-        Attributes:
-            nlines          A Numpy array containing the data in axis order
-                            (line, sample).
-            nsamples        The time sampling array in (line, sample) axis
-                            order, or None if no time backplane is found in
-                            the file.
-            nframelets
-
         """
 
         # Image dimensions
@@ -147,14 +138,8 @@ class Metadata(object):
         Input:
             full_fov        If True, the image is not trimmed.
 
-        Attributes:
-            nlines          A Numpy array containing the data in axis order
-                            (line, sample).
-            nsamples        The time sampling array in (line, sample) axis
-                            order, or None if no time backplane is found in
-                            the file.
-            nframelets
-
+        Output:
+            Data array trimmed to the data window.
         """
 
         if full_fov:
@@ -169,21 +154,14 @@ class Metadata(object):
 
     #===========================================================================
     def fov(self, full_fov=False):
-        """Use the label to assemble the image metadata.
+        """Construct the field of view based on the metadata.
 
         Input:
-            label           The label dictionary.
             full_fov        If False, the FOV is cropped to the dimensions
                             given by the cutout window.
 
         Attributes:
-            nlines          A Numpy array containing the data in axis order
-                            (line, sample).
-            nsamples        The time sampling array in (line, sample) axis
-                            order, or None if no time backplane is found in
-                            the file.
-            nframelets
-
+            FOV object.
         """
 
         # FOV Kernel pool variables
