@@ -283,7 +283,7 @@ class Galileo(object):
         """The list of kernels associated with a Cassini observation at a
         selected range of times.
         """
-        # Determine target based on mission phase or return_all_planets
+        # Determine targets based on mission phase or return_all_planets
         return_all_planets = True
         if return_all_planets:
             targets = ['MERCURY', 'VENUS', 'EARTH', 'MARS', 'JUPITER', 'SATURN', 'URANUS', 'NEPTUNE']

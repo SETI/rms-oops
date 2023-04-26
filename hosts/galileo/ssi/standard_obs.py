@@ -62,3 +62,18 @@ gm.define_standard_obs(name,
         planets  = '',
         moons    = 'EARTH',
         rings    = '')
+
+###################################################################
+name = 'C0374685140R'
+###################################################################
+# To preview and adopt gold masters:
+#  python gold_master.py --name C0374685140R --preview
+#  python gold_master.py --name C0374685140R --adopt
+
+gm.define_standard_obs(name,
+        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
+                               'galileo/GO_0017/E4/EUROPA/' + name + '.img'),
+        index    = None,
+        planets  = '',
+        moons    = 'EUROPA',
+        rings    = '')

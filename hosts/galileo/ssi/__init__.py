@@ -102,7 +102,6 @@ class Metadata(object):
         Input:
             label           The label dictionary.
         """
-
         # Image dimensions
         self.nlines = label['IMAGE']['LINES']
         self.nsamples = label['IMAGE']['LINE_SAMPLES']
@@ -127,7 +126,9 @@ class Metadata(object):
 
         # Window
         if 'CUT_OUT_WINDOW' in label:
-            self.window = label['CUT_OUT_WINDOW']
+            self.window = np.array(label['CUT_OUT_WINDOW'])
+            self.window_origin = self.window[0:2]-1
+            self.window_shape = self.window[2:]
         else:
             self.window = None
 
@@ -141,16 +142,18 @@ class Metadata(object):
         Output:
             Data array trimmed to the data window.
         """
-
         if full_fov:
-            return None
+            return data
 
         window = self.window
-
         if window is None:
             return data
 
-        return data[window[0]:window[2], window[1]:window[3]]
+        origin = self.window_origin
+        shape = self.window_shape
+
+        return data[origin[0]:origin[0]+shape[0],
+                    origin[1]:origin[1]+shape[1]]
 
     #===========================================================================
     def fov(self, full_fov=False):
@@ -163,7 +166,6 @@ class Metadata(object):
         Attributes:
             FOV object.
         """
-
         # FOV Kernel pool variables
         cf_var = 'INS-77036_DISTORTION_COEFF'
         fo_var = 'INS-77036_FOCAL_LENGTH'
@@ -192,10 +194,9 @@ class Metadata(object):
 
         # Apply cutout window if full fov not requested
         if not full_fov and self.window is not None:
-            window = np.array(self.window)
-            fov = oops.fov.SliceFOV(fov_full,
-                                    window[[0,1]],
-                                    window[2:] - window[0:2])
+            origin = self.window_origin
+            shape = self.window_shape
+            fov = oops.fov.SliceFOV(fov_full, origin, shape)
         else:
             fov = fov_full
 
@@ -205,7 +206,7 @@ class Metadata(object):
 
 #===============================================================================
 class SSI(object):
-    """An instance-free class to hold Galileo SSI instrument parameters."""
+    """An instance-free class to hold Galileo SS I instrument parameters."""
 
     instrument_kernel = None
     fov = {}
@@ -287,6 +288,10 @@ class Test_Galileo_SSI_GoldMaster(unittest.TestCase):
     #===========================================================================
     def test_C0061455700R(self):
         gm.execute_as_unittest(self, 'C0061455700R')
+
+    #===========================================================================
+    def test_C0374685140R(self):
+        gm.execute_as_unittest(self, 'C0374685140R')
 
 ############################################
 
