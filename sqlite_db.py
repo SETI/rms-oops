@@ -16,6 +16,7 @@ def open(filepath):
     Input:
         filepath        The file path and name of the database file.
     """
+
     global CONNECTION, CURSOR
 
     CONNECTION = sqlite3.connect(filepath)

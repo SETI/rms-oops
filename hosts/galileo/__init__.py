@@ -24,6 +24,7 @@ TIMELINE = [ {'ET': 0, 'UTC': '1989-10-18T12:00:00.00', 'target': 'VENUS',   'mo
              {'ET': 0, 'UTC': '1993-04-28T12:00:00.00', 'target': 'IDA',     'moons': True},
              {'ET': 0, 'UTC': '1994-07-16T12:00:00.00', 'target': 'SL9',     'moons': False},
              {'ET': 0, 'UTC': '1994-07-22T12:00:00.00', 'target': 'JUPITER', 'moons': True}]
+
 for i in range(len(TIMELINE)):
     TIMELINE[i]['ET'] = \
         julian.tdb_from_tai(julian.tai_from_iso(TIMELINE[i]['UTC']))
@@ -283,8 +284,7 @@ class Galileo(object):
         """The list of kernels associated with a Cassini observation at a
         selected range of times.
         """
-        # Determine targets based on mission phase or return_all_planets
-        return_all_planets = True
+        # Determine targets based on mission phase, or return_all_planets
         if return_all_planets:
             targets = ['MERCURY', 'VENUS', 'EARTH', 'MARS', 'JUPITER', 'SATURN', 'URANUS', 'NEPTUNE']
             moons = [False, False, True, True, True, True, True, True]
@@ -301,8 +301,7 @@ class Galileo(object):
             barycenter = np.trunc(body/100).astype(int)
             bodies += [barycenter, body]
 
-            # Add moons if requested; note special treament for Earth, which
-            # should be addressed
+            # Add moons if requested; note special treament for Earth
             if moon:
                 try:
                     bodies += getattr(Body, target+'_MOONS_LOADED')

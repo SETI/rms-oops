@@ -97,11 +97,8 @@ class Metadata(object):
 
     #===========================================================================
     def __init__(self, label):
-        """Use the label to assemble the image metadata.
+        """Use the label to assemble the image metadata."""
 
-        Input:
-            label           The label dictionary.
-        """
         # Image dimensions
         self.nlines = label['IMAGE']['LINES']
         self.nsamples = label['IMAGE']['LINE_SAMPLES']
@@ -136,7 +133,7 @@ class Metadata(object):
 
     #===========================================================================
     def trim(self, data, full_fov=False):
-        """Trim image to label window
+        """Trim image to label window.
 
         Input:
             full_fov        If True, the image is not trimmed.
@@ -181,10 +178,10 @@ class Metadata(object):
 
         # Construct FOV
         scale = px/fo
-        distortion_coeff = [1,0,cf]
+        distortion_coeff = [1, 0, cf]
 
         # Direct summation modes
-        if self.mode=='HIS' or self.mode=='AI8':
+        if self.mode in ('HIS', 'AI8'):
             scale = scale*2
             cxy = cxy/2
 
@@ -203,7 +200,6 @@ class Metadata(object):
             fov = fov_full
 
         return fov
-
 
 
 #===============================================================================

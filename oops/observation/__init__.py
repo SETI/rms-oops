@@ -75,7 +75,7 @@ class Observation(object):
         subfields       a dictionary containing all of the optional attributes.
                         Additional subfields may be included as needed.
 
-        data            a reserved subfield to contain the NumPy array of
+            data        a reserved subfield to contain the NumPy array of
                         numbers associated with the observation.
     """
 
