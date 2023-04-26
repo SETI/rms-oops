@@ -129,6 +129,8 @@ class Metadata(object):
             self.window = np.array(label['CUT_OUT_WINDOW'])
             self.window_origin = self.window[0:2]-1
             self.window_shape = self.window[2:]
+            self.window_uv_origin = np.flip(self.window_origin)
+            self.window_uv_shape = np.flip(self.window_shape)
         else:
             self.window = None
 
@@ -194,9 +196,9 @@ class Metadata(object):
 
         # Apply cutout window if full fov not requested
         if not full_fov and self.window is not None:
-            origin = self.window_origin
-            shape = self.window_shape
-            fov = oops.fov.SliceFOV(fov_full, origin, shape)
+            uv_origin = self.window_uv_origin
+            uv_shape = self.window_uv_shape
+            fov = oops.fov.SliceFOV(fov_full, uv_origin, uv_shape)
         else:
             fov = fov_full
 

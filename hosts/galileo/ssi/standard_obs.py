@@ -27,6 +27,8 @@ gm.define_standard_obs(name,
         moons    = 'GANYMEDE',
         rings    = '')
 
+gm.override('Right ascension d/dv self-check (deg/pix)', 2.2e-9, names=name)
+
 ###################################################################
 name = 'C0368369200R'
 ###################################################################
