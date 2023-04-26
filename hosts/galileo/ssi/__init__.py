@@ -204,7 +204,7 @@ class Metadata(object):
 
 #===============================================================================
 class SSI(object):
-    """An instance-free class to hold Galileo SS I instrument parameters."""
+    """An instance-free class to hold Galileo SSI instrument parameters."""
 
     instrument_kernel = None
     fov = {}

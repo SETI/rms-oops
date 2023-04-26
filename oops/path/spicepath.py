@@ -98,12 +98,10 @@ class SpicePath(Path):
         # Register the SpicePath; fill in the waypoint
         self.register(shortcut, unpickled=unpickled)
 
-    #===========================================================================
     def __getstate__(self):
         return (self.spice_target_id, self.spice_origin_id,
                 self.spice_frame_name)
 
-    #===========================================================================
     def __setstate__(self, state):
 
         (spice_target_id, spice_origin_id, spice_frame_name) = state
