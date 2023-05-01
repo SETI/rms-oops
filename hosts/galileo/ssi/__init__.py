@@ -71,7 +71,6 @@ def from_file(filespec,
                                                 return_all_planets))
     print(filespec)
     print(Galileo.used_kernels(result.time, 'ssi', return_all_planets))
-    from IPython import embed; print('+++++++++++++'); embed()
 
     return result
 
