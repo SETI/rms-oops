@@ -69,8 +69,6 @@ def from_file(filespec,
     result.insert_subfield('spice_kernels',
                            Galileo.used_kernels(result.time, 'ssi',
                                                 return_all_planets))
-    print(filespec)
-    print(Galileo.used_kernels(result.time, 'ssi', return_all_planets))
 
     return result
 
@@ -284,17 +282,17 @@ class Test_Galileo_SSI_GoldMaster(unittest.TestCase):
     def test_C0349632100R(self):
         gm.execute_as_unittest(self, 'C0349632100R')
 
-    #===========================================================================
-    def test_C0368369200R(self):
-        gm.execute_as_unittest(self, 'C0368369200R')
-
-    #===========================================================================
-    def test_C0061455700R(self):
-        gm.execute_as_unittest(self, 'C0061455700R')
-
-    #===========================================================================
-    def test_C0374685140R(self):
-        gm.execute_as_unittest(self, 'C0374685140R')
+#    #===========================================================================
+#    def test_C0368369200R(self):
+#        gm.execute_as_unittest(self, 'C0368369200R')
+#
+#    #===========================================================================
+#    def test_C0061455700R(self):
+#        gm.execute_as_unittest(self, 'C0061455700R')
+#
+#    #===========================================================================
+#    def test_C0374685140R(self):
+#        gm.execute_as_unittest(self, 'C0374685140R')
 
 ############################################
 

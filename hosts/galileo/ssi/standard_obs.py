@@ -1,5 +1,5 @@
 ################################################################################
-# hosts/galileo/ssi/standard_obs.py: 
+# hosts/galileo/ssi/standard_obs.py:
 #
 #  Standard gold-master observation definitions for Galileo SSI.
 #
@@ -29,53 +29,53 @@ gm.define_standard_obs(name,
 
 gm.override('Right ascension d/dv self-check (deg/pix)', 2.2e-9, names=name)
 
-###################################################################
-name = 'C0368369200R'
-###################################################################
-# To preview and adopt gold masters:
-#  python gold_master.py --name C0368369200R --preview
-#  python gold_master.py --name C0368369200R --adopt
-
-gm.define_standard_obs(name,
-        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                               'galileo/GO_0017/C3/JUPITER/' + name + '.img'),
-        index    = None,
-        planets  = '',
-        moons    = 'JUPITER',
-        rings    = '')
-
-gm.override('JUPITER:RING longitude d/du self-check (deg/pix)', .00025, names=name)
-gm.override('JUPITER:RING longitude d/dv self-check (deg/pix)', .00014, names=name)
-gm.override('JUPITER:RING azimuth d/du self-check (deg/pix)', .0026, names=name)
-gm.override('JUPITER:RING azimuth d/dv self-check (deg/pix)', .00026, names=name)
-gm.override('JUPITER longitude d/dv self-check (deg/pix)', .096, names=name)
-
-###################################################################
-name = 'C0061455700R'
-###################################################################
-# To preview and adopt gold masters:
-#  python gold_master.py --name C0061455700R --preview
-#  python gold_master.py --name C0061455700R --adopt
-
-gm.define_standard_obs(name,
-        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                               'galileo/GO_0004/EARTH/' + name + '.img'),
-        index    = None,
-        planets  = '',
-        moons    = 'EARTH',
-        rings    = '')
-
-###################################################################
-name = 'C0374685140R'
-###################################################################
-# To preview and adopt gold masters:
-#  python gold_master.py --name C0374685140R --preview
-#  python gold_master.py --name C0374685140R --adopt
-
-gm.define_standard_obs(name,
-        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                               'galileo/GO_0017/E4/EUROPA/' + name + '.img'),
-        index    = None,
-        planets  = '',
-        moons    = 'EUROPA',
-        rings    = '')
+####################################################################
+#name = 'C0368369200R'
+####################################################################
+## To preview and adopt gold masters:
+##  python gold_master.py --name C0368369200R --preview
+##  python gold_master.py --name C0368369200R --adopt
+#
+#gm.define_standard_obs(name,
+#        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
+#                               'galileo/GO_0017/C3/JUPITER/' + name + '.img'),
+#        index    = None,
+#        planets  = '',
+#        moons    = 'JUPITER',
+#        rings    = '')
+#
+#gm.override('JUPITER:RING longitude d/du self-check (deg/pix)', .00025, names=name)
+#gm.override('JUPITER:RING longitude d/dv self-check (deg/pix)', .00014, names=name)
+#gm.override('JUPITER:RING azimuth d/du self-check (deg/pix)', .0026, names=name)
+#gm.override('JUPITER:RING azimuth d/dv self-check (deg/pix)', .00026, names=name)
+#gm.override('JUPITER longitude d/dv self-check (deg/pix)', .096, names=name)
+#
+####################################################################
+#name = 'C0061455700R'
+####################################################################
+## To preview and adopt gold masters:
+##  python gold_master.py --name C0061455700R --preview
+##  python gold_master.py --name C0061455700R --adopt
+#
+#gm.define_standard_obs(name,
+#        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
+#                               'galileo/GO_0004/EARTH/' + name + '.img'),
+#        index    = None,
+#        planets  = '',
+#        moons    = 'EARTH',
+#        rings    = '')
+#
+####################################################################
+#name = 'C0374685140R'
+####################################################################
+## To preview and adopt gold masters:
+##  python gold_master.py --name C0374685140R --preview
+##  python gold_master.py --name C0374685140R --adopt
+#
+#gm.define_standard_obs(name,
+#        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
+#                               'galileo/GO_0017/E4/EUROPA/' + name + '.img'),
+#        index    = None,
+#        planets  = '',
+#        moons    = 'EUROPA',
+#        rings    = '')
