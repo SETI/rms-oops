@@ -281,7 +281,7 @@ class Galileo(object):
     #===========================================================================
     @staticmethod
     def used_kernels(time, inst, return_all_planets=False):
-        """The list of kernels associated with a Cassini observation at a
+        """The list of kernels associated with a Galileo observation at a
         selected range of times.
         """
         # Determine targets based on mission phase, or return_all_planets
@@ -309,7 +309,7 @@ class Galileo(object):
                     bodies += [301]
 
         # Return relevent used kernels
-        return spicedb.used_basenames(time=time, inst=inst, sc=-82,
+        return spicedb.used_basenames(time=time, inst=inst, sc=-77,
                                       bodies=bodies)
 
 ################################################################################

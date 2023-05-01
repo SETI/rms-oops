@@ -28,6 +28,8 @@ def from_file(filespec, fast_distortion=True,
     JUNOCAM image file.
 
     Inputs:
+        filespec            Path to input file.
+
         fast_distortion     True to use a pre-inverted polynomial;
                             False to use a dynamically solved polynomial;
                             None to use a FlatFOV.

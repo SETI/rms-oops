@@ -22,11 +22,13 @@ def from_file(filespec,
     returned.
 
     Inputs:
-        full_fov:           If True, the full image is returned with a mask
-                            describing the regions with no data.
+        filespec            The full path to a Galileo SSI file or its PDS label.
 
         return_all_planets  Include kernels for all planets not just
                             Jupiter or Saturn.
+
+        full_fov:           If True, the full image is returned with a mask
+                            describing the regions with no data.
     """
 
     SSI.initialize()    # Define everything the first time through; use defaults
@@ -67,6 +69,9 @@ def from_file(filespec,
     result.insert_subfield('spice_kernels',
                            Galileo.used_kernels(result.time, 'ssi',
                                                 return_all_planets))
+    print(filespec)
+    print(Galileo.used_kernels(result.time, 'ssi', return_all_planets))
+    from IPython import embed; print('+++++++++++++'); embed()
 
     return result
 
@@ -136,6 +141,8 @@ class Metadata(object):
         """Trim image to label window.
 
         Input:
+            data            Numpy array containing the image data.
+
             full_fov        If True, the image is not trimmed.
 
         Output:
@@ -144,8 +151,7 @@ class Metadata(object):
         if full_fov:
             return data
 
-        window = self.window
-        if window is None:
+        if self.window is None:
             return data
 
         origin = self.window_origin
@@ -266,7 +272,7 @@ import unittest
 import os.path
 import oops.backplane.gold_master as gm
 
-from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 #===============================================================================
 class Test_Galileo_SSI_GoldMaster(unittest.TestCase):
