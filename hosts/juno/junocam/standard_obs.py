@@ -107,5 +107,24 @@ gm.override('JUPITER:RING azimuth d/dv self-check (deg/pix)', .23, names=name)
 gm.override('Celestial north minus east angles (deg)', 6., names=name)
 
 
+####################################################################
+#name = 'JNCR_2021052_32M00024_V01'
+####################################################################
+## To preview and adopt gold masters:
+##  python gold_master.py --name JNCR_2021052_32M00024_V01 --preview
+##  python gold_master.py --name JNCR_2021052_32M00024_V01 --adopt
+#
+#gm.define_standard_obs(name,
+#        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
+#                           'juno/junocam/32/' + name + '.img'),
+#        index   = 9,
+#        planets  = 'JUPITER',
+#        moons    = '',
+#        rings    = '')
+        
+
+
+
+
 
 
