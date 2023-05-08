@@ -713,35 +713,29 @@ class Scalar(Qube):
 
         The solution is implemented to provide maximal precision.
 
-        If include_mask is True, a Boolean is also returned containing True
+        If include_antimask is True, a Boolean is also returned containing True
         where the solution exists (because the discriminant is nonnegative).
         """
 
-        a          = Scalar.as_scalar(a, recursive=recursive)
-        neg_half_b = Scalar.as_scalar(b, recursive=recursive) * (-0.5)
-        c          = Scalar.as_scalar(c, recursive=recursive)
+        a = Scalar.as_scalar(a, recursive=recursive)
+        b = Scalar.as_scalar(b, recursive=recursive)
+        c = Scalar.as_scalar(c, recursive=recursive)
+        (a, b, c) = Scalar.broadcast(a, b, c)
 
+        neg_half_b = -0.5 * b
         discr = neg_half_b**2 - a*c
 
         term = neg_half_b + neg_half_b.sign(zeros=False) * discr.sqrt()
         x0 = c / term
         x1 = term / a
 
-        a_zeros = (a == 0)
-        if isinstance(a_zeros, (bool, np.bool_)):
-            if a_zeros:
-                x0 = c / (neg_half_b * 2)
-
-        else:
-            if a_zeros.any():
-                linear_x0 = c / (neg_half_b * 2)
-                linear_x0 = linear_x0.broadcast_into_shape(x0._shape_)
-                a_zeros   = a_zeros.broadcast_into_shape(x0._shape_)
-                x0[a_zeros] = linear_x0[a_zeros]
+        # If x0 is masked, use x1
+        mask = x0.mask
+        x0[mask] = x1[mask]
+        x1 = x1.remask_or(mask | (x1 == x0))    # also mask duplicates inside x1
 
         if include_antimask:
-            return (x0, x1, Qube.BOOLEAN_CLASS(discr._values_ >= 0,
-                                               discr._mask_))
+            return (x0, x1, discr >= 0)
         else:
             return (x0, x1)
 

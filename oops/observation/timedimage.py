@@ -166,6 +166,11 @@ class TimedImage(Observation):
             snapshot_tstart = self.cadence.time[0]
             snapshot_texp = self.cadence.time[1] - self.cadence.time[0]
 
+            if 'texp' in subfields:             # this creates a conflict
+                subfields = subfields.copy()
+                subfields['texp_'] = subfields['texp']
+                del subfields['texp']
+
             self.snapshot = Snapshot(snapshot_axes, snapshot_tstart,
                                      snapshot_texp, self.fov,
                                      self.path, self.frame, **subfields)

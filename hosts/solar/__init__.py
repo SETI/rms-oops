@@ -267,9 +267,9 @@ def bandpass_f(bandpass, model='STIS_Rieke', units='W/m^2/um', xunits='um',
     Return:             the mean solar F within the filter bandpass.
     """
 
-    return bandpass_flux_density(bandpass, model='STIS_Rieke',
-                                           units='W/m^2/um', xunits='um',
-                                           sun_range=1., solar_f=True)
+    return bandpass_flux_density(bandpass, model=model, units=units,
+                                 xunits=xunits, sun_range=sun_range,
+                                 solar_f=True)
 
 #===============================================================================
 def mean_f(center, width, model='STIS_Rieke', units='W/m^2/um', xunits='um',
@@ -296,8 +296,7 @@ def mean_f(center, width, model='STIS_Rieke', units='W/m^2/um', xunits='um',
     Return:             the mean solar F within the specified bandpass.
     """
 
-    return mean_flux_density(center, width, model='STIS_Rieke',
-                                            units='W/m^2/um', xunits='um',
-                                            sun_range=1., solar_f=True)
+    return mean_flux_density(center, width, model=model, units=units,
+                             xunits=xunits, sun_range=sun_range, solar_f=True)
 
 ################################################################################

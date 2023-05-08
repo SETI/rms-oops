@@ -31,12 +31,12 @@ class Test_Scalar_quadratic(unittest.TestCase):
 
     self.assertTrue(np.all(x0.mask == x1.mask))
 
-    a = np.random.randn(8)
-    b = np.random.randn(3,8)
-    c = np.random.randn(4,1,1)
-
-    # Check case where sometimes there is only one solution
+    # Check with one linear case
+    a = np.random.randn(20)
+    b = np.random.randn(20)
+    c = np.random.randn(20)
     a[0] = 0.
+
     (x0, x1) = Scalar.solve_quadratic(a, b, c)
     self.assertTrue(abs(x0.eval_quadratic(a,b,c)).median() < 1.e-15)
     self.assertTrue(abs(x0.eval_quadratic(a,b,c)).max()    < 3.e-13)
@@ -44,8 +44,27 @@ class Test_Scalar_quadratic(unittest.TestCase):
     self.assertTrue(abs(x1.eval_quadratic(a,b,c)).median() < 1.e-15)
     self.assertTrue(abs(x1.eval_quadratic(a,b,c)).max()    < 3.e-13)
 
-    self.assertTrue(np.all(x0[...,1:].mask == x1[...,1:].mask))
-    self.assertTrue(np.all(x1[...,0].mask))
+    self.assertTrue(np.all(x0[1:].mask == x1[1:].mask))
+    self.assertTrue(np.all(x1[0].mask))
+
+    # Check with two single-solution quadratic cases
+    a = np.random.randn(20)
+    b = np.random.randn(20)
+    c = np.random.randn(20)
+    (b[0], c[0]) = (0, 0)
+    (a[1], b[1], c[1]) = (1, -2, 1)
+
+    (x0, x1) = Scalar.solve_quadratic(a, b, c)
+    self.assertTrue(abs(x0.eval_quadratic(a,b,c)).median() < 1.e-15)
+    self.assertTrue(abs(x0.eval_quadratic(a,b,c)).max()    < 3.e-13)
+
+    self.assertTrue(abs(x1.eval_quadratic(a,b,c)).median() < 1.e-15)
+    self.assertTrue(abs(x1.eval_quadratic(a,b,c)).max()    < 3.e-13)
+
+    self.assertEqual(x0[0], 0.)
+    self.assertEqual(x0[1], 1.)
+    self.assertTrue(np.all(x0[2:].mask == x1[2:].mask))
+    self.assertTrue(np.all(x1[:2].mask))
 
     # Single values
     for k in range(100):
@@ -68,6 +87,11 @@ class Test_Scalar_quadratic(unittest.TestCase):
 
     (x0, x1) = Scalar.solve_quadratic(a, b, c)
     self.assertTrue(x0.eval_quadratic(a,b,c) < 3.e-13)
+    self.assertTrue(x1.mask)
+
+    # Single quadratic case with one solution
+    (x0, x1) = Scalar.solve_quadratic(1., -2., 1.)
+    self.assertEqual(x0, 1.)
     self.assertTrue(x1.mask)
 
     # Derivatives wrt a

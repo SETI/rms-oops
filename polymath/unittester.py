@@ -109,6 +109,7 @@ if __name__ == '__main__':
 
     from unit_tests.test_vector3               import *
     from unit_tests.test_vector3_misc          import *
+    from unit_tests.test_vector3_spin          import *
 
     unittest.main(verbosity=2)
 

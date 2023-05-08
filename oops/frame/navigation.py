@@ -3,7 +3,7 @@
 ################################################################################
 
 import numpy as np
-from polymath       import Matrix3, Vector3
+from polymath       import Matrix3, Vector, Vector3
 from oops.fittable  import Fittable
 from oops.frame     import Frame
 from oops.transform import Transform
@@ -17,46 +17,53 @@ class Navigation(Frame, Fittable):
     # expendable. Frame IDs are not preserved during pickling.
 
     #===========================================================================
-    def __init__(self, angles, reference, frame_id=None, matrix=None):
+    def __init__(self, angles, reference, frame_id=None, override=False,
+                       _matrix=None):
         """Constructor for a Navigation Frame.
 
         Input:
             angles      the angles of rotation in radians. The order of the
-                        rotations is about the y, x and z axes.
+                        rotations is about the y, x and z axes. These angles
+                        rotate a vector in the reference frame into this frame.
             reference   the frame or frame ID relative to which this rotation is
                         defined.
             frame_id    the ID to use; None to use a temporary ID.
-            matrix      an optional parameter, used internally, to speed up the
+            override    True to override a pre-existing frame with the same ID.
+            _matrix     an optional 3x3 matrix, used internally, to speed up the
                         copying of Navigation objects. If not None, it must
                         contain the Matrix3 object that performs the defined
                         rotation.
         """
+
+        if isinstance(angles, Vector):
+            angles = angles.vals
 
         self.angles = np.array(angles)
         if self.angles.shape not in ((2,),(3,)):
             raise ValueError('two or three Navigation angles must be provided')
 
         self.cache = {}
-        self.param_name = "angles"
+        self.param_name = 'angles'
         self.nparams = self.angles.shape[0]
 
-        if matrix is None:
-            matrix = Navigation._rotmat(self.angles[0],1)
-            matrix = Navigation._rotmat(self.angles[1],0) * matrix
+        if _matrix is None:
+            _matrix = Navigation._rotmat(self.angles[0],1)
+            _matrix = Navigation._rotmat(self.angles[1],0) * _matrix
 
             if self.nparams > 2 and self.angles[2] != 0.:
-                matrix = Navigation._rotmat(self.angles[2], 2) * matrix
+                _matrix = Navigation._rotmat(self.angles[2], 2) * _matrix
 
-        self.frame_id  = frame_id
         self.reference = Frame.as_wayframe(reference)
         self.origin    = self.reference.origin
+        self.frame_id  = frame_id
         self.shape     = self.reference.shape
         self.keys      = set()
 
         # Update wayframe and frame_id; register if not temporary
-        self.register()
+        self.register(override=override)
 
-        self.transform = Transform(matrix, Vector3.ZERO,
+        # Fill in transform (_after_ registration)
+        self.transform = Transform(_matrix, Vector3.ZERO,
                                    self, self.reference, self.origin)
 
     # Unpickled frames will always have temporary IDs to avoid conflicts

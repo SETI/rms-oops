@@ -409,7 +409,8 @@ def lighting_test_suite(bpt):
 
         # Select the 95th percentile as a large but representative value
         # This is needed because km_per_fov_radian diverges near limb
-        values = deg_per_fov_radian.vals[deg_per_fov_radian.antimask]
+        values = deg_per_fov_radian[deg_per_fov_radian.antimask].vals
+        values = np.sort(values)
         if values.size == 0:
             continue
         cutoff = (values.size * 95) // 100
