@@ -29,6 +29,7 @@ gm.define_standard_obs(name,
 
 gm.override('Right ascension d/dv self-check (deg/pix)', 2.2e-9, names=name)
 
+# overrides to cover unexplained discrepancies among Mark, Rob, Joe
 gm.override('GANYMEDE center distance from Sun (km)', 2, names=name)
 gm.override('GANYMEDE center light time from Sun (km)', 6e-6, names=name)
 gm.override('GANYMEDE center right ascension (deg, actual)', 3e-5, names=name)
@@ -61,6 +62,7 @@ gm.override('JUPITER:RING azimuth d/du self-check (deg/pix)', .0026, names=name)
 gm.override('JUPITER:RING azimuth d/dv self-check (deg/pix)', .00026, names=name)
 gm.override('JUPITER longitude d/dv self-check (deg/pix)', .096, names=name)
 
+# overrides to cover unexplained discrepancies among Mark, Rob, Joe
 gm.override('JUPITER center distance from Sun (km)', 2.5, names=name)
 gm.override('JUPITER center light time from Sun (km)', 4e-6, names=name)
 gm.override('JUPITER:RING center distance from Sun (km)', 2.5, names=name)
@@ -85,6 +87,7 @@ gm.define_standard_obs(name,
         moons    = 'EARTH',
         rings    = '')
 
+# overrides to cover unexplained discrepancies among Mark, Rob, Joe
 gm.override('EUROPA center distance from Sun (km)', 5., names=name)
 gm.override('EUROPA center light time from Sun (km)', 1.5e-5, names=name)
 gm.override('EUROPA pole clock angle (deg)', 0.0017, names=name)
