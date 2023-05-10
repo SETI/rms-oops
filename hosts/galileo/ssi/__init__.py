@@ -204,6 +204,67 @@ class Metadata(object):
 
         return fov
 
+#===============================================================================
+def from_index(filespec, supplemental_filespec, **parameters):
+    """A static method to return a list of Snapshot objects.
+
+    One object for each row in an SSI index file. The filespec refers to the
+    label of the index file.
+    """
+    SSI.initialize()    # Define everything the first time through
+
+    # Read the index file
+    COLUMNS = []        # Return all columns
+    TIMES = ['START_TIME']
+    table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
+    row_dicts = table.dicts_by_row()
+
+    # Read the supplemental index file
+    table = pdstable.PdsTable(supplemental_filespec, columns=COLUMNS, times=TIMES)
+    supplemental_row_dicts = table.dicts_by_row()
+    for row_dict, supplemental_row_dict in zip(row_dicts, supplemental_row_dicts):
+        row_dict.update(supplemental_row_dict)
+
+
+    # Create a list of Snapshot objects
+    snapshots = []
+    for row_dict in row_dicts:
+
+        tstart = julian.tdb_from_tai(row_dict['START_TIME'])
+        texp = max(1.e-3, row_dict['EXPOSURE_DURATION']) / 1000.
+        mode = row_dict['INSTRUMENT_MODE_ID']
+
+        name = row_dict['INSTRUMENT_NAME']
+        if 'WIDE' in name:
+            camera = 'WAC'
+        else:
+            camera = 'NAC'
+
+        item = oops.obs.Snapshot(('v','u'), tstart, texp,
+                                 ISS.fovs[camera,mode,False],
+                                 'CASSINI', 'CASSINI_ISS_' + camera,
+                                 dict = row_dict,       # Add index dictionary
+                                 index_dict = row_dict, # Old name
+                                 instrument = 'ISS',
+                                 detector = camera,
+                                 sampling = mode)
+
+        item.spice_kernels = Cassini.used_kernels(item.time, 'iss')
+
+        item.filespec = os.path.join(row_dict['VOLUME_ID'],
+                                     row_dict['FILE_SPECIFICATION_NAME'])
+        item.basename = row_dict['FILE_NAME']
+
+        snapshots.append(item)
+
+    # Make sure all the SPICE kernels are loaded
+    tdb0 = row_dicts[ 0]['START_TIME']
+    tdb1 = row_dicts[-1]['START_TIME']
+
+    Cassini.load_cks( tdb0, tdb1)
+    Cassini.load_spks(tdb0, tdb1)
+
+    return snapshots
 
 #===============================================================================
 class SSI(object):
@@ -270,6 +331,17 @@ import os.path
 import oops.backplane.gold_master as gm
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+
+#===============================================================================
+class Test_AAA_Galileo_SSI_index_file(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+        dir = os.path.join(TESTDATA_PARENT_DIRECTORY, 'galileo/GO_0017')
+
+        obs = from_index(os.path.join(dir, 'GO_0017_index.lbl'),
+                         os.path.join(dir, 'GO_0017_supplemental_index.lbl'))
+
 
 #===============================================================================
 class Test_Galileo_SSI_GoldMaster(unittest.TestCase):
