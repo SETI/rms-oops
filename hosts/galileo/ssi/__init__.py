@@ -271,6 +271,7 @@ class Metadata(object):
 
         return fov
 
+
 #===============================================================================
 class SSI(object):
     """An instance-free class to hold Galileo SSI instrument parameters."""
