@@ -73,6 +73,69 @@ def from_file(filespec,
     return result
 
 #===============================================================================
+def from_index(filespec, supplemental_filespec, **parameters):
+    """A static method to return a list of Snapshot objects.
+
+    One object for each row in an SSI index file. The filespec refers to the
+    label of the index file.
+    """
+    SSI.initialize()    # Define everything the first time through
+
+    # Read the index file
+    COLUMNS = []        # Return all columns
+    TIMES = ['START_TIME']
+    table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
+    row_dicts = table.dicts_by_row()
+
+    # Read the supplemental index file
+    table = pdstable.PdsTable(supplemental_filespec, columns=COLUMNS, times=TIMES)
+    supplemental_row_dicts = table.dicts_by_row()
+    for row_dict, supplemental_row_dict in zip(row_dicts, supplemental_row_dicts):
+        row_dict.update(supplemental_row_dict)
+
+    # Create a list of Snapshot objects
+    snapshots = []
+    for row_dict in row_dicts:
+
+        # Get image metadata
+        meta = Metadata(row_dict, from_index=True)
+
+        # Load time-dependent kernels
+        Galileo.load_cks(meta.tstart, meta.tstart + meta.exposure)
+        Galileo.load_spks(meta.tstart, meta.tstart + meta.exposure)
+
+        # Define the field of view
+        FOV = meta.fov(full_fov=full_fov)
+
+        # Create a Snapshot
+        item = oops.obs.Snapshot(('v','u'), meta.tstart, meta.exposure,
+                                 FOV,
+                                 path = 'GLL',
+                                 frame = 'GLL_SCAN_PLATFORM',
+                                 dict = row_dict,         # Add the index dict
+                                 instrument = 'SSI',
+                                 filter = meta.filter,
+                                 filespec = filespec,
+                                 basename = os.path.basename(filespec))
+
+        item.spice_kernels = galileo.used_kernels(item.time, 'ssi')
+
+        item.filespec = os.path.join(row_dict['VOLUME_ID'],
+                                     row_dict['FILE_SPECIFICATION_NAME'])
+        item.basename = row_dict['FILE_NAME']
+
+        snapshots.append(item)
+
+    # Make sure all the SPICE kernels are loaded
+    tdb0 = row_dicts[ 0]['START_TIME']
+    tdb1 = row_dicts[-1]['START_TIME']
+
+    Galileo.load_cks( tdb0, tdb1)
+    Galileo.load_spks(tdb0, tdb1)
+
+    return snapshots
+
+#===============================================================================
 def initialize(planets=None, asof=None,
                mst_pck=True, irregulars=True):
     """Initialize key information about the SSI instrument.
@@ -98,34 +161,38 @@ def initialize(planets=None, asof=None,
 class Metadata(object):
 
     #===========================================================================
-    def __init__(self, label):
-        """Use the label to assemble the image metadata."""
+    def __init__(self, meta_dict, from_index=False):
+        """Use the label or index dict to assemble the image metadata."""
 
         # Image dimensions
-        self.nlines = label['IMAGE']['LINES']
-        self.nsamples = label['IMAGE']['LINE_SAMPLES']
+        if from_index:
+            self.nlines = meta_dict['LINES']
+            self.nsamples = meta_dict['LINE_SAMPLES']
+        else:
+            self.nlines = meta_dict['IMAGE']['LINES']
+            self.nsamples = meta_dict['IMAGE']['LINE_SAMPLES']
 
         # Exposure time
-        exposure_ms = label['EXPOSURE_DURATION']
+        exposure_ms = meta_dict['EXPOSURE_DURATION']
         self.exposure = exposure_ms/1000.
 
         # Filters
-        self.filter = label['FILTER_NAME']
+        self.filter = meta_dict['FILTER_NAME']
 
         #TODO: determine whether IMAGE_TIME is the start time or the mid time..
         self.tstart = julian.tdb_from_tai(
-                        julian.tai_from_iso(label['IMAGE_TIME']))
+                        julian.tai_from_iso(meta_dict['IMAGE_TIME']))
         self.tstop = self.tstart + self.exposure
 
         # Target
-        self.target = label['TARGET_NAME']
+        self.target = meta_dict['TARGET_NAME']
 
         # Telemetry mode
-        self.mode = label['TELEMETRY_FORMAT_ID']
+        self.mode = meta_dict['TELEMETRY_FORMAT_ID']
 
         # Window
-        if 'CUT_OUT_WINDOW' in label:
-            self.window = np.array(label['CUT_OUT_WINDOW'])
+        if 'CUT_OUT_WINDOW' in meta_dict:
+            self.window = np.array(meta_dict['CUT_OUT_WINDOW'])
             self.window_origin = self.window[0:2]-1
             self.window_shape = self.window[2:]
             self.window_uv_origin = np.flip(self.window_origin)
@@ -203,68 +270,6 @@ class Metadata(object):
             fov = fov_full
 
         return fov
-
-#===============================================================================
-def from_index(filespec, supplemental_filespec, **parameters):
-    """A static method to return a list of Snapshot objects.
-
-    One object for each row in an SSI index file. The filespec refers to the
-    label of the index file.
-    """
-    SSI.initialize()    # Define everything the first time through
-
-    # Read the index file
-    COLUMNS = []        # Return all columns
-    TIMES = ['START_TIME']
-    table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
-    row_dicts = table.dicts_by_row()
-
-    # Read the supplemental index file
-    table = pdstable.PdsTable(supplemental_filespec, columns=COLUMNS, times=TIMES)
-    supplemental_row_dicts = table.dicts_by_row()
-    for row_dict, supplemental_row_dict in zip(row_dicts, supplemental_row_dicts):
-        row_dict.update(supplemental_row_dict)
-
-
-    # Create a list of Snapshot objects
-    snapshots = []
-    for row_dict in row_dicts:
-
-        tstart = julian.tdb_from_tai(row_dict['START_TIME'])
-        texp = max(1.e-3, row_dict['EXPOSURE_DURATION']) / 1000.
-        mode = row_dict['INSTRUMENT_MODE_ID']
-
-        name = row_dict['INSTRUMENT_NAME']
-        if 'WIDE' in name:
-            camera = 'WAC'
-        else:
-            camera = 'NAC'
-
-        item = oops.obs.Snapshot(('v','u'), tstart, texp,
-                                 ISS.fovs[camera,mode,False],
-                                 'CASSINI', 'CASSINI_ISS_' + camera,
-                                 dict = row_dict,       # Add index dictionary
-                                 index_dict = row_dict, # Old name
-                                 instrument = 'ISS',
-                                 detector = camera,
-                                 sampling = mode)
-
-        item.spice_kernels = Cassini.used_kernels(item.time, 'iss')
-
-        item.filespec = os.path.join(row_dict['VOLUME_ID'],
-                                     row_dict['FILE_SPECIFICATION_NAME'])
-        item.basename = row_dict['FILE_NAME']
-
-        snapshots.append(item)
-
-    # Make sure all the SPICE kernels are loaded
-    tdb0 = row_dicts[ 0]['START_TIME']
-    tdb1 = row_dicts[-1]['START_TIME']
-
-    Cassini.load_cks( tdb0, tdb1)
-    Cassini.load_spks(tdb0, tdb1)
-
-    return snapshots
 
 #===============================================================================
 class SSI(object):
