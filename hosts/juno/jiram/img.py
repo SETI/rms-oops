@@ -15,6 +15,9 @@ from hosts.juno.jiram import JIRAM
 # Standard class methods
 ################################################################################
 
+
+#### TODO: verify label input needed or whether it is covered by filespec, as
+####       other host modules.
 #===============================================================================
 def from_file(filespec, label, fast_distortion=True,
                                return_all_planets=False, **parameters):
@@ -22,6 +25,9 @@ def from_file(filespec, label, fast_distortion=True,
     JIRAM image or spectrum file.
 
     Inputs:
+        filespec            The full path to a Juno JIRAM image file or its
+                            PDS label.
+
         fast_distortion     True to use a pre-inverted polynomial;
                             False to use a dynamically solved polynomial;
                             None to use a FlatFOV.

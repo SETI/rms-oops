@@ -28,6 +28,8 @@ def from_file(filespec, fast_distortion=True,
     JUNOCAM image file.
 
     Inputs:
+        filespec            Path to input file.
+
         fast_distortion     True to use a pre-inverted polynomial;
                             False to use a dynamically solved polynomial;
                             None to use a FlatFOV.
@@ -442,11 +444,13 @@ import unittest
 import oops.backplane.gold_master as gm
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-from hosts.juno.junocam      import standard_obs
-
 
 #===============================================================================
 class Test_Juno_Junocam_GoldMaster(unittest.TestCase):
+
+    #===========================================================================
+    def setUp(self):
+        from hosts.juno.junocam import standard_obs
 
     #===========================================================================
     def test_JNCR_2016347_03C00192_V01(self):
