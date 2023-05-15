@@ -64,7 +64,7 @@ gm.override('JUPITER longitude d/dv self-check (deg/pix)', .096, names=name)
 
 # overrides to cover unexplained discrepancies among Mark, Rob, Joe
 gm.override('JUPITER center distance from Sun (km)', 2.5, names=name)
-gm.override('JUPITER center light time from Sun (km)', 4e-6, names=name)
+gm.override('JUPITER center light time from Sun (km)', 9e-6, names=name)
 gm.override('JUPITER:RING center distance from Sun (km)', 2.5, names=name)
 gm.override('JUPITER:RING center light time from Sun (km)', 9e-6, names=name)
 gm.override('JUPITER center right ascension (deg, actual)', 1.5e-4, names=name)
@@ -113,3 +113,17 @@ gm.define_standard_obs(name,
         planets  = '',
         moons    = 'EUROPA',
         rings    = '')
+        
+# overrides to cover unexplained discrepancies among Mark, Rob, Joe
+gm.override('EUROPA center distance from Sun (km)', 5., names=name)
+gm.override('EUROPA center light time from Sun (km)', 1.5e-5, names=name)
+gm.override('EUROPA pole clock angle (deg)', 0.002, names=name)
+gm.override('EUROPA pole position angle (deg)', 0.002, names=name)
+gm.override('EUROPA center right ascension (deg, actual)', 0.007, names=name)
+gm.override('EUROPA center right ascension (deg, apparent)', 0.007, names=name)
+gm.override('EUROPA center declination (deg, actual)', 0.02, names=name)
+gm.override('EUROPA center declination (deg, apparent)', 0.02, names=name)
+gm.override('EUROPA sub-observer latitude, planetocentric (deg)', 0.02, names=name)
+gm.override('EUROPA sub-observer latitude, planetographic (deg)', 0.02, names=name)
+
+
