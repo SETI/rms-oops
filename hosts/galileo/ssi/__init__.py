@@ -73,7 +73,7 @@ def from_file(filespec,
     return result
 
 #===============================================================================
-def from_index(filespec, supplemental_filespec, **parameters):
+def from_index(filespec, supplemental_filespec, full_fov=False, **parameters):
     """A static method to return a list of Snapshot objects.
 
     One object for each row in an SSI index file. The filespec refers to the
@@ -88,17 +88,49 @@ def from_index(filespec, supplemental_filespec, **parameters):
     row_dicts = table.dicts_by_row()
 
     # Read the supplemental index file
-    table = pdstable.PdsTable(supplemental_filespec, columns=COLUMNS, times=TIMES)
+    table = pdstable.PdsTable(supplemental_filespec)
     supplemental_row_dicts = table.dicts_by_row()
     for row_dict, supplemental_row_dict in zip(row_dicts, supplemental_row_dicts):
         row_dict.update(supplemental_row_dict)
+
+
+####TODO: CUT_OUT_WINDOW should be represented in the index label as a single
+####      column with 4 values as:
+####
+####        OBJECT                        = COLUMN
+####          NAME                        = CUT_OUT_WINDOW
+####          ITEMS                       = 4
+####          DATA_TYPE                   = ASCII_INTEGER
+####          START_BYTE                  = 52
+####          BYTES                       = 3
+####          FORMAT                      = I3
+####          DESCRIPTION                 = "xxxxxxxx."
+####        END_OBJECT                    = COLUMN
+####
+####       However, it appears that the code to handle this in psdtable.py
+####       starting at line 257 does not work.  Therefore, at present,
+####       CUT_OUT_WINDOW is represented as four separate columns.
+####       (actally should return integer values)
+    for row_dict in row_dicts:
+        row_dict['CUT_OUT_WINDOW'] = [ row_dict['CUT_OUT_WINDOW_0'],
+                                       row_dict['CUT_OUT_WINDOW_1'],
+                                       row_dict['CUT_OUT_WINDOW_2'],
+                                       row_dict['CUT_OUT_WINDOW_3'] ]
+
+
 
     # Create a list of Snapshot objects
     snapshots = []
     for row_dict in row_dicts:
 
+
+        print(row_dict['FILE_SPECIFICATION_NAME'])
+        if row_dict['FILE_SPECIFICATION_NAME'] == 'G2/IO/C0359986604R.LBL':
+            continue
+        ###--> hits limit on # loaded kernels
+
         # Get image metadata
-        meta = Metadata(row_dict, from_index=True)
+        meta = Metadata(row_dict)
 
         # Load time-dependent kernels
         Galileo.load_cks(meta.tstart, meta.tstart + meta.exposure)
@@ -118,17 +150,17 @@ def from_index(filespec, supplemental_filespec, **parameters):
                                  filespec = filespec,
                                  basename = os.path.basename(filespec))
 
-        item.spice_kernels = galileo.used_kernels(item.time, 'ssi')
+        item.spice_kernels = Galileo.used_kernels(item.time, 'ssi')
 
         item.filespec = os.path.join(row_dict['VOLUME_ID'],
                                      row_dict['FILE_SPECIFICATION_NAME'])
-        item.basename = row_dict['FILE_NAME']
+#############        item.basename = row_dict['FILE_NAME']
 
         snapshots.append(item)
 
     # Make sure all the SPICE kernels are loaded
-    tdb0 = row_dicts[ 0]['START_TIME']
-    tdb1 = row_dicts[-1]['START_TIME']
+    tdb0 = row_dicts[ 0]['IMAGE_TIME']
+    tdb1 = row_dicts[-1]['IMAGE_TIME']
 
     Galileo.load_cks( tdb0, tdb1)
     Galileo.load_spks(tdb0, tdb1)
@@ -161,16 +193,12 @@ def initialize(planets=None, asof=None,
 class Metadata(object):
 
     #===========================================================================
-    def __init__(self, meta_dict, from_index=False):
+    def __init__(self, meta_dict):
         """Use the label or index dict to assemble the image metadata."""
 
         # Image dimensions
-        if from_index:
-            self.nlines = meta_dict['LINES']
-            self.nsamples = meta_dict['LINE_SAMPLES']
-        else:
-            self.nlines = meta_dict['IMAGE']['LINES']
-            self.nsamples = meta_dict['IMAGE']['LINE_SAMPLES']
+        self.nlines = 800
+        self.nsamples = 800
 
         # Exposure time
         exposure_ms = meta_dict['EXPOSURE_DURATION']
@@ -343,10 +371,16 @@ class Test_AAA_Galileo_SSI_index_file(unittest.TestCase):
 
     #===========================================================================
     def runTest(self):
-        dir = os.path.join(TESTDATA_PARENT_DIRECTORY, 'galileo/GO_0017')
+        dir = '/home/spitale/SETI/RMS/metadata/GO_0xxx/GO_0017'
 
         obs = from_index(os.path.join(dir, 'GO_0017_index.lbl'),
                          os.path.join(dir, 'GO_0017_supplemental_index.lbl'))
+
+
+#        dir = os.path.join(TESTDATA_PARENT_DIRECTORY, 'galileo/GO_0017')
+#
+#        obs = from_index(os.path.join(dir, 'GO_0017_index.lbl'),
+#                         os.path.join(dir, 'GO_0017_supplemental_index.lbl'))
 
 
 #===============================================================================
