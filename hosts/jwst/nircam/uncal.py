@@ -260,8 +260,30 @@ class Uncal(NIRCam):
                            / (group_frames[1] - group_frames[0]))
             else:
                 swapped = np.swapaxes(stop_tai, 0, 1)
-                coefficients = np.polyfit(group_frames, swapped, deg=2)
+                coefficients = np.polyfit(group_frames, swapped, deg=1)
                 tstride = np.mean(coefficients[0])
+
+            start_tai = stop_tai - tstride * (group_frames + 1)
+
+        # Sometimes, the GROUP table only contains one line, which is useless. When this
+        # occurs, the INT_TIMES table also appears to be useless. We do our best to get
+        # the timing based on the info we've got.
+        else:
+            tai_beg = julian.tai_from_iso(header0['DATE-BEG'])
+            tai_end = julian.tai_from_iso(header0['DATE-END'])
+            tstride_ints = (tai_end - tai_beg) / nints
+
+            # Start times are at uniform intervals by integration
+            start_tai = np.empty(shape)
+            i = np.arange(nints)
+            start_tai[i,:] = (tai_beg + i * tstride_ints)[:,np.newaxis]
+
+            # Stop times are defined by group_frames within the integration
+            tstride = tstride_ints / (group_frames[-1] + 1)
+            assert abs(tstride - tframe) < 1.e-4, \
+                (f'Inferred tstride ({tstride:.8f}) does not match tframe ({tframe}) in '
+                 +  filespec)
+            stop_tai = start_tai + (group_frames + 1) * tframe
 
         # The documentation indicates that the tstride includes a small amount of
         # telemetry time, which has to eat into the exposure time, but presumably only
@@ -279,14 +301,12 @@ class Uncal(NIRCam):
             tstride_wo_telem = (ncolumns + 12) * nrows * tsample/1.e6
 
         fraction = (tstride_calc - tstride_wo_telem) / tstride_calc
-        assert abs(fraction) < 0.01, f'The timing of {filespec} smells fishy'
-        deadtime = fraction * tstride
+        deadtime = max(fraction * tstride, 0.)
 
-        # Now we can infer the start time and effective exposure duration of each exposure
-        start_tai = stop_tai - tstride * (group_frames + 1) + deadtime
-
+        # Now we can infer the effective duration of each exposure
         group_texp = tstride * (group_frames - (nframes-1)/2.) - deadtime
         group_texp[0] = tstride - deadtime      # but first exposure is always one frame
+        stop_tai -= deadtime
 
         # Determine successive differences between exposure times
         diff_texp = group_texp.copy()
@@ -509,11 +529,11 @@ class Uncal(NIRCam):
                     if options['data']:
                         obs.insert_subfield('data', data[i,g])
 
-                        if options['cal_file'] and options['calibration']:
-                            obs.insert_subfield('error', error[g])
-                            obs.insert_subfield('quality', quality[g])
-                            obs.insert_subfield('cal_factor', cal_factors[g])
-                            obs.insert_subfield('baseline', cal_baselines[g])
+                    if options['cal_file'] and options['calibration']:
+                        obs.insert_subfield('error', error[g])
+                        obs.insert_subfield('quality', quality[g])
+                        obs.insert_subfield('cal_factor', cal_factors[g])
+                        obs.insert_subfield('baseline', cal_baselines[g])
 
                     if options['calibration']:
                         for key, calib in group_calibs.items():
@@ -532,6 +552,7 @@ class Uncal(NIRCam):
         subfields['texp'] = group_texp
         subfields['frames'] = group_frames
         subfields['readouts'] = group_readouts
+        subfields['shape'] = shape + (ncolumns, nrows)
 
         if options['cal_file'] and options['calibration']:
             subfields['cal_factor'] = cal_factor
@@ -565,7 +586,7 @@ class Uncal(NIRCam):
         antimask = (raw_data != 0.) & (raw_data <= RAW_SATURATION)
 
         # Average over integrations for each group index
-        raw_data = np.mean(raw_data, axis=0)
+        raw_data = np.median(raw_data, axis=0)
         antimask = np.logical_or.reduce(antimask, axis=0)
 
         # Define successive differences; convert to DN per second
@@ -577,7 +598,7 @@ class Uncal(NIRCam):
             antimask[i+1] &= antimask[i]
 
         # Get cal_data; broadcast to match the shape of raw_data
-        cal_data = cal_hdulist['SCI'].data
+        cal_data = cal_hdulist['SCI'].data.copy()
         cal_data[np.isnan(cal_data)] = 0.
         cal_data = np.broadcast_to(cal_data, raw_data.shape)
 
@@ -629,31 +650,34 @@ class Uncal(NIRCam):
         #   X is a matrix of two columns [X0 X1] and A is the matrix [a b].
         #
         # The solution is:
-        #   A = (XT X)^-1 XT Y
+        #   A = (XT W X)^-1 XT W Y
         #
-        # See https://en.wikipedia.org/wiki/Linear_least_squares
+        # See https://en.wikipedia.org/wiki/Weighted_least_squares
 
         # We can pre-calculate a bunch of stuff
+        x = raw_data
         y = cal_data
-        xcol0 = raw_data
+        w = y                       # larger amplitudes get higher weight
+
+        xcol0 = x
         xcol1 = np.zeros(raw_data.shape, dtype='int32')
         xcol1[0] = 1
 
-        xcol0_xcol0 = xcol0**2
-        xcol0_xcol1 = xcol0 * xcol1
-        xcol1_xcol1 = xcol1     # values are zero or one so no need to square this
+        w_xcol0_xcol0 = w * xcol0**2
+        w_xcol0_xcol1 = w * xcol0 * xcol1
+        w_xcol1_xcol1 = w * xcol1   # xcol1 is zero or one so no need to square this
 
-        xcol0_y = xcol0 * y
-        xcol1_y = xcol1 * y
+        w_xcol0_y = w * xcol0 * y
+        w_xcol1_y = w * xcol1 * y
 
         # Iterate while excluding large residuals
         unmasked = np.sum(antimask)
         for count in range(10):
 
             # Solve A = (XT X)^-1 XT Y
-            xt_x_00 = np.sum(antimask * xcol0_xcol0)
-            xt_x_01 = np.sum(antimask * xcol0_xcol1)
-            xt_x_11 = np.sum(antimask * xcol1_xcol1)
+            xt_x_00 = np.sum(antimask * w_xcol0_xcol0)
+            xt_x_01 = np.sum(antimask * w_xcol0_xcol1)
+            xt_x_11 = np.sum(antimask * w_xcol1_xcol1)
 
             det = xt_x_00 * xt_x_11 - xt_x_01**2
             det_inv = 1. / det
@@ -661,15 +685,16 @@ class Uncal(NIRCam):
             xt_x_inv_01 = -xt_x_01 * det_inv
             xt_x_inv_11 =  xt_x_00 * det_inv
 
-            xt_y_0 = np.sum(antimask * xcol0_y)
-            xt_y_1 = np.sum(antimask * xcol1_y)
+            xt_y_0 = np.sum(antimask * w_xcol0_y)
+            xt_y_1 = np.sum(antimask * w_xcol1_y)
 
             a = xt_x_inv_00 * xt_y_0 + xt_x_inv_01 * xt_y_1
             b = xt_x_inv_01 * xt_y_0 + xt_x_inv_11 * xt_y_1
 
             model = a * xcol0 + b * xcol1
-            stdev = np.std((y - model)[antimask])
-            antimask &= np.abs(y - model) < 4. * stdev
+            resid = y - model
+            stdev = np.std(resid[antimask])     # ignore first group here
+            antimask &= np.abs(resid) < 4. * stdev
 
             new_unmasked = np.sum(antimask)
             delta = unmasked - new_unmasked

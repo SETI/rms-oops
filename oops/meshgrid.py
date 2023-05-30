@@ -119,6 +119,24 @@ class Meshgrid(object):
 
     #===========================================================================
     @staticmethod
+    def for_fov_center(fov, origin=None, fov_keywords={}):
+        """A 0-D Meshgrid object for a single line of sight within an FOV.
+
+        Input:
+            fov         FOV object.
+
+            origin      A single value, tuple or Pair defining the line of sight
+                        of the "grid". Default is to use the center of the FOV.
+
+            fov_keywords  an optional dictionary of parameters passed to the
+                        FOV methods, containing parameters that might affect
+                        the properties of the FOV.
+        """
+
+        return Meshgrid(fov, fov.uv_shape/2., fov_keywords=fov_keywords)
+
+    #===========================================================================
+    @staticmethod
     def for_shape(fov, shape, u_axis=-1, v_axis=-1, origin=None, undersample=1,
                   oversample=1, limit=None, center_uv=None, fov_keywords={}):
         """A 2-D rectangular Meshgrid object for a specified FOV and uv_shape.

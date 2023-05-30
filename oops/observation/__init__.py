@@ -616,7 +616,10 @@ class Observation(object):
         """
 
         if time is None:
-            time = self.midtime_at_uv(meshgrid.uv, tfrac=tfrac)
+            if meshgrid is None:
+                time = self.time[0] + tfrac * (self.time[1] - self.time[0])
+            else:
+                time = self.midtime_at_uv(meshgrid.uv, tfrac=tfrac)
 
         if shapeless:
             time = time.mean()

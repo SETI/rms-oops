@@ -223,6 +223,7 @@ class JWST(object):
         subfields['instrument'] = INSTRUMENT_NAME[header0['INSTRUME']]
         subfields['detector'  ] = header0['DETECTOR']
         subfields['filter'    ] = header0['FILTER']
+        subfields['subarray'  ] = header0['SUBARRAY']
         subfields['target'    ] = self.target_name(hdulist, **options)
         subfields['dither'    ] = {
             'visit'  : header0['VISIT_ID'],

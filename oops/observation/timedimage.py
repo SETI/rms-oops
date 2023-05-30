@@ -148,6 +148,12 @@ class TimedImage(Observation):
             self.shape[self.t_axis[1]] = t_size
             self.uv_shape[self._fast_t_uv_axis] = t_size
 
+        # Let the user override the shape (to replace zeros if desired)
+        self.shape = tuple(self.shape)
+        if 'shape' in subfields:
+            self.shape = tuple(subfields['shape'])
+            del subfields['shape']
+
         self.INVENTORY_IMPLEMENTED = not self._extended_fov
 
         # Optional subfields

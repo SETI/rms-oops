@@ -116,6 +116,29 @@ class NIRCam(JWST):
     Objects of this class are empty; they only exist to support inheritance.
     """
 
+    def header_subfields(self, hdulist, **options):
+        """Default subfields for all JWST Observations.
+
+        This is an override of the JWST method, adding additional info.
+        """
+
+        subfields = JWST.header_subfields(self, hdulist, **options)
+        header0 = hdulist[0].header
+
+        pupil = header0['PUPIL']
+        if pupil in ('F164N', 'F162M'):
+            assert subfields['filter'] == 'F150W2', \
+                ('Unrecognized filter/pupil combination: '
+                 + subfields['filter'] + '/' + pupil)
+
+            subfields['filter'] = pupil
+
+        subfields['module'  ] = header0['MODULE']           # A or B
+        subfields['detector'] = header0['DETECTOR'][4:]     # 1-4 or LONG
+        subfields['channel' ] = header0['CHANNEL']          # SHORT or LONG
+
+        return subfields
+
     def filter_bandpass(self, hdulist, **options):
         """Read the filter file for this detector/filter combination, and return
         the bandpass as a Tabulation.
