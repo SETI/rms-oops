@@ -44,10 +44,6 @@ def from_file(filespec,
     # Get image metadata
     meta = Metadata(label)
 
-    # Load time-dependent kernels
-    Galileo.load_cks(meta.tstart, meta.tstart + meta.exposure)
-    Galileo.load_spks(meta.tstart, meta.tstart + meta.exposure)
-
     # Define the field of view
     FOV = meta.fov(full_fov=full_fov)
 
@@ -84,7 +80,8 @@ def from_index(filespec, supplemental_filespec, full_fov=False, **parameters):
     # Read the index file
     COLUMNS = []        # Return all columns
     TIMES = ['START_TIME']
-    table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
+#    table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
+    table = pdstable.PdsTable(filespec, columns=COLUMNS)
     row_dicts = table.dicts_by_row()
 
     # Read the supplemental index file
@@ -111,11 +108,11 @@ def from_index(filespec, supplemental_filespec, full_fov=False, **parameters):
 ####       starting at line 257 does not work.  Therefore, at present,
 ####       CUT_OUT_WINDOW is represented as four separate columns.
 ####       (actally should return integer values)
-    for row_dict in row_dicts:
-        row_dict['CUT_OUT_WINDOW'] = [ row_dict['CUT_OUT_WINDOW_0'],
-                                       row_dict['CUT_OUT_WINDOW_1'],
-                                       row_dict['CUT_OUT_WINDOW_2'],
-                                       row_dict['CUT_OUT_WINDOW_3'] ]
+#    for row_dict in row_dicts:
+#        row_dict['CUT_OUT_WINDOW'] = [ row_dict['CUT_OUT_WINDOW_0'],
+#                                       row_dict['CUT_OUT_WINDOW_1'],
+#                                       row_dict['CUT_OUT_WINDOW_2'],
+#                                       row_dict['CUT_OUT_WINDOW_3'] ]
 
 
 
@@ -123,23 +120,33 @@ def from_index(filespec, supplemental_filespec, full_fov=False, **parameters):
     snapshots = []
     for row_dict in row_dicts:
 
+        file = row_dict['FILE_SPECIFICATION_NAME']
+        print(file)
+#        if file == 'C3/EUROPA/C0368976800R.LBL':
+#xx        if file == 'C3/JUPITER/C0368450300R.LBL':
+        if file == 'C3/JUPITER/C0368410545R.LBL':
+            print(0)
 
-        print(row_dict['FILE_SPECIFICATION_NAME'])
-        if row_dict['FILE_SPECIFICATION_NAME'] == 'G2/IO/C0359986604R.LBL':
-            continue
-        ###--> hits limit on # loaded kernels
+
 
         # Get image metadata
         meta = Metadata(row_dict)
 
-        # Load time-dependent kernels
-        Galileo.load_cks(meta.tstart, meta.tstart + meta.exposure)
-        Galileo.load_spks(meta.tstart, meta.tstart + meta.exposure)
+#        # Load time-dependent kernels
+#        Galileo.load_cks(meta.tstart, meta.tstart + meta.exposure)
+#        Galileo.load_spks(meta.tstart, meta.tstart + meta.exposure)
 
         # Define the field of view
         FOV = meta.fov(full_fov=full_fov)
 
         # Create a Snapshot
+        file = row_dict['FILE_SPECIFICATION_NAME']
+        print(file)
+        if file == 'C3/EUROPA/C0368976800R.LBL':
+#        if file == 'C3/JUPITER/C0368450045R.LBL':
+            continue
+
+        basename = os.path.basename(file)
         item = oops.obs.Snapshot(('v','u'), meta.tstart, meta.exposure,
                                  FOV,
                                  path = 'GLL',
@@ -147,14 +154,14 @@ def from_index(filespec, supplemental_filespec, full_fov=False, **parameters):
                                  dict = row_dict,         # Add the index dict
                                  instrument = 'SSI',
                                  filter = meta.filter,
-                                 filespec = filespec,
-                                 basename = os.path.basename(filespec))
+                                 filespec = file,
+                                 basename=basename)
 
         item.spice_kernels = Galileo.used_kernels(item.time, 'ssi')
 
         item.filespec = os.path.join(row_dict['VOLUME_ID'],
                                      row_dict['FILE_SPECIFICATION_NAME'])
-#############        item.basename = row_dict['FILE_NAME']
+        item.basename = basename
 
         snapshots.append(item)
 
@@ -340,6 +347,9 @@ class SSI(object):
         # Construct the SpiceFrame
         _ = oops.frame.SpiceFrame("GLL_SCAN_PLATFORM")
 
+        # Load kernels
+        Galileo.load_kernels()
+
         SSI.initialized = True
         return
 
@@ -372,16 +382,10 @@ class Test_AAA_Galileo_SSI_index_file(unittest.TestCase):
     #===========================================================================
     def runTest(self):
         dir = '/home/spitale/SETI/RMS/metadata/GO_0xxx/GO_0017'
+#        dir = os.path.join(TESTDATA_PARENT_DIRECTORY, 'galileo/GO_0017')
 
         obs = from_index(os.path.join(dir, 'GO_0017_index.lbl'),
                          os.path.join(dir, 'GO_0017_supplemental_index.lbl'))
-
-
-#        dir = os.path.join(TESTDATA_PARENT_DIRECTORY, 'galileo/GO_0017')
-#
-#        obs = from_index(os.path.join(dir, 'GO_0017_index.lbl'),
-#                         os.path.join(dir, 'GO_0017_supplemental_index.lbl'))
-
 
 #===============================================================================
 class Test_Galileo_SSI_GoldMaster(unittest.TestCase):

@@ -141,51 +141,7 @@ class Galileo(object):
 
     #===========================================================================
     @staticmethod
-    def load_ck(t):
-        """Ensure that the C kernels applicable at or near the given time have
-        been furnished.
-
-        The time can be tai or tdb.
-        """
-        Galileo.load_kernels(t, t, Galileo.CK_LOADED, Galileo.CK_LIST,
-                                   Galileo.CK_DICT)
-
-    #===========================================================================
-    @staticmethod
-    def load_cks(t0, t1):
-        """Ensure that all the C kernels applicable near or within the time
-        interval tdb0 to tdb1 have been furnished.
-
-        The time can be tai or tdb.
-        """
-        Galileo.load_kernels(t0, t1, Galileo.CK_LOADED, Galileo.CK_LIST,
-                                     Galileo.CK_DICT)
-
-    #===========================================================================
-    @staticmethod
-    def load_spk(t):
-        """Ensure that the SPK kernels applicable at or near the given time have
-        been furnished.
-
-        The time can be tai or tdb.
-        """
-        Galileo.load_kernels(t, t, Galileo.SPK_LOADED, Galileo.SPK_LIST,
-                                   Galileo.SPK_DICT)
-
-    #===========================================================================
-    @staticmethod
-    def load_spks(t0, t1):
-        """Ensure that all the SPK kernels applicable near or within the time
-        interval tdb0 to tdb1 have been furnished.
-
-        The time can be tai or tdb.
-        """
-        Galileo.load_kernels(t0, t1, Galileo.SPK_LOADED, Galileo.SPK_LIST,
-                                     Galileo.SPK_DICT)
-
-    #===========================================================================
-    @staticmethod
-    def load_kernels(t0, t1, loaded, lists, kernel_dict):
+    def load_kernels():
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
         import glob
 
