@@ -18,3 +18,4 @@ oops/backplane-unittest-results*
 *.bbprojectd
 .coverage
 htmlcov
+~*

@@ -87,7 +87,7 @@ class SliceFOV(FOV):
 
         new_xy = self.fov.uv_from_xy(xy_pair, time=time, derivs=derivs,
                                               remask=remask, **keywords)
-        return new_xy - self.origin
+        return new_xy - self.uv_origin
 
 ################################################################################
 # UNIT TESTS

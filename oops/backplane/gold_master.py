@@ -578,6 +578,10 @@ def execute_as_unittest(testcase, obsname='default'):
     observations.
     """
 
+    import traceback
+
+    # This try-except is needed to ensure that a unit-test failure is
+    # triggered in the event of an error.
     try:
         # Initialize the command argument namespace
         args = argparse.Namespace()
@@ -617,6 +621,7 @@ def execute_as_unittest(testcase, obsname='default'):
         args = _clean_up_args(args)
 
     except Exception as e:
+        traceback.print_exception(e)
         testcase.assertTrue(False, str(e))
 
     run_tests(args)
@@ -1436,10 +1441,9 @@ class BackplaneTest(object):
                     self._log_comparison(comparison, 'No gold master')
 
                 else:
-                    (min_val, max_val, masked,
-                                       unmasked) = self.gold_summary[title]
+                    (min_val, max_val, masked, total) = self.gold_summary[title]
                     # If gold master value is not shapeless...
-                    if min_val != max_val or masked + unmasked > 1:
+                    if min_val != max_val or total > 1:
                         self._log_comparison(comparison, 'Shape mismatch')
 
                     else:
@@ -2219,7 +2223,7 @@ class BackplaneTest(object):
         for key, value in self.gold_summary_.items():
             if len(value) == 3:
                 if value[0] is None:
-                    value = (0,0) + value[2:]
+                    value = (0,0) + value[1:]
                 else:
                     value = value[:1] + value[:1] + value[1:]
                 self.gold_summary_[key] = value

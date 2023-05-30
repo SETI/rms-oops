@@ -2,6 +2,8 @@
 # oops/observation/__init__.py: Abstract class Observation
 ################################################################################
 
+from __future__ import print_function
+
 import numpy as np
 import numbers
 
@@ -75,13 +77,11 @@ class Observation(object):
         subfields       a dictionary containing all of the optional attributes.
                         Additional subfields may be included as needed.
 
-            data        a reserved subfield to contain the NumPy array of
+        data            a reserved subfield to contain the NumPy array of
                         numbers associated with the observation.
     """
 
     INVENTORY_IMPLEMENTED = False
-
-    DEBUG = False       # True to log iterative convergence steps
 
     ############################################################################
     # Methods to be defined for each subclass
@@ -425,8 +425,8 @@ class Observation(object):
         return tfrac * (time0 + time1)
 
     #===========================================================================
-    def meshgrid(self, origin=None, undersample=1, oversample=1, limit=None,
-                       center_uv=None, fov_keywords={}):
+    def meshgrid(self, origin=0.5, undersample=1, oversample=1, limit=None,
+                       fov_keywords={}):
         """A Meshgrid shaped to broadcast to the observation's shape.
 
         This works like Meshgrid.for_fov() except that the (u,v) axes are
@@ -435,8 +435,12 @@ class Observation(object):
 
         Input:
             origin      A single value, tuple or Pair defining the origin of the
-                        grid. Default is to place the first sample in the middle
-                        of the first pixel, allowing for under- or oversampling.
+                        grid. Default is 0.5, which places the first sample in
+                        the middle of the first pixel.
+
+            limit       A single value, tuple or Pair defining the upper limits
+                        of the meshgrid. By default, this is the shape of the
+                        FOV.
 
             undersample A single value, tuple or Pair defining the magnitude of
                         under-sampling to be performed. For example, a value of
@@ -447,26 +451,79 @@ class Observation(object):
                         over-sampling to be performed. For example, a value of
                         2 would create a 2x2 array of samples inside each pixel.
 
-            limit       A single value, tuple or Pair defining the upper limits
-                        of the meshgrid. By default, this is the shape of the
-                        FOV.
-
-            center_uv   Reference point at the center of the FOV; use None for
-                        the default, which depends on the origin and limit.
-
             fov_keywords  an optional dictionary of parameters passed to the
                         FOV methods, containing parameters that might affect
                         the properties of the FOV.
         """
 
-        return Meshgrid.for_shape(self.fov, self.shape,
-                                  self.u_axis, self.v_axis,
-                                  origin=origin,
-                                  undersample=undersample,
-                                  oversample=oversample,
-                                  limit=limit,
-                                  center_uv=center_uv,
-                                  fov_keywords=fov_keywords)
+        # Convert inputs to NumPy 2-element arrays
+        if limit is None:
+            limit = self.uv_shape
+        if isinstance(limit, numbers.Number):
+            limit = (limit, limit)
+        limit = Pair.as_pair(limit).vals.astype('float')
+
+        if isinstance(origin, numbers.Number):
+            origin = (origin, origin)
+        origin = Pair.as_pair(origin).vals.astype('float')
+
+        if isinstance(undersample, numbers.Number):
+            undersample = (undersample, undersample)
+        undersample = Pair.as_pair(undersample).vals.astype('float')
+
+        if isinstance(oversample, numbers.Number):
+            oversample = (oversample, oversample)
+        oversample = Pair.as_pair(oversample).vals.astype('float')
+
+        # Construct the 1-D index arrays
+        step = undersample/oversample
+        limit = limit + step * 1.e-10   # Allow a little slop at the upper end
+
+        urange = np.arange(origin[0], limit[0], step[0])
+        vrange = np.arange(origin[1], limit[1], step[1])
+
+        usize = urange.size
+        vsize = vrange.size
+
+        # Construct the empty array of values
+        shape_list = len(self.shape) * [1]
+        if self.u_axis >= 0:
+            shape_list[self.u_axis] = usize
+        if self.v_axis >= 0:
+            shape_list[self.v_axis] = vsize
+
+        values = np.empty(tuple(shape_list + [2]))
+
+        # Populate the array
+        if self.u_axis >= 0:
+            shape_list = len(self.shape) * [1]
+            shape_list[self.u_axis] = usize
+            uvalues = urange.reshape(tuple(shape_list))
+            values[...,0] = uvalues
+        else:
+            values[...,0] = 0.5
+
+        if self.v_axis >= 0:
+            shape_list = len(self.shape) * [1]
+            shape_list[self.v_axis] = vsize
+            vvalues = vrange.reshape(tuple(shape_list))
+            values[...,1] = vvalues
+        else:
+            values[...,1] = 0.5
+
+        # Return the Meshgrid
+        grid = Pair(values)
+
+        ####################################################################
+        # Proposed mod by Spitale to apply mask to the meshgrid.
+        #  Currently assumes mask is an optional subfield rather than
+        #  an explicit attribute.
+        ####################################################################
+        if hasattr(self, 'mask'):
+            grid._mask_ = self.mask
+        ####################################################################
+
+        return Meshgrid(self.fov, grid, fov_keywords)
 
     #===========================================================================
     def timegrid(self, meshgrid, oversample=1, tfrac_limits=(0,1)):
@@ -637,8 +694,7 @@ class Observation(object):
             return indices.to_scalar(axis, recursive=derivs)
 
         if isinstance(indices, numbers.Real):
-            if axis not in (0, -1):
-                raise IndexError('index out of range: ' + str(indices))
+            assert axis == 0
             return Scalar(indices)
 
         indices = np.array(indices)
@@ -776,18 +832,23 @@ class Observation(object):
         else:
             converge = PATH_PHOTONS.__dict__
 
-        # Take a guess at the observation time
+        iters = converge['max_iterations']
+        dlt_precision = converge['dlt_precision']
+
+        # Interpret the time
         if time is None:
             obs_time = self.time[0] + tfrac * (self.time[1] - self.time[0])
-            iters = converge['max_iterations']
-            dlt_precision = converge['dlt_precision']
-            max_dt = 1.e99
         else:
-            # In this case, no guessing is needed
             obs_time = time
             iters = 0
-            converged = True
 
+        # Require extra at least two iterations if tfrac != 0.5
+        if not (Scalar.as_scalar(tfrac) == 0.5).all():
+            iters = max(2, iters)
+
+        # Iterate to solution...
+        guess = None
+        max_dt = np.inf
         for count in range(iters):
 
             # Locate the object in the field of view
@@ -796,39 +857,28 @@ class Observation(object):
              obs_event) = path.photon_to_event(obs_event,
                                                derivs=False, guess=guess,
                                                quick=quick, converge=converge)
+            guess = path_event.time
+            (uv_min, uv_max) = self.uv_at_time(obs_event.time)
 
-            # Locate the object in the FOV frame
-            uv = self.fov.uv_from_los_t(obs_event.neg_arr_ap,
-                                        time=obs_event.time, derivs=derivs)
-
-            # Update the observation time based on pixel midtime
-            (t0, t1) = self.time_range_at_uv(uv)
+            # Update the observation times based on pixel midtimes
+            (t0, t1) = self.time_range_at_uv(uv_min)
             new_obs_time = t0 + tfrac * (t1 - t0)
 
             # Test for convergence
             prev_max_dt = max_dt
-            max_dt = (new_obs_time - obs_time).abs().max(builtins=True,
-                                                         masked=-1.)
+            max_dt = abs(new_obs_time - obs_time).max()
             obs_time = new_obs_time
 
-            if LOGGING.observation_iterations or Observation.DEBUG:
-                LOGGING.convergence('Observation.uv_from_path',
-                                    'iter=%d; change[s]=%.6g' % (count+1,
-                                                                 max_dt))
+            if LOGGING.observation_iterations:
+                print(LOGGING.prefix, 'Observation.uv_from_path', count+1,
+                                      max_dt)
 
-            if max_dt <= dlt_precision:
-                converged = True
+            if max_dt <= dlt_precision or max_dt >= prev_max_dt:
                 break
-
-            if max_dt >= prev_max_dt:
-                break
-
-        if not converged:
-            LOGGING.warn('Observation.uv_from_path did not converge;',
-                         'iter=%d; change=%.6g' % (count+1, max_dt))
 
         # Return the results
         obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
+
         (path_event,
          obs_event) = path.photon_to_event(obs_event,
                                            derivs=derivs, guess=guess,
@@ -952,122 +1002,6 @@ class Observation(object):
         raise NotImplementedError(type(self).__name__ + '.inventory '
                                   'is not implemented')
 
-    ############################################################################
-    # Support for parallel observations
-    ############################################################################
-
-    def parallel_los(self, parallel, los, time=None, derivs=False):
-        """The line of sight in a parallel observation's FOV given a line of
-        sight in this observation.
-
-        Input:
-            parallel    a parallel observation (same origin and time, different
-                        frame and FOV).
-            los         a line of sight in this observation.
-            time        absolute time in seconds TDB; None to assume this
-                        observation's midtime.
-            derivs      True to include the derivatives of the los in the
-                        result.
-        """
-
-        # Define the relative frame (assuming a common origin)
-        # This frame rotates vectors from this frame to the parallel frame.
-        frame = self.frame.wrt(parallel.frame)
-
-        # Convert the LOS to the frame of the this observation
-        time = self.midtime if time is None else time
-        xform = frame.transform_at_time(time)
-        return xform.rotate(los, derivs=derivs)
-
-    def parallel_uv(self, parallel, uv, time=None, derivs=False):
-        """The (u,v) pixel coordinates in a parallel observation's FOV given
-        pixel coordinates in the FOV of this observation.
-
-        Input:
-            parallel    a parallel observation (same origin and time, different
-                        frame and FOV).
-            uv          (u,v) pixel coordinates in this observation.
-            time        absolute time in seconds TDB; None to assume this
-                        observation's midtime.
-            derivs      True to include the derivatives of uv in the result.
-        """
-
-        # Convert the coordinates to a line of sight
-        time = self.midtime if time is None else time
-        los = self.fov.los_from_uvt(uv, time=time, derivs=derivs)
-
-        # Transform to the parallel observation
-        los = self.parallel_los(los, parallel, time=time, derivs=derivs)
-
-        # Convert to coordinates in the new FOV
-        return parallel.fov.uv_from_los_t(los, time=time, derivs=derivs)
-
-    def parallel_offset_angles(self, parallel, angles, time=None):
-        """The offset angles in a parallel observation's FOV and frame, given
-        the pointing offset in this observation.
-
-        Input:
-            parallel    a parallel observation (same origin and time, different
-                        frame and FOV). Alternatively, a tuple of two values:
-                        (frame, fov).
-            angles      a tuple or list of two offset angles in radians. The
-                        first rotation is about the Y axis of this observation's
-                        frame and the second is about the X axis.
-            time        absolute time in seconds TDB; None to assume this
-                        observation's midtime.
-            derivs      True to include the derivatives of uv in the result.
-        """
-
-        if isinstance(parallel, Observation):
-            parallel_frame = parallel.frame
-            parallel_fov = parallel.fov
-        else:
-            (parallel_frame, parallel_fov) = parallel
-
-        # Define the relative frame (assuming a common origin)
-        # This frame rotates vectors from this observation's frame to the parallel
-        # frame.
-        frame = self.frame.wrt(parallel_frame)
-        time = self.midtime if time is None else time
-        xform = frame.transform_at_time(time)
-
-        # Get the parallel observation's line of sight in this frame
-        uv = parallel_fov.uv_shape/2.
-        los0_parallel = parallel_fov.los_from_uvt(uv, time=time)
-        los0 = xform.unrotate(los0_parallel)
-
-        # Perform the rotations in this frame
-        # The angles refer to rotations of the axes, not the vectors, so they
-        # need to be reversed here.
-        los1 = los0.spin(Vector3.YAXIS, angles[0])
-        los1 = los1.spin(Vector3.XAXIS, angles[1])
-
-        # Convert back to the parallel's frame
-        los1_parallel = xform.rotate(los1)
-
-        # Return the new rotation angles
-        return los0_parallel.offset_angles(los1_parallel)
-
-    def parallel_offset_duv(self, parallel, duv, time=None, origin=None):
-        """The (u,v) pixel coordinate offset from the center of a parallel
-        observation's FOV, given a pointing offset for this observation.
-
-        Input:
-            parallel    a parallel observation (same origin and time, different
-                        frame and FOV).
-            duv         the (u,v) coordinate offset from the predicted location
-                        of a feature to its actual location.
-            time        absolute time in seconds TDB; None to assume this
-                        observation's midtime.
-            origin      the (u,v) coordinates of the reference point in this
-                        observation's FOV, from which the offset is measured. If
-                        unspecified, the center of the FOV is assumed.
-        """
-
-        angles = self.fov.offset_angles_from_duv(duv, time=time, origin=origin)
-        angles = self.parallel_offset_angles(parallel, angles, time=time)
-        return parallel.fov.duv_from_offset_angles(angles, time=time)
-
 ################################################################################
 # UNIT TESTS
 ################################################################################
@@ -1079,7 +1013,7 @@ class Test_Observation(unittest.TestCase):
     def runTest(self):
 
         # TBD
-        # Note in particular that uv_from_path() is untested!
+        # Note in particular that uv_from_path() is incomplete and untested!
 
         pass
 
