@@ -125,8 +125,9 @@ class Meshgrid(object):
         Input:
             fov         FOV object.
 
-            origin      A single value, tuple or Pair defining the line of sight
-                        of the "grid". Default is to use the center of the FOV.
+            origin      A single value, tuple, or Pair defining the line of
+                        sight of the "grid". Default is to use the center of the
+                        FOV.
 
             fov_keywords  an optional dictionary of parameters passed to the
                         FOV methods, containing parameters that might affect

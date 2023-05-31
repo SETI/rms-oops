@@ -22,9 +22,10 @@ class Navigation(Frame, Fittable):
         """Constructor for a Navigation Frame.
 
         Input:
-            angles      the angles of rotation in radians. The order of the
-                        rotations is about the y, x and z axes. These angles
-                        rotate a vector in the reference frame into this frame.
+            angles      two or three angles of rotation in radians. The order of
+                        the rotations is about the y, x, and (optionally) z
+                        axes. These angles rotate a vector in the reference
+                        frame into this frame.
             reference   the frame or frame ID relative to which this rotation is
                         defined.
             frame_id    the ID to use; None to use a temporary ID.

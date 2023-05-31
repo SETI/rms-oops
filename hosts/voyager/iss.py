@@ -143,8 +143,8 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
             image_frame = spacecraft + '_ISS_' + camera
 
     # Wrap the frame in a Navigation if necessary
-    # - Use navigation=True to in from_file() to enable a navigation frame
-    #   without specifying the rotation angles initially.
+    # - Use navigation=True in from_file() to enable a navigation frame without
+    #   specifying the rotation angles initially.
     # - Use navigation=angles with a tuple of two or three angles to specify the
     #   initial pointing offset in radians.
     # - Use offset=(du,dv) to specify a pointing offset in units of pixels.

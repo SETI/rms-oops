@@ -409,11 +409,11 @@ class FOV(object):
         FOV.
 
         Input:
-            duv         A tuple, list, array or Pair of (u,v) pixel offsets.
+            duv         A tuple, list, array, or Pair of (u,v) pixel offsets.
                         These define the (u,v) coordinates of a feature in the
                         Navigation frame as offsets from the coordinates of that
                         same feature in the reference frame.
-            time        time at which the evaluate the coordinates if this FOV
+            time        time at which to evaluate the coordinates if this FOV
                         has time-dependence.
             origin      An optional tuple, list, array, or Pair defining the
                         (u,v) reference location from which this offset is
@@ -446,7 +446,7 @@ class FOV(object):
             angles      a tuple or list of two offset angles in radians. The
                         first rotation is about the Y axis of this observation's
                         frame and the second is about the X axis.
-            time        time at which the evaluate the coordinates if this FOV
+            time        time at which to evaluate the coordinates if this FOV
                         has time-dependence.
             origin      An optional tuple, list, array, or Pair defining the
                         (u,v) reference location from which this offset is
