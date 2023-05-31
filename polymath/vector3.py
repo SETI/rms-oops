@@ -214,37 +214,72 @@ class Vector3(Vector):
     #===========================================================================
     def spin(self, pole, angle=None, recursive=True):
         """The result of rotating this Vector3 around the given pole vector by
-        the given angle. If angle is None, then the rotation angle is
-        pole.norm().arcsin().
+        the given angle.
+
+        If angle is None, then the rotation angle is pole.norm().arcsin().
         """
 
-        pole = Vector3.as_vector3(pole)
-        if not recursive:
-            pole = pole.wod
-            self = self.wod
+        pole = Vector3.as_vector3(pole, recursive=recursive)
 
         if angle is None:
             norm = pole.norm()
             angle = norm.arcsin()
             zaxis = pole / norm
         else:
-            angle = Scalar.as_scalar(angle)
-            if not recursive:
-                angle = angle.wod
-
+            angle = Scalar.as_scalar(angle, recursive=recursive)
             mask = (angle == 0.)
             if np.any(mask):
-                pole = pole.mask_where_eq(Vector3.ZEROS, Vector3.ZAXIS,
+                pole = pole.mask_where_eq(Vector3.ZERO, Vector3.ZAXIS,
                                           remask=False)
             zaxis = pole.unit()
 
-        z = self.dot(zaxis)
+        z = self.dot(zaxis, recursive=recursive)
         perp = self - z * zaxis
         r = perp.norm()
         perp = perp.mask_where_eq(Vector3.ZERO, Vector3.XAXIS, remask=False)
         xaxis = perp.unit()
         yaxis = zaxis.cross(xaxis)
         return r * (angle.cos() * xaxis + angle.sin() * yaxis) + z * zaxis
+
+    #===========================================================================
+    def offset_angles(self, vector, recursive=True):
+        """The two successive rotation angles about the Y and X axes to convert
+        this vector to the given vector (ignoring length).
+
+        The vector is assumed to be oriented close to the Z-axis.
+        """
+
+        vector = Vector3.as_vector3(vector, recursive=recursive)
+
+        (self, vector) = Vector3.broadcast(self, vector, recursive=recursive)
+        (x0, y0, z0) = self.unit().to_scalars()
+        (x , y , z ) = vector.unit().to_scalars()
+
+        # Start with this vector. The first rotation is about the Y-axis, where
+        # a positive rotation angle increases x if the vector is near the
+        # Z-axis. We need this rotation to change x0 to x, because x will be
+        # conserved in the second rotation.
+
+        # When viewed down the Y-axis, the length of this vector is conserved
+        # during the rotation.
+        norm0 = (x0**2 + z0**2).sqrt()
+        yrot = (x/norm0).arcsin() - (x0/norm0).arcsin()
+
+        # This is the vector after the first rotation; its y coordinate is
+        # unchanged.
+        z1 = (1 - x**2 - y0**2).sqrt()
+            # The new unit vector is (x, y0, z1)
+
+        # The second rotation is about the X-axis and needs to match the final
+        # value of y. If this is accomplished, then the z-values will match
+        # automatically. A positive rotation about the X-axis decreases y.
+
+        # When viewed down the X-axis, the length of this vector is conserved
+        # during the rotation.
+        norm1 = (y0**2 + z1**2).sqrt()
+        xrot = (y0/norm1).arcsin() - (y/norm1).arcsin()
+
+        return (yrot, xrot)
 
 ################################################################################
 # A set of useful class constants
