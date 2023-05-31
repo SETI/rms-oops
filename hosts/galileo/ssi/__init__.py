@@ -79,8 +79,6 @@ def from_index(filespec, supplemental_filespec, full_fov=False, **parameters):
 
     # Read the index file
     COLUMNS = []        # Return all columns
-    TIMES = ['START_TIME']
-#    table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
     table = pdstable.PdsTable(filespec, columns=COLUMNS)
     row_dicts = table.dicts_by_row()
 
@@ -108,44 +106,29 @@ def from_index(filespec, supplemental_filespec, full_fov=False, **parameters):
 ####       starting at line 257 does not work.  Therefore, at present,
 ####       CUT_OUT_WINDOW is represented as four separate columns.
 ####       (actally should return integer values)
-#    for row_dict in row_dicts:
-#        row_dict['CUT_OUT_WINDOW'] = [ row_dict['CUT_OUT_WINDOW_0'],
-#                                       row_dict['CUT_OUT_WINDOW_1'],
-#                                       row_dict['CUT_OUT_WINDOW_2'],
-#                                       row_dict['CUT_OUT_WINDOW_3'] ]
+    for row_dict in row_dicts:
+        row_dict['CUT_OUT_WINDOW'] = [ row_dict['CUT_OUT_WINDOW_0'],
+                                       row_dict['CUT_OUT_WINDOW_1'],
+                                       row_dict['CUT_OUT_WINDOW_2'],
+                                       row_dict['CUT_OUT_WINDOW_3'] ]
 
 
 
     # Create a list of Snapshot objects
     snapshots = []
     for row_dict in row_dicts:
-
         file = row_dict['FILE_SPECIFICATION_NAME']
         print(file)
-#        if file == 'C3/EUROPA/C0368976800R.LBL':
-#xx        if file == 'C3/JUPITER/C0368450300R.LBL':
-        if file == 'C3/JUPITER/C0368410545R.LBL':
-            print(0)
 
-
-
-        # Get image metadata
+        # Get image metadata; do not return observations with zero exposures
         meta = Metadata(row_dict)
-
-#        # Load time-dependent kernels
-#        Galileo.load_cks(meta.tstart, meta.tstart + meta.exposure)
-#        Galileo.load_spks(meta.tstart, meta.tstart + meta.exposure)
+        if meta.exposure == 0:
+            continue
 
         # Define the field of view
         FOV = meta.fov(full_fov=full_fov)
 
         # Create a Snapshot
-        file = row_dict['FILE_SPECIFICATION_NAME']
-        print(file)
-        if file == 'C3/EUROPA/C0368976800R.LBL':
-#        if file == 'C3/JUPITER/C0368450045R.LBL':
-            continue
-
         basename = os.path.basename(file)
         item = oops.obs.Snapshot(('v','u'), meta.tstart, meta.exposure,
                                  FOV,
@@ -164,13 +147,6 @@ def from_index(filespec, supplemental_filespec, full_fov=False, **parameters):
         item.basename = basename
 
         snapshots.append(item)
-
-    # Make sure all the SPICE kernels are loaded
-    tdb0 = row_dicts[ 0]['IMAGE_TIME']
-    tdb1 = row_dicts[-1]['IMAGE_TIME']
-
-    Galileo.load_cks( tdb0, tdb1)
-    Galileo.load_spks(tdb0, tdb1)
 
     return snapshots
 
