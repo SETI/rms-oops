@@ -122,7 +122,6 @@ class Test_Vector3(unittest.TestCase):
 
         self.assertRaises(ValueError, Vector3.zeros, (2,3), numer=(4,))
 
-        #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         # Most operations are inherited from Vector. These include:
         #     def to_scalar(self, axis, recursive=True)
         #     def to_scalars(self, recursive=True)
@@ -142,7 +141,6 @@ class Test_Vector3(unittest.TestCase):
         #     def element_mul(self, arg, recursive=True):
         #     def element_div(self, arg, recursive=True):
         #     def __abs__(self)
-        #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
         # Make sure proper objects are returned...
         a = Vector3(np.random.randn(4,1,5,3))

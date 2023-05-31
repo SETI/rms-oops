@@ -124,7 +124,7 @@ class Test_FlatFOV(unittest.TestCase):
 
         from oops.config import AREA_FACTOR
 
-        test = FlatFOV((1/2048.,-1/2048.), 101, (50,75))
+        test = FlatFOV((1/2048.,-1/2048.), (101,101), (50,75))
 
         buffer = np.empty((101,101,2))
         buffer[:,:,0] = np.arange(101).reshape(101,1)

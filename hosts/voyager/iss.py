@@ -142,6 +142,25 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
                           label_dict['PRODUCT_ID'], RuntimeWarning)
             image_frame = spacecraft + '_ISS_' + camera
 
+    # Wrap the frame in a Navigation if necessary
+    # - Use navigation=True in from_file() to enable a navigation frame without
+    #   specifying the rotation angles initially.
+    # - Use navigation=angles with a tuple of two or three angles to specify the
+    #   initial pointing offset in radians.
+    # - Use offset=(du,dv) to specify a pointing offset in units of pixels.
+    offset = parameters.get('offset', None)
+    if offset:
+        navigation = fovs[camera].offset_angles_from_duv(offset)
+    else:
+        navigation = parameters.get('navigation', None)
+
+    if navigation:
+        if navigation is True:
+            navigation = (0., 0.)
+        image_frame = oops.frame.Navigation(navigation, image_frame,
+                                            frame_id=image_frame.frame_id,
+                                            override=True)
+
     # Create a Snapshot
     result = oops.obs.Snapshot(('v','u'), tstart, texp, fovs[camera],
                                path = spacecraft,

@@ -148,6 +148,12 @@ class TimedImage(Observation):
             self.shape[self.t_axis[1]] = t_size
             self.uv_shape[self._fast_t_uv_axis] = t_size
 
+        # Let the user override the shape (to replace zeros if desired)
+        self.shape = tuple(self.shape)
+        if 'shape' in subfields:
+            self.shape = tuple(subfields['shape'])
+            del subfields['shape']
+
         self.INVENTORY_IMPLEMENTED = not self._extended_fov
 
         # Optional subfields
@@ -165,6 +171,11 @@ class TimedImage(Observation):
             snapshot_axes[self.v_axis] = 'v'
             snapshot_tstart = self.cadence.time[0]
             snapshot_texp = self.cadence.time[1] - self.cadence.time[0]
+
+            if 'texp' in subfields:             # this creates a conflict
+                subfields = subfields.copy()
+                subfields['texp_'] = subfields['texp']
+                del subfields['texp']
 
             self.snapshot = Snapshot(snapshot_axes, snapshot_tstart,
                                      snapshot_texp, self.fov,
