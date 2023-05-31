@@ -403,6 +403,72 @@ class FOV(object):
 
         return self.uv_from_los_t(los, derivs=derivs, remask=remask, **keywords)
 
+    #===========================================================================
+    def offset_angles_from_duv(self, duv, time=None, origin=None):
+        """The rotation angles in radians defined by a (u,v) pixel offset in an
+        FOV.
+
+        Input:
+            duv         A tuple, list, array, or Pair of (u,v) pixel offsets.
+                        These define the (u,v) coordinates of a feature in the
+                        Navigation frame as offsets from the coordinates of that
+                        same feature in the reference frame.
+            time        time at which to evaluate the coordinates if this FOV
+                        has time-dependence.
+            origin      An optional tuple, list, array, or Pair defining the
+                        (u,v) reference location from which this offset is
+                        defined. If not specified, the center of the FOV is
+                        used.
+        """
+
+        # Locate the origin LOS vector
+        if isinstance(origin, np.ndarray) or origin:
+                # We would have liked to write, simply, "if origin:", but that
+                # fails for NumPy arrays.
+            center_uv = Pair.as_pair(origin)
+        else:
+            center_uv = self.uv_shape/2.
+
+        los0 = self.los_from_uvt(center_uv, time=time)
+
+        # Determine the LOS vector associated with this pointing offset
+        los1 = self.los_from_uv(center_uv - duv, time=time)
+
+        # Return the rotation angles
+        return los0.offset_angles(los1)
+
+    #===========================================================================
+    def offset_duv_from_angles(self, angles, time=None, origin=None):
+        """The (u,v) pixel offset in the FOV associated with the given pair of
+        rotation angles.
+
+        Input:
+            angles      a tuple or list of two offset angles in radians. The
+                        first rotation is about the Y axis of this observation's
+                        frame and the second is about the X axis.
+            time        time at which to evaluate the coordinates if this FOV
+                        has time-dependence.
+            origin      An optional tuple, list, array, or Pair defining the
+                        (u,v) reference location from which this offset is
+                        defined. If not specified, the center of the FOV is
+                        assumed.
+        """
+
+        # Locate the origin and the reference LOS vector
+        if isinstance(origin, np.ndarray) or origin:
+            center_uv = Pair.as_pair(origin)
+        else:
+            center_uv = self.uv_shape/2.
+
+        los0 = self.los_from_uvt(center_uv, time=time)
+
+        # Determine the offset LOS
+        los1 = los0.spin(Vector3.YAXIS, angles[0])
+        los1 = los1.spin(Vector3.XAXIS, angles[1])
+
+        # Return the pixel offset
+        return center_uv - self.uv_from_los_t(los1, time=time)
+
     ############################################################################
     # Boundary tests
     ############################################################################
@@ -762,9 +828,20 @@ class Test_FOV(unittest.TestCase):
 
     def runTest(self):
 
-        # Fully tested by Flat.py
+        from oops.fov.flatfov import FlatFOV
 
-        pass
+        fov = FlatFOV((1/2048.,-1/2048.), (101,101), (50,75))
+
+        # Test offset_angles_from_duv and offset_duv_from_angles
+        uvlist = ([0,0], [0,101], [101,0], [50,75], fov.uv_shape/2., fov.uv_shape)
+        uvlist = [Pair.as_pair(uv) for uv in uvlist]
+
+        for uv0 in uvlist:
+            for uv1 in uvlist:
+                duv = uv1 - uv0
+                angles = fov.offset_angles_from_duv(duv, origin=uv0)
+                test = fov.offset_duv_from_angles(angles, origin=uv0)
+                self.assertLess((test - duv).norm(), 1.e-13)
 
 ########################################
 if __name__ == '__main__':

@@ -412,7 +412,7 @@ def lighting_test_suite(bpt):
         values = deg_per_fov_radian[deg_per_fov_radian.antimask].vals
         if values.size == 0:
             continue
-        values = np.sort(values.flatten())
+        values = np.sort(values, axis=None)
         cutoff = (values.size * 95) // 100
         deg_per_fov_radian = values[cutoff]
 
