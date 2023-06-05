@@ -15,7 +15,7 @@ except ImportError:
 import solar
 
 import oops
-from . import NewHorizons
+from hosts.newhorizons import NewHorizons
 
 ################################################################################
 # Standard routines for interpreting WCS parameters, adapted from STSCI source.
@@ -176,7 +176,7 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         target_body = None
 
     if geom == 'spice':
-        path = oops.Path.as_waypoint('NEW HORIZONS')
+        path = oops.path.Path.as_waypoint('NEW HORIZONS')
     else:
 
         # First construct a path from the Sun to NH
@@ -189,17 +189,17 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         velz = -header['SPCSSCVZ']
 
         # The path_id has to be unique to this observation
-        sun_path = oops.Path.as_waypoint('SUN')
+        sun_path = oops.path.Path.as_waypoint('SUN')
         path_id = '.NH_PATH_' + filename
-        sc_path = oops.path.LinearPath((oops.Vector3([posx, posy, posz]),
+        sc_path = oops.path.Path.LinearPath((oops.Vector3([posx, posy, posz]),
                                         oops.Vector3([velx, vely, velz])),
                                        tdb_midtime, sun_path,
-                                       oops.Frame.J2000,
+                                       oops.frame.Frame.J2000,
                                        path_id=path_id)
-        path = oops.Path.as_waypoint(sc_path)
+        path = oops.path.Path.as_waypoint(sc_path)
 
     if pointing == 'spice':
-        frame = oops.Frame.as_wayframe('NH_LORRI')
+        frame = oops.frame.Frame.as_wayframe('NH_LORRI')
     else:
 
         # Create a frame based on the boresight
@@ -231,11 +231,11 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         scet = header['SPCSCET']
 
         frame_id = '.NH_FRAME_' + filename
-        lorri_frame = oops.frame.Cmatrix.from_ra_dec(ra_deg, dec_deg,
+        lorri_frame = oops.frame.Frame.Cmatrix.from_ra_dec(ra_deg, dec_deg,
                                                      north_clock_deg,
-                                                     oops.Frame.J2000,
+                                                     oops.frame.Frame.J2000,
                                                      frame_id=frame_id)
-        frame = oops.Frame.as_wayframe(lorri_frame)
+        frame = oops.frame.Frame.as_wayframe(lorri_frame)
 
         event = oops.Event(tdb_midtime, oops.Vector3.ZERO, path, frame)
         event.neg_arr_ap = oops.Vector3.ZAXIS
@@ -286,7 +286,7 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
 
         # If necessary, get the solar range from the target name
         if solar_range is None and target_body is not None:
-            target_sun_path = oops.Path.as_waypoint(target_name).wrt('SUN')
+            target_sun_path = oops.path.Path.as_waypoint(target_name).wrt('SUN')
             # Paths of the relevant bodies need to be defined in advance!
 
             sun_event = target_sun_path.event_at_time(tdb_midtime)
@@ -529,53 +529,53 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
         import cspyce
 
         snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                  "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
+                                  "newhorizons/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
                              astrometry=True)
-        self.assertFalse(snapshot.__dict__.has_key("data"))
-        self.assertFalse(snapshot.__dict__.has_key("quality"))
-        self.assertFalse(snapshot.__dict__.has_key("error"))
-        self.assertFalse(snapshot.__dict__.has_key("point_calib"))
-        self.assertFalse(snapshot.__dict__.has_key("extended_calib"))
-        self.assertFalse(snapshot.__dict__.has_key("headers"))
+        self.assertFalse("data" in snapshot.__dict__)
+        self.assertFalse("quality" in snapshot.__dict__)
+        self.assertFalse("error" in snapshot.__dict__)
+        self.assertFalse("point_calib" in snapshot.__dict__)
+        self.assertFalse("extended_calib" in snapshot.__dict__)
+        self.assertFalse("headers" in snapshot.__dict__)
 
         snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                  "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
+                                  "newhorizons/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
                              data=False, calibration=True)
-        self.assertFalse(snapshot.__dict__.has_key("data"))
-        self.assertFalse(snapshot.__dict__.has_key("quality"))
-        self.assertFalse(snapshot.__dict__.has_key("error"))
-        self.assertTrue(snapshot.__dict__.has_key("point_calib"))
-        self.assertTrue(snapshot.__dict__.has_key("extended_calib"))
-        self.assertTrue(snapshot.__dict__.has_key("headers"))
+        self.assertFalse("data" in snapshot.__dict__)
+        self.assertFalse("quality" in snapshot.__dict__)
+        self.assertFalse("error" in snapshot.__dict__)
+        self.assertTrue("point_calib" in snapshot.__dict__)
+        self.assertTrue("extended_calib" in snapshot.__dict__)
+        self.assertTrue("headers" in snapshot.__dict__)
 
         snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                  "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
+                                  "newhorizons/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
                              data=True, calibration=False)
-        self.assertTrue(snapshot.__dict__.has_key("data"))
-        self.assertTrue(snapshot.__dict__.has_key("quality"))
-        self.assertTrue(snapshot.__dict__.has_key("error"))
-        self.assertFalse(snapshot.__dict__.has_key("point_calib"))
-        self.assertFalse(snapshot.__dict__.has_key("extended_calib"))
-        self.assertTrue(snapshot.__dict__.has_key("headers"))
+        self.assertTrue("data" in snapshot.__dict__)
+        self.assertTrue("quality" in snapshot.__dict__)
+        self.assertTrue("error" in snapshot.__dict__)
+        self.assertFalse("point_calib" in snapshot.__dict__)
+        self.assertFalse("extended_calib" in snapshot.__dict__)
+        self.assertTrue("headers" in snapshot.__dict__)
 
         snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                  "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
+                                  "newhorizons/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
                              headers=False)
-        self.assertTrue(snapshot.__dict__.has_key("data"))
-        self.assertTrue(snapshot.__dict__.has_key("quality"))
-        self.assertTrue(snapshot.__dict__.has_key("error"))
-        self.assertTrue(snapshot.__dict__.has_key("point_calib"))
-        self.assertTrue(snapshot.__dict__.has_key("extended_calib"))
-        self.assertFalse(snapshot.__dict__.has_key("headers"))
+        self.assertTrue("data" in snapshot.__dict__)
+        self.assertTrue("quality" in snapshot.__dict__)
+        self.assertTrue("error" in snapshot.__dict__)
+        self.assertTrue("point_calib" in snapshot.__dict__)
+        self.assertTrue("extended_calib" in snapshot.__dict__)
+        self.assertFalse("headers" in snapshot.__dict__)
 
         snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                  "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"))
-        self.assertTrue(snapshot.__dict__.has_key("data"))
-        self.assertTrue(snapshot.__dict__.has_key("quality"))
-        self.assertTrue(snapshot.__dict__.has_key("error"))
-        self.assertTrue(snapshot.__dict__.has_key("point_calib"))
-        self.assertTrue(snapshot.__dict__.has_key("extended_calib"))
-        self.assertTrue(snapshot.__dict__.has_key("headers"))
+                                  "newhorizons/LORRI/LOR_0034969199_0X630_SCI_1.FIT"))
+        self.assertTrue("data" in snapshot.__dict__)
+        self.assertTrue("quality" in snapshot.__dict__)
+        self.assertTrue("error" in snapshot.__dict__)
+        self.assertTrue("point_calib" in snapshot.__dict__)
+        self.assertTrue("extended_calib" in snapshot.__dict__)
+        self.assertTrue("headers" in snapshot.__dict__)
 
         self.assertTrue(snapshot.data.shape == (1024,1024))
         self.assertTrue(snapshot.quality.shape == (1024,1024))
@@ -594,7 +594,7 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
                                        ('fits', 'spice', (-4,-12)),
                                        ('fits', 'fits90', (-48,-27))]:
             snapshot_fits = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
-                            "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
+                            "newhorizons/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
                             geom=geom, pointing=pointing, fast_distortion=True)
 
             self.assertEqual(snapshot.time, snapshot_fits.time)
