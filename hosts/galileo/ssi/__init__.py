@@ -88,37 +88,10 @@ def from_index(filespec, supplemental_filespec, full_fov=False, **parameters):
     for row_dict, supplemental_row_dict in zip(row_dicts, supplemental_row_dicts):
         row_dict.update(supplemental_row_dict)
 
-
-####TODO: CUT_OUT_WINDOW should be represented in the index label as a single
-####      column with 4 values as:
-####
-####        OBJECT                        = COLUMN
-####          NAME                        = CUT_OUT_WINDOW
-####          ITEMS                       = 4
-####          DATA_TYPE                   = ASCII_INTEGER
-####          START_BYTE                  = 52
-####          BYTES                       = 3
-####          FORMAT                      = I3
-####          DESCRIPTION                 = "xxxxxxxx."
-####        END_OBJECT                    = COLUMN
-####
-####       However, it appears that the code to handle this in psdtable.py
-####       starting at line 257 does not work.  Therefore, at present,
-####       CUT_OUT_WINDOW is represented as four separate columns.
-####       (actally should return integer values)
-    for row_dict in row_dicts:
-        row_dict['CUT_OUT_WINDOW'] = [ row_dict['CUT_OUT_WINDOW_0'],
-                                       row_dict['CUT_OUT_WINDOW_1'],
-                                       row_dict['CUT_OUT_WINDOW_2'],
-                                       row_dict['CUT_OUT_WINDOW_3'] ]
-
-
-
     # Create a list of Snapshot objects
     snapshots = []
     for row_dict in row_dicts:
         file = row_dict['FILE_SPECIFICATION_NAME']
-        print(file)
 
         # Get image metadata; do not return observations with zero exposures
         meta = Metadata(row_dict)
