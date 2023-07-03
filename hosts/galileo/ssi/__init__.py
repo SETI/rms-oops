@@ -85,6 +85,7 @@ def from_index(filespec, supplemental_filespec, full_fov=False, **parameters):
     # Read the supplemental index file
     table = pdstable.PdsTable(supplemental_filespec)
     supplemental_row_dicts = table.dicts_by_row()
+    from IPython import embed; print('+++++++++++++'); embed()
     for row_dict, supplemental_row_dict in zip(row_dicts, supplemental_row_dicts):
         row_dict.update(supplemental_row_dict)
 
