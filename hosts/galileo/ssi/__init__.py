@@ -69,7 +69,7 @@ def from_file(filespec,
     return result
 
 #===============================================================================
-def from_index(filespec, supplemental_filespec, full_fov=False, **parameters):
+def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameters):
     """A static method to return a list of Snapshot objects.
 
     One object for each row in an SSI index file. The filespec refers to the
@@ -83,11 +83,11 @@ def from_index(filespec, supplemental_filespec, full_fov=False, **parameters):
     row_dicts = table.dicts_by_row()
 
     # Read the supplemental index file
-    table = pdstable.PdsTable(supplemental_filespec)
-    supplemental_row_dicts = table.dicts_by_row()
-#    from IPython import embed; print('+++++++++++++'); embed()
-    for row_dict, supplemental_row_dict in zip(row_dicts, supplemental_row_dicts):
-        row_dict.update(supplemental_row_dict)
+    if supplemental_filespec is not None:
+        table = pdstable.PdsTable(supplemental_filespec)
+        supplemental_row_dicts = table.dicts_by_row()
+        for row_dict, supplemental_row_dict in zip(row_dicts, supplemental_row_dicts):
+            row_dict.update(supplemental_row_dict)
 
     # Create a list of Snapshot objects
     snapshots = []
@@ -153,9 +153,11 @@ class Metadata(object):
     def __init__(self, meta_dict):
         """Use the label or index dict to assemble the image metadata."""
 
+        info = SSI.instrument_kernel['INS'][-77036]
+
         # Image dimensions
-        self.nlines = 800
-        self.nsamples = 800
+        self.nlines = info['MAX_LINE']
+        self.nsamples = info['MAX_SAMPLE']
 
         # Exposure time
         exposure_ms = meta_dict['EXPOSURE_DURATION']
@@ -220,39 +222,15 @@ class Metadata(object):
         Attributes:
             FOV object.
         """
-        # FOV Kernel pool variables
-        cf_var = 'INS-77036_DISTORTION_COEFF'
-        fo_var = 'INS-77036_FOCAL_LENGTH'
-        px_var = 'INS-77036_PIXEL_SIZE'
-        cxy_var = 'INS-77036_FOV_CENTER'
 
-        cf = cspyce.gdpool(cf_var, 0)[0]
-        fo = cspyce.gdpool(fo_var, 0)[0]
-        px = cspyce.gdpool(px_var, 0)[0]
-        cxy = cspyce.gdpool(cxy_var, 0)
-
-        # Construct FOV
-        scale = px/fo
-        distortion_coeff = [1, 0, cf]
-
-        # Direct summation modes
-        if self.mode in ('HIS', 'AI8'):
-            scale = scale*2
-            cxy = cxy/2
-
-        # Construct full FOV
-        fov_full = oops.fov.BarrelFOV(scale,
-                                      (self.nsamples, self.nlines),
-                                      coefft_uv_from_xy=distortion_coeff,
-                                      uv_los=(cxy[0], cxy[1]))
+        # Get FOV
+        fov = SSI.fovs[self.mode]
 
         # Apply cutout window if full fov not requested
         if not full_fov and self.window is not None:
             uv_origin = self.window_uv_origin
             uv_shape = self.window_uv_shape
-            fov = oops.fov.SliceFOV(fov_full, uv_origin, uv_shape)
-        else:
-            fov = fov_full
+            fov = oops.fov.SliceFOV(fov, uv_origin, uv_shape)
 
         return fov
 
@@ -262,7 +240,7 @@ class SSI(object):
     """An instance-free class to hold Galileo SSI instrument parameters."""
 
     instrument_kernel = None
-    fov = {}
+    fovs = {}
     initialized = False
 
     #===========================================================================
@@ -294,6 +272,42 @@ class SSI(object):
                            mst_pck=mst_pck, irregulars=irregulars)
         Galileo.load_instruments(asof=asof)
 
+        # Load the instrument kernel
+        SSI.instrument_kernel = Galileo.spice_instrument_kernel('SSI')[0]
+
+        # Construct the FOVs
+        info = SSI.instrument_kernel['INS'][-77036]
+
+        cf_var = 'INS-77036_DISTORTION_COEFF'
+        fo_var = 'INS-77036_FOCAL_LENGTH'
+        px_var = 'INS-77036_PIXEL_SIZE'
+        cxy_var = 'INS-77036_FOV_CENTER'
+
+        cf = cspyce.gdpool(cf_var, 0)[0]
+        fo = cspyce.gdpool(fo_var, 0)[0]
+        px = cspyce.gdpool(px_var, 0)[0]
+        cxy = cspyce.gdpool(cxy_var, 0)
+
+        scale = px/fo
+        distortion_coeff = [1, 0, cf]
+
+        # Construct FOVs
+        fov_full = oops.fov.BarrelFOV(scale,
+                                      (info['MAX_SAMPLE'], info['MAX_LINE']),
+                                      coefft_uv_from_xy=distortion_coeff,
+                                      uv_los=(cxy[0], cxy[1]))
+
+        # Construct FOV dictionary
+        SSI.fovs['FULL'] = fov_full
+        SSI.fovs['HMA'] = fov_full
+        SSI.fovs['HIM'] = fov_full
+        SSI.fovs['IM8'] = fov_full
+        SSI.fovs['HCA'] = fov_full
+        SSI.fovs['IM4'] = fov_full
+        SSI.fovs['XCM'] = fov_full
+        SSI.fovs['HIS'] = oops.fov.SubsampledFOV(fov_full, 2)
+        SSI.fovs['AI8'] = oops.fov.SubsampledFOV(fov_full, 2)
+
         # Construct the SpiceFrame
         _ = oops.frame.SpiceFrame("GLL_SCAN_PLATFORM")
 
@@ -312,7 +326,7 @@ class SSI(object):
         """
 
         SSI.instrument_kernel = None
-        SSI.fov = {}
+        SSI.fovs = {}
         SSI.initialized = False
 
         Galileo.reset()

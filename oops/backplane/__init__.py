@@ -793,6 +793,7 @@ class Backplane(object):
 
         else:
             now = datetime.datetime.now()
+#            from IPython import embed; print('+++++++++++++'); embed()
             event = surface.unmasked.photon_to_event(detection,
                                                      antimask=antimask,
                                                      derivs=derivs)[0]

@@ -153,7 +153,8 @@ class RingPlane(Surface):
         # Apply mask as needed
         if self.radii is not None:
             mask = a.tvl_lt(self.radii[0]) | a.tvl_gt(self.radii[1])
-            if mask.any():
+#            if mask.any():
+            if mask.any_true_or_masked():       # this allows for fully masked results
                 a = a.remask_or(mask.vals)
                 theta = theta.remask(a.mask)
                 if axes > 2:
