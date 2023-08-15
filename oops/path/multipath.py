@@ -27,7 +27,7 @@ class MultiPath(Path):
                         None to use the default frame of the origin path.
             path_id     the name or ID under which this path will be registered.
                         A single '+' is changed to the ID of the first path with
-                        a '+' appended. None to leave the path unregistered.
+                        a '+others' appended. None to leave the path unregistered.
             unpickled   True if this path has been read from a pickle file.
         """
 
@@ -45,8 +45,11 @@ class MultiPath(Path):
         # Fill in the path_id
         self.path_id = path_id
 
+#        from IPython import embed; print('+++++++++++++'); embed()
         if self.path_id == '+':
-            self.path_id = self.paths[0].path_id + '+others'
+#            self.path_id = self.paths[0].path_id + '+others'
+            body_names = [path.path_id for path in self.paths]
+            self.path_id = ['+'.join(body_names)].sort()
 
         # Update waypoint and path_id; register only if necessary
         self.register(unpickled=unpickled)

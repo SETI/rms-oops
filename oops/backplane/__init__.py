@@ -950,6 +950,7 @@ class Backplane(object):
 
         func = backplane_key[0]
         if func not in Backplane.CALLABLES:
+            from IPython import embed; print('+++++++++++++'); embed()
             raise ValueError('unrecognized backplane function: ' + func)
 
         # Evaluate...
