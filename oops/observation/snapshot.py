@@ -486,7 +486,7 @@ class Snapshot(Observation):
 #        if len(body_names) == 26:
 #            from IPython import embed; print('+++++++++++++'); embed()
         path_ids = [body.path for body in bodies]
-        multipath = MultiPath(path_ids)
+        multipath = MultiPath(path_ids, path_id=None)
 #        multipath = MultiPath(path_ids, path_id='+'.join(body_names))
 
 #        if multipath.shape==(26,):
