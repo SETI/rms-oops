@@ -26,11 +26,12 @@ class MultiPath(Path):
             frame       a frame or frame ID identifying the reference frame.
                         None to use the default frame of the origin path.
             path_id     the name or ID under which this path will be registered.
-                        A single '+' is changed to the ID of the first path with
-                        a '+others' appended. None to leave the path unregistered.
+                        A single '+' is changed to an alphabetized '+'-delineated
+                        list of all body names. None to leave the path unregistered.
             unpickled   True if this path has been read from a pickle file.
         """
 
+        path_id = None
         # Interpret the inputs
         self.origin = Path.as_waypoint(origin) or Path.SSB
         self.frame  = Frame.as_wayframe(frame) or self.origin.frame
@@ -45,19 +46,21 @@ class MultiPath(Path):
         # Fill in the path_id
         self.path_id = path_id
 
-#        from IPython import embed; print('+++++++++++++'); embed()
         if self.path_id == '+':
 #            self.path_id = self.paths[0].path_id + '+others'
             body_names = [path.path_id for path in self.paths]
-            self.path_id = ['+'.join(body_names)].sort()
+            body_names.sort()
+            self.path_id = '+'.join(body_names)
 
         # Update waypoint and path_id; register only if necessary
         self.register(unpickled=unpickled)
 
         # Save in internal dict for name lookup upon serialization
         if not unpickled and self.path_id in Path.WAYPOINT_REGISTRY:
-            key = tuple([path.path_id for path in self.paths])
+#            key = tuple([path.path_id for path in self.paths])
+            key = tuple(body_names)
             MultiPath.PATH_IDS[key] = self.path_id
+#        from IPython import embed; print('+++++++++++++'); embed()
 
     # Unpickled paths will always have temporary IDs to avoid conflicts
     def __getstate__(self):
@@ -173,7 +176,8 @@ class Test_MultiPath(unittest.TestCase):
 
         test = MultiPath([sun,earth,moon], "SSB")
 
-        self.assertEqual(test.path_id, "SUN+others")
+#        self.assertEqual(test.path_id, "SUN+others")
+        self.assertEqual(test.path_id, "EARTH+MOON+SUN")
         self.assertEqual(test.shape, (3,))
 
         # Single time
