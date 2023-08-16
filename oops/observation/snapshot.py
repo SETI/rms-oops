@@ -483,16 +483,9 @@ class Snapshot(Observation):
         bodies  = [Body.as_body(body) for body in bodies]
         nbodies = len(bodies)
 
-#        if len(body_names) == 26:
-#            from IPython import embed; print('+++++++++++++'); embed()
         path_ids = [body.path for body in bodies]
         multipath = MultiPath(path_ids, path_id=None)
-#        multipath = MultiPath(path_ids, path_id='+'.join(body_names))
 
-#        if multipath.shape==(26,):
-#            from IPython import embed; print('+++++++++++++'); embed()
-# multipath.shape
-# multipath.waypoint.shape
         if time is None:
             tfrac = Scalar.as_scalar(tfrac)
             obs_time = self.time[0] + tfrac * (self.time[1] - self.time[0])
@@ -500,7 +493,6 @@ class Snapshot(Observation):
             obs_time = Scalar.as_scalar(time)
 
         obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
-        
         (_,
          arrival_event) = multipath.photon_to_event(obs_event, quick=quick,
                                                     converge=converge)
