@@ -130,6 +130,7 @@ class Ellipsoid(Surface):
                         if input groundtrack is True.
         """
 
+        hints = None                    #####
         # Validate inputs
         self._coords_from_vector3_check(axes)
 
