@@ -23,15 +23,18 @@ class CentricSpheroid(Spheroid):
             pos         a Vector3 of positions at or near the surface, relative
                         to this surface's origin and frame.
             obs         a Vector3 of observer position relative to this
-                        surface's origin and frame; ignored here.
-            time        a Scalar time at which to evaluate the surface; ignored.
-            axes        2 or 3, indicating whether to return a tuple of two or
-                        three Scalar objects.
+                        surface's origin and frame; ignored for this Surface
+                        subclass.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        for this Surface subclass.
+            axes        2 or 3, indicating whether to return the first two
+                        coordinates (lon, lat) or all three (lon, lat, z) as
+                        Scalars.
             derivs      True to propagate any derivatives inside pos and obs
                         into the returned coordinates.
-            hints       if provided, the value of the coefficient p such that
-                            ground + p * normal(ground) = pos
-                        for the ground point on the body surface.
+            hints       optionally, the value of the coefficient p such that
+                            ground + p * normal(ground) = pos;
+                        ignored if the value is None (the default) or True.
             groundtrack True to return the intercept on the surface along with
                         the coordinates.
 
@@ -40,7 +43,7 @@ class CentricSpheroid(Spheroid):
             lat         latitude at the surface in radians.
             z           vertical altitude in km normal to the surface; included
                         if axes == 3.
-            groundtrack intecept point on the surface (where z == 0); included
+            track       intercept point on the surface (where z == 0); included
                         if input groundtrack is True.
         """
 
@@ -56,26 +59,26 @@ class CentricSpheroid(Spheroid):
 
         Input:
             coords      a tuple of two or three Scalars defining coordinates at
-                        or near this surface.
+                        or near this surface. These can have different shapes,
+                        but must be broadcastable to a common shape.
                 lon     longitude at the surface in radians.
                 lat     latitude at the surface in radians.
                 z       vertical altitude in km normal to the body surface.
             obs         a Vector3 of observer position relative to this
-                        surface's origin and frame; ignored here.
-            time        a Scalar time at which to evaluate the surface; ignored.
+                        surface's origin and frame; ignored for this Surface
+                        subclass.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        for this Surface subclass.
             derivs      True to propagate any derivatives inside the coordinates
                         and obs into the returned position vectors.
             groundtrack True to include the associated groundtrack points on the
                         body surface in the returned result.
 
-        Return:         pos or (pos, groundtrack), where
+        Return:         pos or (pos, track), where
             pos         a Vector3 of points defined by the coordinates, relative
                         to this surface's origin and frame.
-            groundtrack True to include the associated groundtrack points on the
-                        body surface in the returned result.
-
-        Note that the coordinates can all have different shapes, but they must
-        be broadcastable to a single shape.
+            track       intercept point on the surface (where z == 0); included
+                        if input groundtrack is True.
         """
 
         # Validate inputs

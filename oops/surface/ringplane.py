@@ -122,13 +122,17 @@ class RingPlane(Surface):
             pos         a Vector3 of positions at or near the surface, relative
                         to this surface's origin and frame.
             obs         a Vector3 of observer position relative to this
-                        surface's origin and frame; ignored here.
-            time        a Scalar time at which to evaluate the surface; ignored.
-            axes        2 or 3, indicating whether to return a tuple of two or
-                        three Scalar objects.
+                        surface's origin and frame; ignored for this Surface
+                        subclass.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        unless this RingPlane contains radial modes.
+            axes        2 or 3, indicating whether to return the first two
+                        coordinates (rad, theta) or all three (rad, theta, z) as
+                        Scalars.
             derivs      True to propagate any derivatives inside pos and obs
                         into the returned coordinates.
-            hints       ignored.
+            hints       ignored. Provided for compatibility with other Surface
+                        subclasses.
 
         Return:         coordinate values packaged as a tuple containing two or
                         three Scalars, one for each coordinate.
@@ -174,21 +178,21 @@ class RingPlane(Surface):
 
         Input:
             coords      a tuple of two or three Scalars defining coordinates at
-                        or near this surface.
+                        or near this surface. These can have different shapes,
+                        but must be broadcastable to a common shape.
                 rad     mean orbital radius in the ring plane, in km.
                 theta   longitude in radians of the intercept point.
                 z       vertical distance in km above the ring plane.
             obs         a Vector3 of observer position relative to this
-                        surface's origin and frame. Ignored for solid surfaces.
-            time        a Scalar time at which to evaluate the surface.
+                        surface's origin and frame; ignored for this Surface
+                        subclass.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        unless this RingPlane contains radial modes.
             derivs      True to propagate any derivatives inside the coordinates
                         and obs into the returned position vectors.
 
         Return:         a Vector3 of points defined by the coordinates, relative
                         to this surface's origin and frame.
-
-        Note that the coordinates can all have different shapes, but they must
-        be broadcastable to a single shape.
         """
 
         # Validate inputs
@@ -227,13 +231,16 @@ class RingPlane(Surface):
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
             guess       unused.
-            hints       unused.
+            hints       if not None (the default), this value is appended to the
+                        returned tuple. Needed for compatibility with other
+                        Surface subclasses.
 
-        Return:         a tuple (pos, t) where
+        Return:         a tuple (pos, t) or (pos, t, hints), where
             pos         a Vector3 of intercept points on the surface relative
                         to this surface's origin and frame, in km.
             t           a Scalar such that:
                             intercept = obs + t * los
+            hints       the input value of hints, included if hints is not None.
         """
 
         # Solve for obs + factor * los for scalar t, such that the z-component
@@ -267,7 +274,8 @@ class RingPlane(Surface):
         Input:
             pos         a Vector3 of positions at or near the surface relative
                         to this surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        here.
             derivs      True to propagate any derivatives of pos into the
                         returned normal vectors.
 
@@ -299,7 +307,8 @@ class RingPlane(Surface):
         Input:
             pos         a Vector3 of positions at or near the surface relative
                         to this surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        unless this RingPlane contains radial modes.
 
         Return:         a Vector3 of velocities, in units of km/s.
         """
