@@ -1,8 +1,8 @@
-astropy>=5.2
-coverage>=7.2.0
-cspyce>=2.0.7
-rms-fpzip>=1.2
-numpy>=1.23.4
-pyparsing>=3.0.9
-scipy>=1.9.3
-Pillow
+astropy>=5.3.4
+coverage>=7.3.2
+cspyce>=2.2.1
+numpy>=1.26.1
+Pillow>=10.1
+pyparsing>=3.1.1
+rms-fpzip>=1.2.7
+scipy>=1.11.3

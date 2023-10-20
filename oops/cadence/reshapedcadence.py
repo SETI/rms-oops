@@ -25,9 +25,9 @@ class ReshapedCadence(Cadence):
         self.cadence = cadence
         self.shape = tuple(shape)
         self._rank = len(self.shape)
-        self._size = int(np.product(self.shape))
+        self._size = int(np.prod(self.shape))
 
-        if self._size != np.product(self.cadence.shape):
+        if self._size != np.prod(self.cadence.shape):
             raise ValueError('ReshapedCadence size and shape are incompatible')
 
         if self._rank > 2:
@@ -41,12 +41,12 @@ class ReshapedCadence(Cadence):
         self.min_tstride = self.cadence.min_tstride
         self.max_tstride = self.cadence.max_tstride
 
-        self._stride = np.cumproduct((self.shape + (1,))[::-1])[-2::-1]
+        self._stride = np.cumprod((self.shape + (1,))[::-1])[-2::-1]
                                                         # trust me, it works!
 
         self._old_shape = self.cadence.shape
         self._old_rank = len(self.cadence.shape)
-        self._old_stride = np.cumproduct((self._old_shape + (1,))[::-1])[-2::-1]
+        self._old_stride = np.cumprod((self._old_shape + (1,))[::-1])[-2::-1]
 
     def __getstate__(self):
         return (self.cadence, self.shape)
@@ -449,19 +449,19 @@ class Test_ReshapedCadence(unittest.TestCase):
 
     def TEST(self, oldshape, newshape, arg):
 
-        oldstride = np.cumproduct((oldshape + (1,))[::-1])[-2::-1]
-        newstride = np.cumproduct((newshape + (1,))[::-1])[-2::-1]
+        oldstride = np.cumprod((oldshape + (1,))[::-1])[-2::-1]
+        newstride = np.cumprod((newshape + (1,))[::-1])[-2::-1]
         oldrank = len(oldshape)
         newrank = len(newshape)
 
         arg1 = ReshapedCadence._reshape_tstep(arg,
                                               oldshape, oldstride, oldrank,
                                               newshape, newstride, newrank,
-                                              np.product(oldshape))
+                                              np.prod(oldshape))
         arg2 = ReshapedCadence._reshape_tstep(arg1,
                                               newshape, newstride, newrank,
                                               oldshape, oldstride, oldrank,
-                                              np.product(oldshape))
+                                              np.prod(oldshape))
 
         self.assertEqual(arg, arg2)
 
