@@ -281,6 +281,8 @@ class Galileo(object):
         # Specify desired body ids
         bodies = []
         for target,moon in zip(targets, moons):
+            if target == 'SL9':       ### TODO find a kernel for SL9
+                continue
             body = cspyce.bodn2c(target)
             barycenter = np.trunc(body/100).astype(int)
             bodies += [barycenter, body]

@@ -1,6 +1,7 @@
 ################################################################################
 # hosts/galileo/ssi/__init__.py
 ################################################################################
+import sys
 import numpy as np
 import julian
 import cspyce
@@ -77,6 +78,8 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
     """
     SSI.initialize()    # Define everything the first time through
 
+    print('****' + filespec)
+
     # Read the index file
     COLUMNS = []        # Return all columns
     table = pdstable.PdsTable(filespec, columns=COLUMNS)
@@ -90,9 +93,16 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
             row_dict.update(supplemental_row_dict)
 
     # Create a list of Snapshot objects
+#    x = 0  ###########
     snapshots = []
     for row_dict in row_dicts:
+#        print(x); x+=1
+        if not 'TELEMETRY_FORMAT_ID' in row_dict:
+            from IPython import embed; print('+++++++++++++'); embed()
+
         file = row_dict['FILE_SPECIFICATION_NAME']
+#        print(filespec)
+#        print(file)
 
         # Get image metadata; do not return observations with zero exposures
         meta = Metadata(row_dict)
@@ -167,9 +177,12 @@ class Metadata(object):
         self.filter = meta_dict['FILTER_NAME']
 
         #TODO: determine whether IMAGE_TIME is the start time or the mid time..
-        self.tstart = julian.tdb_from_tai(
-                        julian.tai_from_iso(meta_dict['IMAGE_TIME']))
-        self.tstop = self.tstart + self.exposure
+        if meta_dict['IMAGE_TIME'] == 'UNK':
+            self.tstart = self.tstop = sys.float_info.min
+        else:
+            self.tstart = julian.tdb_from_tai(
+                            julian.tai_from_iso(meta_dict['IMAGE_TIME']))
+            self.tstop = self.tstart + self.exposure
 
         # Target
         self.target = meta_dict['TARGET_NAME']
@@ -292,21 +305,41 @@ class SSI(object):
         distortion_coeff = [1, 0, cf]
 
         # Construct FOVs
+#        from IPython import embed; print('+++++++++++++'); embed()
+        assert info['MAX_SAMPLE'] == 800
+        assert info['MAX_LINE'] == 800
+
         fov_full = oops.fov.BarrelFOV(scale,
                                       (info['MAX_SAMPLE'], info['MAX_LINE']),
                                       coefft_uv_from_xy=distortion_coeff,
                                       uv_los=(cxy[0], cxy[1]))
+        fov_summed = oops.fov.SubsampledFOV(fov_full, 2)
+#        fov_his = 
+#        fov_hma = 
+#        fov_hca = oops.fov.GapFOV(oops.fov.SubsampledFOV(fov_full, (1,4)),
+#                                  (1,0.25))
+#               ... maybe need SparseFOV or SkipFOV class
+#        fov_him = 
 
         # Construct FOV dictionary
         SSI.fovs['FULL'] = fov_full
+
+        # Phase-2 Telemetry Formats
+        SSI.fovs['HIS'] = fov_summed
         SSI.fovs['HMA'] = fov_full
+        SSI.fovs['HCA'] = fov_full
         SSI.fovs['HIM'] = fov_full
         SSI.fovs['IM8'] = fov_full
-        SSI.fovs['HCA'] = fov_full
+        SSI.fovs['AI8'] = fov_summed
         SSI.fovs['IM4'] = fov_full
+
+        # Phase-1 Telemetry Formats
         SSI.fovs['XCM'] = fov_full
-        SSI.fovs['HIS'] = oops.fov.SubsampledFOV(fov_full, 2)
-        SSI.fovs['AI8'] = oops.fov.SubsampledFOV(fov_full, 2)
+#        SSI.fovs['XED'] = fov_full
+        SSI.fovs['HCJ'] = fov_full      # Inference based on inspection
+        SSI.fovs['HCM'] = fov_full      # Inference based on inspection
+                                        # hmmm, actually C0248807700R.img is 800x200
+                                        # maybe this is just a cropped full fov
 
         # Construct the SpiceFrame
         _ = oops.frame.SpiceFrame("GLL_SCAN_PLATFORM")
