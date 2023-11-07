@@ -501,7 +501,7 @@ class Packrat(object):
             if slash:
                 return
 
-            keys = obj.keys()
+            keys = list(obj.keys())
             keys.sort()
 
             compact_mode = all([isinstance(k,str) for k in keys])

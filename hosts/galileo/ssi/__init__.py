@@ -78,8 +78,6 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
     """
     SSI.initialize()    # Define everything the first time through
 
-    print('****' + filespec)
-
     # Read the index file
     COLUMNS = []        # Return all columns
     table = pdstable.PdsTable(filespec, columns=COLUMNS)

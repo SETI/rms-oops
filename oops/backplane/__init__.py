@@ -589,10 +589,8 @@ class Backplane(object):
         # Save in the arrivals dictionary for next time
         self.gridless_arrivals[event_key] = arrival
 
-        print(departure)
         # Save the departure event if any
         if departure is not None and event_key not in self.surface_events[True]:
-            print('*****', event_key)
             surface = self.get_surface(event_key[-1])
             departure = departure.wrt(surface.origin, surface.frame)
             self.surface_events[True ][event_key] = departure
@@ -736,9 +734,6 @@ class Backplane(object):
             two_item_key = event_key[::2]       # skip over middle item
             detection = self.get_surface_event(two_item_key, derivs=derivs,
                                                              arrivals=True)
-
-#        if is_gridless:
-#            from IPython import embed; print('+++***********+++++++'); embed()
 
         # For occultation events, the line of sight from the detector is
         # defined by the source.
