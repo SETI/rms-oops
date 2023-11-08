@@ -215,13 +215,16 @@ class OrbitPlane(Surface):
             pos         a Vector3 of positions at or near the surface, relative
                         to this surface's origin and frame.
             obs         a Vector3 of observer position relative to this
-                        surface's origin and frame; ignored here.
+                        surface's origin and frame; ignored for this Surface
+                        subclass.
             time        a Scalar time at which to evaluate the surface.
-            axes        2 or 3, indicating whether to return a tuple of two or
-                        three Scalar objects.
+            axes        2 or 3, indicating whether to return the first two
+                        coordinates (rad, theta) or all three (rad, theta, z) as
+                        Scalars.
             derivs      True to propagate any derivatives inside pos and obs
                         into the returned coordinates.
-            hints       ignored.
+            hints       ignored. Provided for compatibility with other Surface
+                        subclasses.
 
         Return:         coordinate values packaged as a tuple containing two or
                         three Scalars, one for each coordinate.
@@ -231,11 +234,8 @@ class OrbitPlane(Surface):
                         if axes == 3.
         """
 
-        # Validate inputs
-        self._coords_from_vector3_check(axes)
-
-        return self.ringplane.coords_from_vector3(pos, obs, axes=axes,
-                                                            derivs=derivs)
+        return self.ringplane.coords_from_vector3(pos, axes=axes, time=time,
+                                                  derivs=derivs)
 
     #===========================================================================
     def vector3_from_coords(self, coords, obs=None, time=None, derivs=False):
@@ -244,24 +244,24 @@ class OrbitPlane(Surface):
 
         Input:
             coords      a tuple of two or three Scalars defining coordinates at
-                        or near this surface.
+                        or near this surface. These can have different shapes,
+                        but must be broadcastable to a common shape.
                 rad     mean orbital radius in the ring plane, in km.
                 theta   mean longitude in radians of the intercept point.
                 z       vertical distance in km above the orbit plane.
             obs         a Vector3 of observer position relative to this
-                        surface's origin and frame; ignored here.
-            time        a Scalar time at which to evaluate the surface; ignored.
+                        surface's origin and frame; ignored for this Surface
+                        subclass.
+            time        a Scalar time at which to evaluate the surface.
             derivs      True to propagate any derivatives inside the coordinates
                         and obs into the returned position vectors.
 
         Return:         a Vector3 of points defined by the coordinates, relative
                         to this surface's origin and frame.
-
-        Note that the coordinates can all have different shapes, but they must
-        be broadcastable to a single shape.
         """
 
-        return self.ringplane.vector3_from_coords(coords, obs, derivs=derivs)
+        return self.ringplane.vector3_from_coords(coords, time=time,
+                                                  derivs=derivs)
 
     #===========================================================================
     def intercept(self, obs, los, time=None, direction='dep', derivs=False,
@@ -272,23 +272,26 @@ class OrbitPlane(Surface):
             obs         observer position as a Vector3 relative to this
                         surface's origin and frame.
             los         line of sight as a Vector3 in this surface's frame.
-            time        a Scalar time at the surface; ignored unless the surface
-                        is time-variable.
+            time        a Scalar time at the surface.
             direction   'arr' for a photon arriving at the surface; 'dep' for a
                         photon departing from the surface; ignored.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
             guess       unused.
-            hints       unused.
+            hints       if not None (the default), this value is appended to the
+                        returned tuple. Needed for compatibility with other
+                        Surface subclasses.
 
-        Return:         a tuple (pos, t) where
+        Return:         a tuple (pos, t) or (pos, t, hints), where
             pos         a Vector3 of intercept points on the surface relative
                         to this surface's origin and frame, in km.
             t           a Scalar such that:
                             position = obs + t * los
+            hints       the input value of hints, included if it is not None.
         """
 
-        return self.ringplane.intercept(obs, los, derivs=derivs, guess=guess)
+        return self.ringplane.intercept(obs, los, time=time, derivs=derivs,
+                                        guess=guess, hints=hints)
 
     #===========================================================================
     def normal(self, pos, time=None, derivs=False):
@@ -305,7 +308,7 @@ class OrbitPlane(Surface):
                         that pass through the position. Lengths are arbitrary.
         """
 
-        return self.ringplane.normal(pos, derivs=derivs)
+        return self.ringplane.normal(pos, time=time, derivs=derivs)
 
     #===========================================================================
     def velocity(self, pos, time=None):

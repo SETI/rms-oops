@@ -79,24 +79,26 @@ class Limb(Surface):
                         to this surface's origin and frame.
             obs         a Vector3 of observer position relative to this
                         surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface; ignored.
-            axes        2 or 3, indicating whether to return a tuple of two or
-                        three Scalar objects.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        for this Surface subclass.
+            axes        2 or 3, indicating whether to return the first two
+                        coordinates (lon, lat) or all three (lon, lat, z) as
+                        Scalars.
             derivs      True to propagate any derivatives inside pos and obs
                         into the returned coordinates.
-            hints       if provided, the estimated value of the coefficient p
-                        such that:
-                            ground + p * normal(ground) = pos
+            hints       optionally, the value of the coefficient p such that:
+                            ground + p * normal(ground) = pos;
                         for the ground point associate with the position.
+                        Ignored if the value is None (the default) or True.
             groundtrack True to return the intercept on the surface along with
                         the coordinates.
 
-        Return:         a tuple containing two to five values.
+        Return:         a tuple containing two to four values.
             lon         longitude in radians.
             lat         latitude in radians.
             z           vertical altitude in km normal to the body surface;
                         included if axes == 3.
-            groundtrack associated point on the body surface; included if the
+            track       associated point on the body surface; included if the
                         input groundtrack is True.
         """
 
@@ -106,13 +108,13 @@ class Limb(Surface):
         pos = Vector3.as_vector3(pos, derivs)
 
         # There's a quick solution for the ground point if hints are provided
-        if hints is not None:
+        if isinstance(hints, (type(None), bool, np.bool_)):
+            (track, p) = self.ground.intercept_normal_to(pos, derivs=derivs,
+                                                         guess=True)
+        else:
             p = Scalar.as_scalar(hints, derivs)
             denom = Vector3.ONES + p * self.ground.unsquash_sq
             track = pos.element_div(denom)
-        else:
-            (track, p) = self.ground.intercept_normal_to(pos, derivs=derivs,
-                                                         guess=True)
 
         (lon, lat) = self.ground.coords_from_vector3(track, derivs=derivs)
 
@@ -145,26 +147,25 @@ class Limb(Surface):
 
         Input:
             coords      a tuple of two or three Scalars defining coordinates at
-                        or near this surface.
+                        or near this surface. These can have different shapes,
+                        but must be broadcastable to a common shape.
                 lon     longitude in radians.
                 lat     latitude in radians.
                 z       the perpendicular distance in km from the limb surface.
             obs         a Vector3 of observer positions relative to this
                         surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface; ignored.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        for this Surface subclass.
             derivs      True to include the partial derivatives of the intercept
                         point with respect to observer and to the coordinates.
             groundtrack True to include the associated groundtrack points on the
                         body surface in the returned result.
 
-        Return:         pos or (pos, groundtrack), where:
+        Return:         pos or (pos, track), where:
             pos         a Vector3 of points defined by the coordinates, relative
                         to this surface's origin and frame.
-            groundtrack a Vector3 of associated points on the body surface;
+            track       a Vector3 of associated points on the body surface;
                         included if input groundtrack is True.
-
-        Note that the coordinates can all have different shapes, but they must
-        be broadcastable to a single shape.
         """
 
         pos = self.ground.vector3_from_coords(coords, derivs=derivs)
@@ -184,20 +185,19 @@ class Limb(Surface):
             obs         observer position as a Vector3 relative to this
                         surface's origin and frame.
             los         line of sight as a Vector3 in this surface's frame.
-            time        a Scalar time at the surface; ignored here.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        for this Surface subclass.
             direction   'arr' for a photon arriving at the surface; 'dep' for a
                         photon departing from the surface; ignored here.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
-            guess       optional initial guess at the coefficient t such that:
-                            intercept = obs + t * los
-            hints       if provided, the estimated value of the coefficient p
-                        such that:
+            guess       unused.
+            hints       optional initial guess a coefficient p such that:
                             ground + p * normal(ground) = limb_intercept
                         for the ground point on the body surface associated with
                         the limb intercept point being sought. The converged
                         value will be included in the tuple returned. Use
-                        hints=True if you do not have an initial value but still
+                        hints=True if you do not have an initial guess but still
                         would like the converged value of p to be returned.
             groundtrack True to include the associated body surface points in
                         the returned results.
@@ -210,7 +210,7 @@ class Limb(Surface):
             p           the converged solution such that
                             ground + p * normal(ground) = limb_intercept;
                         included if the input value of hints is not None.
-            groundtrack the Vector3 of groundtrack points on the body surface;
+            track       the Vector3 of groundtrack points on the body surface;
                         included if the input value of groundtrack is True.
         """
 
@@ -236,14 +236,11 @@ class Limb(Surface):
         #
         # t = -(obs dot los) / (los dot los)
 
-        if guess in (None, False):
-            t = -obs.dot(los) / los.dot(los)
-        else:
-            t = guess.copy()
-        t = t.wod
+        los_wod = los.wod
+        t = -obs.wod.dot(los_wod) / los_wod.dot(los_wod)
 
         # Hints is the value of ground_guess
-        if hints in (None, True):
+        if isinstance(hints, (type(None), bool, np.bool_)):
             ground_guess = True
         else:
             ground_guess = hints.wod
@@ -315,7 +312,8 @@ class Limb(Surface):
         Input:
             pos         a Vector3 of positions at or near the surface relative
                         to this surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface; ignored.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        for this Surface subclass.
             derivs      True to propagate any derivatives of pos into the
                         returned normal vectors.
 
@@ -394,19 +392,18 @@ class Limb(Surface):
                         ellipsoid's origin and frame.
             derivs      True to propagate derivatives of clock and obs into the
                         returned ellipsoid surface point.
-            hints       if provided, the value of the coefficient p such that
+            hints       optionally, the value of the coefficient p such that
                             ground + p * normal(ground) = pos
-                        for the ground point on the body surface. Do not use if
-                        the third coordinate might have a nonzero value.
+                        for the ground point on the body surface.
             groundtrack True to include the surface intercept points of the body
                         associated with each limb intercept.
 
-        Return          a tuple of two or three values
+        Return          (z, clock) or (z, clock, track), where
             z           the perpendicular distance from the ellipsoidal surface,
                         in km.
             clock       angle of the ellipsoid's normal vector, measured
                         clockwise from the projected pole.
-            groundtrack the Vector3 of groundtrack points on the body surface;
+            track       the Vector3 of groundtrack points on the body surface;
                         included if the input value of groundtrack is True.
         """
 
@@ -414,18 +411,18 @@ class Limb(Surface):
         obs = Vector3.as_vector3(obs, recursive=derivs)
 
         # There's a quick solution for the surface point if hints are provided
-        if hints is not None:
+        if isinstance(hints, (type(None), bool, np.bool_)):
+            track = self.ground.intercept_normal_to(pos, derivs=derivs)
+        else:
             denom = Vector3.ONES + hints * self.ground.unsquash_sq
             track = pos.element_div(denom)
-        else:
-            track = self.ground.intercept_normal_to(pos, derivs=derivs)
 
         normal = self.ground.normal(track, derivs=derivs)
 
         z = pos.norm() - track.norm()
 
         x_axis = Vector3.ZAXIS.perp(obs).unit()
-        y_axis = Vector3.ZAXIS.ucross(obs).unit()
+        y_axis = Vector3.ZAXIS.ucross(obs)
 
         x = normal.dot(x_axis)
         y = normal.dot(y_axis)
@@ -448,12 +445,14 @@ class Limb(Surface):
             obs         a Vector3 of observer positions relative to the
                         ellipsoid's origin and frame.
             derivs      True to propagate derivatives of z, clock, and obs into
-                        the returned limb intercept point.
-            groundtrack if True, the tuple (limb intercept, ground intercept) is
+                        the returned limb intercept points.
+            groundtrack if True, the tuple (limb intercept, ground track) is
                         returned rather than just the limb intercept.
 
-        Return:         a Vector3 of limb intercept points or, if groundtrack is
-                        True, a tuple (limb intercepts, groundtrack points)
+        Return:         intercept or (intercept, track), where
+            intercept   Vector3 of limb surface intercept points.
+            track       Vector3 of the associated points on the surface of the
+                        Ellipsoid; included if groundtrack is True.
         """
 
         z = Scalar.as_scalar(z, recursive=derivs)

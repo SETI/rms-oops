@@ -109,15 +109,18 @@ class Ellipsoid(Surface):
             pos         a Vector3 of positions at or near the surface, relative
                         to this surface's origin and frame.
             obs         a Vector3 of observer position relative to this
-                        surface's origin and frame; ignored here.
-            time        a Scalar time at which to evaluate the surface; ignored.
-            axes        2 or 3, indicating whether to return a tuple of two or
-                        three Scalar objects.
+                        surface's origin and frame; ignored for this Surface
+                        subclass.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        for this Surface subclass.
+            axes        2 or 3, indicating whether to return the first two
+                        coordinates (lon, lat) or all three (lon, lat, z) as
+                        Scalars.
             derivs      True to propagate any derivatives inside pos and obs
                         into the returned coordinates.
-            hints       if provided, the value of the coefficient p such that
-                            ground + p * normal(ground) = pos
-                        for the ground point on the body surface.
+            hints       optionally, the value of the coefficient p such that
+                            ground + p * normal(ground) = pos;
+                        ignored if the value is None (the default) or True.
             groundtrack True to return the intercept on the surface along with
                         the coordinates.
 
@@ -126,7 +129,7 @@ class Ellipsoid(Surface):
             lat         latitude at the surface in radians.
             z           vertical altitude in km normal to the surface; included
                         if axes == 3.
-            groundtrack intecept point on the surface (where z == 0); included
+            track       intercept point on the surface (where z == 0); included
                         if input groundtrack is True.
         """
 
@@ -136,12 +139,12 @@ class Ellipsoid(Surface):
         pos = Vector3.as_vector3(pos, recursive=derivs)
 
         # Use the quick solution for the body points if hints are provided
-        if hints is not None:
+        if isinstance(hints, (type(None), bool, np.bool_)):
+            (track, p) = self.intercept_normal_to(pos, derivs=derivs, guess=True)
+        else:
             p = Scalar.as_scalar(hints, recursive=derivs)
             denom = Vector3.ONES + p * self.unsquash_sq
             track = pos.element_div(denom)
-        else:
-            (track, p) = self.intercept_normal_to(pos, guess=True)
 
         # Derive the coordinates
         track_unsquashed = track.element_mul(self.unsquash)
@@ -168,26 +171,26 @@ class Ellipsoid(Surface):
 
         Input:
             coords      a tuple of two or three Scalars defining coordinates at
-                        or near this surface.
+                        or near this surface. These can have different shapes,
+                        but must be broadcastable to a common shape.
                 lon     longitude at the surface in radians.
                 lat     latitude at the surface in radians.
                 z       vertical altitude in km normal to the body surface.
             obs         a Vector3 of observer position relative to this
-                        surface's origin and frame; ignored here.
-            time        a Scalar time at which to evaluate the surface; ignored.
+                        surface's origin and frame; ignored for this Surface
+                        subclass.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        for this Surface subclass.
             derivs      True to propagate any derivatives inside the coordinates
                         and obs into the returned position vectors.
             groundtrack True to include the associated groundtrack points on the
                         body surface in the returned result.
 
-        Return:         pos or (pos, groundtrack), where
+        Return:         pos or (pos, track), where
             pos         a Vector3 of points defined by the coordinates, relative
                         to this surface's origin and frame.
-            groundtrack True to include the associated groundtrack points on the
-                        body surface in the returned result.
-
-        Note that the coordinates can all have different shapes, but they must
-        be broadcastable to a single shape.
+            track       intercept point on the surface (where z == 0); included
+                        if input groundtrack is True.
         """
 
         # Validate inputs
@@ -221,9 +224,10 @@ class Ellipsoid(Surface):
             pos         a Vector3 of positions at or near the surface relative
                         to this surface's origin and frame.
             obs         observer position as a Vector3 relative to this
-                        surface's origin and frame. Ignored for solid surfaces.
+                        surface's origin and frame; ignored for this Surface
+                        subclass.
             time        a Scalar time at which to evaluate the surface; ignored
-                        unless the surface is time-variable.
+                        for this Surface subclass.
 
         Return:         Boolean True where positions are inside the surface
         """
@@ -240,19 +244,23 @@ class Ellipsoid(Surface):
             obs         observer position as a Vector3 relative to this
                         surface's origin and frame.
             los         line of sight as a Vector3 in this surface's frame.
-            time        a Scalar time at the surface; ignored.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        for this Surface subclass.
             direction   'arr' for a photon arriving at the surface; 'dep' for a
                         photon departing from the surface.
             derivs      True to propagate any derivatives inside obs and los
                         into the returned intercept point.
             guess       unused.
-            hints       unused.
+            hints       if not None (the default), this value is appended to the
+                        returned tuple. Needed for compatibility with other
+                        Surface subclasses.
 
-        Return:         a tuple (pos, t) where
+        Return:         a tuple (pos, t) or (pos, t, hints), where
             pos         a Vector3 of intercept points on the surface relative
                         to this surface's origin and frame, in km.
             t           a Scalar such that:
                             intercept = obs + t * los
+            hints       the input value of hints, included if it is not None.
         """
 
         # Convert to Vector3 and un-squash
@@ -328,7 +336,8 @@ class Ellipsoid(Surface):
         Input:
             pos         a Vector3 of positions at or near the surface relative
                         to this surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface; ignored.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        for this Surface subclass.
             derivs      True to propagate any derivatives of pos into the
                         returned normal vectors.
 
@@ -340,21 +349,15 @@ class Ellipsoid(Surface):
         return pos.element_mul(self.unsquash_sq)
 
     #===========================================================================
-    def intercept_with_normal(self, normal, time=None, direction='dep',
-                                            derivs=False, guess=None):
-        """Intercept point where the normal vector parallels the given vector.
+    def intercept_with_normal(self, normal, time=None, derivs=False):
+        """Surface point where the normal vector parallels the given vector.
 
         Input:
             normal      a Vector3 of normal vectors in this surface's frame.
-            time        a Scalar time at which to evaluate the surface; ignored.
-            direction   'arr' for a photon arriving at the surface; 'dep' for a
-                        photon departing from the surface.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        for this Surface subclass.
             derivs      True to propagate derivatives in the normal vector into
                         the returned intercepts.
-            guess       optional initial guess a coefficient array p such that:
-                            pos = intercept + p * normal(intercept)
-                        Use guess=False for the converged value of p to be
-                        returned even if an initial guess was not provided.
 
         Return:         a Vector3 of surface intercept points, in km. Where no
                         solution exists, the returned Vector3 will be masked.
@@ -366,28 +369,32 @@ class Ellipsoid(Surface):
     #===========================================================================
     def intercept_normal_to(self, pos, time=None, direction='dep', derivs=False,
                                        guess=None):
-        """Intercept point whose normal vector passes through a given position.
+        """Surface point whose normal vector passes through a given position.
+
+        This function can have multiple values, in which case the nearest of the
+        surface points should be the one returned.
 
         Input:
             pos         a Vector3 of positions at or near the surface relative
                         to this surface's origin and frame.
-            time        a Scalar time at the surface; ignored here.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        for this Surface subclass.
             direction   'arr' for a photon arriving at the surface; 'dep' for a
                         photon departing from the surface; ignored here.
             derivs      True to propagate derivatives in pos into the returned
                         intercepts.
-            guess       optional initial guess a coefficient array p such that:
+            guess       optional initial guess at coefficient p such that:
                             intercept + p * normal(intercept) = pos
                         Use guess=True for the converged value of p to be
-                        returned even if an initial guess was not provided.
+                        returned even if an initial guess is unavailable.
 
-        Return:         intercept or (intercept, p)
-            intercept   a vector3 of surface intercept points relative to this
+        Return:         intercept or (intercept, p), where
+            intercept   a Vector3 of surface intercept points relative to this
                         surface's origin and frame, in km. Where no intercept
                         exists, the returned vector will be masked.
             p           the converged solution such that
                             intercept = pos + p * normal(intercept);
-                        included if guess is not None.
+                        included if the input guess is not None.
         """
 
         pos = Vector3.as_vector3(pos, recursive=derivs)
@@ -474,7 +481,7 @@ class Ellipsoid(Surface):
         g0 = f1
 
         # Make an initial guess at p
-        if guess in (None, True):
+        if isinstance(guess, (type(None), bool, np.bool_)):
 
             # Unsquash into coordinates where the surface is a sphere
             pos_unsq = pos.wod.element_mul(self.unsquash)   # without derivs!

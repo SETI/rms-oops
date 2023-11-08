@@ -31,28 +31,30 @@ class PolarLimb(Limb):
                         to this surface's origin and frame.
             obs         a Vector3 of observer position relative to this
                         surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface; ignored.
-            axes        2 or 3, indicating whether to return a tuple of two or
-                        three Scalar objects.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        for this Surface subclass.
+            axes        2 or 3, indicating whether to return the first two
+                        coordinates (z, clock) or all three (z, clock, dist) as
+                        Scalars.
             derivs      True to propagate any derivatives inside pos and obs
                         into the returned coordinates.
-            hints       if provided, the value of the coefficient p such that
-                            ground + p * normal(ground) = pos
-                        for the ground point on the body surface. Do not use if
-                        the third coordinate might have a nonzero value.
+            hints       optionally, the value of the coefficient p such that
+                            ground + p * normal(ground) = pos;
+                        for the ground point on the body surface. Ignored if the
+                        value is None (the default) or True.
             groundtrack True to return the intercept on the surface along with
                         the coordinates.
 
-        Return:         a tuple containing two to five values.
+        Return:         a tuple containing two to four values.
             z           the vertical distance in km normal to the limb of the
                         body surface.
             clock       the angle in radians of the normal vector on the sky,
                         measured clockwise from the projected direction of the
                         north pole.
             dist        optional offset distance in km beyond the virtual limb
-                        plane along the line of sight.
-            groundtrack associated point on the body surface; included if the
-                        input groundtrack is True.
+                        plane along the line of sight, included if axes == 3.
+            track       intercept point on the surface (where z == 0); included
+                        if input groundtrack is True.
         """
 
         # Validate inputs
@@ -62,16 +64,16 @@ class PolarLimb(Limb):
         obs = Vector3.as_vector3(obs, recursive=derivs)
 
         # There's a quick solution for the surface point if hints are provided
-        if hints is not None:
-            p = Scalar.as_scalar(hints, recursive=derivs)
-            denom = Vector3.ONES + p * self.ground.unsquash_sq
-            track = pos.element_div(denom)
-            cept = pos
-        else:
+        if isinstance(hints, (type(None), bool, np.bool_)):
             los = pos - obs
             (cept, _, p, track) = self.intercept(obs, los, derivs=derivs,
                                                  hints=True, groundtrack=True)
                 # The returned value of p speeds up the next calculation
+        else:
+            p = Scalar.as_scalar(hints, recursive=derivs)
+            denom = Vector3.ONES + p * self.ground.unsquash_sq
+            track = pos.element_div(denom)
+            cept = pos
 
         results = self.z_clock_from_intercept(cept, obs, derivs=derivs, hints=p)
 
@@ -92,7 +94,8 @@ class PolarLimb(Limb):
 
         Input:
             coords      a tuple of two or three Scalars defining coordinates at
-                        or near this surface.
+                        or near this surface. These can have different shapes,
+                        but must be broadcastable to a common shape.
                 z       the vertical distance in km normal to the limb of the
                         body surface.
                 clock   the angle in radians of the normal vector on the sky,
@@ -102,20 +105,18 @@ class PolarLimb(Limb):
                         plane along the line of sight.
             obs         a Vector3 of observer positions relative to this
                         surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface; ignored.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        for this Surface subclass.
             derivs      True to include the partial derivatives of the intercept
                         point with respect to observer and to the coordinates.
             groundtrack True to include the associated groundtrack points on the
                         body surface in the returned result.
 
-        Return:         pos or (pos, groundtrack), where:
+        Return:         pos or (pos, track), where:
             pos         a Vector3 of points defined by the coordinates, relative
                         to this surface's origin and frame.
-            groundtrack a Vector3 of associated points on the body surface;
+            track       a Vector3 of associated points on the body surface;
                         included if input groundtrack is True.
-
-        Note that the coordinates can all have different shapes, but they must
-        be broadcastable to a single shape.
         """
 
         # Validate inputs
