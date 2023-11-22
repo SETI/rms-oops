@@ -2,6 +2,7 @@
 # hosts/galileo/ssi/__init__.py
 ################################################################################
 import sys
+import os
 import numpy as np
 import julian
 import cspyce
@@ -87,23 +88,36 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
     if supplemental_filespec is not None:
         table = pdstable.PdsTable(supplemental_filespec)
         supplemental_row_dicts = table.dicts_by_row()
+
+#        # Sort supplemental rows to match index file
+#        specs = [os.path.splitext(row_dict['FILE_SPECIFICATION_NAME'])[0] for row_dict in row_dicts]
+#        supplemental_specs = \
+#            [os.path.splitext(supplemental_row_dict['FILE_SPECIFICATION_NAME'])[0] \
+#             for supplemental_row_dict in supplemental_row_dicts]
+
+#        indices = np.argsort(specs)
+        
+#        row_dicts_sorted = [None]*len(row_dicts)
+#        for i in range(len(row_dicts)):
+#            row_dicts_sorted[i] = row_dicts[indices[i]]
+        
+#        supplemental_indices = np.argsort(supplemental_specs)
+#        supplemental_row_dicts_sorted = [None]*len(supplemental_row_dicts)
+#        for i in range(len(supplemental_row_dicts)):
+#            supplemental_row_dicts_sorted[i] = supplemental_row_dicts[supplemental_indices[i]]
+
+        # Append supplemental columns to index file
         for row_dict, supplemental_row_dict in zip(row_dicts, supplemental_row_dicts):
             row_dict.update(supplemental_row_dict)
 
     # Create a list of Snapshot objects
-#    x = 0  ###########
     snapshots = []
     for row_dict in row_dicts:
-#        print(x); x+=1
-        if not 'TELEMETRY_FORMAT_ID' in row_dict:
-            from IPython import embed; print('+++++++++++++'); embed()
-
         file = row_dict['FILE_SPECIFICATION_NAME']
-#        print(filespec)
-#        print(file)
 
         # Get image metadata; do not return observations with zero exposures
         meta = Metadata(row_dict)
+
         if meta.exposure == 0:
             continue
 
