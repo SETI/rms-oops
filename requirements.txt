@@ -6,7 +6,7 @@ Pillow>=10.1
 pyparsing>=3.1.1
 rms-fpzip>=1.2.8
 rms-interval>=0.0.2
-rms-julian>=2.0.0
+rms-julian==0.0.5
 rms-pdsparser>=0.0.4
 rms-pdstable>=0.0.5
 rms-tabulation>=0.0.2
