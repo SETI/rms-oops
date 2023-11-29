@@ -112,9 +112,9 @@ class Surface(object):
             hints       optional data used to expedite this calculation. The
                         specific meaning depends on the Surface subclass.
 
-        Return:         a tuple containing two to four values.
-            coords      two or three coordinate values, depending on the value
-                        of axes.
+        Return:
+            coords      a tuple of two or three coordinate values, depending on
+                        the input value of axes.
         """
 
         raise NotImplementedError('%s.coords_from_vector3() is not implemented'
@@ -127,7 +127,8 @@ class Surface(object):
 
         Input:
             coords      a tuple of two or three Scalars defining coordinates at
-                        or near this surface.
+                        or near this surface. These can have different shapes,
+                        but must be broadcastable to a common shape.
             obs         a Vector3 of observer position relative to this
                         surface's origin and frame. Ignored for solid surfaces
                         but needed for virtual surfaces.
@@ -138,9 +139,6 @@ class Surface(object):
 
         Return:         a Vector3 of intercept points defined by the
                         coordinates.
-
-        Note that the coordinates can all have different shapes, but they must
-        be broadcastable to a single shape.
         """
 
         raise NotImplementedError('%s.vector3_from_coords() is not implemented'
@@ -167,14 +165,19 @@ class Surface(object):
                             intercept = obs + t * los
             hints       any data that might be useful to carry over from one
                         call to the next. If not None, hint values are appended
-                        to the return tuple.
+                        to the returned tuple. Use hints=True if you lack an
+                        initial value but require the new value to be returned.
 
         Return:         a tuple (pos, t) or (pos, t, hints), where
             pos         a Vector3 of intercept points on the surface, in km.
             t           a Scalar such that:
                             intercept = obs + t * los
-            hints       latest version of any hint values; not included if
-                        input hints == None (the default).
+            hints       latest version of any hint values; included if the input
+                        value of hints is not None (the default).
+
+                        Note that some Surface subclasses do not use hints; for
+                        these, the input value of the hints is itself returned
+                        if it is not None.
         """
 
         raise NotImplementedError('%s.intercept() is not implemented'
@@ -203,32 +206,19 @@ class Surface(object):
     # Optional Methods...
     ########################################
 
-    def intercept_with_normal(self, normal, time=None, direction='dep',
-                                    derivs=False, guess=None):
-        """Intercept point where the normal vector parallels the given vector.
+    def intercept_with_normal(self, normal, time=None, derivs=False):
+        """Surface point where the outward normal vector parallels the given
+        vector.
 
         Input:
             normal      a Vector3 of normal vectors in the surface's frame.
             time        a Scalar time at the surface; ignored unless the surface
                         is time-variable.
-            direction   'arr' for a photon arriving at the surface; 'dep' for a
-                        photon departing from the surface. Needed for closed
-                        surfaces that have two intercept points; ignored
-                        otherwise.
             derivs      True to propagate derivatives in the normal vector into
-                        the returned intercepts.
-            guess       optional initial guess a coefficient array p such that:
-                            pos = intercept + p * normal(intercept)
-                        Use guess=False for the converged value of p to be
-                        returned even if an initial guess was not provided.
+                        the returned surface points.
 
         Return:         a Vector3 of surface intercept points, in km. Where no
                         solution exists, the returned Vector3 will be masked.
-
-                        If guess is not None, then it instead returns a tuple
-                        (intercepts, p), where p is the converged solution such
-                        that
-                            pos = intercept + p * normal(intercept).
         """
 
         raise NotImplementedError('%s.intercept_with_normal() is not '
@@ -237,7 +227,10 @@ class Surface(object):
     #===========================================================================
     def intercept_normal_to(self, pos, time=None, direction='dep', derivs=False,
                                        guess=None):
-        """Intercept point whose normal vector passes through a given position.
+        """Surface point whose normal vector passes through a given position.
+
+        This function can have multiple values, in which case the nearest of the
+        surface points should be the one returned.
 
         Input:
             pos         a Vector3 of positions at or near the surface relative
@@ -254,17 +247,18 @@ class Surface(object):
                             intercept = pos + p * normal(intercept)
                         If provided, the converged value of p is included in the
                         returned results; use guess=True to include this in the
-                        return even if an initial guess was not provided.
-            hints       any data that might be useful to carry over from one
-                        call to the next. If not None, hint values are appended
-                        to the return tuple.
+                        return even if an initial guess is not available.
 
-        Return:         intercept or (intercept, p)
+        Return:         intercept or (intercept, p), where
             intercept   a vector3 of surface intercept points, in km. Where no
                         solution exists, the returned vector will be masked.
             p           the converged solution such that
                             intercept = pos + p * normal(intercept);
                         included if guess is not None.
+
+                        Note that some Surface subclasses do not use an initial
+                        guess; for these, the input value of the guess is itself
+                        returned as p (if it is not None).
         """
 
         raise NotImplementedError('%s.intercept_normal_to() is not implemented'
@@ -653,7 +647,6 @@ class Surface(object):
                                                          time=surface_time,
                                                          direction=surface_key,
                                                          derivs=False,
-                                                         guess=0.,
                                                          hints=hints)
             new_lt = lt + dlt
 
@@ -713,7 +706,6 @@ class Surface(object):
                                                      time=surface_time,
                                                      direction=surface_key,
                                                      derivs=True,
-                                                     guess=0.,
                                                      hints=hints)
         new_lt = lt + dlt
         lt = new_lt.clip(lt_min, lt_max, remask=False)
@@ -1143,7 +1135,7 @@ class Surface(object):
     #===========================================================================
     def photon_from_event_to_normal(self, departure, derivs=False, guess=None,
                                           antimask=None, quick={}, converge={}):
-        """Photon arrival at this surface, given the departure event and and the
+        """Photon arrival at this surface, given the departure event and the
         requirement that it arrived along the surface normal.
 
         See _solve_normal_for_photon_event() for details.
@@ -1353,6 +1345,7 @@ class Surface(object):
             (cept_in_frame,
              new_lt, hints) = self.intercept_normal_to(obs_wrt_origin_frame,
                                                        time=surface_time,
+                                                       direction=surface_key,
                                                        derivs=True,
                                                        guess=lt,
                                                        hints=hints)
@@ -1671,6 +1664,7 @@ class Surface(object):
             (cept_in_frame,
              new_lt, hints) = self.intercept_normal_to(pos_wrt_origin_frame,
                                                        time=surface_time,
+                                                       direction=surface_key,
                                                        derivs=True,
                                                        guess=lt,
                                                        hints=hints)

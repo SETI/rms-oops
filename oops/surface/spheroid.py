@@ -65,15 +65,16 @@ class Spheroid(Ellipsoid):
         Input:
             pos         a Vector3 of positions at or near the surface relative
                         to this surface's origin and frame.
-            time        a Scalar time at the surface; ignored here.
+            time        a Scalar time at which to evaluate the surface; ignored
+                        for this Surface subclass.
             direction   'arr' for a photon arriving at the surface; 'dep' for a
                         photon departing from the surface; ignored here.
             derivs      True to propagate derivatives in pos into the returned
                         intercepts.
-            guess       optional initial guess a coefficient array p such that:
+            guess       optional initial guess at coefficient array p such that
                             intercept + p * normal(intercept) = pos
                         Use guess=True for the converged value of p to be
-                        returned even if an initial guess was not provided.
+                        returned even if an initial guess is unavailable.
 
         Return:         intercept or (intercept, p).
             intercept   a vector3 of surface intercept points relative to this
@@ -160,7 +161,7 @@ class Spheroid(Ellipsoid):
         g0 = f1
 
         # Make an initial guess at p if necessary
-        if guess in (None, True):
+        if isinstance(guess, (type(None), bool, np.bool_)):
 
             # Unsquash into coordinates where the surface is a sphere
             pos_unsq = pos.wod.element_mul(self.unsquash)   # without derivs!
