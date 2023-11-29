@@ -307,7 +307,7 @@ def sky_test_suite(bpt):
         (bp, bp_u0, bp_u1, bp_v0, bp_v1) = bpt.backplanes
         pixel_duv = np.abs(bp.obs.fov.uv_scale.vals)
         cos_dec = bp.declination().cos().mean(builtins=True)
-        (ulimit, vlimit) = DPR * pixel_duv * 1.e-4
+        (ulimit, vlimit) = DPR * pixel_duv * 1.e-6
 
         # right_ascension
         ra = bp.right_ascension()
