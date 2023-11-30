@@ -1400,7 +1400,7 @@ def as_dict(kernel_list):
 
     spice_path = get_spice_path()
 
-    clear_dict = True       # clear dictionary on the first pass
+    result = {}
     for kernel in kernel_list:
 
         # Check for a text kernel
@@ -1409,10 +1409,7 @@ def as_dict(kernel_list):
             continue
 
         filespec = os.path.join(spice_path, kernel.filespec)
-        result = textkernel.from_file(filespec, clear=clear_dict)
-
-        # On later passes, don't clear the dictionary
-        clear_dict = False
+        result = textkernel.from_file(filespec, tkdict=result)
 
     return result
 

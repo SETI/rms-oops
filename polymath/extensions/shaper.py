@@ -52,7 +52,7 @@ def flatten(self, recursive=True):
     if len(self._shape_) < 2:
         return self
 
-    count = np.product(self._shape_)
+    count = np.prod(self._shape_)
     return self.reshape((count,), recursive)
 
 #===============================================================================
