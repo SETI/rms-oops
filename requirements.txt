@@ -1,4 +1,4 @@
-astropy>=6.0.0
+astropy>=5.2
 coverage>=7.3.2
 cspyce>=2.2.2
 numpy>=1.26.1
