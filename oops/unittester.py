@@ -17,6 +17,8 @@ from oops.event       import Test_Event
 from oops.lightsource import Test_LightSource
 from oops.transform   import Test_Transform
 
+from oops.hosts.unittester import *
+
 ################################################################################
 # To run all unittests...
 # python oops/unittester.py
