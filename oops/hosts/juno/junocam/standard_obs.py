@@ -13,7 +13,7 @@ from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 # Because JunoCam has such a large, distorted FOV, we need to assign the
 # backplanes an especially large inventory border: border=10 seems to work.
 # However, inventory=False is safer still.
-gm.set_default_args(module='hosts.juno.junocam', inventory=False, border=10)
+gm.set_default_args(module='oops.hosts.juno.junocam', inventory=False, border=10)
 
 ####################################################################
 name = 'JNCR_2016347_03C00192_V01'

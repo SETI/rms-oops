@@ -463,7 +463,7 @@ ISS.initialize()
 #                                       'voyager/ISS/VGISS_6109/C34502XX/'
 #                                       'C3450201_GEOMED.img'),
 #                index   = None,
-#                module  = 'hosts.voyager.iss',
+#                module  = 'oops.hosts.voyager.iss',
 #                planet  = 'SATURN',
 #                moon    = '',
 #                ring    = 'SATURN_MAIN_RINGS',

@@ -586,7 +586,7 @@ class Test_Cassini_UVIS_GoldMaster_HSP2014_197_21_29(unittest.TestCase):
                 obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                        'cassini/UVIS/HSP2014_197_21_29.DAT'),
                 index   = None,
-                module  = 'hosts.cassini.uvis',
+                module  = 'oops.hosts.cassini.uvis',
                 planet  = '',
                 moon    = '',
                 ring    = 'SATURN_MAIN_RINGS',

@@ -25,7 +25,7 @@ class Test_<your test name>(unittest.TestCase):
                 kwargs  = {})                       # other from_file inputs
 
         # Change any other default parameters, at least this one...
-        gm.set_default_args(module='hosts.xxx.yyy', ...)
+        gm.set_default_args(module='oops.hosts.xxx.yyy', ...)
 
         gm.execute_as_unittest(self)
 
@@ -54,7 +54,7 @@ class Test_<your test name>(unittest.TestCase):
         gm.define_standard_obs('obs3', ...)
 
         # Change any other default parameters, at least this one...
-        gm.set_default_args(module='hosts.xxx.yyy', ...)
+        gm.set_default_args(module='oops.hosts.xxx.yyy', ...)
 
     def run_test1(self):
         gm.execute_as_unittest(self, 'obs1')
@@ -86,7 +86,7 @@ gm.define_standard_obs('test2', ...)
 gm.define_standard_obs('test3', ...)
 
 # Change any other default parameters, at least this one...
-gm.set_default_args(module='hosts.xxx.yyy', ...)
+gm.set_default_args(module='oops.hosts.xxx.yyy', ...)
 
 if __name__ == '__main__':
     gm.execute_as_command()
@@ -160,9 +160,9 @@ from oops.config      import LOGGING
 from oops.constants   import DPR
 from oops.observation import Observation
 
-from oops.unittester_support import (OOPS_TEST_DATA_PATH,
+from oops.unittester_support import (OOPS_BACKPLANE_OUTPUT_PATH,
                                      OOPS_GOLD_MASTER_PATH,
-                                     OOPS_BACKPLANE_OUTPUT_PATH)
+                                     OOPS_TEST_DATA_PATH)
 
 ################################################################################
 # Use set_default_obs() and set_standard_obs() to define the observation used
@@ -261,12 +261,14 @@ DEFAULTS = {
     'undersample'   : 16,
     'inventory'     : True,
     'border'        : 0,
-    'browse'        : True,
+    'arrays'        : False,
+    'browse'        : False,
     'zoom'          : 1,
     'browse_format' : 'png',
     'verbose'       : True,
-    'log'           : True,
+    'log'           : False,
     'level'         : 'debug',
+    'summary'       : False
 }
 
 # Note that default values of output, convergence, diagnostics, internals,
@@ -382,7 +384,7 @@ def execute_as_command():
                     help='''Index to use for a specified filepath; otherwise,
                             backplane arrays will be generated for each
                             observation in the file.''')
-    gr.add_argument('--module', type=str, metavar='hosts...',
+    gr.add_argument('--module', type=str, metavar='oops.hosts...',
                     help='''Name of the module containing the "from_file"
                             method for the filepaths specified%s.'''
                          % ('' if DEFAULTS['module'] is None else
@@ -430,7 +432,10 @@ def execute_as_command():
     gr.add_argument('-a', '--adopt', dest='task',
                     action='store_const', const='adopt',
                     help='''Adopt these backplane arrays as the new gold
+                            masters by overwriting the existing gold
                             masters.''')
+    gr.add_argument('--debug', action='store_true',
+                    help='''Shorthand for --arrays --browse --log --summary''')
     gr.add_argument('--tolerance', type=float, metavar='TOL',
                     default=float(DEFAULTS['tolerance']),
                     help='''Factor to apply to backplane array error tolerances;
@@ -472,6 +477,13 @@ def execute_as_command():
 
     # Backplane array options
     gr = parser.add_argument_group('Backplane array options')
+    gr.add_argument('--arrays', action='store_true', default=DEFAULTS['arrays'],
+                    help='Save the backplane arrays%s.'
+                         % (' (default)' if DEFAULTS['arrays'] else ''))
+    gr.add_argument('--no-arrays', dest='arrays', action='store_false',
+                    default=DEFAULTS['arrays'],
+                    help='Do not save backplane arrays%s.'
+                         % ('' if DEFAULTS['arrays'] else ' (default)'))
     gr.add_argument('-u', '--undersample', type=int, metavar='N',
                     default=DEFAULTS['undersample'],
                     help='''Factor by which to undersample backplane arrays;
@@ -480,11 +492,11 @@ def execute_as_command():
     gr.add_argument('--inventory', action='store_true',
                     default=DEFAULTS['inventory'],
                     help='Use a body inventory when generating backplane%s.'
-                         % ' (default)' if DEFAULTS['inventory'] else '')
+                         % (' (default)' if DEFAULTS['inventory'] else ''))
     gr.add_argument('--no-inventory', dest='inventory', action='store_false',
                     help='''Do not use a body inventory when generating
                             backplanes%s.'''
-                         % '' if DEFAULTS['inventory'] else ' (default)')
+                         % ('' if DEFAULTS['inventory'] else ' (default)'))
     gr.add_argument('--border', type=int, metavar='N',
                     default=DEFAULTS['border'],
                     help='''Number of pixels by which to expand image borders
@@ -500,11 +512,11 @@ def execute_as_command():
     gr.add_argument('--browse', action='store_true',
                     default=DEFAULTS['browse'],
                     help='Save browse images of the backplane arrays%s.'
-                         % ' (default)' if DEFAULTS['browse'] else '')
+                         % (' (default)' if DEFAULTS['browse'] else ''))
     gr.add_argument('--no-browse', dest='browse', action='store_false',
                     default=DEFAULTS['browse'],
-                    help='No not save browse images of backplane arrays%s.'
-                         % '' if DEFAULTS['browse'] else ' (default)')
+                    help='Do not save browse images of backplane arrays%s.'
+                         % ('' if DEFAULTS['browse'] else ' (default)'))
     gr.add_argument('--zoom', type=int, metavar='N', default=1,
                     help='Zoom factor to apply to browse images; default %d.'
                          % DEFAULTS['zoom'])
@@ -525,17 +537,18 @@ def execute_as_command():
     gr.add_argument('-v', '--verbose', action='store_true',
                     default=DEFAULTS['verbose'],
                     help='Write log information to the terminal%s.'
-                         % ' (default)' if DEFAULTS['verbose'] else '')
+                         % (' (default)' if DEFAULTS['verbose'] else ''))
     gr.add_argument('-q', '--quiet', dest='verbose', action='store_false',
                     help='Do not write log information to the terminal%s.'
-                         % '' if DEFAULTS['verbose'] else ' (default)')
+                         % ('' if DEFAULTS['verbose'] else ' (default)'))
     gr.add_argument('--log', action='store_true',
                     default=DEFAULTS['log'],
                     help='Write a log file to the output directory%s.'
-                         % ' (default)' if DEFAULTS['log'] else '')
-    gr.add_argument('--no-log', dest='log', action='store_false', default=True,
+                         % (' (default)' if DEFAULTS['log'] else ''))
+    gr.add_argument('--no-log', dest='log', action='store_false',
+                    default=DEFAULTS['log'],
                     help='Do not write a log file in the output directory%s.'
-                         % '' if DEFAULTS['log'] else ' (default)')
+                         % ('' if DEFAULTS['log'] else ' (default)'))
     gr.add_argument('--level', type=str, metavar='LEVEL',
                     choices=['debug', 'warning', 'error']
                             + [str(k) for k in range(1,31)],
@@ -544,6 +557,14 @@ def execute_as_command():
                             "info", "warning", "error", or an integer 1-30;
                             default is %s.'''
                          % DEFAULTS['level'])
+    gr.add_argument('--summary', action='store_true',
+                    default=DEFAULTS['summary'],
+                    help='Write a summary to the output directory%s.'
+                         % (' (default)' if DEFAULTS['summary'] else ''))
+    gr.add_argument('--no-summary', dest='summary', action='store_false',
+                    default=DEFAULTS['summary'],
+                    help='Do not write a summary to the output directory%s.'
+                         % ('' if DEFAULTS['summary'] else ' (default)'))
     gr.add_argument('--convergence', action='store_true', default=False,
                     help='Show iterative convergence information in the log.')
     gr.add_argument('--diagnostics', action='store_true', default=False,
@@ -592,9 +613,11 @@ def execute_as_unittest(testcase, obsname='default'):
         args.name = [obsname]
 
         # These values in the DEFAULTS dictionary are overridden
+        args.arrays = False
         args.browse = False
         args.log = False
         args.verbose = True
+        args.summary = False
 
         # These have no entry in the DEFAULTS dictionary
         args.obspath = None
@@ -606,6 +629,7 @@ def execute_as_unittest(testcase, obsname='default'):
         args.fullpaths = False
         args.platform = None
         args.save_sampled = False
+        args.debug = False
 
         # These options are mandatory
         args.testcase = testcase
@@ -686,8 +710,16 @@ def _clean_up_args(args):
     if args.derivs is None:
         args.derivs = (args.undersample > 1)
 
-    # Special requirements for task --adopt
-    if args.task == 'adopt':    # required options for task adopt
+    # Implement --debug
+    if args.debug:
+        args.arrays = True
+        args.browse = True
+        args.log = True
+        args.summary = True
+
+    # Special requirements for task --adopt or --preview
+    if args.task in ('adopt', 'preview'):
+        args.arrays = True
         args.browse = True
         args.undersample = 1
         args.du = 0.
@@ -710,11 +742,12 @@ def _clean_up_args(args):
         if args.task in ('compare', 'adopt'):
             if not OOPS_TEST_DATA_PATH:
                 raise ValueError('Undefined environment variable: '
-                                 'OOPS_TEST_DATA_PATH')
+                                 'One of OOPS_TEST_DATA_PATH or OOPS_RESOURCES '
+                                 'must be provided')
             test_data_path_ = os.path.realpath(OOPS_TEST_DATA_PATH) + '/'
             if not abspath.startswith(test_data_path_):
-                warnings.warn('File is not in the test data directory: '
-                              + obspath + '; ' + OOPS_TEST_DATA_PATH)
+                warnings.warn('File ' + abspath + ' is not in the test data '
+                              'directory ' + test_data_path_)
         if not os.path.exists(abspath):
             raise FileNotFoundError('No such file: ' + obspath)
 
@@ -1075,13 +1108,13 @@ class BackplaneTest(object):
         self.summary = {}
         self.results = {}
 
-        # Make sure the output directory exits
-        os.makedirs(self.output_dir, exist_ok=True)
-
         # Set up the log handler; set aside any old log
         # Note that each BackplaneTest gets its own dedicated logger
         LOGGING.push()
         if self.args.log:
+            # Make sure the output directory exits
+            os.makedirs(self.output_dir, exist_ok=True)
+
             log_path = os.path.join(self.output_dir, self.task + '.log')
             if os.path.exists(log_path):
                 timestamp = os.path.getmtime(log_path)
@@ -1104,17 +1137,15 @@ class BackplaneTest(object):
             # Make sure test data and gold master files exist
             if self.task in ('compare', 'adopt'):
                 if not OOPS_GOLD_MASTER_PATH:
-                    LOGGING.info('Undefined environment variable: '
-                                 + 'OOPS_GOLD_MASTER_PATH')
                     LOGGING.fatal('Undefined environment variable: '
-                                  + 'OOPS_RESOURCES')
+                                  'One of OOPS_GOLD_MASTER_PATH or '
+                                  'OOPS_RESOURCES must be provided')
                     return
 
                 if not OOPS_TEST_DATA_PATH:
-                    LOGGING.info('Undefined environment variable: '
-                                 + 'OOPS_TEST_DATA_PATH')
                     LOGGING.fatal('Undefined environment variable: '
-                                 + 'OOPS_RESOURCES')
+                                  'One of OOPS_TEST_DATA_PATH or OOPS_RESOURCES '
+                                  'must be provided')
                     return
 
                 if self.task == 'compare':
@@ -1128,8 +1159,9 @@ class BackplaneTest(object):
 
             # Make sure directories exist; log their locations
             if self.task in ('preview', 'compare'):
-                LOGGING.info('Writing arrays to', self.output_arrays)
-                os.makedirs(self.output_arrays, exist_ok=True)
+                if self.args.arrays:
+                    LOGGING.info('Writing arrays to', self.output_arrays)
+                    os.makedirs(self.output_arrays, exist_ok=True)
 
                 if self.args.browse:
                     LOGGING.info('Writing browse images to', self.output_browse)
@@ -1139,7 +1171,9 @@ class BackplaneTest(object):
                     LOGGING.info('Writing sampled masters to', self.sampled_gold)
                     os.makedirs(self.sampled_gold, exist_ok=True)
 
-                if not OOPS_BACKPLANE_OUTPUT_PATH:
+                if (self.args.arrays or
+                    self.args.browse or
+                    self.args.save_sampled) and not OOPS_BACKPLANE_OUTPUT_PATH:
                     LOGGING.info('   To change this destination, define '
                                  + 'OOPS_BACKPLANE_OUTPUT_PATH')
 
@@ -1159,13 +1193,14 @@ class BackplaneTest(object):
                         LOGGING.exception(e, '%s | Fatal error' % TEST_SUITE)
 
             # Wrap up
-            if self.task in ('preview', 'compare'):
-                file_path = self.write_summary(self.output_dir)
-                LOGGING.debug('Summary written: ' + file_path)
+            if self.args.summary:
+                if self.task in ('preview', 'compare'):
+                    file_path = self.write_summary(self.output_dir)
+                    LOGGING.debug('Summary written: ' + file_path)
 
-            else:
-                file_path = self.write_summary(self.gold_dir)
-                LOGGING.info('Summary written: ' + file_path)
+                else:
+                    file_path = self.write_summary(self.gold_dir)
+                    LOGGING.info('Summary written: ' + file_path)
 
             # Internals...
             if self.args.internals:
@@ -1383,11 +1418,12 @@ class BackplaneTest(object):
                 output_browse = self.output_browse
                 basename = self._basename(title, gold=False)
 
-            output_pickle_path = os.path.join(output_arrays,
-                                              basename + '.pickle')
-            comparison.output_pickle_path = output_pickle_path
-            with open(output_pickle_path, 'wb') as f:
-                pickle.dump(array, f)
+            if self.args.arrays:
+                output_pickle_path = os.path.join(output_arrays,
+                                                basename + '.pickle')
+                comparison.output_pickle_path = output_pickle_path
+                with open(output_pickle_path, 'wb') as f:
+                    pickle.dump(array, f)
 
             # Write the browse image
             if self.args.browse:
@@ -1428,9 +1464,10 @@ class BackplaneTest(object):
 
             # For "preview" and "adopt"
             else:
-                LOGGING.debug(comparison.suite, '| Written:',
-                              os.path.basename(output_pickle_path) + ';',
-                              comparison.text)
+                if self.args.arrays:
+                    LOGGING.debug(comparison.suite, '| Written:',
+                                  os.path.basename(output_pickle_path) + ';',
+                                  comparison.text)
 
         # Shapeless case
         else:
@@ -2235,6 +2272,9 @@ class BackplaneTest(object):
         """Write the test summary as a Python dictionary; return its file path.
         """
 
+        # Make sure the output directory exits
+        os.makedirs(outdir, exist_ok=True)
+
         filepath = os.path.join(outdir, 'summary.py')
 
         if os.path.exists(filepath):
@@ -2295,7 +2335,7 @@ if __name__ == '__main__':
             moons   = ['EPIMETHEUS'],
             rings   = ['SATURN_MAIN_RINGS'])
 
-    gm.set_default_args(module='hosts.cassini.iss')
+    gm.set_default_args(module='oops.hosts.cassini.iss')
 
     # The d/dv numerical ring derivatives are extra-uncertain due to the high
     # foreshortening in the vertical direction.

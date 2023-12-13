@@ -194,7 +194,7 @@ class Test_Juno_JIRAM_GoldMaster(unittest.TestCase):
                                        'juno/jiram/JNOJIR_2000/DATA/'
                                        'JIR_IMG_RDR_2013282T133843_V03.IMG'),
                 index   = 1,
-                module  = 'hosts.juno.jiram',
+                module  = 'oops.hosts.juno.jiram',
                 planet  = '',
                 moon    = 'MOON',
                 ring    = '',
@@ -205,7 +205,7 @@ class Test_Juno_JIRAM_GoldMaster(unittest.TestCase):
                                        'juno/jiram/JNOJIR_2008/DATA/'
                                        'JIR_IMG_RDR_2017244T104633_V01.IMG'),
                 index   = 1,
-                module  = 'hosts.juno.jiram',
+                module  = 'oops.hosts.juno.jiram',
                 planet  = '',
                 moon    = 'EUROPA',
                 ring    = '',
@@ -216,7 +216,7 @@ class Test_Juno_JIRAM_GoldMaster(unittest.TestCase):
                                        'juno/jiram/JNOJIR_2014/DATA/'
                                        'JIR_IMG_RDR_2018197T055537_V01.IMG'),
                 index   = 0,
-                module  = 'hosts.juno.jiram',
+                module  = 'oops.hosts.juno.jiram',
                 planet  = 'JUPITER',
                 moon    = '',
                 ring    = '',
@@ -227,7 +227,7 @@ class Test_Juno_JIRAM_GoldMaster(unittest.TestCase):
                                        'juno/jiram/JNOJIR_2000/DATA/'
                                        'JIR_SPE_RDR_2013282T133845_V03.DAT'),
                 index   = 0,
-                module  = 'hosts.juno.jiram',
+                module  = 'oops.hosts.juno.jiram',
                 planet  = '',
                 moon    = 'MOON',
                 ring    = '',

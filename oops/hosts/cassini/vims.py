@@ -969,7 +969,7 @@ class Test_Cassini_VIMS_GoldMaster_v1690952775(unittest.TestCase):
                 obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                        'cassini/VIMS/v1793917030_1.qub'),
                 index   = None,
-                module  = 'hosts.cassini.vims',
+                module  = 'oops.hosts.cassini.vims',
                 planet  = 'SATURN',
                 moon    = '',
                 ring    = '',
