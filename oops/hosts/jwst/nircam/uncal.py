@@ -1,5 +1,5 @@
 ##########################################################################################
-# hosts/jwst/nircam/uncal.py: JWST/NIRCam subclass for _uncal files
+# oops/hosts/jwst/nircam/uncal.py: JWST/NIRCam subclass for _uncal files
 ##########################################################################################
 
 import numpy as np

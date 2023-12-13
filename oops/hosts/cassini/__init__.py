@@ -1,5 +1,5 @@
 ################################################################################
-# hosts/cassini/__init__.py: Cassini class
+# oops/hosts/cassini/__init__.py: Cassini class
 #
 # Utility functions for managing SPICE kernels while working with Cassini data
 # sets.

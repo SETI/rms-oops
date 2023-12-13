@@ -1,5 +1,5 @@
 ################################################################################
-# hosts/pds3.py
+# oops/hosts/pds3.py
 #
 # Utility functions for finding and loading PDS3 labels in host modules.
 #

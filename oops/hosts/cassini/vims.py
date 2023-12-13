@@ -1,5 +1,5 @@
 ################################################################################
-# hosts/cassini/vims.py
+# oops/hosts/cassini/vims.py
 #
 # Known shortcomings:
 #

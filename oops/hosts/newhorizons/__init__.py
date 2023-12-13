@@ -1,5 +1,5 @@
 ################################################################################
-# hosts/newhorizons/__init__.py: NewHorizons class
+# oops/hosts/newhorizons/__init__.py: NewHorizons class
 #
 # For managing SPICE kernels while working with NewHorizons data sets.
 ################################################################################

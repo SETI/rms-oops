@@ -1,15 +1,13 @@
 ################################################################################
-# hosts/galileo/__init__.py: Galileo class
+# oops/hosts/galileo/__init__.py: Galileo class
 #
 # Utility functions for managing SPICE kernels while working with Galileo data
 # sets.
 ################################################################################
 import numpy as np
-import unittest
 import os.path
 
 import julian
-import textkernel
 import spicedb
 import cspyce
 import oops

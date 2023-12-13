@@ -1,5 +1,5 @@
 ################################################################################
-# hosts/galileo/ssi/standard_obs.py:
+# oops/hosts/galileo/ssi/standard_obs.py:
 #
 #  Standard gold-master observation definitions for Galileo SSI.
 #
@@ -10,7 +10,7 @@ import oops.backplane.gold_master as gm
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
-gm.set_default_args(module='hosts.galileo.ssi', inventory=False, border=4)
+gm.set_default_args(module='oops.hosts.galileo.ssi', inventory=False, border=4)
 
 ###################################################################
 name = 'C0349632100R'
@@ -113,7 +113,7 @@ gm.define_standard_obs(name,
         planets  = '',
         moons    = 'EUROPA',
         rings    = '')
-        
+
 # overrides to cover unexplained discrepancies among Mark, Rob, Joe
 gm.override('EUROPA center distance from Sun (km)', 5., names=name)
 gm.override('EUROPA center light time from Sun (km)', 1.5e-5, names=name)
@@ -125,5 +125,3 @@ gm.override('EUROPA center declination (deg, actual)', 0.02, names=name)
 gm.override('EUROPA center declination (deg, apparent)', 0.02, names=name)
 gm.override('EUROPA sub-observer latitude, planetocentric (deg)', 0.02, names=name)
 gm.override('EUROPA sub-observer latitude, planetographic (deg)', 0.02, names=name)
-
-

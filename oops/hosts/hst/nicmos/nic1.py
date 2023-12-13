@@ -1,5 +1,5 @@
 ################################################################################
-# hosts/hst/nicmos/nic1.py: HST/NICMOS subclass NIC1
+# oops/hosts/hst/nicmos/nic1.py: HST/NICMOS subclass NIC1
 ################################################################################
 
 try:

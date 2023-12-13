@@ -1,5 +1,5 @@
 ################################################################################
-# hosts/keck/__init__.py: Class Keck
+# oops/hosts/keck/__init__.py: Class Keck
 #
 # This is an initial implementation of a Keck II FITS reader.  It does not
 # support distortion models or instruments other than NIRC2.

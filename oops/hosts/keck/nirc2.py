@@ -1,5 +1,5 @@
 ################################################################################
-# hosts/keck/nirc2.py: Keck subclass NIRC2
+# oops/hosts/keck/nirc2.py: Keck subclass NIRC2
 #
 # This is an initial implementation of a Keck II FITS reader.  It does not
 # support distortion models or instruments other than NIRC2.

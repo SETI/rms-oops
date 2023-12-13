@@ -1,5 +1,5 @@
 ################################################################################
-# hosts/hst/nicmos/__init__.py: HST subclass NICMOS
+# oops/hosts/hst/nicmos/__init__.py: HST subclass NICMOS
 #
 # 5/21/12 MRS - corrected super().register_frame() so that it works for NICMOS
 #   images; local method deleted.

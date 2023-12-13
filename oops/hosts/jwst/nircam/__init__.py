@@ -1,5 +1,5 @@
 ##########################################################################################
-# hosts/jwst/nircam.py: JWST subclass NIRCam
+# oops/hosts/jwst/nircam.py: JWST subclass NIRCam
 ##########################################################################################
 
 import astropy.io.fits as pyfits
