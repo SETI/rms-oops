@@ -3,7 +3,7 @@ branch = True
 include =
     ./**/*.py
 omit =
-    */venv/*
+    */*venv*/*
 
 [html]
 Title = Coverage Report for OOPS Hosts
