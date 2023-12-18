@@ -11,11 +11,12 @@ from oops.frame.unittester       import *
 from oops.observation.unittester import *
 from oops.path.unittester        import *
 from oops.surface.unittester     import *
-from oops.backplane.unittester   import *
 from oops.body        import Test_Body
 from oops.event       import Test_Event
 from oops.lightsource import Test_LightSource
 from oops.transform   import Test_Transform
+
+# from oops.hosts.unittester import *
 
 ################################################################################
 # To run all unittests...

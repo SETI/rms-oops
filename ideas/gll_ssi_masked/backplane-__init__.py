@@ -818,7 +818,7 @@ class Test_Backplane_Surfaces(unittest.TestCase):
         from oops.surface.centricellipsoid import CentricEllipsoid
         from oops.surface.graphicellipsoid import GraphicEllipsoid
 
-        import hosts.cassini.iss as iss
+        import oops.hosts.cassini.iss as iss
 
         for ABERRATION.old in (False, True):
 
@@ -975,7 +975,7 @@ class Test_Backplane_Borders(unittest.TestCase):
     def runTest(self):
 
         # NOTE These tests are very sensitive to the specific kernel pool used.
-        import hosts.cassini.iss as iss
+        import oops.hosts.cassini.iss as iss
 
         if Backplane_Settings.EXERCISES_ONLY:
             self.skipTest('')
@@ -1030,7 +1030,7 @@ class Test_Backplane_Empty_Events(unittest.TestCase):
 
     #===========================================================================
     def runTest(self):
-        import hosts.cassini.iss as iss
+        import oops.hosts.cassini.iss as iss
 
         if Backplane_Settings.EXERCISES_ONLY:
             self.skipTest('')
@@ -1077,7 +1077,7 @@ class Test_Backplane_Exercises(unittest.TestCase):
 
     #===========================================================================
     def runTest(self):
-        import hosts.cassini.iss as iss
+        import oops.hosts.cassini.iss as iss
 
         if Backplane_Settings.NO_EXERCISES:
             self.skipTest('')
