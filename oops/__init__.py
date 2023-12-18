@@ -51,6 +51,12 @@ from oops.constants import C, C_INVERSE, RPD, DPR, SPR, RPS, SPD, AU, \
 from polymath import Boolean, Matrix, Matrix3, Pair, Quaternion, Qube, Scalar, \
                      Units, Vector, Vector3
 
+try:
+    from _version import __version__
+except ImportError as err:
+    __version__ = 'Version unspecified'
+
+
 ################################################################################
 # Class cross-references and other class attributes to be defined after startup
 ################################################################################
