@@ -6,7 +6,7 @@ import oops
 import .iss as cassini_iss
 
 PRINT = True
-DISPLAY = False
+DISPLAY = True
 
 def show_info(title, array):
     """Internal method to print(summary information and display images as)
