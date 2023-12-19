@@ -29,6 +29,9 @@ SRC_DIR=$TEST_CAT_DIR/src
 mkdir -p $TEST_LOG_DIR
 if [ $? -ne 0 ]; then exit -1; fi
 
+pip install -r requirements.txt
+echo
+
 echo "================================================================"
 echo "OOPS.HOSTS TESTS"
 echo "================================================================"
