@@ -8,7 +8,7 @@ on:
   push:
     branches: [ master ]
   schedule:
-    - cron: "04 00 * * *"
+    - cron: "00 09 * * *"   # 1am PST, 2am PDT
 
 jobs:
   test:
