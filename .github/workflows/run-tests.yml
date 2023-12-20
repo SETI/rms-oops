@@ -1,4 +1,4 @@
-name: Test OPUS Import and Application
+name: Test oops and hosts
 run-name: Run Tests triggered by ${{ github.ref_type }} ${{ github.ref_name }} or ${{ github.triggering_actor }}
 
 on:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   test:
-    name: Test OOPS
+    name: Test oops
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
