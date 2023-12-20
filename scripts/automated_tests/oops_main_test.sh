@@ -3,10 +3,6 @@
 source ~/oops_runner_secrets
 if [ $? -ne 0 ]; then exit -1; fi
 
-if [[ ! -v TEST_ROOT ]]; then
-    echo "TEST_ROOT is not set"
-    exit -1
-fi
 if [[ ! -v SPICE_PATH ]]; then
     echo "SPICE_PATH is not set"
     exit -1
@@ -20,16 +16,8 @@ if [[ ! -v OOPS_RESOURCES ]]; then
     exit -1
 fi
 
-UNIQUE_ID=`date "+%Y%m%d_%H%M%S_%N"`
-TEST_CAT=oops
-TEST_CAT_DIR=$TEST_ROOT/$TEST_CAT/$UNIQUE_ID
-TEST_LOG_DIR=$TEST_CAT_DIR/test_logs
-SRC_DIR=$TEST_CAT_DIR/src
-
-mkdir -p $TEST_LOG_DIR
-if [ $? -ne 0 ]; then exit -1; fi
-
-pip install -r requirements.txt
+pip3 install --upgrade pip
+pip3 install -r requirements.txt
 echo
 
 echo "================================================================"
