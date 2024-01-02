@@ -33,6 +33,7 @@ jobs:
       - name: Test with coverage
         run: |
           scripts/automated_tests/oops_main_test.sh
+        shell: bash
 
       - name: Upload coverage report to codecov
         uses: codecov/codecov-action@v3
