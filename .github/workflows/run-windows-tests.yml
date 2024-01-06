@@ -1,0 +1,39 @@
+name: Test oops on Windows
+run-name: Run Tests triggered by ${{ github.ref_type }} ${{ github.ref_name }} or ${{ github.triggering_actor }}
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test oops
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: self-hosted-windows
+            python-version: "3.8"
+          - os: self-hosted-windows
+            python-version: "3.9"
+          - os: self-hosted-windows
+            python-version: "3.10"
+          - os: self-hosted-windows
+            python-version: "3.11"
+          - os: self-hosted-windows
+            python-version: "3.12"
+      fail-fast: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Test with coverage
+        run: |
+          scripts/automated_tests/oops_main_test.sh
+        shell: bash
