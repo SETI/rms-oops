@@ -43,8 +43,6 @@ jobs:
           - os: self-hosted-windows
             python-version: "3.12"
           - os: self-hosted-macos
-            python-version: "3.11"
-          - os: self-hosted-macos
             python-version: "3.12"
       fail-fast: false
     steps:
