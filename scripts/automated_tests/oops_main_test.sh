@@ -3,15 +3,16 @@
 source ~/oops_runner_secrets
 if [ $? -ne 0 ]; then exit -1; fi
 
-if [[ ! -v SPICE_PATH ]]; then
+# Can't use -v because it doesn't work on MacOS
+if [[ -z ${SPICE_PATH+x} ]]; then
     echo "SPICE_PATH is not set"
     exit -1
 fi
-if [[ ! -v SPICE_SQLITE_DB_NAME ]]; then
+if [[ -z ${SPICE_SQLITE_DB_NAME+x} ]]; then
     echo "SPICE_SQLITE_DB_NAME is not set"
     exit -1
 fi
-if [[ ! -v OOPS_RESOURCES ]]; then
+if [[ -z ${OOPS_RESOURCES+x} ]]; then
     echo "OOPS_RESOURCES is not set"
     exit -1
 fi

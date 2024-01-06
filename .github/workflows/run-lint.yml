@@ -1,4 +1,4 @@
-name: Test Lint
+name: Run Lint
 run-name: Run Lint triggered by ${{ github.ref_type }} ${{ github.ref_name }} or ${{ github.triggering_actor }}
 
 on:
@@ -12,8 +12,8 @@ on:
 
 jobs:
   test:
-    name: Test OOPS Lint
-    runs-on: self-hosted-ubuntu
+    name: Run Lint
+    runs-on: self-hosted-linux
     steps:
       - name: Checkout
         uses: actions/checkout@v4
