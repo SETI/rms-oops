@@ -363,7 +363,7 @@ def kernels_from_filespec(filespec, name=None, version=None, release=None,
 
             coverages = cspyce.ckcov(filespec, spice_id,
                                      False, 'SEGMENT', 1., 'TDB')
-            for (start_tdb, stop_tdb) in coverages:
+            for (start_tdb, stop_tdb) in coverages.as_intervals():
                 start_time = julian.iso_from_tai(julian.tai_from_tdb(start_tdb))
                 stop_time  = julian.iso_from_tai(julian.tai_from_tdb(stop_tdb))
 
