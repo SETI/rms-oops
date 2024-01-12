@@ -1,6 +1,8 @@
 ################################################################################
 # oops/hosts/galileo/ssi/__init__.py
 ################################################################################
+import sys
+import os
 import numpy as np
 import julian
 import cspyce
@@ -44,10 +46,6 @@ def from_file(filespec,
     # Get image metadata
     meta = Metadata(label)
 
-    # Load time-dependent kernels
-    Galileo.load_cks(meta.tstart, meta.tstart + meta.exposure)
-    Galileo.load_spks(meta.tstart, meta.tstart + meta.exposure)
-
     # Define the field of view
     FOV = meta.fov(full_fov=full_fov)
 
@@ -71,6 +69,82 @@ def from_file(filespec,
                                                 return_all_planets))
 
     return result
+
+#===============================================================================
+def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameters):
+    """A static method to return a list of Snapshot objects.
+
+    One object for each row in an SSI index file. The filespec refers to the
+    label of the index file.
+    """
+    SSI.initialize()    # Define everything the first time through
+
+    # Read the index file
+    COLUMNS = []        # Return all columns
+    table = pdstable.PdsTable(filespec, columns=COLUMNS)
+    row_dicts = table.dicts_by_row()
+
+    # Read the supplemental index file
+    if supplemental_filespec is not None:
+        table = pdstable.PdsTable(supplemental_filespec)
+        supplemental_row_dicts = table.dicts_by_row()
+
+#        # Sort supplemental rows to match index file
+#        specs = [os.path.splitext(row_dict['FILE_SPECIFICATION_NAME'])[0] for row_dict in row_dicts]
+#        supplemental_specs = \
+#            [os.path.splitext(supplemental_row_dict['FILE_SPECIFICATION_NAME'])[0] \
+#             for supplemental_row_dict in supplemental_row_dicts]
+
+#        indices = np.argsort(specs)
+        
+#        row_dicts_sorted = [None]*len(row_dicts)
+#        for i in range(len(row_dicts)):
+#            row_dicts_sorted[i] = row_dicts[indices[i]]
+        
+#        supplemental_indices = np.argsort(supplemental_specs)
+#        supplemental_row_dicts_sorted = [None]*len(supplemental_row_dicts)
+#        for i in range(len(supplemental_row_dicts)):
+#            supplemental_row_dicts_sorted[i] = supplemental_row_dicts[supplemental_indices[i]]
+
+        # Append supplemental columns to index file
+        for row_dict, supplemental_row_dict in zip(row_dicts, supplemental_row_dicts):
+            row_dict.update(supplemental_row_dict)
+
+    # Create a list of Snapshot objects
+    snapshots = []
+    for row_dict in row_dicts:
+        file = row_dict['FILE_SPECIFICATION_NAME']
+
+        # Get image metadata; do not return observations with zero exposures
+        meta = Metadata(row_dict)
+
+        if meta.exposure == 0:
+            continue
+
+        # Define the field of view
+        FOV = meta.fov(full_fov=full_fov)
+
+        # Create a Snapshot
+        basename = os.path.basename(file)
+        item = oops.obs.Snapshot(('v','u'), meta.tstart, meta.exposure,
+                                 FOV,
+                                 path = 'GLL',
+                                 frame = 'GLL_SCAN_PLATFORM',
+                                 dict = row_dict,         # Add the index dict
+                                 instrument = 'SSI',
+                                 filter = meta.filter,
+                                 filespec = file,
+                                 basename=basename)
+
+        item.spice_kernels = Galileo.used_kernels(item.time, 'ssi')
+
+        item.filespec = os.path.join(row_dict['VOLUME_ID'],
+                                     row_dict['FILE_SPECIFICATION_NAME'])
+        item.basename = basename
+
+        snapshots.append(item)
+
+    return snapshots
 
 #===============================================================================
 def initialize(planets=None, asof=None,
@@ -98,34 +172,39 @@ def initialize(planets=None, asof=None,
 class Metadata(object):
 
     #===========================================================================
-    def __init__(self, label):
-        """Use the label to assemble the image metadata."""
+    def __init__(self, meta_dict):
+        """Use the label or index dict to assemble the image metadata."""
+
+        info = SSI.instrument_kernel['INS'][-77036]
 
         # Image dimensions
-        self.nlines = label['IMAGE']['LINES']
-        self.nsamples = label['IMAGE']['LINE_SAMPLES']
+        self.nlines = info['MAX_LINE']
+        self.nsamples = info['MAX_SAMPLE']
 
         # Exposure time
-        exposure_ms = label['EXPOSURE_DURATION']
+        exposure_ms = meta_dict['EXPOSURE_DURATION']
         self.exposure = exposure_ms/1000.
 
         # Filters
-        self.filter = label['FILTER_NAME']
+        self.filter = meta_dict['FILTER_NAME']
 
         #TODO: determine whether IMAGE_TIME is the start time or the mid time..
-        self.tstart = julian.tdb_from_tai(
-                        julian.tai_from_iso(label['IMAGE_TIME']))
-        self.tstop = self.tstart + self.exposure
+        if meta_dict['IMAGE_TIME'] == 'UNK':
+            self.tstart = self.tstop = sys.float_info.min
+        else:
+            self.tstart = julian.tdb_from_tai(
+                            julian.tai_from_iso(meta_dict['IMAGE_TIME']))
+            self.tstop = self.tstart + self.exposure
 
         # Target
-        self.target = label['TARGET_NAME']
+        self.target = meta_dict['TARGET_NAME']
 
         # Telemetry mode
-        self.mode = label['TELEMETRY_FORMAT_ID']
+        self.mode = meta_dict['TELEMETRY_FORMAT_ID']
 
         # Window
-        if 'CUT_OUT_WINDOW' in label:
-            self.window = np.array(label['CUT_OUT_WINDOW'])
+        if 'CUT_OUT_WINDOW' in meta_dict:
+            self.window = np.array(meta_dict['CUT_OUT_WINDOW'])
             self.window_origin = self.window[0:2]-1
             self.window_shape = self.window[2:]
             self.window_uv_origin = np.flip(self.window_origin)
@@ -168,39 +247,15 @@ class Metadata(object):
         Attributes:
             FOV object.
         """
-        # FOV Kernel pool variables
-        cf_var = 'INS-77036_DISTORTION_COEFF'
-        fo_var = 'INS-77036_FOCAL_LENGTH'
-        px_var = 'INS-77036_PIXEL_SIZE'
-        cxy_var = 'INS-77036_FOV_CENTER'
 
-        cf = cspyce.gdpool(cf_var, 0)[0]
-        fo = cspyce.gdpool(fo_var, 0)[0]
-        px = cspyce.gdpool(px_var, 0)[0]
-        cxy = cspyce.gdpool(cxy_var, 0)
-
-        # Construct FOV
-        scale = px/fo
-        distortion_coeff = [1, 0, cf]
-
-        # Direct summation modes
-        if self.mode in ('HIS', 'AI8'):
-            scale = scale*2
-            cxy = cxy/2
-
-        # Construct full FOV
-        fov_full = oops.fov.BarrelFOV(scale,
-                                      (self.nsamples, self.nlines),
-                                      coefft_uv_from_xy=distortion_coeff,
-                                      uv_los=(cxy[0], cxy[1]))
+        # Get FOV
+        fov = SSI.fovs[self.mode]
 
         # Apply cutout window if full fov not requested
         if not full_fov and self.window is not None:
             uv_origin = self.window_uv_origin
             uv_shape = self.window_uv_shape
-            fov = oops.fov.SliceFOV(fov_full, uv_origin, uv_shape)
-        else:
-            fov = fov_full
+            fov = oops.fov.SliceFOV(fov, uv_origin, uv_shape)
 
         return fov
 
@@ -210,7 +265,7 @@ class SSI(object):
     """An instance-free class to hold Galileo SSI instrument parameters."""
 
     instrument_kernel = None
-    fov = {}
+    fovs = {}
     initialized = False
 
     #===========================================================================
@@ -242,8 +297,67 @@ class SSI(object):
                            mst_pck=mst_pck, irregulars=irregulars)
         Galileo.load_instruments(asof=asof)
 
+        # Load the instrument kernel
+        SSI.instrument_kernel = Galileo.spice_instrument_kernel('SSI')[0]
+
+        # Construct the FOVs
+        info = SSI.instrument_kernel['INS'][-77036]
+
+        cf_var = 'INS-77036_DISTORTION_COEFF'
+        fo_var = 'INS-77036_FOCAL_LENGTH'
+        px_var = 'INS-77036_PIXEL_SIZE'
+        cxy_var = 'INS-77036_FOV_CENTER'
+
+        cf = cspyce.gdpool(cf_var, 0)[0]
+        fo = cspyce.gdpool(fo_var, 0)[0]
+        px = cspyce.gdpool(px_var, 0)[0]
+        cxy = cspyce.gdpool(cxy_var, 0)
+
+        scale = px/fo
+        distortion_coeff = [1, 0, cf]
+
+        # Construct FOVs
+#        from IPython import embed; print('+++++++++++++'); embed()
+        assert info['MAX_SAMPLE'] == 800
+        assert info['MAX_LINE'] == 800
+
+        fov_full = oops.fov.BarrelFOV(scale,
+                                      (info['MAX_SAMPLE'], info['MAX_LINE']),
+                                      coefft_uv_from_xy=distortion_coeff,
+                                      uv_los=(cxy[0], cxy[1]))
+        fov_summed = oops.fov.SubsampledFOV(fov_full, 2)
+#        fov_his = 
+#        fov_hma = 
+#        fov_hca = oops.fov.GapFOV(oops.fov.SubsampledFOV(fov_full, (1,4)),
+#                                  (1,0.25))
+#               ... maybe need SparseFOV or SkipFOV class
+#        fov_him = 
+
+        # Construct FOV dictionary
+        SSI.fovs['FULL'] = fov_full
+
+        # Phase-2 Telemetry Formats
+        SSI.fovs['HIS'] = fov_summed
+        SSI.fovs['HMA'] = fov_full
+        SSI.fovs['HCA'] = fov_full
+        SSI.fovs['HIM'] = fov_full
+        SSI.fovs['IM8'] = fov_full
+        SSI.fovs['AI8'] = fov_summed
+        SSI.fovs['IM4'] = fov_full
+
+        # Phase-1 Telemetry Formats
+        SSI.fovs['XCM'] = fov_full
+#        SSI.fovs['XED'] = fov_full
+        SSI.fovs['HCJ'] = fov_full      # Inference based on inspection
+        SSI.fovs['HCM'] = fov_full      # Inference based on inspection
+                                        # hmmm, actually C0248807700R.img is 800x200
+                                        # maybe this is just a cropped full fov
+
         # Construct the SpiceFrame
         _ = oops.frame.SpiceFrame("GLL_SCAN_PLATFORM")
+
+        # Load kernels
+        Galileo.load_kernels()
 
         SSI.initialized = True
         return
@@ -257,7 +371,7 @@ class SSI(object):
         """
 
         SSI.instrument_kernel = None
-        SSI.fov = {}
+        SSI.fovs = {}
         SSI.initialized = False
 
         Galileo.reset()
@@ -270,6 +384,17 @@ import os.path
 import oops.backplane.gold_master as gm
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+
+#===============================================================================
+class Test_AAA_Galileo_SSI_index_file(unittest.TestCase):
+
+    #===========================================================================
+    def runTest(self):
+        dir = '/home/spitale/SETI/RMS/metadata/GO_0xxx/GO_0017'
+#        dir = os.path.join(TESTDATA_PARENT_DIRECTORY, 'galileo/GO_0017')
+
+        obs = from_index(os.path.join(dir, 'GO_0017_index.lbl'),
+                         os.path.join(dir, 'GO_0017_supplemental_index.lbl'))
 
 #===============================================================================
 class Test_Galileo_SSI_GoldMaster(unittest.TestCase):

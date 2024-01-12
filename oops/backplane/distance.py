@@ -81,8 +81,9 @@ def center_distance(self, event_key, direction='dep'):
                                        departing photon.
     """
 
+    map = {'arr':'arr', 'sun':'arr', 'dep':'dep', 'obs':'dep'}
     gridless_key = self.gridless_event_key(event_key)
-    return self.distance(gridless_key, direction=direction)
+    return self.distance(gridless_key, direction=map[direction])
 
 #===============================================================================
 def center_light_time(self, event_key, direction='dep'):

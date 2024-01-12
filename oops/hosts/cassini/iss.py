@@ -21,7 +21,7 @@ def from_file(filespec, fast_distortion=True,
     Cassini ISS image file.
 
     Inputs:
-        filespec            Path to input file.
+        filespec            The full path to a Cassini ISS file or its PDS label.
 
         fast_distortion     True to use a pre-inverted polynomial;
                             False to use a dynamically solved polynomial;
