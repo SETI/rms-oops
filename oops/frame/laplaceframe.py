@@ -208,7 +208,7 @@ class LaplaceFrame(Frame):
 
             # Trim the cache, removing the values used least recently
             if len(self.cache) >= self.cache_size:
-                all_keys = self.cache.values()
+                all_keys = list(self.cache.values())
                 all_keys.sort()
                 for (_, old_key, _) in all_keys[:self.trim_size]:
                     del self.cache[old_key]
