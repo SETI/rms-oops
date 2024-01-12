@@ -1,5 +1,5 @@
 ################################################################################
-# spicedb.py
+# spicedb/__init__.py
 #
 # This set of routines handles the selection of SPICE kernels based on various
 # criteria related to body, instrument, time frame, etc. It also sorts selected
@@ -19,7 +19,7 @@ import textkernel
 
 import cspyce
 
-import sqlite_db as db
+import spicedb.sqlite_db as db
 
 # For testing and debugging
 DEBUG = False   # If true, no files are furnished.
@@ -363,7 +363,7 @@ def kernels_from_filespec(filespec, name=None, version=None, release=None,
 
             coverages = cspyce.ckcov(filespec, spice_id,
                                      False, 'SEGMENT', 1., 'TDB')
-            for (start_tdb, stop_tdb) in coverages:
+            for (start_tdb, stop_tdb) in coverages.as_intervals():
                 start_time = julian.iso_from_tai(julian.tai_from_tdb(start_tdb))
                 stop_time  = julian.iso_from_tai(julian.tai_from_tdb(stop_tdb))
 

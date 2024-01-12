@@ -58,7 +58,7 @@ Source = "https://github.com/SETI/rms-oops"
 Issues = "https://github.com/SETI/rms-oops/issues"
 
 [tool.setuptools]
-packages = ["oops"]
+packages = ["oops", "spicedb"]
 
 [tool.setuptools_scm]
 local_scheme = "no-local-version"
