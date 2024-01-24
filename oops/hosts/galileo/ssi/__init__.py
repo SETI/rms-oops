@@ -188,12 +188,17 @@ class Metadata(object):
         # Filters
         self.filter = meta_dict['FILTER_NAME']
 
-        #TODO: determine whether IMAGE_TIME is the start time or the mid time..
+        # IMAGE_TIME is converted directly from the VICAR label SCET* fields,
+        # which refer to shutter center according to a software instrument 
+        # spec. note:
+        #
+        # 2) The SCET refers to the shutter center of the shutter event.
         if meta_dict['IMAGE_TIME'] == 'UNK':
             self.tstart = self.tstop = sys.float_info.min
         else:
-            self.tstart = julian.tdb_from_tai(
+            center = julian.tdb_from_tai(
                             julian.tai_from_iso(meta_dict['IMAGE_TIME']))
+            self.tstart = center - 0.5*self.exposure
             self.tstop = self.tstart + self.exposure
 
         # Target
