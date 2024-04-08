@@ -27,7 +27,7 @@ echo "================================================================"
 echo
 echo "Test start:" `date`
 echo
-coverage run -m unittest oops/hosts/unittester.py -v
+python -m coverage run -m unittest oops/hosts/unittester.py -v
 if [ $? -ne 0 ]; then
     echo "************************************"
     echo "*** OOPS.HOSTS FAILED UNIT TESTS ***"
@@ -46,7 +46,7 @@ echo "================================================================"
 echo
 echo "Test start:" `date`
 echo
-coverage run -a -m unittest oops/unittester.py -v
+python -m coverage run -a -m unittest oops/unittester.py -v
 if [ $? -ne 0 ]; then
     echo "******************************"
     echo "*** OOPS FAILED UNIT TESTS ***"
@@ -59,9 +59,9 @@ echo
 echo "Test end:" `date`
 echo
 
-coverage report
+python -m coverage report
 if [ $? -ne 0 ]; then exit -1; fi
-coverage xml
+python -m coverage xml
 if [ $? -ne 0 ]; then exit -1; fi
 
 exit 0
