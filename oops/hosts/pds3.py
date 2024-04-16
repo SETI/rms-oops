@@ -98,6 +98,10 @@ def fast_dict(label, units=False, strings='concatenate'):
     almost no syntax checking and may not work on some labels that are otherwise PDS3
     compliant.
 
+    Note that, when a keyword or OBJECT/GROUP name is repeated, a numeric suffix "_2",
+    "_3", etc. is appended to make it unique. This ensures that information in the label
+    is not lost.
+
     Input:
         label       a PDS3 label as a file path (string or pathlib object), string, or
                     list of strings.
@@ -124,27 +128,36 @@ def fast_dict(label, units=False, strings='concatenate'):
 
         cleaned = []
         prefix = ''
-        quote = ''
+        quoted = False
         for line in lines:
             line = line.partition('/*')[0]      # strip trailing comments
 
             if strings == 'indent':
                 text = line.rstrip()
-                line = line.lstrip()
+                line = text.lstrip()
             else:
                 line = line.strip()
                 text = line
 
             # If we are currently inside a quoted string...
-            if quote:
-                quote_count = len([c for c in line if c == quote])
+            if quoted:
+                quote_count = len([c for c in line if c == '"'])
                 if quote_count % 2:     # if odd
                     line = prefix + sep + text
                     prefix = ''
-                    quote = ''
+                    quoted = False
                 else:
                     prefix += sep + text
                     line = ''
+                    continue
+
+            # Check for an unbalanced quote
+            else:
+                quote_count = len([c for c in line if c == '"'])
+                if quote_count % 2:     # if odd
+                    prefix = line
+                    quoted = True
+                    continue
 
             if not line:
                 continue
@@ -152,17 +165,6 @@ def fast_dict(label, units=False, strings='concatenate'):
                 continue
             if line == 'END':
                 break
-
-            # Check for an unbalanced quote
-            for q in ('"', "'"):
-                quote_count = len([c for c in line if c == q])
-                if quote_count % 2:     # if odd
-                    prefix = line
-                    quote = q
-                    break
-
-            if quote:
-                continue
 
             # Check for a continuation line
             # This will fail if a comma is not the last char in an incomplete list
@@ -231,10 +233,24 @@ def fast_dict(label, units=False, strings='concatenate'):
 
         return result
 
+    def unique_key(name, dict_):
+        """This name if it is not in the dict_; otherwise with a numeric suffix appended
+        to make it unique.
+        """
+
+        if name not in dict_:
+            return name
+
+        k = 2
+        while (key := name +  '_' + str(k)) in dict_:
+            k += 1
+
+        return key
+
     def to_dict(lines):
         """The dictionary from a "cleaned" list of records."""
 
-        state = [('', '', {})]         # list of (OBJECT or GROUP, name, dict)
+        state = [('', '', {})]              # list of (OBJECT or GROUP, name, dict)
         for k, line in enumerate(lines):
 
             # Get the name and value
@@ -259,11 +275,15 @@ def fast_dict(label, units=False, strings='concatenate'):
                     raise ValueError(f'unbalanced {obj_type} = {obj_name}')
                         # tolerate END_OBJECT without name
 
-                state[-1][-1][obj_name] = obj_dict
+                dict_ = state[-1][-1]
+                key = unique_key(obj_name, dict_)
+                dict_[key] = obj_dict
 
             # Otherwise, just append one new value to the current dictionary
             else:
-                state[-1][-1][name] = value
+                dict_ = state[-1][-1]
+                key = unique_key(name, dict_)
+                dict_[key] = value
 
         # Make sure all objects and groups were terminated
         (obj_type, obj_name, obj_dict) = state.pop()
@@ -273,6 +293,9 @@ def fast_dict(label, units=False, strings='concatenate'):
         return obj_dict
 
     #### Active code starts here
+
+    if strings not in {'concatenate', 'newlines', 'indent'}:
+        raise ValueError(f'invalid strings option: "{strings}"')
 
     # Convert to a list of strings
     if '\n' in label:                       # split a long string containing newlines

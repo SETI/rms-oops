@@ -4,3 +4,7 @@ coverage:
       default:
         # basic
         target: 0
+    patch:
+      default:
+        # basic
+        target: 0
