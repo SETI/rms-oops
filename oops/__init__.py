@@ -52,7 +52,7 @@ from polymath import Boolean, Matrix, Matrix3, Pair, Quaternion, Qube, Scalar, \
                      Units, Vector, Vector3
 
 try:
-    from _version import __version__
+    from ._version import __version__
 except ImportError as err:
     __version__ = 'Version unspecified'
 

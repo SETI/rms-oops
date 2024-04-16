@@ -396,7 +396,7 @@ class Snapshot(Observation):
         return self.fov.uv_from_los_t(neg_arr_ap, time=time, derivs=derivs)
 
     #===========================================================================
-    def inventory(self, bodies, tfrac=0.5, time=None, expand=0.,
+    def inventory(self, bodies, tfrac=0.5, time=None, expand=0., cache=True,
                         return_type='list', fov=None, quick={}, converge={}):
         """Info about the bodies that appear unobscured inside the FOV.
 
@@ -415,6 +415,7 @@ class Snapshot(Observation):
             expand      an optional angle in radians by which to extend the
                         limits of the field of view. This can be used to
                         accommodate pointing uncertainties.
+            cache       if False, do not cache the body paths.  Default is True.
             return_type 'list' returns the inventory as a list of names.
                         'flags' returns the inventory as an array of boolean
                                 flag values in the same order as bodies.
@@ -484,7 +485,8 @@ class Snapshot(Observation):
         nbodies = len(bodies)
 
         path_ids = [body.path for body in bodies]
-        multipath = MultiPath(path_ids)
+        path_id = '+' if cache else None
+        multipath = MultiPath(path_ids, path_id=path_id)
 
         if time is None:
             tfrac = Scalar.as_scalar(tfrac)

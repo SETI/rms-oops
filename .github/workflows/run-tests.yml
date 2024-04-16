@@ -1,12 +1,12 @@
 name: Test oops
-run-name: Run Tests triggered by ${{ github.ref_type }} ${{ github.ref_name }} or ${{ github.triggering_actor }}
+run-name: "Run Tests: ${{ github.ref_type }} ${{ github.ref_name }} by ${{ github.triggering_actor }}"
 
 on:
   workflow_dispatch:
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
   push:
-    branches: [ master ]
+    branches: [ main ]
   schedule:
     - cron: "00 09 * * *"   # 1am PST, 2am PDT
 
@@ -16,18 +16,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # Because we can run multiple tests at the same time
-        # under Linux, we can do our multi-Python-version test
-        # there, and then just run a single version under
-        # Windows and MacOS to make sure the code still works there.
-        # This is not ideal because we would really like to make sure
-        # everything is numerically stable on all versions (especially with
-        # cspyce).
-        #
-        # Windows: Windows tests are randomly failing, especially with
-        # Python 3.11, so for now we only run with 3.12 and hope it works the
-        # first time.
-        #
         # MacOS: Python 3.8-3.10 does not currently work on MacOS.
         include:
           - os: self-hosted-linux
@@ -40,9 +28,19 @@ jobs:
             python-version: "3.11"
           - os: self-hosted-linux
             python-version: "3.12"
-          # - os: self-hosted-macos
-          #   python-version: "3.11"
           - os: self-hosted-macos
+            python-version: "3.11"
+          - os: self-hosted-macos
+            python-version: "3.12"
+          - os: self-hosted-windows
+            python-version: "3.8"
+          - os: self-hosted-windows
+            python-version: "3.9"
+          - os: self-hosted-windows
+            python-version: "3.10"
+          - os: self-hosted-windows
+            python-version: "3.11"
+          - os: self-hosted-windows
             python-version: "3.12"
       fail-fast: false
     steps:
@@ -52,7 +50,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
