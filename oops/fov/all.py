@@ -2,8 +2,6 @@
 # oops/fov/all.py
 ################################################################################
 
-# Import FOV and all its subclasses into a common name space
-
 from oops.fov               import FOV
 from oops.fov.barrelfov     import BarrelFOV
 from oops.fov.flatfov       import FlatFOV

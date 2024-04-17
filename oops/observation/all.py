@@ -2,8 +2,6 @@
 # oops/observation/all.py
 ################################################################################
 
-# Import the Observation class and all its subclasses into a common name space
-
 from oops.observation              import Observation
 from oops.observation.insitu       import InSitu
 from oops.observation.pixel        import Pixel

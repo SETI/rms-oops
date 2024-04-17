@@ -2,8 +2,6 @@
 # oops/cadence/all.py
 ################################################################################
 
-# Import the Cadence class and all its subclasses into a common name space
-
 from oops.cadence                 import Cadence
 from oops.cadence.dualcadence     import DualCadence
 from oops.cadence.instant         import Instant

@@ -5,10 +5,9 @@
 # Examples of import statements and how they work:
 #
 # >>> import oops
-#   This imports the entire oops object tree (but not instruments), creating
+#   This imports the entire oops object tree (but not hosts), creating
 #   classes such as oops.Scalar, ops.Event, oops.path.SpicePath, plus other
-#   components such as oops.registry and oops.config. This is the recommended
-#   form of import.
+#   components such as oops.config. This is the recommended form of import.
 #
 # >>> import oops as abc
 #   Imports the ENTIRE oops object tree but with the prefix "abc" replacing
@@ -23,7 +22,6 @@ import cspyce.aliases
 cspyce.use_errors()
 cspyce.use_aliases()
 
-import oops.backplane.all   as backplane
 import oops.cadence.all     as cadence
 import oops.calibration.all as calib
 import oops.fov.all         as fov
@@ -33,14 +31,7 @@ import oops.observation.all as observation
 import oops.path.all        as path
 import oops.surface.all     as surface
 
-from oops.body      import Body
-from oops.event     import Event
-from oops.fittable  import Fittable
-from oops.meshgrid  import Meshgrid
-from oops.transform import Transform
-
-# Add Backplane and all abstract base classes to top level namespace
-Backplane   = backplane.Backplane
+# Add all abstract base classes to top level namespace
 Cadence     = cadence.Cadence
 Calibration = calibration.Calibration
 FOV         = fov.FOV
@@ -49,6 +40,15 @@ Frame       = frame.Frame
 Observation = observation.Observation
 Path        = path.Path
 Surface     = surface.Surface
+
+from oops.backplane import Backplane
+from oops.body      import Body
+from oops.event     import Event
+from oops.fittable  import Fittable
+from oops.meshgrid  import Meshgrid
+from oops.transform import Transform
+
+import oops.backplane.all           # define all Backplane methods
 
 import oops.constants     as constants
 import oops.spice_support as spice

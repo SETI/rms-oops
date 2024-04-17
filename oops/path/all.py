@@ -2,8 +2,6 @@
 # oops/path/all.py
 ################################################################################
 
-# Import the Path class and all its core components into a common name space
-
 from oops.path            import (Path, Waypoint, AliasPath, LinkedPath,
                                   RelativePath, ReversedPath, RotatedPath,
                                   QuickPath)
