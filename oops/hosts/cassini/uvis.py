@@ -1,22 +1,24 @@
-################################################################################
+##########################################################################################
 # oops/hosts/cassini/uvis.py
-################################################################################
+##########################################################################################
 
-import oops
 import numpy as np
 import numbers
 import os
+
 import julian
+import oops
 import pdsparser
 
 from oops.hosts.cassini import Cassini
+from oops.hosts         import pds3
 
 DEBUG = False       # True to assert that the data array must have null
                     # values outside the active windows
 
-################################################################################
+##########################################################################################
 # Standard class methods
-################################################################################
+##########################################################################################
 
 def from_file(filespec, data=True, enclose=False, **parameters):
     """A general, static method to return one or more Observation subclass
@@ -25,31 +27,19 @@ def from_file(filespec, data=True, enclose=False, **parameters):
     Input:
         filespec        the full path to the PDS label of a UVIS data file.
         data            True to include the data array.
-        enclose         True to return a single observation, regardless of how
-                        many windows are defined. If multiple windows are used,
-                        then the observation (and the optional data array) are
-                        are defined by the enclosing limits in line and band,
-                        and the binning is assumed to be 1. If False and
-                        multiple windows are used, the function returns a tuple
-                        of observations rather than a single observation.
+        enclose         True to return a single observation, regardless of how many
+                        windows are defined. If multiple windows are used, then the
+                        observation (and the optional data array) are are defined by the
+                        enclosing limits in line and band, and the binning is assumed to
+                        be 1. If False and multiple windows are used, the function returns
+                        a tuple of observations rather than a single observation.
     """
-    UVIS.initialize()   # Define everything the first time through; use defaults
-                        # unless initialize() is called explicitly.
 
-    # Load the PDS label
-    recs = pdsparser.PdsLabel.load_file(filespec)
-
-    # Deal with corrupt syntax
-    for i in range(len(recs)):
-        rec = recs[i]
-        if 'CORE_UNIT' in rec:
-            if '"COUNTS/BIN"' not in rec:
-                recs[i] = rec.replace('COUNTS/BIN', '"COUNTS/BIN"')
-        if rec.startswith('ODC_ID'):
-            recs[i] = rec.replace(',', '')
+    UVIS.initialize()   # Define everything the first time through; use defaults unless
+                        # initialize() is called explicitly.
 
     # Get the label dictionary and data array dimensions
-    label = pdsparser.PdsLabel.from_string(recs).as_dict()
+    label = pds3.fast_dict(filespec)
 
     # Load any needed SPICE kernels
     tstart = julian.tdb_from_tai(julian.tai_from_iso(label['START_TIME']))
@@ -65,7 +55,7 @@ def from_file(filespec, data=True, enclose=False, **parameters):
     else:
         return get_spectrum(filespec, tstart, label, data)
 
-#===============================================================================
+#=========================================================================================
 def get_qube(filespec, tstart, label, data, enclose):
     """The observation object given that it is a QUBE."""
 
@@ -83,7 +73,7 @@ def get_qube(filespec, tstart, label, data, enclose):
     # Get array shape
     info = label['QUBE']
     (bands,lines,samples) = info['CORE_ITEMS']
-    assert lines in (1,64)
+    assert lines in (1,64), f'invalid lines = {lines}'
 
     if lines == 1:
         shape = (samples, bands)
@@ -173,7 +163,7 @@ def get_qube(filespec, tstart, label, data, enclose):
 
         return tuple(obslist)
 
-#===============================================================================
+#=========================================================================================
 def get_one_qube(label, detector, resolution,
                  fov, cadence, frame_id,
                  shape, array, samples,
@@ -205,7 +195,7 @@ def get_one_qube(label, detector, resolution,
     if rebin and line_bin > 1:
         assert dline % line_bin == 0
         fov = oops.fov.SubsampledFOV(fov, (1,line_bin))
-        dline_binned = dline / line_bin
+        dline_binned = dline // line_bin
         shape = (dline_binned,) + shape[1:]
 
         if array is not None:
@@ -219,7 +209,7 @@ def get_one_qube(label, detector, resolution,
         if DEBUG:
             assert dband % band_bin == 0    # seen to fail occasionally
 
-        dband_binned = dband / band_bin
+        dband_binned = dband // band_bin
         shape = shape[:-1] + (dband_binned,)
 
         if array is not None:
@@ -232,8 +222,7 @@ def get_one_qube(label, detector, resolution,
     if lines == 1:
         obs = oops.obs.Pixel(('t','b'), cadence, fov, 'CASSINI', frame_id)
     else:
-        obs = oops.obs.TimedImage(('v','ut','b'), 1, cadence, fov,
-                                  'CASSINI', frame_id)
+        obs = oops.obs.TimedImage(('v','ut','b'), cadence, fov, 'CASSINI', frame_id)
 
     obs.insert_subfield('dict', label)
     obs.insert_subfield('instrument', 'UVIS')
@@ -257,7 +246,7 @@ def get_one_qube(label, detector, resolution,
 
     return obs
 
-#===============================================================================
+#=========================================================================================
 def get_time_series(filespec, tstart, label, data):
     """The observation object given that it is a TIME_SERIES."""
 
@@ -316,7 +305,7 @@ def get_time_series(filespec, tstart, label, data):
 
     return obs
 
-#===============================================================================
+#=========================================================================================
 def get_spectrum(filespec, tstart, label, data):
     """The observation object given that it is a SPECTRUM."""
 
@@ -381,7 +370,7 @@ def get_spectrum(filespec, tstart, label, data):
 
     return obs
 
-#===============================================================================
+#=========================================================================================
 def load_data(filespec, body, dtype):
 
     head = os.path.split(filespec)[0]
@@ -394,14 +383,13 @@ def load_data(filespec, body, dtype):
 
     return np.fromfile(data_filespec, sep='', dtype=dtype)
 
-#===============================================================================
+#=========================================================================================
 def initialize(ck='reconstructed', planets=None, asof=None,
                spk='reconstructed', gapfill=True,
                mst_pck=True, irregulars=True):
     """Initialize key information about the VIMS instrument.
 
-    Must be called first. After the first call, later calls to this function
-    are ignored.
+    Must be called first. After the first call, later calls to this function are ignored.
 
     Input:
         ck,spk      'predicted', 'reconstructed', or 'none', depending on
@@ -417,10 +405,10 @@ def initialize(ck='reconstructed', planets=None, asof=None,
         irregulars  True to include the irregular satellites;
                     False otherwise.
     """
-    UVIS.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
-                    gapfill=gapfill, mst_pck=mst_pck, irregulars=irregulars)
+    UVIS.initialize(ck=ck, planets=planets, asof=asof, spk=spk, gapfill=gapfill,
+                    mst_pck=mst_pck, irregulars=irregulars)
 
-#===============================================================================
+#=========================================================================================
 class UVIS(object):
     """An instance-free class to hold Cassini UVIS instrument parameters."""
 
@@ -448,38 +436,34 @@ class UVIS(object):
                  'HSP'    : 'CASSINI_UVIS_HSP',
                  'HDAC'   : 'CASSINI_UVIS_HDAC'}
 
-    #===========================================================================
+    #=====================================================================================
     @staticmethod
-    def initialize(ck='reconstructed', planets=None, asof=None,
-                   spk='reconstructed', gapfill=True,
-                   mst_pck=True, irregulars=True):
+    def initialize(ck='reconstructed', planets=None, asof=None, spk='reconstructed',
+                   gapfill=True, mst_pck=True, irregulars=True):
         """Fill in key information about the UVIS channels.
 
-        Must be called first. After the first call, later calls to this function
-        are ignored.
+        Must be called first. After the first call, later calls to this function are
+        ignored.
 
         Input:
-            ck,spk      'predicted', 'reconstructed', or 'none', depending on
-                        which kernels are to be used. Defaults are
-                        'reconstructed'. Use 'none' if the kernels are to be
-                        managed manually.
-            planets     A list of planets to pass to define_solar_system. None
-                        or 0 means all.
-            asof        Only use SPICE kernels that existed before this date;
-                        None to ignore.
+            ck,spk      'predicted', 'reconstructed', or 'none', depending on which
+                        kernels are to be used. Defaults are 'reconstructed'. Use 'none'
+                        if the kernels are to be managed manually.
+            planets     A list of planets to pass to define_solar_system. None or 0 means
+                        all.
+            asof        Only use SPICE kernels that existed before this date; None to
+                        ignore.
             gapfill     True to include gapfill CKs. False otherwise.
-            mst_pck     True to include MST PCKs, which update the rotation
-                        models for some of the small moons.
-            irregulars  True to include the irregular satellites;
-                        False otherwise.
+            mst_pck     True to include MST PCKs, which update the rotation models for
+                        some of the small moons.
+            irregulars  True to include the irregular satellites; False otherwise.
         """
 
         # Quick exit after first call
         if UVIS.initialized:
             return
 
-        Cassini.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
-                           gapfill=gapfill,
+        Cassini.initialize(ck=ck, planets=planets, asof=asof, spk=spk, gapfill=gapfill,
                            mst_pck=mst_pck, irregulars=irregulars)
         Cassini.load_instruments(asof=asof)
 
@@ -526,7 +510,7 @@ class UVIS(object):
 
         UVIS.initialized = True
 
-    #===========================================================================
+    #=====================================================================================
     @staticmethod
     def reset():
         """Resets the internal Cassini UVIS parameters. Can be useful for
@@ -539,22 +523,14 @@ class UVIS(object):
 
         Cassini.reset()
 
-################################################################################
+##########################################################################################
 # UNIT TESTS
-################################################################################
+##########################################################################################
 import unittest
 import os.path
 import oops.backplane.gold_master as gm
 
-from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
-
-
-#===============================================================================
-class Test_Cassini_UVIS(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-        pass
+from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 
 #===============================================================================
@@ -582,6 +558,7 @@ class Test_Cassini_UVIS_GoldMaster_HSP2014_197_21_29(unittest.TestCase):
                 --no-inventory \
                 --adopt
         """
+
         gm.execute_as_unittest(self,
                 obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                        'cassini/UVIS/HSP2014_197_21_29.DAT'),
