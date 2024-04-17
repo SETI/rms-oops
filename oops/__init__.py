@@ -31,6 +31,8 @@ import oops.observation.all as observation
 import oops.path.all        as path
 import oops.surface.all     as surface
 
+obs = observation                   # handy abbreviation
+
 # Add all abstract base classes to top level namespace
 Cadence     = cadence.Cadence
 Calibration = calibration.Calibration
