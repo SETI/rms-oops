@@ -4,8 +4,9 @@
 
 # Import the Frame class and its core components into a common name space
 
-from oops.frame import (Frame, Wayframe, AliasFrame, LinkedFrame,
-                        RelativeFrame, ReversedFrame, QuickFrame)
+from oops.frame                  import (Frame, Wayframe, AliasFrame,
+                                         LinkedFrame, RelativeFrame,
+                                         ReversedFrame, QuickFrame)
 from oops.frame.cmatrix          import Cmatrix
 from oops.frame.inclinedframe    import InclinedFrame
 from oops.frame.laplaceframe     import LaplaceFrame

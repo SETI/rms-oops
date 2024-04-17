@@ -23,13 +23,12 @@ import cspyce.aliases
 cspyce.use_errors()
 cspyce.use_aliases()
 
-import oops.backplane.all   as Backplane
+import oops.backplane.all   as backplane
 import oops.cadence.all     as cadence
 import oops.calibration.all as calib
 import oops.fov.all         as fov
 import oops.gravity.all     as gravity
 import oops.frame.all       as frame
-import oops.observation.all as obs
 import oops.observation.all as observation
 import oops.path.all        as path
 import oops.surface.all     as surface
@@ -39,6 +38,17 @@ from oops.event     import Event
 from oops.fittable  import Fittable
 from oops.meshgrid  import Meshgrid
 from oops.transform import Transform
+
+# Add Backplane and all abstract base classes to top level namespace
+Backplane   = backplane.Backplane
+Cadence     = cadence.Cadence
+Calibration = calibration.Calibration
+FOV         = fov.FOV
+Gravity     = gravity.Gravity
+Frame       = frame.Frame
+Observation = observation.Observation
+Path        = path.Path
+Surface     = surface.Surface
 
 import oops.constants     as constants
 import oops.spice_support as spice

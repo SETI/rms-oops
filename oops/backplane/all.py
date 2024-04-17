@@ -19,6 +19,4 @@ import oops.backplane.sky
 import oops.backplane.spheroid
 import oops.backplane.where
 
-oops.Backplane = oops.backplane.Backplane       # easier way to reference
-
 ################################################################################

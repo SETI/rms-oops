@@ -4,15 +4,16 @@
 
 import numpy as np
 
-from polymath           import Pair, Matrix
-from oops.fov           import FOV
-from oops.fov.flatfov   import FlatFOV
-from oops.fov.polyfov   import PolyFOV
-from oops.frame.cmatrix import Cmatrix
-from oops.constants     import RPD, DPR
+from polymath               import Pair, Matrix
+from oops.fov               import FOV
+from oops.fov.flatfov       import FlatFOV
+from oops.fov.polynomialfov import PolynomialFOV
+from oops.frame.cmatrix     import Cmatrix
+from oops.constants         import RPD, DPR
 
 class WCSFOV(FOV):
-    """PolyFOV subclass represented by WCS SIP parameters in a FITS header.
+    """PolynomialFOV subclass represented by WCS SIP parameters in a FITS
+    header.
 
     The FITS WCS parameters define both the camera distortion and also image's
     instantaneous (aberration-corrected) pointing. We need to decouple these two
@@ -91,8 +92,8 @@ class WCSFOV(FOV):
             else:
                 abp = None
 
-            self.polyfov = PolyFOV(self.uv_shape, ab, abp, uv_los=self.uv_los,
-                                   fast=self.fast)
+            self.polyfov = PolynomialFOV(self.uv_shape, ab, abp,
+                                         uv_los=self.uv_los, fast=self.fast)
         else:       # without a distortion model, we use a FlatFOV instead
                     # (in spite of the attribute name)
             self.polyfov = FlatFOV(1., self.uv_shape, uv_los=self.uv_los)
@@ -432,7 +433,7 @@ class Test_WCSFOV(unittest.TestCase):
 
     np.random.seed(9400)
 
-    PolyFOV.DEBUG = False
+    PolynomialFOV.DEBUG = False
     SpeedTest = False
 
     for h,header in enumerate((header1, header2)):
