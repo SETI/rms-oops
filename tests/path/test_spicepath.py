@@ -13,7 +13,7 @@ import oops.constants as constants
 from polymath   import Vector3
 from oops.frame import Frame, SpiceFrame
 from oops.path  import Path, AliasPath, SpicePath
-from oops.gold_master.unittest_support import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 
 class Test_SpicePath(unittest.TestCase):
