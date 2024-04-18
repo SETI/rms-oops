@@ -145,19 +145,3 @@ class OffsetFOV(FOV, Fittable):
         return OffsetFOV(self.fov, self.uv_offset.copy(), xy_offset=None)
 
 ################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_OffsetFOV(unittest.TestCase):
-
-    def runTest(self):
-
-        # TBD
-        pass
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
-################################################################################

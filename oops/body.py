@@ -2,22 +2,22 @@
 # oops/body.py: Body class
 ################################################################################
 
-import numpy as np
 import numbers
+import numpy as np
 
 import cspyce
 import spicedb
 
 from polymath                    import Vector3
-from oops.frame                  import Frame, AliasFrame
+from oops.frame.frame_           import Frame, AliasFrame
 from oops.frame.poleframe        import PoleFrame
 from oops.frame.ringframe        import RingFrame
 from oops.frame.spiceframe       import SpiceFrame
 from oops.frame.synchronousframe import SynchronousFrame
 from oops.frame.twovectorframe   import TwoVectorFrame
-from oops.gravity                import Gravity
+from oops.gravity.gravity_       import Gravity
 from oops.gravity.oblategravity  import OblateGravity
-from oops.path                   import Path
+from oops.path.path_             import Path
 from oops.path.multipath         import MultiPath
 from oops.path.spicepath         import SpicePath
 from oops.surface.nullsurface    import NullSurface
@@ -1656,71 +1656,4 @@ class Body(object):
         body.is_standard = bool(is_standard)
         body.spk = spk
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_Body(unittest.TestCase):
-
-    def runTest(self):
-
-        # Imports are here to avoid conflicts
-        Path.reset_registry()
-        Frame.reset_registry()
-        Body.reset_registry()
-
-        Body.define_solar_system('2000-01-01', '2020-01-01')
-
-        self.assertEqual(Body.lookup('DAPHNIS').barycenter.name,
-                         'SATURN')
-        self.assertEqual(Body.lookup('PHOEBE').barycenter.name,
-                         'SATURN BARYCENTER')
-
-        mars = Body.lookup('MARS')
-        moons = mars.select_children(include_all=['SATELLITE'])
-        self.assertEqual(len(moons), 2)     # Phobos, Deimos
-
-        saturn = Body.lookup('SATURN')
-        moons = saturn.select_children(include_all=['CLASSICAL', 'IRREGULAR'])
-        self.assertEqual(len(moons), 1)     # Phoebe
-
-        moons = saturn.select_children(exclude=['IRREGULAR','RING'], radius=160)
-        self.assertEqual(len(moons), 8)     # Mimas-Iapetus
-
-        rings = saturn.select_children(include_any=('RING'))
-        self.assertEqual(len(rings), 8)     # A, B, C, AB, Main, all, plane,
-                                            # system
-
-        moons = saturn.select_children(include_all='SATELLITE',
-                                       exclude=('IRREGULAR'), radius=1000)
-        self.assertEqual(len(moons), 1)     # Titan only
-
-        sun = Body.lookup('SUN')
-        planets = sun.select_children(include_any=['PLANET'])
-        self.assertEqual(len(planets), 9)
-
-        sun = Body.lookup('SUN')
-        planets = sun.select_children(include_any=['PLANET', 'EARTH'])
-        self.assertEqual(len(planets), 9)
-
-        sun = Body.lookup('SUN')
-        planets = sun.select_children(include_any=['PLANET', 'EARTH'],
-                                      recursive=True)
-        self.assertEqual(len(planets), 10)  # 9 planets plus Earth's moon
-
-        sun = Body.lookup('SUN')
-        planets = sun.select_children(include_any=['PLANET', 'JUPITER'],
-                                      exclude=['IRREGULAR', 'BARYCENTER', 'IO'],
-                                      recursive=True)
-        self.assertEqual(len(planets), 16)  # 9 planets + 7 Jovian moons
-
-        Path.reset_registry()
-        Frame.reset_registry()
-        Body.reset_registry()
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

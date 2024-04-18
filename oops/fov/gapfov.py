@@ -2,8 +2,8 @@
 # oops/fov/gapfov.py: GapFOV subclass of FOV
 ################################################################################
 
-import numpy as np
 import numbers
+import numpy as np
 
 from polymath import Pair
 from oops.fov import FOV
@@ -117,20 +117,4 @@ class GapFOV(FOV):
 
         return uv_int + uv_frac
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_GapFOV(unittest.TestCase):
-
-    def runTest(self):
-
-        #### TBD
-        print('GapFOV unit tests are needed!')
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

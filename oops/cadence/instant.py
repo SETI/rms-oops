@@ -3,7 +3,8 @@
 ################################################################################
 
 import numpy as np
-from polymath import Scalar
+
+from polymath     import Scalar
 from oops.cadence import Cadence
 
 class Instant(Cadence):
@@ -149,21 +150,4 @@ class Instant(Cadence):
         instant.is_continuoue = True
         return instant
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_Instant(unittest.TestCase):
-
-    def runTest(self):
-
-        # No tests here - TBD - WORK IN PROGRESS
-
-        pass
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################
