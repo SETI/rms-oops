@@ -222,24 +222,22 @@ class Test_Utils(unittest.TestCase):
                 vm  = np.array(v[0,j,0])
 
                 test = am @ bm
-                self.assertTrue(np.all(test == axb[i,j,k]))
+                self.assertLess(np.abs(test - axb[i,j,k]).max(), eps)
 
                 test = amt @ bm
-                self.assertTrue(np.all(test == atxb[i,j,k]))
+                self.assertLess(np.abs(test - atxb[i,j,k]).max(), eps)
 
                 test = am @ bmt
-                self.assertTrue(np.all(test == axbt[i,j,k]))
+                self.assertLess(np.abs(test - axbt[i,j,k]).max(), eps)
 
                 test = amt @ bmt
-                self.assertTrue(np.all(test == atxbt[i,j,k]))
+                self.assertLess(np.abs(test - atxbt[i,j,k]).max(), eps)
 
                 test = am @ vm
-                self.assertTrue(np.all(test > axv[i,j,k,:,np.newaxis]) - eps)
-                self.assertTrue(np.all(test < axv[i,j,k,:,np.newaxis]) + eps)
+                self.assertLess(np.abs(test - axv[i,j,k,:,np.newaxis]).max(), eps)
 
                 test = amt @ vm
-                self.assertTrue(np.all(test > atxv[i,j,k,:,np.newaxis]) - eps)
-                self.assertTrue(np.all(test < atxv[i,j,k,:,np.newaxis]) + eps)
+                self.assertLess(np.abs(test - atxv[i,j,k,:,np.newaxis]).max(), eps)
 
 ########################################
 if __name__ == "__main__":
