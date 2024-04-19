@@ -84,6 +84,7 @@ class TimedImage(Observation):
         u_suffix = self.axes[self.u_axis][1:]
         v_suffix = self.axes[self.v_axis][1:]
 
+#        from IPython import embed; print('+++++++++++++'); embed()
         if u_suffix == 't' and v_suffix == '':
             self.t_axis = self.u_axis
             self._t_uv_axis = 0
@@ -99,6 +100,7 @@ class TimedImage(Observation):
         else:
             raise ValueError('invalid axis labels for TimedImage: "%s", "%s"'
                              % (self.axes[self.u_axis], self.axes[self.v_axis]))
+#        self.t_axis = 1 ###########
 
         self.swap_uv = (self.u_axis > self.v_axis)
         self._time_is_1d = not isinstance(self.t_axis, tuple)

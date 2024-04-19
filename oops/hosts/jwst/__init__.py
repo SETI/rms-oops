@@ -8,7 +8,7 @@ import os
 
 import julian
 import oops
-import oops.hosts.solar as solar
+import solar as solar
 
 from polymath import Vector3
 
