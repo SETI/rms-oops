@@ -1,16 +1,16 @@
-################################################################################
+##########################################################################################
 # oops/hosts/cassini/vims.py
 #
 # Known shortcomings:
 #
-# For SAMPLING_MODE_ID == "UNDER" (aka Nyquist sampling), the FOV boundary will
-# be slightly off because an FOV object cannot handle overlapping, double-sized
-# pixels. The proper boundary is 1/64th larger along the line direction to
-# account for the larger pixel.
-################################################################################
+# For SAMPLING_MODE_ID == "UNDER" (aka Nyquist sampling), the FOV boundary will be
+# be slightly off because an FOV object cannot handle overlapping, double-sized pixels.
+# The proper boundary is 1/64th larger along the line direction to account for the larger
+# pixel.
+##########################################################################################
 
 import numpy as np
-import numpy.lib.stride_tricks
+from numpy.lib import stride_tricks
 
 import julian
 import pdsparser
@@ -18,6 +18,7 @@ import cspyce
 import oops
 
 from oops.hosts.cassini import Cassini
+from oops.hosts.pds3    import pds3
 
 # Timing correction as of 1/9/15 -- MRS
 # EXTRA_INTERSAMPLE_DELAY =  0.000363     # observed empirically in V1555349441
@@ -72,115 +73,225 @@ IR_OVER_VIS = IR_NORMAL_PIXEL / VIS_NORMAL_PIXEL
 IR_FULL_FOV  = oops.fov.FlatFOV(IR_NORMAL_SCALE,  oops.Pair((64,64)))
 VIS_FULL_FOV = oops.fov.FlatFOV(VIS_NORMAL_SCALE, oops.Pair((64,64)))
 
-################################################################################
-# Standard class methods
-################################################################################
+##########################################################################################
+# FMT files have fixed values
+##########################################################################################
 
-def from_file(filespec, fast=False, **parameters):
-    """A general, static method to return a pair of Observation objects based on
-    a given Cassini VIMS data file or label file.
+CORE_DESCRIPTION_FMT = pds3.fast_dict("""\
+  CORE_ITEM_BYTES                = 2
+  CORE_ITEM_TYPE                 = SUN_INTEGER
+  CORE_BASE                      = 0.0
+  CORE_MULTIPLIER                = 1.0
+  CORE_VALID_MINIMUM             = -4095
+  CORE_NULL                      = -8192
+  CORE_LOW_REPR_SATURATION       = -32767
+  CORE_LOW_INSTR_SATURATION      = -32766
+  CORE_HIGH_REPR_SATURATION      = -32764
+  CORE_HIGH_INSTR_SATURATION     = -32765
+  CORE_MINIMUM_DN                = -122
+  CORE_NAME                      = "RAW DATA NUMBER"
+  CORE_UNIT                      = DIMENSIONLESS
+""")
+
+SUFFIX_DESCRIPTION_FMT = pds3.fast_dict("""\
+  GROUP                          = SAMPLE_SUFFIX
+    SUFFIX_NAME                  = BACKGROUND
+    SUFFIX_UNIT                  = DIMENSIONLESS
+    SUFFIX_ITEM_BYTES            = 4
+    SUFFIX_ITEM_TYPE             = SUN_INTEGER
+    SUFFIX_BASE                  = 0.0
+    SUFFIX_MULTIPLIER            = 1.0
+    SUFFIX_VALID_MINIMUM         = 0
+    SUFFIX_NULL                  = -8192
+    SUFFIX_LOW_REPR_SAT          = -32767
+    SUFFIX_LOW_INSTR_SAT         = -32766
+    SUFFIX_HIGH_REPR_SAT         = -32764
+    SUFFIX_HIGH_INSTR_SAT        = -32765
+  END_GROUP                      = SAMPLE_SUFFIX
+
+  GROUP                          = BAND_SUFFIX
+    SUFFIX_NAME                  = (X_SCAN_DRIVE_CURRENT,
+                                    Z_SCAN_DRIVE_CURRENT,
+                                    X_SCAN_MIRROR_POSITION,
+                                    Z_SCAN_MIRROR_POSITION)
+    SUFFIX_UNIT                  = (DIMENSIONLESS,DIMENSIONLESS,
+                                    DIMENSIONLESS,DIMENSIONLESS)
+    SUFFIX_ITEM_TYPE             = (SUN_INTEGER,SUN_INTEGER,
+                                    SUN_INTEGER,SUN_INTEGER)
+    SUFFIX_ITEM_BYTES            = (4,4,4,4)
+    SUFFIX_BASE                  = (0.0,0.0,0.0,0.0)
+    SUFFIX_MULTIPLIER            = (1.0,1.0,1.0,1.0)
+    SUFFIX_VALID_MINIMUM         = (0,0,0,0)
+    SUFFIX_NULL                  = (-8192,-8192,-8192,-8192)
+    SUFFIX_LOW_REPR_SAT          = (-32767,-32767,-32767,-32767)
+    SUFFIX_LOW_INSTR_SAT         = (-32766,-32766,-32766,-32766)
+    SUFFIX_HIGH_INSTR_SAT        = (-32765,-32765,-32765,-32765)
+    SUFFIX_HIGH_REPR_SAT         = (-32764,-32764,-32764,-32764)
+  END_GROUP                      = BAND_SUFFIX
+""")
+
+BAND_BIN_CENTER_FMT = pds3.fast_dict("""\
+  GROUP                          = BAND_BIN
+    BAND_BIN_CENTER = (0.35,0.36,0.37,0.37,0.38,0.39,0.40,0.40,0.41,0.42,
+      0.42,0.43,0.44,0.45,0.45,0.46,0.47,0.48,0.49,0.49,0.50,0.51,0.51,0.52,
+      0.53,0.53,0.54,0.55,0.56,0.56,0.57,0.58,0.59,0.59,0.60,0.61,0.62,0.62,
+      0.63,0.64,0.64,0.65,0.66,0.67,0.67,0.68,0.69,0.70,0.70,0.71,0.72,0.72,
+      0.73,0.74,0.75,0.75,0.76,0.77,0.78,0.78,0.79,0.80,0.81,0.81,0.82,0.83,
+      0.83,0.84,0.85,0.86,0.86,0.87,0.88,0.89,0.89,0.90,0.91,0.92,0.92,0.93,
+      0.94,0.94,0.95,0.96,0.97,0.97,0.98,0.99,1.00,1.00,1.01,1.02,1.02,1.03,
+      1.04,1.05,0.863,0.879,0.896,0.912,0.928,0.945,0.961,0.977,0.994,1.010,
+      1.026,1.043,1.060,1.077,1.093,1.109,1.125,1.142,1.159,1.175,1.191,1.207,
+      1.224,1.240,1.257,1.273,1.290,1.306,1.322,1.338,1.355,1.372,1.388,1.404,
+      1.421,1.437,1.453,1.470,1.487,1.503,1.519,1.535,1.552,1.569,1.585,1.597,
+      1.620,1.637,1.651,1.667,1.684,1.700,1.717,1.733,1.749,1.766,1.783,1.799,
+      1.815,1.831,1.848,1.864,1.882,1.898,1.914,1.930,1.947,1.964,1.980,1.997,
+      2.013,2.029,2.046,2.063,2.079,2.095,2.112,2.128,2.145,2.162,2.178,2.194,
+      2.211,2.228,2.245,2.261,2.277,2.294,2.311,2.328,2.345,2.363,2.380,2.397,
+      2.413,2.430,2.446,2.462,2.479,2.495,2.512,2.528,2.544,2.559,2.577,2.593,
+      2.610,2.625,2.642,2.656,2.676,2.691,2.707,2.728,2.743,2.758,2.776,2.794,
+      2.811,2.827,2.845,2.861,2.877,2.894,2.910,2.926,2.942,2.958,2.972,2.996,
+      3.009,3.025,3.043,3.059,3.075,3.092,3.107,3.125,3.142,3.158,3.175,3.192,
+      3.209,3.227,3.243,3.261,3.278,3.294,3.311,3.328,3.345,3.361,3.377,3.394,
+      3.410,3.427,3.444,3.460,3.476,3.493,3.508,3.525,3.542,3.558,3.575,3.591,
+      3.609,3.626,3.644,3.660,3.678,3.695,3.712,3.729,3.746,3.763,3.779,3.796,
+      3.812,3.830,3.846,3.857,3.877,3.894,3.910,3.926,3.943,3.959,3.975,3.992,
+      4.008,4.024,4.042,4.058,4.076,4.092,4.110,4.127,4.144,4.161,4.178,4.193,
+      4.206,4.219,4.237,4.255,4.273,4.292,4.310,4.328,4.346,4.361,4.378,4.393,
+      4.410,4.427,4.443,4.461,4.477,4.495,4.511,4.529,4.547,4.563,4.581,4.598,
+      4.615,4.631,4.649,4.665,4.682,4.698,4.715,4.732,4.749,4.765,4.782,4.798,
+      4.815,4.831,4.848,4.864,4.881,4.898,4.915,4.932,4.949,4.967,4.984,5.001,
+      5.017,5.036,5.052,5.069,5.086,5.102)
+    BAND_BIN_UNIT                = MICROMETER
+    BAND_BIN_ORIGINAL_BAND = (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,
+      19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,
+      43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,
+      67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,
+      91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,
+      111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,
+      129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,
+      147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,
+      165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,
+      183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,
+      201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,
+      219,220,221,222,223,224,225,226,227,228,229,230,231,232,233,234,235,236,
+      237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,
+      255,256,257,258,259,260,261,262,263,264,265,266,267,268,269,270,271,272,
+      273,274,275,276,277,278,279,280,281,282,283,284,285,286,287,288,289,290,
+      291,292,293,294,295,296,297,298,299,300,301,302,303,304,305,306,307,308,
+      309,310,311,312,313,314,315,316,317,318,319,320,321,322,323,324,325,326,
+      327,328,329,330,331,332,333,334,335,336,337,338,339,340,341,342,343,344,
+      345,346,347,348,349,350,351)
+  END_GROUP                      = BAND_BIN
+""")
+
+##########################################################################################
+# Standard class methods
+##########################################################################################
+
+def from_file(filespec, data=True):
+    """A general, static method to return a pair of Observation objects based on a given
+    Cassini VIMS data file or label file.
 
     Input:
         filespec        the full path to a VIMS cube file or its PDS label.
-        fast            True to perform a fast load of a label file. A fast load
-                        bypasses the PDS label parser and pulls the minimum
-                        required information out of the label using a much
-                        faster procedure. It works only when the filespec is a
-                        PDS label.
+        data            if True, data arrays are included in the returned observation
+                        objects. Use a tuple of two booleans to specify whether to include
+                        the VIS and IR data independently.
 
-    Return:             (vis,ir)
-        vis             the VIS observation, or None if the VIS channel was
-                        inactive.
-        ir              the IR observation, or None if the IR channel was
-                        inactive.
+    Return:             (vis, ir)
+        vis             the VIS observation, or None if the VIS channel was inactive.
+        ir              the IR observation, or None if the IR channel was inactive.
     """
 
     VIMS.initialize()   # Define everything the first time through; use defaults
                         # unless initialize() is called explicitly.
 
-    # Load a label via the fast procedure if specified
-    if fast:
-        assert filespec.lower().endswith('.lbl')
-        f = open(filespec)
-        lines = f.readlines()
-        f.close()
+    if not isinstance(data, (tuple, list)):
+        data = (data, data)
 
-        label = fast_dict(lines)
+    label = pds3.fast_dict(filespec)
 
-        # Allow label['SPECTRAL_QUBE'] to work properly below
-        label['SPECTRAL_QUBE'] = label
+    # Insert "data_file" and "header_recs"
+    # Convert ISIS .qub info to a standard PDS3 label dictionary
+    if 'QUBE' in label:
 
-    # Otherwise, use the standard parser
+        # PDS3 labels use "SPECTRAL_QUBE" in place of "QUBE"
+        label['SPECTRAL_QUBE'] = label['QUBE']
+
+        # Copy the non-structural issue to the top-level dictionary
+        for key, value in label['QUBE'].items():
+            if (key in {'AXES', 'AXIS_NAME'}
+                or key[:5] == 'CORE_'
+                or key[:7] in {'SUFFIX_', 'SAMPLE_', 'BAND_SU'}):
+                    continue
+            label[key] = value
+
+        # Rename "PACKING" to "PACKING_FLAG"
+        label['PACKING_FLAG'] = label['PACKING']
+
+        # Add these items
+        label['data_file'] = filespec
+        label['header_recs'] = label['^QUBE'] - 1
+
+    # Otherwise, convert PDS3 label info to a standard ISIS dictionary
     else:
-        # Load the VIMS file or the PDS label
-        lines = pdsparser.PdsLabel.load_file(filespec)
 
-        # Fix known syntax errors
-        for i in range(len(lines)):
-            line = lines[i]
+        # Insert the needed info from the .FMT files
+        label['SPECTRAL_QUBE'].update(CORE_DESCRIPTION_FMT)
+        label['SPECTRAL_QUBE'].update(SUFFIX_DESCRIPTION_FMT)
+        label.update(BAND_BIN_CENTER_FMT)
 
-            # In GAIN_MODE_ID and BACKGROUND_SAMPLING_MODE_ID, sometimes N/A is
-            # not properly quoted
-            if line[:4] in ('GAIN', 'BACK'):
-                lines[i] = line.replace('(N/A',  '("N/A"')
-                lines[i] = line.replace('N/A)',  '"N/A")')
+        # ISIS labels use "QUBE" in place of "SPECTRAL_QUBE"
+        label['QUBE'] = label['SPECTRAL_QUBE']
 
-            # Sometimes a comment begins on one line and and ends on the next
-            if line.strip().endswith('*/') and '/*' not in line:
-                lines[i] = '\n'
+        # Add these items
+        parent = os.path.split(filespec)[0]
+        label['data_file'] = os.path.join(parent, label['^QUBE'][0])
+        label['header_recs'] = label['^QUBE'][1] - 1
 
-        label = pdsparser.PdsLabel.from_string(lines).as_dict()
-
-    is_isis_file = 'QUBE' in label.keys()
-    if is_isis_file:                # If this is an ISIS file...
-        info = label['QUBE']        # ... the info is in the QUBE object
-    else:                           # Otherwise, this is a .LBL file
-        info = label                # ... and the info is at the top level
-        info['CORE_ITEMS'] = label['SPECTRAL_QUBE']['CORE_ITEMS']
-        info['BAND_SUFFIX_NAME'] = label['SPECTRAL_QUBE']['BAND_SUFFIX_NAME']
-        info['PACKING'] = info['PACKING_FLAG']
+    qube_dict = label['SPECTRAL_QUBE']
 
     # Load any needed SPICE kernels
-    tstart = julian.tdb_from_tai(julian.tai_from_iso(info['START_TIME']))
+    tstart = julian.tdb_from_tai(julian.tai_from_iso(label['START_TIME']))
     Cassini.load_cks( tstart, tstart + 3600.)
     Cassini.load_spks(tstart, tstart + 3600.)
 
     # Check power state of each channel: [0] is IR; [1] is VIS
-    ir_is_off  = info['POWER_STATE_FLAG'][0] == 'OFF'
-    vis_is_off = info['POWER_STATE_FLAG'][1] == 'OFF'
+    ir_is_off  = label['POWER_STATE_FLAG'][0] == 'OFF'
+    vis_is_off = label['POWER_STATE_FLAG'][1] == 'OFF'
 
     ########################################
-    # Load the data array
+    # Load the data arrays
     ########################################
 
-    (samples, bands, lines) = info['CORE_ITEMS']
+    (samples, bands, lines) = qube_dict['CORE_ITEMS']
     assert bands in (352, 256, 96)
 
-    if is_isis_file:
-        (data, times) = _load_data_and_times(filespec, label)
-        assert data.shape == (lines, samples, bands)
+    vis_data = None
+    ir_data = None
+    times = None
+
+    if data[0] or data[1]:
+        qub_file = filespec.replace('.lbl', '.qub')
+        (array, times) = _load_data_and_times(qub_file, label)
+        assert array.shape == (lines, samples, bands), 'incorrect array shape'
 
         if bands == 352:
-            vis_data = data[:,:,:96]    # index order is [line, sample, band]
-            ir_data  = data[:,:,96:]
+            vis_data = array[:,:,:96]   # index order is [line, sample, band]
+            ir_data  = array[:,:,96:]
         elif bands == 256:              # only happens in a few early cubes
             vis_data = None
-            ir_data = data
+            ir_data = array
         else:
-            vis_data = data
+            vis_data = array
             ir_data = None
-
-    else:
-        vis_data = None
-        ir_data = None
-        times = None
 
     ########################################
     # Define the FOVs
     ########################################
 
-    swath_width = info['SWATH_WIDTH']
-    swath_length = info['SWATH_LENGTH']
+    swath_width = label['SWATH_WIDTH']
+    swath_length = label['SWATH_LENGTH']
 
     frame_size = swath_width * swath_length
     frames = (samples * lines) // frame_size
@@ -195,28 +306,28 @@ def from_file(filespec, fast=False, **parameters):
 
     uv_shape = (swath_width, swath_length)
 
-    x_offset = info['X_OFFSET']
-    z_offset = info['Z_OFFSET']
+    x_offset = label['X_OFFSET']
+    z_offset = label['Z_OFFSET']
     uv_los = (33. - x_offset, 33. - z_offset)
 
-    vis_sampling = info['SAMPLING_MODE_ID'][1].strip()  # handle ' NORMAL'
-    ir_sampling  = info['SAMPLING_MODE_ID'][0].strip()
+    vis_sampling = label['SAMPLING_MODE_ID'][1].strip()  # handle ' NORMAL'
+    ir_sampling  = label['SAMPLING_MODE_ID'][0].strip()
 
     # VIS FOV
     if vis_sampling == 'HI-RES':
         vis_fov = oops.fov.FlatFOV(VIS_HIRES_SCALE, uv_shape,
-                    (VIS_HIRES_FACTOR * uv_los[0] - uv_shape[0],
-                     VIS_HIRES_FACTOR * uv_los[1] - uv_shape[1]))
+                                   (VIS_HIRES_FACTOR * uv_los[0] - uv_shape[0],
+                                    VIS_HIRES_FACTOR * uv_los[1] - uv_shape[1]))
 
     elif uv_shape == (64,64):
         vis_fov = VIS_FULL_FOV
 
     else:
         vis_fov = oops.fov.FlatFOV(VIS_NORMAL_SCALE, uv_shape,
-                    (IR_OVER_VIS * uv_los[0], IR_OVER_VIS * uv_los[1]))
+                                   (IR_OVER_VIS * uv_los[0], IR_OVER_VIS * uv_los[1]))
 
     # IR FOV
-    if info['INSTRUMENT_MODE_ID'] == 'OCCULTATION':
+    if label['INSTRUMENT_MODE_ID'] == 'OCCULTATION':
         if ir_sampling == 'NORMAL':
             ir_fov = oops.fov.FlatFOV(IR_NORMAL_SCALE, uv_shape, uv_los)
         else:
@@ -224,7 +335,8 @@ def from_file(filespec, fast=False, **parameters):
 
     elif ir_sampling in ('HI-RES','UNDER'):
         ir_fov = oops.fov.FlatFOV(IR_HIRES_SCALE, uv_shape,
-                    (IR_HIRES_FACTOR * uv_los[0] - uv_shape[0]/2., uv_los[1]))
+                                  (IR_HIRES_FACTOR * uv_los[0] - uv_shape[0]/2.,
+                                   uv_los[1]))
 
     elif uv_shape == (64,64):
         ir_fov = IR_FULL_FOV
@@ -234,7 +346,7 @@ def from_file(filespec, fast=False, **parameters):
 
     # Nyquist sampling
     if ir_sampling == 'UNDER':
-        ### VIMS IR sampling mode UNDER is untested!!
+        ### TBD: VIMS IR sampling mode UNDER is untested!!
         # Use ir_det_size = 2 for RasterSlit1D and RasterSlit observations
         # Use (1., ir_det_size) for RasterScan observations
         ir_fov = oops.fov.GapFOV(IR_NORMAL_SCALE, uv_shape, uv_los)
@@ -247,12 +359,12 @@ def from_file(filespec, fast=False, **parameters):
     ########################################
 
     # Define cadences based on header parameters
-    ir_texp  = info['EXPOSURE_DURATION'][0] * 0.001 * TIME_FACTOR
-    vis_texp = info['EXPOSURE_DURATION'][1] * 0.001 * TIME_FACTOR
+    ir_texp  = label['EXPOSURE_DURATION'][0] * 0.001 * TIME_FACTOR
+    vis_texp = label['EXPOSURE_DURATION'][1] * 0.001 * TIME_FACTOR
     vis_texp_nonzero = max(vis_texp, 1.e-8) # avoids divide-by-zero in cadences
 
-    interframe_delay = info['INTERFRAME_DELAY_DURATION'] * 0.001 * TIME_FACTOR
-    interline_delay  = info['INTERLINE_DELAY_DURATION']  * 0.001 * TIME_FACTOR
+    interframe_delay = label['INTERFRAME_DELAY_DURATION'] * 0.001 * TIME_FACTOR
+    interline_delay  = label['INTERLINE_DELAY_DURATION']  * 0.001 * TIME_FACTOR
 
     # Adjust the timing of one line, multiple frames
     if frames > 1 and frame_size != 1:
@@ -266,13 +378,13 @@ def from_file(filespec, fast=False, **parameters):
     if times is None:
         pass
 
-    elif info['OVERWRITTEN_CHANNEL_FLAG'] == 'ON':
+    elif label['OVERWRITTEN_CHANNEL_FLAG'] == 'ON':
         times = times.ravel()
         assert times[0] < times[1]
         assert vis_is_off
         backplane_cadence = oops.cadence.Sequence(times, ir_texp)
 
-    elif info['PACKING'] == 'ON':
+    elif label['PACKING_FLAG'] == 'ON':
         times = times.ravel()
         assert times[0] == times[1]
         tstart = times[0]
@@ -283,12 +395,10 @@ def from_file(filespec, fast=False, **parameters):
         assert times[0] == times[1]
         tstart = times[0]
 
-    vis_header_cadence = oops.cadence.Metronome(tstart,
-                                length_stride, vis_texp_nonzero, swath_length)
-    ir_fast_cadence = oops.cadence.Metronome(tstart,
-                                ir_texp, ir_texp, swath_width)
-    ir_header_cadence = oops.cadence.DualCadence(vis_header_cadence,
-                                ir_fast_cadence)
+    vis_header_cadence = oops.cadence.Metronome(tstart, length_stride, vis_texp_nonzero,
+                                                swath_length)
+    ir_fast_cadence = oops.cadence.Metronome(tstart, ir_texp, ir_texp, swath_width)
+    ir_header_cadence = oops.cadence.DualCadence(vis_header_cadence, ir_fast_cadence)
 
     # At this point...
     #   vis_header_cadence  always defined, always 1-D.
@@ -303,7 +413,7 @@ def from_file(filespec, fast=False, **parameters):
     vis_frame_id = 'CASSINI_VIMS_V'
     ir_frame_id  = 'CASSINI_VIMS_IR'
 
-    if (info['TARGET_NAME'] == 'SUN' or '_SOL' in info['OBSERVATION_ID']):
+    if (label['TARGET_NAME'] == 'SUN' or '_SOL' in label['OBSERVATION_ID']):
         ir_frame_id = 'CASSINI_VIMS_IR_SOL'
 
     ########################################
@@ -318,12 +428,10 @@ def from_file(filespec, fast=False, **parameters):
         assert vis_is_off
         if backplane_cadence is None:
             fast_stride = ir_texp   # + EXTRA_INTERSAMPLE_DELAY
-            fastcad = oops.cadence.Metronome(tstart, fast_stride, ir_texp,
-                                             samples)
+            fastcad = oops.cadence.Metronome(tstart, fast_stride, ir_texp, samples)
 
             slow_stride = ir_texp * samples + interline_delay
-            slowcad = oops.cadence.Metronome(tstart, slow_stride, slow_stride,
-                                             lines)
+            slowcad = oops.cadence.Metronome(tstart, slow_stride, slow_stride, lines)
             fullcad = oops.cadence.DualCadence(slowcad, fastcad)
             ir_cadence = oops.cadence.ReshapedCadence(fullcad, (samples*lines,))
 
@@ -333,9 +441,7 @@ def from_file(filespec, fast=False, **parameters):
         if ir_data is not None:
             ir_data = ir_data.reshape((frames, 256))
 
-        ir_obs = oops.obs.Pixel(('t','b'),
-                                ir_cadence, ir_fov,
-                                'CASSINI', ir_frame_id)
+        ir_obs = oops.obs.Pixel(('t','b'), ir_cadence, ir_fov, 'CASSINI', ir_frame_id)
 
     # Single LINE case
     elif swath_length == 1:
@@ -343,8 +449,7 @@ def from_file(filespec, fast=False, **parameters):
             if vis_data is not None:
                 vis_data = vis_data.reshape((samples, 96))
 
-            vis_obs = oops.obs.Slit1D(('u','b'),
-                                       tstart, vis_texp_nonzero, vis_fov,
+            vis_obs = oops.obs.Slit1D(('u','b'), tstart, vis_texp_nonzero, vis_fov,
                                        'CASSINI', vis_frame_id)
 
         if not ir_is_off:
@@ -354,15 +459,13 @@ def from_file(filespec, fast=False, **parameters):
             if backplane_cadence is not None:
                 ir_fast_cadence = backplane_cadence
 
-            ir_obs = oops.obs.RasterSlit1D(('ut','b'),
-                                           ir_fast_cadence, ir_fov,
+            ir_obs = oops.obs.RasterSlit1D(('ut','b'), ir_fast_cadence, ir_fov,
                                            'CASSINI', ir_frame_id)
 
     # Single 2-D IMAGE case
     elif samples == swath_width and lines == swath_length:
         if not vis_is_off:
-            vis_obs = oops.obs.TimedImage(('vt','u','b'),
-                                          vis_header_cadence, vis_fov,
+            vis_obs = oops.obs.TimedImage(('vt','u','b'), vis_header_cadence, vis_fov,
                                           'CASSINI', vis_frame_id)
 
         if not ir_is_off:
@@ -373,27 +476,23 @@ def from_file(filespec, fast=False, **parameters):
                 ir_cadence = oops.cadence.ReshapedCadence(backplane_cadence,
                                                          (lines,samples))
 
-            ir_obs = oops.obs.TimedImage(('vslow','ufast','b'),
-                                         ir_cadence, ir_fov,
+            ir_obs = oops.obs.TimedImage(('vslow','ufast','b'), ir_cadence, ir_fov,
                                          'CASSINI', ir_frame_id)
 
     # Multiple LINE case
     elif swath_length == 1 and swath_length == lines:
         if not vis_is_off:
-            vis_obs = oops.obs.TimedImage(('vt','u','b'),
-                                          frame_cadence, vis_fov,
+            vis_obs = oops.obs.TimedImage(('vt','u','b'), frame_cadence, vis_fov,
                                           'CASSINI', vis_frame_id)
 
         if not ir_is_off:
             if backplane_cadence is None:
-                ir_cadence = oops.cadence.DualCadence(frame_cadence,
-                                                      ir_fast_cadence)
+                ir_cadence = oops.cadence.DualCadence(frame_cadence, ir_fast_cadence)
             else:
                 ir_cadence = oops.cadence.ReshapedCadence(backplane_cadence,
                                                          (lines,samples))
 
-            ir_obs = oops.obs.TimedImage(('vslow','ufast','b'),
-                                         ir_cadence, ir_fov,
+            ir_obs = oops.obs.TimedImage(('vslow','ufast','b'), ir_cadence, ir_fov,
                                          'CASSINI', ir_frame_id)
 
 # 1/9/15 broken code no longer needed
@@ -484,7 +583,7 @@ def from_file(filespec, fast=False, **parameters):
         vis_obs.insert_subfield('dict', label)
         vis_obs.insert_subfield('index_dict', label)# for backward compatibility
 
-        if vis_data is not None:
+        if vis_data is not None and data[0]:
             vis_obs.insert_subfield('data', vis_data)
 
     if ir_obs is not None:
@@ -494,62 +593,57 @@ def from_file(filespec, fast=False, **parameters):
         ir_obs.insert_subfield('dict', label)
         ir_obs.insert_subfield('index_dict', label)# for backward compatibility
 
-        if ir_data is not None:
+        if ir_data is not None and data[1]:
             ir_obs.insert_subfield('data', ir_data)
 
     return (vis_obs, ir_obs)
 
-#===============================================================================
+#=========================================================================================
 def _load_data_and_times(filespec, label):
     """Load the data array from the file.
 
-    If time backplanes are present, also return an array of times in seconds
-    TDB as derived from these backplanes.
+    If time backplanes are present, also return an array of times in seconds TDB as
+    derived from these backplanes.
 
     Input:
         filespec        full path to the data file.
         label           the label dictionary.
 
     Return:             (data, times)
-        data            a Numpy array containing the data in axis order
-                        (line, sample, band).
-        times           the time sampling array in (line, sample) axis order, or
-                        None if no time backplane is found in the file.
+        data            a Numpy array containing the data in axis order (line, sample,
+                        band).
+        times           the time sampling array in (line, sample) axis order, or None if
+                        no time backplane is found in the file.
 
-    Note: This procedure is absurdly complicated but it has been rather
-    carefully debugged. --MRS 7/4/12.
+    Note: This procedure is absurdly complicated but it has been rather carefully
+    debugged. --MRS 7/4/12.
     """
-    info = label['QUBE']
 
-    # Extract key parameters fro the file header
-    core_items   = info['CORE_ITEMS']
+    qube_dict = label['SPECTRAL_QUBE']
+
+    # Extract key parameters from the file header
+    core_items   = qube_dict['CORE_ITEMS']
     core_samples = core_items[0]
     core_bands   = core_items[1]
     core_lines   = core_items[2]
-    core_item_bytes = info['CORE_ITEM_BYTES']
-    core_item_type  = info['CORE_ITEM_TYPE']
+    core_item_bytes = qube_dict.get('CORE_ITEM_BYTES', 2)
+    core_item_type  = qube_dict.get('CORE_ITEM_TYPE', 'SUN_INTEGER')
 
-    sample_suffix_items = info['SUFFIX_ITEMS'][0]
-    band_suffix_items   = info['SUFFIX_ITEMS'][1]
+    sample_suffix_items = qube_dict['SUFFIX_ITEMS'][0]
+    band_suffix_items   = qube_dict['SUFFIX_ITEMS'][1]
 
     suffix_item_bytes = 4
 
-    if sample_suffix_items == 1:
-        suffix_item_type = info['SAMPLE_SUFFIX_ITEM_TYPE']
-    elif sample_suffix_items > 1:
-        suffix_item_type = info['SAMPLE_SUFFIX_ITEM_TYPE'][0]
-    elif band_suffix_items == 1:
-        suffix_item_type = info['BAND_SUFFIX_ITEM_TYPE']
-    elif band_suffix_items > 1:
-        suffix_item_type = info['BAND_SUFFIX_ITEM_TYPE'][0]
-    else:
-        suffix_item_type = ''
+    key = 'SAMPLE_SUFFIX_ITEM_TYPE' if sample_suffix_items else 'BAND_SUFFIX_ITEM_TYPE'
+    suffix_item_type = qube_dict.get(key, 'SUN_INTEGER')
+    if isinstance(suffix_item_type, (list, tuple)):
+        suffix_item_type = suffix_item_type[0]  # all backplanes/sideplanes are same type
 
     record_bytes = label['RECORD_BYTES']
-    header_bytes = record_bytes * (label['^QUBE'][1] - 1)
+    header_bytes = record_bytes * label['header_recs']
 
     # Make sure we have byte-aligned values
-    assert (core_samples * core_item_bytes) % suffix_item_bytes == 0
+    assert (core_samples * core_item_bytes) % suffix_item_bytes == 0, 'misaligned items'
 
     ############################
 
@@ -597,15 +691,15 @@ def _load_data_and_times(filespec, label):
     array = array[offset:offset+size]
 
     # Create a data array using new strides in (line, sample, band) order
-    data = numpy.lib.stride_tricks.as_strided(array,
-                    strides = (line_stride, core_item_bytes, band_stride),
-                    shape   = (core_lines,  core_samples,    core_bands))
+    data = stride_tricks.as_strided(array,
+                                    strides = (line_stride, core_item_bytes, band_stride),
+                                    shape   = (core_lines,  core_samples,    core_bands))
 
     # Convert core to a native 3-D array
     data = data.astype(native_dtype)
 
     # If there are no time backplanes, we're done
-    band_suffix_name = info['BAND_SUFFIX_NAME']
+    band_suffix_name = qube_dict['BAND_SUFFIX_NAME']
     if 'SLICE_TIME_SECONDS' not in band_suffix_name:
         return (data, None)
 
@@ -643,9 +737,9 @@ def _load_data_and_times(filespec, label):
     # Extract the band suffix array using new strides in
     # (backplane, line, sample) order
     backplane_stride = suffix_item_bytes * (core_samples + sample_suffix_items)
-    backplane = numpy.lib.stride_tricks.as_strided(offset_array,
-                strides = (backplane_stride,  line_stride, suffix_item_bytes),
-                shape   = (band_suffix_items, core_lines,  core_samples))
+    backplane = stride_tricks.as_strided(offset_array,
+                            strides = (backplane_stride,  line_stride, suffix_item_bytes),
+                            shape   = (band_suffix_items, core_lines,  core_samples))
 
     # Convert to spacecraft clock
     seconds = backplane[band_suffix_name.index('SLICE_TIME_SECONDS')]
@@ -674,133 +768,22 @@ def _load_data_and_times(filespec, label):
 
     return (data, times)
 
-#===============================================================================
-def pds_value_from_constants(string_value):
-    """A value or tuple from a string that does not contain quotes and therefore
-    expects a pre-defined constant.
-
-    Input:
-        string_value    a string that is either a pre-defined constant OR a
-                        tuple of pre-defined constants
-
-    Return:             a string of that constant or a tuple of strings of those
-                        constants.
-    """
-    if string_value[0] == '(' and string_value[-1] == ')':
-        words = string_value[1:-1].split(',')
-        return words
-        """string_list = []
-        for word in words:
-            string_list.append('"' + word + '"')
-        string_tuple = tuple(string_list)
-        return string_tuple
-        """
-
-    #if add_quotes:
-    #    return '"' + string_value + '"'
-    return string_value
-
-#===============================================================================
-def fast_dict(lines):
-    """A dictionary extracted from the PDS label of a VIMS file, containing the
-    minimum required set of entries for the observation to be generated and
-    analyzed.
-
-    This routine is much faster than a call to PdsLabel.from_file() because
-    it does not use the pyparsing module.
-
-    Input:
-        lines           a list containing all the lines of the file, as read by
-                        file.readlines().
-
-    Return:             a dictionary containing, at minimum, these elements:
-                            "BAND_SUFFIX_NAME" = unparsed string
-                            "CORE_ITEMS" = three ints
-                            "EXPOSURE_DURATION" = two floats
-                            "INSTRUMENT_MODE_ID" = unquoted string
-                            "INTERFRAME_DELAY_DURATION" = float
-                            "INTERLINE_DELAY_DURATION" = float
-                            "MISSION_PHASE_NAME" = string
-                            "OVERWRITTEN_CHANNEL_FLAG" = string
-                            "PACKING_FLAG" = string
-                            "POWER_STATE_FLAG" = pair of strings
-                            "SAMPLING_MODE_ID" = pair of strings
-                            "START_TIME" = string
-                            "SWATH_LENGTH" = int
-                            "SWATH_WIDTH" = int
-                            "TARGET_NAME" = string
-                            "X_OFFSET" = int
-                            "Z_OFFSET" = int
-    """
-    def three_ints(string):
-        string = string.strip()
-        assert string[0] == '(' and string[1] == ')'
-        (a,b,c) = string[1:-1].split(',')
-        return (int(a), int(b), int(c))
-
-    def two_floats(string):
-        string = string.strip()
-        assert string[0] == '(' and string[1] == ')'
-        (a,b) = string[1:-1].split(',')
-        return (float(a), float(b))
-
-    def two_strings(string):
-        string = string.strip()
-        assert string[0] == '(' and string[1] == ')'
-        (a,b) = string[1:-1].split(',')
-        return (unquote(a), unquote(b))
-
-    def unquote(string):
-        string = string.strip()
-        if len(string) >= 2 and string[0] == '"' and string[-1] == '"':
-            return string[1:-1]
-        else:
-            return string
-
-    # Create a quick dictionary using the PDS keyword, equal to the string value
-    dict = {}
-    for line in lines:
-        pair = line.split('=')
-        if len(pair) == 2:
-            dict[pair[0].strip()] = pair[1]
-
-    # Re-define the required keywords
-
-    dict['BAND_SUFFIX_NAME']          = dict['BAND_SUFFIX_NAME'].strip()
-    dict['CORE_ITEMS']                = three_ints(dict['CORE_ITEMS'])
-    dict['EXPOSURE_DURATION']         = two_floats(dict['EXPOSURE_DURATION'])
-    dict['INSTRUMENT_MODE_ID']        = unquote(dict['INSTRUMENT_MODE_ID'])
-    dict['INTERFRAME_DELAY_DURATION'] = float(dict['INTERFRAME_DELAY_DURATION'])
-    dict['INTERLINE_DELAY_DURATION']  = float(dict['INTERLINE_DELAY_DURATION'])
-    dict['MISSION_PHASE_NAME']        = unquote(['MISSION_PHASE_NAME'])
-    dict['OVERWRITTEN_CHANNEL_FLAG']  = unquote(['OVERWRITTEN_CHANNEL_FLAG'])
-    dict['PACKING_FLAG']              = unquote(dict['PACKING_FLAG'])
-    dict['POWER_STATE_FLAG']          = two_strings(dict['POWER_STATE_FLAG'])
-    dict['SAMPLING_MODE_ID']          = two_strings(dict['SAMPLING_MODE_ID'])
-    dict['START_TIME']                = dict['START_TIME'].strip()
-    dict['SWATH_LENGTH']              = int(dict['SWATH_LENGTH'])
-    dict['SWATH_WIDTH']               = int(dict['SWATH_WIDTH'])
-    dict['TARGET_NAME']               = unquote(dict['TARGET_NAME'])
-    dict['X_OFFSET']                  = int(dict['X_OFFSET'])
-    dict['Z_OFFSET']                  = int(dict['Z_OFFSET'])
-
-    return dict
-
-#===============================================================================
+#=========================================================================================
 def meshgrid_and_times(obs, oversample=6, extend=1.5):
-    """A meshgrid object and time array that oversamples and extends the
-    dimensions of the field of view of a VIMS observation.
+    """A meshgrid object and time array that oversamples and extends the dimensions of the
+    field of view of a VIMS observation.
 
     Input:
-        obs             the VIMS observation object to for which to generate a
-                        meshgrid and a time array.
-        oversample      the factor by which to oversample the field of view, in
-                        units of the full-resolution VIMS pixel size.
-        extend          the number of pixels by which to extend the field of
-                        view, in units of the oversampled pixel.
+        obs             the VIMS observation object to for which to generate a meshgrid
+                        and a time array.
+        oversample      the factor by which to oversample the field of view, in units of
+                        the full-resolution VIMS pixel size.
+        extend          the number of pixels by which to extend the field of view, in
+                        units of the oversampled pixel.
 
     Return:             (mesgrid, time)
     """
+
     shrinkage = {('IR',  'NORMAL'): (1,1),
                  ('IR',  'HI-RES'): (2,1),
                  ('IR',  'UNDER' ): (2,1),
@@ -822,40 +805,38 @@ def meshgrid_and_times(obs, oversample=6, extend=1.5):
     limit = (obs.fov.uv_shape.vals[0] + extend * ustep,
              obs.fov.uv_shape.vals[1] + extend * vstep)
 
-    meshgrid = oops.Meshgrid.for_fov(obs.fov, origin, undersample, oversample,
-                                     limit, swap=True)
+    meshgrid = oops.Meshgrid.for_fov(obs.fov, origin, undersample, oversample, limit,
+                                     swap=True)
 
     time = obs.uvt(obs.fov.nearest_uv(meshgrid.uv).swapxy())[1]
 
     return (meshgrid, time)
 
-#===============================================================================
-def initialize(ck='reconstructed', planets=None, asof=None,
-               spk='reconstructed', gapfill=True,
-               mst_pck=True, irregulars=True):
+#=========================================================================================
+def initialize(ck='reconstructed', planets=None, asof=None, spk='reconstructed',
+               gapfill=True, mst_pck=True, irregulars=True):
     """Initialize key information about the VIMS instrument.
 
     Must be called first. After the first call, later calls to this function
     are ignored.
 
     Input:
-        ck,spk      'predicted', 'reconstructed', or 'none', depending on
-                    which kernels are to be used. Defaults are 'reconstructed'.
-                    Use 'none' if the kernels are to be managed manually.
-        planets     A list of planets to pass to define_solar_system. None or
-                    0 means all.
+        ck,spk      'predicted', 'reconstructed', or 'none', depending on which kernels
+                    are to be used. Defaults are 'reconstructed'. Use 'none' if the
+                    kernels are to be managed manually.
+        planets     A list of planets to pass to define_solar_system. None or 0 means all.
         asof        Only use SPICE kernels that existed before this date;
                     None to ignore.
         gapfill     True to include gapfill CKs. False otherwise.
-        mst_pck     True to include MST PCKs, which update the rotation models
-                    for some of the small moons.
-        irregulars  True to include the irregular satellites;
-                    False otherwise.
+        mst_pck     True to include MST PCKs, which update the rotation models for some of
+                    of the small moons.
+        irregulars  True to include the irregular satellites; False otherwise.
     """
-    VIMS.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
-                    gapfill=gapfill, mst_pck=mst_pck, irregulars=irregulars)
 
-################################################################################
+    VIMS.initialize(ck=ck, planets=planets, asof=asof, spk=spk, gapfill=gapfill,
+                    mst_pck=mst_pck, irregulars=irregulars)
+
+##########################################################################################
 
 class VIMS(object):
     """An instance-free class to hold Cassini VIMS instrument parameters."""
@@ -863,38 +844,33 @@ class VIMS(object):
     initialized = False
     instrument_kernel = None
 
-    #===========================================================================
     @staticmethod
-    def initialize(ck='reconstructed', planets=None, asof=None,
-                   spk='reconstructed', gapfill=True,
-                   mst_pck=True, irregulars=True):
+    def initialize(ck='reconstructed', planets=None, asof=None, spk='reconstructed',
+                   gapfill=True, mst_pck=True, irregulars=True):
         """Fill in key information about the VIS and IR channels.
 
-        Must be called first. After the first call, later calls to this function
-        are ignored.
+        Must be called first. After the first call, later calls to this function are
+        ignored.
 
         Input:
-            ck,spk      'predicted', 'reconstructed', or 'none', depending on
-                        which kernels are to be used. Defaults are
-                        'reconstructed'. Use 'none' if the kernels are to be
-                        managed manually.
-            planets     A list of planets to pass to define_solar_system. None
-                        or 0 means all.
-            asof        Only use SPICE kernels that existed before this date;
-                        None to ignore.
+            ck,spk      'predicted', 'reconstructed', or 'none', depending on which
+                        kernels are to be used. Defaults are 'reconstructed'. Use 'none'
+                        if the kernels are to be managed manually.
+            planets     A list of planets to pass to define_solar_system. None or 0 means
+                        all.
+            asof        Only use SPICE kernels that existed before this date; None to
+                        ignore.
             gapfill     True to include gapfill CKs. False otherwise.
-            mst_pck     True to include MST PCKs, which update the rotation
-                        models for some of the small moons.
-            irregulars  True to include the irregular satellites;
-                        False otherwise.
+            mst_pck     True to include MST PCKs, which update the rotation models for
+                        some of the small moons.
+            irregulars  True to include the irregular satellites; False otherwise.
         """
 
         # Quick exit after first call
         if VIMS.initialized:
             return
 
-        Cassini.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
-                           gapfill=gapfill,
+        Cassini.initialize(ck=ck, planets=planets, asof=asof, spk=spk, gapfill=gapfill,
                            mst_pck=mst_pck, irregulars=irregulars)
         Cassini.load_instruments(asof=asof)
 
@@ -908,7 +884,7 @@ class VIMS(object):
 
         VIMS.initialized = True
 
-    #===========================================================================
+    #=====================================================================================
     @staticmethod
     def reset():
         """Reset the internal Cassini VIMS parameters.
@@ -922,28 +898,18 @@ class VIMS(object):
 
         Cassini.reset()
 
-################################################################################
+##########################################################################################
 # UNIT TESTS
-################################################################################
+##########################################################################################
 import unittest
 import os.path
 import oops.backplane.gold_master as gm
 
-from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 
-#===============================================================================
-class Test_Cassini_VIMS(unittest.TestCase):
-
-    #===========================================================================
-    def runTest(self):
-        pass
-
-
-#===============================================================================
 class Test_Cassini_VIMS_GoldMaster_v1690952775(unittest.TestCase):
 
-    #===========================================================================
     def runTest(self):
         """
         *** fails because vims needs updating ***
@@ -965,6 +931,7 @@ class Test_Cassini_VIMS_GoldMaster_v1690952775(unittest.TestCase):
                 --no-inventory \
                 --adopt
         """
+
         gm.execute_as_unittest(self,
                 obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
                                        'cassini/VIMS/v1793917030_1.qub'),
@@ -975,8 +942,7 @@ class Test_Cassini_VIMS_GoldMaster_v1690952775(unittest.TestCase):
                 ring    = '',
                 inventory=False, border=10)
 
-
 ############################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
-################################################################################
+##########################################################################################

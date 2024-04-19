@@ -120,7 +120,7 @@ def from_file(filespec, fast_distortion=True,
     return obs
 
 #===============================================================================
-def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
+def initialize(ck='reconstructed', planets=None, asof=None,
                spk='reconstructed', gapfill=True,
                mst_pck=True, irregulars=True):
     """Initialize key information about the JUNOCAM instrument.
@@ -134,8 +134,6 @@ def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
                     'none' if the kernels are to be managed manually.
         planets     A list of planets to pass to define_solar_system. None or
                     0 means all.
-        offset_wac  True to offset the WAC frame relative to the NAC frame as
-                    determined by star positions.
         asof        Only use SPICE kernels that existed before this date; None
                     to ignore.
         gapfill     True to include gapfill CKs. False otherwise.
@@ -145,7 +143,7 @@ def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
                     False otherwise.
     """
 
-    JUNOCAM.initialize(ck=ck, planets=planets, offset_wac=offset_wac, asof=asof,
+    JUNOCAM.initialize(ck=ck, planets=planets, asof=asof,
                    spk=spk, gapfill=gapfill,
                    mst_pck=mst_pck, irregulars=irregulars)
 

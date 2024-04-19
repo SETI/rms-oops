@@ -144,7 +144,7 @@ def from_index(filespec, **parameters):
     return snapshots
 
 #===============================================================================
-def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
+def initialize(ck='reconstructed', planets=None, offset_wac=False, asof=None,
                spk='reconstructed', gapfill=True,
                mst_pck=True, irregulars=True):
     """Initialize key information about the ISS instrument.

@@ -176,7 +176,7 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         target_body = None
 
     if geom == 'spice':
-        path = oops.Path.as_waypoint('NEW HORIZONS')
+        path = oops.path.Path.as_waypoint('NEW HORIZONS')
     else:
 
         # First construct a path from the Sun to NH
@@ -189,17 +189,17 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         velz = -header['SPCSSCVZ']
 
         # The path_id has to be unique to this observation
-        sun_path = oops.Path.as_waypoint('SUN')
+        sun_path = oops.path.Path.as_waypoint('SUN')
         path_id = '.NH_PATH_' + filename
         sc_path = oops.path.LinearPath((oops.Vector3([posx, posy, posz]),
                                         oops.Vector3([velx, vely, velz])),
                                        tdb_midtime, sun_path,
-                                       oops.Frame.J2000,
+                                       oops.frame.FrameFrame.J2000,
                                        path_id=path_id)
-        path = oops.Path.as_waypoint(sc_path)
+        path = oops.path.Path.as_waypoint(sc_path)
 
     if pointing == 'spice':
-        frame = oops.Frame.as_wayframe('NH_LORRI')
+        frame = oops.frame.Frame.as_wayframe('NH_LORRI')
     else:
 
         # Create a frame based on the boresight
@@ -235,7 +235,7 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
                                                      north_clock_deg,
                                                      oops.Frame.J2000,
                                                      frame_id=frame_id)
-        frame = oops.Frame.as_wayframe(lorri_frame)
+        frame = oops.frame.Frame.as_wayframe(lorri_frame)
 
         event = oops.Event(tdb_midtime, oops.Vector3.ZERO, path, frame)
         event.neg_arr_ap = oops.Vector3.ZAXIS
@@ -286,7 +286,7 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
 
         # If necessary, get the solar range from the target name
         if solar_range is None and target_body is not None:
-            target_sun_path = oops.Path.as_waypoint(target_name).wrt('SUN')
+            target_sun_path = oops.path.Path.as_waypoint(target_name).wrt('SUN')
             # Paths of the relevant bodies need to be defined in advance!
 
             sun_event = target_sun_path.event_at_time(tdb_midtime)
