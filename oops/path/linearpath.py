@@ -2,11 +2,10 @@
 # oops/path/linearpath.py: Subclass LinearPath of class Path
 ################################################################################
 
-from polymath import Qube, Scalar, Vector3
-
-from oops.event import Event
-from oops.frame import Frame
-from oops.path  import Path
+from polymath          import Qube, Scalar, Vector3
+from oops.event        import Event
+from oops.frame.frame_ import Frame
+from oops.path.path_   import Path
 
 class LinearPath(Path):
     """A path defining linear motion relative to another path and frame."""
@@ -83,20 +82,4 @@ class LinearPath(Path):
         return Event(time, (self.pos + (time-self.epoch) * self.vel, self.vel),
                            self.origin, self.frame)
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_LinearPath(unittest.TestCase):
-
-    def runTest(self):
-
-        # TBD
-        pass
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

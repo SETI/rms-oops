@@ -2,10 +2,10 @@
 # oops/surface/nullsurface.py: NullSurface subclass of class Surface
 ################################################################################
 
-from polymath     import Scalar, Vector3
-from oops.frame   import Frame
-from oops.path    import Path
-from oops.surface import Surface
+from polymath              import Scalar, Vector3
+from oops.frame.frame_     import Frame
+from oops.path.path_       import Path
+from oops.surface.surface_ import Surface
 
 class NullSurface(Surface):
     """A subclass of Surface of describing an infinitesimal surface centered on
@@ -196,17 +196,4 @@ class NullSurface(Surface):
         # Always zero
         return Vector3.ZERO
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_NullSurface(unittest.TestCase):
-
-    pass        # TBD
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

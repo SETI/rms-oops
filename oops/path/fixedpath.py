@@ -2,11 +2,10 @@
 # oops/path/fixedpath.py: Subclass FixedPath of class Path
 ################################################################################
 
-from polymath import Qube, Vector3
-
-from oops.event import Event
-from oops.frame import Frame
-from oops.path  import Path
+from polymath          import Qube, Vector3
+from oops.event        import Event
+from oops.frame.frame_ import Frame
+from oops.path.path_   import Path
 
 class FixedPath(Path):
     """A path described by fixed coordinates relative to another path and frame.
@@ -66,20 +65,4 @@ class FixedPath(Path):
 
         return Event(time, self.pos, self.origin, self.frame)
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_FixedPath(unittest.TestCase):
-
-    def runTest(self):
-
-        # TBD
-        pass
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

@@ -130,19 +130,3 @@ class InclinedFrame(Frame):
                                          - self.epoch)) % Scalar.TWOPI
 
 ################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_InclinedFrame(unittest.TestCase):
-
-    def runTest(self):
-
-        # Note: Unit testing is performed in surface/orbitplane.py
-        pass
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
-################################################################################

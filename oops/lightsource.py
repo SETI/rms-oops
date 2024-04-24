@@ -3,8 +3,8 @@
 ################################################################################
 
 import numpy as np
-from polymath import Scalar, Pair, Vector, Vector3, Matrix3
 
+from polymath       import Scalar, Pair, Vector, Vector3, Matrix3
 from oops.body      import Body
 from oops.path      import Path
 from oops.constants import C, RPD, RPS
@@ -319,18 +319,4 @@ class DiskSource(LightSource):
         new_event.neg_arr_j2000 = self.source
         return arrival
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_LightSource(unittest.TestCase):
-
-    #### TBD
-    pass
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

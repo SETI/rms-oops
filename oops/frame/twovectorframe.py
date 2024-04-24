@@ -127,18 +127,3 @@ class TwoVectorFrame(Frame):
         return self.node
 
 ################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_TwoVectorFrame(unittest.TestCase):
-
-    def runTest(self):
-
-        pass    # TBD
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
-################################################################################

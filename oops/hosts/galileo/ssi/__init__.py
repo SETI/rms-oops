@@ -96,11 +96,11 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
 #             for supplemental_row_dict in supplemental_row_dicts]
 
 #        indices = np.argsort(specs)
-        
+
 #        row_dicts_sorted = [None]*len(row_dicts)
 #        for i in range(len(row_dicts)):
 #            row_dicts_sorted[i] = row_dicts[indices[i]]
-        
+
 #        supplemental_indices = np.argsort(supplemental_specs)
 #        supplemental_row_dicts_sorted = [None]*len(supplemental_row_dicts)
 #        for i in range(len(supplemental_row_dicts)):
@@ -326,12 +326,12 @@ class SSI(object):
                                       coefft_uv_from_xy=distortion_coeff,
                                       uv_los=(cxy[0], cxy[1]))
         fov_summed = oops.fov.SubsampledFOV(fov_full, 2)
-#        fov_his = 
-#        fov_hma = 
+#        fov_his =
+#        fov_hma =
 #        fov_hca = oops.fov.GapFOV(oops.fov.SubsampledFOV(fov_full, (1,4)),
 #                                  (1,0.25))
 #               ... maybe need SparseFOV or SkipFOV class
-#        fov_him = 
+#        fov_him =
 
         # Construct FOV dictionary
         SSI.fovs['FULL'] = fov_full
@@ -381,7 +381,7 @@ class SSI(object):
 ################################################################################
 import unittest
 import os.path
-import oops.backplane.gold_master as gm
+import oops.gold_master as gm
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 

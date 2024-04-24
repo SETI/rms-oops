@@ -378,7 +378,7 @@ class Cassini(object):
 ################################################################################
 import unittest
 import os.path
-import oops.backplane.gold_master as gm
+import oops.gold_master as gm
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
@@ -394,7 +394,6 @@ class Test_Cassini_ISS_GoldMaster(unittest.TestCase):
         gm.execute_as_unittest(self, 'W1573721822_1')
 
 ############################################
-
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 ################################################################################

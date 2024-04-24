@@ -3,6 +3,7 @@
 ################################################################################
 
 import numpy as np
+
 from polymath             import Matrix3, Qube, Scalar, Vector3
 from oops.frame           import Frame
 from oops.frame.poleframe import PoleFrame
@@ -94,7 +95,7 @@ class LaplaceFrame(Frame):
 
     # Unpickled frames will always have temporary IDs to avoid conflicts
     def __getstate__(self):
-        return (Path.as_primary_path(self.orbit),
+        return (Frame.PATH_CLASS.as_primary_path(self.orbit),
                 self.tilt, self.given_cache_size, self.shape)
 
     def __setstate__(self, state):
@@ -221,19 +222,4 @@ class LaplaceFrame(Frame):
 
         return xform
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_LaplaceFrame(unittest.TestCase):
-
-    def runTest(self):
-
-        pass
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

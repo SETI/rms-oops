@@ -3,12 +3,11 @@
 ################################################################################
 
 import numpy as np
+
 import cspyce
 
 from polymath            import Scalar, Vector3
 from oops.frame          import Frame
-from oops.path           import Path
-from oops.path.spicepath import SpicePath
 from oops.transform      import Transform
 import oops.spice_support as spice
 
@@ -84,10 +83,10 @@ class SpiceType1Frame(Frame):
         self.spice_origin_name = cspyce.bodc2n(self.spice_origin_id)
 
         try:
-            self.origin = Path.as_waypoint(self.spice_origin_id)
+            self.origin = Frame.PATH_CLASS.as_waypoint(self.spice_origin_id)
         except KeyError:
             # If the origin path was never defined, define it now
-            origin_path = SpicePath(self.spice_origin_id)
+            origin_path = Frame.SPICEPATH_CLASS(self.spice_origin_id)
             self.origin = origin_path.waypoint
 
         # No shape, no keys
@@ -194,18 +193,4 @@ class SpiceType1Frame(Frame):
                                           self.frame_id, self.reference_id)
         return self.cached_transform
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_SpiceType1Frame(unittest.TestCase):
-
-    def runTest(self):
-        pass                # TBD
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

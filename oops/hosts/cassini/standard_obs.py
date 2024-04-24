@@ -5,7 +5,7 @@
 #
 ################################################################################
 import os
-import oops.backplane.gold_master as gm
+import oops.gold_master as gm
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 

@@ -2,12 +2,8 @@
 # oops/frame/trackerframe.py: Subclass TrackerFrame of class Frame
 ################################################################################
 
-import numpy as np
-from polymath import Qube, Scalar, Vector3, Matrix3
-
-from oops.event     import Event
+from polymath       import Qube, Scalar, Vector3, Matrix3
 from oops.frame     import Frame
-from oops.path      import Path
 from oops.transform import Transform
 
 class TrackerFrame(Frame):
@@ -40,8 +36,8 @@ class TrackerFrame(Frame):
         """
 
         self.fixed_frame = Frame.as_frame(frame)
-        self.target_path = Path.as_path(target)
-        self.observer_path = Path.as_path(observer)
+        self.target_path = Frame.PATH_CLASS.as_path(target)
+        self.observer_path = Frame.PATH_CLASS.as_path(observer)
         self.epoch = Scalar.as_scalar(epoch)
         self.shape = Qube.broadcasted_shape(self.fixed_frame, self.target_path,
                                             self.observer_path, self.epoch)
@@ -56,7 +52,8 @@ class TrackerFrame(Frame):
         self.register(unpickled=unpickled)
 
         # Determine the apparent direction to the target path at epoch
-        obs_event = Event(epoch, Vector3.ZERO, self.observer_path, Frame.J2000)
+        obs_event = Frame.EVENT_CLASS(epoch, Vector3.ZERO, self.observer_path,
+                                      Frame.J2000)
         (path_event, obs_event) = self.target_path.photon_to_event(obs_event)
         self.trackpoint = obs_event.neg_arr_ap.unit()
 
@@ -86,8 +83,8 @@ class TrackerFrame(Frame):
     # Unpickled frames will always have temporary IDs to avoid conflicts
     def __getstate__(self):
         return (Frame.as_primary_frame(self.fixed_frame),
-                Path.as_primary_path(self.target_path),
-                Path.as_primary_path(self.observer_path),
+                Frame.PATH_CLASS.as_primary_path(self.target_path),
+                Frame.PATH_CLASS.as_primary_path(self.observer_path),
                 self.epoch, self.shape)
 
     def __setstate__(self, state):
@@ -111,7 +108,8 @@ class TrackerFrame(Frame):
             return self.cached_xform
 
         # Determine the needed rotation
-        obs_event = Event(time, Vector3.ZERO, self.observer_path, Frame.J2000)
+        obs_event = Frame.EVENT_CLASS(time, Vector3.ZERO, self.observer_path,
+                                      Frame.J2000)
         (path_event, obs_event) = self.target_path.photon_to_event(obs_event)
         newpoint = obs_event.neg_arr_ap.unit()
 
@@ -129,46 +127,4 @@ class TrackerFrame(Frame):
         self.cached_xform = xform
         return xform
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_TrackerFrame(unittest.TestCase):
-
-    def setUp(self):
-        from oops.body import Body
-
-        Body.reset_registry()
-        Body.define_solar_system('1990-01-01', '2020-01-01')
-
-    def tearDown(self):
-        pass
-
-    def runTest(self):
-
-        _ = TrackerFrame("J2000", "MARS", "EARTH", 0., frame_id="TEST")
-        mars = Path.as_path("MARS")
-
-        obs_event = Event(0., Vector3.ZERO, "EARTH", "J2000")
-        (path_event, obs_event) = mars.photon_to_event(obs_event)
-        start_arr = obs_event.arr_ap.unit()
-
-        # Track Mars for 30 days
-        DAY = 86400
-        for t in range(0,30*DAY,DAY):
-            obs_event = Event(t, Vector3.ZERO, "EARTH", "TEST")
-            (path_event, obs_event) = mars.photon_to_event(obs_event)
-            self.assertTrue(abs(obs_event.arr_ap.unit() - start_arr) < 1.e-6)
-
-        # Try the test all at once
-        t = np.arange(0,30*DAY,DAY/40)
-        obs_event = Event(t, Vector3.ZERO, "EARTH", "TEST")
-        (path_event, obs_event) = mars.photon_to_event(obs_event)
-        self.assertTrue(abs(obs_event.arr_ap.unit() - start_arr).max() < 1.e-6)
-
-#########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################
