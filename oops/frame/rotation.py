@@ -3,6 +3,7 @@
 ################################################################################
 
 import numpy as np
+
 from polymath       import Matrix3, Qube, Scalar, Vector3
 from oops.fittable  import Fittable
 from oops.frame     import Frame
@@ -130,21 +131,4 @@ class Rotation(Frame, Fittable):
 
         return Rotation(self.angle.copy(), self.axis, self.reference_id)
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_Rotation(unittest.TestCase):
-
-    def runTest(self):
-
-        # Note: Unit testing is performed in surface/orbitplane.py
-
-        pass
-
-#########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

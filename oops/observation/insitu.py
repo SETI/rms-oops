@@ -3,6 +3,7 @@
 ################################################################################
 
 import numpy as np
+
 from polymath             import Scalar
 from oops.cadence         import Cadence
 from oops.cadence.instant import Instant
@@ -85,21 +86,4 @@ class InSitu(Observation):
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_InSitu(unittest.TestCase):
-
-    def runTest(self):
-
-        # TBD
-
-        pass
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

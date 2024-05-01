@@ -3,10 +3,11 @@
 ################################################################################
 
 import numbers
+
 import cspyce
 import spicedb
 
-from oops.path import Path
+from oops.path.path_ import Path
 
 # Maintain dictionaries that translate names in the SPICE toolkit into their
 # corresponding names in the Frame and Path registries.
@@ -139,20 +140,4 @@ def initialize():
     FRAME_TRANSLATION = {'J2000':'J2000', cspyce.namfrm('J2000'):'J2000'}
     PATH_TRANSLATION = {'SSB':'SSB', 0:'SSB', 'SOLAR SYSTEM BARYCENTER':'SSB'}
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_tools(unittest.TestCase):
-
-    def runTest(self):
-
-        # TBD
-        pass
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

@@ -440,21 +440,3 @@ class Meshgrid(object):
         return self.center_uv_w_derivs(time).d_dlos
 
 ################################################################################
-# UNIT TESTS
-################################################################################
-
-# Tested by other modules, but here's a placeholder if we want to add more tests
-#
-# import unittest
-#
-# class Test_Meshgrid(unittest.TestCase):
-#
-#     def runTest(self):
-#
-#         # TBD
-#         pass
-#
-# ########################################
-# if __name__ == '__main__':
-#     unittest.main(verbosity=2)
-################################################################################

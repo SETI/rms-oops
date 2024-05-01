@@ -3,6 +3,7 @@
 ################################################################################
 
 import numpy as np
+
 from polymath       import Matrix3, Vector, Vector3
 from oops.fittable  import Fittable
 from oops.frame     import Frame
@@ -140,20 +141,4 @@ class Navigation(Frame, Fittable):
         return Navigation(self.angles.copy(), self.reference,
                           matrix=self.transform.matrix.copy())
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_Navigation(unittest.TestCase):
-
-    def runTest(self):
-
-        # TBD
-        pass
-
-#########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

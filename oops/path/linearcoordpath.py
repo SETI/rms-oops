@@ -2,11 +2,9 @@
 # oops/path/linearcoordpath.py: Subclass LinearCoordPath of class Path
 ################################################################################
 
-from polymath import Qube, Scalar
-
-from oops.event import Event
-from oops.frame import Frame
-from oops.path  import Path
+from polymath        import Qube, Scalar
+from oops.event      import Event
+from oops.path.path_ import Path
 
 class LinearCoordPath(Path):
     """A path defined by coordinates changing linearly on a specified Surface.
@@ -86,20 +84,4 @@ class LinearCoordPath(Path):
 
         return Event(time, pos, self.origin, self.frame)
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_LinearCoordPath(unittest.TestCase):
-
-    def runTest(self):
-
-        # TBD
-        pass
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

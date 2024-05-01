@@ -2,9 +2,7 @@
 # oops/backplane/all.py
 ################################################################################
 
-# Import the Backplane class and all its subclasses into a common name space
-
-from oops.backplane import Backplane
+# Define all Backplane methods
 
 import oops.backplane.ansa
 import oops.backplane.border
@@ -18,7 +16,5 @@ import oops.backplane.ring
 import oops.backplane.sky
 import oops.backplane.spheroid
 import oops.backplane.where
-
-oops.Backplane = oops.backplane.Backplane       # easier way to reference
 
 ################################################################################

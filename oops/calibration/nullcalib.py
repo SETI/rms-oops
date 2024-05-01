@@ -108,18 +108,3 @@ class NullCalib(Calibration):
         return FlatCalib(name or self.name, factor, baseline)
 
 ################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_NullCalib(unittest.TestCase):
-
-    def runTest(self):
-
-        pass
-
-#########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
-################################################################################

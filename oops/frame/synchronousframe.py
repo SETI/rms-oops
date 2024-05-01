@@ -2,10 +2,8 @@
 # oops/frame/synchronousframe.py: Subclass SynchronousFrame of class Frame
 ################################################################################
 
-import numpy as np
-from polymath       import Matrix3, Qube, Scalar
+from polymath       import Matrix3, Qube
 from oops.frame     import Frame
-from oops.path      import Path
 from oops.transform import Transform
 
 class SynchronousFrame(Frame):
@@ -26,9 +24,9 @@ class SynchronousFrame(Frame):
             unpickled       True if this frame has been read from a pickle file.
         """
 
-        self.body_path = Path.as_path(body_path)
-        self.planet_path = Path.as_path(planet_path)
-        self.path = Path.wrt(self.planet_path, self.body_path)
+        self.body_path = Frame.PATH_CLASS.as_path(body_path)
+        self.planet_path = Frame.PATH_CLASS.as_path(planet_path)
+        self.path = Frame.PATH_CLASS.wrt(self.planet_path, self.body_path)
 
         if self.planet_path.shape:
             raise ValueError('SynchronousFrame requires a shapeless body path')
@@ -51,8 +49,8 @@ class SynchronousFrame(Frame):
 
     # Unpickled frames will always have temporary IDs to avoid conflicts
     def __getstate__(self):
-        return (Path.as_primary_path(self.body_path),
-                Path.as_primary_path(self.planet_path), self.shape)
+        return (Frame.PATH_CLASS.as_primary_path(self.body_path),
+                Frame.PATH_CLASS.as_primary_path(self.planet_path), self.shape)
 
     def __setstate__(self, state):
         # If this frame matches a pre-existing frame, re-use its ID
@@ -77,52 +75,4 @@ class SynchronousFrame(Frame):
         return Transform(matrix, omega, self.frame_id, self.reference,
                                         self.body_path)
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_SynchronousFrame(unittest.TestCase):
-
-    def setUp(self):
-        from oops.body import Body
-
-        Body.reset_registry()
-        Body.define_solar_system('2000-01-01', '2020-01-01')
-
-    def tearDown(self):
-        pass
-
-    def runTest(self):
-        from oops.path import Path
-
-        # Path of Saturn relative to Enceladus
-        inward = Path.as_path('SATURN').wrt('ENCELADUS')
-        synchro = SynchronousFrame('ENCELADUS', 'SATURN', frame_id='SYNCHRO')
-
-        time = Scalar(np.arange(1000.) * 86400.)
-
-        # Make sure direction to Saturn is along X-axis
-        pos = inward.event_at_time(time).wrt_frame(synchro).pos
-        self.assertTrue(np.all(pos.values[:,0] > 0.))
-        self.assertTrue(np.max(np.abs(pos.values[:,1])) < 1.e-10)
-        self.assertTrue(np.max(np.abs(pos.values[:,2])) < 1.e-10)
-
-        # Make sure this frame and IAU_ENCELADUS are close
-        xform = synchro.wrt('IAU_ENCELADUS').transform_at_time(time)
-
-        self.assertTrue(np.max(np.abs(xform.omega.values[:,0])) < 5.e-8)
-        self.assertTrue(np.max(np.abs(xform.omega.values[:,1])) < 5.e-8)
-        self.assertTrue(np.max(np.abs(xform.omega.values[:,2])) < 1.e-6)
-
-        unit = np.array([[1,0,0],[0,1,0],[0,0,1]])
-        self.assertTrue(np.median(np.abs(xform.matrix.values - unit).ravel())
-                        < 5.e-4)
-        self.assertTrue(np.median(np.abs(xform.matrix.values - unit).ravel())
-                        < 0.1)
-
-#########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

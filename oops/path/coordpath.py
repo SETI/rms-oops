@@ -2,11 +2,9 @@
 # oops/path/coordpath.py: Subclass CoordPath of class Path
 ################################################################################
 
-from polymath import Qube, Scalar
-
-from oops.event   import Event
-from oops.path    import Path
-from oops.surface import Surface
+from polymath        import Qube, Scalar
+from oops.event      import Event
+from oops.path.path_ import Path
 
 class CoordPath(Path):
     """A path defined by fixed coordinates on a specified Surface."""
@@ -75,19 +73,4 @@ class CoordPath(Path):
 
         return Event(time, self.pos, self.origin, self.frame)
 
-################################################################################
-# UNIT TESTS
-################################################################################
-
-import unittest
-
-class Test_CoordPath(unittest.TestCase):
-
-    def runTest(self):
-
-        pass
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################
