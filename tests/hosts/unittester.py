@@ -4,13 +4,13 @@
 
 import unittest
 
-#from oops.hosts.juno.unittester         import *
-from oops.hosts.galileo.unittester      import *
-from oops.hosts.cassini.unittester      import *
-#from oops.hosts.hst.unittester         import *
-#from oops.hosts.voyager.unittester     import *
-#from oops.hosts.newhorizons.unittester import *
-#from oops.hosts.keck.unittester        import *
+#from tests.hosts.juno         import *
+from tests.hosts.galileo.ssi     import *
+from tests.hosts.cassini.iss     import *
+#from tests.hosts.hst         import *
+#from tests.hosts.voyager     import *
+#from tests.hosts.newhorizons import *
+#from tests.hosts.keck        import *
 
 ########################################
 if __name__ == '__main__':

@@ -27,7 +27,7 @@ echo "================================================================"
 echo
 echo "Test start:" `date`
 echo
-python -m coverage run -m unittest oops/hosts/unittester.py -v
+python -m coverage run -m unittest tests/hosts/unittester.py -v
 if [ $? -ne 0 ]; then
     echo "************************************"
     echo "*** OOPS.HOSTS FAILED UNIT TESTS ***"

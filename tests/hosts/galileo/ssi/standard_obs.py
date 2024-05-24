@@ -1,12 +1,9 @@
 ################################################################################
-# oops/hosts/galileo/ssi/standard_obs.py:
-#
-#  Standard gold-master observation definitions for Galileo SSI.
-#
+# tests/hosts/galileo/ssi/standard_obs.py:
 ################################################################################
+
 import os
-import unittest
-import oops.backplane.gold_master as gm
+import oops.gold_master as gm
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
@@ -125,3 +122,5 @@ gm.override('EUROPA center declination (deg, actual)', 0.02, names=name)
 gm.override('EUROPA center declination (deg, apparent)', 0.02, names=name)
 gm.override('EUROPA sub-observer latitude, planetocentric (deg)', 0.02, names=name)
 gm.override('EUROPA sub-observer latitude, planetographic (deg)', 0.02, names=name)
+
+################################################################################
