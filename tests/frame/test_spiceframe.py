@@ -3,39 +3,42 @@
 ################################################################################
 
 import numpy as np
+import os
 import unittest
 
 import cspyce
 
 from polymath       import Scalar, Vector3
-from oops           import Path
-from oops.frame     import Frame, SpiceFrame
 from oops.config    import QUICK
 from oops.constants import DPR
+from oops.event     import Event
+from oops.frame     import Frame, SpiceFrame, QuickFrame
+from oops.path      import Path
+from oops.path.spicepath import SpicePath
+
+from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 
 class Test_SpiceFrame(unittest.TestCase):
 
-    def runTest(self):
-
-        np.random.seed(6242)
-
-        # Imports are here to avoid conflicts
-        import os
-        from oops.event          import Event
-        from oops.frame          import QuickFrame
-        from oops.path.spicepath import SpicePath
-
-        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+    def setUp(self):
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls'))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/pck00010.tpc'))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp'))
-
         Path.USE_QUICKPATHS = False
         Frame.USE_QUICKFRAMES = False
-
         Path.reset_registry()
         Frame.reset_registry()
+
+    def tearDown(self):
+        Path.reset_registry()
+        Frame.reset_registry()
+        Path.USE_QUICKPATHS = True
+        Frame.USE_QUICKFRAMES = True
+
+    def runTest(self):
+
+        np.random.seed(6242)
 
         _ = SpicePath('EARTH', 'SSB')
 
@@ -378,12 +381,6 @@ class Test_SpiceFrame(unittest.TestCase):
 
         diff = (xform3.omega - xform2.omega).norm()
         self.assertTrue(diff.max() < 1.e-7)
-
-        Path.reset_registry()
-        Frame.reset_registry()
-
-        Path.USE_QUICKPATHS = True
-        Frame.USE_QUICKFRAMES = True
 
 ########################################
 if __name__ == '__main__':

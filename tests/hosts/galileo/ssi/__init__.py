@@ -5,6 +5,7 @@ import unittest
 import os.path
 import oops.gold_master as gm
 
+from oops.body import Body
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 
@@ -40,6 +41,11 @@ class Test_Galileo_SSI_GoldMaster(unittest.TestCase):
     #===========================================================================
     def test_C0374685140R(self):
         gm.execute_as_unittest(self, 'C0374685140R')
+
+    #===========================================================================
+    def tearDown(self):
+        Body._undefine_solar_system()
+        Body.define_solar_system()
 
 ############################################
 

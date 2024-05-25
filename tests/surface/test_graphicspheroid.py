@@ -278,8 +278,8 @@ class Test_GraphicSpheroid(unittest.TestCase):
         newer_lat = planet.lat_from_centric(new_lat)
         self.assertTrue(abs(newer_lat - lat).max() < 1.e-8)
 
-        Path.reset_registry()
-        Frame.reset_registry()
+#         Path.reset_registry()
+#         Frame.reset_registry()
 
 ########################################
 if __name__ == '__main__':

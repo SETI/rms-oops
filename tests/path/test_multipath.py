@@ -14,14 +14,17 @@ from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 class Test_MultiPath(unittest.TestCase):
 
-    def runTest(self):
-
+    def setUp(self):
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "naif0009.tls"))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "pck00010.tpc"))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "de421.bsp"))
-
         Path.reset_registry()
         Frame.reset_registry()
+
+    def tearDown(self):
+        pass
+
+    def runTest(self):
 
         sun   = SpicePath("SUN", "SSB")
         earth = SpicePath("EARTH", "SSB")
@@ -79,9 +82,6 @@ class Test_MultiPath(unittest.TestCase):
 
         self.assertTrue(event012a.pos[0:2] == event01x.pos)
         self.assertTrue(event012a.vel[0:2] == event01x.vel)
-
-        Path.reset_registry()
-        Frame.reset_registry()
 
 ########################################
 if __name__ == '__main__':

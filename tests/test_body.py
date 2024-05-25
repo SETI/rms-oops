@@ -11,14 +11,14 @@ from oops.path  import Path
 
 class Test_Body(unittest.TestCase):
 
-    def runTest(self):
-
-        # Imports are here to avoid conflicts
-        Path.reset_registry()
-        Frame.reset_registry()
-        Body.reset_registry()
-
+    def setUp(self):
+        Body._undefine_solar_system()
         Body.define_solar_system('2000-01-01', '2020-01-01')
+
+    def tearDown(self):
+        pass
+
+    def runTest(self):
 
         self.assertEqual(Body.lookup('DAPHNIS').barycenter.name,
                          'SATURN')
@@ -62,10 +62,6 @@ class Test_Body(unittest.TestCase):
                                       exclude=['IRREGULAR', 'BARYCENTER', 'IO'],
                                       recursive=True)
         self.assertEqual(len(planets), 16)  # 9 planets + 7 Jovian moons
-
-        Path.reset_registry()
-        Frame.reset_registry()
-        Body.reset_registry()
 
 ########################################
 if __name__ == '__main__':

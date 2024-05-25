@@ -6,21 +6,23 @@ import numpy as np
 import unittest
 
 from polymath   import Scalar, Vector3
-from oops       import Path
+from oops.event import Event
 from oops.frame import Frame, SpinFrame
+from oops.path  import Path
 
 
 class Test_SpinFrame(unittest.TestCase):
 
+    def setUp(self):
+        Frame.reset_registry()
+        Path.reset_registry()
+
+    def tearDown(self):
+        pass
+
     def runTest(self):
 
         np.random.seed(6521)
-
-        # Import here to avoid conflicts
-        from oops.event import Event
-
-        Frame.reset_registry()
-        Path.reset_registry()
 
         spin1 = SpinFrame(0., 1., 0., 2, "J2000", "spin1")
         _ = SpinFrame(0., 2., 0., 2, "J2000", "spin2")
@@ -101,8 +103,6 @@ class Test_SpinFrame(unittest.TestCase):
         pos1 = tr1.unrotate(pos, derivs=False)
         dpos_dt_test = (pos1 - pos0) / dt
         self.assertTrue(abs(dpos_dt_test - pos0.d_dt).max() < 1.e-5)
-
-        Frame.reset_registry()
 
 #########################################
 if __name__ == '__main__':

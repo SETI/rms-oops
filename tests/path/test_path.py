@@ -9,6 +9,7 @@ import unittest
 import cspyce
 
 from oops.config import QUICK
+from oops.body   import Body
 from oops.frame  import Frame, SpiceFrame
 from oops.path   import (Path, LinkedPath, ReversedPath, RelativePath,
                          RotatedPath, QuickPath, LinearPath, SpicePath)
@@ -17,15 +18,17 @@ from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 class Test_Path(unittest.TestCase):
 
+    def setUp(self):
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp'))
+        Path.reset_registry()
+        Frame.reset_registry()
+
+    def tearDown(self):
+        pass
+
     def runTest(self):
 
         Path.USE_QUICKPATHS = False
-
-        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp'))
-
-        # Registry tests
-        Path.reset_registry()
-        Frame.reset_registry()
 
         self.assertEqual(Path.WAYPOINT_REGISTRY['SSB'], Path.SSB)
 
