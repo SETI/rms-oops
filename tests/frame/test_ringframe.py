@@ -10,6 +10,7 @@ import cspyce
 
 from polymath   import Scalar, Vector3
 from oops       import Event
+from oops.body  import Body
 from oops.frame import Frame, RingFrame, SpiceFrame
 from oops.path  import Path, SpicePath
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
@@ -17,18 +18,21 @@ from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 class Test_RingFrame(unittest.TestCase):
 
+    def setUp(self):
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/naif0009.tls"))
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
+        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
+        Path.reset_registry()
+        Frame.reset_registry()
+
+    def tearDown(self):
+        pass
+
     def runTest(self):
 
         # Imports are here to reduce conflicts
 
         np.random.seed(2492)
-
-        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/naif0009.tls"))
-        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
-        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
-
-        Path.reset_registry()
-        Frame.reset_registry()
 
         _ = SpicePath("MARS", "SSB")
         planet = SpiceFrame("IAU_MARS", "J2000")
@@ -65,8 +69,8 @@ class Test_RingFrame(unittest.TestCase):
         self.assertTrue(np.all(np.abs(diff.values) < 1.e-4))
         self.assertTrue(np.mean(np.abs(diff.values) > 1.e-8))
 
-        Path.reset_registry()
-        Frame.reset_registry()
+#         Path.reset_registry()
+#         Frame.reset_registry()
 
 ########################################
 if __name__ == '__main__':

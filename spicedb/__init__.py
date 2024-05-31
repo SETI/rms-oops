@@ -1940,6 +1940,19 @@ def unload_by_filepath(filepath):
     if name in FURNISHED_FILENOS:
         del FURNISHED_FILENOS[name]
 
+#===============================================================================
+def unload_all():
+    """Unload all SPICE kernels."""
+
+    for ktype, abspaths in FURNISHED_ABSPATHS.items():
+        for abspath in abspaths:
+            cspyce.unload(abspath)
+        FURNISHED_ABSPATHS[ktype] = []
+        FURNISHED_NAMES = []
+
+    FURNISHED_FILENOS = {}
+    FURNISHED_INFO = {}
+
 ################################################################################
 # Public API for names of kernels
 ################################################################################

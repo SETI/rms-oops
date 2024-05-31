@@ -149,6 +149,7 @@ class Galileo(object):
         cspyce.furnsh(gkdir + 'LSK/naif0012.tls')
         cspyce.furnsh(kdir + 'SCLK/mk00062a.tsc')
         cspyce.furnsh(kdir + 'IK/gll36001.ti')
+        cspyce.furnsh(kdir + 'FK/gll_v0.tf')
         cspyce.furnsh(kdir + 'SPK/de421.bsp')
         cspyce.furnsh(kdir + 'SPK/de432s.bsp')
 

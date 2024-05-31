@@ -9,7 +9,8 @@ import unittest
 import cspyce
 
 from polymath   import Scalar, Vector3
-from oops       import Event
+from oops.body  import Body
+from oops.event import Event
 from oops.frame import Frame, PoleFrame, RingFrame, SpiceFrame
 from oops.path  import Path, SpicePath
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
@@ -17,18 +18,19 @@ from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 class Test_PoleFrame(unittest.TestCase):
 
-    def runTest(self):
-
-        np.random.seed(1152)
-
-        # Imports are here to reduce conflicts
-
+    def setUp(self):
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls'))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/pck00010.tpc'))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp'))
-
         Path.reset_registry()
         Frame.reset_registry()
+
+    def tearDown(self):
+        pass
+
+    def runTest(self):
+
+        np.random.seed(1152)
 
         _ = SpicePath('MARS', 'SSB')
         planet = SpiceFrame('IAU_MARS', 'J2000')
@@ -218,9 +220,6 @@ class Test_PoleFrame(unittest.TestCase):
         self.assertTrue(len(poleframe.cache) == 4)
         self.assertFalse(poleframe.cached_value_returned)
         self.assertTrue(300. not in poleframe.cache)
-
-        Path.reset_registry()
-        Frame.reset_registry()
 
 ########################################
 if __name__ == '__main__':

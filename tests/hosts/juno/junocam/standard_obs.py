@@ -1,8 +1,5 @@
 ################################################################################
-# oops/hosts/juno/junocam/standard_obs.py:
-#
-#  Standard gold-master observation definitions for JunoCam.
-#
+# tests/hosts/juno/junocam/standard_obs.py:
 ################################################################################
 import os
 import unittest
@@ -105,3 +102,5 @@ gm.override('JUPITER:RING longitude d/dv self-check (deg/pix)', .09, names=name)
 gm.override('JUPITER:RING azimuth d/du self-check (deg/pix)', .16, names=name)
 gm.override('JUPITER:RING azimuth d/dv self-check (deg/pix)', .23, names=name)
 gm.override('Celestial north minus east angles (deg)', 6., names=name)
+
+################################################################################

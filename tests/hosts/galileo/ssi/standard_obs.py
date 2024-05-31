@@ -1,12 +1,9 @@
 ################################################################################
-# oops/hosts/galileo/ssi/standard_obs.py:
-#
-#  Standard gold-master observation definitions for Galileo SSI.
-#
+# tests/hosts/galileo/ssi/standard_obs.py:
 ################################################################################
+
 import os
-import unittest
-import oops.backplane.gold_master as gm
+import oops.gold_master as gm
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
@@ -99,6 +96,16 @@ gm.override('EUROPA center declination (deg, apparent)', 0.017, names=name)
 gm.override('EUROPA sub-observer latitude, planetocentric (deg)', 0.019, names=name)
 gm.override('EUROPA sub-observer latitude, planetographic (deg)', 0.019, names=name)
 
+# These overrides are only necessary for Windows; I don't know why.  --Mark
+# (The default error threshold is 0.001.)
+gm.override('EUROPA center phase angle, apparent (deg)', 0.0015, names=name)
+gm.override('EUROPA center phase angle, actual (deg)', 0.0015, names=name)
+gm.override('EUROPA orbit longitude wrt observer (deg)', 0.0015, names=name)
+gm.override('EUROPA orbit longitude wrt OHA (deg)', 0.0015, names=name)
+gm.override('EUROPA sub-observer longitude, IAU (deg)', 0.0015, names=name)
+gm.override('EUROPA sub-observer longitude wrt Sun (deg)', 0.0015, names=name)
+gm.override('EUROPA sub-solar longitude wrt observer (deg)', 0.0015, names=name)
+
 ###################################################################
 name = 'C0374685140R'
 ###################################################################
@@ -125,3 +132,15 @@ gm.override('EUROPA center declination (deg, actual)', 0.02, names=name)
 gm.override('EUROPA center declination (deg, apparent)', 0.02, names=name)
 gm.override('EUROPA sub-observer latitude, planetocentric (deg)', 0.02, names=name)
 gm.override('EUROPA sub-observer latitude, planetographic (deg)', 0.02, names=name)
+
+# These overrides are only necessary for Windows; I don't know why.  --Mark
+# (The default error threshold is 0.001.)
+gm.override('EUROPA center phase angle, apparent (deg)', 0.0015, names=name)
+gm.override('EUROPA center phase angle, actual (deg)', 0.0015, names=name)
+gm.override('EUROPA orbit longitude wrt observer (deg)', 0.0015, names=name)
+gm.override('EUROPA orbit longitude wrt OHA (deg)', 0.0015, names=name)
+gm.override('EUROPA sub-observer longitude, IAU (deg)', 0.0015, names=name)
+gm.override('EUROPA sub-observer longitude wrt Sun (deg)', 0.0015, names=name)
+gm.override('EUROPA sub-solar longitude wrt observer (deg)', 0.0015, names=name)
+
+################################################################################

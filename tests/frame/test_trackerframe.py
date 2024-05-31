@@ -13,7 +13,6 @@ from oops.frame import TrackerFrame
 class Test_TrackerFrame(unittest.TestCase):
 
     def setUp(self):
-
         Body.reset_registry()
         Body.define_solar_system('1990-01-01', '2020-01-01')
 

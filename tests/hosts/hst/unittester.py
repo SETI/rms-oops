@@ -1,10 +1,10 @@
 ################################################################################
-# oops/hosts/hst/unittester.py
+# tests/hosts/hst/unittester.py
 ################################################################################
 
 import unittest
 
-from __init__ import Test_HST
+from . import Test_HST
 
 ########################################
 if __name__ == '__main__':

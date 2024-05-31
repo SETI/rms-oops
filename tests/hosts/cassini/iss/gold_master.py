@@ -1,12 +1,11 @@
 ################################################################################
-# oops/hosts/galileo/unittester.py
+# tests/hosts/cassini/iss/gold_master.py
 ################################################################################
 
-import unittest
+import oops.gold_master as gm
+from tests.hosts.cassini.iss import standard_obs
 
-from oops.hosts.cassini import Test_Cassini_ISS_GoldMaster
-
-########################################
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    gm.execute_as_command()
+
 ################################################################################
