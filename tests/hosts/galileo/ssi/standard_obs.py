@@ -98,13 +98,13 @@ gm.override('EUROPA sub-observer latitude, planetographic (deg)', 0.019, names=n
 
 # These overrides are only necessary for Windows; I don't know why.  --Mark
 # (The default error threshold is 0.001.)
-gm.override('EUROPA center phase angle, apparent (deg)', 0.0015, names=names)
-gm.override('EUROPA center phase angle, actual (deg)', 0.0015, names=names)
-gm.override('EUROPA orbit longitude wrt observer (deg)', 0.0015, names=names)
-gm.override('EUROPA orbit longitude wrt OHA (deg)', 0.0015, names=names)
-gm.override('EUROPA sub-observer longitude, IAU (deg)', 0.0015, names=names)
-gm.override('EUROPA sub-observer longitude wrt Sun (deg)', 0.0015, names=names)
-gm.override('EUROPA sub-solar longitude wrt observer (deg)', 0.0015, names=names)
+gm.override('EUROPA center phase angle, apparent (deg)', 0.0015, names=name)
+gm.override('EUROPA center phase angle, actual (deg)', 0.0015, names=name)
+gm.override('EUROPA orbit longitude wrt observer (deg)', 0.0015, names=name)
+gm.override('EUROPA orbit longitude wrt OHA (deg)', 0.0015, names=name)
+gm.override('EUROPA sub-observer longitude, IAU (deg)', 0.0015, names=name)
+gm.override('EUROPA sub-observer longitude wrt Sun (deg)', 0.0015, names=name)
+gm.override('EUROPA sub-solar longitude wrt observer (deg)', 0.0015, names=name)
 
 ###################################################################
 name = 'C0374685140R'
