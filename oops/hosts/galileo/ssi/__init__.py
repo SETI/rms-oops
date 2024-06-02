@@ -40,7 +40,7 @@ def from_file(filespec,
     label = pds3.get_label(filespec)
 
     # Load the data array
-    vic = vicar.VicarImage.from_file(filespec, extraneous='warn')
+    vic = vicar.VicarImage.from_file(filespec)
     vicar_dict = vic.as_dict()
 
     # Get image metadata

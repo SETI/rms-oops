@@ -198,8 +198,8 @@ def set_default_obs(obspath, index, planets, moons=[], rings=[], kwargs={}):
                                    planets=planets, moons=moons, rings=rings,
                                    kwargs=kwargs)
 
-def define_standard_obs(obsname, obspath, index, planets, moons=[], rings=[],
-                        kwargs={}):
+def define_standard_obs(obsname, obspath, index=None, *, planets=[], moons=[],
+                        rings=[], kwargs={}):
     """Set the details of a standard gold master test.
 
     These are the observation file path and module to use when a test is
@@ -226,9 +226,12 @@ def define_standard_obs(obsname, obspath, index, planets, moons=[], rings=[],
 
     global STANDARD_OBS_INFO
 
-    planets = planets if isinstance(planets, (list,tuple)) else (planets,)
-    moons   = moons   if isinstance(moons,   (list,tuple)) else (moons,)
-    rings   = rings   if isinstance(rings,   (list,tuple)) else (rings,)
+    planets = (planets,) if isinstance(planets, str) else tuple(planets)
+    moons   = (moons,)   if isinstance(moons,   str) else tuple(moons)
+    rings   = (rings,)   if isinstance(rings,   str) else tuple(rings)
+
+    if not (planets or moons or rings):
+        raise ValueError('no planets, moons, or rings specified')
 
     STANDARD_OBS_INFO[obsname] = {}
     STANDARD_OBS_INFO[obsname]['obspath'] = obspath
@@ -550,7 +553,7 @@ def execute_as_command():
                     help='Do not write a log file in the output directory%s.'
                          % ('' if DEFAULTS['log'] else ' (default)'))
     gr.add_argument('--level', type=str, metavar='LEVEL',
-                    choices=['debug', 'warning', 'error']
+                    choices=['debug', 'info', 'warning', 'error']
                             + [str(k) for k in range(1,31)],
                     default=DEFAULTS['level'],
                     help='''Minimum level for messages to be logged: "debug",
@@ -791,16 +794,41 @@ def run_tests(args):
     LOGGING.all(args.convergence, category='convergence')
     LOGGING.all(args.diagnostics, category='diagnostics')
     LOGGING.all(args.performance, category='performance')
+    LOGGING.reset()
 
-    LOGGING.reset()         # zero out error and warning counts
     errors = 0
+    warnings = 0
+    lines = 0
     had_exception = False
+    start = datetime.datetime.now()
     try:
-        for bpt in args.backplane_tests:
-            errors += bpt.run_tests()
+        for k, bpt in enumerate(args.backplane_tests):
+
+            # Insert blank line after tests that logged something/anything
+            if LOGGING.lines:
+                LOGGING.literal(level=args.level, force=True)
+
+            LOGGING.reset()         # zero out error and warning counts
+            bpt.run_tests()
+
+            errors += LOGGING.errors
+            warnings += LOGGING.warnings
+            lines += LOGGING.lines
+
     except Exception as e:
         LOGGING.exception(e)
         had_exception = True
+
+    finally:
+        if len(args.backplane_tests) > 0:
+            if LOGGING.lines:
+                LOGGING.literal(level=args.level, force=True)
+
+            LOGGING.info('Total warnings = ' + str(warnings))
+            LOGGING.info('Total errors = ' + str(errors))
+
+            seconds = (datetime.datetime.now() - start).total_seconds()
+            LOGGING.info('Total elapsed time: %.3f s' % seconds)
 
     if errors or had_exception > 0:
         if args.testcase is not None:
@@ -1088,6 +1116,11 @@ class BackplaneTest(object):
         self.summary = {}
         self.results = {}
 
+        self.header = ['File: ' + self.abspath]
+        if self.suffix:
+            self.header.append('Suffix: ' + self.suffix)
+        self.print_header = self.args.level > logging.INFO
+
     ############################################################################
     # Test runner for one BackplaneTest
     ############################################################################
@@ -1111,7 +1144,6 @@ class BackplaneTest(object):
 
         # Set up the log handler; set aside any old log
         # Note that each BackplaneTest gets its own dedicated logger
-        LOGGING.push()
         if self.args.log:
             # Make sure the output directory exits
             os.makedirs(self.output_dir, exist_ok=True)
@@ -1129,12 +1161,16 @@ class BackplaneTest(object):
 
         # Run the tests
         start = datetime.datetime.now()
-        try:
-            LOGGING.info('Beginning task ' + self.task)
-            LOGGING.info('File: ' + self.abspath)
-            if self.suffix:
-                LOGGING.info('Suffix: ' + self.suffix)
 
+        LOGGING.info('Beginning task ' + self.task)
+        for msg in self.header:
+            LOGGING.info(msg)
+        self.print_header = self.args.level > logging.INFO
+            # This flag indicates that we must print the observation info just
+            # before the first warning or error. Otherwise, we don't know which
+            # observation triggered it.
+
+        try:
             # Make sure test data and gold master files exist
             if self.task in ('compare', 'adopt'):
                 if not OOPS_GOLD_MASTER_PATH:
@@ -1206,83 +1242,79 @@ class BackplaneTest(object):
             # Internals...
             if self.args.internals:
                 LOGGING.push()
-                LOGGING.set_logger_level('DEBUG')
-                bp = self.backplane
+                try:
+                    LOGGING.set_logger_level('DEBUG')
+                    bp = self.backplane
 
-                for i in (False, True):
-                    LOGGING.diagnostic('\nSurface Events, derivs=%s' % i)
-                    keys = list(bp.surface_events[i].keys())
-                    keys.sort()
-                    for key in keys:
-                        sum = np.sum(bp.surface_events[i][key].mask)
-                        LOGGING.diagnostic('   ', key, sum)
+                    for i in (False, True):
+                        LOGGING.diagnostic('\nSurface Events, derivs=%s' % i)
+                        keys = list(bp.surface_events[i].keys())
+                        keys.sort()
+                        for key in keys:
+                            sum = np.sum(bp.surface_events[i][key].mask)
+                            LOGGING.diagnostic('   ', key, sum)
 
-                for i in (False, True):
-                    LOGGING.diagnostic('\nIntercepts, derivs=%s' % i)
-                    keys = list(bp.intercepts[i].keys())
+                    for i in (False, True):
+                        LOGGING.diagnostic('\nIntercepts, derivs=%s' % i)
+                        keys = list(bp.intercepts[i].keys())
+                        keys.sort(key=BackplaneTest._sort_key)
+                        for key in keys:
+                            sum = np.sum(bp.intercepts[i][key].mask)
+                            LOGGING.diagnostic('   ', key, sum)
+
+                    LOGGING.diagnostic('\nGridless arrivals')
+                    keys = list(bp.gridless_arrivals.keys())
                     keys.sort(key=BackplaneTest._sort_key)
                     for key in keys:
-                        sum = np.sum(bp.intercepts[i][key].mask)
+                        sum = np.sum(bp.gridless_arrivals[key].mask)
                         LOGGING.diagnostic('   ', key, sum)
 
-                LOGGING.diagnostic('\nGridless arrivals')
-                keys = list(bp.gridless_arrivals.keys())
-                keys.sort(key=BackplaneTest._sort_key)
-                for key in keys:
-                    sum = np.sum(bp.gridless_arrivals[key].mask)
-                    LOGGING.diagnostic('   ', key, sum)
+                    LOGGING.diagnostic('\nBackplanes')
+                    keys = list(bp.backplanes.keys())
+                    keys.sort(key=BackplaneTest._sort_key)
+                    for key in keys:
+                        sum = np.sum(bp.backplanes[key].mask)
+                        if key in bp.backplanes_with_derivs:
+                            derivs = bp.backplanes_with_derivs[key].derivs
+                            flag = ' '
+                            if 't' in derivs:
+                                if 'los' in derivs:
+                                    flag = '*'
+                                else:
+                                    flag = 't'
+                            elif 'los' in derivs:
+                                flag = 'l'
+                        else:
+                            flag = ' '
+                        LOGGING.diagnostic('   %s%s' % (flag, key), sum)
 
-                LOGGING.diagnostic('\nBackplanes')
-                keys = list(bp.backplanes.keys())
-                keys.sort(key=BackplaneTest._sort_key)
-                for key in keys:
-                    sum = np.sum(bp.backplanes[key].mask)
-                    if key in bp.backplanes_with_derivs:
-                        derivs = bp.backplanes_with_derivs[key].derivs
-                        flag = ' '
-                        if 't' in derivs:
-                            if 'los' in derivs:
-                                flag = '*'
-                            else:
-                                flag = 't'
-                        elif 'los' in derivs:
-                            flag = 'l'
-                    else:
-                        flag = ' '
-                    LOGGING.diagnostic('   %s%s' % (flag, key), sum)
+                    LOGGING.diagnostic('\nAntimasks')
+                    keys = list(bp.antimasks.keys())
+                    keys.sort()
+                    for key in keys:
+                        antimask = bp.antimasks[key]
+                        info = ('array' if isinstance(antimask, np.ndarray)
+                                        else str(antimask))
+                        LOGGING.diagnostic('   ', key, '(%s)' % info)
 
-                LOGGING.diagnostic('\nAntimasks')
-                keys = list(bp.antimasks.keys())
-                keys.sort()
-                for key in keys:
-                    antimask = bp.antimasks[key]
-                    info = ('array' if isinstance(antimask, np.ndarray)
-                                    else str(antimask))
-                    LOGGING.diagnostic('   ', key, '(%s)' % info)
+                    LOGGING.diagnostic()
 
-                LOGGING.diagnostic()
-                errors = LOGGING.errors
-                LOGGING.pop()
-
-            seconds = (datetime.datetime.now() - start).total_seconds()
-            LOGGING.info('Elapsed time: %.3f s' % seconds)
+                finally:
+                    LOGGING.pop()
 
         # Be sure to remove the BackplaneTest-specific file handler afterward
         finally:
-            if LOGGING.warnings:
-                LOGGING.debug('Total warnings = ' + str(LOGGING.warnings))
-            if LOGGING.errors:
-                LOGGING.info('Total errors = ' + str(LOGGING.errors),
-                             force=True)
+            LOGGING.info('Warnings = ' + str(LOGGING.warnings))
+            LOGGING.info('Errors = ' + str(LOGGING.errors))
+
+            seconds = (datetime.datetime.now() - start).total_seconds()
+            LOGGING.info('Elapsed time: %.3f s' % seconds)
 
             if self.args.log:
                 LOGGING.logger.removeHandler(handler)
                 handler.close()
 
-            errors = LOGGING.errors
-            LOGGING.pop()
-
-        return errors
+        return
 
     @staticmethod
     def _sort_key(key):
@@ -1959,7 +1991,7 @@ class BackplaneTest(object):
         """Log this comparison info.
 
         A single record of the log file has this format:
-          "<time> | oops.backplane.gold_master | <level> | <suite> | <message>"
+          "<time> | oops.gold_master | <level> | <suite> | <message>"
         where
           <time>  is the local time to the level of ms.
           <level> is one of "DEBUG", "INFO", "WARNING", "ERROR", "FATAL".
@@ -2054,6 +2086,12 @@ class BackplaneTest(object):
                 message += ['/', str(errors2)]
 
             message += ['/', str(comparison.pixels)]
+
+        # If necessary, print the observation info before the first error
+        if comparison.status != 'Success' and self.print_header:
+            for msg in self.header:
+                LOGGING.info(msg, force=True)
+            self.print_header = False
 
         LOGGING.print(''.join(message), level=comparison.logging_level)
 

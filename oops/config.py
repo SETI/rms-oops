@@ -139,6 +139,7 @@ class LOGGING(object):
     log_formatting = True           # True to use DEFAULT_LOG_FORMAT.
     warnings = 0                    # Warning count.
     errors = 0                      # Error count.
+    lines = 0                       # Number of lines logged.
     python_warnings = False         # Use Python warnings on LOGGING.warn()
 
     LEVELS = {                      # Static dictionary of logging levels
@@ -168,6 +169,7 @@ class LOGGING(object):
 
         LOGGING.warnings = 0
         LOGGING.errors = 0
+        LOGGING.lines = 0
 
     @staticmethod
     def all(flag, category='', reset=False):
@@ -210,8 +212,8 @@ class LOGGING(object):
         """Enable or disable log messages to stdout."""
 
         LOGGING.stdout = bool(flag)
-        LOGGING.errors = 0
-        LOGGING.warnings = 0
+#         LOGGING.errors = 0          # MRS 6/1/24 doesn't seem necessary
+#         LOGGING.warnings = 0
 
         if reset:
             LOGGING.reset()
@@ -221,9 +223,10 @@ class LOGGING(object):
         """Enable or disable log messages to stderr."""
 
         LOGGING.stderr = bool(flag)
-        LOGGING.errors = 0
-        LOGGING.warnings = 0
+#         LOGGING.errors = 0          # MRS 6/1/24 doesn't seem necessary
+#         LOGGING.warnings = 0
 
+        # Never allow stdout=False if other logging methods are off
         if not any([LOGGING._file, LOGGING.logger, LOGGING.stderr]):
             LOGGING.stdout = True
 
@@ -312,7 +315,7 @@ class LOGGING(object):
             handler.setFormatter(LOG_FORMATTER)
 
     @staticmethod
-    def print(*args, level=logging.INFO, literal=False, force=False):
+    def print(*args, level=logging.INFO, literal=False, force=False, tally=False):
         """Print a log message for a given log level.
 
         The message is constructed by converting each argument to a string, and
@@ -339,20 +342,21 @@ class LOGGING(object):
             level = LOGGING.LEVELS[level.lower()]
 
         # Update the prefix based on the level
-        if level >= logging.ERROR:
-            prefix = LOGGING.prefix + 'ERROR:'
-            LOGGING.errors += 1
-        elif level >= logging.WARNING:
-            prefix = LOGGING.prefix + 'WARNING:'
-            LOGGING.warnings += 1
-        else:
-            prefix = LOGGING.prefix
+        prefix = LOGGING.prefix
+        if not literal:
+            if level >= logging.ERROR:
+                prefix += 'ERROR:'
+                LOGGING.errors += 1
+            elif level >= logging.WARNING:
+                prefix += 'WARNING:'
+                LOGGING.warnings += 1
 
         # The Python warnings filter mechanism can be used, so a warning might
         # be suppressed or converted to an error. If suppressed, it will still
         # be sent to a logger.
         user_was_warned = False
-        if logging.WARNING <= level < logging.ERROR and LOGGING.python_warnings:
+        if (not literal and LOGGING.python_warnings
+                and logging.WARNING <= level < logging.ERROR):
             warnings.warn(' '.join([str(x) for x in args]))
             user_was_warned = True
 
@@ -362,7 +366,7 @@ class LOGGING(object):
             prefix_ = ''
 
         # Write to stdout
-        if LOGGING.stdout and not user_was_warned:
+        if LOGGING.stdout and level >= LOGGING.level and not user_was_warned:
             if prefix:
                 print(prefix, *args)
             else:
@@ -407,6 +411,8 @@ class LOGGING(object):
                 LOGGING.logger.log(LOGGING.level, message, extra=extras)
             else:
                 LOGGING.logger.log(level, message, extra=extras)
+
+        LOGGING.lines += (force or level >= LOGGING.level)
 
     @staticmethod
     def debug(*args, force=False):
