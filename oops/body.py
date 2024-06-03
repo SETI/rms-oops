@@ -9,7 +9,7 @@ import cspyce
 import spicedb
 
 from polymath                    import Vector3
-from oops.frame.frame_           import Frame, AliasFrame
+from oops.frame.frame_           import Frame
 from oops.frame.poleframe        import PoleFrame
 from oops.frame.ringframe        import RingFrame
 from oops.frame.spiceframe       import SpiceFrame
@@ -1288,7 +1288,7 @@ class Body(object):
 
         URANUS_EPOCH = cspyce.utc2et('1977-03-10T20:00:00')
 
-        uranus_wrt_b1950 = AliasFrame('IAU_URANUS').wrt('B1950')
+        uranus_wrt_b1950 = Frame.as_frame('IAU_URANUS').wrt('B1950')
         _ = RingFrame(uranus_wrt_b1950, URANUS_EPOCH, retrograde=True,
                       frame_id='URANUS_RINGS_B1950')
 
@@ -1655,5 +1655,23 @@ class Body(object):
 
         body.is_standard = bool(is_standard)
         body.spk = spk
+
+    ############################################################################
+    # For debugging
+    ############################################################################
+
+    @staticmethod
+    def _undefine_solar_system():
+
+        Body.BODY_REGISTRY = {}
+        Body.STANDARD_BODIES = set()
+        Body.MARS_MOONS_LOADED = []
+        Body.JUPITER_MOONS_LOADED = []
+        Body.SATURN_MOONS_LOADED = []
+        Body.URANUS_MOONS_LOADED = []
+        Body.NEPTUNE_MOONS_LOADED = []
+        Body.PLUTO_MOONS_LOADED = []
+
+        spicedb.unload_all()
 
 ################################################################################

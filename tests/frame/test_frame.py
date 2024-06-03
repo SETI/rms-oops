@@ -9,6 +9,7 @@ import unittest
 import cspyce
 
 from oops.config import QUICK
+from oops.body   import Body
 from oops.frame  import Frame, QuickFrame, Rotation, SpiceFrame
 from oops.path   import SpicePath
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
@@ -16,13 +17,17 @@ from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 class Test_Frame(unittest.TestCase):
 
-    def runTest(self):
-
+    def setUp(self):
+        Body._undefine_solar_system()
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls'))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/pck00010.tpc'))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp'))
-
         Frame.reset_registry()
+
+    def tearDown(self):
+        pass
+
+    def runTest(self):
 
         # QuickFrame tests
 

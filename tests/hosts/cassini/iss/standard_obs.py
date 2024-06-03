@@ -1,11 +1,9 @@
 ################################################################################
-# oops/hosts/cassini/standard_obs.py:
-#
-#  Standard gold-master observation definitions for Cassini ISS.
-#
+# tests/hosts/cassini/iss/standard_obs.py:
 ################################################################################
+
 import os
-import oops.backplane.gold_master as gm
+import oops.gold_master as gm
 
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
@@ -31,3 +29,5 @@ gm.override('SATURN_MAIN_RINGS longitude d/dv self-check (deg/pix)', 1.)
 gm.override('SATURN:RING azimuth d/dv self-check (deg/pix)', 0.1)
 gm.override('SATURN:RING distance d/dv self-check (km/pix)', 0.3)
 gm.override('SATURN:RING longitude d/dv self-check (deg/pix)', 0.1)
+
+################################################################################

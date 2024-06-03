@@ -11,6 +11,7 @@ import oops.spice_support as spice
 import oops.constants as constants
 
 from polymath   import Vector3
+from oops.body  import Body
 from oops.frame import Frame, SpiceFrame
 from oops.path  import Path, AliasPath, SpicePath
 from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
@@ -18,13 +19,18 @@ from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 class Test_SpicePath(unittest.TestCase):
 
-    def runTest(self):
-
+    def setUp(self):
       Path.USE_QUICKPATHS = False
       Frame.USE_QUICKFRAMES = False
-
       cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
       cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
+
+    def tearDown(self):
+      spice.initialize()
+      Path.USE_QUICKPATHS = True
+      Frame.USE_QUICKFRAMES = True
+
+    def runTest(self):
 
       # Repeat the tests without and then with shortcuts
       for SpicePath.USE_SPICEPATH_SHORTCUTS in (False, True):
@@ -597,10 +603,6 @@ class Test_SpicePath(unittest.TestCase):
 
         Path.reset_registry()
         Frame.reset_registry()
-
-      spice.initialize()
-      Path.USE_QUICKPATHS = True
-      Frame.USE_QUICKFRAMES = True
 
 ########################################
 if __name__ == '__main__':

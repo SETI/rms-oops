@@ -428,8 +428,8 @@ class Test_Limb(unittest.TestCase):
         self.assertTrue(abs(coords[1] - lat).max() < 1.e-12)
         self.assertTrue(abs(coords[2] - z).max() < 1.e-6)
 
-        Path.reset_registry()
-        Frame.reset_registry()
+#         Path.reset_registry()
+#         Frame.reset_registry()
 
 ########################################
 if __name__ == '__main__':

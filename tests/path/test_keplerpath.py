@@ -5,9 +5,10 @@
 import numpy as np
 import unittest
 
-from oops      import Frame, Gravity
-from oops.path import Path, KeplerPath
-
+from oops.body    import Body
+from oops.frame   import Frame
+from oops.gravity import Gravity
+from oops.path    import Path, KeplerPath
 
 def _xyz_planet_derivative_test(kep, t, delta=1.e-7):
     """Error in position change based on numerical vs. analytic derivatives.
@@ -107,9 +108,8 @@ def _pos_derivative_test(kep, t, delta=1.e-5):
 class Test_KeplerPath(unittest.TestCase):
 
     def setUp(self):
-        from oops.body import Body
-
         Body.reset_registry()
+        Body._undefine_solar_system()
         Body.define_solar_system("2000-01-01", "2010-01-01")
 
     def tearDown(self):

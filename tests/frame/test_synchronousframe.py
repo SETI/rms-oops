@@ -17,7 +17,8 @@ class Test_SynchronousFrame(unittest.TestCase):
         Body.define_solar_system('2000-01-01', '2020-01-01')
 
     def tearDown(self):
-        pass
+        Body._undefine_solar_system()
+        Body.define_solar_system()
 
     def runTest(self):
         from oops.path import Path

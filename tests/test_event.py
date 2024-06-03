@@ -6,15 +6,15 @@ import numpy as np
 import unittest
 
 from polymath       import Vector3
-from oops           import Event
+from oops.body      import Body
+from oops.event     import Event
 from oops.constants import C, RPD
 
 
 class Test_Event(unittest.TestCase):
 
     def setUp(self):
-        from oops.body import Body
-        Body.reset_registry()
+        Body._undefine_solar_system()
         Body.define_solar_system('1990-01-01', '2010-01-01')
 
     def tearDown(self):

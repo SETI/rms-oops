@@ -260,8 +260,8 @@ class Test_GraphicEllipsoid(unittest.TestCase):
             ref = t.d_dpos.vals[...,i]
             self.assertTrue(abs(dt_dpos/ref - 1).max() < 1.e-5)
 
-        Path.reset_registry()
-        Frame.reset_registry()
+#         Path.reset_registry()
+#         Frame.reset_registry()
 
 ########################################
 if __name__ == '__main__':

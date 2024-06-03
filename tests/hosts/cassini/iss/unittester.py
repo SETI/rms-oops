@@ -1,10 +1,10 @@
 ################################################################################
-# oops/hosts/galileo/unittester.py
+# tests/hosts/cassini/iss/unittester.py
 ################################################################################
 
 import unittest
 
-from oops.hosts.galileo.ssi import Test_Galileo_SSI_GoldMaster
+from tests.hosts.cassini.iss import Test_Cassini_ISS_GoldMaster
 
 ########################################
 if __name__ == '__main__':

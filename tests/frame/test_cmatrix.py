@@ -9,6 +9,7 @@ import unittest
 import cspyce
 
 from polymath   import Scalar
+from oops.body  import Body
 from oops.event import Event
 from oops.frame import Frame, Cmatrix, SpiceFrame
 from oops.path  import Path, SpicePath
@@ -17,16 +18,19 @@ from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 class Test_Cmatrix(unittest.TestCase):
 
-    def runTest(self):
-
-        np.random.seed(7316)
-
+    def setUp(self):
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls'))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/pck00010.tpc'))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp'))
-
         Path.reset_registry()
         Frame.reset_registry()
+
+    def tearDown(self):
+        pass
+
+    def runTest(self):
+
+        np.random.seed(7316)
 
         _ = SpicePath('MARS', 'SSB')
         _ = SpiceFrame('IAU_MARS', 'J2000')
@@ -93,9 +97,6 @@ class Test_Cmatrix(unittest.TestCase):
         self.assertTrue(np.all(wrt_mars.vel.vals[...,0][:,0] ==  wrt_mars90s.vel.vals[...,1][:,3]))
         self.assertTrue(np.all(wrt_mars.vel.vals[...,1][:,0] == -wrt_mars90s.vel.vals[...,0][:,3]))
         self.assertTrue(np.all(wrt_mars.vel.vals[...,2][:,0] ==  wrt_mars90s.vel.vals[...,2][:,3]))
-
-        Path.reset_registry()
-        Frame.reset_registry()
 
 ########################################
 if __name__ == '__main__':

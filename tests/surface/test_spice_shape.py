@@ -18,12 +18,15 @@ import oops.spice_support as spice
 
 class Test_spice_shape(unittest.TestCase):
 
-    def runTest(self):
-
+    def setUp(self):
         spice.initialize()
-
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "pck00010.tpc"))
         cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "de421.bsp"))
+
+    def tearDown(self):
+        pass
+
+    def runTest(self):
 
         _ = SpicePath("VENUS", "SSB", "J2000", path_id="APHRODITE")
         _ = SpiceFrame("VENUS", "J2000", "SLOWSPINNER")
@@ -33,9 +36,6 @@ class Test_spice_shape(unittest.TestCase):
         self.assertEqual(Frame.as_frame_id(body.frame),  "SLOWSPINNER")
         self.assertEqual(body.req, 6051.8)
         self.assertEqual(body.squash_z, 1.)
-
-        Path.reset_registry()
-        Frame.reset_registry()
 
 ########################################
 if __name__ == '__main__':

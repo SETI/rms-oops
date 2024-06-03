@@ -150,8 +150,8 @@ class Test_Ansa(unittest.TestCase):
         self.assertTrue(abs(dpos_dlos_test - pos0.d_dlos.vals[...,2]).max() < 1.e-2)
         self.assertTrue(abs(dt_dlos_test - t0.d_dlos.vals[...,2]).max() < 1.e-2)
 
-        Path.reset_registry()
-        Frame.reset_registry()
+#         Path.reset_registry()
+#         Frame.reset_registry()
 
 ########################################
 if __name__ == '__main__':
