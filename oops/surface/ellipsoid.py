@@ -54,7 +54,7 @@ class Ellipsoid(Surface):
         self.origin = Path.as_waypoint(origin)
         self.frame  = Frame.as_wayframe(frame)
 
-        self.radii    = np.asfarray(radii)
+        self.radii    = np.asarray(radii, dtype=np.float64)
         self.radii_sq = self.radii**2
         self.req      = self.radii[0]
         self.req_sq   = self.req**2

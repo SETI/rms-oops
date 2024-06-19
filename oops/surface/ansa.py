@@ -54,7 +54,7 @@ class Ansa(Surface):
         if radii is None:
             self.radii = None
         else:
-            self.radii = np.asfarray(radii)
+            self.radii = np.asarray(radii, dtype=np.float64)
 
         self._state_ringplane = ringplane
         if ringplane is None:

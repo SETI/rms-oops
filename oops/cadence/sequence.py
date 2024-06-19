@@ -42,7 +42,7 @@ class Sequence(Cadence):
                 raise ValueError('Sequence texp input must be unmasked')
             texp = texp.vals
 
-        tlist = np.asfarray(tlist)
+        tlist = np.asarray(tlist, dtype=np.float64)
         if np.ndim(tlist) != 1 or tlist.size <= 1:
             raise ValueError('Sequence tlist must be 1-D')
 
@@ -52,7 +52,7 @@ class Sequence(Cadence):
 
         # Interpret texp
         if np.shape(texp):          # texp is an array
-            texp = np.asfarray(texp)
+            texp = np.asarray(texp, dtype=np.float64)
             if texp.shape != tlist.shape:
                 raise ValueError('Shape mismatch between texp and tlist')
             if np.any(texp <= 0.):

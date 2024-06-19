@@ -493,12 +493,12 @@ class OblateGravity(Gravity):
         gm = self.gm + body_gm
 
         (a, e, inc, mean_lon, long_peri, long_node) = elements
-        a = np.asfarray(a)
-        e = np.asfarray(e)
-        inc = np.asfarray(inc)
-        mean_lon = np.asfarray(mean_lon)
-        long_peri = np.asfarray(long_peri)
-        long_node = np.asfarray(long_node)
+        a = np.asarray(a, dtype=np.float64)
+        e = np.asarray(e, dtype=np.float64)
+        inc = np.asarray(inc, dtype=np.float64)
+        mean_lon = np.asarray(mean_lon, dtype=np.float64)
+        long_peri = np.asarray(long_peri, dtype=np.float64)
+        long_node = np.asarray(long_node, dtype=np.float64)
 
         mean_anomaly = mean_lon - long_peri
 
@@ -570,8 +570,8 @@ class OblateGravity(Gravity):
         """
 
         (pos, vel) = np.broadcast_arrays(pos, vel)
-        pos = np.asfarray(pos)
-        vel = np.asfarray(vel)
+        pos = np.asarray(pos, dtype=np.float64)
+        vel = np.asarray(vel, dtype=np.float64)
 
         x = pos[...,0]
         y = pos[...,1]
@@ -664,12 +664,12 @@ class OblateGravity(Gravity):
         """
 
         (a, e, inc, mean_lon, long_peri, long_node) = elements
-        a = np.asfarray(a)
-        e = np.asfarray(e)
-        inc = np.asfarray(inc)
-        lam = np.asfarray(mean_lon)
-        long_peri = np.asfarray(long_peri)
-        long_node = np.asfarray(long_node)
+        a = np.asarray(a, dtype=np.float64)
+        e = np.asarray(e, dtype=np.float64)
+        inc = np.asarray(inc, dtype=np.float64)
+        lam = np.asarray(mean_lon, dtype=np.float64)
+        long_peri = np.asarray(long_peri, dtype=np.float64)
+        long_node = np.asarray(long_node, dtype=np.float64)
 
         (n, kappa, nu, eta2, chi2,
          alpha1, alpha2, alphasq) = self._geom_to_freq(a, e, inc, body_gm)
@@ -733,8 +733,8 @@ class OblateGravity(Gravity):
         """
 
         (pos, vel) = np.broadcast_arrays(pos, vel)
-        pos = np.asfarray(pos)
-        vel = np.asfarray(vel)
+        pos = np.asarray(pos, dtype=np.float64)
+        vel = np.asarray(vel, dtype=np.float64)
 
         x = pos[...,0]
         y = pos[...,1]

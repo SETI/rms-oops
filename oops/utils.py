@@ -48,12 +48,12 @@ def ucross3d(a,b):
 
 def proj(a,b):
     """proj(a,b) = 3-vector a projected onto 3-vector b."""
-    b = np.asfarray(b)
+    b = np.asarray(b, dtype=np.float64)
     return b * dot(a,b)[..., np.newaxis] / dot(b,b)[..., np.newaxis]
 
 def perp(a,b):
     """perp(a,b) = component of 3-vector a perpendicular to 3-vector b."""
-    a = np.asfarray(a)
+    a = np.asarray(a, dtype=np.float64)
     return a - proj(a,b)
 
 def sep(a,b):
@@ -67,15 +67,15 @@ def sep(a,b):
 
 def xpose(m):
     """xpose(m) = transpose of matrix m."""
-    return np.asfarray(m).swapaxes(-2,-1)
+    return np.asarray(m, dtype=np.float64).swapaxes(-2,-1)
 
 def mxv(m,v):
     """mxv(m,v)= matrix m times 3-vector v"""
-    return np.sum(np.asfarray(m) * np.asfarray(v)[..., np.newaxis, :], axis=-1)
+    return np.sum(np.asarray(m, dtype=np.float64) * np.asarray(v, dtype=np.float64)[..., np.newaxis, :], axis=-1)
 
 def mtxv(m,v):
     """mtxv(m,v) = transpose (inverse) of matrix m times 3-vector v."""
-    return np.sum(np.asfarray(m) * np.asfarray(v)[..., np.newaxis], axis=-2)
+    return np.sum(np.asarray(m, dtype=np.float64) * np.asarray(v, dtype=np.float64)[..., np.newaxis], axis=-2)
 
 # The standard numpy method for multiplying matrices uses the dot() function,
 # but does not generalize to the case of multiplying arrays of 3x3 matrices,
@@ -101,8 +101,8 @@ def mxm(m1,m2):
 
     # Duplicate the final 3x3 elements, reorder and pair-wise multiply
 
-    prods = (np.asfarray(m1)[..., _ORDER1, _ORDER2] *
-             np.asfarray(m2)[..., _ORDER2, _ORDER3])
+    prods = (np.asarray(m1, dtype=np.float64)[..., _ORDER1, _ORDER2] *
+             np.asarray(m2, dtype=np.float64)[..., _ORDER2, _ORDER3])
 
     # Note that m1 and m2 need not have the same shape, as long as they
     # broadcast to the same shape. For purposes of this illustation, we neglect
@@ -179,8 +179,8 @@ def mtxm(m1,m2):
     """mtxm(m1,m2) = transpose of matrix m1 times matrix m2."""
 
     # Duplicate the final 3x3 elements, reorder and pair-wise multiply
-    prods = (np.asfarray(m1)[..., _ORDER2, _ORDER1] *
-             np.asfarray(m2)[..., _ORDER2, _ORDER3])
+    prods = (np.asarray(m1, dtype=np.float64)[..., _ORDER2, _ORDER1] *
+             np.asarray(m2, dtype=np.float64)[..., _ORDER2, _ORDER3])
 
     # Reshape and sum over the final axis
     prods = prods.reshape(list(prods.shape)[0:-1]+[3,3,3])
@@ -190,8 +190,8 @@ def mxmt(m1,m2):
     """mxmt(m1,m2) = matrix m1 times transpose of matrix m2."""
 
     # Duplicate the final 3x3 elements, reorder and pair-wise multiply
-    prods = (np.asfarray(m1)[..., _ORDER1, _ORDER2] *
-             np.asfarray(m2)[..., _ORDER3, _ORDER2])
+    prods = (np.asarray(m1, dtype=np.float64)[..., _ORDER1, _ORDER2] *
+             np.asarray(m2, dtype=np.float64)[..., _ORDER3, _ORDER2])
 
     # Reshape and sum over the final axis
     prods = prods.reshape(list(prods.shape)[0:-1]+[3,3,3])
@@ -201,8 +201,8 @@ def mtxmt(m1,m2):
     """mtxmt(m1,m2) = transpose of matrix m1 times transpose of matrix m2."""
 
     # Duplicate the final 3x3 elements, reorder and pair-wise multiply
-    prods = (np.asfarray(m1)[..., _ORDER2, _ORDER1] *
-             np.asfarray(m2)[..., _ORDER3, _ORDER2])
+    prods = (np.asarray(m1, dtype=np.float64)[..., _ORDER2, _ORDER1] *
+             np.asarray(m2, dtype=np.float64)[..., _ORDER3, _ORDER2])
 
     # Reshape and sum over the final axis
     prods = prods.reshape(list(prods.shape)[0:-1] + [3,3,3])
