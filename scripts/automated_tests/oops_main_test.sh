@@ -18,7 +18,7 @@ if [[ -z ${OOPS_RESOURCES+x} ]]; then
 fi
 
 python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+python -m pip install --upgrade -r requirements.txt
 echo
 python -m pip freeze
 echo
