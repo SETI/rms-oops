@@ -17,8 +17,11 @@ if [[ -z ${OOPS_RESOURCES+x} ]]; then
     exit -1
 fi
 
-pip3 install --upgrade pip
-pip3 install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+echo
+python -m pip freeze
+echo
 echo
 
 echo "================================================================"
