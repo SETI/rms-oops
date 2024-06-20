@@ -77,7 +77,7 @@ class PolynomialFOV(FOV):
         self.coefft_uv_from_xy = None
 
         if coefft_xy_from_uv is not None:
-            self.coefft_xy_from_uv = np.asfarray(coefft_xy_from_uv)
+            self.coefft_xy_from_uv = np.asarray(coefft_xy_from_uv, dtype=np.float64)
             order = self.coefft_xy_from_uv.shape[0] - 1
             self.coefft_dxy_du = (self.coefft_xy_from_uv[1:] *
                                   np.arange(1,order+1)[:,np.newaxis,np.newaxis])
@@ -85,7 +85,7 @@ class PolynomialFOV(FOV):
                                   np.arange(1,order+1)[np.newaxis,:,np.newaxis])
 
         if coefft_uv_from_xy is not None:
-            self.coefft_uv_from_xy = np.asfarray(coefft_uv_from_xy)
+            self.coefft_uv_from_xy = np.asarray(coefft_uv_from_xy, dtype=np.float64)
             order = self.coefft_uv_from_xy.shape[0] - 1
             self.coefft_duv_dx = (self.coefft_uv_from_xy[1:] *
                                   np.arange(1,order+1)[:,np.newaxis,np.newaxis])

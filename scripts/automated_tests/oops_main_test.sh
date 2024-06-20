@@ -17,8 +17,14 @@ if [[ -z ${OOPS_RESOURCES+x} ]]; then
     exit -1
 fi
 
-pip3 install --upgrade pip
-pip3 install -r requirements.txt
+python -m pip install --upgrade pip
+# --no-cache-dir is annoyingly required because the pyerfa package uses
+# sub-versions (2.0.1.1) which aren't recognized by pip as version upgrades
+python -m pip uninstall -y `python -m pip freeze`
+python -m pip install --no-cache-dir --upgrade -r requirements.txt
+echo
+python -m pip freeze
+echo
 echo
 
 echo "================================================================"

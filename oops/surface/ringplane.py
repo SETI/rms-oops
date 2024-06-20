@@ -68,7 +68,7 @@ class RingPlane(Surface):
         if radii is None:
             self.radii = None
         else:
-            self.radii    = np.asfarray(radii)
+            self.radii    = np.asarray(radii, dtype=np.float64)
             self.radii_sq = self.radii**2
 
         # Save the unmasked version of this surface

@@ -98,13 +98,13 @@ class BarrelFOV(FOV):
 
         if coefft_xy_from_uv is not None:
             order = len(coefft_xy_from_uv)
-            self.coefft_xy_from_uv = np.asfarray(coefft_xy_from_uv)
+            self.coefft_xy_from_uv = np.asarray(coefft_xy_from_uv, dtype=np.float64)
             self.dcoefft_xy_from_uv = (self.coefft_xy_from_uv *
                                        np.arange(order))
 
         if coefft_uv_from_xy is not None:
             order = len(coefft_uv_from_xy)
-            self.coefft_uv_from_xy = np.asfarray(coefft_uv_from_xy)
+            self.coefft_uv_from_xy = np.asarray(coefft_uv_from_xy, dtype=np.float64)
             self.dcoefft_uv_from_xy = (self.coefft_uv_from_xy *
                                        np.arange(order))
 

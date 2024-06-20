@@ -238,7 +238,7 @@ class DiskSource(LightSource):
             self.xy_grid = matrix * (Vector.ZAXIS + self.radius * self.xy_grid)
 
         # Define the weights
-        self.weights = (1. - np.asfarray(mask))
+        self.weights = (1. - np.asarray(mask, dtype=np.float64))
         self.weights /= np.sum(self.weights)
 
         # Re-register as a Body

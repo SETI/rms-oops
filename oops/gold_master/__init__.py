@@ -2220,7 +2220,7 @@ class BackplaneTest(object):
             image = array.vals.copy()
             mask = array.mask
 
-        image = np.asfarray(image)
+        image = np.asarray(image, dtype=np.float64)
         image = np.atleast_2d(image)
 
         # Handle the mask

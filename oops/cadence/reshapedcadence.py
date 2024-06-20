@@ -93,7 +93,7 @@ class ReshapedCadence(Cadence):
 
         # Convert to float if necessary
         if tstep.is_float():
-            indices = np.asfarray(indices)
+            indices = np.asarray(indices, dtype=np.float64)
 
         # Restore fractional part
         indices[...,-1] += frac.vals

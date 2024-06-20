@@ -71,10 +71,10 @@ class Test_Utils(unittest.TestCase):
         self.assertEqual(cross2d((1,0),(111,1)), 1.)
         self.assertEqual(cross2d((0,1),(111,1)), -111.)
 
-        dirs = np.asfarray([[[( 5, 0),( 4, 3),( 3, 4)],
-                             [( 0, 5),(-3, 4),(-4, 3)]],
-                            [[(-5, 0),(-4,-3),(-3,-4)],
-                             [( 0,-5),( 3,-4),( 4,-3)]]])
+        dirs = np.asarray([[[( 5, 0),( 4, 3),( 3, 4)],
+                            [( 0, 5),(-3, 4),(-4, 3)]],
+                           [[(-5, 0),(-4,-3),(-3,-4)],
+                            [( 0,-5),( 3,-4),( 4,-3)]]], dtype=np.float64)
         self.assertTrue(np.all(cross2d(dirs,(1,0)) == -dirs[...,1]))
         self.assertTrue(np.all(cross2d(dirs,(0,1)) ==  dirs[...,0]))
 
