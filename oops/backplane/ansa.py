@@ -27,7 +27,7 @@ def ansa_radius(self, event_key, radius_type='positive', rmax=None):
         raise ValueError('invalid radius_type: ' + repr(radius_type))
 
     # Look up under the desired radius type and maximum
-    event_key = self.standardize_event_key(event_key, default='ANSA')
+    event_key = Backplane.standardize_event_key(event_key, default='ANSA')
     key = ('ansa_radius', event_key, radius_type, rmax)
     if key in self.backplanes:
         return self.get_backplane(key)
@@ -150,7 +150,7 @@ def _fill_ansa_intercepts(self, event_key):
     """
 
     # Validate the surface type
-    surface = self.get_surface(event_key[1])
+    surface = Backplane.get_surface(event_key[1])
     if surface.COORDINATE_TYPE != 'cylindrical':
         raise ValueError('invalid coordinate type for ansa geometry: '
                          + surface.COORDINATE_TYPE)
@@ -169,7 +169,7 @@ def _fill_ansa_longitudes(self, event_key):
     """Internal method to fill in the ansa intercept longitude backplane."""
 
     # Validate the surface type
-    surface = self.get_surface(event_key[1])
+    surface = Backplane.get_surface(event_key[1])
     if surface.COORDINATE_TYPE != 'cylindrical':
         raise ValueError('invalid coordinate type for ansa geometry: '
                          + surface.COORDINATE_TYPE)

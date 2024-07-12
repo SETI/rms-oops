@@ -1,16 +1,13 @@
-################################################################################
+##########################################################################################
 # oops/hosts/hst/wfc3/ir.py: HST/WFC3 subclass IR
-################################################################################
+##########################################################################################
 
-try:
-    import astropy.io.fits as pyfits
-except ImportError:
-    import pyfits
+import astropy.io.fits as pyfits
 from . import WFC3
 
-################################################################################
+##########################################################################################
 # Standard class methods
-################################################################################
+##########################################################################################
 
 def from_file(filespec, **parameters):
     """A general, static method to return an Observation object based on a given
@@ -18,80 +15,79 @@ def from_file(filespec, **parameters):
     """
 
     # Open the file
-    hst_file = pyfits.open(filespec)
+    hdulist = pyfits.open(filespec)
 
     # Make an instance of the SBN class
     this = IR()
 
     # Confirm that the telescope is HST
-    if this.telescope_name(hst_file) != "HST":
-        raise IOError("not an HST file: " + this.filespec(hst_file))
+    if this.telescope_name(hdulist) != 'HST':
+        raise IOError('not an HST file: ' + filespec)
 
     # Confirm that the instrument is ACS
-    if this.instrument_name(hst_file) != "WFC3":
-        raise IOError("not an HST/WFC3 file: " + this.filespec(hst_file))
+    if this.instrument_name(hdulist) != 'WFC3':
+        raise IOError('not an HST/WFC3 file: ' + filespec)
 
     # Confirm that the detector is IR
-    if this.detector_name(hst_file) != "IR":
-        raise IOError("not an HST/WFC3/IR file: " + this.filespec(hst_file))
+    if this.detector_name(hdulist) != 'IR':
+        raise IOError('not an HST/WFC3/IR file: ' + filespec)
 
-    return IR.from_opened_fitsfile(hst_file, **parameters)
+    return IR.from_opened_fitsfile(hdulist, **parameters)
+
+##########################################################################################
+# WFC3 class
+##########################################################################################
 
 IDC_DICT = None
 
-GENERAL_SYN_FILES = ["OTA/hst_ota_???_syn.fits",
-                     "WFC3/wfc3_ir_cor_???_syn.fits",
-                     "WFC3/wfc3_ir_mask_???_syn.fits",
-                     "WFC3/wfc3_ir_mir1_???_syn.fits",
-                     "WFC3/wfc3_ir_mir2_???_syn.fits",
-                     "WFC3/wfc3_ir_rcp_???_syn.fits",
-                     "WFC3/wfc3_ir_primary_???_syn.fits",
-                     "WFC3/wfc3_ir_secondary_???_syn.fits",
-                     "WFC3/wfc3_ir_win_???_syn.fits"]
+GENERAL_SYN_FILES = ['OTA/hst_ota_???_syn.fits',
+                     'WFC3/wfc3_ir_cor_???_syn.fits',
+                     'WFC3/wfc3_ir_mask_???_syn.fits',
+                     'WFC3/wfc3_ir_mir1_???_syn.fits',
+                     'WFC3/wfc3_ir_mir2_???_syn.fits',
+                     'WFC3/wfc3_ir_rcp_???_syn.fits',
+                     'WFC3/wfc3_ir_primary_???_syn.fits',
+                     'WFC3/wfc3_ir_secondary_???_syn.fits',
+                     'WFC3/wfc3_ir_win_???_syn.fits']
 
-CCD_SYN_FILE_PARTS    = ["WFC3/wfc3_ir_ccd", "_???_syn.fits"]
-FILTER_SYN_FILE_PARTS = ["WFC3/wfc3_ir_",    "_???_syn.fits"]
+CCD_SYN_FILE_PARTS    = ['WFC3/wfc3_ir_ccd', '_???_syn.fits']
+FILTER_SYN_FILE_PARTS = ['WFC3/wfc3_ir_',    '_???_syn.fits']
 
-#===============================================================================
-#===============================================================================
+
 class IR(WFC3):
-    """This class defines functions and properties unique to the WFC3/IR
-    detector. Everything else is inherited from higher levels in the class
-    hierarchy.
+    """This class defines functions and properties unique to the WFC3/IR detector.
+    Everything else is inherited from higher levels in the class hierarchy.
 
     Objects of this class are empty; they only exist to support inheritance.
     """
 
     # The IR detector has a single filter wheel. The name is identified by
     # FITS parameter FILTER.
-    def filter_name_from_file(self, hst_file):
+    def filter_name_from_file(self, hdulist):
         """The name of the filter for the WFC3/IR detector."""
 
-        return hst_file[0].header["FILTER"]
+        return hdulist[0].header['FILTER']
 
-    #===========================================================================
     # The IDC dictionaries for WFC3/IR are all keyed by (FILTER,).
-    def define_fov(self, hst_file, **parameters):
-        """An FOV object defining the full field of view (ignoring any subarray)
-        for the given image file.
+    def define_fov(self, hdulist, **parameters):
+        """An FOV object defining the full field of view (ignoring any subarray) for the
+        given image file.
         """
 
         global IDC_DICT
 
         # Load the dictionary of IDC parameters if necessary
         if IDC_DICT is None:
-            IDC_DICT = self.load_idc_dict(hst_file, ("FILTER",))
+            IDC_DICT = self.load_idc_dict(hdulist, ('FILTER',))
 
         # Define the key into the dictionary
-        idc_key = (hst_file[0].header["FILTER"],)
+        idc_key = (hdulist[0].header['FILTER'],)
 
-        return self.construct_fov(IDC_DICT[idc_key], hst_file)
+        return self.construct_fov(IDC_DICT[idc_key], hdulist)
 
-    #===========================================================================
-    def select_syn_files(self, hst_file, **parameters):
-        """The list of SYN files containing profiles that are to be multiplied
-        together to obtain the throughput of the given instrument, detector and
-        filter combination.
+    def select_syn_files(self, hdulist, **parameters):
+        """The list of SYN files containing profiles that are to be multiplied together to
+        obtain the throughput of the given instrument, detector and filter combination.
         """
 
         global GENERAL_SYN_FILES, CCD_SYN_FILE_PARTS, FILTER_SYN_FILE_PARTS
@@ -103,30 +99,28 @@ class IR(WFC3):
 
         # Add the filter file name
         syn_filenames.append(FILTER_SYN_FILE_PARTS[0] +
-                             hst_file[0].header["FILTER"].lower() +
+                             hdulist[0].header['FILTER'].lower() +
                              FILTER_SYN_FILE_PARTS[1])
 
         return syn_filenames
 
-    #===========================================================================
-    def dn_per_sec_factor(self, hst_file):
+    def dn_per_sec_factor(self, hdulist):
         """The factor that converts a pixel value to DN per second.
 
         Input:
-            hst_file    the object returned by pyfits.open()
+            hdulist    the object returned by pyfits.open()
 
         Return          the factor to multiply a pixel value by to get DN/sec
         """
 
         return 1.
 
-    #===========================================================================
     @staticmethod
-    def from_opened_fitsfile(hst_file, **parameters):
-        """A general class method to return an Observation object based on an
-        HST data file generated by HST/WFC3/IR.
+    def from_hdulist(hdulist, **parameters):
+        """A general class method to return an Observation object based on an HST data
+        file generated by HST/WFC3/IR.
         """
 
-        return IR().construct_snapshot(hst_file, **parameters)
+        return IR().construct_snapshot(hdulist, **parameters)
 
-################################################################################
+##########################################################################################
