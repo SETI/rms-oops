@@ -23,7 +23,7 @@ def right_ascension(self, event_key=(), apparent=True, direction='arr'):
                         'dep' to return the direction of a departing photon.
     """
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     key = ('right_ascension', event_key, apparent, direction)
     if key not in self.backplanes:
         self._fill_ra_dec(event_key, apparent, direction)
@@ -46,7 +46,7 @@ def declination(self, event_key=(), apparent=True, direction='arr'):
                         'dep' to base the direction on a departing photon.
     """
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     key = ('declination', event_key, apparent, direction)
     if key not in self.backplanes:
         self._fill_ra_dec(event_key, apparent, direction)
@@ -84,7 +84,7 @@ def celestial_north_angle(self, event_key=()):
                         refer to the observation.
     """
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     key = ('celestial_north_angle', event_key)
     if key in self.backplanes:
         return self.get_backplane(key)
@@ -110,7 +110,7 @@ def celestial_east_angle(self, event_key=()):
                         refer to the observation.
     """
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     key = ('celestial_east_angle', event_key)
     if key in self.backplanes:
         return self.get_backplane(key)
@@ -176,7 +176,7 @@ def center_right_ascension(self, event_key, apparent=True, direction='arr'):
                         'dep' to return the direction of a departing photon.
     """
 
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = Backplane.gridless_event_key(event_key)
     key = ('center_right_ascension', gridless_key, apparent, direction)
     if key not in self.backplanes:
         self._fill_center_ra_dec(gridless_key, apparent, direction)
@@ -196,7 +196,7 @@ def center_declination(self, event_key, apparent=True, direction='arr'):
                         'dep' to return the direction of a departing photon.
     """
 
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = Backplane.gridless_event_key(event_key)
     key = ('center_declination', gridless_key, apparent, direction)
     if key not in self.backplanes:
         self._fill_center_ra_dec(gridless_key, apparent, direction)
@@ -210,7 +210,7 @@ def _fill_center_ra_dec(self, event_key, apparent, direction):
     if direction not in ('arr', 'dep'):
         raise ValueError('invalid photon direction: ' + direction)
 
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = Backplane.gridless_event_key(event_key)
     event = self.get_obs_event(gridless_key)
     (ra, dec) = event.ra_and_dec(apparent=apparent, subfield=direction,
                                  derivs=self.ALL_DERIVS)

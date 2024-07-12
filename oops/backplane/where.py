@@ -12,7 +12,7 @@ from oops.backplane import Backplane
 def where_intercepted(self, event_key):
     """A Boolean array that is True where the surface was intercepted."""
 
-    event_key  = self.standardize_event_key(event_key)
+    event_key  = Backplane.standardize_event_key(event_key)
     key = ('where_intercepted', event_key)
     if key in self.backplanes:
         return self.get_backplane(key)
@@ -46,7 +46,7 @@ def where_outside_shadow(self, event_key, surface_key, tvl=False):
 
 def _where_inside_or_outside_shadow(self, event_key, surface_key, tvl, inside):
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     if len(event_key) != 2:
         raise ValueError('invalid event key for shadowing: ', event_key)
 
@@ -70,7 +70,7 @@ def _where_inside_or_outside_shadow(self, event_key, surface_key, tvl, inside):
             result_vals = shadow_event.mask
 
         # Exclude where the event is inside the shadower's surface
-        surface = self.get_surface(surface_key)
+        surface = Backplane.get_surface(surface_key)
         if surface.HAS_INTERIOR:
             where_inside = self.where_inside(event_key, surface_key)
             result_vals = result_vals | where_inside.vals
@@ -114,7 +114,7 @@ def where_in_back(self, event_key, surface_key, tvl=False):
 
 def _where_in_front_or_in_back(self, event_key, surface_key, tvl, in_front):
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
 
     surface_key = surface_key.upper()
     if in_front:
@@ -170,7 +170,7 @@ def where_antisunward(self, event_key, tvl=False):
 
 def _where_sunward_or_antisunward(self, event_key, tvl, sunward):
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
 
     if sunward:
         key = ('where_sunward', event_key, tvl)
@@ -180,7 +180,7 @@ def _where_sunward_or_antisunward(self, event_key, tvl, sunward):
     if key not in self.backplanes:
 
         # This is slightly different for rings vs. planets.
-        surface = self.get_surface(event_key[-1])
+        surface = Backplane.get_surface(event_key[-1])
         if surface.COORDINATE_TYPE == 'polar':
             incidence = self.ring_incidence_angle(event_key, pole='observed')
         else:
@@ -226,7 +226,7 @@ def where_outside(self, event_key, surface_key, tvl=False):
 
 def _where_inside_or_outside(self, event_key, surface_key, tvl, inside):
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     if len(event_key) != 2:
         raise ValueError('invalid event key for inside/outside calculations: ',
                          event_key)
@@ -240,7 +240,7 @@ def _where_inside_or_outside(self, event_key, surface_key, tvl, inside):
     if key not in self.backplanes:
 
         # Check positions with respect to the surface interior
-        surface = self.get_surface(surface_key)
+        surface = Backplane.get_surface(surface_key)
         if surface.HAS_INTERIOR:
             event = self.get_surface_event(event_key)
             surface_pos = event.wrt(surface.origin, surface.frame).pos

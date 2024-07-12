@@ -17,7 +17,7 @@ def distance(self, event_key, direction='dep'):
     if direction not in ('dep', 'arr'):
         raise ValueError('invalid photon direction: ' + repr(direction))
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     key = ('distance', event_key, direction)
     if key in self.backplanes:
         return self.get_backplane(key)
@@ -38,7 +38,7 @@ def light_time(self, event_key, direction='dep'):
     if direction not in ('dep', 'arr'):
         raise ValueError('invalid photon direction: ' + repr(direction))
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     key = ('light_time', event_key, direction)
     if key in self.backplanes:
         return self.get_backplane(key)
@@ -60,7 +60,7 @@ def event_time(self, event_key):
         event_key       key defining the surface event.
     """
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
 
     key = ('event_time', event_key)
     if key in self.backplanes:
@@ -82,7 +82,7 @@ def center_distance(self, event_key, direction='dep'):
     """
 
     map = {'arr':'arr', 'sun':'arr', 'dep':'dep', 'obs':'dep'}
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = Backplane.gridless_event_key(event_key)
     return self.distance(gridless_key, direction=map[direction])
 
 #===============================================================================
@@ -97,7 +97,7 @@ def center_light_time(self, event_key, direction='dep'):
                                        departing photon.
     """
 
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = Backplane.gridless_event_key(event_key)
     return self.light_time(gridless_key, direction=direction)
 
 #===============================================================================
@@ -110,7 +110,7 @@ def center_time(self, event_key):
         event_key       key defining the event at the body's path.
     """
 
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = Backplane.gridless_event_key(event_key)
     return self.event_time(gridless_key)
 
 ################################################################################

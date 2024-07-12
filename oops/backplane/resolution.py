@@ -21,7 +21,7 @@ def resolution(self, event_key, axis='u'):
     if axis not in ('u', 'v'):
         raise ValueError('invalid axis: ' + repr(axis))
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     key = ('resolution', event_key, axis)
     if key not in self.backplanes:
         distance = self.distance(event_key)
@@ -48,7 +48,7 @@ def center_resolution(self, event_key, axis='u'):
     if axis not in ('u', 'v'):
         raise ValueError('invalid axis: ' + repr(axis))
 
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = Backplane.gridless_event_key(event_key)
     key = ('center_resolution', gridless_key, axis)
     if key not in self.backplanes:
         distance = self.center_distance(gridless_key)
@@ -68,7 +68,7 @@ def finest_resolution(self, event_key):
         event_key       key defining the ring surface event.
     """
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     key = ('finest_resolution', event_key)
     if key not in self.backplanes:
         self._fill_surface_resolution(event_key)
@@ -84,7 +84,7 @@ def coarsest_resolution(self, event_key):
         event_key       key defining the ring surface event.
     """
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     key = ('coarsest_resolution', event_key)
     if key not in self.backplanes:
         self._fill_surface_resolution(event_key)
@@ -95,7 +95,7 @@ def coarsest_resolution(self, event_key):
 def _fill_surface_resolution(self, event_key):
     """Internal method to fill in the surface resolution backplanes."""
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     event = self.get_surface_event(event_key, derivs=True)
 
     dpos_duv1 = event.pos.d_dlos.chain(self.dlos_duv1)

@@ -289,8 +289,9 @@ class Backplane(object):
     # Dictionary keys
     ############################################################################
 
-    @functools.lru_cache(maxsize=300)
-    def standardize_event_key(self, event_key, default=''):
+    @staticmethod
+    @functools.lru_cache(maxsize=100)
+    def standardize_event_key(event_key, default=''):
         """Repair an event key to make it suitable for indexing a dictionary.
 
         The photons originate from the Sun unless otherwise indicated. An empty
@@ -322,7 +323,7 @@ class Backplane(object):
         # Add the default surface suffix to the body if necessary
         if default and ':' not in event_key[-1]:
             default = default.upper()
-            surface = self.get_surface(event_key[-1])
+            surface = Backplane.get_surface(event_key[-1])
             if surface.COORDINATE_TYPE == 'spherical':
                 event_key = event_key[:-1] + (event_key[-1] + ':' + default,)
             elif default == 'ANSA' and surface.COORDINATE_TYPE == 'polar':
@@ -331,42 +332,48 @@ class Backplane(object):
         event_key = tuple(event_key)
 
         # Check length
-        if self._is_dispersed(event_key) and len(event_key) not in (2,3):
+        if Backplane._is_dispersed(event_key) and len(event_key) not in (2,3):
             raise ValueError('illegal surface event key: ' + repr(event_key))
 
-        if self._is_occultation(event_key) and len(event_key) != 2:
+        if Backplane._is_occultation(event_key) and len(event_key) != 2:
             raise ValueError('illegal occultation event key: '
                              + repr(event_key))
 
-        if self._is_gridless(event_key) and len(event_key) != 2:
+        if Backplane._is_gridless(event_key) and len(event_key) != 2:
             raise ValueError('illegal gridless event key: ' + repr(event_key))
 
         return event_key
 
-    def _is_dispersed(self, event_key):
+    @staticmethod
+    def _is_dispersed(event_key):
         if len(event_key) == 0:
             return True
         return event_key[0][-1] == '<'
 
-    def _is_occultation(self, event_key):
+    @staticmethod
+    def _is_occultation(event_key):
         if len(event_key) == 0:
             return False
         return event_key[0][-1] == '>'
 
-    def _is_gridless(self, event_key):
+    @staticmethod
+    def _is_gridless(event_key):
         if len(event_key) == 0:
             return False
         return event_key[0][-1] == '-'
 
-    def _is_shadowing(self, event_key):
+    @staticmethod
+    def _is_shadowing(event_key):
         if len(event_key) == 0:
             return False
-        return self._is_dispersed(event_key) and len(event_key) == 3
+        return Backplane._is_dispersed(event_key) and len(event_key) == 3
 
-    def gridless_event_key(self, event_key, default=''):
+    @staticmethod
+    @functools.lru_cache(maxsize=100)
+    def gridless_event_key(event_key, default=''):
         """Convert event key to gridless."""
 
-        event_key = self.standardize_event_key(event_key, default=default)
+        event_key = Backplane.standardize_event_key(event_key, default=default)
         if not event_key:
             return event_key
 
@@ -391,10 +398,11 @@ class Backplane(object):
             raise ValueError('illegal backplane key type: ' +
                               type(backplane_key).__name__)
 
-        return self._standardize_backplane_key_if_not_qube(backplane_key)
+        return Backplane._standardize_backplane_key_if_not_qube(backplane_key)
 
-    @functools.lru_cache(maxsize=300)
-    def _standardize_backplane_key_if_not_qube(self, backplane_key):
+    @staticmethod
+    @functools.lru_cache(maxsize=100)
+    def _standardize_backplane_key_if_not_qube(backplane_key):
 
         if isinstance(backplane_key, str):
             backplane_key = (backplane_key.upper(),)
@@ -409,7 +417,6 @@ class Backplane(object):
         return backplane_key
 
     #===========================================================================
-    @functools.lru_cache(maxsize=300)
     def _event_and_backplane_keys(self, event_key, names=(), default=''):
         """Interpret the input as either a backplane_key or an event_key.
 
@@ -429,7 +436,7 @@ class Backplane(object):
             event_key = event_key[1]
             uses_backplane_key = True
 
-        event_key = self.standardize_event_key(event_key, default=default)
+        event_key = Backplane.standardize_event_key(event_key, default=default)
         if uses_backplane_key:
             backplane_key = self.standardize_backplane_key(backplane_key)
             return (event_key, backplane_key)
@@ -437,8 +444,9 @@ class Backplane(object):
         return (event_key, None)
 
     #===========================================================================
-    @functools.lru_cache(maxsize=300)
-    def get_body_and_modifier(self, surface_key):
+    @staticmethod
+    @functools.lru_cache(maxsize=100)
+    def get_body_and_modifier(surface_key):
         """A body object and modifier based on the given surface key.
 
         The string is normally a registered body ID (case insensitive), but it
@@ -468,8 +476,9 @@ class Backplane(object):
         return (Body.lookup(body_id), modifier)
 
     #===========================================================================
-    @functools.lru_cache(maxsize=300)
-    def unmasked_surface_key(self, surface_key):
+    @staticmethod
+    @functools.lru_cache(maxsize=100)
+    def unmasked_surface_key(surface_key):
         """The unmasked surface key associated with a given surface key.
         Example: SATURN_MAIN_RINGS -> SATURN:RING.
 
@@ -477,7 +486,7 @@ class Backplane(object):
         is returned.
         """
 
-        (body, modifier) = self.get_body_and_modifier(surface_key)
+        (body, modifier) = Backplane.get_body_and_modifier(surface_key)
 
         # If this is an ansa surface, make sure the parent is a planet, not ring
         if modifier == 'ANSA':
@@ -491,7 +500,7 @@ class Backplane(object):
             return body_name + ':' + modifier
 
         # Determine what kind of a surface this is
-        intercept_key = self.get_surface(surface_key).intercept_key
+        intercept_key = Backplane.get_surface(surface_key).intercept_key
         surface_type = intercept_key[0]
 
         if surface_type == 'ellipsoid':
@@ -520,30 +529,32 @@ class Backplane(object):
         return ''
 
     #===========================================================================
-    @functools.lru_cache(maxsize=300)
-    def unmasked_event_key(self, event_key):
+    @staticmethod
+    @functools.lru_cache(maxsize=100)
+    def unmasked_event_key(event_key):
         """Return the unmasked event key based on an event key.
         """
 
-        event_key = self.standardize_event_key(event_key)
+        event_key = Backplane.standardize_event_key(event_key)
 
         new_key = [event_key[0]]
         for surface_key in event_key[1:]:
-            new_key.append(self.unmasked_surface_key(surface_key))
+            new_key.append(Backplane.unmasked_surface_key(surface_key))
 
         return tuple(new_key)
 
     #===========================================================================
-    @functools.lru_cache(maxsize=300)
-    def intercept_dict_key(self, event_key):
+    @staticmethod
+    @functools.lru_cache(maxsize=100)
+    def intercept_dict_key(event_key):
         """Return the key for the intercepts dictionary based on an event key.
         """
 
-        event_key = self.standardize_event_key(event_key)
+        event_key = Backplane.standardize_event_key(event_key)
 
         new_key = [event_key[0]]
         for surface_key in event_key[1:]:
-            surface = self.get_surface(surface_key)
+            surface = Backplane.get_surface(surface_key)
             new_key.append(surface.intercept_key)
 
         return tuple(new_key)
@@ -558,7 +569,7 @@ class Backplane(object):
         derivs = derivs or self.ALL_DERIVS
 
         # Gridded events always carry the same arrival vectors
-        if self._is_dispersed(event_key):
+        if Backplane._is_dispersed(event_key):
             return self.obs_events[derivs]
 
         # For others, check the target-based cache first
@@ -567,7 +578,7 @@ class Backplane(object):
             return (event if derivs else event.wod)
 
         # Occultation events depend on the source
-        if self._is_occultation(event_key):
+        if Backplane._is_occultation(event_key):
             source_key = event_key[0][:-1]
         else:
             # Gridless events depend on the last body
@@ -580,7 +591,7 @@ class Backplane(object):
 
         # Otherwise, solve
         else:
-            source = self.get_body_and_modifier(source_key)[0]
+            source = Backplane.get_body_and_modifier(source_key)[0]
             (departure,
              arrival) = source.photon_to_event(self.obs_gridless_event,
                                                derivs=True)
@@ -591,7 +602,7 @@ class Backplane(object):
 
         # Save the departure event if any
         if departure is not None and event_key not in self.surface_events[True]:
-            surface = self.get_surface(event_key[-1])
+            surface = Backplane.get_surface(event_key[-1])
             departure = departure.wrt(surface.origin, surface.frame)
             self.surface_events[True ][event_key] = departure
             self.surface_events[False][event_key] = departure.wod
@@ -599,11 +610,12 @@ class Backplane(object):
         return arrival
 
     #===========================================================================
-    @functools.lru_cache()
-    def get_surface(self, surface_key):
+    @staticmethod
+    @functools.lru_cache(maxsize=100)
+    def get_surface(surface_key):
         """A surface based on its surface key."""
 
-        (body, modifier) = self.get_body_and_modifier(surface_key)
+        (body, modifier) = Backplane.get_body_and_modifier(surface_key)
 
         if modifier is None:
             return body.surface
@@ -688,7 +700,7 @@ class Backplane(object):
         derivs = derivs or self.ALL_DERIVS
 
         # Handle the empty event key (used for sky coordinates) quickly
-        event_key = self.standardize_event_key(event_key)
+        event_key = Backplane.standardize_event_key(event_key)
         if not event_key:
             return self.get_obs_event(event_key, derivs)
 
@@ -702,7 +714,7 @@ class Backplane(object):
                 event = source.photon_to_event(event,
                                                antimask=event.antimask,
                                                derivs=derivs)[1]
-                surface = self.get_surface(event_key[1])
+                surface = Backplane.get_surface(event_key[1])
                 event = event.wrt(surface.origin, surface.frame)
                 self._save_event(event_key, event, surface=surface,
                                                    derivs=derivs)
@@ -715,9 +727,9 @@ class Backplane(object):
             return event
 
         # Always include derivatives by default, except for shadowing events
-        is_shadowing   = self._is_shadowing(event_key)
-        is_occultation = self._is_occultation(event_key)
-        is_gridless    = self._is_gridless(event_key)
+        is_shadowing   = Backplane._is_shadowing(event_key)
+        is_occultation = Backplane._is_occultation(event_key)
+        is_gridless    = Backplane._is_gridless(event_key)
 
         if not is_shadowing and not derivs:
             try:
@@ -774,16 +786,16 @@ class Backplane(object):
         """The event defined by dispersed lighting over a surface."""
 
         surface_key = event_key[1]
-        surface = self.get_surface(surface_key)
+        surface = Backplane.get_surface(surface_key)
 
-        if self._is_dispersed(event_key):
+        if Backplane._is_dispersed(event_key):
             antimask = self.get_antimask(event_key[-1]) # last item defines mask
         else:
             antimask = None
 
         # Update the intercept dictionary if necessary
-        intercept_key = self.intercept_dict_key(event_key)
-        unmasked_event_key = self.unmasked_event_key(event_key)
+        intercept_key = Backplane.intercept_dict_key(event_key)
+        unmasked_event_key = Backplane.unmasked_event_key(event_key)
 
         if intercept_key in self.intercepts[derivs]:
             event = self.intercepts[derivs][intercept_key]
@@ -822,7 +834,7 @@ class Backplane(object):
     #===========================================================================
     def _save_event(self, event_key, event, surface, derivs):
 
-        body = self.get_body_and_modifier(event_key[1])[0]
+        body = Backplane.get_body_and_modifier(event_key[1])[0]
         event.insert_subfield('body', body)
         event.insert_subfield('event_key', event_key)
         event.insert_subfield('surface', surface)
@@ -832,7 +844,8 @@ class Backplane(object):
         self.surface_events[derivs][event_key] = event
 
         # Save the antimask
-        if self._is_dispersed(event_key) and not self._is_shadowing(event_key):
+        if (Backplane._is_dispersed(event_key)
+                and not Backplane._is_shadowing(event_key)):
             surface_key = event_key[-1]
             if surface_key not in self.antimasks:
                 self.antimasks[surface_key] = event.antimask

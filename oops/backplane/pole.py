@@ -13,7 +13,7 @@ def pole_clock_angle(self, event_key):
     In other words, measured clockwise on the sky.
     """
 
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = Backplane.gridless_event_key(event_key)
 
     key = ('pole_clock_angle', gridless_key)
     if key in self.backplanes:
@@ -50,7 +50,7 @@ def pole_position_angle(self, event_key):
     celestial north toward celestial east (i.e., counterclockwise on the sky).
     """
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
 
     key = ('pole_position_angle', event_key)
     if key in self.backplanes:
