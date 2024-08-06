@@ -8,7 +8,7 @@ import os
 
 import julian
 import oops
-import solar as solar
+import solar
 
 from polymath import Vector3
 

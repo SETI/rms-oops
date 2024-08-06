@@ -21,7 +21,7 @@ def limb_altitude(self, event_key, zmin=None, zmax=None):
         zmax            upper limit on altitude.
     """
 
-    event_key = self.standardize_event_key(event_key, default='LIMB')
+    event_key = Backplane.standardize_event_key(event_key, default='LIMB')
     key = ('limb_altitude', event_key, zmin, zmax)
     if key in self.backplanes:
         return self.get_backplane(key)
@@ -54,7 +54,7 @@ def _fill_limb_intercepts(self, event_key):
     """
 
     # Validate the surface type
-    surface = self.get_surface(event_key[1])
+    surface = Backplane.get_surface(event_key[1])
     if surface.COORDINATE_TYPE != 'limb':
         raise ValueError('invalid coordinate type for limb geometry: '
                          + surface.COORDINATE_TYPE)
@@ -176,7 +176,7 @@ def limb_clock_angle(self, event_key):
     if default_key not in self.backplanes:
         self._fill_limb_intercepts(event_key)
 
-    surface = self.get_surface(event_key[1])
+    surface = Backplane.get_surface(event_key[1])
     event = self.get_surface_event(event_key)
 
     polar_surface = PolarLimb(surface.ground, limits=surface.limits)

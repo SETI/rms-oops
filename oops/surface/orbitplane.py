@@ -81,7 +81,7 @@ class OrbitPlane(Surface):
         self.internal_frame  = self.defined_frame
 
         # Save the orbital elements
-        self.elements = np.asfarray(elements)
+        self.elements = np.asarray(elements, dtype=np.float64)
         self.a     = elements[0]
         self.lon   = elements[1]
         self.n     = elements[2]
@@ -90,7 +90,7 @@ class OrbitPlane(Surface):
         if radii is None:
             self.radii = None
         else:
-            self.radii    = np.asfarray(radii)
+            self.radii    = np.asarray(radii, dtype=np.float64)
             self.radii_sq = self.radii**2
 
         # Interpret the inclination

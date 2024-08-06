@@ -28,7 +28,7 @@ def orbit_longitude(self, event_key, reference='obs', planet=None):
         raise ValueError('invalid longitude reference: ' + repr(reference))
 
     # Determine/validate the planet
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     if planet is None:
         (body,_) = self.get_body_and_modifier(event_key[1])
         planet = body.parent.name

@@ -44,7 +44,7 @@ def longitude(self, event_key, reference='iau', direction='west',
         raise ValueError('invalid longitude type: ' + repr(lon_type))
 
     # Look up under the desired reference
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     key0 = ('longitude', event_key)
     key = key0 + (reference, direction, minimum, lon_type)
     if key in self.backplanes:
@@ -63,7 +63,7 @@ def longitude(self, event_key, reference='iau', direction='west',
         longitude = self.get_backplane(key_typed)
     else:
         lon_squashed = self.get_backplane(key_default)
-        surface = self.get_surface(event_key[1])
+        surface = Backplane.get_surface(event_key[1])
 
         if lon_type == 'centric':
             longitude = surface.lon_to_centric(lon_squashed,
@@ -115,7 +115,7 @@ def latitude(self, event_key, lat_type='centric'):
         raise ValueError('invalid latitude type: ' + repr(lat_type))
 
     # Look up under the desired reference
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     key0 = ('latitude', event_key)
     key = key0 + (lat_type,)
     if key in self.backplanes:
@@ -131,7 +131,7 @@ def latitude(self, event_key, lat_type='centric'):
     if lat_type == 'squashed':
         return latitude
 
-    surface = self.get_surface(event_key[1])
+    surface = Backplane.get_surface(event_key[1])
 
     # Fill in the requested lon_type if necessary
     lon_key = ('longitude', event_key, 'iau', 'east', 0, 'squashed')
@@ -151,7 +151,7 @@ def _fill_surface_intercepts(self, event_key):
     """Internal method to fill in the surface intercept geometry backplanes.
     """
 
-    surface = self.get_surface(event_key[1])
+    surface = Backplane.get_surface(event_key[1])
 
     # If this is actually a limb event, define the limb backplanes instead
     if surface.COORDINATE_TYPE == 'limb':
@@ -175,7 +175,7 @@ def _fill_surface_intercepts(self, event_key):
 def _sub_observer_longitude(self, event_key):
     """Gridless sub-observer longitude. Used internally."""
 
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = Backplane.gridless_event_key(event_key)
     key = ('_sub_observer_longitude', gridless_key)
 
     if key in self.backplanes:
@@ -190,7 +190,7 @@ def _sub_observer_longitude(self, event_key):
 def _sub_observer_latitude(self, event_key):
     """Gridless sub-observer latitude. Used internally."""
 
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = Backplane.gridless_event_key(event_key)
     key = ('_sub_observer_latitude', gridless_key)
 
     if key in self.backplanes:
@@ -205,7 +205,7 @@ def _sub_observer_latitude(self, event_key):
 def _sub_solar_longitude(self, event_key):
     """Gridless sub-solar longitude. Used internally."""
 
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = Backplane.gridless_event_key(event_key)
     key = ('_sub_solar_longitude', gridless_key)
 
     if key in self.backplanes:
@@ -220,7 +220,7 @@ def _sub_solar_longitude(self, event_key):
 def _sub_solar_latitude(self, event_key):
     """Gridless sub-solar latitude. Used internally."""
 
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = Backplane.gridless_event_key(event_key)
     key = ('_sub_solar_latitude', gridless_key)
 
     if key in self.backplanes:
@@ -258,7 +258,7 @@ def sub_observer_longitude(self, event_key, reference='iau', direction='west',
                     -180.
     """
 
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = Backplane.gridless_event_key(event_key)
 
     key0 = ('sub_observer_longitude', gridless_key)
     key = key0 + (reference, direction, minimum)
@@ -302,7 +302,7 @@ def sub_solar_longitude(self, event_key, reference='iau',
                     -180.
     """
 
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = Backplane.gridless_event_key(event_key)
 
     key0 = ('sub_solar_longitude', gridless_key)
     key = key0 + (reference, direction, minimum)
@@ -338,7 +338,7 @@ def _sub_longitude(self, event_key, longitude, reference='iau',
         raise ValueError('invalid longitude minimum: ' + repr(minimum))
 
     # Define the longitude relative to the reference value
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     if reference != 'iau':
         if reference in ('sun', 'sha'):
             ref_lon = self._sub_solar_longitude(event_key)
@@ -375,7 +375,7 @@ def sub_observer_latitude(self, event_key, lat_type='centric'):
     if lat_type not in ('centric', 'graphic'):
         raise ValueError('invalid latitude type: ' + repr(lat_type))
 
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = Backplane.gridless_event_key(event_key)
     key = ('sub_observer_latitude', gridless_key, lat_type)
     if key in self.backplanes:
         return self.get_backplane(key)
@@ -403,7 +403,7 @@ def sub_solar_latitude(self, event_key, lat_type='centric'):
     if lat_type not in ('centric', 'graphic'):
         raise ValueError('invalid latitude type: ' + repr(lat_type))
 
-    gridless_key = self.gridless_event_key(event_key)
+    gridless_key = Backplane.gridless_event_key(event_key)
     key = ('sub_solar_latitude', gridless_key, lat_type)
     if key in self.backplanes:
         return self.get_backplane(key)

@@ -24,7 +24,7 @@ def ring_radius(self, event_key, rmin=None, rmax=None):
                         the event_key.
     """
 
-    event_key = self.standardize_event_key(event_key, default='RING')
+    event_key = Backplane.standardize_event_key(event_key, default='RING')
     key = ('ring_radius', event_key, rmin, rmax)
     if key in self.backplanes:
         return self.get_backplane(key)
@@ -196,7 +196,7 @@ def _aries_ring_longitude(self, event_key):
     (prograde) direction.
     """
 
-    event_key = self.gridless_event_key(event_key, default='RING')
+    event_key = Backplane.gridless_event_key(event_key, default='RING')
     key = ('_aries_ring_longitude', event_key)
 
     if key in self.backplanes:
@@ -326,7 +326,7 @@ def _fill_ring_intercepts(self, event_key):
     """
 
     # Validate the surface type
-    surface = self.get_surface(event_key[1])
+    surface = Backplane.get_surface(event_key[1])
     if surface.COORDINATE_TYPE != 'polar':
         raise ValueError('invalid coordinate type for ring geometry: '
                          + surface.COORDINATE_TYPE)
@@ -492,7 +492,7 @@ def ring_sub_observer_longitude(self, event_key, reference='node'):
         raise ValueError('invalid longitude reference: ' + repr(reference))
 
     # Look up under the desired reference
-    gridless_key = self.gridless_event_key(event_key, default='RING')
+    gridless_key = Backplane.gridless_event_key(event_key, default='RING')
     key0 = ('ring_sub_observer_longitude', gridless_key)
     key = key0 + (reference,)
     if key in self.backplanes:
@@ -544,7 +544,7 @@ def ring_sub_solar_longitude(self, event_key, reference='node'):
         raise ValueError('invalid longitude reference: ' + repr(reference))
 
     # Look up under the desired reference
-    gridless_key = self.gridless_event_key(event_key, default='RING')
+    gridless_key = Backplane.gridless_event_key(event_key, default='RING')
     key0 = ('ring_sub_solar_longitude', gridless_key)
     key = key0 + (reference,)
     if key in self.backplanes:
@@ -593,7 +593,7 @@ def ring_center_incidence_angle(self, event_key, pole='sunward', apparent=True):
                         False for the actual.
     """
 
-    gridless_key = self.gridless_event_key(event_key, default='RING')
+    gridless_key = Backplane.gridless_event_key(event_key, default='RING')
     return self.ring_incidence_angle(gridless_key, pole=pole, apparent=apparent)
 
 #===============================================================================
@@ -617,7 +617,7 @@ def ring_center_emission_angle(self, event_key, pole='sunward', apparent=True):
                         False for the actual.
     """
 
-    gridless_key = self.gridless_event_key(event_key, default='RING')
+    gridless_key = Backplane.gridless_event_key(event_key, default='RING')
     return self.ring_emission_angle(gridless_key, pole=pole, apparent=apparent)
 
 #===============================================================================
@@ -729,7 +729,7 @@ def ring_shadow_radius(self, event_key, ring_surface_key):
     """Radius in the ring plane that casts a shadow at each point on this body.
     """
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     ring_surface_key = ring_surface_key.upper()
 
     key = ('ring_shadow_radius', event_key, ring_surface_key)
@@ -752,7 +752,7 @@ def ring_shadow_incidence(self, event_key, ring_surface_key):
     this body.
     """
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     ring_surface_key = ring_surface_key.upper()
 
     key = ('ring_shadow_incidence', event_key, ring_surface_key)
@@ -776,7 +776,7 @@ def ring_shadow_incidence(self, event_key, ring_surface_key):
 def ring_radius_in_front(self, event_key, ring_surface_key):
     """Radius in the ring plane that obscures each point on this body."""
 
-    event_key = self.standardize_event_key(event_key)
+    event_key = Backplane.standardize_event_key(event_key)
     ring_surface_key = ring_surface_key.upper()
 
     key = ('ring_radius_in_front', event_key, ring_surface_key)

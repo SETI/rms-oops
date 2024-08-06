@@ -1,20 +1,14 @@
-################################################################################
-# oops/hosts/hst/nicmos/__init__.py: HST subclass NICMOS
-#
-# 5/21/12 MRS - corrected super().register_frame() so that it works for NICMOS
-#   images; local method deleted.
-################################################################################
+##########################################################################################
+# oops/hosts/hst/nicmos/__init__.py
+##########################################################################################
 
-try:
-    import astropy.io.fits as pyfits
-except ImportError:
-    import pyfits
-import oops
+import astropy.io.fits as pyfits
+
 from .. import HST
 
-################################################################################
+##########################################################################################
 # Standard class methods
-################################################################################
+##########################################################################################
 
 def from_file(filespec, **parameters):
     """A general, static method to return an Observation object based on a given
@@ -22,84 +16,81 @@ def from_file(filespec, **parameters):
     """
 
     # Open the file
-    hst_file = pyfits.open(filespec)
+    hdulist = pyfits.open(filespec)
 
     # Make an instance of the NICMOS class
     this = NICMOS()
 
     # Confirm that the telescope is HST
-    if this.telescope_name(hst_file) != "HST":
-        raise IOError("not an HST file: " + this.filespec(hst_file))
+    if this.telescope_name(hdulist) != 'HST':
+        raise IOError('not an HST file: ' + filespec)
 
     # Confirm that the instrument is NICMOS
-    if this.instrument_name(hst_file) != "NICMOS":
-        raise IOError("not an HST/NICMOS file: " + this.filespec(hst_file))
+    if this.instrument_name(hdulist) != 'NICMOS':
+        raise IOError('not an HST/NICMOS file: ' + filespec)
 
-    return NICMOS.from_opened_fitsfile(hst_file, **parameters)
+    return NICMOS.from_opened_fitsfile(hdulist, **parameters)
+
+##########################################################################################
+# NICMOS class
+##########################################################################################
 
 # For each NICMOS detector, IDC_DICT returns a sub-dictionary of IDC parameters
 # keyed by (FILTER,).
-IDC_DICT = {"NIC1":None, "NIC2": None, "NIC3": None}
+IDC_DICT = {'NIC1':None, 'NIC2': None, 'NIC3': None}
 
 # These SYN file names apply to every NICMOS detector
-NICMOS_SYN_FILES = ["OTA/hst_ota_???_syn.fits",
-                    "NICMOS/nic_bend1_???_syn.fits",
-                    "NICMOS/nic_primary_???_syn.fits",
-                    "NICMOS/nic_pupil_???_syn.fits",
-                    "NICMOS/nic_reimag_???_syn.fits",
-                    "NICMOS/nic_secondary_???_syn.fits"]
+NICMOS_SYN_FILES = ['OTA/hst_ota_???_syn.fits',
+                    'NICMOS/nic_bend1_???_syn.fits',
+                    'NICMOS/nic_primary_???_syn.fits',
+                    'NICMOS/nic_pupil_???_syn.fits',
+                    'NICMOS/nic_reimag_???_syn.fits',
+                    'NICMOS/nic_secondary_???_syn.fits']
 
-#===============================================================================
-#===============================================================================
+
 class NICMOS(HST):
-    """This class defines functions and properties unique to the NICMOS
-    instrument. Everything else is inherited from higher levels in the class
-    hierarchy.
+    """This class defines functions and properties unique to the NICMOS instrument.
+    Everything else is inherited from higher levels in the class hierarchy.
 
     Objects of this class are empty; they only exist to support inheritance.
     """
 
-    #===========================================================================
     # The detector name for NICMOS must be extracted from the aperture
-    def detector_name(self, hst_file):
-        """The name of the detector on the HST instrument that was used to
-        obtain this file.
+    def detector_name(self, hdulist):
+        """The name of the detector on the HST instrument that was used to obtain this
+        file.
         """
 
-        return hst_file[0].header["APERTURE"][0:4]
+        return hdulist[0].header['APERTURE'][0:4]
 
-    #===========================================================================
     # All NICMOS detectors have a single filter wheel. The name is identified by
     # FITS parameter FILTER.
-    def filter_name(self, hst_file):
+    def filter_name(self, hdulist):
         """The name of the filter for this particular NICMOS detector."""
 
-        return hst_file[0].header["FILTER"]
+        return hdulist[0].header['FILTER']
 
-    #===========================================================================
     # The IDC dictionaries for NICMOS detectors are all keyed by (FILTER,).
-    def define_fov(self, hst_file, **parameters):
+    def define_fov(self, hdulist, **parameters):
         """An FOV object defining the field of view of the given image file."""
 
         global IDC_DICT
 
         # Identify the detector
-        det = self.detector_name(hst_file)
+        det = self.detector_name(hdulist)
 
         # Load the dictionary of IDC parameters if necessary
         if IDC_DICT[det] is None:
-            IDC_DICT[det] = self.load_idc_dict(hst_file, ("FILTER",))
+            IDC_DICT[det] = self.load_idc_dict(hdulist, ('FILTER',))
 
         # Define the key into the dictionary
-        idc_key = (hst_file[0].header["FILTER"],)
+        idc_key = (hdulist[0].header['FILTER'],)
 
-        return self.construct_fov(IDC_DICT[det][idc_key], hst_file)
+        return self.construct_fov(IDC_DICT[det][idc_key], hdulist)
 
-    #===========================================================================
-    def select_syn_files(self, hst_file, **parameters):
-        """The list of SYN files containing profiles that are to be multiplied
-        together to obtain the throughput of the given instrument, detector and
-        filter combination.
+    def select_syn_files(self, hdulist, **parameters):
+        """The list of SYN files containing profiles that are to be multiplied together to
+        obtain the throughput of the given instrument, detector and filter combination.
         """
 
         global NICMOS_SYN_FILES
@@ -115,52 +106,50 @@ class NICMOS(HST):
 
         # Add the filter file name
         syn_filenames.append(self.FILTER_SYN_FILE_PARTS[0] +
-                             hst_file[0].header["FILTER"].lower() +
+                             hdulist[0].header['FILTER'].lower() +
                              self.FILTER_SYN_FILE_PARTS[1])
 
         return syn_filenames
 
-    #===========================================================================
-    def dn_per_sec_factor(self, hst_file):
+    def dn_per_sec_factor(self, hdulist):
         """The factor that converts a pixel value to DN per second.
 
         Input:
-            hst_file        the object returned by pyfits.open()
+            hdulist        the object returned by pyfits.open()
 
         Return              the factor to multiply a pixel value by to get DN/sec
         """
 
         return 1.
 
-    #===========================================================================
     @staticmethod
-    def from_opened_fitsfile(hst_file, **parameters):
-        """A general, static method to return an Observation object based on an
-        HST data file generated by HST/NICMOS.
+    def from_hdulist(hdulist, **parameters):
+        """A general, static method to return an Observation object based on an HST data
+        file generated by HST/NICMOS.
         """
 
         # Make an instance of the NICMOS class
         this = NICMOS()
 
         # Figure out the detector
-        detector = this.detector_name(hst_file)
+        detector = this.detector_name(hdulist)
 
-        if detector == "NIC1":
+        if detector == 'NIC1':
             from .nic1 import NIC1
-            obs = NIC1.from_opened_fitsfile( hst_file, **parameters)
+            obs = NIC1.from_hdulist( hdulist, **parameters)
 
-        elif detector == "NIC2":
+        elif detector == 'NIC2':
             from .nic2 import NIC2
-            obs = NIC2.from_opened_fitsfile(hst_file, **parameters)
+            obs = NIC2.from_hdulist(hdulist, **parameters)
 
-        elif detector == "NIC3":
+        elif detector == 'NIC3':
             from .nic3 import NIC3
-            obs = NIC3.from_opened_fitsfile(hst_file, **parameters)
+            obs = NIC3.from_hdulist(hdulist, **parameters)
 
         else:
-            raise IOError("unrecognized detector in HST/NICMOS file " +
-                          this.filespec(hst_file) + ": " + detector)
+            raise IOError('unrecognized detector in HST/NICMOS file ' +
+                          this.filespec(hdulist) + ': ' + detector)
 
         return obs
 
-################################################################################
+##########################################################################################

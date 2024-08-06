@@ -168,7 +168,7 @@ class Wobble(Path, Fittable):
         global RWOBB, RATIO, WOBB0, DWOBB
         global KEPLER_ELEMENTS, WOBBLE_ELEMENTS
 
-        self.elements = np.asfarray(elements)
+        self.elements = np.asarray(elements, dtype=np.float64)
         assert self.elements.shape == (self.nparams,)
 
         self.kepler.set_params(elements[:9])

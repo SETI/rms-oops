@@ -221,7 +221,7 @@ class KeplerPath(Path, Fittable):
         global SEMIM, MEAN0, DMEAN, ECCEN, PERI0, DPERI, INCLI, NODE0, DNODE
         global NELEMENTS
 
-        self.elements = np.asfarray(elements)
+        self.elements = np.asarray(elements, dtype=np.float64)
         if self.elements.shape != (self.nparams,):
             raise ValueError('revised KeplerPath elements do not match shape '
                              'of original')
