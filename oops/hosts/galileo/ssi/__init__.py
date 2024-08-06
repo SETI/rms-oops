@@ -40,6 +40,7 @@ def from_file(filespec,
     label = pds3.get_label(filespec)
 
     # Load the data array
+    from IPython import embed; print('+++++++++++++'); embed()
     vic = vicar.VicarImage.from_file(filespec, extraneous='warn')
     vicar_dict = vic.as_dict()
 
