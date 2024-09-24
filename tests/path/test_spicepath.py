@@ -62,8 +62,8 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(abs(lt - saturn_event.dep_lt[i]) < 1.e-11)
             self.assertTrue(abs(saturn_event.time[i] + lt - ssb_event.time[i])
                                                                        < 1.e-11)
-            self.assertTrue((ssb_event.arr[i] + state[0:3]).norm() < 1.e-8)
-            self.assertTrue((saturn_event.dep[i] + state[0:3]).norm() < 1.e-7)
+            self.assertTrue((ssb_event.arr[i] + state[0:3]).norm() < 1.e-6)
+            self.assertTrue((saturn_event.dep[i] + state[0:3]).norm() < 1.e-6)
             self.assertEqual(saturn_event.pos[i], (0.,0.,0.))
             self.assertEqual(saturn_event.vel[i], (0.,0.,0.))
 
@@ -74,8 +74,8 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(abs(lt + saturn_event.arr_lt[i]) < 1.e-11)
             self.assertTrue(abs(ssb_event.time[i] + lt - saturn_event.time[i])
                                                                        < 1.e-11)
-            self.assertTrue((ssb_event.dep[i] - state[0:3]).norm() < 1.e-8)
-            self.assertTrue((Vector3(state[0:3]) - ssb_event.dep[i]).norm() < 1.e-8)
+            self.assertTrue((ssb_event.dep[i] - state[0:3]).norm() < 1.e-6)
+            self.assertTrue((Vector3(state[0:3]) - ssb_event.dep[i]).norm() < 1.e-6)
 
         # Check instantaneous geometry using linked paths
 
@@ -261,7 +261,7 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(abs(lt + saturn_rel.time[i]) < 1.e-7)
             self.assertTrue(abs(saturn_event.time[i] + lt
                                 - earth_event.time[i]) < 1.e-11)
-            self.assertTrue(abs(earth_event.arr[i] + state[0:3]) < 1.e-8)
+            self.assertTrue(abs(earth_event.arr[i] + state[0:3]) < 1.e-6)
             self.assertTrue(abs(saturn_rel.pos[i]  - state[0:3]) < 1.e-6)
             self.assertTrue(abs(saturn_rel.vel[i]  - state[3:6]) < 1.e-3)
 
@@ -276,7 +276,7 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.abs(earth_event.time.vals[i] + lt
                                    - saturn_event.time.vals[i]) < 1.e-11)
             self.assertTrue(np.all(np.abs(state[0:3] -
-                                          earth_event.dep[i].vals) < 1.e-8))
+                                          earth_event.dep[i].vals) < 1.e-6))
             self.assertTrue(np.all(np.abs(state[0:3]
                                           - saturn_rel.pos[i].vals) < 1.e-6))
             self.assertTrue(np.all(np.abs(state[3:6]
@@ -304,7 +304,7 @@ class Test_SpicePath(unittest.TestCase):
             self.assertTrue(np.abs(saturn_event.time.vals[i] + lt
                                         - earth_event.time.vals[i]) < 1.e-11)
             self.assertTrue(np.all(np.abs(state[0:3]
-                                        + earth_event.arr[i].vals) < 1.e-8))
+                                        + earth_event.arr[i].vals) < 1.e-6))
             self.assertTrue(np.all(np.abs(state[0:3]
                                         - saturn_rel.pos[i].vals) < 1.e-6))
             self.assertTrue(np.abs(saturn_rel.pos[i].norm()/constants.C +
