@@ -140,24 +140,99 @@ class Galileo(object):
     #===========================================================================
     @staticmethod
     def load_kernels():
-        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
         import glob
+        from filecache import FileCache
 
-        kdir = os.path.join(TESTDATA_PARENT_DIRECTORY, '../SPICE/Galileo/')
-        gkdir = os.path.join(TESTDATA_PARENT_DIRECTORY, '../SPICE/General/')
+        SPICE_PATH = os.environ['SPICE_PATH'].rstrip('/') + '/'
+        test_filecache = FileCache(shared='oops_kernels')
 
-        cspyce.furnsh(gkdir + 'LSK/naif0012.tls')
-        cspyce.furnsh(kdir + 'SCLK/mk00062a.tsc')
-        cspyce.furnsh(kdir + 'IK/gll36001.ti')
-        cspyce.furnsh(kdir + 'FK/gll_v0.tf')
-        cspyce.furnsh(kdir + 'SPK/de421.bsp')
-        cspyce.furnsh(kdir + 'SPK/de432s.bsp')
+        # Load the SPICE kernels
+        cspyce.furnsh(
+            test_filecache.retrieve(SPICE_PATH + 'General/LSK/naif0012.tls'))
+        cspyce.furnsh(
+            test_filecache.retrieve(SPICE_PATH + 'Galileo/SCLK/mk00062a.tsc'))
+        cspyce.furnsh(
+            test_filecache.retrieve(SPICE_PATH + 'Galileo/IK/gll36001.ti'))
+        cspyce.furnsh(
+            test_filecache.retrieve(SPICE_PATH + 'Galileo/FK/gll_v0.tf'))
+        cspyce.furnsh(
+            test_filecache.retrieve(SPICE_PATH + 'Galileo/SPK/de421.bsp'))
+        cspyce.furnsh(
+            test_filecache.retrieve(SPICE_PATH + 'Galileo/SPK/de432s.bsp'))
 
-        for ckfile in glob.glob(kdir + 'CK/*.bc'):
-            cspyce.furnsh(ckfile)
+        for ck_root in (
+            'ckc03b_plt.bc',
+            'ckc09b_plt.bc',
+            'ckc10b_plt.bc',
+            'ckc20f_plt.bc',
+            'ckc21f_plt.bc',
+            'ckc22f_plt.bc',
+            'ckc23f_plt.bc',
+            'ckc30f_plt.bc',
+            'cke04b_plt.bc',
+            'cke06b_plt.bc',
+            'cke11b_plt.bc',
+            'cke12f_plt.bc',
+            'cke14f_plt.bc',
+            'cke15f_plt.bc',
+            'cke16f_plt.bc',
+            'cke17f_plt.bc',
+            'cke18f_plt.bc',
+            'cke19f_plt.bc',
+            'cke26f_plt.bc',
+            'ckg01b_plt.bc',
+            'ckg02b_plt.bc',
+            'ckg07b_plt.bc',
+            'ckg08b_plt.bc',
+            'ckg28f_plt.bc',
+            'ckg29f_plt.bc',
+            'cki24f_plt.bc',
+            'cki25f_plt.bc',
+            'cki27f_plt.bc',
+            'cki31f_plt.bc',
+            'cki32f_plt.bc',
+            'ckj0cav3_plt.bc',
+            'ckj0cduh_plt.bc',
+            'ckj0cv3_plt.bc',
+            'ckj0eav3_plt.bc',
+            'ckj0ebv3_plt.bc',
+            'ckj0ecv3_plt.bc',
+            'ckjaap_plt.bc',
+            'ckjaav3_plt.bc',
+            'ckjabp_plt.bc',
+            'ckjabv3_plt.bc',
+            'gll_plt_pre_1990_v00.bc',
+            'gll_plt_pre_1991_v00.bc',
+            'gll_plt_pre_1992_v00.bc',
+            'gll_plt_pre_1993_v00.bc',
+            'gll_plt_pre_1994_v00.bc',
+            'gll_plt_pre_1995_v00.bc',
+            'gll_plt_pre_1996_v00.bc',
+            'gll_plt_pre_1997_v00.bc',
+            'gll_plt_pre_1998_v00.bc',
+            'gll_plt_pre_1999_v00.bc',
+            'gll_plt_pre_2000_v00.bc',
+            'gll_plt_pre_2001_v00.bc',
+        ):
+            cspyce.furnsh(
+                test_filecache.retrieve(SPICE_PATH + 'Galileo/CK/'+ck_root))
 
-        for spkfile in glob.glob(kdir + 'SPK/*.bsp'):
-            cspyce.furnsh(spkfile)
+        for spk_root in (
+            'de421.bsp',
+            'de432s.bsp',
+            'gll_951120_021126_raj2007.bsp',
+            'gll_951120_021126_raj2021.bsp',
+            's000131a.bsp',
+            's000615a.bsp',
+            's020128a.bsp',
+            's030916a.bsp',
+            's960730a.bsp',
+            's970311a.bsp',
+            's971125a.bsp',
+            's980326a.bsp',
+        ):
+            cspyce.furnsh(
+                test_filecache.retrieve(SPICE_PATH + 'Galileo/SPK/'+spk_root))
 
         return
 

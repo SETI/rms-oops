@@ -29,6 +29,7 @@ def find_label(filespec):
     """Find the PDS3 label corresponding to the given filespec."""
     # Construct candidate label filenames
     spec = Path(filespec)
+    filespec = str(filespec)
     labelspecs = [
         spec.with_suffix('.lbl'),
         spec.with_suffix('.LBL') ]
@@ -41,7 +42,7 @@ def find_label(filespec):
             return labelspec
 
     # If no successful candidate, assume attached label
-    return filespec
+    return spec
 
 #===============================================================================
 def get_label(filespec, cleaner=None):

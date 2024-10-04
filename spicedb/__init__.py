@@ -13,6 +13,7 @@ import os
 import unittest
 import warnings
 
+from filecache import FileCache
 import interval
 import julian
 import textkernel
@@ -27,6 +28,8 @@ ABSPATH_LIST = []   # If DEBUG, lists the files that would have been furnished.
 
 IS_OPEN = False
 DB_PATH = ''
+
+SPICE_FILECACHE = None
 
 TRANSLATOR = None   # Optional user-specified function to alter the absolute
                     # paths of SPICE kernels. This can be used to override the
@@ -1010,6 +1013,9 @@ def _sql_query_by_filespec(filespec, time=None):
 def set_spice_path(spice_path=""):
     """Define the directory path to the root of the SPICE file directory tree.
 
+    This directory may also be on a webserver or in the cloud by providing an
+    appropriate prefix.
+
     Call with no argument to reset the path to its default value.
     """
 
@@ -1021,6 +1027,9 @@ def set_spice_path(spice_path=""):
 def get_spice_path():
     """Return the current path to the root of the SPICE file directory tree.
 
+    This directory may also be on a webserver or in the cloud by providing an
+    appropriate prefix.
+
     If the path is undefined, it uses the value of environment variable
     SPICE_PATH.
     """
@@ -1031,6 +1040,17 @@ def get_spice_path():
         SPICE_PATH = os.environ["SPICE_PATH"]
 
     return SPICE_PATH
+
+#===============================================================================
+def get_spice_filecache():
+    """Return the FileCache used for storing the SPICE DB and kernels."""
+
+    global SPICE_FILECACHE
+
+    if SPICE_FILECACHE is None:
+        SPICE_FILECACHE = FileCache(shared="oops_kernels")
+
+    return SPICE_FILECACHE
 
 #===============================================================================
 def open_db(name=None):
@@ -1051,7 +1071,9 @@ def open_db(name=None):
         else:
             name = os.environ["SPICE_SQLITE_DB_NAME"]
 
-    db.open(name)
+    fc = get_spice_filecache()
+    local_path = fc.retrieve(name)
+    db.open(local_path)
     DB_PATH = name
     IS_OPEN = True
 
@@ -1393,12 +1415,13 @@ def select_by_filespec(filespecs, time=None):
 ################################################################################
 
 def as_dict(kernel_list):
-    """Return a dictionary containing the information in  text kernels.
+    """Return a dictionary containing the information in text kernels.
 
     Binary kernels are ignored.
     """
 
     spice_path = get_spice_path()
+    spice_filecache = get_spice_filecache()
 
     result = {}
     for kernel in kernel_list:
@@ -1409,7 +1432,8 @@ def as_dict(kernel_list):
             continue
 
         filespec = os.path.join(spice_path, kernel.filespec)
-        result = textkernel.from_file(filespec, tkdict=result)
+        local_path = spice_filecache.retrieve(filespec)
+        result = textkernel.from_file(local_path, tkdict=result)
 
     return result
 
@@ -1444,6 +1468,7 @@ def furnish_kernels(kernel_list, fast=True):
     fileno_dict = {}
 
     spice_path = get_spice_path()
+    spice_filecache = get_spice_filecache()
 
     # For each kernel...
     for kernel in kernel_list:
@@ -1484,19 +1509,23 @@ def furnish_kernels(kernel_list, fast=True):
             abspath_list.append(abspath)
             abspath_types[abspath] = kernel.kernel_type     # track kernel types
 
-            # Save the info for each furnished file if it exists
-            if os.path.exists(abspath):
-                basename = os.path.basename(abspath)
-                if basename in FURNISHED_INFO:
-                    if kernel not in FURNISHED_INFO[basename]:
-                        FURNISHED_INFO[basename].append(kernel)
-                else:
-                    FURNISHED_INFO[basename] = [kernel]
-
-            # Otherwise flag it and remove from abspath_list
-            else:
+            # Save the info for each furnished file if it exists.
+            # We go ahead and download them here (if necessary) since we're
+            # going to use them later anyway, rather than doing a separate
+            # exists() check.
+            try:
+                spice_filecache.retrieve(abspath)
+            except FileNotFoundError:
                 warnings.warn('SPICE kernel not found: ' + abspath, RuntimeWarning)
                 abspath_list.remove(abspath)
+                continue
+
+            basename = os.path.basename(abspath)
+            if basename in FURNISHED_INFO:
+                if kernel not in FURNISHED_INFO[basename]:
+                    FURNISHED_INFO[basename].append(kernel)
+            else:
+                FURNISHED_INFO[basename] = [kernel]
 
     # Furnish the kernel files...
     if DEBUG:
@@ -1511,13 +1540,15 @@ def furnish_kernels(kernel_list, fast=True):
             if fast and already_furnished:
                 continue
 
+            local_path = spice_filecache.get_local_path(abspath)
+
             # Otherwise, unload the kernel if it was already furnished
             if already_furnished:
                 furnished_list.remove(abspath)
-                cspyce.unload(abspath)
+                cspyce.unload(local_path)
 
             # Load the kernel
-            cspyce.furnsh(abspath)
+            cspyce.furnsh(local_path)
             furnished_list.append(abspath)
 
         # Track the kernel names loaded
@@ -1803,6 +1834,8 @@ def furnish_by_metafile(metafile, time=None, asof=None):
     Return:         A list of kernel names in load order.
     """
 
+    spice_filecache = get_spice_filecache()
+
     # Search database
     kernel_names = []
     if not os.path.exists(metafile):
@@ -1816,7 +1849,8 @@ def furnish_by_metafile(metafile, time=None, asof=None):
             metafile = os.path.join(spice_path, kernel_list[-1].filespec)
             kernel_names = [kernel_list[-1].full_name]
 
-    filespecs = textkernel.from_file(metafile)['KERNELS_TO_LOAD']
+    local_path = get_spice_filecache.retrieve(metafile)
+    filespecs = textkernel.from_file(local_path)['KERNELS_TO_LOAD']
 
     kernel_list = select_by_filespec(filespecs, time=time)
 
@@ -1850,6 +1884,7 @@ def unload_by_name(names):
 
     # For each kernel...
     spice_path = get_spice_path()
+    spice_filecache = get_spice_filecache()
     for kernel in kernel_list:
         key = kernel.kernel_type
 
@@ -1860,7 +1895,8 @@ def unload_by_name(names):
             if abspath in FURNISHED_ABSPATHS[key]:
                 FURNISHED_ABSPATHS[key].remove(abspath)
                 del FURNISHED_INFO[os.path.basename(abspath)]
-                cspyce.unload(abspath)
+                local_path = spice_filecache.get_local_path(abspath)
+                cspyce.unload(local_path)
 
         # Delete the file_no from the list
         name = kernel.full_name
@@ -1894,6 +1930,7 @@ def unload_by_type(types=None):
         types = [types]
 
     spice_path = get_spice_path()
+    spice_filecache = get_spice_filecache()
 
     # For each selected type...
     for key in types:
@@ -1901,7 +1938,9 @@ def unload_by_type(types=None):
         # Unload each file from SPICE
         abspath_list = FURNISHED_ABSPATHS[key]
         for file in abspath_list:
-            cspyce.unload(os.path.join(spice_path, file))
+            local_path = spice_filecache.get_local_path(os.path.join(spice_path,
+                                                                     file))
+            cspyce.unload()
             del FURNISHED_INFO[os.path.basename(file)]
 
         # Delete the file list from the dictionary

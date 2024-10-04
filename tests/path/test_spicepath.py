@@ -14,7 +14,7 @@ from polymath   import Vector3
 from oops.body  import Body
 from oops.frame import Frame, SpiceFrame
 from oops.path  import Path, AliasPath, SpicePath
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support import TESTDATA_PARENT_DIRECTORY, TEST_FILECACHE
 
 
 class Test_SpicePath(unittest.TestCase):
@@ -22,8 +22,10 @@ class Test_SpicePath(unittest.TestCase):
     def setUp(self):
       Path.USE_QUICKPATHS = False
       Frame.USE_QUICKFRAMES = False
-      cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc"))
-      cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp"))
+      cspyce.furnsh(TEST_FILECACHE.retrieve(
+          os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc")))
+      cspyce.furnsh(TEST_FILECACHE.retrieve(
+          os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp")))
 
     def tearDown(self):
       spice.initialize()

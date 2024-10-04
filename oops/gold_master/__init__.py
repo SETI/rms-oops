@@ -150,6 +150,7 @@ import sys
 import warnings
 
 from collections   import defaultdict
+from filecache     import FileCache
 from scipy.ndimage import minimum_filter, maximum_filter
 from scipy.ndimage import zoom as zoom_image
 
@@ -161,6 +162,9 @@ from polymath       import Boolean, Pair, Qube, Scalar
 from oops.gold_master.test_support import (OOPS_BACKPLANE_OUTPUT_PATH,
                                            OOPS_GOLD_MASTER_PATH,
                                            OOPS_TEST_DATA_PATH)
+
+GM_FILECACHE = FileCache(shared='oops_gold_master_tests')
+
 
 ################################################################################
 # Use set_default_obs() and set_standard_obs() to define the observation used
@@ -742,25 +746,44 @@ def _clean_up_args(args):
         index   = STANDARD_OBS_INFO[obsname]['index']
         kwargs  = STANDARD_OBS_INFO[obsname]['kwargs']
 
-        abspath = os.path.abspath(os.path.realpath(obspath))
+        if '://' in obspath:
+            abspath = obspath
+        else:
+            abspath = os.path.abspath(os.path.realpath(obspath))
         if args.task in ('compare', 'adopt'):
             if not OOPS_TEST_DATA_PATH:
                 raise ValueError('Undefined environment variable: '
                                  'One of OOPS_TEST_DATA_PATH or OOPS_RESOURCES '
                                  'must be provided')
-            test_data_path_ = os.path.realpath(OOPS_TEST_DATA_PATH) + '/'
+            if '://' in OOPS_TEST_DATA_PATH:
+                test_data_path_ = OOPS_TEST_DATA_PATH.rstrip('/') + '/'
+            else:
+                test_data_path_ = os.path.realpath(OOPS_TEST_DATA_PATH) + '/'
             if not abspath.startswith(test_data_path_):
                 warnings.warn('File ' + abspath + ' is not in the test data '
                               'directory ' + test_data_path_)
-        if not os.path.exists(abspath):
-            raise FileNotFoundError('No such file: ' + obspath)
+        # This will raise FileNotFoundError if the file doesn't exist and can't
+        # be downloaded
+        local_path = GM_FILECACHE.retrieve(abspath)
+
+        # We also try to download an associated .lbl or .LBL file so it's also
+        # in the cache. This is an annoying hack required by the "pds3" module,
+        # which assumes both the img and lbl file will be side-by-side.
+        for ext in ('.lbl', '.LBL'):
+            try:
+                GM_FILECACHE.retrieve(abspath
+                                      .replace('.img', ext)
+                                      .replace('.IMG', ext))
+            except FileNotFoundError:
+                continue
+            break
 
         # Allow overrides of bodies
         planets = args.planets or STANDARD_OBS_INFO[obsname]['planets']
         moons   = args.moons   or STANDARD_OBS_INFO[obsname]['moons']
         rings   = args.rings   or STANDARD_OBS_INFO[obsname]['rings']
 
-        result = args.from_file(abspath, **kwargs)
+        result = args.from_file(local_path, **kwargs)
         if index is not None:
             result = result[index]
 
@@ -1095,7 +1118,10 @@ class BackplaneTest(object):
         # gold masters sampled at the undersampling grid:
         #         $OOPS_BACKPLANE_OUTPUT_PATH/N1460072401_1/sampled_gold
 
-        self.abspath = os.path.abspath(os.path.realpath(obs.filespec))
+        if '://' in str(obs.filespec):
+            self.abspath = obs.filespec
+        else:
+            self.abspath = os.path.abspath(os.path.realpath(obs.filespec))
         basename_prefix = os.path.splitext(os.path.basename(self.abspath))[0]
 
         self.gold_dir = os.path.join(OOPS_GOLD_MASTER_PATH,
@@ -1458,7 +1484,7 @@ class BackplaneTest(object):
 
             if self.args.arrays:
                 output_pickle_path = os.path.join(output_arrays,
-                                                basename + '.pickle')
+                                                  basename + '.pickle')
                 comparison.output_pickle_path = output_pickle_path
                 with open(output_pickle_path, 'wb') as f:
                     pickle.dump(array, f)
@@ -1477,26 +1503,26 @@ class BackplaneTest(object):
                                                 basename + '.pickle')
                 comparison.gold_pickle_path = gold_pickle_path
 
-                # Handle a missing pickle file
-                if not os.path.exists(gold_pickle_path):
+                try:
+                    local_path = GM_FILECACHE.retrieve(gold_pickle_path)
+                except FileNotFoundError:
                     self._log_comparison(comparison, 'No gold master')
-
                 else:
-                    # Retrieve pickled backplane
-                    try:
-                        with open(gold_pickle_path, 'rb') as f:
+                    master = None
+                    with open(local_path, 'rb') as f:
+                        try:
                             master = pickle.load(f)
-                    except (ValueError, TypeError, OSError):
-                        self._log_comparison(comparison, 'Invalid gold master')
-
-                    # Compare...
-                    else:
+                        except (ValueError, TypeError, OSError):
+                            self._log_comparison(comparison,
+                                                 'Invalid gold master')
+                    if master is not None:
+                        # Compare...
                         if self.args.save_sampled:
                             basename = self._basename(comparison.title,
                                                       gold=False)
                             comparison.sampled_gold_path = os.path.join(
-                                                           self.sampled_gold,
-                                                           basename + '.pickle')
+                                                            self.sampled_gold,
+                                                            basename + '.pickle')
 
                         self._compare(array, master, comparison)
 
@@ -2293,10 +2319,12 @@ class BackplaneTest(object):
             return self.gold_summary_
 
         filepath = os.path.join(self.gold_dir, 'summary.py')
-        if not os.path.exists(filepath):
+        try:
+            local_path = GM_FILECACHE.retrieve(filepath)
+        except FileNotFoundError:
             self.gold_summary_ = {}
         else:
-            with open(filepath) as f:
+            with open(local_path) as f:
                 text = f.read()
             self.gold_summary_ = eval(text)
 

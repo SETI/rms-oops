@@ -4,6 +4,9 @@
 
 import os
 
+from filecache import FileCache
+
+
 # Attributes ending with underscore contain a trailing "/"; others do not
 
 try:
@@ -12,7 +15,8 @@ except KeyError:
     OOPS_RESOURCES = ''
     OOPS_RESOURCES_ = ''
 else:
-    OOPS_RESOURCES = os.path.normpath(OOPS_RESOURCES)
+    if '://' not in OOPS_RESOURCES:
+        OOPS_RESOURCES = os.path.normpath(OOPS_RESOURCES)
     OOPS_RESOURCES = OOPS_RESOURCES.rstrip('/')
     OOPS_RESOURCES_ = OOPS_RESOURCES + '/'
 
@@ -30,13 +34,17 @@ except KeyError:
         OOPS_TEST_DATA_PATH = ''
         OOPS_TEST_DATA_PATH_ = ''
 else:
-    OOPS_TEST_DATA_PATH = os.path.realpath(OOPS_TEST_DATA_PATH)
-    OOPS_TEST_DATA_PATH = os.path.abspath(OOPS_TEST_DATA_PATH)
+    if '://' not in OOPS_TEST_DATA_PATH:
+        # Only normalize local filesystem paths
+        OOPS_TEST_DATA_PATH = os.path.realpath(OOPS_TEST_DATA_PATH)
+        OOPS_TEST_DATA_PATH = os.path.abspath(OOPS_TEST_DATA_PATH)
     OOPS_TEST_DATA_PATH = OOPS_TEST_DATA_PATH.rstrip('/')
     OOPS_TEST_DATA_PATH_ = OOPS_TEST_DATA_PATH + '/'
 
 # Alternative global variable name for the same directory
 TESTDATA_PARENT_DIRECTORY  = OOPS_TEST_DATA_PATH
 TESTDATA_PARENT_DIRECTORY_ = OOPS_TEST_DATA_PATH_
+
+TEST_FILECACHE = FileCache(shared='oops_tests')
 
 ################################################################################
