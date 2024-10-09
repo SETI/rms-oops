@@ -146,7 +146,7 @@
 #         if Backplane_Settings.NO_EXERCISES:
 #             self.skipTest('')
 #
-#         root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'cassini/ISS')
+#         root = f'{TESTDATA_PARENT_DIRECTORY}/cassini/ISS'
 #         file = os.path.join(root, 'N1460072401_1.IMG')
 #         obs = from_file(file)
 #         exercise_backplanes(obs, use_inventory=True, inventory_border=4,

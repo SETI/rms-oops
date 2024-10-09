@@ -5,6 +5,7 @@ numpy
 Pillow
 pyparsing
 rms-fpzip
+rms-filecache
 rms-interval
 rms-julian
 rms-pdsparser

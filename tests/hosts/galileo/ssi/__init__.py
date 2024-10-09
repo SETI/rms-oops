@@ -15,7 +15,7 @@ from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 #     #===========================================================================
 #     def runTest(self):
 #         dir = '/home/spitale/SETI/RMS/metadata/GO_0xxx/GO_0017'
-# #        dir = os.path.join(TESTDATA_PARENT_DIRECTORY, 'galileo/GO_0017')
+# #        dir = f'{TESTDATA_PARENT_DIRECTORY}/galileo/GO_0017'
 #
 #         obs = from_index(os.path.join(dir, 'GO_0017_index.lbl'),
 #                          os.path.join(dir, 'GO_0017_supplemental_index.lbl'))

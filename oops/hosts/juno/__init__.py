@@ -204,8 +204,9 @@ class Juno(object):
 
         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
-        kdir = os.path.join(TESTDATA_PARENT_DIRECTORY, '../SPICE/Juno/')
-        gkdir = os.path.join(TESTDATA_PARENT_DIRECTORY, '../SPICE/General/')
+        # XXX Update for filecache
+        kdir = f'{TESTDATA_PARENT_DIRECTORY}/../SPICE/Juno/'
+        gkdir = f'{TESTDATA_PARENT_DIRECTORY}/../SPICE/General/'
 
 
         cspyce.furnsh(kdir + 'CK/juno_sc_rec_131006_131012_v01.bc')
