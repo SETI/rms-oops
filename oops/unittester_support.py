@@ -16,6 +16,7 @@ except KeyError:
     OOPS_RESOURCES_ = ''
 else:
     if '://' not in OOPS_RESOURCES:
+        # Only normalize local filesystem paths
         OOPS_RESOURCES = os.path.normpath(OOPS_RESOURCES)
     OOPS_RESOURCES = OOPS_RESOURCES.rstrip('/')
     OOPS_RESOURCES_ = OOPS_RESOURCES + '/'
