@@ -29,7 +29,7 @@ try:
     OOPS_TEST_DATA_PATH = os.environ['OOPS_TEST_DATA_PATH']
 except KeyError:
     if OOPS_RESOURCES:
-        OOPS_TEST_DATA_PATH = os.path.join(OOPS_RESOURCES, 'test_data')
+        OOPS_TEST_DATA_PATH = f'{OOPS_RESOURCES}/test_data'
         OOPS_TEST_DATA_PATH_ = OOPS_TEST_DATA_PATH + '/'
     else:
         OOPS_TEST_DATA_PATH = ''

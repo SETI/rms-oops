@@ -20,7 +20,7 @@ class Test_Path(unittest.TestCase):
 
     def setUp(self):
         cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp')))
+            f'{TESTDATA_PARENT_DIRECTORY}/SPICE/de421.bsp'))
         Path.reset_registry()
         Frame.reset_registry()
 

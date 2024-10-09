@@ -1124,18 +1124,15 @@ class BackplaneTest(object):
             self.abspath = os.path.abspath(os.path.realpath(obs.filespec))
         basename_prefix = os.path.splitext(os.path.basename(self.abspath))[0]
 
-        self.gold_dir = os.path.join(OOPS_GOLD_MASTER_PATH,
-                                     args.module, basename_prefix)
-        self.gold_arrays = os.path.join(self.gold_dir, 'arrays' + self.suffix)
-        self.gold_browse = os.path.join(self.gold_dir, 'browse' + self.suffix)
+        self.gold_dir = (f'{OOPS_GOLD_MASTER_PATH}/{args.module}/'
+                         f'{basename_prefix}')
+        self.gold_arrays = f'{self.gold_dir}/arrays{self.suffix}'
+        self.gold_browse = f'{self.gold_dir}/browse{self.suffix}'
 
-        self.output_dir = os.path.join(args.output, basename_prefix)
-        self.output_arrays = os.path.join(self.output_dir,
-                                          'arrays' + self.suffix)
-        self.output_browse = os.path.join(self.output_dir,
-                                          'browse' + self.suffix)
-        self.sampled_gold = os.path.join(self.output_dir,
-                                          'sampled_gold' + self.suffix)
+        self.output_dir = f'{args.output}/{basename_prefix}'
+        self.output_arrays = f'{self.output_dir}/arrays{self.suffix}'
+        self.output_browse = f'{self.output_dir}/browse{self.suffix}'
+        self.sampled_gold = f'{self.output_dir}/sampled_gold{self.suffix}'
 
         # Initialize the comparison log
         self.gold_summary_ = None
@@ -1176,7 +1173,7 @@ class BackplaneTest(object):
             # Make sure the output directory exits
             os.makedirs(self.output_dir, exist_ok=True)
 
-            # Relocate any pre-existing log for this observation
+            # Relocate any pre-existing log for this observation  XXX
             log_path = os.path.join(self.output_dir, self.task + '.log')
             if os.path.exists(log_path):
                 timestamp = os.path.getmtime(log_path)
@@ -1483,8 +1480,7 @@ class BackplaneTest(object):
                 basename = self._basename(title, gold=False)
 
             if self.args.arrays:
-                output_pickle_path = os.path.join(output_arrays,
-                                                  basename + '.pickle')
+                output_pickle_path = f'{output_arrays}/{basename}.pickle'
                 comparison.output_pickle_path = output_pickle_path
                 with open(output_pickle_path, 'wb') as f:
                     pickle.dump(array, f)
@@ -1492,15 +1488,14 @@ class BackplaneTest(object):
             # Write the browse image
             if self.args.browse:
                 browse_name = basename + '.' + self.args.browse_format
-                browse_path = os.path.join(output_browse, browse_name)
+                browse_path = f'{output_browse}/{browse_name}'
                 comparison.browse_path = browse_path
                 self.save_browse(array, browse_path)
 
             # For "compare"
             if self.task == 'compare':
                 basename = self._basename(title, gold=True)
-                gold_pickle_path = os.path.join(self.gold_arrays,
-                                                basename + '.pickle')
+                gold_pickle_path = f'{self.gold_arrays}/{basename}.pickle'
                 comparison.gold_pickle_path = gold_pickle_path
 
                 try:
@@ -1520,9 +1515,8 @@ class BackplaneTest(object):
                         if self.args.save_sampled:
                             basename = self._basename(comparison.title,
                                                       gold=False)
-                            comparison.sampled_gold_path = os.path.join(
-                                                            self.sampled_gold,
-                                                            basename + '.pickle')
+                            comparison.sampled_gold_path = \
+                                f'{self.sampled_gold}/{basename}.pickle'
 
                         self._compare(array, master, comparison)
 
@@ -2318,7 +2312,7 @@ class BackplaneTest(object):
         if self.gold_summary_ is not None:
             return self.gold_summary_
 
-        filepath = os.path.join(self.gold_dir, 'summary.py')
+        filepath = f'{self.gold_dir}/summary.py'
         try:
             local_path = GM_FILECACHE.retrieve(filepath)
         except FileNotFoundError:
@@ -2347,7 +2341,7 @@ class BackplaneTest(object):
         # Make sure the output directory exits
         os.makedirs(outdir, exist_ok=True)
 
-        filepath = os.path.join(outdir, 'summary.py')
+        filepath = f'{outdir}/summary.py'
 
         if os.path.exists(filepath):
 
@@ -2400,8 +2394,7 @@ if __name__ == '__main__':
 
     # Define the default observation
     gm.set_default_obs(
-            obspath = os.path.join(OOPS_TEST_DATA_PATH,
-                                   'cassini/ISS/W1573721822_1.IMG'),
+            obspath = f'{OOPS_TEST_DATA_PATH}/cassini/ISS/W1573721822_1.IMG',
             index   = None,
             planets = ['SATURN'],
             moons   = ['EPIMETHEUS'],

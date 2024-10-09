@@ -20,11 +20,11 @@ class Test_Frame(unittest.TestCase):
     def setUp(self):
         Body._undefine_solar_system()
         cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls')))
+            f'{TESTDATA_PARENT_DIRECTORY}/SPICE/naif0009.tls'))
         cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/pck00010.tpc')))
+            f'{TESTDATA_PARENT_DIRECTORY}/SPICE/pck00010.tpc'))
         cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp')))
+            f'{TESTDATA_PARENT_DIRECTORY}/SPICE/de421.bsp'))
         Frame.reset_registry()
 
     def tearDown(self):

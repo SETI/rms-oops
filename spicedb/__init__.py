@@ -1431,7 +1431,7 @@ def as_dict(kernel_list):
         if ext[0:2] != ".t":
             continue
 
-        filespec = os.path.join(spice_path, kernel.filespec)
+        filespec = f'{spice_path}/{kernel.filespec}'
         local_path = spice_filecache.retrieve(filespec)
         result = textkernel.from_file(local_path, tkdict=result)
 
@@ -1489,7 +1489,7 @@ def furnish_kernels(kernel_list, fast=True):
 
         # Update the list of files to furnish
         filepaths = kernel.filespec.split(',')
-        abspaths = [os.path.join(spice_path, f) for f in filepaths]
+        abspaths = [f'{spice_path}/{f}' for f in filepaths]
         if TRANSLATOR:
             new_abspaths = []
             for oldpath in abspaths:
@@ -1842,11 +1842,11 @@ def furnish_by_metafile(metafile, time=None, asof=None):
         spice_path = get_spice_path()
         try:
             kernel_list = _query_kernels('META', name=metafile, asof=asof)
-            metafile = os.path.join(spice_path, kernel_list[-1].filespec)
+            metafile = f'{spice_path}/{kernel_list[-1].filespec}'
             kernel_names = [kernel_list[-1].full_name]
         except ValueError:
             kernel_list = _query_kernels('META', path=metafile, asof=asof)
-            metafile = os.path.join(spice_path, kernel_list[-1].filespec)
+            metafile = f'{spice_path}/{kernel_list[-1].filespec}'
             kernel_names = [kernel_list[-1].full_name]
 
     local_path = get_spice_filecache.retrieve(metafile)
@@ -1890,7 +1890,7 @@ def unload_by_name(names):
 
         # Remove the kernel files from the dictionary and unload from SPICE
         filespecs = kernel.filespec.split(',')
-        abspaths = [os.path.join(spice_path, f) for f in filespecs]
+        abspaths = [f'{spice_path}/{f}' for f in filespecs]
         for abspath in abspaths:
             if abspath in FURNISHED_ABSPATHS[key]:
                 FURNISHED_ABSPATHS[key].remove(abspath)
@@ -1938,8 +1938,7 @@ def unload_by_type(types=None):
         # Unload each file from SPICE
         abspath_list = FURNISHED_ABSPATHS[key]
         for file in abspath_list:
-            local_path = spice_filecache.get_local_path(os.path.join(spice_path,
-                                                                     file))
+            local_path = spice_filecache.get_local_path(f'{spice_path}/{file}')
             cspyce.unload()
             del FURNISHED_INFO[os.path.basename(file)]
 

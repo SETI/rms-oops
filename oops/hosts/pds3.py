@@ -361,27 +361,27 @@ class Test_PDS3(unittest.TestCase):
 
         # Test extension replacement
         filespec = 'cassini/ISS/W1575634136_1.IMG'
-        label_dict = pds3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
+        label_dict = pds3.get_label(f'{TESTDATA_PARENT_DIRECTORY}/{filespec}')
         self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
 
         # Test .LBL file input
         filespec = 'cassini/ISS/W1575634136_1.LBL'
-        label_dict = pds3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
+        label_dict = pds3.get_label(f'{TESTDATA_PARENT_DIRECTORY}/{filespec}')
         self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
 
         # Test non-existent file
         filespec = 'nofile.crap'
-        self.assertRaises(AssertionError, pds3.get_label, os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
+        self.assertRaises(AssertionError, pds3.get_label, f'{TESTDATA_PARENT_DIRECTORY}/{filespec}')
 
         # Test Cassini VIMS file
         filespec = 'cassini/VIMS/v1793917030_1.lbl'
-        label_dict = pds3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec),
+        label_dict = pds3.get_label(f'{TESTDATA_PARENT_DIRECTORY}/{filespec}',
                                     cleaner=clean_VIMS)
         self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
 
         # Test Cassini UVIS file
         filespec = 'cassini/UVIS/HSP2014_197_21_29.LBL'
-        label_dict = pds3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec),
+        label_dict = pds3.get_label(f'{TESTDATA_PARENT_DIRECTORY}/{filespec}',
                                                  cleaner=clean_UVIS)
         self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
 

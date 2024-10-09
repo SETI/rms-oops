@@ -15,7 +15,7 @@ try:
     OOPS_GOLD_MASTER_PATH = os.environ['OOPS_GOLD_MASTER_PATH']
 except KeyError:
     if OOPS_RESOURCES:
-        OOPS_GOLD_MASTER_PATH = os.path.join(OOPS_RESOURCES, 'gold_master')
+        OOPS_GOLD_MASTER_PATH = f'{OOPS_RESOURCES}/gold_master'
         OOPS_GOLD_MASTER_PATH_ = OOPS_GOLD_MASTER_PATH + '/'
     else:
         OOPS_GOLD_MASTER_PATH = ''
