@@ -3,7 +3,6 @@
 ################################################################################
 
 import numpy as np
-import os
 import unittest
 
 import cspyce
@@ -12,19 +11,17 @@ from oops.config import QUICK
 from oops.body   import Body
 from oops.frame  import Frame, QuickFrame, Rotation, SpiceFrame
 from oops.path   import SpicePath
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY, TEST_FILECACHE
+from oops.unittester_support import TEST_SPICE_PFX
 
 
 class Test_Frame(unittest.TestCase):
 
     def setUp(self):
         Body._undefine_solar_system()
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            f'{TESTDATA_PARENT_DIRECTORY}/SPICE/naif0009.tls'))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            f'{TESTDATA_PARENT_DIRECTORY}/SPICE/pck00010.tpc'))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            f'{TESTDATA_PARENT_DIRECTORY}/SPICE/de421.bsp'))
+        paths = TEST_SPICE_PFX.retrieve(['naif0009.tls', 'pck00010.tpc',
+                                         'de421.bsp'])
+        for path in paths:
+            cspyce.furnsh(path)
         Frame.reset_registry()
 
     def tearDown(self):

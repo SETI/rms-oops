@@ -12,7 +12,7 @@ from oops.frame.spiceframe    import SpiceFrame
 from oops.path.path_          import Path
 from oops.path.spicepath      import SpicePath
 from oops.surface.spice_shape import spice_shape
-from oops.unittester_support  import TESTDATA_PARENT_DIRECTORY, TEST_FILECACHE
+from oops.unittester_support  import TEST_SPICE_PFX
 import oops.spice_support as spice
 
 
@@ -20,10 +20,9 @@ class Test_spice_shape(unittest.TestCase):
 
     def setUp(self):
         spice.initialize()
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "pck00010.tpc")))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE", "de421.bsp")))
+        paths = TEST_SPICE_PFX.retrieve(["pck00010.tpc", "de421.bsp"])
+        for path in paths:
+            cspyce.furnsh(path)
 
     def tearDown(self):
         pass

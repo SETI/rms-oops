@@ -3,7 +3,6 @@
 ################################################################################
 
 import numpy as np
-import os
 import unittest
 
 import cspyce
@@ -13,14 +12,13 @@ from oops.body   import Body
 from oops.frame  import Frame, SpiceFrame
 from oops.path   import (Path, LinkedPath, ReversedPath, RelativePath,
                          RotatedPath, QuickPath, LinearPath, SpicePath)
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY, TEST_FILECACHE
+from oops.unittester_support import TEST_SPICE_PFX
 
 
 class Test_Path(unittest.TestCase):
 
     def setUp(self):
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            f'{TESTDATA_PARENT_DIRECTORY}/SPICE/de421.bsp'))
+        cspyce.furnsh(TEST_SPICE_PFX.retrieve('de421.bsp'))
         Path.reset_registry()
         Frame.reset_registry()
 

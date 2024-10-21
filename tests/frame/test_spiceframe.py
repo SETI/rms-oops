@@ -3,7 +3,6 @@
 ################################################################################
 
 import numpy as np
-import os
 import unittest
 
 import cspyce
@@ -16,18 +15,16 @@ from oops.frame     import Frame, SpiceFrame, QuickFrame
 from oops.path      import Path
 from oops.path.spicepath import SpicePath
 
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY, TEST_FILECACHE
+from oops.unittester_support import TEST_SPICE_PFX
 
 
 class Test_SpiceFrame(unittest.TestCase):
 
     def setUp(self):
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            f'{TESTDATA_PARENT_DIRECTORY}/SPICE/naif0009.tls'))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            f'{TESTDATA_PARENT_DIRECTORY}/SPICE/pck00010.tpc'))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            f'{TESTDATA_PARENT_DIRECTORY}/SPICE/de421.bsp'))
+        paths = TEST_SPICE_PFX.retrieve(['naif0009.tls', 'pck00010.tpc',
+                                         'de421.bsp'])
+        for path in paths:
+            cspyce.furnsh(path)
         Path.USE_QUICKPATHS = False
         Frame.USE_QUICKFRAMES = False
         Path.reset_registry()
@@ -137,37 +134,16 @@ class Test_SpiceFrame(unittest.TestCase):
         ########################################
 
         # Load all the required kernels for Cassini ISS on 2007-312
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE', 'naif0009.tls')))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE', 'cas00149.tsc')))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE', 'cas_v40.tf')))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE', 'cas_status_v04.tf')))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE', 'cas_iss_v10.ti')))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE', 'pck00010.tpc')))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE', 'cpck14Oct2011.tpc')))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE', 'de421.bsp')))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE', 'sat052.bsp')))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE', 'sat083.bsp')))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE', 'sat125.bsp')))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE', 'sat128.bsp')))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE', 'sat164.bsp')))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE', '07312_07317ra.bc')))
-        cspyce.furnsh(TEST_FILECACHE.retrieve(
-            os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE',
-                         '080123R_SCPSE_07309_07329.bsp')))
+        paths = TEST_SPICE_PFX.retrieve(['naif0009.tls', 'cas00149.tsc',
+                                         'cas_v40.tf','cas_status_v04.tf',
+                                         'cas_iss_v10.ti', 'pck00010.tpc',
+                                         'cpck14Oct2011.tpc', 'de421.bsp',
+                                         'sat052.bsp', 'sat083.bsp',
+                                         'sat125.bsp', 'sat128.bsp',
+                                         'sat164.bsp', '07312_07317ra.bc',
+                                         '080123R_SCPSE_07309_07329.bsp'])
+        for path in paths:
+            cspyce.furnsh(path)
 
         _ = SpicePath('CASSINI', 'SSB')
         _ = SpiceFrame('CASSINI_ISS_NAC')

@@ -6,7 +6,6 @@
 # kernels into their proper load order.
 ################################################################################
 
-from __future__ import division
 import datetime
 import numbers
 import os
@@ -29,7 +28,9 @@ ABSPATH_LIST = []   # If DEBUG, lists the files that would have been furnished.
 IS_OPEN = False
 DB_PATH = ''
 
+SPICE_FILECACHE_SHARED_NAME = "oops_kernels"
 SPICE_FILECACHE = None
+SPICE_FILECACHE_PREFIX = None
 
 TRANSLATOR = None   # Optional user-specified function to alter the absolute
                     # paths of SPICE kernels. This can be used to override the
@@ -1019,9 +1020,11 @@ def set_spice_path(spice_path=""):
     Call with no argument to reset the path to its default value.
     """
 
-    global SPICE_PATH
+    global SPICE_PATH, SPICE_FILECACHE, SPICE_FILECACHE_PFX
 
     SPICE_PATH = spice_path
+    SPICE_FILECACHE = None
+    SPICE_FILECACHE_PFX = None
 
 #===============================================================================
 def get_spice_path():
@@ -1048,9 +1051,22 @@ def get_spice_filecache():
     global SPICE_FILECACHE
 
     if SPICE_FILECACHE is None:
-        SPICE_FILECACHE = FileCache(shared="oops_kernels")
+        SPICE_FILECACHE = FileCache(shared=SPICE_FILECACHE_SHARED_NAME)
 
     return SPICE_FILECACHE
+
+#===============================================================================
+def get_spice_filecache_prefix():
+    """Return the FileCachePrefix used for storing the SPICE kernels."""
+
+    global SPICE_FILECACHE_PREFIX
+
+    if SPICE_FILECACHE_PREFIX is None:
+        fc = get_spice_filecache()
+        spice_path = get_spice_path()
+        SPICE_FILECACHE_PREFIX = fc.new_prefix(spice_path)
+
+    return SPICE_FILECACHE_PREFIX
 
 #===============================================================================
 def open_db(name=None):
@@ -1072,7 +1088,7 @@ def open_db(name=None):
             name = os.environ["SPICE_SQLITE_DB_NAME"]
 
     fc = get_spice_filecache()
-    local_path = fc.retrieve(name)
+    local_path = fc.retrieve(name)  # name will include the URI prefix, if any
     db.open(local_path)
     DB_PATH = name
     IS_OPEN = True
@@ -1420,8 +1436,7 @@ def as_dict(kernel_list):
     Binary kernels are ignored.
     """
 
-    spice_path = get_spice_path()
-    spice_filecache = get_spice_filecache()
+    pfx = get_spice_filecache_prefix()
 
     result = {}
     for kernel in kernel_list:
@@ -1431,8 +1446,7 @@ def as_dict(kernel_list):
         if ext[0:2] != ".t":
             continue
 
-        filespec = f'{spice_path}/{kernel.filespec}'
-        local_path = spice_filecache.retrieve(filespec)
+        local_path = pfx.retrieve(kernel.filespec)
         result = textkernel.from_file(local_path, tkdict=result)
 
     return result
@@ -1467,8 +1481,7 @@ def furnish_kernels(kernel_list, fast=True):
     name_types = {}
     fileno_dict = {}
 
-    spice_path = get_spice_path()
-    spice_filecache = get_spice_filecache()
+    pfx = get_spice_filecache_prefix()
 
     # For each kernel...
     for kernel in kernel_list:
@@ -1488,8 +1501,7 @@ def furnish_kernels(kernel_list, fast=True):
                 fileno_dict[name].append(kernel.file_no)
 
         # Update the list of files to furnish
-        filepaths = kernel.filespec.split(',')
-        abspaths = [f'{spice_path}/{f}' for f in filepaths]
+        abspaths = kernel.filespec.split(',')
         if TRANSLATOR:
             new_abspaths = []
             for oldpath in abspaths:
@@ -1514,9 +1526,10 @@ def furnish_kernels(kernel_list, fast=True):
             # going to use them later anyway, rather than doing a separate
             # exists() check.
             try:
-                spice_filecache.retrieve(abspath)
+                pfx.retrieve(abspath)
             except FileNotFoundError:
-                warnings.warn('SPICE kernel not found: ' + abspath, RuntimeWarning)
+                warnings.warn(f'SPICE kernel not found: {pfx.prefix}{abspath}',
+                              RuntimeWarning)
                 abspath_list.remove(abspath)
                 continue
 
@@ -1540,7 +1553,7 @@ def furnish_kernels(kernel_list, fast=True):
             if fast and already_furnished:
                 continue
 
-            local_path = spice_filecache.get_local_path(abspath)
+            local_path = pfx.get_local_path(abspath)
 
             # Otherwise, unload the kernel if it was already furnished
             if already_furnished:

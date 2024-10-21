@@ -3,7 +3,6 @@
 ################################################################################
 
 import numpy as np
-import os
 import unittest
 
 import cspyce
@@ -14,23 +13,22 @@ from polymath   import Vector3
 from oops.body  import Body
 from oops.frame import Frame, SpiceFrame
 from oops.path  import Path, AliasPath, SpicePath
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY, TEST_FILECACHE
+from oops.unittester_support import TEST_SPICE_PFX
 
 
 class Test_SpicePath(unittest.TestCase):
 
     def setUp(self):
-      Path.USE_QUICKPATHS = False
-      Frame.USE_QUICKFRAMES = False
-      cspyce.furnsh(TEST_FILECACHE.retrieve(
-          os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/pck00010.tpc")))
-      cspyce.furnsh(TEST_FILECACHE.retrieve(
-          os.path.join(TESTDATA_PARENT_DIRECTORY, "SPICE/de421.bsp")))
+        Path.USE_QUICKPATHS = False
+        Frame.USE_QUICKFRAMES = False
+        paths = TEST_SPICE_PFX.retrieve(["pck00010.tpc", "de421.bsp"])
+        for path in paths:
+            cspyce.furnsh(path)
 
     def tearDown(self):
-      spice.initialize()
-      Path.USE_QUICKPATHS = True
-      Frame.USE_QUICKFRAMES = True
+        spice.initialize()
+        Path.USE_QUICKPATHS = True
+        Frame.USE_QUICKFRAMES = True
 
     def runTest(self):
 
