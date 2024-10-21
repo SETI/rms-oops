@@ -20,7 +20,8 @@ class Test_spice_shape(unittest.TestCase):
 
     def setUp(self):
         spice.initialize()
-        paths = TEST_SPICE_PREFIX.retrieve(["pck00010.tpc", "de421.bsp"])
+        paths = TEST_SPICE_PREFIX.retrieve(["pck00010.tpc",
+                                            "de421.bsp"])
         for path in paths:
             cspyce.furnsh(path)
 

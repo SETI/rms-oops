@@ -18,7 +18,8 @@ from oops.unittester_support import TEST_SPICE_PREFIX
 class Test_Cmatrix(unittest.TestCase):
 
     def setUp(self):
-        paths = TEST_SPICE_PREFIX.retrieve(['naif0009.tls', 'pck00010.tpc',
+        paths = TEST_SPICE_PREFIX.retrieve(['naif0009.tls',
+                                            'pck00010.tpc',
                                             'de421.bsp'])
         for path in paths:
             cspyce.furnsh(path)

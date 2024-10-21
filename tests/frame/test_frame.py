@@ -18,7 +18,8 @@ class Test_Frame(unittest.TestCase):
 
     def setUp(self):
         Body._undefine_solar_system()
-        paths = TEST_SPICE_PREFIX.retrieve(['naif0009.tls', 'pck00010.tpc',
+        paths = TEST_SPICE_PREFIX.retrieve(['naif0009.tls',
+                                            'pck00010.tpc',
                                             'de421.bsp'])
         for path in paths:
             cspyce.furnsh(path)

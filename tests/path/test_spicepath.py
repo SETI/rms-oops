@@ -21,7 +21,8 @@ class Test_SpicePath(unittest.TestCase):
     def setUp(self):
         Path.USE_QUICKPATHS = False
         Frame.USE_QUICKFRAMES = False
-        paths = TEST_SPICE_PREFIX.retrieve(["pck00010.tpc", "de421.bsp"])
+        paths = TEST_SPICE_PREFIX.retrieve(["pck00010.tpc",
+                                            "de421.bsp"])
         for path in paths:
             cspyce.furnsh(path)
 

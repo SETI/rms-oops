@@ -15,7 +15,7 @@ name = 'C0349632100R'
 #  python gold_master.py --name C0349632100R --adopt
 
 gm.define_standard_obs(name,
-        obspath='galileo/GO_0017/G1/GANYMEDE/' + name + '.img',
+        obspath=f'galileo/GO_0017/G1/GANYMEDE/{name}.img',
         moons='GANYMEDE')
 
 gm.override('Right ascension d/dv self-check (deg/pix)', 2.2e-9, names=name)
@@ -38,7 +38,7 @@ name = 'C0368369200R'
 #  python gold_master.py --name C0368369200R --adopt
 
 gm.define_standard_obs(name,
-        obspath = 'galileo/GO_0017/C3/JUPITER/' + name + '.img',
+        obspath=f'galileo/GO_0017/C3/JUPITER/{name}.img',
         planets='JUPITER')
 
 gm.override('JUPITER:RING longitude d/du self-check (deg/pix)', .00025, names=name)
@@ -65,7 +65,7 @@ name = 'C0061455700R'
 #  python gold_master.py --name C0061455700R --adopt
 
 gm.define_standard_obs(name,
-        obspath='galileo/GO_0004/EARTH/' + name + '.img',
+        obspath=f'galileo/GO_0004/EARTH/{name}.img',
         planets='EARTH')
 
 ###################################################################
@@ -76,7 +76,7 @@ name = 'C0374685140R'
 #  python gold_master.py --name C0374685140R --adopt
 
 gm.define_standard_obs(name,
-        obspath='galileo/GO_0017/E4/EUROPA/' + name + '.img',
+        obspath=f'galileo/GO_0017/E4/EUROPA/{name}.img',
         moons='EUROPA')
 
 # overrides to cover unexplained discrepancies among Mark, Rob, Joe
