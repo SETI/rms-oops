@@ -1034,13 +1034,16 @@ def get_spice_path():
     appropriate prefix.
 
     If the path is undefined, it uses the value of environment variable
-    SPICE_PATH.
+    SPICE_PATH. If SPICE_PATH is undefined, it uses $OOPS_RESOURCES/SPICE.
     """
 
     global SPICE_PATH
 
     if SPICE_PATH is None:
-        SPICE_PATH = os.environ["SPICE_PATH"]
+        try:
+            SPICE_PATH = os.environ["SPICE_PATH"].rstrip('/')
+        except KeyError:
+            SPICE_PATH = os.environ["OOPS_RESOURCES"].rstrip('/') + "/SPICE"
 
     return SPICE_PATH
 
@@ -1073,7 +1076,8 @@ def open_db(name=None):
     """Open the SPICE database given its name or file path.
 
     If no name is given, the value of the environment variable
-    SPICE_SQLITE_DB_NAME is used.
+    SPICE_SQLITE_DB_NAME is used. If SPICE_SQLITE_DB_NAME is not set,
+    then $SPICE_PATH/SPICE.db is used.
     """
 
     global IS_OPEN, DB_PATH
@@ -1085,7 +1089,10 @@ def open_db(name=None):
         if DB_PATH:
             name = DB_PATH
         else:
-            name = os.environ["SPICE_SQLITE_DB_NAME"]
+            try:
+                name = os.environ["SPICE_SQLITE_DB_NAME"]
+            except KeyError:
+                name = get_spice_path() + "/SPICE.db"
 
     fc = get_spice_filecache()
     local_path = fc.retrieve(name)  # name will include the URI prefix, if any

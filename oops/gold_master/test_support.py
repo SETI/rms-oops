@@ -7,6 +7,9 @@ from oops.unittester_support import (OOPS_RESOURCES,
                                      TEST_DATA_FILECACHE,
                                      TEST_DATA_PREFIX)
 
+# import filecache
+# filecache.set_easy_logger()
+
 # Environment variables used to support oops "gold master" testing:
 #
 # - $OOPS_RESOURCES is the top-level directory. It is expected to have the
@@ -38,5 +41,8 @@ if OOPS_GOLD_MASTER_PATH:
     GOLD_MASTER_PREFIX = TEST_DATA_FILECACHE.new_prefix(OOPS_GOLD_MASTER_PATH)
 else:
     GOLD_MASTER_PREFIX = None
+
+BACKPLANE_OUTPUT_PREFIX = TEST_DATA_FILECACHE.new_prefix(
+    OOPS_BACKPLANE_OUTPUT_PATH)
 
 ################################################################################

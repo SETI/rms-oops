@@ -159,8 +159,10 @@ from oops.config    import LOGGING
 from oops.constants import DPR
 from polymath       import Boolean, Pair, Qube, Scalar
 
-from oops.gold_master.test_support import (GOLD_MASTER_PREFIX,
+from oops.gold_master.test_support import (BACKPLANE_OUTPUT_PREFIX,
+                                           GOLD_MASTER_PREFIX,
                                            OOPS_BACKPLANE_OUTPUT_PATH,
+                                           TEST_DATA_FILECACHE,
                                            TEST_DATA_PREFIX)
 
 
@@ -534,7 +536,8 @@ def execute_as_command():
 
     # Output options
     gr = parser.add_argument_group('Output options')
-    gr.add_argument('-o', '--output', type=str, metavar='dir', default=None,
+    gr.add_argument('-o', '--output', type=str, metavar='dir',
+                    default=OOPS_BACKPLANE_OUTPUT_PATH,
                     help='''Root directory for saved backplane arrays, browse
                             images, and logs; default is the value of the
                             environment variable OOPS_BACKPLANE_OUTPUT_PATH, if
@@ -593,6 +596,11 @@ def execute_as_command():
     args = parser.parse_args()
     args.testcase = None
     args = _clean_up_args(args)
+
+    if args.output != OOPS_BACKPLANE_OUTPUT_PATH:
+        global BACKPLANE_OUTPUT_PREFIX
+        BACKPLANE_OUTPUT_PREFIX = TEST_DATA_FILECACHE.new_prefix(args.output)
+
     run_tests(args)
 
 ################################################################################
@@ -681,10 +689,6 @@ def _clean_up_args(args):
                                 rings=args.rings)
 
         args.name = args.obspath        # using obspath as the temporary name
-
-    # --output
-    if args.output is None:
-        args.output = OOPS_BACKPLANE_OUTPUT_PATH
 
     # --platform
     if args.platform is None:
@@ -1109,17 +1113,14 @@ class BackplaneTest(object):
         # gold masters sampled at the undersampling grid:
         #         $OOPS_BACKPLANE_OUTPUT_PATH/N1460072401_1/sampled_gold
 
-        if '://' in str(obs.filespec):
-            self.abspath = obs.filespec
-        else:
-            self.abspath = os.path.abspath(os.path.realpath(obs.filespec))
+        self.abspath = obs.filespec
         basename_prefix = os.path.splitext(os.path.basename(self.abspath))[0]
 
         self.gold_dir = (f'{args.module}/{basename_prefix}')
         self.gold_arrays = f'{self.gold_dir}/arrays{self.suffix}'
         self.gold_browse = f'{self.gold_dir}/browse{self.suffix}'
 
-        self.output_dir = f'{args.output}/{basename_prefix}'
+        self.output_dir = basename_prefix
         self.output_arrays = f'{self.output_dir}/arrays{self.suffix}'
         self.output_browse = f'{self.output_dir}/browse{self.suffix}'
         self.sampled_gold = f'{self.output_dir}/sampled_gold{self.suffix}'
@@ -1131,9 +1132,9 @@ class BackplaneTest(object):
 
         # Prepare to log observation info before the first warning or error if
         # the logging level is > INFO.
-        self.header = ['File: ' + self.abspath]
+        self.header = [f'File: {self.abspath}']
         if self.suffix:
-            self.header.append('Suffix: ' + self.suffix)
+            self.header.append(f'Suffix: {self.suffix}')
         self.print_header = self.args.level > logging.INFO
 
     ############################################################################
@@ -1207,28 +1208,25 @@ class BackplaneTest(object):
                     LOGGING.info('Writing new masters to', self.gold_arrays)
                     LOGGING.info('Writing browse images to', self.gold_browse)
 
-                os.makedirs(self.gold_arrays, exist_ok=True)
-                os.makedirs(self.gold_browse, exist_ok=True)
-
             # Make sure directories exist; log their locations
             if self.task in ('preview', 'compare'):
                 if self.args.arrays:
-                    LOGGING.info('Writing arrays to', self.output_arrays)
-                    os.makedirs(self.output_arrays, exist_ok=True)
+                    LOGGING.info('Writing arrays to '
+                                 f'{BACKPLANE_OUTPUT_PREFIX.prefix}{self.output_arrays}')
 
                 if self.args.browse:
-                    LOGGING.info('Writing browse images to', self.output_browse)
-                    os.makedirs(self.output_browse, exist_ok=True)
+                    LOGGING.info('Writing browse images to '
+                                 f'{BACKPLANE_OUTPUT_PREFIX}{self.output_browse}')
 
                 if self.args.save_sampled:
-                    LOGGING.info('Writing sampled masters to', self.sampled_gold)
-                    os.makedirs(self.sampled_gold, exist_ok=True)
+                    LOGGING.info('Writing sampled masters to'
+                                 f'{BACKPLANE_OUTPUT_PREFIX}{self.sampled_gold}')
 
                 if (self.args.arrays or
                     self.args.browse or
-                    self.args.save_sampled) and not BACKPLANE_OUTPUT_PATH:
+                    self.args.save_sampled) and not OOPS_BACKPLANE_OUTPUT_PATH:
                     LOGGING.info('   To change this destination, define '
-                                 + 'OOPS_BACKPLANE_OUTPUT_PATH')
+                                 'OOPS_BACKPLANE_OUTPUT_PATH')
 
             # Run the tests...
             for key in self.args.suite:
@@ -1472,7 +1470,7 @@ class BackplaneTest(object):
             if self.args.arrays:
                 output_pickle_path = f'{output_arrays}/{basename}.pickle'
                 comparison.output_pickle_path = output_pickle_path
-                with open(output_pickle_path, 'wb') as f:
+                with BACKPLANE_OUTPUT_PREFIX.open(output_pickle_path, 'wb') as f:
                     pickle.dump(array, f)
 
             # Write the browse image
@@ -1623,7 +1621,7 @@ class BackplaneTest(object):
 
         # Saved the sampled array if necessary
         if hasattr(comparison, 'sampled_gold_path'):
-            with open(comparison.sampled_gold_path, 'wb') as f:
+            with BACKPLANE_OUTPUT_PREFIX.open(comparison.sampled_gold_path, 'wb') as f:
                 pickle.dump(master_grid, f)
 
         # Find the differences among unmasked pixels
@@ -2283,6 +2281,7 @@ class BackplaneTest(object):
         """Read a PNG, JPG, or TIFF image file as a 2-D array of unsigned bytes.
         """
 
+        assert False  # If this is ever used, convert to using filecache
         with PIL.Image.open(browse_path, mode='r') as im:
             return np.array(im)
 
@@ -2328,9 +2327,6 @@ class BackplaneTest(object):
         """Write the test summary as a Python dictionary; return its file path.
         """
 
-        # Make sure the output directory exits
-        os.makedirs(outdir, exist_ok=True)
-
         filepath = f'{outdir}/summary.py'
 
         if os.path.exists(filepath):
@@ -2348,7 +2344,7 @@ class BackplaneTest(object):
         titles.sort(key=lambda key: key.lower())    # sort titles ignoring case
 
         # Write new file
-        with open(filepath, 'w') as f:
+        with BACKPLANE_OUTPUT_PREFIX.open(filepath, 'w') as f:
 
             dt = datetime.datetime.now()
             f.write(dt.strftime('# gold_master summary %Y-%m-%dT%H-%M-%S\n'))
