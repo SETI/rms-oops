@@ -13,7 +13,7 @@ from polymath   import Vector3
 from oops.body  import Body
 from oops.frame import Frame, SpiceFrame
 from oops.path  import Path, AliasPath, SpicePath
-from oops.unittester_support import TEST_SPICE_PFX
+from oops.unittester_support import TEST_SPICE_PREFIX
 
 
 class Test_SpicePath(unittest.TestCase):
@@ -21,7 +21,7 @@ class Test_SpicePath(unittest.TestCase):
     def setUp(self):
         Path.USE_QUICKPATHS = False
         Frame.USE_QUICKFRAMES = False
-        paths = TEST_SPICE_PFX.retrieve(["pck00010.tpc", "de421.bsp"])
+        paths = TEST_SPICE_PREFIX.retrieve(["pck00010.tpc", "de421.bsp"])
         for path in paths:
             cspyce.furnsh(path)
 

@@ -329,7 +329,7 @@ import unittest
 import os.path
 
 from oops.hosts                   import pds3
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support import TEST_DATA_PREFIX
 
 #===========================================================================
 def clean_VIMS(lines):

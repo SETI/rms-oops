@@ -12,14 +12,14 @@ from oops       import Event
 from oops.body  import Body
 from oops.frame import Frame, RingFrame, SpiceFrame
 from oops.path  import Path, SpicePath
-from oops.unittester_support import TEST_SPICE_PFX
+from oops.unittester_support import TEST_SPICE_PREFIX
 
 
 class Test_RingFrame(unittest.TestCase):
 
     def setUp(self):
-        paths = TEST_SPICE_PFX.retrieve(["naif0009.tls", "pck00010.tpc",
-                                         "de421.bsp"])
+        paths = TEST_SPICE_PREFIX.retrieve(["naif0009.tls", "pck00010.tpc",
+                                            "de421.bsp"])
         for path in paths:
             cspyce.furnsh(path)
         Path.reset_registry()

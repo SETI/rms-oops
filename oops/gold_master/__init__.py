@@ -159,11 +159,9 @@ from oops.config    import LOGGING
 from oops.constants import DPR
 from polymath       import Boolean, Pair, Qube, Scalar
 
-from oops.gold_master.test_support import (OOPS_BACKPLANE_OUTPUT_PATH,
-                                           OOPS_GOLD_MASTER_PATH,
-                                           OOPS_TEST_DATA_PATH)
-
-GM_FILECACHE = FileCache(shared='oops_gold_master_tests')
+from oops.gold_master.test_support import (GOLD_MASTER_PREFIX,
+                                           OOPS_BACKPLANE_OUTPUT_PATH,
+                                           TEST_DATA_PREFIX)
 
 
 ################################################################################
@@ -746,34 +744,27 @@ def _clean_up_args(args):
         index   = STANDARD_OBS_INFO[obsname]['index']
         kwargs  = STANDARD_OBS_INFO[obsname]['kwargs']
 
-        if '://' in obspath:
-            abspath = obspath
-        else:
-            abspath = os.path.abspath(os.path.realpath(obspath))
+        abspath = obspath
         if args.task in ('compare', 'adopt'):
-            if not OOPS_TEST_DATA_PATH:
+            if not TEST_DATA_PREFIX: # XXX
                 raise ValueError('Undefined environment variable: '
                                  'One of OOPS_TEST_DATA_PATH or OOPS_RESOURCES '
                                  'must be provided')
-            if '://' in OOPS_TEST_DATA_PATH:
-                test_data_path_ = OOPS_TEST_DATA_PATH.rstrip('/') + '/'
-            else:
-                test_data_path_ = os.path.realpath(OOPS_TEST_DATA_PATH) + '/'
-            if not abspath.startswith(test_data_path_):
-                warnings.warn('File ' + abspath + ' is not in the test data '
-                              'directory ' + test_data_path_)
+            # if not abspath.startswith(test_data_path_):
+            #     warnings.warn('File ' + abspath + ' is not in the test data '
+            #                   'directory ' + test_data_path_)
         # This will raise FileNotFoundError if the file doesn't exist and can't
         # be downloaded
-        local_path = GM_FILECACHE.retrieve(abspath)
+        local_path = TEST_DATA_PREFIX.retrieve(abspath)
 
         # We also try to download an associated .lbl or .LBL file so it's also
         # in the cache. This is an annoying hack required by the "pds3" module,
         # which assumes both the img and lbl file will be side-by-side.
         for ext in ('.lbl', '.LBL'):
             try:
-                GM_FILECACHE.retrieve(abspath
-                                      .replace('.img', ext)
-                                      .replace('.IMG', ext))
+                TEST_DATA_PREFIX.retrieve(abspath
+                                          .replace('.img', ext)
+                                          .replace('.IMG', ext))
             except FileNotFoundError:
                 continue
             break
@@ -1124,8 +1115,7 @@ class BackplaneTest(object):
             self.abspath = os.path.abspath(os.path.realpath(obs.filespec))
         basename_prefix = os.path.splitext(os.path.basename(self.abspath))[0]
 
-        self.gold_dir = (f'{OOPS_GOLD_MASTER_PATH}/{args.module}/'
-                         f'{basename_prefix}')
+        self.gold_dir = (f'{args.module}/{basename_prefix}')
         self.gold_arrays = f'{self.gold_dir}/arrays{self.suffix}'
         self.gold_browse = f'{self.gold_dir}/browse{self.suffix}'
 
@@ -1199,13 +1189,13 @@ class BackplaneTest(object):
         try:
             # Make sure test data and gold master files exist
             if self.task in ('compare', 'adopt'):
-                if not OOPS_GOLD_MASTER_PATH:
+                if not GOLD_MASTER_PREFIX:
                     LOGGING.fatal('Undefined environment variable: '
                                   'One of OOPS_GOLD_MASTER_PATH or '
                                   'OOPS_RESOURCES must be provided')
                     return
 
-                if not OOPS_TEST_DATA_PATH:
+                if not TEST_DATA_PREFIX:
                     LOGGING.fatal('Undefined environment variable: '
                                   'One of OOPS_TEST_DATA_PATH or OOPS_RESOURCES '
                                   'must be provided')
@@ -1236,7 +1226,7 @@ class BackplaneTest(object):
 
                 if (self.args.arrays or
                     self.args.browse or
-                    self.args.save_sampled) and not OOPS_BACKPLANE_OUTPUT_PATH:
+                    self.args.save_sampled) and not BACKPLANE_OUTPUT_PATH:
                     LOGGING.info('   To change this destination, define '
                                  + 'OOPS_BACKPLANE_OUTPUT_PATH')
 
@@ -1499,7 +1489,7 @@ class BackplaneTest(object):
                 comparison.gold_pickle_path = gold_pickle_path
 
                 try:
-                    local_path = GM_FILECACHE.retrieve(gold_pickle_path)
+                    local_path = GOLD_MASTER_PREFIX.retrieve(gold_pickle_path)
                 except FileNotFoundError:
                     self._log_comparison(comparison, 'No gold master')
                 else:
@@ -2314,7 +2304,7 @@ class BackplaneTest(object):
 
         filepath = f'{self.gold_dir}/summary.py'
         try:
-            local_path = GM_FILECACHE.retrieve(filepath)
+            local_path = GOLD_MASTER_PREFIX.retrieve(filepath)
         except FileNotFoundError:
             self.gold_summary_ = {}
         else:
@@ -2394,7 +2384,7 @@ if __name__ == '__main__':
 
     # Define the default observation
     gm.set_default_obs(
-            obspath = f'{OOPS_TEST_DATA_PATH}/cassini/ISS/W1573721822_1.IMG',
+            obspath = 'cassini/ISS/W1573721822_1.IMG',
             index   = None,
             planets = ['SATURN'],
             moons   = ['EPIMETHEUS'],

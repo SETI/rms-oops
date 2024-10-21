@@ -12,7 +12,7 @@ from oops.frame.spiceframe    import SpiceFrame
 from oops.path.path_          import Path
 from oops.path.spicepath      import SpicePath
 from oops.surface.spice_shape import spice_shape
-from oops.unittester_support  import TEST_SPICE_PFX
+from oops.unittester_support  import TEST_SPICE_PREFIX
 import oops.spice_support as spice
 
 
@@ -20,7 +20,7 @@ class Test_spice_shape(unittest.TestCase):
 
     def setUp(self):
         spice.initialize()
-        paths = TEST_SPICE_PFX.retrieve(["pck00010.tpc", "de421.bsp"])
+        paths = TEST_SPICE_PREFIX.retrieve(["pck00010.tpc", "de421.bsp"])
         for path in paths:
             cspyce.furnsh(path)
 

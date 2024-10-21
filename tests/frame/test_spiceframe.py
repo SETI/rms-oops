@@ -15,14 +15,14 @@ from oops.frame     import Frame, SpiceFrame, QuickFrame
 from oops.path      import Path
 from oops.path.spicepath import SpicePath
 
-from oops.unittester_support import TEST_SPICE_PFX
+from oops.unittester_support import TEST_SPICE_PREFIX
 
 
 class Test_SpiceFrame(unittest.TestCase):
 
     def setUp(self):
-        paths = TEST_SPICE_PFX.retrieve(['naif0009.tls', 'pck00010.tpc',
-                                         'de421.bsp'])
+        paths = TEST_SPICE_PREFIX.retrieve(['naif0009.tls', 'pck00010.tpc',
+                                            'de421.bsp'])
         for path in paths:
             cspyce.furnsh(path)
         Path.USE_QUICKPATHS = False
@@ -134,14 +134,14 @@ class Test_SpiceFrame(unittest.TestCase):
         ########################################
 
         # Load all the required kernels for Cassini ISS on 2007-312
-        paths = TEST_SPICE_PFX.retrieve(['naif0009.tls', 'cas00149.tsc',
-                                         'cas_v40.tf','cas_status_v04.tf',
-                                         'cas_iss_v10.ti', 'pck00010.tpc',
-                                         'cpck14Oct2011.tpc', 'de421.bsp',
-                                         'sat052.bsp', 'sat083.bsp',
-                                         'sat125.bsp', 'sat128.bsp',
-                                         'sat164.bsp', '07312_07317ra.bc',
-                                         '080123R_SCPSE_07309_07329.bsp'])
+        paths = TEST_SPICE_PREFIX.retrieve(['naif0009.tls', 'cas00149.tsc',
+                                            'cas_v40.tf','cas_status_v04.tf',
+                                            'cas_iss_v10.ti', 'pck00010.tpc',
+                                            'cpck14Oct2011.tpc', 'de421.bsp',
+                                            'sat052.bsp', 'sat083.bsp',
+                                            'sat125.bsp', 'sat128.bsp',
+                                            'sat164.bsp', '07312_07317ra.bc',
+                                            '080123R_SCPSE_07309_07329.bsp'])
         for path in paths:
             cspyce.furnsh(path)
 
