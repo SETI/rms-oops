@@ -1526,7 +1526,7 @@ def furnish_kernels(kernel_list, fast=True):
             # Save the info for each furnished file if it exists.
             if not isinstance(abspath, Path):
                 if DEBUG:
-                    abspath = pfx.get_local_path(filepath)
+                    abspath = pfx.get_local_path(filepath, create_parents=False)
                 else:
                     warnings.warn(f'SPICE kernel not found: {pfx.prefix}{filepath}',
                                   RuntimeWarning)
