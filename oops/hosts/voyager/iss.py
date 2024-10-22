@@ -34,7 +34,7 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
     if filespec.upper().endswith('.LBL'):
         label_dict = pdsparser.PdsLabel.from_file(filespec).as_dict()
         imagefile = label_dict['^IMAGE'][0]
-        imagespec = os.path.join(os.path.split(filespec)[0], imagefile)
+        imagespec = f'{os.path.split(filespec)[0]}/{imagefile}')
     else:
         (body,ext) = os.path.splitext(filespec)
         if ext == ext.upper():

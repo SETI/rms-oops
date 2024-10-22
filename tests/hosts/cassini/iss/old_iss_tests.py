@@ -6,7 +6,7 @@
 #import unittest
 #import oops.backplane.gold_master as gm
 #
-#from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
+#from oops.unittester_support    import TEST_DATA_PREFIX
 #
 #
 ##===============================================================================
@@ -15,11 +15,11 @@
 #    #===========================================================================
 #    def runTest(self):
 #
-#        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+#        from oops.unittester_support import TEST_DATA_PREFIX
 #
-#        snapshots = from_index(os.path.join(TESTDATA_PARENT_DIRECTORY,
+#        snapshots = from_index(TEST_DATA_PREFIX.retrieve(
 #                                            'cassini/ISS/index.lbl'))
-#        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
+#        snapshot = from_file(TEST_DATA_PREFIX.retrieve(
 #                                          'cassini/ISS/W1575634136_1.IMG'))
 #        snapshot3940 = snapshots[3940]  #should be same as snapshot
 #
@@ -53,7 +53,7 @@
 #                --adopt
 #        """
 #        gm.execute_as_unittest(self,
-#                obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
+#                obspath = TEST_DATA_PREFIX.retrieve(
 #                                       'cassini/ISS/N1460072401_1.IMG'),
 #                index   = None,
 #                module  = 'oops.hosts.cassini.iss',
@@ -91,7 +91,7 @@
 #                --adopt
 #        """
 #        gm.execute_as_unittest(self,
-#                obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
+#                obspath = TEST_DATA_PREFIX.retrieve(
 #                                       'cassini/ISS/W1573721822_1.IMG'),
 #                index   = None,
 #                module  = 'oops.hosts.cassini.iss',
@@ -115,7 +115,7 @@
 # import unittest
 # import os.path
 #
-# from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+# from oops.unittester_support            import TEST_DATA_PREFIX
 # from oops.backplane.exercise_backplanes import exercise_backplanes
 # from oops.backplane.unittester_support  import Backplane_Settings
 #
@@ -125,11 +125,11 @@
 #
 #     def runTest(self):
 #
-#         from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+#         from oops.unittester_support import TEST_DATA_PREFIX
 #
-#         snapshots = from_index(os.path.join(TESTDATA_PARENT_DIRECTORY,
+#         snapshots = from_index(TEST_DATA_PREFIX.retrieve(
 #                                             'cassini/ISS/index.lbl'))
-#         snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
+#         snapshot = from_file(TEST_DATA_PREFIX.retrieve(
 #                                           'cassini/ISS/W1575634136_1.IMG'))
 #         snapshot3940 = snapshots[3940]  #should be same as snapshot
 #
@@ -146,8 +146,7 @@
 #         if Backplane_Settings.NO_EXERCISES:
 #             self.skipTest('')
 #
-#         root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'cassini/ISS')
-#         file = os.path.join(root, 'N1460072401_1.IMG')
+#         file = TEST_DATA_PREFIX.retrieve('cassini/ISS/N1460072401_1.IMG')
 #         obs = from_file(file)
 #         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
 #                                  planet_key='SATURN')

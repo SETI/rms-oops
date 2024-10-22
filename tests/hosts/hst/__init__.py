@@ -6,58 +6,58 @@ class Test_HST(unittest.TestCase):
 
     def runTest(self):
 
-        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+        from oops.unittester_support import TEST_DATA_PREFIX
         import cspyce
         from .acs.hrc import HRC
 
         APR = oops.DPR * 3600.
 
-        prefix = os.path.join(TESTDATA_PARENT_DIRECTORY, "hst")
-        snapshot = from_file(os.path.join(prefix, "ibht07svq_drz.fits"))
+        snapshot = from_file(TEST_DATA_PREFIX.retrieve("hst/ibht07svq_drz.fits"))
         self.assertEqual(snapshot.instrument, "WFC3")
         self.assertEqual(snapshot.detector, "IR")
 
-        snapshot = from_file(os.path.join(prefix, "ibht07svq_ima.fits"))
+        snapshot = from_file(TEST_DATA_PREFIX.retrieve("hst/ibht07svq_ima.fits"))
         self.assertEqual(snapshot.instrument, "WFC3")
         self.assertEqual(snapshot.detector, "IR")
 
-        snapshot = from_file(os.path.join(prefix, "ibht07svq_raw.fits"))
+        snapshot = from_file(TEST_DATA_PREFIX.retrieve("hst/ibht07svq_raw.fits"))
         self.assertEqual(snapshot.instrument, "WFC3")
         self.assertEqual(snapshot.detector, "IR")
 
-        snapshot = from_file(os.path.join(prefix, "ibu401nnq_flt.fits"))
+        snapshot = from_file(TEST_DATA_PREFIX.retrieve("hst/ibu401nnq_flt.fits"))
         self.assertEqual(snapshot.instrument, "WFC3")
         self.assertEqual(snapshot.detector, "UVIS")
 
-        snapshot = from_file(os.path.join(prefix, "j9dh35h7q_raw.fits"))
+        snapshot = from_file(TEST_DATA_PREFIX.retrieve("hst/j9dh35h7q_raw.fits"))
         self.assertEqual(snapshot.instrument, "ACS")
         self.assertEqual(snapshot.detector, "HRC")
 
-        snapshot = from_file(os.path.join(prefix, "j96o01ioq_raw.fits"))
+        snapshot = from_file(TEST_DATA_PREFIX.retrieve("hst/j96o01ioq_raw.fits"))
         self.assertEqual(snapshot.instrument, "ACS")
         self.assertEqual(snapshot.detector, "WFC")
 
-        snapshot = from_file(os.path.join(prefix, "n43h05b3q_raw.fits"))
+        snapshot = from_file(TEST_DATA_PREFIX.retrieve("hst/n43h05b3q_raw.fits"))
         self.assertEqual(snapshot.instrument, "NICMOS")
         self.assertEqual(snapshot.detector, "NIC2")
 
-        snapshot = from_file(os.path.join(prefix, "ua1b0309m_d0m.fits"), layer=2)
+        snapshot = from_file(TEST_DATA_PREFIX.retrieve("hst/ua1b0309m_d0m.fits"), layer=2)
         self.assertEqual(snapshot.instrument, "WFPC2")
         self.assertEqual(snapshot.detector, "")
         self.assertEqual(snapshot.layer, 2)
 
-        snapshot = from_file(os.path.join(prefix, "ua1b0309m_d0m.fits"), layer=3)
+        snapshot = from_file(TEST_DATA_PREFIX.retrieve("hst/ua1b0309m_d0m.fits"), layer=3)
         self.assertEqual(snapshot.instrument, "WFPC2")
         self.assertEqual(snapshot.detector, "")
         self.assertEqual(snapshot.layer, 3)
 
-        self.assertRaises(IOError, from_file, os.path.join(prefix, "ua1b0309m_d0m.fits"),
-                                              **{"mask":"required"})
+        self.assertRaises(IOError, from_file,
+                          TEST_DATA_PREFIX.retrieve("ua1b0309m_d0m.fits"),
+                          **{"mask":"required"})
 
-        self.assertRaises(IOError, from_file, os.path.join(prefix, "a.b.c.d"))
+        self.assertRaises(IOError, from_file, TEST_DATA_PREFIX.retrieve("a.b.c.d"))
 
         # Raw ACS/HRC, full-frame with overscan pixels
-        filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "hst/j9dh35h7q_raw.fits")
+        filespec = TEST_DATA_PREFIX.retrieve("hst/j9dh35h7q_raw.fits")
         snapshot = from_file(filespec)
         hst_file = pyfits.open(filespec)
         self.assertEqual(snapshot.filter, "F475W")

@@ -3,11 +3,10 @@
 ################################################################################
 
 import unittest
-import os.path
 import oops.gold_master as gm
 
 from oops.body import Body
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support import TEST_DATA_PREFIX
 
 
 class Test_Cassini_ISS_GoldMaster(unittest.TestCase):

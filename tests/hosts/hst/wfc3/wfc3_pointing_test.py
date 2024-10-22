@@ -7,8 +7,7 @@ import scipy.fftpack as fftpack
 import pylab
 import oops
 import oops.inst.hst as hst
-from oops.unittester_support    import TESTDATA_PARENT_DIRECTORY
-import os.path
+from oops.unittester_support    import TEST_DATA_PREFIX
 
 #===============================================================================
 # correlate2d
@@ -29,7 +28,7 @@ def correlate2d(image, model, normalize=False):
 #---------------------------------
 # Create the snapshot object
 #---------------------------------
-filespec = os.path.join(TESTDATA_PARENT_DIRECTORY, "hst/ibht02v5q_flt.fits")
+filespec = TEST_DATA_PREFIX.retrieve("hst/ibht02v5q_flt.fits")
 snapshot = hst.from_file(filespec)
 pylab.imshow(snapshot.data)
 

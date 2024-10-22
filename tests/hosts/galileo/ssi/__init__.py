@@ -2,11 +2,10 @@
 # tests/hosts/galileo/ssi/__init__.py
 ################################################################################
 import unittest
-import os.path
 import oops.gold_master as gm
 
 from oops.body import Body
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support import TEST_DATA_PREFIX
 
 
 #===============================================================================
@@ -15,7 +14,7 @@ from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 #     #===========================================================================
 #     def runTest(self):
 #         dir = '/home/spitale/SETI/RMS/metadata/GO_0xxx/GO_0017'
-# #        dir = os.path.join(TESTDATA_PARENT_DIRECTORY, 'galileo/GO_0017')
+# #        dir = f'{OOPS_TEST_DATA_PATH}/galileo/GO_0017'
 #
 #         obs = from_index(os.path.join(dir, 'GO_0017_index.lbl'),
 #                          os.path.join(dir, 'GO_0017_supplemental_index.lbl'))

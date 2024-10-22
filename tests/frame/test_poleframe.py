@@ -3,7 +3,6 @@
 ################################################################################
 
 import numpy as np
-import os
 import unittest
 
 import cspyce
@@ -13,15 +12,17 @@ from oops.body  import Body
 from oops.event import Event
 from oops.frame import Frame, PoleFrame, RingFrame, SpiceFrame
 from oops.path  import Path, SpicePath
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support import TEST_SPICE_PREFIX
 
 
 class Test_PoleFrame(unittest.TestCase):
 
     def setUp(self):
-        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/naif0009.tls'))
-        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/pck00010.tpc'))
-        cspyce.furnsh(os.path.join(TESTDATA_PARENT_DIRECTORY, 'SPICE/de421.bsp'))
+        paths = TEST_SPICE_PREFIX.retrieve(['naif0009.tls',
+                                            'pck00010.tpc',
+                                            'de421.bsp'])
+        for path in paths:
+            cspyce.furnsh(path)
         Path.reset_registry()
         Frame.reset_registry()
 
