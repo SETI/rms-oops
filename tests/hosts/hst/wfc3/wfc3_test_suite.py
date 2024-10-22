@@ -7,7 +7,6 @@ from __future__ import print_function
 import numpy as np
 import scipy.ndimage.filters as filters
 import pylab
-import os.path
 
 #---------------
 # Load oops

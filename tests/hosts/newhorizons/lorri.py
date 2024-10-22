@@ -3,7 +3,6 @@
 ################################################################################
 
 import unittest
-import os.path
 
 class Test_NewHorizons_LORRI(unittest.TestCase):
 

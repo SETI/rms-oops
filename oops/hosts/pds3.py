@@ -30,15 +30,11 @@ def find_label(filespec):
     # Construct candidate label filenames
     spec = Path(filespec)
     filespec = str(filespec)
-    labelspecs = [
-        spec.with_suffix('.lbl'),
-        spec.with_suffix('.LBL') ]
-    if filespec.upper().endswith('.LBL'):
-        labelspecs.append(filespec)
+    labelspecs = [spec.with_suffix('.lbl'), spec.with_suffix('.LBL')]
 
     # Check candidates; return first one that exists
     for labelspec in labelspecs:
-        if os.path.isfile(labelspec):
+        if labelspec.is_file():
             return labelspec
 
     # If no successful candidate, assume attached label
@@ -326,7 +322,6 @@ def fast_dict(label, units=False, strings='concatenate'):
 # UNIT TESTS
 ################################################################################
 import unittest
-import os.path
 
 from oops.hosts                   import pds3
 from oops.unittester_support import TEST_DATA_PREFIX

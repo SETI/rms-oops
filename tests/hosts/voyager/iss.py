@@ -6,7 +6,6 @@
 # UNIT TESTS
 ################################################################################
 #import unittest
-#import os.path
 #import oops.backplane.gold_master as gm
 #
 #from oops.unittester_support            import TEST_DATA_PREFIX
@@ -66,7 +65,6 @@
 
 
 # import unittest
-# import os.path
 #
 # from oops.unittester_support            import TEST_DATA_PREFIX
 # from oops.backplane.exercise_backplanes import exercise_backplanes

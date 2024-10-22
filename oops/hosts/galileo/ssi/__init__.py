@@ -138,8 +138,7 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
 
         item.spice_kernels = Galileo.used_kernels(item.time, 'ssi')
 
-        item.filespec = os.path.join(row_dict['VOLUME_ID'],
-                                     row_dict['FILE_SPECIFICATION_NAME'])
+        item.filespec = f'{row_dict['VOLUME_ID']}/{row_dict['FILE_SPECIFICATION_NAME']}'
         item.basename = basename
 
         snapshots.append(item)

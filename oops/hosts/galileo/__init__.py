@@ -5,7 +5,6 @@
 # sets.
 ################################################################################
 import numpy as np
-import os.path
 
 import julian
 import spicedb

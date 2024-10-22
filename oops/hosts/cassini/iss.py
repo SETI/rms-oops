@@ -128,8 +128,7 @@ def from_index(filespec, **parameters):
 
         item.spice_kernels = Cassini.used_kernels(item.time, 'iss')
 
-        item.filespec = os.path.join(row_dict['VOLUME_ID'],
-                                     row_dict['FILE_SPECIFICATION_NAME'])
+        item.filespec = f'{row_dict['VOLUME_ID']}/{row_dict['FILE_SPECIFICATION_NAME']}'
         item.basename = row_dict['FILE_NAME']
 
         snapshots.append(item)

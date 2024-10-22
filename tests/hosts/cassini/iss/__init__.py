@@ -3,7 +3,6 @@
 ################################################################################
 
 import unittest
-import os.path
 import oops.gold_master as gm
 
 from oops.body import Body

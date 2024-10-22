@@ -2,7 +2,6 @@
 # tests/hosts/juno/jiram/img.py
 ################################################################################
 import unittest
-import os.path
 import oops.backplane.gold_master as gm
 import oops.hosts.juno.jiram as jiram
 

@@ -530,7 +530,6 @@ def uvis_test_suite(filespec, derivs, info, display):
 ################################################################################
 
 import unittest
-import os.path
 
 UNITTEST_PRINTING = True
 UNITTEST_LOGGING = True

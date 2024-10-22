@@ -29,6 +29,7 @@ except KeyError:
     else:
         OOPS_TEST_DATA_PATH = None
 
+
 # The FileCache in which to store the "$OOPS_RESOURCES/test_data" directory
 TEST_DATA_FILECACHE = FileCache(shared='oops_test_data')
 

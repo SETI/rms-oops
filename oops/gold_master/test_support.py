@@ -36,7 +36,6 @@ except KeyError:
     OOPS_BACKPLANE_OUTPUT_PATH = os.getcwd()
 
 
-
 if OOPS_GOLD_MASTER_PATH:
     GOLD_MASTER_PREFIX = TEST_DATA_FILECACHE.new_prefix(OOPS_GOLD_MASTER_PATH)
 else:

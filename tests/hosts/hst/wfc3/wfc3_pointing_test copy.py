@@ -8,7 +8,6 @@ import pylab
 import oops
 import ..hst as hst
 from oops.unittester_support import TEST_DATA_PREFIX
-import os.path
 
 # A quick-and-dirty image correlation function
 def correlate2d(image, model, normalize=False):

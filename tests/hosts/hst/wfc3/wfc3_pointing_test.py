@@ -8,7 +8,6 @@ import pylab
 import oops
 import oops.inst.hst as hst
 from oops.unittester_support    import TEST_DATA_PREFIX
-import os.path
 
 #===============================================================================
 # correlate2d

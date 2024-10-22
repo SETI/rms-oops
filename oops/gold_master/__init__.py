@@ -147,10 +147,8 @@ import os
 import pickle
 import PIL.Image
 import sys
-import warnings
 
 from collections   import defaultdict
-from filecache     import FileCache
 from scipy.ndimage import minimum_filter, maximum_filter
 from scipy.ndimage import zoom as zoom_image
 
@@ -750,13 +748,10 @@ def _clean_up_args(args):
 
         abspath = obspath
         if args.task in ('compare', 'adopt'):
-            if not TEST_DATA_PREFIX: # XXX
+            if not TEST_DATA_PREFIX:
                 raise ValueError('Undefined environment variable: '
                                  'One of OOPS_TEST_DATA_PATH or OOPS_RESOURCES '
                                  'must be provided')
-            # if not abspath.startswith(test_data_path_):
-            #     warnings.warn('File ' + abspath + ' is not in the test data '
-            #                   'directory ' + test_data_path_)
         # This will raise FileNotFoundError if the file doesn't exist and can't
         # be downloaded
         local_path = TEST_DATA_PREFIX.retrieve(abspath)
@@ -1161,19 +1156,33 @@ class BackplaneTest(object):
         # Set up the log handler; set aside any old log
         # Note that each BackplaneTest gets its own dedicated log file.
         if self.args.log:
-            # Make sure the output directory exits
-            os.makedirs(self.output_dir, exist_ok=True)
+            log_path = f'{self.output_dir}/{self.task}.log'
 
-            # Relocate any pre-existing log for this observation  XXX
-            log_path = os.path.join(self.output_dir, self.task + '.log')
-            if os.path.exists(log_path):
-                timestamp = os.path.getmtime(log_path)
-                dt = datetime.datetime.fromtimestamp(timestamp)
+            localpath = None
+            try:
+                localpath = str(BACKPLANE_OUTPUT_PREFIX.retrieve(log_path))
+            except FileNotFoundError:
+                pass
+
+            if localpath:
+                # Append the latest modification date to the pre-existing file
+                dt = datetime.datetime.fromtimestamp(os.path.getmtime(localpath))
                 suffix = dt.strftime('-%Y-%m-%dT%H-%M-%S')
-                dated_path = log_path[:-4] + suffix + '.log'
-                os.rename(log_path, dated_path)
+                dated_localpath = localpath[:-4] + suffix + '.log'
+                dated_logpath = log_path[:-4] + suffix + '.log'
+                # Note that for a cloud destination, this doesn't actually delete
+                # the original summary.py file in the cloud, since you can't rename
+                # files in the cloud. Instead we upload a copy with the new dated
+                # name and then the write below will overwrite the old version.
+                # Also notice that this attempt to use the modification date of the
+                # original summary.py file won't work in the cloud, because
+                # creation/modification times are not preserved when a file is
+                # retrieved. Instead, it will use the time the file was downloaded.
+                os.rename(localpath, dated_localpath)
+                BACKPLANE_OUTPUT_PREFIX.upload(dated_logpath)
 
-            handler = logging.FileHandler(log_path)
+            abs_log_path = BACKPLANE_OUTPUT_PREFIX.get_local_path(log_path)
+            handler = logging.FileHandler(abs_log_path)
             LOGGING.logger.addHandler(handler)
 
         # Run the tests
@@ -1203,10 +1212,13 @@ class BackplaneTest(object):
                     return
 
                 if self.task == 'compare':
-                    LOGGING.info('Reading masters from', self.gold_arrays)
+                    LOGGING.info('Reading masters from '
+                                 f'{GOLD_MASTER_PREFIX.prefix}{self.gold_arrays}')
                 elif self.task == 'adopt':
-                    LOGGING.info('Writing new masters to', self.gold_arrays)
-                    LOGGING.info('Writing browse images to', self.gold_browse)
+                    LOGGING.info('Writing new masters to '
+                                 f'{GOLD_MASTER_PREFIX.prefix}{self.gold_arrays}')
+                    LOGGING.info('Writing browse images to '
+                                 f'{GOLD_MASTER_PREFIX.prefix}{self.gold_browse}')
 
             # Make sure directories exist; log their locations
             if self.task in ('preview', 'compare'):
@@ -1216,11 +1228,11 @@ class BackplaneTest(object):
 
                 if self.args.browse:
                     LOGGING.info('Writing browse images to '
-                                 f'{BACKPLANE_OUTPUT_PREFIX}{self.output_browse}')
+                                 f'{BACKPLANE_OUTPUT_PREFIX.prefix}{self.output_browse}')
 
                 if self.args.save_sampled:
                     LOGGING.info('Writing sampled masters to'
-                                 f'{BACKPLANE_OUTPUT_PREFIX}{self.sampled_gold}')
+                                 f'{BACKPLANE_OUTPUT_PREFIX.prefix}{self.sampled_gold}')
 
                 if (self.args.arrays or
                     self.args.browse or
@@ -1246,11 +1258,11 @@ class BackplaneTest(object):
             # Wrap up
             if self.args.summary:
                 if self.task in ('preview', 'compare'):
-                    file_path = self.write_summary(self.output_dir)
+                    file_path = self.write_summary(self.output_dir, BACKPLANE_OUTPUT_PREFIX)
                     LOGGING.debug('Summary written: ' + file_path)
 
                 else:
-                    file_path = self.write_summary(self.gold_dir)
+                    file_path = self.write_summary(self.gold_dir, GOLD_MASTER_PREFIX)
                     LOGGING.info('Summary written: ' + file_path)
 
             # Internals...
@@ -1327,6 +1339,7 @@ class BackplaneTest(object):
             LOGGING.info('Elapsed time: %.3f s' % seconds)
 
             if self.args.log:
+                BACKPLANE_OUTPUT_PREFIX.upload(log_path)
                 LOGGING.logger.removeHandler(handler)
                 handler.close()
 
@@ -1461,16 +1474,19 @@ class BackplaneTest(object):
             if self.task == 'adopt':
                 output_arrays = self.gold_arrays
                 output_browse = self.gold_browse
+                output_prefix = GOLD_MASTER_PREFIX
                 basename = self._basename(title, gold=True)
             else:
                 output_arrays = self.output_arrays
                 output_browse = self.output_browse
-                basename = self._basename(title, gold=False)
+                output_prefix = BACKPLANE_OUTPUT_PREFIX
+                basename = self._basename(title,
+                                          gold=not BACKPLANE_OUTPUT_PREFIX.is_local)
 
             if self.args.arrays:
                 output_pickle_path = f'{output_arrays}/{basename}.pickle'
                 comparison.output_pickle_path = output_pickle_path
-                with BACKPLANE_OUTPUT_PREFIX.open(output_pickle_path, 'wb') as f:
+                with output_prefix.open(output_pickle_path, 'wb') as f:
                     pickle.dump(array, f)
 
             # Write the browse image
@@ -1478,7 +1494,7 @@ class BackplaneTest(object):
                 browse_name = basename + '.' + self.args.browse_format
                 browse_path = f'{output_browse}/{browse_name}'
                 comparison.browse_path = browse_path
-                self.save_browse(array, browse_path)
+                self.save_browse(array, browse_path, output_prefix)
 
             # For "compare"
             if self.task == 'compare':
@@ -1502,7 +1518,7 @@ class BackplaneTest(object):
                         # Compare...
                         if self.args.save_sampled:
                             basename = self._basename(comparison.title,
-                                                      gold=False)
+                                                gold=not BACKPLANE_OUTPUT_PREFIX.is_local)
                             comparison.sampled_gold_path = \
                                 f'{self.sampled_gold}/{basename}.pickle'
 
@@ -2217,7 +2233,7 @@ class BackplaneTest(object):
     # Browse image support
     ############################################################################
 
-    def save_browse(self, array, browse_path):
+    def save_browse(self, array, browse_path, output_prefix):
         """Save a backplane as a PNG, JPG, or TIFF file."""
 
         # Get pixels and mask
@@ -2273,7 +2289,9 @@ class BackplaneTest(object):
 
         shape = scaled_bytes.shape[::-1]
         im = PIL.Image.frombytes('L', shape, scaled_bytes)
-        im.save(browse_path)
+        filename = output_prefix.get_local_path(browse_path)
+        im.save(filename)
+        output_prefix.upload(browse_path)
 
     #===========================================================================
     @staticmethod
@@ -2323,28 +2341,42 @@ class BackplaneTest(object):
         return self.gold_summary_
 
     #===========================================================================
-    def write_summary(self, outdir):
+    def write_summary(self, outdir, output_prefix):
         """Write the test summary as a Python dictionary; return its file path.
         """
 
         filepath = f'{outdir}/summary.py'
 
-        if os.path.exists(filepath):
+        localpath = None
+        try:
+            localpath = str(output_prefix.retrieve(filepath))
+        except FileNotFoundError:
+            pass
 
+        if localpath:
             # Append the latest modification date to any pre-existing file
-            dt = datetime.datetime.fromtimestamp(os.path.getmtime(filepath))
+            dt = datetime.datetime.fromtimestamp(os.path.getmtime(localpath))
             suffix = dt.strftime('-%Y-%m-%dT%H-%M-%S')
-            dated_path = filepath[:-3] + suffix + '.py'
-            os.rename(filepath, dated_path)
-
+            dated_localpath = localpath[:-3] + suffix + '.py'
+            dated_filepath = filepath[:-3] + suffix + '.py'
+            # Note that for a cloud destination, this doesn't actually delete
+            # the original summary.py file in the cloud, since you can't rename
+            # files in the cloud. Instead we upload a copy with the new dated
+            # name and then the write below will overwrite the old version.
+            # Also notice that this attempt to use the modification date of the
+            # original summary.py file won't work in the cloud, because
+            # creation/modification times are not preserved when a file is
+            # retrieved. Instead, it will use the time the file was downloaded.
+            os.rename(localpath, dated_localpath)
+            output_prefix.upload(dated_filepath)
             LOGGING.info('Previous summary moved to: '
-                         + os.path.basename(dated_path))
+                         + os.path.basename(dated_filepath))
 
         titles = list(self.summary.keys())
         titles.sort(key=lambda key: key.lower())    # sort titles ignoring case
 
         # Write new file
-        with BACKPLANE_OUTPUT_PREFIX.open(filepath, 'w') as f:
+        with output_prefix.open(filepath, 'w') as f:
 
             dt = datetime.datetime.now()
             f.write(dt.strftime('# gold_master summary %Y-%m-%dT%H-%M-%S\n'))
@@ -2368,7 +2400,7 @@ class BackplaneTest(object):
                 f.write(',\n')
             f.write('}\n')
 
-        return filepath
+        return f'{output_prefix.prefix}{filepath}'
 
 ################################################################################
 # To handle gold master testing from the command line...

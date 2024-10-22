@@ -2,7 +2,6 @@
 # tests/hosts/cassini/uvis.py
 ##########################################################################################
 import unittest
-import os.path
 import oops.backplane.gold_master as gm
 
 
