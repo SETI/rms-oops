@@ -5,12 +5,11 @@
 import os
 import oops.gold_master as gm
 
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support import TEST_DATA_PREFIX
 
 # Define the default observation
 gm.define_standard_obs('W1573721822_1',
-        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                               'cassini/ISS/W1573721822_1.IMG'),
+        obspath = 'cassini/ISS/W1573721822_1.IMG',
         index   = None,
         planets = ['SATURN'],
         moons   = ['EPIMETHEUS'],

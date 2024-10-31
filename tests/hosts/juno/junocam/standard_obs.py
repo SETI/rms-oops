@@ -5,7 +5,7 @@ import os
 import unittest
 import oops.backplane.gold_master as gm
 
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support import TEST_DATA_PREFIX
 
 # Because JunoCam has such a large, distorted FOV, we need to assign the
 # backplanes an especially large inventory border: border=10 seems to work.
@@ -20,8 +20,7 @@ name = 'JNCR_2016347_03C00192_V01'
 #  python gold_master.py --name JNCR_2016347_03C00192_V01 --adopt
 
 gm.define_standard_obs(name,
-        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                               'juno/junocam/03/' + name + '.img'),
+        obspath = f'juno/junocam/03/{name}.img',
         index    = 5,
         planets  = 'JUPITER',
         moons    = '',
@@ -41,8 +40,7 @@ name = 'JNCR_2020366_31C00065_V01'
 #  python gold_master.py --name JNCR_2020366_31C00065_V01 --adopt
 
 gm.define_standard_obs(name,
-        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                               'juno/junocam/31/' + name + '.img'),
+        obspath = f'juno/junocam/31/{name}.img',
         index   = 12,
         planets  = 'JUPITER',
         moons    = '',
@@ -62,8 +60,7 @@ name = 'JNCR_2019096_19M00012_V02'
 #  python gold_master.py --name JNCR_2019096_19M00012_V02 --adopt
 
 gm.define_standard_obs(name,
-        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                               'juno/junocam/19/' + name + '.img'),
+        obspath = f'juno/junocam/19/{name}.img',
         index    = 7,
         planets  = 'JUPITER',
         moons    = '',
@@ -84,8 +81,7 @@ name = 'JNCR_2019149_20G00008_V01'
 #  python gold_master.py --name JNCR_2019149_20G00008_V01 --adopt
 
 gm.define_standard_obs(name,
-        obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                           'juno/junocam/20/' + name + '.img'),
+        obspath = f'juno/junocam/20/{name}.img',
         index    = 2,
         planets  = 'JUPITER',
         moons    = '',

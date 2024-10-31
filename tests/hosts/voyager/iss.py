@@ -6,10 +6,9 @@
 # UNIT TESTS
 ################################################################################
 #import unittest
-#import os.path
 #import oops.backplane.gold_master as gm
 #
-#from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+#from oops.unittester_support            import TEST_DATA_PREFIX
 #
 #
 ##===============================================================================
@@ -46,9 +45,7 @@
 #                --adopt
 #        """
 #        gm.execute_as_unittest(self,
-#                obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
-#                                       'voyager/ISS/VGISS_6109/C34502XX/'
-#                                       'C3450201_GEOMED.img'),
+#                obspath = 'voyager/ISS/VGISS_6109/C34502XX/C3450201_GEOMED.img',
 #                index   = None,
 #                module  = 'oops.hosts.voyager.iss',
 #                planet  = 'SATURN',
@@ -68,9 +65,8 @@
 
 
 # import unittest
-# import os.path
 #
-# from oops.unittester_support            import TESTDATA_PARENT_DIRECTORY
+# from oops.unittester_support            import TEST_DATA_PREFIX
 # from oops.backplane.exercise_backplanes import exercise_backplanes
 # from oops.backplane.unittester_support  import Backplane_Settings
 #
@@ -83,8 +79,7 @@
 #         if Backplane_Settings.NO_EXERCISES:
 #             self.skipTest('')
 #
-#         root = os.path.join(TESTDATA_PARENT_DIRECTORY, 'voyager/ISS')
-#         file = os.path.join(root, 'c3440346.gem')
+#         file = TEST_DATA_PREFIX.retrieve('voyager/ISS/c3440346.gem')
 #         obs = from_file(file)
 #         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
 #                                  planet_key='SATURN')
