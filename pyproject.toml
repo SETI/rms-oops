@@ -15,6 +15,7 @@ dependencies = [
   "numpy",
   "Pillow",
   "pyparsing",
+  "rms-filecache>=2.0.2",
   "rms-fpzip",
   "rms-interval",
   "rms-julian",
