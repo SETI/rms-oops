@@ -79,8 +79,7 @@
 #         if Backplane_Settings.NO_EXERCISES:
 #             self.skipTest('')
 #
-#         file = TEST_DATA_PREFIX.retrieve('voyager/ISS/c3440346.gem')
-#         obs = from_file(file)
+#         obs = from_file(TEST_DATA_PREFIX / 'voyager/ISS/c3440346.gem')
 #         exercise_backplanes(obs, use_inventory=True, inventory_border=4,
 #                                  planet_key='SATURN')
 #

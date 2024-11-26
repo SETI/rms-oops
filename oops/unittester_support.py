@@ -31,16 +31,17 @@ except KeyError:
 
 
 # The FileCache in which to store the "$OOPS_RESOURCES/test_data" directory
-TEST_DATA_FILECACHE = FileCache(shared='oops_test_data')
+TEST_DATA_FILECACHE = FileCache('oops_test_data')
 
 # The FileCache in which to store the "$OOPS_RESOURCES/SPICE" directory; this
 # should be DIFFERENT from the name used in spicedb because these could
 # be different kernels with the same name
-TEST_SPICE_FILECACHE = FileCache(shared='oops_test_kernels')
+TEST_SPICE_FILECACHE = FileCache('oops_test_kernels')
 
 if OOPS_TEST_DATA_PATH:
-    TEST_DATA_PREFIX = TEST_DATA_FILECACHE.new_prefix(OOPS_TEST_DATA_PATH)
-    TEST_SPICE_PREFIX = TEST_SPICE_FILECACHE.new_prefix(f'{OOPS_TEST_DATA_PATH}/SPICE')
+    TEST_DATA_PREFIX = TEST_DATA_FILECACHE.new_path(OOPS_TEST_DATA_PATH)
+    TEST_SPICE_PREFIX = TEST_SPICE_FILECACHE.new_path(
+        f'{OOPS_TEST_DATA_PATH}/SPICE')
 else:
     TEST_DATA_PREFIX = None
     TEST_SPICE_PREFIX = None

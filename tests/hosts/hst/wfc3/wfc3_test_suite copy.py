@@ -72,7 +72,7 @@ def show_info(title, array):
 
 # Pick a file, any file
 # filespec = "hst/ibht02v4q_flt.fits"
-filespec = TEST_DATA_PREFIX.retrieve("hst/ibht02v5q_flt.fits")
+filespec = TEST_DATA_PREFIX / 'hst/ibht02v5q_flt.fits'
 # filespec = "hst/ibht02v6q_flt.fits"
 
 # Create the snapshot object. It contains everything you need to know.

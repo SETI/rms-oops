@@ -22,7 +22,7 @@ def correlate2d(image, model, normalize=False):
     return corr
 
 # Create the snapshot object
-filespec = TEST_DATA_PREFIX.retrieve("hst/ibht02v5q_flt.fits")
+filespec = TEST_DATA_PREFIX / 'hst/ibht02v5q_flt.fits'
 snapshot = hst.from_file(filespec)
 pylab.imshow(snapshot.data)
 

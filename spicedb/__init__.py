@@ -1056,7 +1056,7 @@ def get_spice_filecache():
     global SPICE_FILECACHE
 
     if SPICE_FILECACHE is None:
-        SPICE_FILECACHE = FileCache(shared=SPICE_FILECACHE_SHARED_NAME)
+        SPICE_FILECACHE = FileCache(SPICE_FILECACHE_SHARED_NAME)
 
     return SPICE_FILECACHE
 
@@ -1069,7 +1069,7 @@ def get_spice_filecache_prefix():
     if SPICE_FILECACHE_PREFIX is None:
         fc = get_spice_filecache()
         spice_path = get_spice_path()
-        SPICE_FILECACHE_PREFIX = fc.new_prefix(spice_path)
+        SPICE_FILECACHE_PREFIX = fc.new_path(spice_path)
 
     return SPICE_FILECACHE_PREFIX
 
