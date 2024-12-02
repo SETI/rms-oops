@@ -1069,7 +1069,7 @@ def get_spice_filecache_prefix():
     if SPICE_FILECACHE_PREFIX is None:
         fc = get_spice_filecache()
         spice_path = get_spice_path()
-        SPICE_FILECACHE_PREFIX = fc.new_path(str(spice_path))
+        SPICE_FILECACHE_PREFIX = fc.new_path(spice_path)
 
     return SPICE_FILECACHE_PREFIX
 
