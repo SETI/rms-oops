@@ -17,6 +17,8 @@ import polymath
 import solar
 import tabulation as tab
 
+from filecache import FCPath
+
 ########################################
 # Global Variables
 ########################################
@@ -83,12 +85,15 @@ def from_file(filespec, **parameters):
     the target body for calibration purposes.
     """
 
+    filespec = FCPath(filespec)
+
     # Open the file
-    hdulist = pyfits.open(filespec)
+    local_path = filespec.retrieve()
+    hdulist = pyfits.open(local_path)
 
     # Confirm that the telescope is HST
     if HST().telescope_name(hdulist) != 'HST':
-        raise IOError('not an HST file: ' + filespec)
+        raise IOError(f'not an HST file: {filespec}')
 
     return HST.from_hdulist(hdulist, **parameters)
 

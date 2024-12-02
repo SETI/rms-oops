@@ -17,10 +17,8 @@
 #
 #        from oops.unittester_support import TEST_DATA_PREFIX
 #
-#        snapshots = from_index(TEST_DATA_PREFIX.retrieve(
-#                                            'cassini/ISS/index.lbl'))
-#        snapshot = from_file(TEST_DATA_PREFIX.retrieve(
-#                                          'cassini/ISS/W1575634136_1.IMG'))
+#        snapshots = from_index(TEST_DATA_PREFIX / 'cassini/ISS/index.lbl')
+#        snapshot = from_file(TEST_DATA_PREFIX / 'cassini/ISS/W1575634136_1.IMG')
 #        snapshot3940 = snapshots[3940]  #should be same as snapshot
 #
 #        self.assertTrue(abs(snapshot.time[0] - snapshot3940.time[0]) < 1.e-3)
@@ -129,8 +127,7 @@
 #
 #         snapshots = from_index(TEST_DATA_PREFIX.retrieve(
 #                                             'cassini/ISS/index.lbl'))
-#         snapshot = from_file(TEST_DATA_PREFIX.retrieve(
-#                                           'cassini/ISS/W1575634136_1.IMG'))
+#         snapshot = from_file(TEST_DATA_PREFIX / 'cassini/ISS/W1575634136_1.IMG')
 #         snapshot3940 = snapshots[3940]  #should be same as snapshot
 #
 #         self.assertTrue(abs(snapshot.time[0] - snapshot3940.time[0]) < 1.e-3)

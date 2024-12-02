@@ -17,6 +17,8 @@ import solar
 import oops
 from . import NewHorizons
 
+from filecache import FCPath
+
 ################################################################################
 # Standard routines for interpreting WCS parameters, adapted from STSCI source.
 #
@@ -144,8 +146,10 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
     LORRI.initialize(asof=asof, meta=meta)
 
     # Load the FITS file
-    nh_file = pyfits.open(filespec)
-    filename = os.path.split(filespec)[1]
+    filespec = FCPath(filespec)
+    local_path = filespec.retrieve()
+    nh_file = pyfits.open(local_path)
+    filename = filespec.name
     header = nh_file[0].header
 
     # Get key information from the header
@@ -348,10 +352,13 @@ def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
 
     LORRI.initialize(asof=asof, meta=meta)
 
+    filespec = FCPath(filespec)
+
     # Read the index file
     COLUMNS = []                # Return all columns
     TIMES = ['START_TIME']      # Convert this one to TAI
-    table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
+    local_path = filespec.retrieve()
+    table = pdstable.PdsTable(local_path, columns=COLUMNS, times=TIMES)
     row_dicts = table.dicts_by_row()
 
     # Create a list of Snapshot objects

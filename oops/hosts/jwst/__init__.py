@@ -12,6 +12,8 @@ import solar
 
 from polymath import Vector3
 
+from filecache import FCPath
+
 # A handy constant
 RADIANS_PER_ARCSEC = oops.RPD / 3600.
 
@@ -158,13 +160,16 @@ def from_file(filespec, **options):
     Instrument-specific methods may support additional options.
     """
 
+    filespec = FCPath(filespec)
+
     # Open the file
-    hdulist = pyfits.open(filespec)
+    local_path = filespec.retrieve()
+    hdulist = pyfits.open(local_path)
 
     try:
         # Confirm that the telescope is JWST
         if JWST().telescope_name(hdulist) != 'JWST':
-            raise IOError('not a JWST file: ' + filespec)
+            raise IOError(f'not a JWST file: {filespec}')
 
         return JWST.from_hdulist(hdulist, **options)
 

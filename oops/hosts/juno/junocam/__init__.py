@@ -16,6 +16,8 @@ from oops.hosts.juno import Juno
 ### BTW, we have standards for how to order imports. Often not important, but
 ### this is a long enough list.
 
+from filecache import FCPath
+
 ################################################################################
 # Standard class methods
 ################################################################################
@@ -44,12 +46,14 @@ def from_file(filespec, fast_distortion=True,
                             # defaults unless initialize() is called explicitly.
 ### I think we recommend a blank line after a multi-line docstring.
 
+    filespec = FCPath(filespec)
     # Load the PDS label
-    lbl_filespec = filespec.replace('.img', '.LBL')
+    lbl_filespec = filespec.with_suffix('.LBL')
 ### This failed for me because the files come off the PDS archive volumes in
 ### upper case, so they end in '.IMG', not 'img'. You need to find a way to make
 ### this work regardless of the case of either file extension.
-    recs = pdsparser.PdsLabel.load_file(lbl_filespec)
+    local_lbl_filespec = lbl_filespec.retrieve()
+    recs = pdsparser.PdsLabel.load_file(local_lbl_filespec)
     label = pdsparser.PdsLabel.from_string(recs).as_dict()
 
     # Get composite image metadata
@@ -172,7 +176,8 @@ def _load_data(filespec, label, meta):
     bits = label['IMAGE']['SAMPLE_BITS']
     dtype = '>u' +str(int(bits/8))
 ### Add space before "str"; change "int(bits/8)" to "bits//8" (floor division is handy!)
-    data = np.fromfile(filespec, dtype=dtype).reshape(meta.nlines,meta.nsamples)
+    local_path = filespec.retrieve()
+    data = np.fromfile(local_path, dtype=dtype).reshape(meta.nlines,meta.nsamples)
 ### Add a space after the comma
 
 ### BTW, unless the things around operators are extremely short (like "bits//8"),

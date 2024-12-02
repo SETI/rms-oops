@@ -74,6 +74,7 @@ python -m unittest tests/unittester_with_hosts.py
   line options:
 
 ```sh
+export PYTHONPATH=.
 python tests/hosts/cassini/iss/gold_master.py --help
 python tests/hosts/galileo/ssi/gold_master.py --help
 ```
