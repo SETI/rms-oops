@@ -37,11 +37,11 @@ except KeyError:
 
 
 if OOPS_GOLD_MASTER_PATH:
-    GOLD_MASTER_PREFIX = TEST_DATA_FILECACHE.new_prefix(OOPS_GOLD_MASTER_PATH)
+    GOLD_MASTER_PREFIX = TEST_DATA_FILECACHE.new_path(OOPS_GOLD_MASTER_PATH)
 else:
     GOLD_MASTER_PREFIX = None
 
-BACKPLANE_OUTPUT_PREFIX = TEST_DATA_FILECACHE.new_prefix(
+BACKPLANE_OUTPUT_PREFIX = TEST_DATA_FILECACHE.new_path(
     OOPS_BACKPLANE_OUTPUT_PATH)
 
 ################################################################################

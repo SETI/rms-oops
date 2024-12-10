@@ -8,6 +8,8 @@ import astropy.io.fits as pyfits
 import oops
 from . import HST
 
+from filecache import FCPath
+
 ##########################################################################################
 # Standard class method
 ##########################################################################################
@@ -25,8 +27,11 @@ def from_file(filespec, **parameters):
         compatible. If neither is specified, layer=1 is assumed
     """
 
+    filespec = FCPath(filespec)
+
     # Open the file
-    hdulist = pyfits.open(filespec)
+    local_path = filespec.retrieve()
+    hdulist = pyfits.open(local_path)
 
     # Make an instance of the NICMOS class
     this = WFPC2()

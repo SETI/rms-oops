@@ -597,7 +597,7 @@ def execute_as_command():
 
     if args.output != OOPS_BACKPLANE_OUTPUT_PATH:
         global BACKPLANE_OUTPUT_PREFIX
-        BACKPLANE_OUTPUT_PREFIX = TEST_DATA_FILECACHE.new_prefix(args.output)
+        BACKPLANE_OUTPUT_PREFIX = TEST_DATA_FILECACHE.new_path(args.output)
 
     run_tests(args)
 
@@ -746,34 +746,22 @@ def _clean_up_args(args):
         index   = STANDARD_OBS_INFO[obsname]['index']
         kwargs  = STANDARD_OBS_INFO[obsname]['kwargs']
 
-        abspath = obspath
-        if args.task in ('compare', 'adopt'):
-            if not TEST_DATA_PREFIX:
-                raise ValueError('Undefined environment variable: '
-                                 'One of OOPS_TEST_DATA_PATH or OOPS_RESOURCES '
-                                 'must be provided')
-        # This will raise FileNotFoundError if the file doesn't exist and can't
-        # be downloaded
-        local_path = TEST_DATA_PREFIX.retrieve(abspath)
+        if not TEST_DATA_PREFIX:
+            raise ValueError('Undefined environment variable: '
+                             'One of OOPS_TEST_DATA_PATH or OOPS_RESOURCES '
+                             'must be provided')
 
-        # We also try to download an associated .lbl or .LBL file so it's also
-        # in the cache. This is an annoying hack required by the "pds3" module,
-        # which assumes both the img and lbl file will be side-by-side.
-        for ext in ('.lbl', '.LBL'):
-            try:
-                TEST_DATA_PREFIX.retrieve(abspath
-                                          .replace('.img', ext)
-                                          .replace('.IMG', ext))
-            except FileNotFoundError:
-                continue
-            break
+        # This will raise FileNotFoundError if the file doesn't exist or can't
+        # be downloaded. It's more efficient to just load it into the cache here
+        # than check for existence and then load it into the cache later.
+        abspath = TEST_DATA_PREFIX / obspath
 
         # Allow overrides of bodies
         planets = args.planets or STANDARD_OBS_INFO[obsname]['planets']
         moons   = args.moons   or STANDARD_OBS_INFO[obsname]['moons']
         rings   = args.rings   or STANDARD_OBS_INFO[obsname]['rings']
 
-        result = args.from_file(local_path, **kwargs)
+        result = args.from_file(abspath, **kwargs)
         if index is not None:
             result = result[index]
 
@@ -1108,17 +1096,17 @@ class BackplaneTest(object):
         # gold masters sampled at the undersampling grid:
         #         $OOPS_BACKPLANE_OUTPUT_PATH/N1460072401_1/sampled_gold
 
-        self.abspath = obs.filespec
-        basename_prefix = os.path.splitext(os.path.basename(self.abspath))[0]
+        self.abspath = TEST_DATA_PREFIX / obs.filespec
+        basename_prefix = self.abspath.stem
 
-        self.gold_dir = (f'{args.module}/{basename_prefix}')
-        self.gold_arrays = f'{self.gold_dir}/arrays{self.suffix}'
-        self.gold_browse = f'{self.gold_dir}/browse{self.suffix}'
+        self.gold_dir = GOLD_MASTER_PREFIX / args.module / basename_prefix
+        self.gold_arrays = self.gold_dir / f'arrays{self.suffix}'
+        self.gold_browse = self.gold_dir / f'browse{self.suffix}'
 
-        self.output_dir = basename_prefix
-        self.output_arrays = f'{self.output_dir}/arrays{self.suffix}'
-        self.output_browse = f'{self.output_dir}/browse{self.suffix}'
-        self.sampled_gold = f'{self.output_dir}/sampled_gold{self.suffix}'
+        self.output_dir = BACKPLANE_OUTPUT_PREFIX / basename_prefix
+        self.output_arrays = self.output_dir / f'arrays{self.suffix}'
+        self.output_browse = self.output_dir / f'browse{self.suffix}'
+        self.sampled_gold = self.output_dir / f'sampled_gold{self.suffix}'
 
         # Initialize the comparison log
         self.gold_summary_ = None
@@ -1156,11 +1144,12 @@ class BackplaneTest(object):
         # Set up the log handler; set aside any old log
         # Note that each BackplaneTest gets its own dedicated log file.
         if self.args.log:
-            log_path = f'{self.output_dir}/{self.task}.log'
+            log_path = (BACKPLANE_OUTPUT_PREFIX / self.output_dir /
+                        f'{self.task}.log')
 
             localpath = None
             try:
-                localpath = str(BACKPLANE_OUTPUT_PREFIX.retrieve(log_path))
+                localpath = log_path.retrieve()
             except FileNotFoundError:
                 pass
 
@@ -1179,9 +1168,9 @@ class BackplaneTest(object):
                 # creation/modification times are not preserved when a file is
                 # retrieved. Instead, it will use the time the file was downloaded.
                 os.rename(localpath, dated_localpath)
-                BACKPLANE_OUTPUT_PREFIX.upload(dated_logpath)
+                (BACKPLANE_OUTPUT_PREFIX / dated_logpath).upload()
 
-            abs_log_path = BACKPLANE_OUTPUT_PREFIX.get_local_path(log_path)
+            abs_log_path = log_path.get_local_path()
             handler = logging.FileHandler(abs_log_path)
             LOGGING.logger.addHandler(handler)
 
@@ -1212,27 +1201,21 @@ class BackplaneTest(object):
                     return
 
                 if self.task == 'compare':
-                    LOGGING.info('Reading masters from '
-                                 f'{GOLD_MASTER_PREFIX.prefix}{self.gold_arrays}')
+                    LOGGING.info('Reading masters from', self.gold_arrays)
                 elif self.task == 'adopt':
-                    LOGGING.info('Writing new masters to '
-                                 f'{GOLD_MASTER_PREFIX.prefix}{self.gold_arrays}')
-                    LOGGING.info('Writing browse images to '
-                                 f'{GOLD_MASTER_PREFIX.prefix}{self.gold_browse}')
+                    LOGGING.info('Writing new masters to', self.gold_arrays)
+                    LOGGING.info('Writing browse images to', self.gold_browse)
 
             # Make sure directories exist; log their locations
             if self.task in ('preview', 'compare'):
                 if self.args.arrays:
-                    LOGGING.info('Writing arrays to '
-                                 f'{BACKPLANE_OUTPUT_PREFIX.prefix}{self.output_arrays}')
+                    LOGGING.info('Writing arrays to', self.output_arrays)
 
                 if self.args.browse:
-                    LOGGING.info('Writing browse images to '
-                                 f'{BACKPLANE_OUTPUT_PREFIX.prefix}{self.output_browse}')
+                    LOGGING.info('Writing browse images to', self.output_browse)
 
                 if self.args.save_sampled:
-                    LOGGING.info('Writing sampled masters to'
-                                 f'{BACKPLANE_OUTPUT_PREFIX.prefix}{self.sampled_gold}')
+                    LOGGING.info('Writing sampled masters to', self.sampled_gold)
 
                 if (self.args.arrays or
                     self.args.browse or
@@ -1258,11 +1241,11 @@ class BackplaneTest(object):
             # Wrap up
             if self.args.summary:
                 if self.task in ('preview', 'compare'):
-                    file_path = self.write_summary(self.output_dir, BACKPLANE_OUTPUT_PREFIX)
+                    file_path = self.write_summary(self.output_dir)
                     LOGGING.debug('Summary written: ' + file_path)
 
                 else:
-                    file_path = self.write_summary(self.gold_dir, GOLD_MASTER_PREFIX)
+                    file_path = self.write_summary(self.gold_dir)
                     LOGGING.info('Summary written: ' + file_path)
 
             # Internals...
@@ -1339,7 +1322,7 @@ class BackplaneTest(object):
             LOGGING.info('Elapsed time: %.3f s' % seconds)
 
             if self.args.log:
-                BACKPLANE_OUTPUT_PREFIX.upload(log_path)
+                log_path.upload()
                 LOGGING.logger.removeHandler(handler)
                 handler.close()
 
@@ -1474,36 +1457,33 @@ class BackplaneTest(object):
             if self.task == 'adopt':
                 output_arrays = self.gold_arrays
                 output_browse = self.gold_browse
-                output_prefix = GOLD_MASTER_PREFIX
                 basename = self._basename(title, gold=True)
             else:
                 output_arrays = self.output_arrays
                 output_browse = self.output_browse
-                output_prefix = BACKPLANE_OUTPUT_PREFIX
-                basename = self._basename(title,
-                                          gold=not BACKPLANE_OUTPUT_PREFIX.is_local)
+                basename = self._basename(title, gold=False)
 
             if self.args.arrays:
-                output_pickle_path = f'{output_arrays}/{basename}.pickle'
+                output_pickle_path = output_arrays / f'{basename}.pickle'
                 comparison.output_pickle_path = output_pickle_path
-                with output_prefix.open(output_pickle_path, 'wb') as f:
+                with output_pickle_path.open(mode='wb') as f:
                     pickle.dump(array, f)
 
             # Write the browse image
             if self.args.browse:
                 browse_name = basename + '.' + self.args.browse_format
-                browse_path = f'{output_browse}/{browse_name}'
+                browse_path = output_browse / browse_name
                 comparison.browse_path = browse_path
-                self.save_browse(array, browse_path, output_prefix)
+                self.save_browse(array, browse_path)
 
             # For "compare"
             if self.task == 'compare':
                 basename = self._basename(title, gold=True)
-                gold_pickle_path = f'{self.gold_arrays}/{basename}.pickle'
+                gold_pickle_path = self.gold_arrays / f'{basename}.pickle'
                 comparison.gold_pickle_path = gold_pickle_path
 
                 try:
-                    local_path = GOLD_MASTER_PREFIX.retrieve(gold_pickle_path)
+                    local_path = gold_pickle_path.retrieve()
                 except FileNotFoundError:
                     self._log_comparison(comparison, 'No gold master')
                 else:
@@ -1518,9 +1498,9 @@ class BackplaneTest(object):
                         # Compare...
                         if self.args.save_sampled:
                             basename = self._basename(comparison.title,
-                                                gold=not BACKPLANE_OUTPUT_PREFIX.is_local)
+                                                      gold=False)
                             comparison.sampled_gold_path = \
-                                f'{self.sampled_gold}/{basename}.pickle'
+                                self.sampled_gold / f'{basename}.pickle'
 
                         self._compare(array, master, comparison)
 
@@ -1637,7 +1617,7 @@ class BackplaneTest(object):
 
         # Saved the sampled array if necessary
         if hasattr(comparison, 'sampled_gold_path'):
-            with BACKPLANE_OUTPUT_PREFIX.open(comparison.sampled_gold_path, 'wb') as f:
+            with comparison.sampled_gold_path.open(mode='wb') as f:
                 pickle.dump(master_grid, f)
 
         # Find the differences among unmasked pixels
@@ -2233,7 +2213,7 @@ class BackplaneTest(object):
     # Browse image support
     ############################################################################
 
-    def save_browse(self, array, browse_path, output_prefix):
+    def save_browse(self, array, browse_path):
         """Save a backplane as a PNG, JPG, or TIFF file."""
 
         # Get pixels and mask
@@ -2289,9 +2269,9 @@ class BackplaneTest(object):
 
         shape = scaled_bytes.shape[::-1]
         im = PIL.Image.frombytes('L', shape, scaled_bytes)
-        filename = output_prefix.get_local_path(browse_path)
+        filename = browse_path.get_local_path()
         im.save(filename)
-        output_prefix.upload(browse_path)
+        browse_path.upload()
 
     #===========================================================================
     @staticmethod
@@ -2299,8 +2279,8 @@ class BackplaneTest(object):
         """Read a PNG, JPG, or TIFF image file as a 2-D array of unsigned bytes.
         """
 
-        assert False  # If this is ever used, convert to using filecache
-        with PIL.Image.open(browse_path, mode='r') as im:
+        local_path = browse_path.retrieve()
+        with PIL.Image.open(local_path, mode='r') as im:
             return np.array(im)
 
     ############################################################################
@@ -2319,14 +2299,12 @@ class BackplaneTest(object):
         if self.gold_summary_ is not None:
             return self.gold_summary_
 
-        filepath = f'{self.gold_dir}/summary.py'
+        filepath = self.gold_dir / 'summary.py'
         try:
-            local_path = GOLD_MASTER_PREFIX.retrieve(filepath)
+            text = filepath.read_text()
         except FileNotFoundError:
             self.gold_summary_ = {}
         else:
-            with open(local_path) as f:
-                text = f.read()
             self.gold_summary_ = eval(text)
 
         # Expand tuples where value is None or min == max
@@ -2341,15 +2319,15 @@ class BackplaneTest(object):
         return self.gold_summary_
 
     #===========================================================================
-    def write_summary(self, outdir, output_prefix):
+    def write_summary(self, outdir):
         """Write the test summary as a Python dictionary; return its file path.
         """
 
-        filepath = f'{outdir}/summary.py'
+        filepath = outdir / 'summary.py'
 
         localpath = None
         try:
-            localpath = str(output_prefix.retrieve(filepath))
+            localpath = str(filepath.retrieve(filepath))
         except FileNotFoundError:
             pass
 
@@ -2368,15 +2346,14 @@ class BackplaneTest(object):
             # creation/modification times are not preserved when a file is
             # retrieved. Instead, it will use the time the file was downloaded.
             os.rename(localpath, dated_localpath)
-            output_prefix.upload(dated_filepath)
-            LOGGING.info('Previous summary moved to: '
-                         + os.path.basename(dated_filepath))
+            dated_filepath.upload()
+            LOGGING.info('Previous summary moved to:', dated_filepath.name)
 
         titles = list(self.summary.keys())
         titles.sort(key=lambda key: key.lower())    # sort titles ignoring case
 
         # Write new file
-        with output_prefix.open(filepath, 'w') as f:
+        with filepath.open(mode='w') as f:
 
             dt = datetime.datetime.now()
             f.write(dt.strftime('# gold_master summary %Y-%m-%dT%H-%M-%S\n'))
@@ -2400,7 +2377,7 @@ class BackplaneTest(object):
                 f.write(',\n')
             f.write('}\n')
 
-        return f'{output_prefix.prefix}{filepath}'
+        return filepath
 
 ################################################################################
 # To handle gold master testing from the command line...

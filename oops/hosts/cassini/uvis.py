@@ -13,6 +13,8 @@ import pdsparser
 from oops.hosts.cassini import Cassini
 from oops.hosts         import pds3
 
+from filecache import FCPath
+
 DEBUG = False       # True to assert that the data array must have null
                     # values outside the active windows
 
@@ -373,15 +375,15 @@ def get_spectrum(filespec, tstart, label, data):
 #=========================================================================================
 def load_data(filespec, body, dtype):
 
-    head = os.path.split(filespec)[0]
+    data_filespec = FCPath(filespec).with_name(body)
 
-    data_filespec = os.path.join(head, body)
-    if not os.path.exists(data_filespec):
-        data_filespec = os.path.join(head, body.lower())
-    if not os.path.exists(data_filespec):
-        f = open(data_filespec,'r')     # raise IOError
+    try:
+        local_path = data_filespec.retrieve()
+    except FileNotFoundError:
+        data_filespec = data_filespec.with_name(body.lower())
+        local_path = data_filespec.retrieve()
 
-    return np.fromfile(data_filespec, sep='', dtype=dtype)
+    return np.fromfile(local_path, sep='', dtype=dtype)
 
 #=========================================================================================
 def initialize(ck='reconstructed', planets=None, asof=None,

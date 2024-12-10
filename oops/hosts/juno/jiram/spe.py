@@ -11,6 +11,8 @@ import oops
 
 from oops.hosts.juno.jiram import JIRAM
 
+from filecache import FCPath
+
 ################################################################################
 # Standard class methods
 ################################################################################
@@ -34,6 +36,8 @@ def from_file(filespec, label, fast_distortion=True,
         return_all_planets  Include kernels for all planets not just
                             Jupiter or Saturn.
     """
+
+    filespec = FCPath(filespec)
 
     # Get metadata
     meta = Metadata(label)
@@ -89,7 +93,8 @@ def _load_data(filespec, label, meta):
 
     # Read data
     # seems like this should be handled in a readpds-style function somewhere
-    data = np.fromfile(filespec, dtype='<f4').reshape(meta.nlines,meta.nsamples)
+    local_path = filespec.retrieve()
+    data = np.fromfile(local_path, dtype='<f4').reshape(meta.nlines,meta.nsamples)
 
     return data
 

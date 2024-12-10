@@ -6,6 +6,8 @@ import astropy.io.fits as pyfits
 
 from . import ACS
 
+from filecache import FCPath
+
 ##########################################################################################
 # Classless method
 ##########################################################################################
@@ -24,7 +26,11 @@ def from_file(filespec, **parameters):
 
     # Open the file if necessary
     if isinstance(filespec, str):
-        hdulist = pyfits.open(filespec)
+        filespec = FCPath(filespec)
+
+        # Open the file
+        local_path = filespec.retrieve()
+        hdulist = pyfits.open(local_path)
     else:
         hdulist = filespec
 
@@ -33,15 +39,15 @@ def from_file(filespec, **parameters):
 
     # Confirm that the telescope is HST
     if this.telescope_name(hdulist) != 'HST':
-        raise IOError('not an HST file: ' + filespec)
+        raise IOError(f'not an HST file: {filespec}')
 
     # Confirm that the instrument is ACS
     if this.instrument_name(hdulist) != 'ACS':
-        raise IOError('not an HST/ACS file: ' + filespec)
+        raise IOError(f'not an HST/ACS file: {filespec}')
 
     # Confirm that the detector is WFC
     if this.detector_name(hdulist) != 'WFC':
-        raise IOError('not an HST/ACS/WFC file: ' + filespec)
+        raise IOError(f'not an HST/ACS/WFC file: {filespec}')
 
     return WFC.from_opened_fitsfile(hdulist, **parameters)
 
