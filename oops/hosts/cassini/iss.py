@@ -37,7 +37,8 @@ def from_file(filespec, fast_distortion=True,
                         # unless initialize() is called explicitly.
 
     # Load the VICAR file
-    local_path = FCPath(filespec).retrieve()
+    filespec = FCPath(filespec)
+    local_path = filespec.retrieve()
     vic = vicar.VicarImage.from_file(local_path)
     vicar_dict = vic.as_dict()
 
