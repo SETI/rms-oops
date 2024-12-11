@@ -13,7 +13,7 @@ from pathlib import Path
 import unittest
 import warnings
 
-from filecache import FileCache
+from filecache import FCPath, FileCache
 import interval
 import julian
 import textkernel
@@ -1043,9 +1043,9 @@ def get_spice_path():
 
     if SPICE_PATH is None:
         try:
-            SPICE_PATH = os.environ["SPICE_PATH"].rstrip('/')
+            SPICE_PATH = FCPath(os.environ["SPICE_PATH"])
         except KeyError:
-            SPICE_PATH = os.environ["OOPS_RESOURCES"].rstrip('/') + "/SPICE"
+            SPICE_PATH = FCPath(os.environ["OOPS_RESOURCES"]) / "SPICE"
 
     return SPICE_PATH
 
@@ -1056,7 +1056,7 @@ def get_spice_filecache():
     global SPICE_FILECACHE
 
     if SPICE_FILECACHE is None:
-        SPICE_FILECACHE = FileCache(shared=SPICE_FILECACHE_SHARED_NAME)
+        SPICE_FILECACHE = FileCache(SPICE_FILECACHE_SHARED_NAME)
 
     return SPICE_FILECACHE
 
@@ -1069,7 +1069,7 @@ def get_spice_filecache_prefix():
     if SPICE_FILECACHE_PREFIX is None:
         fc = get_spice_filecache()
         spice_path = get_spice_path()
-        SPICE_FILECACHE_PREFIX = fc.new_prefix(spice_path)
+        SPICE_FILECACHE_PREFIX = fc.new_path(spice_path)
 
     return SPICE_FILECACHE_PREFIX
 
@@ -1092,12 +1092,12 @@ def open_db(name=None):
             name = DB_PATH
         else:
             try:
-                name = os.environ["SPICE_SQLITE_DB_NAME"]
+                name = FCPath(os.environ["SPICE_SQLITE_DB_NAME"])
             except KeyError:
-                name = get_spice_path() + "/SPICE.db"
+                name = get_spice_path() / "SPICE.db"
 
     fc = get_spice_filecache()
-    local_path = fc.retrieve(name)  # name will include the URI prefix, if any
+    local_path = name.retrieve()  # name will include the URI prefix, if any
     db.open(local_path)
     DB_PATH = name
     IS_OPEN = True
@@ -1528,7 +1528,7 @@ def furnish_kernels(kernel_list, fast=True):
                 if DEBUG:
                     abspath = pfx.get_local_path(filepath, create_parents=False)
                 else:
-                    warnings.warn(f'SPICE kernel not found: {pfx.prefix}{filepath}',
+                    warnings.warn(f'SPICE kernel not found: {pfx}/{filepath}',
                                   RuntimeWarning)
                     continue
 

@@ -20,6 +20,8 @@ import oops
 from oops.hosts.cassini import Cassini
 from oops.hosts.pds3    import pds3
 
+from filecache import FCPath
+
 # Timing correction as of 1/9/15 -- MRS
 # EXTRA_INTERSAMPLE_DELAY =  0.000363     # observed empirically in V1555349441
 # TIME_CORRECTION         = -0.337505
@@ -209,6 +211,8 @@ def from_file(filespec, data=True):
     if not isinstance(data, (tuple, list)):
         data = (data, data)
 
+    filespec = FCPath(filespec)
+
     label = pds3.fast_dict(filespec)
 
     # Insert "data_file" and "header_recs"
@@ -245,8 +249,7 @@ def from_file(filespec, data=True):
         label['QUBE'] = label['SPECTRAL_QUBE']
 
         # Add these items
-        parent = os.path.split(filespec)[0]
-        label['data_file'] = os.path.join(parent, label['^QUBE'][0])
+        label['data_file'] = filespec.with_name(label['^QUBE'][0])
         label['header_recs'] = label['^QUBE'][1] - 1
 
     qube_dict = label['SPECTRAL_QUBE']
@@ -272,7 +275,7 @@ def from_file(filespec, data=True):
     times = None
 
     if data[0] or data[1]:
-        qub_file = filespec.replace('.lbl', '.qub')
+        qub_file = filespec.with_suffix('.qub')
         (array, times) = _load_data_and_times(qub_file, label)
         assert array.shape == (lines, samples, bands), 'incorrect array shape'
 
@@ -573,7 +576,7 @@ def from_file(filespec, data=True):
 #                                 ir_cadence)
 
     else:
-        raise ValueError('unsupported VIMS format in file ' + filespec)
+        raise ValueError(f'unsupported VIMS format in file {filespec}')
 
     # Insert the data array
     if vis_obs is not None:
@@ -685,7 +688,8 @@ def _load_data_and_times(filespec, label):
     core_dtype += str(core_item_bytes)
 
     # Read the file as core dtypes
-    array = np.fromfile(filespec, dtype=core_dtype)
+    local_path = filespec.retrieve()
+    array = np.fromfile(local_path, dtype=core_dtype)
 
     # Slice away the core lines, leaving off the line suffix
     array = array[offset:offset+size]

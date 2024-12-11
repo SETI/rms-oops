@@ -14,6 +14,8 @@ import oops
 from oops.inst.keck import Keck
 import numpy as np
 
+from filecache import FCPath
+
 ################################################################################
 # Standard class methods
 ################################################################################
@@ -32,7 +34,9 @@ def from_file(filespec, **parameters):
     #--------------------
     # Open the file
     #--------------------
-    keck_file = pyfits.open(filespec)
+    filespec = FCPath(filespec)
+    local_path = filespec.retrieve()
+    keck_file = pyfits.open(local_path)
 
     #------------------------------------------
     # Make an instance of the NIRC2 class

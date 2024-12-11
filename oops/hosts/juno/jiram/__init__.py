@@ -11,6 +11,9 @@ import pdsparser
 import oops
 
 from oops.hosts.juno import Juno
+
+from filecache import FCPath
+
 ################################################################################
 # Standard class methods
 ################################################################################
@@ -26,9 +29,11 @@ def from_file(filespec, return_all_planets=False, **parameters):
                           # defaults unless initialize() is called explicitly.
 
     # Load the PDS label
-    base = os.path.splitext(filespec)[0]
-    lbl_filespec = base + '.LBL'
-    recs = pdsparser.PdsLabel.load_file(lbl_filespec)
+    filespec = FCPath(filespec)
+    lbl_filespec = filespec.with_suffix('.LBL')
+    local_filespec = filespec.retrieve()
+    local_lbl_filespec = lbl_filespec.retrieve()
+    recs = pdsparser.PdsLabel.load_file(local_lbl_filespec)
     label = pdsparser.PdsLabel.from_string(recs).as_dict()
 
     # Get common metadata
@@ -39,18 +44,18 @@ def from_file(filespec, return_all_planets=False, **parameters):
     Juno.load_spks(meta.tstart, meta.tstart + 3600.)
 
     # Determine which observation type and load data
-    ext = os.path.splitext(filespec)[1]
+    ext = filespec.suffix
 
     # Image
     if ext.upper() == '.IMG':
         from . import img
-        return img.from_file(filespec, label,
+        return img.from_file(local_filespec, label,
                              return_all_planets=False, **parameters)
 
     # Spectrum
     if ext.upper() == '.DAT':
         from . import spe
-        return spe.from_file(filespec, label,
+        return spe.from_file(local_filespec, label,
                              return_all_planets=False, **parameters)
 
     return None
