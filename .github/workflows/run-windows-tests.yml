@@ -21,6 +21,8 @@ jobs:
             python-version: "3.11"
           - os: self-hosted-windows
             python-version: "3.12"
+            - os: self-hosted-windows
+            python-version: "3.13"
       fail-fast: false
     steps:
       - name: Checkout
