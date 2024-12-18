@@ -6,7 +6,7 @@ import os
 import unittest
 import oops.backplane.gold_master as gm
 
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support import TEST_DATA_PREFIX
 
 #===============================================================================
 class Test_Juno_Junocam_GoldMaster(unittest.TestCase):

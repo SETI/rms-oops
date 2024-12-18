@@ -7,8 +7,10 @@ import numpy as np
 import julian
 import vicar
 import pdstable
-import oops
 
+from filecache import FCPath
+
+import oops
 from oops.hosts.cassini import Cassini
 
 ################################################################################
@@ -35,7 +37,9 @@ def from_file(filespec, fast_distortion=True,
                         # unless initialize() is called explicitly.
 
     # Load the VICAR file
-    vic = vicar.VicarImage.from_file(filespec)
+    filespec = FCPath(filespec)
+    local_path = filespec.retrieve()
+    vic = vicar.VicarImage.from_file(local_path)
     vicar_dict = vic.as_dict()
 
     # Get key information from the header
@@ -84,7 +88,7 @@ def from_file(filespec, fast_distortion=True,
                            Cassini.used_kernels(result.time, 'iss',
                                                 return_all_planets))
     result.insert_subfield('filespec', filespec)
-    result.insert_subfield('basename', os.path.basename(filespec))
+    result.insert_subfield('basename', filespec.name)
 
     return result
 
@@ -97,10 +101,13 @@ def from_index(filespec, **parameters):
     """
     ISS.initialize()    # Define everything the first time through
 
+    filespec = FCPath(filespec)
+
     # Read the index file
     COLUMNS = []        # Return all columns
     TIMES = ['START_TIME']
-    table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
+    local_path = filespec.retrieve()
+    table = pdstable.PdsTable(local_path, columns=COLUMNS, times=TIMES)
     row_dicts = table.dicts_by_row()
 
     # Create a list of Snapshot objects
@@ -128,8 +135,8 @@ def from_index(filespec, **parameters):
 
         item.spice_kernels = Cassini.used_kernels(item.time, 'iss')
 
-        item.filespec = os.path.join(row_dict['VOLUME_ID'],
-                                     row_dict['FILE_SPECIFICATION_NAME'])
+        item.filespec = (row_dict['VOLUME_ID'] + '/' +
+                         row_dict['FILE_SPECIFICATION_NAME'])
         item.basename = row_dict['FILE_NAME']
 
         snapshots.append(item)

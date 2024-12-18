@@ -14,6 +14,9 @@ import oops
 from oops.hosts         import pds3
 from oops.hosts.galileo import Galileo
 
+from filecache import FCPath
+
+
 ################################################################################
 # Standard class methods
 ################################################################################
@@ -36,11 +39,14 @@ def from_file(filespec,
     SSI.initialize()    # Define everything the first time through; use defaults
                         # unless initialize() is called explicitly.
 
+    filespec = FCPath(filespec)
+
     # Load the PDS label
     label = pds3.get_label(filespec)
 
     # Load the data array
-    vic = vicar.VicarImage.from_file(filespec)
+    local_path = filespec.retrieve()
+    vic = vicar.VicarImage.from_file(local_path)
     vicar_dict = vic.as_dict()
 
     # Get image metadata
@@ -62,7 +68,7 @@ def from_file(filespec,
                                instrument = 'SSI',
                                filter = meta.filter,
                                filespec = filespec,
-                               basename = os.path.basename(filespec))
+                               basename = filespec.name)
 
     result.insert_subfield('spice_kernels',
                            Galileo.used_kernels(result.time, 'ssi',
@@ -79,14 +85,19 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
     """
     SSI.initialize()    # Define everything the first time through
 
+    filespec = FCPath(filespec)
+
     # Read the index file
     COLUMNS = []        # Return all columns
-    table = pdstable.PdsTable(filespec, columns=COLUMNS)
+    local_path = filespec.retrieve(filespec)
+    table = pdstable.PdsTable(local_path, columns=COLUMNS)
     row_dicts = table.dicts_by_row()
 
     # Read the supplemental index file
     if supplemental_filespec is not None:
-        table = pdstable.PdsTable(supplemental_filespec)
+        supplemental_filespec = FCPath(supplemental_filespec)
+        supplemental_local_path = supplemental_filespec.retrieve()
+        table = pdstable.PdsTable(supplemental_local_path)
         supplemental_row_dicts = table.dicts_by_row()
 
 #        # Sort supplemental rows to match index file
@@ -138,8 +149,8 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
 
         item.spice_kernels = Galileo.used_kernels(item.time, 'ssi')
 
-        item.filespec = os.path.join(row_dict['VOLUME_ID'],
-                                     row_dict['FILE_SPECIFICATION_NAME'])
+        item.filespec = (row_dict['VOLUME_ID'] + '/' +
+                         row_dict['FILE_SPECIFICATION_NAME'])
         item.basename = basename
 
         snapshots.append(item)

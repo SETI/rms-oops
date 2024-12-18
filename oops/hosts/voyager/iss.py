@@ -13,6 +13,8 @@ import numpy as np
 import os
 import warnings
 
+from filecache import FCPath
+
 ################################################################################
 # Standard class methods
 ################################################################################
@@ -30,29 +32,35 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
     """
     ISS.initialize()    # Define everything the first time through
 
-    # Load the PDS label if available
-    if filespec.upper().endswith('.LBL'):
-        label_dict = pdsparser.PdsLabel.from_file(filespec).as_dict()
-        imagefile = label_dict['^IMAGE'][0]
-        imagespec = os.path.join(os.path.split(filespec)[0], imagefile)
-    else:
-        (body,ext) = os.path.splitext(filespec)
-        if ext == ext.upper():
-            labelspec = body + '.LBL'
-        else:
-            labelspec = body + '.lbl'
+    filespec = FCPath(filespec)
 
-        if os.path.exists(labelspec):
-            label_dict = pdsparser.PdsLabel.from_file(labelspec).as_dict()
+    # Load the PDS label if available
+    if filespec.name.upper().endswith('.LBL'):
+        local_path = filespec.retrieve()
+        label_dict = pdsparser.PdsLabel.from_file(local_path).as_dict()
+        imagefile = label_dict['^IMAGE'][0]
+        imagespec = filespec.with_name(imagefile)
+    else:
+        ext = filespec.suffix
+        if ext == ext.upper():
+            labelspec = filespec.with_suffix('.LBL')
         else:
+            labelspec = filespec.with_suffix('.lbl')
+
+        try:
+            local_labelspec = labelspec.retrieve()
+        except FileNotFoundError:
             label_dict = None
+        else:
+            label_dict = pdsparser.PdsLabel.from_file(local_labelspec).as_dict()
 
         imagespec = filespec
 
     # Load the VICAR file
     vicar_dict = label_dict
     if not astrometry:
-        vic = vicar.VicarImage.from_file(imagespec)
+        local_imagespec = imagespec.retrieve()
+        vic = vicar.VicarImage.from_file(local_imagespec)
         vicar_dict = vic.as_dict()
 
     # Get key information, preferably from the PDS label
@@ -197,9 +205,12 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
     """
     ISS.initialize()    # Define everything the first time through
 
+    filespec = FCPath(filespec)
+
     # Read the index file
     COLUMNS = []                # Return all columns
-    table = pdstable.PdsTable(filespec, columns=COLUMNS)
+    local_path = filespec.retrieve()
+    table = pdstable.PdsTable(local_path, columns=COLUMNS)
     row_dicts = table.dicts_by_row()
 
     # Interpret GEOMED parameter

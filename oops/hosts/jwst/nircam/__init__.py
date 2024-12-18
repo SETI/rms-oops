@@ -10,6 +10,8 @@ import tabulation as tab
 
 from oops.hosts.jwst import JWST
 
+from filecache import FCPath
+
 # Not currently used, but might be useful...
 READ_PATTERNS = {   # (number averaged, stride)
     'RAPID'   : (1,  1),
@@ -83,8 +85,11 @@ def from_file(filespec, **options):
     See help(nircam.uncal.from_file) for the additional options related to _uncal.fits.
     """
 
+    filespec = FCPath(filespec)
+
     # Open the file
-    hdulist = pyfits.open(filespec)
+    local_path = filespec.retrieve()
+    hdulist = pyfits.open(local_path)
 
     try:
         # Make an instance of the JWST class
@@ -92,11 +97,11 @@ def from_file(filespec, **options):
 
         # Confirm that the telescope is JWST
         if jwst.telescope_name(hdulist) != 'JWST':
-            raise IOError('not a JWST file: ' + filespec)
+            raise IOError(f'not a JWST file: {filespec}')
 
         # Confirm that the instrument is NIRCam
         if jwst.instrument_name(hdulist) != 'NIRCam':
-            raise IOError('not a JWST/NIRCam file: ' + filespec)
+            raise IOError(f'not a JWST/NIRCam file: {filespec}')
 
         return NIRCam.from_hdulist(hdulist, **options)
 

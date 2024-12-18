@@ -3,17 +3,16 @@
 ################################################################################
 
 import unittest
-import os.path
 
 class Test_NewHorizons_LORRI(unittest.TestCase):
 
     def runTest(self):
 
-        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+        from oops.unittester_support import TEST_DATA_PREFIX
         import cspyce
 
-        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                  "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
+        snapshot = from_file(TEST_DATA_PREFIX /
+                             "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT",
                              astrometry=True)
         self.assertFalse(snapshot.__dict__.has_key("data"))
         self.assertFalse(snapshot.__dict__.has_key("quality"))
@@ -22,8 +21,8 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
         self.assertFalse(snapshot.__dict__.has_key("extended_calib"))
         self.assertFalse(snapshot.__dict__.has_key("headers"))
 
-        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                  "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
+        snapshot = from_file(TEST_DATA_PREFIX /
+                             "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT",
                              data=False, calibration=True)
         self.assertFalse(snapshot.__dict__.has_key("data"))
         self.assertFalse(snapshot.__dict__.has_key("quality"))
@@ -32,8 +31,8 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
         self.assertTrue(snapshot.__dict__.has_key("extended_calib"))
         self.assertTrue(snapshot.__dict__.has_key("headers"))
 
-        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                  "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
+        snapshot = from_file(TEST_DATA_PREFIX /
+                             "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT",
                              data=True, calibration=False)
         self.assertTrue(snapshot.__dict__.has_key("data"))
         self.assertTrue(snapshot.__dict__.has_key("quality"))
@@ -42,8 +41,8 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
         self.assertFalse(snapshot.__dict__.has_key("extended_calib"))
         self.assertTrue(snapshot.__dict__.has_key("headers"))
 
-        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                  "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
+        snapshot = from_file(TEST_DATA_PREFIX /
+                             "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
                              headers=False)
         self.assertTrue(snapshot.__dict__.has_key("data"))
         self.assertTrue(snapshot.__dict__.has_key("quality"))
@@ -52,8 +51,8 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
         self.assertTrue(snapshot.__dict__.has_key("extended_calib"))
         self.assertFalse(snapshot.__dict__.has_key("headers"))
 
-        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                  "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"))
+        snapshot = from_file(TEST_DATA_PREFIX /
+                             "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"))
         self.assertTrue(snapshot.__dict__.has_key("data"))
         self.assertTrue(snapshot.__dict__.has_key("quality"))
         self.assertTrue(snapshot.__dict__.has_key("error"))
@@ -77,8 +76,8 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
         for geom, pointing, offset in [('spice', 'fits90', (-49,-28)),
                                        ('fits', 'spice', (-4,-12)),
                                        ('fits', 'fits90', (-48,-27))]:
-            snapshot_fits = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
-                            "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
+            snapshot_fits = from_file(TEST_DATA_PREFIX /
+                                      "nh/LORRI/LOR_0034969199_0X630_SCI_1.FIT"),
                             geom=geom, pointing=pointing, fast_distortion=True)
 
             self.assertEqual(snapshot.time, snapshot_fits.time)
@@ -135,9 +134,9 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
         self.assertLess(europa_ext_iof, 0.6)
         self.assertAlmostEqual(europa_ext_iof, europa_pt_iof, 1)
 
-        snapshot = from_file(os.path.join(TESTDATA_PARENT_DIRECTORY,
-                            "nh", "LORRI", "LOR_0030710290_0x633_SCI_1.FIT"),
-                            calibration=False)
+        snapshot = from_file(TEST_DATA_PREFIX /
+                             "nh/LORRI/LOR_0030710290_0x633_SCI_1.FIT",
+                             calibration=False)
         self.assertTrue(snapshot.data.shape == (256,256))
         self.assertTrue(snapshot.quality.shape == (256,256))
         self.assertTrue(snapshot.error.shape == (256,256))

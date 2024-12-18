@@ -7,7 +7,6 @@
 
 import numpy as np
 
-import os
 import julian
 import spicedb
 import cspyce
@@ -202,63 +201,66 @@ class Juno(object):
     def load_kernels(t0, t1, loaded, lists, kernel_dict):
         """Load kernal pool."""
 
-        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+        from spicedb import get_spice_filecache_prefix
 
-        kdir = os.path.join(TESTDATA_PARENT_DIRECTORY, '../SPICE/Juno/')
-        gkdir = os.path.join(TESTDATA_PARENT_DIRECTORY, '../SPICE/General/')
+        SPICE_FILECACHE_PFX = get_spice_filecache_prefix()
 
+        paths = SPICE_FILECACHE_PFX.retrieve([
+            'Juno/CK/juno_sc_rec_131006_131012_v01.bc',
+            'Juno/SPK/spk_rec_131005_131014_131101.bsp',
+            'Juno/CK/juno_sc_rec_161211_161217_v01.bc',
+            'Juno/SPK/juno_rec_161115_170106_170113.bsp',
+            'Juno/CK/juno_sc_rec_170702_170708_v01.bc',
+            'Juno/SPK/juno_rec_170608_170728_170803.bsp',
+            'Juno/CK/juno_sc_rec_171023_171025_v01.bc',
+            'Juno/SPK/juno_rec_170918_171121_171127.bsp',
+            'Juno/CK/juno_sc_rec_171215_171217_v01.bc',
+            'Juno/SPK/juno_rec_171121_180113_180117.bsp',
+            'Juno/CK/juno_sc_rec_180523_180524_v01.bc',
+            'Juno/SPK/juno_rec_180429_180621_180626.bsp',
+            'Juno/CK/juno_sc_rec_180906_180907_v01.bc',
+            'Juno/SPK/juno_rec_180812_181004_181011.bsp',
+            'Juno/CK/juno_sc_rec_190405_190406_v01.bc',
+            'Juno/SPK/juno_rec_190312_190504_190509.bsp',
+            'Juno/CK/juno_sc_rec_190911_190912_v01.bc',
+            'Juno/SPK/juno_rec_190817_191010_191022.bsp',
+            'Juno/CK/juno_sc_rec_200405_200411_v01.bc',
+            'Juno/SPK/juno_rec_200316_200508_200512.bsp',
+            'Juno/CK/juno_sc_rec_200719_200725_v01.bc',
+            'Juno/SPK/juno_rec_200629_200822_200826.bsp',
+            'Juno/CK/juno_sc_rec_201108_201114_v01.bc',
+            'Juno/SPK/juno_rec_201014_201205_201208.bsp',
+            'Juno/CK/juno_sc_rec_201227_210102_v01.bc',
+            'Juno/SPK/juno_rec_201205_210127_210210.bsp',
+            'Juno/CK/juno_sc_rec_210221_210227_v01.bc',
+            'Juno/SPK/juno_rec_210127_210321_210329.bsp',
+            'Juno/CK/juno_sc_rec_210221_210227_v01.bc',
+            'Juno/SPK/juno_rec_210127_210321_210329.bsp',
+            'Juno/CK/juno_sc_rec_190528_190529_v01.bc',
+            'Juno/SPK/juno_rec_190504_190626_190627.bsp',
 
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_131006_131012_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/spk_rec_131005_131014_131101.bsp')
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_161211_161217_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/juno_rec_161115_170106_170113.bsp')
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_170702_170708_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/juno_rec_170608_170728_170803.bsp')
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_171023_171025_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/juno_rec_170918_171121_171127.bsp')
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_171215_171217_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/juno_rec_171121_180113_180117.bsp')
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_180523_180524_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/juno_rec_180429_180621_180626.bsp')
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_180906_180907_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/juno_rec_180812_181004_181011.bsp')
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_190405_190406_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/juno_rec_190312_190504_190509.bsp')
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_190911_190912_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/juno_rec_190817_191010_191022.bsp')
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_200405_200411_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/juno_rec_200316_200508_200512.bsp')
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_200719_200725_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/juno_rec_200629_200822_200826.bsp')
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_201108_201114_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/juno_rec_201014_201205_201208.bsp')
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_201227_210102_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/juno_rec_201205_210127_210210.bsp')
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_210221_210227_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/juno_rec_210127_210321_210329.bsp')
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_210221_210227_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/juno_rec_210127_210321_210329.bsp')
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_190528_190529_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/juno_rec_190504_190626_190627.bsp')
+            'Juno/CK/juno_sc_rec_160710_160716_v01.bc',
+            'Juno/CK/juno_sc_rec_160717_160723_v01.bc',
+            'Juno/SPK/spk_rec_160522_160729_160909.bsp',
 
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_160710_160716_v01.bc')
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_160717_160723_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/spk_rec_160522_160729_160909.bsp')
+            'Juno/CK/juno_sc_rec_170827_170902_v01.bc',
+            'Juno/CK/juno_sc_rec_170903_170909_v01.bc',
+            'Juno/SPK/spk_rec_170728_170918_170922.bsp',
 
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_170827_170902_v01.bc')
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_170903_170909_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/spk_rec_170728_170918_170922.bsp')
+            'Juno/CK/juno_sc_rec_180715_180716_v01.bc',
+            'Juno/SPK/spk_rec_180620_180812_180821.bsp',
 
-        cspyce.furnsh(kdir + 'CK/juno_sc_rec_180715_180716_v01.bc')
-        cspyce.furnsh(kdir + 'SPK/spk_rec_180620_180812_180821.bsp')
+            'General/LSK/naif0012.tls',
+            'Juno/SCLK/jno_sclkscet_00128.tsc',
+            'Juno/FK/juno_v12.tf',
+            'Juno/IK/juno_junocam_v03.ti',
+            'Juno/IK/juno_jiram_v02.ti',
+            'Juno/SPK/de421.bsp',
+            'Juno/SPK/de432s.bsp',
+        ])
+        for path in paths:
+            cspyce.furnsh(path)
 
-        cspyce.furnsh(gkdir + 'LSK/naif0012.tls')
-        cspyce.furnsh(kdir + 'SCLK/jno_sclkscet_00128.tsc')
-        cspyce.furnsh(kdir + 'FK/juno_v12.tf')
-        cspyce.furnsh(kdir + 'IK/juno_junocam_v03.ti')
-        cspyce.furnsh(kdir + 'IK/juno_jiram_v02.ti')
-        cspyce.furnsh(kdir + 'SPK/de421.bsp')
-        cspyce.furnsh(kdir + 'SPK/de432s.bsp')
 ### This would be best handled by creating a text file that contains a list of the
 ### file names to be loaded (starting with "ck/, "spk/" etc.). Maintain this file
 ### separately from the Python code. The Python code reads the list and furnishes

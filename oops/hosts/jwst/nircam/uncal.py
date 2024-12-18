@@ -11,6 +11,8 @@ from oops.hosts.jwst.nircam import NIRCam
 from oops.hosts.jwst.nircam import from_file as cal_from_file
 from oops.hosts.jwst        import MASK_VALUES
 
+from filecache import FCPath
+
 # A handy constant
 ARCSEC_PER_RADIAN = 60. * 60. * 180./np.pi
 
@@ -107,12 +109,15 @@ def from_file(filespec, **options):
                         individual raw image as a 2-D array.
     """
 
+    filespec = FCPath(filespec)
+
     # Confirm that the file suffix is "_uncal"
-    if not filespec.lower().endswith('_uncal.fits'):
+    if not filespec.name.lower().endswith('_uncal.fits'):
         raise ValueError('not an _uncal file: ' + filespec)
 
     # Open the file
-    hdulist = pyfits.open(filespec)
+    local_path = filespec.retrieve()
+    hdulist = pyfits.open(local_path)
 
     try:
         # Make an instance of the NIRCam class
@@ -121,11 +126,11 @@ def from_file(filespec, **options):
 
         # Confirm that the telescope is JWST
         if uncal.telescope_name(hdulist) != 'JWST':
-            raise IOError('not a JWST file: ' + filespec)
+            raise IOError(f'not a JWST file: {filespec}')
 
         # Confirm that the instrument is NIRCam
         if uncal.instrument_name(hdulist) != 'NIRCam':
-            raise IOError('not a JWST/NIRCam file: ' + filespec)
+            raise IOError(f'not a JWST/NIRCam file: {filespec}')
 
         return uncal.from_hdulist(hdulist, **options)
 

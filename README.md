@@ -24,3 +24,57 @@
 # rms-oops
 
 This package is under development. Use with extreme caution.
+
+# Environment Variables
+
+- `OOPS_RESOURCES`: The top-level directory containing all files needed by OOPS. Unless
+  overriden as described below, this environment variable is the only one that needs to be
+  set. It is expected that the specified directory will contain the subdirectories:
+  - `SPICE`: SPICE kernels and associated database.
+  - `HST`: Reference and calibration files required for HST.
+  - `JWST`: Reference and calibration files required for JWST.
+  - `gold_master`: Gold master files for host tests.
+  - `test_data`: Test input files.
+- `SPICE_PATH`: The location of the SPICE kernel files; defaults to
+  `${OOPS_RESOURCES}/SPICE`.
+- `SPICE_SQLITE_DB_NAME`: The full path and filename of the SPICE SQlite database;
+  defaults to `${SPICE_PATH}/SPICE.db`.
+- `OOPS_TEST_DATA_PATH`: The location of the oops test files; defaults to
+  `${OOPS_RESOURCES}/test_data`.
+- `OOPS_GOLD_MASTER_PATH`: The location of the oops gold master test files; defaults to
+  `${OOPS_RESOURCES}/gold_master`.
+- `OOPS_BACKPLANE_OUTPUT_PATH`: The output path to use when writing backplanes
+  for gold master tests; defaults to the current directory.
+- `HST_IDC_PATH`: The location of HST IDC files; defaults to
+  `${OOPS_RESOURCES}/HST/IDC`.
+- `HST_SYN_PATH`: The location of HST SYN files; defaults to
+  `${OOPS_RESOURCES}/HST/SYN`.
+
+# Running Tests
+
+- To run the main oops unit tests:
+
+```sh
+python -m unittest tests/unittester.py
+```
+
+- To run the host tests including golden master tests:
+
+```sh
+python -m unittest tests/hosts/unittester.py
+```
+
+- To run the main oops unit tests and the host tests:
+
+```sh
+python -m unittest tests/unittester_with_hosts.py
+```
+
+- To run the gold master tests for one instrument with the ability to specify command
+  line options:
+
+```sh
+export PYTHONPATH=.
+python tests/hosts/cassini/iss/gold_master.py --help
+python tests/hosts/galileo/ssi/gold_master.py --help
+```

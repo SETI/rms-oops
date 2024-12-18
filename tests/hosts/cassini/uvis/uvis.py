@@ -2,10 +2,7 @@
 # tests/hosts/cassini/uvis.py
 ##########################################################################################
 import unittest
-import os.path
 import oops.backplane.gold_master as gm
-
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 
 #===============================================================================
@@ -35,8 +32,7 @@ class Test_Cassini_UVIS_GoldMaster_HSP2014_197_21_29(unittest.TestCase):
         """
 
         gm.execute_as_unittest(self,
-                obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                       'cassini/UVIS/HSP2014_197_21_29.DAT'),
+                obspath = 'cassini/UVIS/HSP2014_197_21_29.DAT',
                 index   = None,
                 module  = 'oops.hosts.cassini.uvis',
                 planet  = '',

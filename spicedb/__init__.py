@@ -6,13 +6,14 @@
 # kernels into their proper load order.
 ################################################################################
 
-from __future__ import division
 import datetime
 import numbers
 import os
+from pathlib import Path
 import unittest
 import warnings
 
+from filecache import FCPath, FileCache
 import interval
 import julian
 import textkernel
@@ -27,6 +28,10 @@ ABSPATH_LIST = []   # If DEBUG, lists the files that would have been furnished.
 
 IS_OPEN = False
 DB_PATH = ''
+
+SPICE_FILECACHE_SHARED_NAME = "oops_kernels"
+SPICE_FILECACHE = None
+SPICE_FILECACHE_PREFIX = None
 
 TRANSLATOR = None   # Optional user-specified function to alter the absolute
                     # paths of SPICE kernels. This can be used to override the
@@ -56,6 +61,7 @@ FURNISHED_NAMES = {
 }
 
 # Furnished kernel file paths and names by type, listed in load order
+# This really does store local paths, not paths relative to a prefix
 FURNISHED_ABSPATHS = {
     'CK':   [],
     'FK':   [],
@@ -1010,34 +1016,70 @@ def _sql_query_by_filespec(filespec, time=None):
 def set_spice_path(spice_path=""):
     """Define the directory path to the root of the SPICE file directory tree.
 
+    This directory may also be on a webserver or in the cloud by providing an
+    appropriate prefix.
+
     Call with no argument to reset the path to its default value.
     """
 
-    global SPICE_PATH
+    global SPICE_PATH, SPICE_FILECACHE, SPICE_FILECACHE_PFX
 
     SPICE_PATH = spice_path
+    SPICE_FILECACHE = None
+    SPICE_FILECACHE_PFX = None
 
 #===============================================================================
 def get_spice_path():
     """Return the current path to the root of the SPICE file directory tree.
 
+    This directory may also be on a webserver or in the cloud by providing an
+    appropriate prefix.
+
     If the path is undefined, it uses the value of environment variable
-    SPICE_PATH.
+    SPICE_PATH. If SPICE_PATH is undefined, it uses ${OOPS_RESOURCES}/SPICE.
     """
 
     global SPICE_PATH
 
     if SPICE_PATH is None:
-        SPICE_PATH = os.environ["SPICE_PATH"]
+        try:
+            SPICE_PATH = FCPath(os.environ["SPICE_PATH"])
+        except KeyError:
+            SPICE_PATH = FCPath(os.environ["OOPS_RESOURCES"]) / "SPICE"
 
     return SPICE_PATH
+
+#===============================================================================
+def get_spice_filecache():
+    """Return the FileCache used for storing the SPICE DB and kernels."""
+
+    global SPICE_FILECACHE
+
+    if SPICE_FILECACHE is None:
+        SPICE_FILECACHE = FileCache(SPICE_FILECACHE_SHARED_NAME)
+
+    return SPICE_FILECACHE
+
+#===============================================================================
+def get_spice_filecache_prefix():
+    """Return the FileCachePrefix used for storing the SPICE kernels."""
+
+    global SPICE_FILECACHE_PREFIX
+
+    if SPICE_FILECACHE_PREFIX is None:
+        fc = get_spice_filecache()
+        spice_path = get_spice_path()
+        SPICE_FILECACHE_PREFIX = fc.new_path(spice_path)
+
+    return SPICE_FILECACHE_PREFIX
 
 #===============================================================================
 def open_db(name=None):
     """Open the SPICE database given its name or file path.
 
     If no name is given, the value of the environment variable
-    SPICE_SQLITE_DB_NAME is used.
+    SPICE_SQLITE_DB_NAME is used. If SPICE_SQLITE_DB_NAME is not set,
+    then ${SPICE_PATH}/SPICE.db is used.
     """
 
     global IS_OPEN, DB_PATH
@@ -1049,9 +1091,14 @@ def open_db(name=None):
         if DB_PATH:
             name = DB_PATH
         else:
-            name = os.environ["SPICE_SQLITE_DB_NAME"]
+            try:
+                name = FCPath(os.environ["SPICE_SQLITE_DB_NAME"])
+            except KeyError:
+                name = get_spice_path() / "SPICE.db"
 
-    db.open(name)
+    fc = get_spice_filecache()
+    local_path = name.retrieve()  # name will include the URI prefix, if any
+    db.open(local_path)
     DB_PATH = name
     IS_OPEN = True
 
@@ -1393,12 +1440,12 @@ def select_by_filespec(filespecs, time=None):
 ################################################################################
 
 def as_dict(kernel_list):
-    """Return a dictionary containing the information in  text kernels.
+    """Return a dictionary containing the information in text kernels.
 
     Binary kernels are ignored.
     """
 
-    spice_path = get_spice_path()
+    pfx = get_spice_filecache_prefix()
 
     result = {}
     for kernel in kernel_list:
@@ -1408,8 +1455,8 @@ def as_dict(kernel_list):
         if ext[0:2] != ".t":
             continue
 
-        filespec = os.path.join(spice_path, kernel.filespec)
-        result = textkernel.from_file(filespec, tkdict=result)
+        local_path = pfx.retrieve(kernel.filespec)
+        result = textkernel.from_file(local_path, tkdict=result)
 
     return result
 
@@ -1443,7 +1490,7 @@ def furnish_kernels(kernel_list, fast=True):
     name_types = {}
     fileno_dict = {}
 
-    spice_path = get_spice_path()
+    pfx = get_spice_filecache_prefix()
 
     # For each kernel...
     for kernel in kernel_list:
@@ -1464,17 +1511,26 @@ def furnish_kernels(kernel_list, fast=True):
 
         # Update the list of files to furnish
         filepaths = kernel.filespec.split(',')
-        abspaths = [os.path.join(spice_path, f) for f in filepaths]
         if TRANSLATOR:
-            new_abspaths = []
-            for oldpath in abspaths:
+            new_filepaths = []
+            for oldpath in filepaths:
                 newpath = TRANSLATOR(oldpath)
                 if newpath:
-                    new_abspaths.append(newpath)
+                    new_filepaths.append(newpath)
 
-            abspaths = new_abspaths
+            filepaths = new_filepaths
 
-        for abspath in abspaths:
+        abspaths = pfx.retrieve(filepaths, exception_on_fail=False)
+
+        for (abspath, filepath) in zip(abspaths, filepaths):
+            # Save the info for each furnished file if it exists.
+            if not isinstance(abspath, Path):
+                if DEBUG:
+                    abspath = pfx.get_local_path(filepath, create_parents=False)
+                else:
+                    warnings.warn(f'SPICE kernel not found: {pfx}/{filepath}',
+                                  RuntimeWarning)
+                    continue
 
             # Remove the name from earlier in the list if necessary
             if abspath in abspath_list:
@@ -1484,19 +1540,12 @@ def furnish_kernels(kernel_list, fast=True):
             abspath_list.append(abspath)
             abspath_types[abspath] = kernel.kernel_type     # track kernel types
 
-            # Save the info for each furnished file if it exists
-            if os.path.exists(abspath):
-                basename = os.path.basename(abspath)
-                if basename in FURNISHED_INFO:
-                    if kernel not in FURNISHED_INFO[basename]:
-                        FURNISHED_INFO[basename].append(kernel)
-                else:
-                    FURNISHED_INFO[basename] = [kernel]
-
-            # Otherwise flag it and remove from abspath_list
+            basename = os.path.basename(abspath)
+            if basename in FURNISHED_INFO:
+                if kernel not in FURNISHED_INFO[basename]:
+                    FURNISHED_INFO[basename].append(kernel)
             else:
-                warnings.warn('SPICE kernel not found: ' + abspath, RuntimeWarning)
-                abspath_list.remove(abspath)
+                FURNISHED_INFO[basename] = [kernel]
 
     # Furnish the kernel files...
     if DEBUG:
@@ -1803,20 +1852,23 @@ def furnish_by_metafile(metafile, time=None, asof=None):
     Return:         A list of kernel names in load order.
     """
 
+    pfx = get_spice_filecache_prefix()
+
     # Search database
     kernel_names = []
     if not os.path.exists(metafile):
         spice_path = get_spice_path()
         try:
             kernel_list = _query_kernels('META', name=metafile, asof=asof)
-            metafile = os.path.join(spice_path, kernel_list[-1].filespec)
+            metafile = pfx.retrieve(kernel_list[-1].filespec)
             kernel_names = [kernel_list[-1].full_name]
         except ValueError:
             kernel_list = _query_kernels('META', path=metafile, asof=asof)
-            metafile = os.path.join(spice_path, kernel_list[-1].filespec)
+            metafile = pfx.retrieve(kernel_list[-1].filespec)
             kernel_names = [kernel_list[-1].full_name]
 
-    filespecs = textkernel.from_file(metafile)['KERNELS_TO_LOAD']
+    local_path = get_spice_filecache.retrieve(metafile)
+    filespecs = textkernel.from_file(local_path)['KERNELS_TO_LOAD']
 
     kernel_list = select_by_filespec(filespecs, time=time)
 
@@ -1849,14 +1901,15 @@ def unload_by_name(names):
     kernel_list = _sort_kernels(kernel_list)
 
     # For each kernel...
-    spice_path = get_spice_path()
+    pfx = get_spice_filecache_prefix()
+
     for kernel in kernel_list:
         key = kernel.kernel_type
 
         # Remove the kernel files from the dictionary and unload from SPICE
         filespecs = kernel.filespec.split(',')
-        abspaths = [os.path.join(spice_path, f) for f in filespecs]
-        for abspath in abspaths:
+        for filespec in filespecs:
+            abspath = pfx.get_local_path(filespec)
             if abspath in FURNISHED_ABSPATHS[key]:
                 FURNISHED_ABSPATHS[key].remove(abspath)
                 del FURNISHED_INFO[os.path.basename(abspath)]
@@ -1893,16 +1946,14 @@ def unload_by_type(types=None):
     elif type(types) == str:
         types = [types]
 
-    spice_path = get_spice_path()
-
     # For each selected type...
     for key in types:
 
         # Unload each file from SPICE
         abspath_list = FURNISHED_ABSPATHS[key]
-        for file in abspath_list:
-            cspyce.unload(os.path.join(spice_path, file))
-            del FURNISHED_INFO[os.path.basename(file)]
+        for abspath in abspath_list:
+            cspyce.unload(abspath)
+            del FURNISHED_INFO[os.path.basename(abspath)]
 
         # Delete the file list from the dictionary
         FURNISHED_ABSPATHS[key] = []
@@ -1944,11 +1995,13 @@ def unload_by_filepath(filepath):
 def unload_all():
     """Unload all SPICE kernels."""
 
+    global FURNISHED_NAMES, FURNISHED_FILENOS, FURNISHED_INFO
+
     for ktype, abspaths in FURNISHED_ABSPATHS.items():
         for abspath in abspaths:
             cspyce.unload(abspath)
         FURNISHED_ABSPATHS[ktype] = []
-        FURNISHED_NAMES = []
+        FURNISHED_NAMES[ktype] = []
 
     FURNISHED_FILENOS = {}
     FURNISHED_INFO = {}
@@ -2681,7 +2734,7 @@ class test_spicedb(unittest.TestCase):
         kernels = furnish_lsk(asof='2014')
         self.assertEqual(kernels, ['NAIF-LSK-0010'])
         self.assertEqual(len(ABSPATH_LIST), 1)
-        self.assertTrue(ABSPATH_LIST[0].endswith('/naif0010.tls'))
+        self.assertEqual(ABSPATH_LIST[0].name, 'naif0010.tls')
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -2695,7 +2748,7 @@ class test_spicedb(unittest.TestCase):
         k1 = kernels
         kernels = furnish_lsk(asof=(14*365.25*86400))
         self.assertEqual(kernels, ['NAIF-LSK-0010'])
-        self.assertTrue(ABSPATH_LIST[0].endswith('/naif0010.tls'))
+        self.assertEqual(ABSPATH_LIST[0].name, 'naif0010.tls')
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -2708,7 +2761,7 @@ class test_spicedb(unittest.TestCase):
         ABSPATH_LIST = []
         kernels = furnish_lsk(asof='2010-01-01')
         self.assertEqual(kernels, ['NAIF-LSK-0009'])
-        self.assertTrue(ABSPATH_LIST[0].endswith('/naif0009.tls'))
+        self.assertEqual(ABSPATH_LIST[0].name, 'naif0009.tls')
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -2770,11 +2823,11 @@ class test_spicedb(unittest.TestCase):
                                    'CAS-PCK-2014-02-19',
                                    'NAIF-PCK-00010-EDIT-V01'])
 
-        self.assertTrue(ABSPATH_LIST[0].endswith('mars_iau2000_v0.tpc'))
-        self.assertTrue(ABSPATH_LIST[1].endswith('cas_rocks_v18.tf'))
-        self.assertTrue(ABSPATH_LIST[2].endswith('cpck_rock_21Jan2011_merged.tpc'))
-        self.assertTrue(ABSPATH_LIST[3].endswith('cpck19Feb2014.tpc'))
-        self.assertTrue(ABSPATH_LIST[4].endswith('pck00010_edit_v01.tpc'))
+        self.assertEqual(ABSPATH_LIST[0].name, 'mars_iau2000_v0.tpc')
+        self.assertEqual(ABSPATH_LIST[1].name, 'cas_rocks_v18.tf')
+        self.assertEqual(ABSPATH_LIST[2].name, 'cpck_rock_21Jan2011_merged.tpc')
+        self.assertEqual(ABSPATH_LIST[3].name, 'cpck19Feb2014.tpc')
+        self.assertEqual(ABSPATH_LIST[4].name, 'pck00010_edit_v01.tpc')
 
         ########################################################################
         # furnish_spk(bodies, time=None, asof=None, after=None, redo=True)
@@ -2784,7 +2837,7 @@ class test_spicedb(unittest.TestCase):
         kernels = furnish_spk([1,2,3,4,5,6,7,8,9], asof='2014-03-10')
         self.assertEqual(kernels, ['DE430'])
         self.assertEqual(len(ABSPATH_LIST), 1)
-        self.assertTrue(ABSPATH_LIST[0].endswith('/de430.bsp'))
+        self.assertEqual(ABSPATH_LIST[0].name, 'de430.bsp')
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -2798,8 +2851,8 @@ class test_spicedb(unittest.TestCase):
         kernels = furnish_spk([699], asof='2014-03-10')
         self.assertEqual(kernels, ['SAT363', 'DE430']) #####
         self.assertEqual(len(ABSPATH_LIST), 2)
-        self.assertTrue(ABSPATH_LIST[0].endswith('/sat363.bsp'))
-        self.assertTrue(ABSPATH_LIST[1].endswith('/de430.bsp'))
+        self.assertEqual(ABSPATH_LIST[0].name, 'sat363.bsp')
+        self.assertEqual(ABSPATH_LIST[1].name, 'de430.bsp')
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -2848,8 +2901,8 @@ class test_spicedb(unittest.TestCase):
         kernels = furnish_spk([-82], asof='2013-12-13', time=None)
         self.assertEqual(kernels, ['CAS-SPK-RECONSTRUCTED-V01[1-133]'])
         self.assertEqual(len(ABSPATH_LIST), 133)
-        self.assertTrue(ABSPATH_LIST[ 0].endswith('/000331R_SK_LP0_V1P32.bsp'))
-        self.assertTrue(ABSPATH_LIST[-1].endswith('/131212R_SCPSE_13273_13314.bsp'))
+        self.assertEqual(ABSPATH_LIST[ 0].name, '000331R_SK_LP0_V1P32.bsp')
+        self.assertEqual(ABSPATH_LIST[-1].name, '131212R_SCPSE_13273_13314.bsp')
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -2864,10 +2917,10 @@ class test_spicedb(unittest.TestCase):
                                      time=(12*365.25*86400., '2012-04-01'))
         self.assertEqual(kernels, ['CAS-SPK-RECONSTRUCTED-V01[114-117]'])
         self.assertEqual(len(ABSPATH_LIST), 4)
-        self.assertTrue(ABSPATH_LIST[0].endswith('/120227R_SCPSE_11357_12016.bsp'))
-        self.assertTrue(ABSPATH_LIST[1].endswith('/120312R_SCPSE_12016_12042.bsp'))
-        self.assertTrue(ABSPATH_LIST[2].endswith('/120416R_SCPSE_12042_12077.bsp'))
-        self.assertTrue(ABSPATH_LIST[3].endswith('/120426R_SCPSE_12077_12098.bsp'))
+        self.assertEqual(ABSPATH_LIST[0].name, '120227R_SCPSE_11357_12016.bsp')
+        self.assertEqual(ABSPATH_LIST[1].name, '120312R_SCPSE_12016_12042.bsp')
+        self.assertEqual(ABSPATH_LIST[2].name, '120416R_SCPSE_12042_12077.bsp')
+        self.assertEqual(ABSPATH_LIST[3].name, '120426R_SCPSE_12077_12098.bsp')
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -2883,9 +2936,9 @@ class test_spicedb(unittest.TestCase):
         self.assertEqual(kernels, ['CAS-SPK-PREDICTED-2011-08-18',
                                    'CAS-SPK-RECONSTRUCTED-V01[114,115]'])
         self.assertEqual(len(ABSPATH_LIST), 3)
-        self.assertTrue(ABSPATH_LIST[0].endswith('110818AP_SCPSE_11175_17265.bsp'))
-        self.assertTrue(ABSPATH_LIST[1].endswith('120227R_SCPSE_11357_12016.bsp'))
-        self.assertTrue(ABSPATH_LIST[2].endswith('120312R_SCPSE_12016_12042.bsp'))
+        self.assertEqual(ABSPATH_LIST[0].name, '110818AP_SCPSE_11175_17265.bsp')
+        self.assertEqual(ABSPATH_LIST[1].name, '120227R_SCPSE_11357_12016.bsp')
+        self.assertEqual(ABSPATH_LIST[2].name, '120312R_SCPSE_12016_12042.bsp')
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -2900,7 +2953,7 @@ class test_spicedb(unittest.TestCase):
                                      time=(12*365.25*86400., '2012-04-01'))
         self.assertEqual(kernels, ['CAS-SPK-PREDICTED-2011-08-18'])
         self.assertEqual(len(ABSPATH_LIST), 1)
-        self.assertTrue(ABSPATH_LIST[0].endswith('110818AP_SCPSE_11175_17265.bsp'))
+        self.assertEqual(ABSPATH_LIST[0].name, '110818AP_SCPSE_11175_17265.bsp')
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -2915,7 +2968,7 @@ class test_spicedb(unittest.TestCase):
                                      time=(12*365.25*86400., '2012-04-01'))
         self.assertEqual(kernels, ['CAS-SPK-PREDICTED-2009-10-05'])
         self.assertEqual(len(ABSPATH_LIST), 1)
-        self.assertTrue(ABSPATH_LIST[0].endswith('091005AP_SCPSE_09248_17265.bsp'))
+        self.assertEqual(ABSPATH_LIST[0].name, '091005AP_SCPSE_09248_17265.bsp')
 
         self.assertRaises(ValueError, furnish_spk, [-82], after='3000-01-01',
                                                           redo=False)
@@ -2934,9 +2987,9 @@ class test_spicedb(unittest.TestCase):
         self.assertEqual(kernels, ['SAT360', 'SAT363', 'VG2-SPK-SAT337',
                                    'DE432'])
         self.assertEqual(len(ABSPATH_LIST), 5)
-        self.assertTrue(ABSPATH_LIST[-3].endswith('/sat337.bsp'))
-        self.assertTrue(ABSPATH_LIST[-2].endswith('/vgr2_sat337.bsp'))
-        self.assertTrue('de432' in ABSPATH_LIST[-1])
+        self.assertEqual(ABSPATH_LIST[-3].name, 'sat337.bsp')
+        self.assertEqual(ABSPATH_LIST[-2].name, 'vgr2_sat337.bsp')
+        self.assertTrue('de432' in str(ABSPATH_LIST[-1]))
 
         self.assertRaises(ValueError, furnish_spk, [-82], after='3000-01-01',
                                                           redo=False)
@@ -2955,9 +3008,9 @@ class test_spicedb(unittest.TestCase):
         kernels = furnish_spk(sl9, asof='2014-08-01')
         self.assertEqual(kernels, ['SL9-SPK-DE403'])
         self.assertEqual(len(ABSPATH_LIST), len(sl9) + 1)
-        self.assertTrue(ABSPATH_LIST[-1].endswith('/de403.bsp'))
+        self.assertEqual(ABSPATH_LIST[-1].name, 'de403.bsp')
         for file in ABSPATH_LIST[:-1]:
-            self.assertTrue(file.endswith('_1992-1994.gst.DE403.bsp'))
+            self.assertTrue(file.name.endswith('_1992-1994.gst.DE403.bsp'))
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -2974,9 +3027,9 @@ class test_spicedb(unittest.TestCase):
         kernels = furnish_inst(-82, inst=[], asof='2017-06-01')
         self.assertEqual(kernels, ['CAS-SCLK-00171', 'CAS-FK-V04'])
         self.assertEqual(len(ABSPATH_LIST), 3)
-        self.assertTrue(ABSPATH_LIST[0].endswith('/cas00171.tsc'))
-        self.assertTrue(ABSPATH_LIST[1].endswith('/cas_v40.tf'))
-        self.assertTrue(ABSPATH_LIST[2].endswith('/cas_status_v04.tf'))
+        self.assertEqual(ABSPATH_LIST[0].name, 'cas00171.tsc')
+        self.assertEqual(ABSPATH_LIST[1].name, 'cas_v40.tf')
+        self.assertEqual(ABSPATH_LIST[2].name, 'cas_status_v04.tf')
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -2991,10 +3044,10 @@ class test_spicedb(unittest.TestCase):
         self.assertEqual(kernels, ['CAS-SCLK-00171', 'CAS-FK-V04',
                                    'CAS-IK-ISS-V10'])
         self.assertEqual(len(ABSPATH_LIST), 4)
-        self.assertTrue(ABSPATH_LIST[0].endswith('/cas00171.tsc'))
-        self.assertTrue(ABSPATH_LIST[1].endswith('/cas_v40.tf'))
-        self.assertTrue(ABSPATH_LIST[2].endswith('/cas_status_v04.tf'))
-        self.assertTrue(ABSPATH_LIST[3].endswith('/cas_iss_v10.ti'))
+        self.assertEqual(ABSPATH_LIST[0].name, 'cas00171.tsc')
+        self.assertEqual(ABSPATH_LIST[1].name, 'cas_v40.tf')
+        self.assertEqual(ABSPATH_LIST[2].name, 'cas_status_v04.tf')
+        self.assertEqual(ABSPATH_LIST[3].name, 'cas_iss_v10.ti')
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -3007,7 +3060,7 @@ class test_spicedb(unittest.TestCase):
         ABSPATH_LIST = []
         kernels = furnish_inst(-82, inst=None, asof='2017-06-01')
         for file in ABSPATH_LIST[3:]:      # skip over one .tsc and two .tf files
-            self.assertTrue(file.endswith('.ti'))
+            self.assertTrue(file.name.endswith('.ti'))
 
         F1 = ABSPATH_LIST
         k1 = kernels
@@ -3080,13 +3133,13 @@ class test_spicedb(unittest.TestCase):
 
         filenames = list(ABSPATH_LIST)
         filenames.sort()
-        self.assertTrue(filenames[0].endswith('/04361_05002ra.bc'))
-        self.assertTrue(filenames[1].endswith('/05002_05007ra.bc'))
-        self.assertTrue(filenames[2].endswith('/05007_05012ra.bc'))
-        self.assertTrue(filenames[3].endswith('/05012_05017ra.bc'))
-        self.assertTrue(filenames[4].endswith('/05017_05022ra.bc'))
-        self.assertTrue(filenames[5].endswith('/05022_05027ra.bc'))
-        self.assertTrue(filenames[6].endswith('/05027_05032ra.bc'))
+        self.assertEqual(filenames[0].name, '04361_05002ra.bc')
+        self.assertEqual(filenames[1].name, '05002_05007ra.bc')
+        self.assertEqual(filenames[2].name, '05007_05012ra.bc')
+        self.assertEqual(filenames[3].name, '05012_05017ra.bc')
+        self.assertEqual(filenames[4].name, '05017_05022ra.bc')
+        self.assertEqual(filenames[5].name, '05022_05027ra.bc')
+        self.assertEqual(filenames[6].name, '05027_05032ra.bc')
 
         ########
         ABSPATH_LIST = []
@@ -3094,8 +3147,8 @@ class test_spicedb(unittest.TestCase):
                                   asof='2014-01-01', name="%PREDICTED%")
         self.assertEqual(kernels, ['CAS-CK-PREDICTED-V01[10,11]'])
         self.assertEqual(len(ABSPATH_LIST), 2)
-        self.assertTrue(ABSPATH_LIST[0].endswith('/04351_05022ph_fsiv.bc'))
-        self.assertTrue(ABSPATH_LIST[1].endswith('/05022_05058pj_fsiv.bc'))
+        self.assertEqual(ABSPATH_LIST[0].name, '04351_05022ph_fsiv.bc')
+        self.assertEqual(ABSPATH_LIST[1].name, '05022_05058pj_fsiv.bc')
 
         F1 = ABSPATH_LIST
         k1 = ['CAS-CK-PREDICTED-V01[9-20]']
@@ -3104,8 +3157,8 @@ class test_spicedb(unittest.TestCase):
         self.assertEqual(F1, ABSPATH_LIST)
 
         self.assertEqual(len(ABSPATH_LIST), 2)
-        self.assertTrue(ABSPATH_LIST[0].endswith('/04351_05022ph_fsiv.bc'))
-        self.assertTrue(ABSPATH_LIST[1].endswith('/05022_05058pj_fsiv.bc'))
+        self.assertEqual(ABSPATH_LIST[0].name, '04351_05022ph_fsiv.bc')
+        self.assertEqual(ABSPATH_LIST[1].name, '05022_05058pj_fsiv.bc')
 
         ########
         ABSPATH_LIST = []
@@ -3379,12 +3432,18 @@ class test_spicedb(unittest.TestCase):
         DEBUG = True
 
         # Function to translate Cassini SPKs, adding "_testing" before suffix
-        # and replacing the leading directory path with 'my_testing/'
+        # and replacing the "reconstructed" directory with "my_testing"
         def translator(filepath):
-          if filepath.endswith('.bsp') and 'RECONSTRUCTED' in filepath.upper():
-            lpref = len(get_spice_path())
-            return 'my_testing/' + filepath[lpref:-4] + '_testing.bsp'
-          return filepath
+            filepath = Path(filepath)
+            s_filepath = str(filepath)
+            if s_filepath.endswith('.bsp') and 'RECONSTRUCTED' in s_filepath.upper():
+                parts = filepath.parts
+                parts = [p if 'RECONSTRUCTED' not in p.upper() else 'my_testing'
+                         for p in parts]
+                new_parts = list(parts[:-1]) + [parts[-1][:-4] + '_testing.bsp']
+                ret = Path(*new_parts)
+                return ret
+            return filepath
 
         # Translator will not affect solar system kernels
         ABSPATH_LIST = []
@@ -3428,11 +3487,11 @@ class test_spicedb(unittest.TestCase):
         self.assertEqual(remainder1, remainder2)
 
         for abspath in originals:
-            self.assertTrue(abspath.endswith('.bsp'))
-            self.assertTrue('CASSINI' in abspath.upper())
+            self.assertTrue(abspath.name.endswith('.bsp'))
+            self.assertTrue('CASSINI' in str(abspath).upper())
 
             newpath = translator(abspath)
-            self.assertTrue(newpath in translated)
+            self.assertTrue(str(newpath) in [str(x) for x in translated])
 
         self.assertTrue(len(translated) == len(originals))
 
@@ -3451,7 +3510,7 @@ class test_spicedb(unittest.TestCase):
         unload_by_type()
 
         for abspath in abspaths2:
-            if abspath.endswith('.bc'):
+            if abspath.name.endswith('.bc'):
                 self.assertNotIn(abspath, abspaths1)
             else:
                 self.assertIn(abspath, abspaths1)

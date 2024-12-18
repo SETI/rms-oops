@@ -5,7 +5,6 @@
 # sets.
 ################################################################################
 import numpy as np
-import os.path
 
 import julian
 import spicedb
@@ -140,26 +139,84 @@ class Galileo(object):
     #===========================================================================
     @staticmethod
     def load_kernels():
-        from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
-        import glob
+        from spicedb import get_spice_filecache_prefix
 
-        kdir = os.path.join(TESTDATA_PARENT_DIRECTORY, '../SPICE/Galileo/')
-        gkdir = os.path.join(TESTDATA_PARENT_DIRECTORY, '../SPICE/General/')
+        SPICE_FILECACHE_PFX = get_spice_filecache_prefix()
 
-        cspyce.furnsh(gkdir + 'LSK/naif0012.tls')
-        cspyce.furnsh(kdir + 'SCLK/mk00062a.tsc')
-        cspyce.furnsh(kdir + 'IK/gll36001.ti')
-        cspyce.furnsh(kdir + 'FK/gll_v0.tf')
-        cspyce.furnsh(kdir + 'SPK/de421.bsp')
-        cspyce.furnsh(kdir + 'SPK/de432s.bsp')
-
-        for ckfile in glob.glob(kdir + 'CK/*.bc'):
-            cspyce.furnsh(ckfile)
-
-        for spkfile in glob.glob(kdir + 'SPK/*.bsp'):
-            cspyce.furnsh(spkfile)
-
-        return
+        paths = SPICE_FILECACHE_PFX.retrieve([
+            'General/LSK/naif0012.tls',
+            'Galileo/SCLK/mk00062a.tsc',
+            'Galileo/IK/gll36001.ti',
+            'Galileo/FK/gll_v0.tf',
+            'Galileo/SPK/de421.bsp',
+            'Galileo/SPK/de432s.bsp',
+            'Galileo/CK/ckc03b_plt.bc',
+            'Galileo/CK/ckc09b_plt.bc',
+            'Galileo/CK/ckc10b_plt.bc',
+            'Galileo/CK/ckc20f_plt.bc',
+            'Galileo/CK/ckc21f_plt.bc',
+            'Galileo/CK/ckc22f_plt.bc',
+            'Galileo/CK/ckc23f_plt.bc',
+            'Galileo/CK/ckc30f_plt.bc',
+            'Galileo/CK/cke04b_plt.bc',
+            'Galileo/CK/cke06b_plt.bc',
+            'Galileo/CK/cke11b_plt.bc',
+            'Galileo/CK/cke12f_plt.bc',
+            'Galileo/CK/cke14f_plt.bc',
+            'Galileo/CK/cke15f_plt.bc',
+            'Galileo/CK/cke16f_plt.bc',
+            'Galileo/CK/cke17f_plt.bc',
+            'Galileo/CK/cke18f_plt.bc',
+            'Galileo/CK/cke19f_plt.bc',
+            'Galileo/CK/cke26f_plt.bc',
+            'Galileo/CK/ckg01b_plt.bc',
+            'Galileo/CK/ckg02b_plt.bc',
+            'Galileo/CK/ckg07b_plt.bc',
+            'Galileo/CK/ckg08b_plt.bc',
+            'Galileo/CK/ckg28f_plt.bc',
+            'Galileo/CK/ckg29f_plt.bc',
+            'Galileo/CK/cki24f_plt.bc',
+            'Galileo/CK/cki25f_plt.bc',
+            'Galileo/CK/cki27f_plt.bc',
+            'Galileo/CK/cki31f_plt.bc',
+            'Galileo/CK/cki32f_plt.bc',
+            'Galileo/CK/ckj0cav3_plt.bc',
+            'Galileo/CK/ckj0cduh_plt.bc',
+            'Galileo/CK/ckj0cv3_plt.bc',
+            'Galileo/CK/ckj0eav3_plt.bc',
+            'Galileo/CK/ckj0ebv3_plt.bc',
+            'Galileo/CK/ckj0ecv3_plt.bc',
+            'Galileo/CK/ckjaap_plt.bc',
+            'Galileo/CK/ckjaav3_plt.bc',
+            'Galileo/CK/ckjabp_plt.bc',
+            'Galileo/CK/ckjabv3_plt.bc',
+            'Galileo/CK/gll_plt_pre_1990_v00.bc',
+            'Galileo/CK/gll_plt_pre_1991_v00.bc',
+            'Galileo/CK/gll_plt_pre_1992_v00.bc',
+            'Galileo/CK/gll_plt_pre_1993_v00.bc',
+            'Galileo/CK/gll_plt_pre_1994_v00.bc',
+            'Galileo/CK/gll_plt_pre_1995_v00.bc',
+            'Galileo/CK/gll_plt_pre_1996_v00.bc',
+            'Galileo/CK/gll_plt_pre_1997_v00.bc',
+            'Galileo/CK/gll_plt_pre_1998_v00.bc',
+            'Galileo/CK/gll_plt_pre_1999_v00.bc',
+            'Galileo/CK/gll_plt_pre_2000_v00.bc',
+            'Galileo/CK/gll_plt_pre_2001_v00.bc',
+            'Galileo/SPK/de421.bsp',
+            'Galileo/SPK/de432s.bsp',
+            'Galileo/SPK/gll_951120_021126_raj2007.bsp',
+            'Galileo/SPK/gll_951120_021126_raj2021.bsp',
+            'Galileo/SPK/s000131a.bsp',
+            'Galileo/SPK/s000615a.bsp',
+            'Galileo/SPK/s020128a.bsp',
+            'Galileo/SPK/s030916a.bsp',
+            'Galileo/SPK/s960730a.bsp',
+            'Galileo/SPK/s970311a.bsp',
+            'Galileo/SPK/s971125a.bsp',
+            'Galileo/SPK/s980326a.bsp',
+        ])
+        for path in paths:
+            cspyce.furnsh(path)
 
     ############################################################################
     # Initialize the kernel lists

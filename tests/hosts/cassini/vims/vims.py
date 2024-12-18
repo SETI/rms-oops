@@ -2,10 +2,7 @@
 # tests/hosts/cassini/vims.py
 ##########################################################################################
 import unittest
-import os.path
 import oops.backplane.gold_master as gm
-
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
 
 
 class Test_Cassini_VIMS_GoldMaster_v1690952775(unittest.TestCase):
@@ -33,8 +30,7 @@ class Test_Cassini_VIMS_GoldMaster_v1690952775(unittest.TestCase):
         """
 
         gm.execute_as_unittest(self,
-                obspath = os.path.join(TESTDATA_PARENT_DIRECTORY,
-                                       'cassini/VIMS/v1793917030_1.qub'),
+                obspath = 'cassini/VIMS/v1793917030_1.qub',
                 index   = None,
                 module  = 'oops.hosts.cassini.vims',
                 planet  = 'SATURN',

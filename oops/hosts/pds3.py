@@ -9,6 +9,8 @@ import pdsparser
 import re
 from pathlib import Path
 
+from filecache import FCPath
+
 #===============================================================================
 def clean_label(lines, cleaner=None):
     """
@@ -28,20 +30,17 @@ def clean_label(lines, cleaner=None):
 def find_label(filespec):
     """Find the PDS3 label corresponding to the given filespec."""
     # Construct candidate label filenames
-    spec = Path(filespec)
-    labelspecs = [
-        spec.with_suffix('.lbl'),
-        spec.with_suffix('.LBL') ]
-    if filespec.upper().endswith('.LBL'):
-        labelspecs.append(filespec)
+    spec = FCPath(filespec)
+    labelspecs = [spec.with_suffix('.lbl'),
+                  spec.with_suffix('.LBL')]
 
     # Check candidates; return first one that exists
     for labelspec in labelspecs:
-        if os.path.isfile(labelspec):
+        if labelspec.is_file():
             return labelspec
 
     # If no successful candidate, assume attached label
-    return filespec
+    return spec
 
 #===============================================================================
 def get_label(filespec, cleaner=None):
@@ -54,13 +53,15 @@ def get_label(filespec, cleaner=None):
                         return a cleaned label.
         no_standard:    If True, the standard cleaners are not used.
     """
-    assert os.path.isfile(filespec), f'Not found: {filespec}'
+    filespec = FCPath(filespec)
+    assert filespec.is_file(), f'Not found: {filespec}'
 
     # Find the label
     labelspec = find_label(filespec)
 
     # Load and clean the PDS label
-    lines = clean_label(pdsparser.PdsLabel.load_file(labelspec), cleaner=cleaner)
+    local_path = labelspec.retrieve()
+    lines = clean_label(pdsparser.PdsLabel.load_file(local_path), cleaner=cleaner)
 
     # Parse the label into a dictionary
     return pdsparser.PdsLabel.from_string(lines).as_dict()
@@ -303,6 +304,9 @@ def fast_dict(label, units=False, strings='concatenate'):
     elif isinstance(label, (str, Path)):    # read the content of a file path
         with open(label, 'r', encoding='latin8') as f:
             lines = f.readlines()
+    elif isinstance(label, FCPath):
+        with label.open(mode='r', encoding='latin8') as f:
+            lines = f.readlines()
     elif isinstance(label, list):           # leave a list alone
         lines = label
     else:
@@ -325,10 +329,9 @@ def fast_dict(label, units=False, strings='concatenate'):
 # UNIT TESTS
 ################################################################################
 import unittest
-import os.path
 
 from oops.hosts                   import pds3
-from oops.unittester_support import TESTDATA_PARENT_DIRECTORY
+from oops.unittester_support import TEST_DATA_PREFIX
 
 #===========================================================================
 def clean_VIMS(lines):
@@ -360,27 +363,27 @@ class Test_PDS3(unittest.TestCase):
 
         # Test extension replacement
         filespec = 'cassini/ISS/W1575634136_1.IMG'
-        label_dict = pds3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
+        label_dict = pds3.get_label(TEST_DATA_PREFIX / filespec)
         self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
 
         # Test .LBL file input
         filespec = 'cassini/ISS/W1575634136_1.LBL'
-        label_dict = pds3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
+        label_dict = pds3.get_label(TEST_DATA_PREFIX / filespec)
         self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
 
         # Test non-existent file
         filespec = 'nofile.crap'
-        self.assertRaises(AssertionError, pds3.get_label, os.path.join(TESTDATA_PARENT_DIRECTORY, filespec))
+        self.assertRaises(AssertionError, pds3.get_label, TEST_DATA_PREFIX / filespec)
 
         # Test Cassini VIMS file
         filespec = 'cassini/VIMS/v1793917030_1.lbl'
-        label_dict = pds3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec),
+        label_dict = pds3.get_label(TEST_DATA_PREFIX / filespec,
                                     cleaner=clean_VIMS)
         self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
 
         # Test Cassini UVIS file
         filespec = 'cassini/UVIS/HSP2014_197_21_29.LBL'
-        label_dict = pds3.get_label(os.path.join(TESTDATA_PARENT_DIRECTORY, filespec),
+        label_dict = pds3.get_label(TEST_DATA_PREFIX / filespec,
                                                  cleaner=clean_UVIS)
         self.assertTrue(label_dict['PDS_VERSION_ID'] == 'PDS3')
 

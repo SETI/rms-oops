@@ -19,8 +19,6 @@ jobs:
         # MacOS: Python 3.8-3.10 does not currently work on MacOS.
         include:
           - os: self-hosted-linux
-            python-version: "3.8"
-          - os: self-hosted-linux
             python-version: "3.9"
           - os: self-hosted-linux
             python-version: "3.10"
@@ -28,12 +26,14 @@ jobs:
             python-version: "3.11"
           - os: self-hosted-linux
             python-version: "3.12"
+          - os: self-hosted-linux
+            python-version: "3.13"
           - os: self-hosted-macos
             python-version: "3.11"
           - os: self-hosted-macos
             python-version: "3.12"
-          - os: self-hosted-windows
-            python-version: "3.8"
+          - os: self-hosted-macos
+            python-version: "3.13"
           - os: self-hosted-windows
             python-version: "3.9"
           - os: self-hosted-windows
@@ -42,6 +42,8 @@ jobs:
             python-version: "3.11"
           - os: self-hosted-windows
             python-version: "3.12"
+          - os: self-hosted-windows
+            python-version: "3.13"
       fail-fast: false
     steps:
       - name: Checkout
@@ -60,8 +62,8 @@ jobs:
         shell: bash
 
       - name: Upload coverage report to codecov
-        uses: codecov/codecov-action@v4
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v5
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
