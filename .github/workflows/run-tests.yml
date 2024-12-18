@@ -8,7 +8,7 @@ on:
   push:
     branches: [ main ]
   schedule:
-    - cron: "00 09 * * *"   # 1am PST, 2am PDT
+    - cron: "21 11 * * 0"
 
 jobs:
   test:
@@ -32,6 +32,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: rms-node
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
 
       - name: Test with coverage
         run: |
