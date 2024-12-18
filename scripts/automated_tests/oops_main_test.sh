@@ -1,17 +1,12 @@
 #!/bin/bash
 
-source ~/oops_runner_secrets
-if [ $? -ne 0 ]; then exit -1; fi
+# Only read in the standard OOPS_RESOURCES if it isn't already in the
+# environment
+if [[ -z ${OOPS_RESOURCES+x} ]]; then
+    source ~/oops_runner_secrets
+    if [ $? -ne 0 ]; then exit -1; fi
+fi
 
-# Can't use -v because it doesn't work on MacOS
-if [[ -z ${SPICE_PATH+x} ]]; then
-    echo "SPICE_PATH is not set"
-    exit -1
-fi
-if [[ -z ${SPICE_SQLITE_DB_NAME+x} ]]; then
-    echo "SPICE_SQLITE_DB_NAME is not set"
-    exit -1
-fi
 if [[ -z ${OOPS_RESOURCES+x} ]]; then
     echo "OOPS_RESOURCES is not set"
     exit -1
