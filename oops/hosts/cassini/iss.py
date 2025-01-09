@@ -39,7 +39,7 @@ def from_file(filespec, fast_distortion=True,
     # Load the VICAR file
     filespec = FCPath(filespec)
     local_path = filespec.retrieve()
-    vic = vicar.VicarImage.from_file(local_path)
+    vic = vicar.VicarImage.from_file(local_path, strict=False)
     vicar_dict = vic.as_dict()
 
     # Get key information from the header
@@ -294,7 +294,7 @@ class ISS(object):
 
     #===========================================================================
     @staticmethod
-    def initialize(ck='reconstructed', planets=None, offset_wac=True, asof=None,
+    def initialize(ck='reconstructed', planets=None, offset_wac=False, asof=None,
                    spk='reconstructed', gapfill=True,
                    mst_pck=True, irregulars=True):
         """Initialize key information about the ISS instrument.

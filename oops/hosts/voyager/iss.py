@@ -181,9 +181,9 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
                                planet = planet,
                                target = target)
 
-    if factor is not None:
-        result.insert_subfield('extended_calib',
-                               oops.calib.ExtendedSource('I/F', factor))
+    # TODO if factor is not None:
+    #     result.insert_subfield('extended_calib',
+    #                            oops.calib.ExtendedSource('I/F', factor))
 
     return result
 

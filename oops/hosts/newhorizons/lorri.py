@@ -320,10 +320,10 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
             point_factor = (1. / texp / spectral_irradiance / fov.uv_area *
                             np.pi * solar_range**2 / F_solar)
 
-            extended_calib[spectral_name] = oops.calib.ExtendedSource('I/F',
-                                                            extended_factor)
-            point_calib[spectral_name] = oops.calib.PointSource('I/F',
-                                                            point_factor, fov)
+            # TODO extended_calib[spectral_name] = oops.calib.ExtendedSource('I/F',
+            #                                                 extended_factor)
+            # point_calib[spectral_name] = oops.calib.PointSource('I/F',
+            #                                                 point_factor, fov)
 
         snapshot.insert_subfield('point_calib', point_calib)
         snapshot.insert_subfield('extended_calib', extended_calib)
