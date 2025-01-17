@@ -418,50 +418,6 @@ def sub_solar_latitude(self, event_key, lat_type='centric'):
     latitude = neg_arr_ap.latitude(recursive=self.ALL_DERIVS)
     return self.register_backplane(key, latitude)
 
-#===============================================================================
-def _center_coordinates(self, gridless_key):
-    """Compute (u,v) coordinates of the center of the disk.
-
-    Input:
-        event_key       key defining the event on the body's path.
-        gridless_key    gridless event key
-    """
-    event = self.get_gridless_event(gridless_key, arrivals=True)
-    neg_arr_ap = event.neg_arr_ap
-    return self.obs.fov.uv_from_los(neg_arr_ap)
-
-#===============================================================================
-def center_x_coordinate(self, event_key):
-    """Gridless u coordinate of the center of the disk.
-
-    Input:
-        event_key       key defining the event on the body's path.
-    """
-
-    gridless_key = Backplane.gridless_event_key(event_key)
-    key = ('center_x_coordinate', gridless_key)
-    if key in self.backplanes:
-        return self.get_backplane(key)
-
-    uv = self._center_coordinates(gridless_key)
-    return self.register_backplane(key, uv.to_scalars()[0])
-
-#===============================================================================
-def center_y_coordinate(self, event_key):
-    """Gridless v coordinate of the center of the disk.
-
-    Input:
-        event_key       key defining the event on the body's path.
-    """
-
-    gridless_key = Backplane.gridless_event_key(event_key)
-    key = ('center_y_coordinate', gridless_key)
-    if key in self.backplanes:
-        return self.get_backplane(key)
-
-    uv = self._center_coordinates(gridless_key)
-    return self.register_backplane(key, uv.to_scalars()[1])
-
 ################################################################################
 
 # Add these functions to the Backplane module
