@@ -957,9 +957,6 @@ class Backplane(object):
         starting with the event_key.
         """
 
-#        if backplane_key == ('ring_longitude', 'JUPITER:RING', 'aries'):
-#            from IPython import embed; print('+++////////++++++++++'); embed()
-
         if isinstance(backplane_key, str):
             backplane_key = (backplane_key,)
 

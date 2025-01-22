@@ -26,8 +26,7 @@ def radius_in_pixels(self, event_key):
     # compute apparent enclosing radius
     (body, mod) = Backplane.get_body_and_modifier(gridless_key[1])
     if mod == 'RING':
-#        body = body.children[-1]    # this works, but uses a likely bad assumption
-        body = body.ring_system_body # this is better, but uses a new attribute
+        body = body.ring_system_body
     radius = body.radius/distance / self.obs.fov.uv_scale.values[0]
 
     return self.register_backplane(key, radius)
@@ -45,34 +44,21 @@ def _center_coordinates(self, gridless_key):
     return self.obs.uv_from_path(body.path)
 
 #===============================================================================
-def center_x_coordinate(self, event_key):
-    """Gridless u coordinate of the center of the disk.
-
-    Input:
-        event_key       key defining the event on the body's path.
-    """
-    gridless_key = Backplane.gridless_event_key(event_key)
-    key = ('center_x_coordinate', gridless_key)
-    if key in self.backplanes:
-        return self.get_backplane(key)
-
-    uv = self._center_coordinates(gridless_key)
-    return self.register_backplane(key, uv.to_scalars()[0])
-
-#===============================================================================
-def center_y_coordinate(self, event_key):
+def center_coordinate(self, event_key, direction="x"):
     """Gridless v coordinate of the center of the disk.
 
     Input:
         event_key       key defining the event on the body's path.
+        direction       "x" or "y".
     """
     gridless_key = Backplane.gridless_event_key(event_key)
-    key = ('center_y_coordinate', gridless_key)
+    key = ('center_coordinate', gridless_key) + (direction,)
     if key in self.backplanes:
         return self.get_backplane(key)
 
     uv = self._center_coordinates(gridless_key)
-    return self.register_backplane(key, uv.to_scalars()[1])
+    index = 0 if direction == "x" else 1
+    return self.register_backplane(key, uv.to_scalars()[index])
 
 ################################################################################
 
