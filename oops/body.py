@@ -310,6 +310,7 @@ class Body(object):
         self.ring_is_retrograde = False
         self.ring_pole = None
         self.ring_body = None
+        self.ring_system_body = None
         self.is_ring = False
         self.invariable_pole = None
         self.invariable_frame = None
@@ -1122,6 +1123,7 @@ class Body(object):
 
         ring = Body.define_ring('JUPITER', 'JUPITER_RING_SYSTEM',
                                 JUPITER_MAIN_RING_LIMIT, [], is_standard=True)
+        Body.BODY_REGISTRY['JUPITER'].ring_system_body = ring
         ring.backplane_id = 'JUPITER:RING'
         ring.backplane_limits = (0., JUPITER_MAIN_RING_LIMIT)
         ring.unbounded_surface = unbounded_ring
@@ -1183,6 +1185,7 @@ class Body(object):
 
         ring = Body.define_ring('SATURN', 'SATURN_RING_SYSTEM',
                                 SATURN_F_RING_LIMIT, [], is_standard=True)
+        Body.BODY_REGISTRY['SATURN'].ring_system_body = ring
         ring.backplane_id = 'SATURN:RING'
         ring.backplane_limits = (0., SATURN_F_RING_LIMIT)
         ring.unbounded_surface = unbounded_ring
@@ -1270,6 +1273,7 @@ class Body(object):
         ring = Body.define_ring('URANUS', 'URANUS_RING_SYSTEM',
                                 URANUS_EPSILON_LIMIT, [],
                                 retrograde=True, is_standard=True)
+        Body.BODY_REGISTRY['URANUS'].ring_system_body = ring
         ring.backplane_id = 'URANUS:RING'
         ring.backplane_limits = (0., URANUS_EPSILON_LIMIT)
         ring.unbounded_surface = unbounded_ring
@@ -1375,6 +1379,7 @@ class Body(object):
         ring = Body.define_ring('NEPTUNE', 'NEPTUNE_RING_SYSTEM',
                                 NEPTUNE_ADAMS_LIMIT, [], pole=pole,
                                 is_standard=True)
+        Body.BODY_REGISTRY['NEPTUNE'].ring_system_body = ring
         ring.backplane_id = 'NEPTUNE:RING'
         ring.backplane_limits = (0., NEPTUNE_ADAMS_LIMIT)
         ring.unbounded_surface = unbounded_ring

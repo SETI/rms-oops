@@ -26,14 +26,15 @@ def radius_in_pixels(self, event_key):
     # compute apparent enclosing radius
     (body, mod) = Backplane.get_body_and_modifier(gridless_key[1])
     if mod == 'RING':
-        body = body.children[-1]    ### PROB NOT CORRECT!
+#        body = body.children[-1]    # this works, but uses a likely bad assumption
+        body = body.ring_system_body # this is better, but uses a new attribute
     radius = body.radius/distance / self.obs.fov.uv_scale.values[0]
 
     return self.register_backplane(key, radius)
 
 #===============================================================================
 def _center_coordinates(self, gridless_key):
-    """Compute (u,v) coordinates of the center of the disk.
+    """Internal function to compute (u,v) coordinates of the center of the disk.
 
     Input:
         event_key       key defining the event on the body's path.
