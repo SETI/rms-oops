@@ -8,7 +8,7 @@ from oops.constants import C
 from oops.backplane import Backplane
 
 #===============================================================================
-def radius_in_pixels(self, event_key):
+def radius_in_pixels(self, event_key, radius_in_km=0):
     """Gridless approximate apparent radius of the body in pixels.
 
     Input:
@@ -24,10 +24,10 @@ def radius_in_pixels(self, event_key):
     distance = event._dep_lt_*C
 
     # compute apparent enclosing radius
-    (body, mod) = Backplane.get_body_and_modifier(gridless_key[1])
-    if mod == 'RING':
-        body = body.ring_system_body
-    radius = body.radius/distance / self.obs.fov.uv_scale.values[0]
+    if radius_in_km==0:
+        (body, mod) = Backplane.get_body_and_modifier(gridless_key[1])
+        radius_in_km = body.radius
+    radius = radius_in_km/distance / self.obs.fov.uv_scale.values[0]
 
     return self.register_backplane(key, radius)
 
