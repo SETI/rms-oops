@@ -109,7 +109,8 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
         factor = None
 
     # Interpret the GEOMED parameter
-    if 'GEOMA' in vic['TASK']:
+    if 'GEOM' in imagespec.name:
+    # if 'GEOMA' in vic['TASK']:
         assert vic.data_2d.shape == (1000,1000)
         fovs = {
             'NAC': ISS.fovs['NAC_GEOMED'],
