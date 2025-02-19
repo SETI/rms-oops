@@ -44,20 +44,20 @@ def _center_coordinates(self, gridless_key):
     return self.obs.uv_from_path(body.path)
 
 #===============================================================================
-def center_coordinate(self, event_key, direction="x"):
+def center_coordinate(self, event_key, axis="x"):
     """Gridless v coordinate of the center of the disk.
 
     Input:
         event_key       key defining the event on the body's path.
-        direction       "x" or "y".
+        axis            "x" or "y".
     """
     gridless_key = Backplane.gridless_event_key(event_key)
-    key = ('center_coordinate', gridless_key) + (direction,)
+    key = ('center_coordinate', gridless_key) + (axis,)
     if key in self.backplanes:
         return self.get_backplane(key)
 
     uv = self._center_coordinates(gridless_key)
-    index = 0 if direction == "x" else 1
+    index = 0 if axis == "x" else 1
     return self.register_backplane(key, uv.to_scalars()[index])
 
 ################################################################################

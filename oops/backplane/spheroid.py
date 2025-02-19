@@ -4,6 +4,7 @@
 
 from polymath       import Scalar
 from oops.backplane import Backplane
+from oops.constants import C
 
 def longitude(self, event_key, reference='iau', direction='west',
                                minimum=0, lon_type='centric'):
