@@ -30,6 +30,11 @@ class LinearCoordPath(Path):
                         leave the path unregistered.
         """
 
+        if self.surface.IS_VIRTUAL:
+            raise NotImplementedError('LinearCoordPath cannot be defined for '
+                                      'virtual surface class '
+                                      + type(self.surface).__name__)
+
         self.surface = surface
         self.coords = [Scalar.as_scalar(c) for c in coords]
         self.coords_dot = [Scalar.as_scalar(c) for c in coords_dot]
@@ -74,14 +79,7 @@ class LinearCoordPath(Path):
             new_coords.append(coord)
 
         new_coords = tuple(new_coords)
-
-        if self.surface.IS_VIRTUAL:
-            obs = self.obs_path.event_at_time(time, quick=quick).pos
-        else:
-            obs = None
-
-        pos = self.surface.vector3_from_coords(new_coords, obs, derivs=True)
-
+        pos = self.surface.vector3_from_coords(new_coords, derivs=True)
         return Event(time, pos, self.origin, self.frame)
 
 ################################################################################

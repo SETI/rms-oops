@@ -26,22 +26,22 @@ class CoordPath(Path):
                         leave the path unregistered.
         """
 
+        if surface.IS_VIRTUAL:
+            raise NotImplementedError('CoordPath cannot be defined for virtual '
+                                      'surface class '
+                                      + type(surface).__name__)
+
         self.surface = surface
         self.coords = tuple(Scalar(x) for x in coords)
         self.obs_path = None if obs is None else Path.as_path(obs)
-
-        if not self.surface.IS_VIRTUAL:
-            self.pos = self.surface.vector3_from_coords(self.coords)
-        else:
-            self.pos = None
+        self.pos = self.surface.vector3_from_coords(self.coords)
 
         # Required attributes
         self.path_id = path_id
         self.origin  = self.surface.origin
         self.frame   = self.origin.frame
         self.keys    = set()
-        self.shape   = Qube.broadcasted_shape(self.surface, self.obs_path,
-                                              *self.coords)
+        self.shape   = Qube.broadcasted_shape(self.obs_path, *self.coords)
 
         # Update waypoint and path_id; register only if necessary
         self.register()
@@ -66,11 +66,17 @@ class CoordPath(Path):
                         and velocity on the path.
         """
 
-        if self.surface.IS_VIRTUAL:
-            obs_event = self.obs_path.event_at_time(time, quick=quick)
-            self.pos = self.surface.vector3_from_coords(self.coords,
-                                                        obs_event.pos)
-
         return Event(time, self.pos, self.origin, self.frame)
+
+    #===========================================================================
+    def _solve_photon(self, link, sign, derivs=False, guess=None, antimask=None,
+                            quick={}, converge={}):
+        """Override of the default method to avoid extra iteration."""
+
+        return self.surface._solve_photon_by_coords(link, self.coords, sign,
+                                                    derivs=derivs, guess=guess,
+                                                    antimask=antimask,
+                                                    quick=quick,
+                                                    converge=converge)
 
 ################################################################################
