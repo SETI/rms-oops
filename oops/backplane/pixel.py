@@ -13,6 +13,8 @@ def radius_in_pixels(self, event_key, radius_in_km=0):
 
     Input:
         event_key       key defining the event on the body's path.
+        radius_in_km    If nonzero, override the radius of the body referred to
+                        in the event key.
     """
     gridless_key = Backplane.gridless_event_key(event_key)
     key = ('radius_in_pixels', gridless_key)
@@ -37,7 +39,7 @@ def _center_coordinates(self, gridless_key):
 
     Input:
         event_key       key defining the event on the body's path.
-        gridless_key    gridless event key
+        gridless_key    gridless event key.
     """
     
     body = oops.Body.lookup(gridless_key[1])

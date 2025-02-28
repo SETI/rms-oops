@@ -198,7 +198,6 @@ class NIRCam(JWST):
         subfields['texp'] = subfields['headers'][0]['EFFEXPTM']
         
         
-#        from IPython import embed; print('+++++++++++++'); embed()
         return oops.obs.Snapshot(('v','u'), cadence.time[0], subfields['texp'],
                                fov, path=path, frame=frame, dict=subfields)  
 

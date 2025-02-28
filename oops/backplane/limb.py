@@ -20,7 +20,7 @@ def limb_altitude(self, event_key, zmin=None, zmax=None, scaled=False):
         event_key       key defining the limb surface event.
         zmin            lower limit on altitude; lower values are masked.
         zmax            upper limit on altitude.
-        scaled          if True, zmin and zmax are in units of the maximum body radius
+        scaled          if True, zmin and zmax are in units of the maximum body radius.
     """
 
     event_key = Backplane.standardize_event_key(event_key, default='LIMB')
