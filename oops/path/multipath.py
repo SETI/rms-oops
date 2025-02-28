@@ -15,7 +15,7 @@ class MultiPath(Path):
     PATH_IDS = {}
 
     #===========================================================================
-    def __init__(self, paths, origin=None, frame=None, path_id='+',
+    def __init__(self, paths, origin=None, frame=None, path_id=None,
                        unpickled=False):
         """Constructor for a MultiPath Path.
 

@@ -104,6 +104,23 @@ class Ansa(Surface):
                     ringplane=ringplane, radii=ringplane.radii)
 
     #===========================================================================
+    @staticmethod
+    def for_body(body):
+        """Construct an Ansa Surface associated with a given body, ignoring any
+        modes.
+
+        Input:
+            body        a ring body to which this ansa surface is to be defined.
+        """
+
+        # Identify the ring body
+        if body.surface.COORDINATE_TYPE != 'polar':
+            body = body.ring_body
+
+        return Ansa(body.path, body.frame, gravity=body.gravity,
+                    ringplane=body.surface, radii=body.surface.radii)
+
+    #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
                                   derivs=False, hints=None):
         """Surface coordinates associated with a position vector.
