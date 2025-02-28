@@ -10,6 +10,7 @@ import oops.backplane.distance
 import oops.backplane.lighting
 import oops.backplane.limb
 import oops.backplane.orbit
+import oops.backplane.pixel
 import oops.backplane.pole
 import oops.backplane.resolution
 import oops.backplane.ring

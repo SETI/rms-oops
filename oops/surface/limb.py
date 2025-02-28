@@ -22,8 +22,7 @@ class Limb(Surface):
         lat     latitude at the ground point beneath the limb point, using the
                 same definition as that of the associated spheroid or ellipsoid.
         z       the elevation above the surface, as an actual distance measured
-                normal to the ring plane. Note that this definition differs from
-                that used by the spheroid and ellipsoid surface.
+                normal to the surface.
     """
 
     COORDINATE_TYPE = 'limb'
