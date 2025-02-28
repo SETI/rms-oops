@@ -109,7 +109,7 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
         factor = None
 
     # Interpret the GEOMED parameter
-    if 'GEOMA' in vic['TASK']:
+    if 'GEOMA' in vic['TASK+']:
         assert vic.data_2d.shape == (1000,1000)
         fovs = {
             'NAC': ISS.fovs['NAC_GEOMED'],
@@ -179,11 +179,13 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
                                detector = camera,
                                filter = filter,
                                planet = planet,
-                               target = target)
+                               target = target,
+                               filespec = filespec,
+                               basename = filespec.name)
 
-    if factor is not None:
-        result.insert_subfield('extended_calib',
-                               oops.calib.ExtendedSource('I/F', factor))
+    # TODO if factor is not None:
+    #     result.insert_subfield('extended_calib',
+    #                            oops.calib.ExtendedSource('I/F', factor))
 
     return result
 

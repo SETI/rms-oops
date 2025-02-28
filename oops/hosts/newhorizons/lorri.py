@@ -304,29 +304,29 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         extended_calib = {}
         point_calib = {}
 
-        for spectral_name in ['SOLAR', 'PLUTO', 'PHOLUS', 'CHARON', 'JUPITER']:
+        # for spectral_name in ['SOLAR', 'PLUTO', 'PHOLUS', 'CHARON', 'JUPITER']:
 
-            # Extended source
-            spectral_radiance = header['R' + spectral_name]
+        #     # Extended source
+        #     spectral_radiance = header['R' + spectral_name]
 
-            # Point source
-            spectral_irradiance = header['P' + spectral_name]
+        #     # Point source
+        #     spectral_irradiance = header['P' + spectral_name]
 
-            F_solar = 176.  # pivot 6076.2 A at 1 AU
+        #     F_solar = 176.  # pivot 6076.2 A at 1 AU
 
-            # Conversion to I/F
-            extended_factor = (1. / texp / spectral_radiance * np.pi *
-                               solar_range**2 / F_solar)
-            point_factor = (1. / texp / spectral_irradiance / fov.uv_area *
-                            np.pi * solar_range**2 / F_solar)
+        #     # Conversion to I/F
+        #     extended_factor = (1. / texp / spectral_radiance * np.pi *
+        #                        solar_range**2 / F_solar)
+        #     point_factor = (1. / texp / spectral_irradiance / fov.uv_area *
+        #                     np.pi * solar_range**2 / F_solar)
 
-            extended_calib[spectral_name] = oops.calib.ExtendedSource('I/F',
-                                                            extended_factor)
-            point_calib[spectral_name] = oops.calib.PointSource('I/F',
-                                                            point_factor, fov)
+        #     # TODO extended_calib[spectral_name] = oops.calib.ExtendedSource('I/F',
+        #     #                                                 extended_factor)
+        #     # point_calib[spectral_name] = oops.calib.PointSource('I/F',
+        #     #                                                 point_factor, fov)
 
-        snapshot.insert_subfield('point_calib', point_calib)
-        snapshot.insert_subfield('extended_calib', extended_calib)
+        # snapshot.insert_subfield('point_calib', point_calib)
+        # snapshot.insert_subfield('extended_calib', extended_calib)
 
     if include_headers:
         headers = []

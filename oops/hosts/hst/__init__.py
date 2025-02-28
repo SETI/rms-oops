@@ -538,6 +538,9 @@ class HST(object):
         if include_headers:
             snapshot.insert_subfield('headers', self.get_headers(hdulist, **parameters))
 
+        model = parameters.get('solar_model', 'STIS')
+        snapshot.insert_subfield('bandpass', self.bandpass(hdulist, model=model,
+                                                           **parameters))
         return snapshot
 
     ######################################################################################
@@ -905,6 +908,13 @@ class HST(object):
                                                             sun_range=sun_range)
 
         return solar_f_mks_per_micron * solar.TO_CGS * solar.TO_PER_ANGSTROM
+
+    def bandpass(self, hdulist, model='STIS', **parameters):
+        bandpass_ = self.load_syn_throughput(hdulist, **parameters)
+        bandpass_ = tab.Tabulation(bandpass_.x * 1.e-4, bandpass_.y)
+
+        sun = solar.flux_density(model=model, units='W/m^2/um', xunits='um')
+        return sun * bandpass_
 
     def compare_pivot_mean(self, hdulist):
         """A tuple containing the pivot wavelength as derived from the SYN file

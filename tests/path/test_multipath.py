@@ -31,7 +31,7 @@ class Test_MultiPath(unittest.TestCase):
         earth = SpicePath("EARTH", "SSB")
         moon  = SpicePath("MOON", "EARTH")
 
-        test = MultiPath([sun,earth,moon], "SSB")
+        test = MultiPath([sun,earth,moon], "SSB", path_id='+')
 
         self.assertEqual(test.path_id, "SUN+others")
         self.assertEqual(test.shape, (3,))
