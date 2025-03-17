@@ -2,22 +2,23 @@
 # oops/backplanes/pixel.py: pixel coordinate backplanes
 ################################################################################
 
-import oops
-
 from oops.constants import C
 from oops.backplane import Backplane
+from oops.body import Body
 
 #===============================================================================
-def radius_in_pixels(self, event_key, radius_in_km=0):
-    """Gridless approximate apparent radius of the body in pixels.
+def body_diameter_in_pixels(self, event_key, radius=0):
+    """Gridless approximate apparent diameter of the body in pixels.
 
     Input:
         event_key       key defining the event on the body's path.
-        radius_in_km    If nonzero, override the radius of the body referred to
+        radius          If nonzero, override the radius of the body referred to
                         in the event key.
     """
     gridless_key = Backplane.gridless_event_key(event_key)
-    key = ('radius_in_pixels', gridless_key)
+
+
+    key = ('body_diameter_in_pixels', gridless_key, radius)
     if key in self.backplanes:
         return self.get_backplane(key)
 
@@ -26,24 +27,12 @@ def radius_in_pixels(self, event_key, radius_in_km=0):
     distance = event._dep_lt_*C
 
     # compute apparent enclosing radius
-    if radius_in_km==0:
+    if radius==0:
         (body, mod) = Backplane.get_body_and_modifier(gridless_key[1])
-        radius_in_km = body.radius
-    radius = radius_in_km/distance / self.obs.fov.uv_scale.values[0]
+        radius = body.radius
+    radius = radius/distance / self.obs.fov.uv_scale.values[0] ### only good for snapshots
 
-    return self.register_backplane(key, radius)
-
-#===============================================================================
-def _center_coordinates(self, gridless_key):
-    """Internal function to compute (u,v) coordinates of the center of the disk.
-
-    Input:
-        event_key       key defining the event on the body's path.
-        gridless_key    gridless event key.
-    """
-    
-    body = oops.Body.lookup(gridless_key[1])
-    return self.obs.uv_from_path(body.path)
+    return 2*self.register_backplane(key, radius)
 
 #===============================================================================
 def center_coordinate(self, event_key, axis="x"):
@@ -53,12 +42,18 @@ def center_coordinate(self, event_key, axis="x"):
         event_key       key defining the event on the body's path.
         axis            "x" or "y".
     """
+    if axis not in {'x', 'y'}:
+        raise ValueError('Invalid axis: ' + repr(axis))
+
     gridless_key = Backplane.gridless_event_key(event_key)
-    key = ('center_coordinate', gridless_key) + (axis,)
+
+    key = ('center_coordinate', gridless_key, axis)
     if key in self.backplanes:
         return self.get_backplane(key)
 
-    uv = self._center_coordinates(gridless_key)
+    body = Body.lookup(gridless_key[1])
+    uv = self.obs.uv_from_path(body.path)
+
     index = 0 if axis == "x" else 1
     return self.register_backplane(key, uv.to_scalars()[index])
 

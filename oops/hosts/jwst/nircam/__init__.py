@@ -198,10 +198,6 @@ class NIRCam(JWST):
         subfields['texp'] = subfields['headers'][0]['EFFEXPTM']
         
         
-        return oops.obs.Snapshot(('v','u'), cadence.time[0], subfields['texp'],
-                               fov, path=path, frame=frame, dict=subfields)  
-
-
         return oops.obs.TimedImage(axes=('vt','u'), cadence=cadence,
                                    fov=fov, path=path, frame=frame,
                                    **subfields)

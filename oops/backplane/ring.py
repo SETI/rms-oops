@@ -3,7 +3,6 @@
 ################################################################################
 
 import numpy as np
-import oops
 
 from polymath       import Pair, Qube, Scalar
 from oops.backplane import Backplane
@@ -655,8 +654,8 @@ def ring_radial_resolution(self, event_key):
     return self.register_backplane(key, resolution)
 
 #===============================================================================
-def _longitudinal_resolution(self, event_key, format="deg"):
-    """Projected longitudinal resolution in radians at the ring intercept point.
+def ring_angular_resolution(self, event_key, format="deg"):
+    """Projected angular resolution in radians/pixel at the ring intercept.
 
     Input:
         event_key       key defining the ring surface event. Alternatively, a
@@ -666,85 +665,11 @@ def _longitudinal_resolution(self, event_key, format="deg"):
         format          longitude representation; "deg" or "km"
     """
 
-    event = self.get_surface_event(event_key, derivs=True)
-    if event.surface.COORDINATE_TYPE != 'polar':
-        raise ValueError('invalid coordinate type for ring geometry: '
-                         + event.surface.COORDINATE_TYPE)
-
-    longitude = event.coord2
-    dlon_duv = longitude.d_dlos.chain(self.dlos_duv)
-    resolution = dlon_duv.join_items(Pair).norm()
-    
-    if format == "km":
-        resolution *= event.coord1
-    return resolution
-
-#===============================================================================
-def ring_longitudinal_resolution(self, event_key):
-    """Projected longitudinal resolution in deg/pixel at the ring intercept point.
-
-    Input:
-        event_key       key defining the ring surface event. Alternatively, a
-                        ring_radius or radial_mode backplane key, in which case
-                        this backplane inherits the mask of the given backplane
-                        array.
-    """
-
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
                                                      default='RING')
 
-    key = ('ring_longitudinal_resolution', event_key)
-    if backplane_key:
-        return self._remasked_backplane(key, backplane_key)
-
-    if key in self.backplanes:
-        return self.get_backplane(key)
-
-    resolution = self._longitudinal_resolution(event_key)
-    return self.register_backplane(key, resolution)
-
-#===============================================================================
-def ring_longitudinal_resolution_km(self, event_key):
-    """Projected longitudinal resolution in km/pixel at the ring intercept point.
-
-    Input:
-        event_key       key defining the ring surface event. Alternatively, a
-                        ring_radius or radial_mode backplane key, in which case
-                        this backplane inherits the mask of the given backplane
-                        array.
-    """
-
-    (event_key,
-     backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
-                                                     default='RING')
-
-    key = ('ring_longitudinal_resolution_km', event_key)
-    if backplane_key:
-        return self._remasked_backplane(key, backplane_key)
-
-    if key in self.backplanes:
-        return self.get_backplane(key)
-
-    resolution = self._longitudinal_resolution(event_key, format="km")
-    return self.register_backplane(key, resolution)
-
-#===============================================================================
-def ring_angular_resolution(self, event_key):
-    """Projected angular resolution in radians/pixel at the ring intercept.
-
-    Input:
-        event_key       key defining the ring surface event. Alternatively, a
-                        ring_radius or radial_mode backplane key, in which case
-                        this backplane inherits the mask of the given backplane
-                        array.
-    """
-
-    (event_key,
-     backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
-                                                     default='RING')
-
-    key = ('ring_angular_resolution', event_key)
+    key = ('ring_angular_resolution', event_key, format)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
 
@@ -761,6 +686,8 @@ def ring_angular_resolution(self, event_key):
     dlon_duv = longitude.d_dlos.chain(self.dlos_duv)
     resolution = dlon_duv.join_items(Pair).norm()
 
+    if format == "km":
+        resolution *= event.coord1
     return self.register_backplane(key, resolution)
 
 #===============================================================================

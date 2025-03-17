@@ -24,9 +24,6 @@ def limb_altitude(self, event_key, zmin=None, zmax=None, scaled=False):
     """
 
     event_key = Backplane.standardize_event_key(event_key, default='LIMB')
-    key = ('limb_altitude', event_key, zmin, zmax)
-    if key in self.backplanes:
-        return self.get_backplane(key)
 
     if scaled:
         body = self.get_body_and_modifier(event_key[-1])[0]
@@ -35,7 +32,11 @@ def limb_altitude(self, event_key, zmin=None, zmax=None, scaled=False):
             zmin = zmin * radius
         if zmin is not None:
             zmax = zmax * radius
-    
+
+    key = ('limb_altitude', event_key, zmin, zmax)
+    if key in self.backplanes:
+        return self.get_backplane(key)
+
     default_key = ('limb_altitude', event_key, None, None)
     if default_key not in self.backplanes:
         self._fill_limb_intercepts(event_key)
