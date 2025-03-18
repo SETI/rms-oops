@@ -654,7 +654,7 @@ def ring_radial_resolution(self, event_key):
     return self.register_backplane(key, resolution)
 
 #===============================================================================
-def ring_angular_resolution(self, event_key, format="deg"):
+def ring_angular_resolution(self, event_key, units="rad"):
     """Projected angular resolution in radians/pixel at the ring intercept.
 
     Input:
@@ -662,14 +662,16 @@ def ring_angular_resolution(self, event_key, format="deg"):
                         ring_radius or radial_mode backplane key, in which case
                         this backplane inherits the mask of the given backplane
                         array.
-        format          longitude representation; "deg" or "km"
+        units           longitude representation; "rad" or "km"
     """
+
+    assert units.lower() in ["rad", "km"]
 
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
                                                      default='RING')
 
-    key = ('ring_angular_resolution', event_key, format)
+    key = ('ring_angular_resolution', event_key, units)
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
 
@@ -686,7 +688,7 @@ def ring_angular_resolution(self, event_key, format="deg"):
     dlon_duv = longitude.d_dlos.chain(self.dlos_duv)
     resolution = dlon_duv.join_items(Pair).norm()
 
-    if format == "km":
+    if units == "km":
         resolution *= event.coord1
     return self.register_backplane(key, resolution)
 
