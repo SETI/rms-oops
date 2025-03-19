@@ -216,14 +216,12 @@ class Metadata(object):
         # Window
         self.window = None
         if 'CUT_OUT_WINDOW' in meta_dict:
-            window = np.array(meta_dict['CUT_OUT_WINDOW'])
-            
+            window = meta_dict['CUT_OUT_WINDOW']
+
             # check for [-1,-1,-1,-1].  This is the value written in the 
             # supplemental index when there is no CUT_OUT_WINDOW in the label.
-            if np.all(window != -1):
-                if np.any(window == -1):
-                    from IPython import embed; print('+++++++******++++++'); embed()
-                self.window = np.array(meta_dict['CUT_OUT_WINDOW'])
+            if window.tolist() != [-1,-1,-1,-1]:
+                self.window = window
                 self.window_origin = self.window[0:2]-1
                 self.window_shape = self.window[2:]
                 self.window_uv_origin = np.flip(self.window_origin)
