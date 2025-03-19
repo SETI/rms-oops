@@ -54,14 +54,15 @@ def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
     return 2*self.register_backplane(key, radius_in_pixels)
 
 #===============================================================================
-def center_coordinate(self, event_key, axis="x"):
+def center_coordinate(self, event_key, axis="u"):
     """Gridless coordinate of the center of the disk.
 
     Input:
         event_key       key defining the event on the body's path.
-        axis            "x" or "y".
+        axis            "u" (horizonatal pixel direction) or "v" (vertical
+                        pixel direction).
     """
-    if axis not in {'x', 'y'}:
+    if axis not in {'u', 'v'}:
         raise ValueError('Invalid axis: ' + repr(axis))
 
     gridless_key = Backplane.gridless_event_key(event_key)
@@ -73,7 +74,7 @@ def center_coordinate(self, event_key, axis="x"):
     body = Body.lookup(gridless_key[1])
     uv = self.obs.uv_from_path(body.path)
 
-    index = 0 if axis == "x" else 1
+    index = 0 if axis == "u" else 1
     return self.register_backplane(key, uv.to_scalars()[index])
 
 ################################################################################
