@@ -216,7 +216,7 @@ class Metadata(object):
         # Window
         self.window = None
         if 'CUT_OUT_WINDOW' in meta_dict:
-            window = meta_dict['CUT_OUT_WINDOW']
+            window = np.array(meta_dict['CUT_OUT_WINDOW'])
 
             # check for [-1,-1,-1,-1].  This is the value written in the 
             # supplemental index when there is no CUT_OUT_WINDOW in the label.

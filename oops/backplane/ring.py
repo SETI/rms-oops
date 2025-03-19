@@ -665,7 +665,8 @@ def ring_angular_resolution(self, event_key, units="rad"):
         units           longitude representation; "rad" or "km"
     """
 
-    assert units.lower() in ["rad", "km"]
+    if units.lower() not in {"rad", "km"}:
+        raise ValueError('invalid units: ' + repr(units))
 
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,

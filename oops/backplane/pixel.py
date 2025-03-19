@@ -32,7 +32,8 @@ def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
     try:
         index = {'u':0, 'v':1}[axis]
     except KeyError:
-        assert axis.lower() in ["min", "max"]
+        if axis.lower() not in {"min", "max"}:
+            raise ValueError('invalid axis: ' + repr(axis))
 
     # compute apparent distance
     event = self.get_surface_event(gridless_key, arrivals=True)
@@ -45,7 +46,7 @@ def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
 
     theta = radius/distance
     radii_in_pixels = np.divide(theta, self.obs.fov.uv_scale.values)
-    if index:
+    if index is not None:
         radius_in_pixels = radii_in_pixels[index].values
     else:
         radius_in_pixels = getattr(radii_in_pixels, axis)()
