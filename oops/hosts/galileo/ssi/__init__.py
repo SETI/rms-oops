@@ -214,14 +214,18 @@ class Metadata(object):
         self.mode = meta_dict['TELEMETRY_FORMAT_ID']
 
         # Window
+        self.window = None
         if 'CUT_OUT_WINDOW' in meta_dict:
-            self.window = np.array(meta_dict['CUT_OUT_WINDOW'])
-            self.window_origin = self.window[0:2]-1
-            self.window_shape = self.window[2:]
-            self.window_uv_origin = np.flip(self.window_origin)
-            self.window_uv_shape = np.flip(self.window_shape)
-        else:
-            self.window = None
+            window = np.array(meta_dict['CUT_OUT_WINDOW'])
+
+            # check for [-1,-1,-1,-1].  This is the value written in the 
+            # supplemental index when there is no CUT_OUT_WINDOW in the label.
+            if window.tolist() != [-1,-1,-1,-1]:
+                self.window = window
+                self.window_origin = self.window[0:2]-1
+                self.window_shape = self.window[2:]
+                self.window_uv_origin = np.flip(self.window_origin)
+                self.window_uv_shape = np.flip(self.window_shape)
 
     #===========================================================================
     def trim(self, data, full_fov=False):
@@ -328,7 +332,6 @@ class SSI(object):
         distortion_coeff = [1, 0, cf]
 
         # Construct FOVs
-#        from IPython import embed; print('+++++++++++++'); embed()
         assert info['MAX_SAMPLE'] == 800
         assert info['MAX_LINE'] == 800
 

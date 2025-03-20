@@ -12,16 +12,27 @@ from oops.surface.polarlimb import PolarLimb
 # forward to each new backplane array that refers to it.
 LIMB_BACKPLANES = ('limb_altitude',)
 
-def limb_altitude(self, event_key, zmin=None, zmax=None):
+#===============================================================================
+def limb_altitude(self, event_key, zmin=None, zmax=None, scaled=False):
     """Elevation of a limb point above the body's surface.
 
     Input:
         event_key       key defining the limb surface event.
         zmin            lower limit on altitude; lower values are masked.
         zmax            upper limit on altitude.
+        scaled          if True, zmin and zmax are in units of the maximum body radius.
     """
 
     event_key = Backplane.standardize_event_key(event_key, default='LIMB')
+
+    if scaled:
+        body = self.get_body_and_modifier(event_key[-1])[0]
+        radius = body.surface.radii.max()
+        if zmin is not None:
+            zmin = zmin * radius
+        if zmin is not None:
+            zmax = zmax * radius
+
     key = ('limb_altitude', event_key, zmin, zmax)
     if key in self.backplanes:
         return self.get_backplane(key)
