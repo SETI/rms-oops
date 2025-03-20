@@ -15,25 +15,23 @@ def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
         event_key       key defining the event on the body's path.
         radius          If nonzero, override the radius of the body referred to
                         in the event key.
-        axis            uv axis to evaluate on, or "min" or "max".
+        axis            "u"   : horizontal pixel direction.
+                        "v"   : vertical pixel direction.
+                        "min" : direction of largest diameter.
+                        "max" : direction of smallest diameter.
     """
     if not self.obs.INVENTORY_IMPLEMENTED:
         raise NotImplementedError('body_diameter_in_pixels not defined for '
                                     + type(self.obs).__name__)
+
+    if axis not in {'u', 'v', 'min', 'max'}:
+        raise ValueError('invalid axis: ' + repr(axis))
 
     gridless_key = Backplane.gridless_event_key(event_key)
 
     key = ('body_diameter_in_pixels', gridless_key, radius, axis)
     if key in self.backplanes:
         return self.get_backplane(key)
-
-    index = None
-    # interpret axis input
-    try:
-        index = {'u':0, 'v':1}[axis]
-    except KeyError:
-        if axis.lower() not in {"min", "max"}:
-            raise ValueError('invalid axis: ' + repr(axis))
 
     # compute apparent distance
     event = self.get_surface_event(gridless_key, arrivals=True)
@@ -44,14 +42,18 @@ def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
     if radius==0:
         radius = body.radius
 
-    theta = radius/distance
-    radii_in_pixels = np.divide(theta, self.obs.fov.uv_scale.values)
-    if index is not None:
-        radius_in_pixels = radii_in_pixels[index].values
-    else:
-        radius_in_pixels = getattr(radii_in_pixels, axis)()
+    radii_in_pixels = radius/distance / self.obs.fov.uv_scale.vals
 
-    return 2*self.register_backplane(key, radius_in_pixels)
+    if axis == 'u':
+        radius_in_pixels = radii_in_pixels[0]
+    elif axis == 'v':
+        radius_in_pixels = radii_in_pixels[1]
+    elif axis == 'max':
+        radius_in_pixels = radii_in_pixels.max()
+    else:
+        radius_in_pixels = radii_in_pixels.min()
+
+    return self.register_backplane(key, 2*radius_in_pixels)
 
 #===============================================================================
 def center_coordinate(self, event_key, axis="u"):
@@ -59,11 +61,11 @@ def center_coordinate(self, event_key, axis="u"):
 
     Input:
         event_key       key defining the event on the body's path.
-        axis            "u" (horizonatal pixel direction) or "v" (vertical
+        axis            "u" (horizontal pixel direction) or "v" (vertical
                         pixel direction).
     """
     if axis not in {'u', 'v'}:
-        raise ValueError('Invalid axis: ' + repr(axis))
+        raise ValueError('invalid axis: ' + repr(axis))
 
     gridless_key = Backplane.gridless_event_key(event_key)
 
