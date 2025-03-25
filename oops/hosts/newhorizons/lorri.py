@@ -475,7 +475,7 @@ class LORRI(object):
                                        coefft_uv_from_xy=LORRI.LORRI_COEFF,
                                        coefft_xy_from_uv=LORRI.LORRI_INV_COEFF)
 
-        full_fov_flat = oops.fov.FlatFOV((4.96e-6,-4.96e-6), (1024,1024))
+        full_fov_flat = oops.fov.FlatFOV((4.96e-6,4.96e-6), (1024,1024))
 
         # Load the dictionary, include the subsampling modes
         LORRI.fovs['1X1', 'slow'] = full_fov
