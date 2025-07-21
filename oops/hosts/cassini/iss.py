@@ -43,17 +43,19 @@ def from_file(filespec, fast_distortion=True,
     vicar_dict = vic.as_dict()
 
     # Get key information from the header
-    tstart = julian.tdb_from_tai(julian.tai_from_iso(vic['START_TIME']))
+    tstop = julian.tdb_from_tai(julian.tai_from_iso(vic['IMAGE_TIME']))
     texp = max(1.e-3, vicar_dict['EXPOSURE_DURATION']) / 1000.
+    tstart = tstop - 0.5*texp
     mode = vicar_dict['INSTRUMENT_MODE_ID']
 
-    name = vicar_dict['INSTRUMENT_NAME']
-    if 'WIDE' in name:
-        camera = 'WAC'
-    else:
-        camera = 'NAC'
+    id = vicar_dict['INSTRUMENT_ID']
+    camera = id[3:]+'C'
 
-    filter1, filter2 = vicar_dict['FILTER_NAME']
+    if 'FILTER_NAME' in vicar_dict:
+        filter1, filter2 = vicar_dict['FILTER_NAME']
+    else:
+        filter1 = vicar_dict['FILTER1_NAME']
+        filter2 = vicar_dict['FILTER2_NAME']
 
     gain_mode = None
 
