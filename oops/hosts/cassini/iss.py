@@ -45,7 +45,7 @@ def from_file(filespec, fast_distortion=True,
     # Get key information from the header
     tstop = julian.tdb_from_tai(julian.tai_from_iso(vic['IMAGE_TIME']))
     texp = max(1.e-3, vicar_dict['EXPOSURE_DURATION']) / 1000.
-    tstart = tstop - 0.5*texp
+    tstart = tstop - texp
     mode = vicar_dict['INSTRUMENT_MODE_ID']
 
     id = vicar_dict['INSTRUMENT_ID']
