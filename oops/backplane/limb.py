@@ -18,7 +18,7 @@ def limb_altitude(self, event_key, zmin=None, zmax=None, scaled=False):
 
     Input:
         event_key       key defining the limb surface event.
-        zmin            lower limit on altitude; smaller values are masked.
+        zmin            lower limit on altitude; lower values are masked.
         zmax            upper limit on altitude.
         scaled          if True, zmin and zmax are in units of the maximum body radius.
     """
