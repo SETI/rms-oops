@@ -550,7 +550,7 @@ class Snapshot(Observation):
         returned_dict = {}
 
         u_scale = fov.uv_scale.vals[0]
-        v_scale = fov.uv_scale.vals[1]
+        v_scale = np.abs(fov.uv_scale.vals[1])
         body_uv = fov.uv_from_los_t(arrival_event.neg_arr_ap,
                                     time=obs_time).vals
         for i in range(nbodies):
