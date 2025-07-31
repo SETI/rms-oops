@@ -61,7 +61,7 @@ from oops.constants import C, C_INVERSE, RPD, DPR, SPR, RPS, SPD, AU, \
                            PI, TWOPI, HALFPI
 
 from polymath import Boolean, Matrix, Matrix3, Pair, Quaternion, Qube, Scalar, \
-                     Units, Vector, Vector3
+                     Vector, Vector3
 
 try:
     from ._version import __version__

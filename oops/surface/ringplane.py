@@ -145,7 +145,7 @@ class RingPlane(Surface):
 
         # Validate inputs
         self._coords_from_vector3_check(axes)
-        pos = Vector3.as_vector3(pos, derivs)
+        pos = Vector3.as_vector3(pos, recursive=derivs)
 
         # Generate cylindrical coordinates
         (r, theta, z) = pos.to_cylindrical()
@@ -199,8 +199,8 @@ class RingPlane(Surface):
         # Validate inputs
         self._vector3_from_coords_check(coords)
 
-        a = Scalar.as_scalar(coords[0], derivs)
-        theta = Scalar.as_scalar(coords[1], derivs)
+        a = Scalar.as_scalar(coords[0], recursive=derivs)
+        theta = Scalar.as_scalar(coords[1], recursive=derivs)
 
         if self.modes:
             r = a + self._mode_offset(theta, time, derivs=derivs)
@@ -208,9 +208,9 @@ class RingPlane(Surface):
             r = a
 
         if len(coords) > 2:
-            z = Scalar.as_scalar(coords[2] + self.elevation, derivs)
+            z = Scalar.as_scalar(coords[2] + self.elevation, recursive=derivs)
         else:
-            z = Scalar.as_scalar(self.elevation, derivs)
+            z = Scalar.as_scalar(self.elevation, recursive=derivs)
 
         x = r * theta.cos()
         y = r * theta.sin()
@@ -246,8 +246,8 @@ class RingPlane(Surface):
 
         # Solve for obs + factor * los for scalar t, such that the z-component
         # equals zero.
-        obs = Vector3.as_vector3(obs, derivs)
-        los = Vector3.as_vector3(los, derivs)
+        obs = Vector3.as_vector3(obs, recursive=derivs)
+        los = Vector3.as_vector3(los, recursive=derivs)
 
         obs_z = obs.to_scalar(2)
         los_z = los.to_scalar(2)
@@ -284,10 +284,10 @@ class RingPlane(Surface):
                         that pass through the position. Lengths are arbitrary.
         """
 
-        pos = Vector3.as_vector3(pos, derivs)
+        pos = Vector3.as_vector3(pos, recursive=derivs)
 
         # Always the Z-axis
-        perp = pos.all_constant((0.,0.,1.))
+        perp = pos.as_all_constant((0.,0.,1.))
 
         # The normal is undefined outside the ring's radial limits
         if self.radii is not None:
@@ -314,7 +314,7 @@ class RingPlane(Surface):
         Return:         a Vector3 of velocities, in units of km/s.
         """
 
-        pos = Vector3.as_vector3(pos, False)
+        pos = Vector3.as_vector3(pos, recursive=False)
 
         # Handle special case that's easy
         if self.gravity is None and not self.modes:

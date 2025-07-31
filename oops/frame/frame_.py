@@ -5,7 +5,7 @@
 import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
 
-from polymath       import Matrix3, Quaternion, Qube, Scalar, Vector3
+from polymath       import Matrix, Matrix3, Quaternion, Qube, Scalar, Vector3
 from oops.config    import QUICK, LOGGING, PICKLE_CONFIG
 from oops.transform import Transform
 
@@ -916,7 +916,7 @@ class QuickFrame(Frame):
             true_transform = self.slowframe.transform_at_time(t)
             (matrix, omega) = self._interpolate_matrix_omega(t)
 
-            dmatrix = (true_transform.matrix - matrix).rms()
+            dmatrix = (Matrix(true_transform.matrix) - Matrix(matrix)).rms()
 
             domega = (true_transform.omega - omega).rms()
             if true_transform.omega.rms() != 0.:

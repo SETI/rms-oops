@@ -103,7 +103,7 @@ class GraphicSpheroid(Spheroid):
         Return          planetocentric latitude.
         """
 
-        lat = Scalar.as_scalar(lat, derivs)
+        lat = Scalar.as_scalar(lat, recursive=derivs)
         return (lat.tan() * self.squash_z_sq).arctan()
 
     #===========================================================================
@@ -118,7 +118,7 @@ class GraphicSpheroid(Spheroid):
         Return          planetographic latitude.
         """
 
-        lat = Scalar.as_scalar(lat, derivs)
+        lat = Scalar.as_scalar(lat, recursive=derivs)
         return (lat.tan() * self.unsquash_z_sq).arctan()
 
     #===========================================================================
@@ -133,7 +133,7 @@ class GraphicSpheroid(Spheroid):
         Return          planetographic latitude.
         """
 
-        return Scalar.as_scalar(lat, derivs)
+        return Scalar.as_scalar(lat, recursive=derivs)
 
     #===========================================================================
     def lat_from_graphic(self, lat, lon=None, derivs=False):
@@ -147,6 +147,6 @@ class GraphicSpheroid(Spheroid):
         Return          planetographic latitude.
         """
 
-        return Scalar.as_scalar(lat, derivs)
+        return Scalar.as_scalar(lat, recursive=derivs)
 
 ################################################################################

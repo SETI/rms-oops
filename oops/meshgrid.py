@@ -46,7 +46,7 @@ class Meshgrid(object):
 
         self.fov = fov
         self.uv = Pair.as_pair(uv_pair).wod
-        self.uv_w_duv_duv = self.uv.with_deriv('uv', Pair.IDENTITY, 'insert')
+        self.uv_w_duv_duv = self.uv.with_deriv('uv', Pair.IDENTITY, method='insert')
         self.fov_keywords = fov_keywords
         self.shape = self.uv.shape
 
@@ -61,8 +61,8 @@ class Meshgrid(object):
         else:
             self.center_uv = Pair.as_pair(center_uv).wod
 
-        self.center_uv_w_duv_duv = self.center_uv.with_deriv('uv',
-                                                        Pair.IDENTITY, 'insert')
+        self.center_uv_w_duv_duv = self.center_uv.with_deriv('uv', Pair.IDENTITY,
+                                                             method='insert')
 
         self.filled_center_los_w_derivs = {}
         self.filled_center_los = {}
@@ -342,7 +342,7 @@ class Meshgrid(object):
             pass
 
         # Evaluate (u,v) anew
-        los_ = self.los(time).with_deriv('los', Vector3.IDENTITY, 'insert')
+        los_ = self.los(time).with_deriv('los', Vector3.IDENTITY, method='insert')
         uv = self.fov.uv_from_los_t(los_, time=time, derivs=True,
                                     **self.fov_keywords)
 
@@ -424,7 +424,7 @@ class Meshgrid(object):
 
         # Evaluate (u,v) anew
         los_ = self.center_los(time).with_deriv('los', Vector3.IDENTITY,
-                                                'insert')
+                                                method='insert')
         uv = self.fov.uv_from_los_t(los_, time=time, derivs=True,
                                     **self.fov_keywords)
 

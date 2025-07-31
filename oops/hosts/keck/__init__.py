@@ -13,10 +13,9 @@ try:
 except ImportError:
     import pyfits
 import glob
-import unittest
 
 import julian
-import oops.hosts.solar as solar
+import solar
 import tabulation as tab
 import oops
 
