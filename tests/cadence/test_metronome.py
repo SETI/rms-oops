@@ -141,7 +141,7 @@ def case_continuous(self, cadence):
 
     tstep = ([-1,0],[2,4],[4.5,5])
     test = cadence.time_at_tstep(tstep, remask=False)
-    self.assertEqual(test.masked(), 0)
+    self.assertEqual(test.count_masked(), 0)
     self.assertEqual(test, [[100,100],[120,140],[140,140]])
 
     test = cadence.time_at_tstep(tstep, remask=True)
@@ -259,7 +259,7 @@ def case_continuous(self, cadence):
     self.assertTrue((abs(tstep - test)[~mask] < 1.e-14).all())
     self.assertTrue(np.all(time[tstep.vals < 0] == 100.))
     self.assertTrue(np.all(time[tstep.vals > 4] == 140.))
-    self.assertEqual(test.masked(), 0)
+    self.assertEqual(test.count_masked(), 0)
 
     test = cadence.time_at_tstep(tstep, remask=True)
     self.assertTrue((abs(time - test).mvals < 1.e-14).all())
@@ -271,8 +271,8 @@ def case_continuous(self, cadence):
     test = cadence.time_at_tstep(tstep, remask=False)
     mask = (time.vals < 100) | (time.vals > 140)
     self.assertTrue((abs(time - test)[~mask] < 1.e-14).all())
-    self.assertEqual(tstep.masked(), 0)
-    self.assertEqual(test.masked(), 0)
+    self.assertEqual(tstep.count_masked(), 0)
+    self.assertEqual(test.count_masked(), 0)
 
     # time_range_at_tstep()
     tstep = Scalar((0.,1.,2.), [False,True,False])
@@ -351,7 +351,7 @@ def case_discontinuous(self, cadence):
 
     tstep = ([-1,0],[2,4],[4.5,5])
     test = cadence.time_at_tstep(tstep, remask=False)
-    self.assertEqual(test.masked(), 0)
+    self.assertEqual(test.count_masked(), 0)
     test = cadence.time_at_tstep(tstep, remask=True)
     self.assertTrue(Boolean(test.mask) ==
                     [[True,False],[False,False],[True,True]])
@@ -470,7 +470,7 @@ def case_discontinuous(self, cadence):
     self.assertTrue((abs(tstep - test)[~mask] < 1.e-14).all())
     self.assertTrue(np.all(time[tstep.vals < 0] == 100.))
     self.assertTrue(np.all(time[tstep.vals > 4] == 137.5))
-    self.assertEqual(test.masked(), 0)
+    self.assertEqual(test.count_masked(), 0)
 
     mask = (tstep < 0) | (tstep > cadence.steps)
     test = cadence.time_at_tstep(tstep, remask=True)
@@ -572,7 +572,7 @@ def case_non_unique(self, cadence):
 
     tstep = ([-1,0],[2,4],[4.5,5])
     test = cadence.time_at_tstep(tstep, remask=False)
-    self.assertEqual(test.masked(), 0)
+    self.assertEqual(test.count_masked(), 0)
     test = cadence.time_at_tstep(tstep, remask=True)
     self.assertTrue(Boolean(test.mask) ==
                     [[True,False],[False,False],[True,True]])

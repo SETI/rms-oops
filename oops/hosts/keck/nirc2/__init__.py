@@ -11,7 +11,7 @@ try:
 except ImportError:
     import pyfits
 import oops
-from oops.inst.keck import Keck
+from oops.hosts.keck import Keck
 import numpy as np
 
 from filecache import FCPath

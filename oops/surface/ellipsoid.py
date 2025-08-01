@@ -198,8 +198,8 @@ class Ellipsoid(Surface):
         self._vector3_from_coords_check(coords)
 
         # Determine groundtrack
-        lon = Scalar.as_scalar(coords[0], derivs)
-        lat = Scalar.as_scalar(coords[1], derivs)
+        lon = Scalar.as_scalar(coords[0], recursive=derivs)
+        lat = Scalar.as_scalar(coords[1], recursive=derivs)
         track_unsquashed = Vector3.from_ra_dec_length(lon, lat, self.req)
         track = track_unsquashed.element_mul(self.squash)
 
@@ -346,7 +346,7 @@ class Ellipsoid(Surface):
                         that pass through the position. Lengths are arbitrary.
         """
 
-        pos = Vector3.as_vector3(pos, derivs)
+        pos = Vector3.as_vector3(pos, recursive=derivs)
         return pos.element_mul(self.unsquash_sq)
 
     #===========================================================================
@@ -364,7 +364,7 @@ class Ellipsoid(Surface):
                         solution exists, the returned Vector3 will be masked.
         """
 
-        normal = Vector3.as_vector3(normal, derivs)
+        normal = Vector3.as_vector3(normal, recursive=derivs)
         return normal.element_mul(self.squash).unit().element_mul(self.radii)
 
     #===========================================================================

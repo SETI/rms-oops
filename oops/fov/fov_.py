@@ -187,7 +187,7 @@ class FOV(object):
 
         # Prepare for the partial derivatives
         uv_pair = Pair.as_pair(uv_pair).wod
-        uv_pair = uv_pair.with_deriv('uv', Pair.IDENTITY, 'insert')
+        uv_pair = uv_pair.with_deriv('uv', Pair.IDENTITY, method='insert')
         xy_pair = self.xy_from_uvt(uv_pair, time=time, derivs=True,
                                             remask=remask, **keywords)
 
@@ -423,12 +423,10 @@ class FOV(object):
         """
 
         # Locate the origin LOS vector
-        if isinstance(origin, np.ndarray) or origin:
-                # We would have liked to write, simply, "if origin:", but that
-                # fails for NumPy arrays.
-            center_uv = Pair.as_pair(origin)
-        else:
+        if origin is None:
             center_uv = self.uv_shape/2.
+        else:
+            center_uv = Pair.as_pair(origin)
 
         los0 = self.los_from_uvt(center_uv, time=time)
 
@@ -456,10 +454,10 @@ class FOV(object):
         """
 
         # Locate the origin and the reference LOS vector
-        if isinstance(origin, np.ndarray) or origin:
-            center_uv = Pair.as_pair(origin)
-        else:
+        if origin is None:
             center_uv = self.uv_shape/2.
+        else:
+            center_uv = Pair.as_pair(origin)
 
         los0 = self.los_from_uvt(center_uv, time=time)
 

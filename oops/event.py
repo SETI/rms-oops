@@ -156,11 +156,11 @@ class Event(object):
         if isinstance(state, (tuple,list)) and len(state) == 2:
             pos = Vector3.as_vector3(state[0])
             vel = Vector3.as_vector3(state[1])
-            state = pos.with_deriv('t', vel, 'insert')
+            state = pos.with_deriv('t', vel, method='insert')
         else:
             state = Vector3.as_vector3(state)
             if 't' not in state.derivs:
-                state = state.with_deriv('t', Vector3.ZERO)
+                state = state.with_deriv('t', Vector3.ZERO, method='insert')
 
         self._state_ = state.as_readonly()
         self._pos_ = self._state_.without_deriv('t')
@@ -973,7 +973,7 @@ class Event(object):
         return self._apply_this_func(remove_derivs)
 
     #===========================================================================
-    def all_masked(self, origin=None, frame=None, broadcast=None):
+    def as_all_masked(self, origin=None, frame=None, broadcast=None):
         """A shallow copy of this event, entirely masked.
 
         Inputs:
@@ -986,7 +986,7 @@ class Event(object):
         """
 
         def fully_masked(arg):
-            return arg.all_masked().broadcast_into_shape(broadcast)
+            return arg.as_all_masked().broadcast_to(broadcast)
 
         if broadcast is None:
             broadcast = self.shape
@@ -1005,7 +1005,7 @@ class Event(object):
         if (result._origin_ == Event.SSB and result._frame_ == Frame.J2000):
                 result._ssb_ == result
         else:
-                result._ssb_ = result.all_masked(Event.SSB, Frame.J2000)
+                result._ssb_ = result.as_all_masked(Event.SSB, Frame.J2000)
                 result._ssb_._xform_to_j2000_ = Transform.IDENTITY
 
         if result._xform_to_j2000_ is None:
@@ -1019,7 +1019,7 @@ class Event(object):
 
         def apply_mask_where(arg):
             if arg.shape != self.shape:
-                arg = arg.broadcast_into_shape(self.shape)
+                arg = arg.broadcast_to(self.shape)
 
             return arg.mask_where(mask)
 
@@ -1032,7 +1032,7 @@ class Event(object):
 
         def apply_remask(arg):
             if arg.shape != self.shape:
-                arg = arg.broadcast_into_shape(self.shape)
+                arg = arg.broadcast_to(self.shape)
 
             return arg.remask(mask)
 
@@ -1733,7 +1733,7 @@ class Event(object):
         # the length of the ray is adjusted to be accurate to higher order in
         # (v/c)
 
-        ray_ssb = Vector3.as_vector3(ray_ssb, derivs).as_readonly()
+        ray_ssb = Vector3.as_vector3(ray_ssb, recursive=derivs).as_readonly()
         wrt_ssb = self.wrt_ssb(derivs, quick=quick)
         vel_ssb = wrt_ssb.vel + wrt_ssb.vflat.without_deriv('t')
 
@@ -1773,7 +1773,7 @@ class Event(object):
         # This procedure is equivalent to a vector subtraction of the velocity
         # of the observer from the ray, given that the ray has length C.
 
-        ray_ap_ssb = Vector3.as_vector3(ray_ap_ssb, derivs).as_readonly()
+        ray_ap_ssb = Vector3.as_vector3(ray_ap_ssb, recursive=derivs).as_readonly()
         wrt_ssb = self.wrt_ssb(derivs, quick=quick)
         vel_ssb = wrt_ssb.vel + wrt_ssb.vflat.without_deriv('t')
 

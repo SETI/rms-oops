@@ -657,7 +657,7 @@ def execute_as_unittest(testcase, obsname='default'):
         args = _clean_up_args(args)
 
     except Exception as e:
-        traceback.print_exception(e)
+        print(traceback.format_exc())
         testcase.assertTrue(False, str(e))
 
     run_tests(args)

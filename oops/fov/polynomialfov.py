@@ -289,7 +289,7 @@ class PolynomialFOV(FOV):
             dab_dpq     optional derivative of f with respect to pq.
         """
 
-        pq = Pair.as_pair(pq, derivs)
+        pq = Pair.as_pair(pq, recursive=derivs)
 
         # Start with empty buffer
         order_plus_1 = coefft.shape[0]
@@ -364,7 +364,7 @@ class PolynomialFOV(FOV):
                         the polynomial evaluates to ab.
         """
 
-        ab = Pair.as_pair(ab, derivs)
+        ab = Pair.as_pair(ab, recursive=derivs)
 
         # Handle fully-masked case
         if np.all(ab.mask):

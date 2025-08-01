@@ -218,7 +218,7 @@ class Metadata(object):
         if 'CUT_OUT_WINDOW' in meta_dict:
             window = np.array(meta_dict['CUT_OUT_WINDOW'])
 
-            # check for [-1,-1,-1,-1].  This is the value written in the 
+            # check for [-1,-1,-1,-1].  This is the value written in the
             # supplemental index when there is no CUT_OUT_WINDOW in the label.
             if window.tolist() != [-1,-1,-1,-1]:
                 self.window = window

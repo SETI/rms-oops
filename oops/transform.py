@@ -120,7 +120,7 @@ class Transform(object):
         """
 
         if self.filled_omega1 is None:
-            self.filled_omega1 = -self.matrix * self.omega
+            self.filled_omega1 = self.matrix * (-self.omega)
 
         return self.filled_omega1
 
@@ -132,7 +132,7 @@ class Transform(object):
         if self.filled_matrix_with_deriv is None:
             self.filled_matrix_with_deriv = self.matrix.clone()
 
-            d_dt = -self.matrix * self.omega.cross_product_as_matrix()
+            d_dt = self.matrix * (-self.omega.cross_product_as_matrix())
             self.filled_matrix_with_deriv.insert_deriv('t', d_dt, override=True)
 
         return self.filled_matrix_with_deriv

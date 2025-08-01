@@ -125,7 +125,7 @@ class PolynomialFOV(FOV):
         """
 
         # Subtract off the center of the field of view
-        uv = Pair.as_pair(uv, derivs) - self.uv_los
+        uv = Pair.as_pair(uv, recursive=derivs) - self.uv_los
 
         # Transform based on which types of coeffs are given
         if self.coefft_xy_from_uv is not None:
@@ -158,7 +158,7 @@ class PolynomialFOV(FOV):
                         FOV coordinates.
         """
 
-        xy = Pair.as_pair(xy, derivs)
+        xy = Pair.as_pair(xy, recursive=derivs)
 
         # Transform based on which types of coeffs are given
         if self.coefft_uv_from_xy is not None:
@@ -297,7 +297,7 @@ class PolynomialFOV(FOV):
         to_ = (src^{from_}).pop()
         dkey = from_
 
-        ab = Pair.as_pair(ab, derivs)
+        ab = Pair.as_pair(ab, recursive=derivs)
         ab_wod = ab.wod
 
         # Make a rough initial guess

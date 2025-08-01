@@ -73,7 +73,7 @@ class NullSurface(Surface):
         self._coords_from_vector3_check(axes)
 
         # Simple rectangular coordinates
-        pos = Vector3.as_vector3(pos, derivs)
+        pos = Vector3.as_vector3(pos, recursive=derivs)
         return pos.to_scalars(derivs)[:axes]
 
     #===========================================================================
@@ -103,13 +103,13 @@ class NullSurface(Surface):
         self._vector3_from_coords_check(coords)
 
         # Convert to Scalars and strip units, if any
-        x = Scalar.as_scalar(coords[0], derivs)
-        y = Scalar.as_scalar(coords[1], derivs)
+        x = Scalar.as_scalar(coords[0], recursive=derivs)
+        y = Scalar.as_scalar(coords[1], recursive=derivs)
 
         if len(coords) == 2:
             z = Scalar(0.)
         else:
-            z = Scalar.as_scalar(coords[2], derivs)
+            z = Scalar.as_scalar(coords[2], recursive=derivs)
 
         # Convert to a Vector3 and return
         return Vector3.from_scalars(x, y, z)

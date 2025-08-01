@@ -150,8 +150,8 @@ class Ansa(Surface):
         # Validate inputs
         self._coords_from_vector3_check(axes)
 
-        pos = Vector3.as_vector3(pos, derivs)
-        obs = Vector3.as_vector3(obs, derivs)
+        pos = Vector3.as_vector3(pos, recursive=derivs)
+        obs = Vector3.as_vector3(obs, recursive=derivs)
         (pos_x, pos_y, pos_z) = pos.to_scalars()
         (obs_x, obs_y, obs_z) = obs.to_scalars()
 
@@ -247,8 +247,8 @@ class Ansa(Surface):
         # Theta is an angular offset from phi, with smaller values closer to the
         # observer and larger angles further away.
 
-        r = Scalar.as_scalar(coords[0], derivs)
-        z = Scalar.as_scalar(coords[1], derivs)
+        r = Scalar.as_scalar(coords[0], recursive=derivs)
+        z = Scalar.as_scalar(coords[1], recursive=derivs)
 
         sign = r.sign()
         rabs = r * sign
@@ -256,9 +256,9 @@ class Ansa(Surface):
         if len(coords) == 2:
             theta = Scalar(0.)
         else:
-            theta = Scalar.as_scalar(coords[2], derivs)
+            theta = Scalar.as_scalar(coords[2], recursive=derivs)
 
-        (obs_x, obs_y, obs_z) = Vector3.as_vector(obs, derivs).to_scalars()
+        (obs_x, obs_y, obs_z) = Vector3.as_vector(obs, recursive=derivs).to_scalars()
         obs_xy = (obs_x**2 + obs_y**2).sqrt()
 
         phi = (rabs / obs_xy).arccos()
@@ -297,8 +297,8 @@ class Ansa(Surface):
             hints       the input value of hints, included if it is not None.
         """
 
-        obs = Vector3.as_vector3(obs, derivs)
-        los = Vector3.as_vector3(los, derivs)
+        obs = Vector3.as_vector3(obs, recursive=derivs)
+        los = Vector3.as_vector3(los, recursive=derivs)
 
         # (obs_xy + t los_xy) dot los_xy = 0
         # t = -(obs_xy dot los_xy) / (los_xy dot los_xy)
@@ -340,9 +340,9 @@ class Ansa(Surface):
         ring plane.
         """
 
-        pos = Vector3.as_vector3(pos, derivs)
+        pos = Vector3.as_vector3(pos, recursive=derivs)
 
         # Always the Z-axis
-        return pos.all_constant((0.,0.,1.))
+        return pos.as_all_constant((0.,0.,1.))
 
 ################################################################################

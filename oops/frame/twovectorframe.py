@@ -85,7 +85,7 @@ class TwoVectorFrame(Frame):
         self.transform = Transform(matrix, Vector3.ZERO,
                                    self.wayframe, self.reference)
 
-        z_axis = matrix.row_vector(2, Vector3)
+        z_axis = matrix.row_vector(2, classes=[Vector3])
         self.node = Vector3.ZAXIS.ucross(z_axis)
 
         # Save in internal dict for name lookup upon serialization
