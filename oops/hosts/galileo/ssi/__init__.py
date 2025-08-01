@@ -90,7 +90,7 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
     # Read the index file
     COLUMNS = []        # Return all columns
     local_path = filespec.retrieve(filespec)
-    table = pdstable.PdsTable(local_path, columns=COLUMNS)
+    table = pdstable.Pds3Table(local_path, columns=COLUMNS)
     row_dicts = table.dicts_by_row()
 
     # Read the supplemental index file
@@ -218,7 +218,7 @@ class Metadata(object):
         if 'CUT_OUT_WINDOW' in meta_dict:
             window = np.array(meta_dict['CUT_OUT_WINDOW'])
 
-            # check for [-1,-1,-1,-1].  This is the value written in the 
+            # check for [-1,-1,-1,-1].  This is the value written in the
             # supplemental index when there is no CUT_OUT_WINDOW in the label.
             if window.tolist() != [-1,-1,-1,-1]:
                 self.window = window

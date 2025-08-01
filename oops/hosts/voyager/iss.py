@@ -212,7 +212,7 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
     # Read the index file
     COLUMNS = []                # Return all columns
     local_path = filespec.retrieve()
-    table = pdstable.PdsTable(local_path, columns=COLUMNS)
+    table = pdstable.Pds3Table(local_path, columns=COLUMNS)
     row_dicts = table.dicts_by_row()
 
     # Interpret GEOMED parameter
