@@ -2,6 +2,7 @@ astropy
 coverage
 cspyce
 numpy
+pds4_tools
 Pillow
 pyparsing
 rms-fpzip
