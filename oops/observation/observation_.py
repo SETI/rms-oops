@@ -354,6 +354,28 @@ class Observation(object):
         raise NotImplementedError(type(self).__name__ + '.time_shift ' +
                                   'is not implemented')
 
+    #===========================================================================
+    def navigate(self, angles):
+        """A copy of this Observation object after two or three rotation angles
+        of a Navigation object applied.
+
+        Input:
+            angles      two or three angles of rotation in radians. The order of
+                        the rotations is about the y, x, and (optionally) z
+                        axes. These angles rotate a vector in the reference
+                        frame into this frame.
+
+        Return:         A new Observation with the navigation applied.
+        """
+
+        # Identify the non-navigated frame
+        if isinstance(self.frame, Navigation):
+            frame = self.frame.reference
+        else:
+            frame = self.frame
+
+        self.frame = Navigation(angles, reference=frame)
+
     ############################################################################
     # Subfield support methods
     ############################################################################
