@@ -374,7 +374,11 @@ class Observation(object):
         else:
             frame = self.frame
 
-        self.frame = Navigation(angles, reference=frame)
+        # Copy and update the frame
+        obs = type(self).__new__()
+        obs.__dict__ = self.__dict__.copy()
+        obs.frame = Navigation(angles, reference=frame)
+        return obs
 
     ############################################################################
     # Subfield support methods
