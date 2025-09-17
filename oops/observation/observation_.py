@@ -5,10 +5,11 @@
 import numpy as np
 import numbers
 
-from polymath      import Scalar, Pair, Vector, Vector3, Qube
-from oops.config   import LOGGING, PATH_PHOTONS
-from oops.event    import Event
-from oops.meshgrid import Meshgrid
+from polymath              import Scalar, Pair, Vector, Vector3, Qube
+from oops.config           import LOGGING, PATH_PHOTONS
+from oops.event            import Event
+from oops.frame.navigation import Navigation
+from oops.meshgrid         import Meshgrid
 
 class Observation(object):
     """An Observation is an abstract class that defines the timing and pointing
