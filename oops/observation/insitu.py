@@ -8,6 +8,7 @@ from polymath             import Scalar
 from oops.cadence         import Cadence
 from oops.cadence.instant import Instant
 from oops.fov.nullfov     import NullFOV
+from oops.fittable        import Fittable_
 from oops.frame           import Frame
 from oops.observation     import Observation
 from oops.path            import Path
@@ -71,19 +72,30 @@ class InSitu(Observation):
         self.shape = self.cadence.shape
         self.uv_shape = (1,1)
 
-        # Timing
-        self.time = self.cadence.time
-        self.midtime = self.cadence.midtime
-
         # Optional subfields
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
 
     def __getstate__(self):
+        Fittable_.refresh(self)
         return (self.cadence, self.path, self.subfields)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
+
+    #===========================================================================
+    def time_shift(self, dtime):
+        """A copy of the observation object with a time-shift.
+
+        Input:
+            dtime       the time offset to apply to the observation, in units of
+                        seconds. A positive value shifts the observation later.
+
+        Return:         a shallow copy of the object with a new time.
+        """
+
+        return self.insitu(self.cadence.time_shift(dtime), self.path,
+                           **self.subfields)
 
 ################################################################################

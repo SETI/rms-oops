@@ -6,8 +6,11 @@ import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 from polymath       import Matrix, Matrix3, Quaternion, Qube, Scalar, Vector3
+from oops.cache     import Cache
 from oops.config    import QUICK, LOGGING, PICKLE_CONFIG
+from oops.fittable  import Fittable_
 from oops.transform import Transform
+
 
 class Frame(object):
     """A Frame is an abstract class that returns a Transform (rotation matrix
@@ -242,7 +245,7 @@ class Frame(object):
         Frame.initialize_registry()
 
     #===========================================================================
-    def register(self, shortcut=None, override=False, unpickled=False):
+    def register(self, shortcut=None, override=False):
         """Register a Frame's definition.
 
         A shortcut makes it possible to calculate one SPICE frame relative to
@@ -255,10 +258,6 @@ class Frame(object):
         definition of any previous frame with the same name. The old frame might
         still exist, but it will not be available from the registry.
 
-        If unpickled is True and a frame with the same ID is already in the
-        registry, then this frame is not registered. Instead, its wayframe will
-        be defined by the frame with the same name that is already registered.
-
         If the frame ID is None, blank, or begins with '.', it is treated as a
         temporary path and is not registered.
         """
@@ -268,6 +267,8 @@ class Frame(object):
             Frame.initialize_registry()
 
         frame_id = self.frame_id
+        if not hasattr(self, 'keys'):
+            self.keys = set()
 
         # Handle a shortcut
         if shortcut is not None:
@@ -341,16 +342,13 @@ class Frame(object):
             if not hasattr(self, 'wayframe') or self.wayframe is None:
                 self.wayframe = Frame.WAYFRAME_REGISTRY[frame_id]
 
-            # If this is not an unpickled frame, make it the frame returned by
-            # any of the standard keys.
-            if not unpickled:
-                # Cache (self.wayframe, self.reference); overwrite if necessary
-                key = (self.wayframe, self.reference)
-                if key in Frame.FRAME_CACHE:        # remove an old version
-                    Frame.FRAME_CACHE[key].keys -= {key}
+            # Cache (self.wayframe, self.reference); overwrite if necessary
+            key = (self.wayframe, self.reference)
+            if key in Frame.FRAME_CACHE:        # remove an old version
+                Frame.FRAME_CACHE[key].keys -= {key}
 
-                Frame.FRAME_CACHE[key] = self
-                self.keys |= {key}
+            Frame.FRAME_CACHE[key] = self
+            self.keys |= {key}
 
     #===========================================================================
     @staticmethod
@@ -405,8 +403,7 @@ class Frame(object):
     #===========================================================================
     @staticmethod
     def temporary_frame_id():
-        """A temporary frame ID. This is assigned once and never re-used.
-        """
+        """A temporary frame ID. This is assigned once and never re-used."""
 
         while True:
             Frame.TEMPORARY_FRAME_ID += 1
@@ -416,10 +413,67 @@ class Frame(object):
                 return frame_id
 
     #===========================================================================
+    @staticmethod
+    def id_is_temporary(frame_id):
+        """True if this is a temporary frame ID."""
+
+        return frame_id.startswith('TEMPORARY_')
+
+    #===========================================================================
     def is_registered(self):
         """True if this frame is registered."""
 
         return (self.frame_id in Frame.WAYFRAME_REGISTRY)
+
+    ############################################################################
+    # Serialization support
+    ############################################################################
+
+    def _cache_id(self):
+        """Save this object's frame ID in a class dictionary `_FRAME_IDS`.
+
+        This dictionary is keyed by a tuple of attributes of the object, as
+        returned by the method `_frame_key`. It returns the frame ID.
+
+        If an object is constructed with a default frame ID, but an existing
+        frame with the same key already exists, the frame ID is reused (although
+        it will still be a different, unique object).
+        """
+
+        if self.shape != ():                            # shapeless
+            return
+        if not Frame.id_is_temporary(self.frame_id):    # permanent id
+            return
+        if self.frame_id in self._FRAME_IDS.values():   # don't overwrite
+            return
+        if not Fittable_.is_frozen(self):               # frozen
+            return
+
+        key = Cache.clean_key(self._frame_key())
+        if key in self._FRAME_IDS:                      # don't overwrite
+            return
+
+        self._FRAME_IDS[key] = self.frame_id
+
+    def _recover_id(self, frame_id=None):
+        """If the given frame ID is None, check the class's `_FRAME_IDS`
+        dictionary for a matching object and use its ID if found.
+        """
+
+        if frame_id is not None:
+            return frame_id
+
+        if hasattr(self, '_FRAME_IDS'):
+            key = Cache.clean_key(self._frame_key())
+            if key in self._FRAME_IDS:
+                return self._FRAME_IDS[key]
+
+        return None
+
+    def _state_id(self):
+        if Frame.id_is_temporary(self.frame_id):
+            return None
+        return self.frame_id
 
     ############################################################################
     # Frame Generators

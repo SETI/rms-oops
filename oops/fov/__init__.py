@@ -7,6 +7,7 @@ from oops.fov.barrelfov     import BarrelFOV
 from oops.fov.flatfov       import FlatFOV
 from oops.fov.nullfov       import NullFOV
 from oops.fov.offsetfov     import OffsetFOV
+from oops.fov.platescale    import Platescale
 from oops.fov.polynomialfov import PolynomialFOV
 from oops.fov.slicefov      import SliceFOV
 from oops.fov.subarray      import Subarray

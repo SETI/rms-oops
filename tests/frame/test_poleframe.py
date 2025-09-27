@@ -181,47 +181,6 @@ class Test_PoleFrame(unittest.TestCase):
             diffs = node_vecs - node_vecs[0]
             self.assertTrue(diffs.norm().max() < 0.02)
 
-        # Test cache
-        poleframe = PoleFrame(planet, pole, cache_size=3)
-        self.assertTrue(poleframe.cache_size == 4)
-        self.assertTrue(poleframe.trim_size == 1)
-        self.assertTrue(len(poleframe.cache) == 0)
-
-        pole_vecs = poleframe.transform_at_time(times).unrotate(Vector3.ZAXIS)
-        self.assertTrue(len(poleframe.cache) == 0)  # don't cache vectors
-        self.assertFalse(poleframe.cached_value_returned)
-
-        pole_vecs = poleframe.transform_at_time(100.).unrotate(Vector3.ZAXIS)
-        self.assertTrue(len(poleframe.cache) == 1)
-        self.assertTrue(100. in poleframe.cache)
-        self.assertFalse(poleframe.cached_value_returned)
-
-        pole_vecs = poleframe.transform_at_time(100.).unrotate(Vector3.ZAXIS)
-        self.assertTrue(len(poleframe.cache) == 1)
-        self.assertTrue(poleframe.cached_value_returned)
-
-        pole_vecs = poleframe.transform_at_time(200.).unrotate(Vector3.ZAXIS)
-        self.assertTrue(len(poleframe.cache) == 2)
-
-        pole_vecs = poleframe.transform_at_time(300.).unrotate(Vector3.ZAXIS)
-        self.assertTrue(len(poleframe.cache) == 3)
-
-        pole_vecs = poleframe.transform_at_time(400.).unrotate(Vector3.ZAXIS)
-        self.assertTrue(len(poleframe.cache) == 4)
-
-        pole_vecs = poleframe.transform_at_time(500.).unrotate(Vector3.ZAXIS)
-        self.assertTrue(len(poleframe.cache) == 4)
-        self.assertTrue(100. not in poleframe.cache)
-
-        pole_vecs = poleframe.transform_at_time(200.).unrotate(Vector3.ZAXIS)
-        self.assertTrue(len(poleframe.cache) == 4)
-        self.assertTrue(poleframe.cached_value_returned)
-
-        pole_vecs = poleframe.transform_at_time(100.).unrotate(Vector3.ZAXIS)
-        self.assertTrue(len(poleframe.cache) == 4)
-        self.assertFalse(poleframe.cached_value_returned)
-        self.assertTrue(300. not in poleframe.cache)
-
 ########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)

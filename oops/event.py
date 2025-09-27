@@ -392,7 +392,7 @@ class Event(object):
             self._ssb_._antimask_ = None
             self._ssb_._shape_ = None
 
-    def reinit(self):
+    def _refresh(self):
         """Remove all internal information; needed for Events that involve
         Fittable objects.
         """

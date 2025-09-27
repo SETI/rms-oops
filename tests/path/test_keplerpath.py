@@ -20,14 +20,16 @@ def _xyz_planet_derivative_test(kep, t, delta=1.e-7):
     pos_norm = xyz.norm().vals
 
     # Create new Kepler objects for tweaking the parameters
-    khi = kep.copy()
-    klo = kep.copy()
+    khi = KeplerPath(kep.planet, kep.epoch, kep.elements.copy(), kep.observer,
+                     kep.wobbles)
+    klo = KeplerPath(kep.planet, kep.epoch, kep.elements.copy(), kep.observer,
+                     kep.wobbles)
 
-    params = kep.get_params()
+    params = kep.get_elements()
 
     # Loop through parameters...
-    errors = np.zeros(np.shape(t) + (3,kep.nparams))
-    for e in range(kep.nparams):
+    errors = np.zeros(np.shape(t) + (3,kep.nelements))
+    for i,e in enumerate(range(kep.nelements)):
 
         # Tweak one parameter
         hi = params.copy()
@@ -69,14 +71,16 @@ def _pos_derivative_test(kep, t, delta=1.e-5):
     pos_norm = event.pos.norm().vals
 
     # Create new Kepler objects for tweaking the parameters
-    khi = kep.copy()
-    klo = kep.copy()
+    khi = KeplerPath(kep.planet, kep.epoch, kep.elements.copy(), kep.observer,
+                     kep.wobbles)
+    klo = KeplerPath(kep.planet, kep.epoch, kep.elements.copy(), kep.observer,
+                     kep.wobbles)
 
-    params = kep.get_params()
+    params = kep.get_elements()
 
     # Loop through parameters...
-    errors = np.zeros(np.shape(t) + (3,kep.nparams))
-    for e in range(kep.nparams):
+    errors = np.zeros(np.shape(t) + (3,kep.nelements))
+    for e in range(kep.nelements):
 
         # Tweak one parameter
         hi = params.copy()

@@ -7,6 +7,7 @@ import numpy as np
 from polymath                  import Pair, Vector, Qube
 from oops.observation          import Observation
 from oops.observation.snapshot import Snapshot
+from oops.fittable             import Fittable_
 from oops.frame                import Frame
 from oops.path                 import Path
 
@@ -25,7 +26,7 @@ class TimedImage(Observation):
 
     #===========================================================================
     def __init__(self, axes, cadence, fov, path, frame, **subfields):
-        """Constructor for a Pushframe.
+        """Constructor for a TimedImage.
 
         Input:
             axes        a list or tuple of strings, with one value for each axis
@@ -112,10 +113,6 @@ class TimedImage(Observation):
             if len(self.cadence.shape) != 2:
                 raise ValueError('TimedImage axes requires 2-D cadence')
 
-        # Timing
-        self.time = self.cadence.time
-        self.midtime = self.cadence.midtime
-
         # Shape / Size
         self.shape = len(axes) * [0]
         self.shape[self.u_axis] = self.fov_shape[0]
@@ -182,6 +179,7 @@ class TimedImage(Observation):
                                      self.path, self.frame, **subfields)
 
     def __getstate__(self):
+        Fittable_.refresh(self)
         return (self.axes, self.cadence, self.fov, self.path, self.frame,
                 self.subfields)
 

@@ -6,6 +6,7 @@ from oops.frame.frame_           import (Frame, Wayframe, AliasFrame,
                                          LinkedFrame, RelativeFrame,
                                          ReversedFrame, QuickFrame)
 from oops.frame.cmatrix          import Cmatrix
+from oops.frame.frameshift       import FrameShift
 from oops.frame.inclinedframe    import InclinedFrame
 from oops.frame.laplaceframe     import LaplaceFrame
 from oops.frame.navigation       import Navigation

@@ -11,6 +11,7 @@ from oops.path.fixedpath  import FixedPath
 from oops.path.keplerpath import KeplerPath
 from oops.path.linearpath import LinearPath
 from oops.path.multipath  import MultiPath
+from oops.path.pathshift  import PathShift
 from oops.path.spicepath  import SpicePath
 
 ################################################################################

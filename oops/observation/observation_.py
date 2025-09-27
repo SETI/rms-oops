@@ -5,10 +5,11 @@
 import numpy as np
 import numbers
 
-from polymath      import Scalar, Pair, Vector, Vector3, Qube
-from oops.config   import LOGGING, PATH_PHOTONS
-from oops.event    import Event
-from oops.meshgrid import Meshgrid
+from polymath              import Scalar, Pair, Vector, Vector3, Qube
+from oops.config           import LOGGING, PATH_PHOTONS
+from oops.event            import Event
+from oops.frame.navigation import Navigation
+from oops.meshgrid         import Meshgrid
 
 class Observation(object):
     """An Observation is an abstract class that defines the timing and pointing
@@ -29,12 +30,14 @@ class Observation(object):
 
     At minimum, these attributes are used to describe the observation:
 
+        cadence         a Cadence object defining the timing of the observation.
+
         time            a tuple or Pair defining the start time and end time of
-                        the observation overall, in seconds TDB.
+                        the observation overall, in seconds TDB. Inherited from
+                        `cadence`.
 
         midtime         the mid-time of the observation, in seconds TDB.
-
-        cadence         a Cadence object defining the timing of the observation.
+                        Inherited from `cadence`.
 
         fov             a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -42,8 +45,9 @@ class Observation(object):
                         coordinates (x,y).
 
         uv_shape        a tuple defining the 2-D shape of the spatial axes of
-                        the data array, in (u,v) order. Note that this may
-                        differ from fov.uv_shape.
+                        the data array, in (u,v) order. Note that this will
+                        differ from fov.uv_shape in cases where the
+                        time-dependence introduces an extra dimension.
 
         u_axis, v_axis  integers identifying the axes of the data array
                         associated with the u-axis and the v-axis. Use -1 if
@@ -90,6 +94,14 @@ class Observation(object):
         """A constructor."""
 
         pass
+
+    @property
+    def time(self):
+        return self.cadence.time
+
+    @property
+    def midtime(self):
+        return self.cadence.midtime
 
     #===========================================================================
     def uvt(self, indices, remask=False, derivs=True):
@@ -353,6 +365,32 @@ class Observation(object):
 
         raise NotImplementedError(type(self).__name__ + '.time_shift ' +
                                   'is not implemented')
+
+    #===========================================================================
+    def navigate(self, angles):
+        """A copy of this Observation object after two or three rotation angles
+        of a Navigation object applied.
+
+        Input:
+            angles      two or three angles of rotation in radians. The order of
+                        the rotations is about the y, x, and (optionally) z
+                        axes. These angles rotate a vector in the reference
+                        frame into this frame.
+
+        Return:         A new Observation with the navigation applied.
+        """
+
+        # Identify the non-navigated frame
+        if isinstance(self.frame, Navigation):
+            frame = self.frame.reference
+        else:
+            frame = self.frame
+
+        # Copy and update the frame
+        obs = type(self).__new__()
+        obs.__dict__ = self.__dict__.copy()
+        obs.frame = Navigation(angles, reference=frame)
+        return obs
 
     ############################################################################
     # Subfield support methods

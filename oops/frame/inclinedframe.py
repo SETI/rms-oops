@@ -1,117 +1,116 @@
-################################################################################
+##########################################################################################
 # oops/frame/inclinedframe.py: Subclass InclinedFrame of class Frame
-################################################################################
+##########################################################################################
 
 from polymath             import Qube, Scalar
+from oops.fittable        import Fittable_
 from oops.frame           import Frame
-from oops.frame.poleframe import PoleFrame
 from oops.frame.rotation  import Rotation
 from oops.frame.spinframe import SpinFrame
 
-class InclinedFrame(Frame):
-    """InclinedFrame is a Frame subclass describing a frame that is inclined to
-    the equator of another frame.
 
-    It is defined by an inclination, a node at epoch, and a nodal regression
-    rate. This frame is oriented to be "nearly inertial," meaning that a
-    longitude in the new frame is determined by measuring from the reference
-    longitude in the reference frame, along that frame's equator to the
-    ascending node, and thence along the ascending node.
+class InclinedFrame(Frame):
+    """InclinedFrame is a Frame subclass describing a frame that is inclined to the
+    equator of another frame.
+
+    It is defined by an inclination, a node at epoch, and a nodal regression rate. This
+    frame is oriented to be "nearly inertial," meaning that a longitude in the new frame
+    is determined by measuring from the reference longitude in the reference frame, along
+    that frame's equator to the ascending node, and thence along the ascending node.
     """
 
-    FRAME_IDS = {}  # frame_id to use if a frame already exists upon un-pickling
+    _FRAME_IDS = {}
 
-    #===========================================================================
-    def __init__(self, inc, node, rate, epoch, reference, despin=True,
-                       frame_id=None, unpickled=False):
+    def __init__(self, inc, node, rate, epoch, reference, *, despin=True, frame_id=None):
         """Constructor for a InclinedFrame.
 
-        Input:
-            inc         the inclination of the plane in radians.
+        Parameters:
+            inc (Scalar, array-like, or float): Inclination angle in radians.
+            node (Scalar, array-like, or float): Longitude of None at epoch in radians.
+            rate (Scalar, array-like, or float): Rate of nodal presession in radians/s.
+            epoch Scalar, array-like, or float): Time in seconds TDB at which the `node`
+                applies.
+            reference (Frame or str): Frame or Frame ID describing the central planet of
+                the inclined plane.
+            despin (bool, optional): True for a nearly inertial frame, in which the x and
+                yaxes vary as little as possible while the zaxis rotates; False for a
+                frame in which the x axis is tied to the ascending node.
+            frame_id (str, optional): The ID under which the frame will be registered;
+                None to leave the frame unregistered
 
-            node        the longitude of ascending node of the inclined plane
-                        at the specified epoch, in radians. This measured
-                        relative to the ascending node of the planet's equator
-                        relative to its parent frame, which is typically J2000.
-
-            rate        the nodal regression rate of the inclined plane in
-                        radians per second. Should be negative for a ring about
-                        an oblate planet.
-
-            epoch       the time TDB at which the node is defined.
-
-            reference   a reference frame describing the central planet of the
-                        inclined plane.
-
-            despin      True to return a nearly inertial frame; False to return
-                        a frame in which the x-axis is tied to the ascending
-                        node.
-
-            frame_id    the ID under which the frame will be registered; None
-                        to leave the frame unregistered.
-
-            unpickled   True if this frame has been read from a pickle file.
-
-        Note that inc, node, rate and epoch can all be scalars of arbitrary
-        shape. The shape of the InclinedFrame is the result of broadcasting all
-        these shapes together.
+        Note that inc, node, rate and epoch can all be Scalars of arbitrary shape. The
+        shape of the InclinedFrame is the result of broadcasting all these shapes
+        together.
         """
 
         self.inc = Scalar.as_scalar(inc)
         self.node = Scalar.as_scalar(node)
         self.rate = Scalar.as_scalar(rate)
         self.epoch = Scalar.as_scalar(epoch)
-
-        self.shape = Qube.broadcast(self.inc, self.node, self.rate, self.epoch)
-
-        self.frame_id  = frame_id
-        self.reference = Frame.as_wayframe(reference)
-        self.origin    = self.reference.origin
-        self.keys      = set()
-
-        self.spin1  = SpinFrame(self.node, self.rate, self.epoch, axis=2,
-                                reference=self.reference)
-        self.rotate = Rotation(self.inc, axis=0, reference=self.spin1)
-
         self.despin = bool(despin)
-        if despin:
+
+        # Required attributes
+        self.reference = Frame.as_wayframe(reference)
+        self.origin = self.reference.origin
+        self.shape = Qube.broadcast(self.inc, self.node, self.rate, self.epoch)
+        self.frame_id = self._recover_id(frame_id)
+
+        # Update wayframe and frame_id; register if not temporary
+        self.register()
+        self._refresh()
+        self._cache_id()
+
+    def _refresh(self):
+        self.spin1 = SpinFrame(self.node, self.rate, self.epoch, axis=2,
+                               reference=self.reference)
+        self.rotate = Rotation(self.inc, axis=0, reference=self.spin1)
+        self.rotate.freeze()
+
+        if self.despin:
             self.spin2 = SpinFrame(-self.node, -self.rate, self.epoch, axis=2,
                                    reference=self.rotate)
         else:
             self.spin2 = None
 
-        # Update wayframe and frame_id; register if not temporary
-        self.register(unpickled=unpickled)
+    ######################################################################################
+    # Serialization support
+    ######################################################################################
 
-        # Save in internal dict for name lookup upon serialization
-        if (not unpickled and self.shape == ()
-            and self.frame_id in Frame.WAYFRAME_REGISTRY):
-                key = (self.inc.vals, self.node.vals, self.rate.vals,
-                       self.epoch.vals, self.reference.frame_id, self.despin)
-                InclinedFrame.FRAME_IDS[key] = self.frame_id
+    def _frame_key(self):
+        return (self.inc, self.node, self.rate, self.epoch, self.reference, self.despin)
 
-    # Unpickled frames will always have temporary IDs to avoid conflicts
     def __getstate__(self):
+        Fittable_.refresh(self)
+        self._cache_id()
         return (self.inc, self.node, self.rate, self.epoch,
-                Frame.as_primary_frame(self.reference),
-                self.despin, self.shape)
+                Frame.as_primary_frame(self.reference), self.despin, self._state_id())
 
     def __setstate__(self, state):
-        # If this frame matches a pre-existing frame, re-use its ID
-        (inc, node, rate, epoch, reference, despin, shape) = state
-        if shape == ():
-            key = (inc.vals, node.vals, rate.vals, epoch.vals,
-                   reference.frame_id, despin)
-            frame_id = PoleFrame.FRAME_IDS.get(key, None)
-        else:
-            frame_id = None
+        (inc, node, rate, epoch, reference, despin, frame_id) = state
+        self.__init__(inc, node, rate, epoch, reference=reference, despin=despin,
+                      frame_id=frame_id)
+        Fittable_.freeze(self)
 
-        self.__init__(inc, node, rate, epoch, reference, despin,
-                      frame_id=frame_id, unpickled=True)
+    ######################################################################################
+    # Frame API
+    ######################################################################################
 
-    #===========================================================================
     def transform_at_time(self, time, quick=False):
-        """The Transform into the this Frame at a Scalar of times."""
+        """Transform that rotates coordinates from the reference frame to this frame.
+
+        If the frame is rotating, then the coordinates being transformed must be given
+        relative to the center of rotation.
+
+        Parameters:
+            time (Scalar, array-like, or float): The time in seconds TDB.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default QuickPath and QuickFrame parameters.
+                Use False to disable the use of QuickPaths and QuickFrames.
+
+        Returns:
+            (Transform): The Tranform applicable at the specified time or times. It
+                rotates vectors from the reference frame to this frame.
+        """
 
         xform = self.spin1.transform_at_time(time)
         xform = self.rotate.transform_at_time(time).rotate_transform(xform)
@@ -121,12 +120,22 @@ class InclinedFrame(Frame):
 
         return xform
 
-    #===========================================================================
     def node_at_time(self, time):
-        """The longitude of ascending node at the specified time."""
+        """The vector defining the ascending node of this frame's XY plane relative to
+        the XY frame of its reference.
+
+        Parameters:
+            time (Scalar, array-like, or float): The time in seconds TDB.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default QuickPath and QuickFrame parameters.
+                Use False to disable the use of QuickPaths and QuickFrames.
+
+        Returns:
+            (Vector3): The unit vector pointing in the direction of the ascending node.
+        """
 
         # Locate the ascending nodes in the reference frame
-        return (self.node + self.rate * (Scalar.as_scalar(time)
-                                         - self.epoch)) % Scalar.TWOPI
+        time = Scalar.as_scalar(time)
+        return (self.node + self.rate * (time - self.epoch)) % Scalar.TWOPI
 
-################################################################################
+##########################################################################################

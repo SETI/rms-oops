@@ -33,7 +33,7 @@ class Test_MultiPath(unittest.TestCase):
 
         test = MultiPath([sun,earth,moon], "SSB", path_id='+')
 
-        self.assertEqual(test.path_id, "SUN+others")
+        self.assertEqual(test.path_id, "SUN+EARTH+MOON")
         self.assertEqual(test.shape, (3,))
 
         # Single time

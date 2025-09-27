@@ -1,73 +1,53 @@
-################################################################################
+##########################################################################################
 # oops/frame/twovectorframe.py: Subclass TwoVectorFrame of class Frame
-################################################################################
+##########################################################################################
 
 from polymath       import Matrix3, Qube, Vector3
+from oops.fittable  import Fittable_
 from oops.frame     import Frame
 from oops.transform import Transform
 
-class TwoVectorFrame(Frame):
-    """A Frame subclass describing a frame that is fixed relative to another
-    frame.
 
-    It is described by two vectors. The first vector is one axis of the frame
-    and the second vector points in the half-plane of another axis.
+class TwoVectorFrame(Frame):
+    """A Frame subclass describing a frame that is fixed relative to another frame.
+
+    It is described by two vectors. The first vector is one axis of the frame and the
+    second vector points in the half-plane of another axis.
     """
 
-    XYZDICT = {'X': 0, 'Y': 1, 'Z': 2, 'x': 0, 'y': 1, 'z': 2}
+    _FRAME_IDS = {}
+    _XYZDICT = {'X': 0, 'Y': 1, 'Z': 2, 'x': 0, 'y': 1, 'z': 2, 0: 0, 1: 1, 2: 2}
 
-    FRAME_IDS = {}  # frame_id to use if a frame already exists upon un-pickling
-
-    #===========================================================================
-    def __init__(self, frame, vector1, axis1, vector2, axis2, frame_id='+',
-                       unpickled=False):
+    def __init__(self, reference, vector1, axis1, vector2, axis2, frame_id='+'):
         """Constructor for a TwoVectorFrame.
 
-        Input:
-            frame       the frame relative to which this frame is defined.
-
-            vector1     vector describing an axis.
-
-            axis1       'X', 'Y', or 'Z', indicating the axis defined by the
-                        first vector..
-
-            vector2     a vector which, along with vector1, defines the half
-                        plane in which a second axis falls.
-
-            axis2       'X', 'Y', or 'Z', indicating the axis defined by the
-                        second vector.
-
-            frame_id    the ID under which the frame will be registered. None to
-                        leave the frame unregistered. If the value begins with
-                        "+", then the "+" is replaced by an underscore and the
-                        result is appended to the name of the reference frame.
-                        If the name is "+" alone, then the registered name is
-                        that of the reference frame appended with '_TWOVECTOR'.
-
-            unpickled   True if this frame has been read from a pickle file.
+        Parameters:
+            reference (Frame): The frame relative to which this frame is defined.
+            vector1 (Vector3 or array-like): Vector describing an axis.
+            axis1 (str): The axis defined by the first vector: 0 or "X" for x; 1 or "Y"
+                for y, or 2 or "Z" for z.
+            vector1 (Vector3 or array-like): A Vector which, along with vector1, defines
+                the half-plane in which a second axis falls.
+            axis1 (str): "X", "Y", or "Z", indicating the axis defined by the second
+                vector.
+            frame_id (str, optional): The ID under which to register the frame; None to
+                leave it unregistered. As a special case, at value of "+" alone is
+                replaced by the ID of `reference` plus "_TWOVECTOR". If text follows the
+                "+", the new ID is the ID of `reference` followed by "_" and this text.
         """
 
         self.vector1 = Vector3.as_vector3(vector1)
         self.vector2 = Vector3.as_vector3(vector2)
-        self.axis1 = str(axis1).upper()
-        self.axis2 = str(axis2).upper()
+        self.axis1 = TwoVectorFrame._XYZDICT[axis1]
+        self.axis2 = TwoVectorFrame._XYZDICT[axis2]
 
-        for axis in (self.axis1, self.axis2):
-            if axis not in ('X','Y','Z'):
-                raise ValueError('invalid axis value: ' + repr(axis))
-
-        self.reference = Frame.as_wayframe(frame)
-
-        self.shape = Qube.broadcasted_shape(self.vector1, self.vector2,
-                                            self.reference)
-        self.keys = set()
-
+        # Required attributes
+        self.reference = Frame.as_wayframe(reference)
         self.origin = self.reference.origin
+        self.shape = Qube.broadcasted_shape(self.vector1, self.vector2, self.reference)
 
-        # Fill in the frame ID
-        self._state_frame_id = frame_id
         if frame_id is None:
-            self.frame_id = Frame.temporary_frame_id()
+            self.frame_id = Frame._recover_frame_id(frame_id)
         elif frame_id.startswith('+') and len(frame_id) > 1:
             self.frame_id = self.reference.frame_id + '_' + frame_id[1:]
         elif frame_id == '+':
@@ -76,54 +56,79 @@ class TwoVectorFrame(Frame):
             self.frame_id = frame_id
 
         # Register if necessary
-        self.register(unpickled=unpickled)
+        self.register()
+        self._refresh()
+        self._cache_id()
 
-        # Derive the tranform now
-        matrix = Matrix3.twovec(self.vector1, TwoVectorFrame.XYZDICT[axis1],
-                                self.vector2, TwoVectorFrame.XYZDICT[axis2])
-
-        self.transform = Transform(matrix, Vector3.ZERO,
-                                   self.wayframe, self.reference)
-
+    def _refresh(self):
+        matrix = Matrix3.twovec(self.vector1, self.axis1, self.vector2, self.axis2)
+        self._transform = Transform(matrix, Vector3.ZERO, self, self.reference)
         z_axis = matrix.row_vector(2, classes=[Vector3])
-        self.node = Vector3.ZAXIS.ucross(z_axis)
+        self._node = Vector3.ZAXIS.ucross(z_axis)
 
-        # Save in internal dict for name lookup upon serialization
-        if (not unpickled and self.shape == ()
-            and self.frame_id in Frame.WAYFRAME_REGISTRY):
-                key = (self.reference.frame_id,
-                       tuple(self.vector1.vals), self.axis1,
-                       tuple(self.vector2.vals), self.axis2)
-                TwoVectorFrame.FRAME_IDS[key] = self.frame_id
+    ######################################################################################
+    # Serialization support
+    ######################################################################################
 
-    # Unpickled frames will always have temporary IDs to avoid conflicts
+    def _frame_key(self):
+        return (self.reference, self.vector1, self.axis1, self.vector2, self.axis2)
+
     def __getstate__(self):
-        return (Frame.as_primary_frame(self.reference),
-                self.vector1, self.axis1,
-                self.vector2, self.axis2, self.shape)
+        Fittable_.refresh(self)
+        self._cache_id()
+        return (Frame.as_primary_frame(self.reference),  self.vector1, self.axis1,
+                self.vector2, self.axis2, self._state_id())
 
     def __setstate__(self, state):
-        # If this frame matches a pre-existing frame, re-use its ID
-        (frame, vector1, axis1, vector2, axis2, shape) = state
-        if self.shape == ():
-            key = (frame.frame_id, tuple(vector1.vals), axis1,
-                                   tuple(vector2.vals), axis2)
-            frame_id = TwoVectorFrame.FRAME_IDS.get(key, None)
-        else:
-            frame_id = None
+        (frame, vector1, axis1, vector2, axis2, frame_id) = state
+        self.__init__(frame, vector1, axis1, vector2, axis2, frame_id=frame_id)
+        Fittable_.freeze(self)
 
-        self.__init__(frame, vector1, axis1, vector2, axis2, frame_id=frame_id,
-                      unpickled=True)
+    ######################################################################################
+    # Frame API
+    ######################################################################################
 
-    #===========================================================================
     def transform_at_time(self, time, quick={}):
-        """The Transform into the this Frame at a Scalar of times."""
+        """Transform that rotates coordinates from the reference frame to this frame.
 
-        return self.transform
+        If the frame is rotating, then the coordinates being transformed must be given
+        relative to the center of rotation.
 
-    #===========================================================================
+        Parameters:
+            time (Scalar, array-like, or float): The time in seconds TDB.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default QuickPath and QuickFrame parameters.
+                Use False to disable the use of QuickPaths and QuickFrames.
+
+        Returns:
+            (Transform): The Tranform applicable at the specified time or times. It
+                rotates vectors from the reference frame to this frame.
+
+        Notes:
+            TwoVector is a fixed frame, so the transform relative to the `reference` frame
+            is independent of time.
+        """
+
+        return self._transform
+
     def node_at_time(self, time, quick={}):
+        """The vector defining the ascending node of this frame's XY plane relative to
+        the XY frame of its reference.
 
-        return self.node
+        Parameters:
+            time (Scalar, array-like, or float): The time in seconds TDB.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default QuickPath and QuickFrame parameters.
+                Use False to disable the use of QuickPaths and QuickFrames.
 
-################################################################################
+        Returns:
+            (Vector3): The unit vector pointing in the direction of the ascending node.
+
+        Notes:
+            TwoVector is a fixed frame, so its node vector relative to the `reference`
+            frame is independent of time.
+        """
+
+        return self._node
+
+##########################################################################################

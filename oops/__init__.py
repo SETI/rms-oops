@@ -45,8 +45,9 @@ Surface     = oops.surface.Surface
 
 from oops.backplane import Backplane
 from oops.body      import Body
+from oops.cache     import Cache
 from oops.event     import Event
-from oops.fittable  import Fittable
+from oops.fittable  import Fittable, Fittable_
 from oops.meshgrid  import Meshgrid
 from oops.transform import Transform
 
@@ -81,6 +82,9 @@ Transform.IDENTITY = Transform(Matrix3.IDENTITY,
                                frame.Frame.J2000,
                                frame.Frame.J2000,
                                path.Path.SSB)
+
+Cache.FRAME_CLASS = Frame
+Cache.PATH_CLASS = Path
 
 Frame.EVENT_CLASS = Event
 Frame.PATH_CLASS = Path

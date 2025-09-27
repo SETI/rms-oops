@@ -43,6 +43,12 @@ class ReversedCadence(Cadence):
         self._first_time = self.cadence.time_range_at_tstep(self._max_step)[0]
         self._last_time  = self.cadence.time_range_at_tstep(0)[1]
 
+    def _refresh(self):
+        """Update internals if self.cadence is Fittable."""
+        self.time = self.cadence.time
+        self.midtime = self.cadence.midtime
+        self.lasttime = self.cadence.lasttime
+
     def __getstate__(self):
         return (self.cadence,)
 

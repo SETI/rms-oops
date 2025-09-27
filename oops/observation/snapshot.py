@@ -4,14 +4,16 @@
 
 import numpy as np
 
-from polymath               import Scalar, Pair, Vector, Vector3, Qube
-from oops.observation       import Observation
-from oops.body              import Body
-from oops.cadence.metronome import Metronome
-from oops.event             import Event
-from oops.frame             import Frame
-from oops.path              import Path
-from oops.path.multipath    import MultiPath
+from polymath                 import Scalar, Pair, Vector, Vector3, Qube
+from oops.observation         import Observation
+from oops.body                import Body
+from oops.cadence             import Cadence
+from oops.cadence.snapcadence import SnapCadence
+from oops.event               import Event
+from oops.fittable            import Fittable_
+from oops.frame               import Frame
+from oops.path                import Path
+from oops.path.multipath      import MultiPath
 
 class Snapshot(Observation):
     """A Snapshot is an Observation consisting of a 2-D image made up of pixels
@@ -33,8 +35,11 @@ class Snapshot(Observation):
                         an image file in FITS or VICAR format.
 
             tstart      the start time of the observation in seconds TDB.
+                        Alternatively, a Cadence object with shape (1,) defining
+                        `tstart` and `texp`.
 
-            texp        exposure duration of the observation in seconds.
+            texp        exposure duration of the observation in seconds. Ignored
+                        if `tstart` is specified as a Cadence.
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -75,17 +80,14 @@ class Snapshot(Observation):
         self.shape[self.v_axis] = self.uv_shape[1]
 
         # Cadence
-        self.cadence = Metronome.for_array0d(tstart, texp)
-
-        # Timing
-        self.tstart = self.cadence.tstart
-        self.texp = self.cadence.texp
-
-        self.time = self.cadence.time
-        self.midtime = self.cadence.midtime
-
-        self._scalar_time = (Scalar(self.time[0]), Scalar(self.time[1]))
-        self._scalar_midtime = Scalar(self.midtime)
+        if isinstance(tstart, Cadence):
+            self.cadence = tstart
+            if self.cadence.shape != (1,):
+                raise ValueError('Shape of Snapshot cadence must be (1,)')
+            self.texp = self.cadence.texp
+        else:
+            self.cadence = SnapCadence(tstart, texp)
+            self.texp = texp
 
         # Optional subfields
         self.subfields = {}
@@ -93,7 +95,8 @@ class Snapshot(Observation):
             self.insert_subfield(key, subfields[key])
 
     def __getstate__(self):
-        return (self.axes, self.tstart, self.texp, self.fov, self.path,
+        Fittable_.refresh(self)
+        return (self.axes, self.cadence, self.texp, self.fov, self.path,
                 self.frame, self.subfields)
 
     def __setstate__(self, state):
@@ -119,7 +122,7 @@ class Snapshot(Observation):
 
         indices = Vector.as_vector(indices, recursive=derivs)
         uv = indices.to_pair((self.u_axis, self.v_axis))
-        time = self._scalar_midtime
+        time = Scalar(self.cadence.midtime)
 
         if remask:
             is_outside = self.uv_is_outside(uv, inclusive=True)
@@ -212,7 +215,7 @@ class Snapshot(Observation):
                 return (time_min, time_max)
 
         # Without a mask, it's OK to return shapeless values
-        return self._scalar_time
+        return (Scalar(self.cadence.time[0]), Scalar(self.cadence.time[1]))
 
     #===========================================================================
     def uv_range_at_time(self, time, remask=False):
@@ -249,14 +252,10 @@ class Snapshot(Observation):
         Return:         a (shallow) copy of the object with a new time.
         """
 
-        obs = Snapshot(axes=self.axes, tstart=self.time[0] + dtime,
-                       texp=self.texp, fov=self.fov, path=self.path,
-                       frame=self.frame)
-
-        for key in self.subfields.keys():
-            obs.insert_subfield(key, self.subfields[key])
-
-        return obs
+        cadence = self.cadence.time_shift(dtime)
+        return Snapshot(axes=self.axes, tstart=cadence, texp=self.texp,
+                        fov=self.fov, path=self.path, frame=self.frame,
+                        **self.subfields)
 
     ############################################################################
     # Overrides of Observation methods
