@@ -387,7 +387,7 @@ class Observation(object):
             frame = self.frame
 
         # Copy and update the frame
-        obs = type(self).__new__()
+        obs = type(self).__new__(type(self))
         obs.__dict__ = self.__dict__.copy()
         obs.frame = Navigation(angles, reference=frame)
         return obs
