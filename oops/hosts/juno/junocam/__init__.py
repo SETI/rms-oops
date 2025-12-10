@@ -357,7 +357,7 @@ class Metadata(object):
 
         """
         desc = label['RATIONALE_DESC']
-        desc = re.sub('\s+',' ', desc)                     # compress whitespace
+        desc = re.sub(r'\s+',' ', desc)                     # compress whitespace
 ### There's a standard way to do this without re:
 ###     desc = ' '.join(desc.split())
         kv = desc.partition('INS-61504_DISTORTION_Y = ')   # parse keyword

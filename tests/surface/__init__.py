@@ -791,7 +791,7 @@ class Surface(object):
                                                  mask=True))
 
         # Add link key attributes for the new, masked link
-        new_link = link.all_masked()
+        new_link = link.as_all_masked()
         new_link = new_link.replace(link_key, vector,
                                     link_key + '_lt', scalar)
 
@@ -1047,7 +1047,7 @@ class Surface(object):
             # Update the light travel time
             los_in_j2000 = pos_wrt_origin_j2000 - obs_wrt_origin_j2000
             new_lt = los_in_j2000.norm() / signed_c
-            new_lt = new_lt.clip(lt_min, lt_max, False)
+            new_lt = new_lt.clip(lt_min, lt_max, remask=False)
             dlt = new_lt - lt
             lt = new_lt
 

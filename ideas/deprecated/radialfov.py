@@ -150,7 +150,7 @@ class RadialFOV(FOV):
                         FOV coordinates.
         """
 
-        xy = Pair.as_pair(xy, derivs)
+        xy = Pair.as_pair(xy, recursive=derivs)
 
         # Transform based on which types of coeffs are given
         if self.coefft_uv_from_xy is not None:
@@ -178,7 +178,7 @@ class RadialFOV(FOV):
                      the polynomial at each input point.
         """
 
-        r = Scalar.as_scalar(r, derivs)
+        r = Scalar.as_scalar(r, recursive=derivs)
         order = coefft.shape[0]-1
 
         # Construct the powers of radius
@@ -313,7 +313,7 @@ class RadialFOV(FOV):
         to_ = (src^{from_}).pop()
         dkey = from_
 
-        ab = Pair.as_pair(ab, derivs)
+        ab = Pair.as_pair(ab, recursive=derivs)
         ab_wod = ab.wod
 
         # Make a rough initial guess
