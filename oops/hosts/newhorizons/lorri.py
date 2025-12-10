@@ -297,9 +297,8 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
             solar_range = sun_event.pos.norm().vals / solar.AU
 
         if solar_range is None:
-            raise IOError("Calibration can't figure out range from Sun to " +
-                          "target body " + target_name + " in file " +
-                          filespec)
+            raise IOError(f"Calibration can't figure out range from Sun to "
+                          f"target body {target_name} in file {filespec}")
 
         extended_calib = {}
         point_calib = {}
