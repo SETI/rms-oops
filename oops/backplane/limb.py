@@ -30,8 +30,9 @@ def limb_altitude(self, event_key, zmin=None, zmax=None, scaled=False):
         radius = body.surface.radii.max()
         if zmin is not None:
             zmin = zmin * radius
-        if zmin is not None:
-            zmax = zmax * radius
+        if zmax is not None:
+            if zmin is not None:
+                zmax = zmax * radius
 
     key = ('limb_altitude', event_key, zmin, zmax)
     if key in self.backplanes:
@@ -159,7 +160,7 @@ def limb_latitude(self, event_key, lat_type='centric'):
     return self.register_backplane(key, latitude)
 
 #===============================================================================
-def limb_clock_angle(self, event_key):
+def limb_clock_angle(self, event_key, zmin=None, zmax=None, scaled=False):
     """Angular location around the limb, measured clockwise from the projected
     north pole.
 
@@ -168,8 +169,16 @@ def limb_clock_angle(self, event_key):
                         limb_altitude backplane key, in which case this
                         backplane inherits the mask of the given backplane
                         array.
+        zmin            lower limit on altitude; lower values are masked.
+        zmax            upper limit on altitude.
+        scaled          if True, zmin and zmax are in units of the maximum body radius.
     """
 
+    # Get the altitude backplane
+    altitude_key = ('limb_altitude', event_key, zmin, zmax)
+    altitude = limb_altitude(self, event_key, zmin=zmin, zmax=zmax, scaled=scaled)
+
+    # Create the clock angle backplane
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, LIMB_BACKPLANES,
                                                      default='LIMB')
@@ -194,8 +203,14 @@ def limb_clock_angle(self, event_key):
     event = polar_surface.apply_coords_to_event(event, obs=self.obs_event,
                                                        axes=2,
                                                        derivs=self.ALL_DERIVS)
+    clock_angle = event.coord2
 
-    return self.register_backplane(key, event.coord2)
+    ### use self._remasked_backplane
+    # copy altitude mask
+    if np.any(altitude.mask):
+        clock_angle = clock_angle.remask_or(altitude.mask)
+
+    return self.register_backplane(key, clock_angle)
 
 ################################################################################
 
