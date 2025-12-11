@@ -30,7 +30,7 @@ class FixedPath(Path):
 
         # Interpret the position
         pos = Vector3.as_vector3(pos)
-        pos = pos.with_deriv('t', Vector3.ZERO, 'replace')
+        pos = pos.with_deriv('t', Vector3.ZERO, method='replace')
         self.pos = pos.as_readonly()
 
         # Required attributes

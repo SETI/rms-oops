@@ -348,8 +348,7 @@ class ReshapedCadence(Cadence):
             elif mask:
                 max_vals[-1] = new_tstep_min.vals[-1]
 
-            new_tstep_max = new_tstep_min.clone()
-            new_tstep_max._set_values_(max_vals)
+            new_tstep_max = Pair(max_vals, new_tstep_min.mask)
 
             # Make sure that the new tstep range will be continuous
             if not self.is_unique and self._rank > 1:

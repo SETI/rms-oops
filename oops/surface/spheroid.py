@@ -313,7 +313,7 @@ class Spheroid(Ellipsoid):
         """
 
         lat = Scalar.as_scalar(lat, recursive=derivs)
-        return (lat.tan(derivs) * self.squash_z).arctan()
+        return (lat.tan(recursive=derivs) * self.squash_z).arctan()
 
     #===========================================================================
     def lat_from_centric(self, lat, lon=None, derivs=False):

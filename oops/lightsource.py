@@ -78,9 +78,9 @@ class LightSource(object):
 
         # Interpret the weights
         if weight:
-            weight = Scalar.as_scalar(weight).broadcast_into_shape(self.shape)
+            weight = Scalar.as_scalar(weight).broadcast_to(self.shape)
         else:
-            weight = Scalar(1.).broadcast_into_shape(self.shape)
+            weight = Scalar(1.).broadcast_to(self.shape)
 
         self.weight = weight.copy().mask_where(weight.mask, replace=0.,
                                                remask=True)

@@ -163,7 +163,7 @@ class BarrelFOV(FOV):
 
         # Convert to xy using flat FOV model
         flat_xy = self.flat_fov.xy_from_uv(uv, derivs=derivs, remask=remask)
-        r_flat = flat_xy.norm(derivs)
+        r_flat = flat_xy.norm(recursive=derivs)
 
         # Distort based on which types of coefficients are given
         if self.coefft_xy_from_uv is not None:
@@ -199,8 +199,8 @@ class BarrelFOV(FOV):
                         FOV coordinates.
         """
 
-        true_xy = Pair.as_pair(xy, derivs)
-        r_true = true_xy.norm(derivs)
+        true_xy = Pair.as_pair(xy, recursive=derivs)
+        r_true = true_xy.norm(recursive=derivs)
 
         # Distort based on which types of coefficients are given
         if self.fast and self.coefft_uv_from_xy is not None:
@@ -256,7 +256,7 @@ class BarrelFOV(FOV):
         """
 
         # Construct the powers of radius, starting at 1
-        r = Scalar.as_scalar(r, derivs)
+        r = Scalar.as_scalar(r, recursive=derivs)
 
         powers = np.empty(r.shape + coefft.shape)
         powers[...,0] = 1.
@@ -318,7 +318,7 @@ class BarrelFOV(FOV):
             df_dr       the derivative df/dr at r.
         """
 
-        f = Scalar.as_scalar(f, derivs)
+        f = Scalar.as_scalar(f, recursive=derivs)
 
         # Handle fully-masked case
         if np.all(f.mask):

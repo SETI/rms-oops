@@ -105,14 +105,14 @@ class Limb(Surface):
         # Validate inputs
         self._coords_from_vector3_check(axes)
 
-        pos = Vector3.as_vector3(pos, derivs)
+        pos = Vector3.as_vector3(pos, recursive=derivs)
 
         # There's a quick solution for the ground point if hints are provided
         if isinstance(hints, (type(None), bool, np.bool_)):
             (track, p) = self.ground.intercept_normal_to(pos, derivs=derivs,
                                                          guess=True)
         else:
-            p = Scalar.as_scalar(hints, derivs)
+            p = Scalar.as_scalar(hints, recursive=derivs)
             denom = Vector3.ONES + p * self.ground.unsquash_sq
             track = pos.element_div(denom)
 
@@ -214,8 +214,8 @@ class Limb(Surface):
                         included if the input value of groundtrack is True.
         """
 
-        obs = Vector3.as_vector3(obs, derivs)
-        los = Vector3.as_vector3(los, derivs)
+        obs = Vector3.as_vector3(obs, recursive=derivs)
+        los = Vector3.as_vector3(los, recursive=derivs)
 
         # Solve for the intercept distance where the line of sight is normal to
         # the surface.
@@ -340,8 +340,8 @@ class Limb(Surface):
                         returned clock angle.
         """
 
-        track = Vector3.as_vector3(track, derivs)
-        obs = Vector3.as_vector3(obs, derivs)
+        track = Vector3.as_vector3(track, recursive=derivs)
+        obs = Vector3.as_vector3(obs, recursive=derivs)
 
         # Get groundtrack surface normal
         normal = self.ground.normal(track, derivs=derivs)

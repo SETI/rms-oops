@@ -90,7 +90,7 @@ class OffsetFOV(FOV, Fittable):
                         (x,y) coordinates in the camera's frame.
         """
 
-        uv_pair = Pair.as_pair(uv_pair, derivs)
+        uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
         old_xy = self.fov.xy_from_uvt(uv_pair, time=time, derivs=derivs,
                                       remask=remask, **keywords)
         return old_xy - self.xy_offset
@@ -115,7 +115,7 @@ class OffsetFOV(FOV, Fittable):
                         FOV coordinates.
         """
 
-        xy_pair = Pair.as_pair(xy_pair, derivs)
+        xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
         return self.fov.uv_from_xyt(xy_pair + self.xy_offset, time=time,
                                     derivs=derivs, remask=remask, **keywords)
 

@@ -5,10 +5,11 @@
 import numpy as np
 import numbers
 
-from polymath      import Scalar, Pair, Vector, Vector3, Qube
-from oops.config   import LOGGING, PATH_PHOTONS
-from oops.event    import Event
-from oops.meshgrid import Meshgrid
+from polymath              import Scalar, Pair, Vector, Vector3, Qube
+from oops.config           import LOGGING, PATH_PHOTONS
+from oops.event            import Event
+from oops.frame.navigation import Navigation
+from oops.meshgrid         import Meshgrid
 
 class Observation(object):
     """An Observation is an abstract class that defines the timing and pointing
@@ -353,6 +354,32 @@ class Observation(object):
 
         raise NotImplementedError(type(self).__name__ + '.time_shift ' +
                                   'is not implemented')
+
+    #===========================================================================
+    def navigate(self, angles):
+        """A copy of this Observation object after two or three rotation angles
+        of a Navigation object applied.
+
+        Input:
+            angles      two or three angles of rotation in radians. The order of
+                        the rotations is about the y, x, and (optionally) z
+                        axes. These angles rotate a vector in the reference
+                        frame into this frame.
+
+        Return:         A new Observation with the navigation applied.
+        """
+
+        # Identify the non-navigated frame
+        if isinstance(self.frame, Navigation):
+            frame = self.frame.reference
+        else:
+            frame = self.frame
+
+        # Copy and update the frame
+        obs = type(self).__new__(type(self))
+        obs.__dict__ = self.__dict__.copy()
+        obs.frame = Navigation(angles, reference=frame)
+        return obs
 
     ############################################################################
     # Subfield support methods

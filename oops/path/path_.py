@@ -578,10 +578,10 @@ class Path(object):
 
             new_link = original_link.replace(link_key, vector3,
                                              link_key + '_lt', scalar)
-            new_link = new_link.all_masked()
+            new_link = new_link.as_all_masked()
 
-            path_event = new_link.all_masked(origin=self.origin,
-                                             frame=self.frame.wayframe)
+            path_event = new_link.as_all_masked(origin=self.origin,
+                                                frame=self.frame.wayframe)
             path_event = path_event.replace(path_key, vector3,
                                             path_key + '_lt', scalar)
 
@@ -680,7 +680,7 @@ class Path(object):
         # Broadcast the path_time to encompass the shape of the path, if any
         shape = Qube.broadcasted_shape(path_time, link_shape)
         if path_time.shape != shape:
-            path_time = path_time.broadcast_into_shape(shape)
+            path_time = path_time.broadcast_to(shape)
 
         # Iterate a fixed number of times or until the threshold of error
         # tolerance is reached. Convergence takes just a few iterations.
@@ -742,7 +742,7 @@ class Path(object):
 
             dlt = ((delta_pos_ssb.norm() - prev_lt * signed_c) /
                    (delta_vel_ssb.proj(delta_pos_ssb).norm() - signed_c))
-            new_lt = (prev_lt - dlt).clip(lt_min, lt_max, False)
+            new_lt = (prev_lt - dlt).clip(lt_min, lt_max, remask=False)
             path_time = link.time + new_lt
 
             # The path_time contains a time derivative due to the motion of the
