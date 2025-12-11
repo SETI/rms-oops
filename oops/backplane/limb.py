@@ -31,8 +31,7 @@ def limb_altitude(self, event_key, zmin=None, zmax=None, scaled=False):
         if zmin is not None:
             zmin = zmin * radius
         if zmax is not None:
-            if zmin is not None:
-                zmax = zmax * radius
+            zmax = zmax * radius
 
     key = ('limb_altitude', event_key, zmin, zmax)
     if key in self.backplanes:
@@ -205,7 +204,6 @@ def limb_clock_angle(self, event_key, zmin=None, zmax=None, scaled=False):
                                                        derivs=self.ALL_DERIVS)
     clock_angle = event.coord2
 
-    ### use self._remasked_backplane
     # copy altitude mask
     if np.any(altitude.mask):
         clock_angle = clock_angle.remask_or(altitude.mask)

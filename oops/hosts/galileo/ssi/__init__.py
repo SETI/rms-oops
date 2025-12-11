@@ -11,7 +11,6 @@ import pdstable
 import pdsparser
 import oops
 
-from oops.hosts         import pds3
 from oops.hosts.galileo import Galileo
 
 from filecache import FCPath
@@ -42,7 +41,6 @@ def from_file(filespec,
     filespec = FCPath(filespec)
 
     # Load the PDS label
-#    label = pds3.get_label(filespec)
     label = pdsparser.PdsLabel.from_file(filespec).as_dict()
 
     # Load the data array
@@ -212,7 +210,7 @@ class Metadata(object):
         self.target = meta_dict['TARGET_NAME']
 
         # Telemetry mode
-        if not 'TELEMETRY_FORMAT_ID' in meta_dict:
+        if 'TELEMETRY_FORMAT_ID' not in meta_dict:
             meta_dict['TELEMETRY_FORMAT_ID'] = 'NONE'
         self.mode = meta_dict['TELEMETRY_FORMAT_ID']
 
