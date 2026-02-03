@@ -159,7 +159,7 @@ def limb_latitude(self, event_key, lat_type='centric'):
     return self.register_backplane(key, latitude)
 
 #===============================================================================
-def limb_clock_angle(self, event_key, zmin=None, zmax=None, scaled=False):
+def limb_clock_angle(self, event_key):
     """Angular location around the limb, measured clockwise from the projected
     north pole.
 
@@ -168,14 +168,7 @@ def limb_clock_angle(self, event_key, zmin=None, zmax=None, scaled=False):
                         limb_altitude backplane key, in which case this
                         backplane inherits the mask of the given backplane
                         array.
-        zmin            lower limit on altitude; lower values are masked.
-        zmax            upper limit on altitude.
-        scaled          if True, zmin and zmax are in units of the maximum body radius.
     """
-
-    # Get the altitude backplane
-    altitude_key = ('limb_altitude', event_key, zmin, zmax)
-    altitude = limb_altitude(self, event_key, zmin=zmin, zmax=zmax, scaled=scaled)
 
     # Create the clock angle backplane
     (event_key,
@@ -203,10 +196,6 @@ def limb_clock_angle(self, event_key, zmin=None, zmax=None, scaled=False):
                                                        axes=2,
                                                        derivs=self.ALL_DERIVS)
     clock_angle = event.coord2
-
-    # copy altitude mask
-    if np.any(altitude.mask):
-        clock_angle = clock_angle.remask_or(altitude.mask)
 
     return self.register_backplane(key, clock_angle)
 
