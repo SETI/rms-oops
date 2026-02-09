@@ -78,7 +78,7 @@ def _fill_limb_intercepts(self, event_key):
                              'squashed'), event.coord1)
     self.register_backplane(('latitude', event_key, 'squashed'), event.coord2)
     self.register_backplane(('limb_altitude', event_key, None, None),
-                            event.coord3)
+                             event.coord3)
 
 #===============================================================================
 def limb_longitude(self, event_key, reference='iau', direction='west',
@@ -182,11 +182,6 @@ def limb_clock_angle(self, event_key):
     # If this backplane array is already defined, return it
     if key in self.backplanes:
         return self.get_backplane(key)
-
-    # Make sure the limb event is defined
-    default_key = ('limb_clock_angle', event_key)
-    if default_key not in self.backplanes:
-        self._fill_limb_intercepts(event_key)
 
     surface = Backplane.get_surface(event_key[1])
     event = self.get_surface_event(event_key)
