@@ -11,7 +11,6 @@ import oops
 import pdsparser
 
 from oops.hosts.cassini import Cassini
-from oops.hosts         import pds3
 
 from filecache import FCPath
 
@@ -41,7 +40,7 @@ def from_file(filespec, data=True, enclose=False, **parameters):
                         # initialize() is called explicitly.
 
     # Get the label dictionary and data array dimensions
-    label = pds3.fast_dict(filespec)
+    label = pdsparser.Pds3Label(filespec, method='fast').as_dict()
 
     # Load any needed SPICE kernels
     tstart = julian.tdb_from_tai(julian.tai_from_iso(label['START_TIME']))
