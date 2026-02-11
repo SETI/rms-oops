@@ -153,7 +153,7 @@ def get_qube(filespec, tstart, label, data, enclose):
     # Separate windows
     else:
         obslist = []
-        for w in len(line0):
+        for w in range(len(line0)):
             obs = get_one_qube(label, detector, resolution,
                                fov, cadence, frame_id,
                                shape, array, samples,
