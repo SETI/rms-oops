@@ -11,7 +11,6 @@ import pdstable
 import pdsparser
 import oops
 
-from oops.hosts         import pds3
 from oops.hosts.galileo import Galileo
 
 from filecache import FCPath
@@ -42,7 +41,7 @@ def from_file(filespec,
     filespec = FCPath(filespec)
 
     # Load the PDS label
-    label = pds3.get_label(filespec)
+    label = pdsparser.Pds3Label(filespec).as_dict()
 
     # Load the data array
     local_path = filespec.retrieve()
