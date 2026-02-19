@@ -44,8 +44,7 @@ def from_file(filespec,
     label = pdsparser.Pds3Label(filespec).as_dict()
 
     # Load the data array
-    local_path = filespec.retrieve()
-    vic = vicar.VicarImage.from_file(local_path)
+    vic = vicar.VicarImage.from_file(filespec)
     vicar_dict = vic.as_dict()
 
     # Get image metadata
@@ -210,6 +209,8 @@ class Metadata(object):
         self.target = meta_dict['TARGET_NAME']
 
         # Telemetry mode
+        if 'TELEMETRY_FORMAT_ID' not in meta_dict:
+            meta_dict['TELEMETRY_FORMAT_ID'] = 'NONE'
         self.mode = meta_dict['TELEMETRY_FORMAT_ID']
 
         # Window
@@ -365,9 +366,12 @@ class SSI(object):
         SSI.fovs['HCM'] = fov_full      # Inference based on inspection
                                         # hmmm, actually C0248807700R.img is 800x200
                                         # maybe this is just a cropped full fov
+        SSI.fovs['NONE'] = fov_full     # Inference based on inspection
 
         # Construct the SpiceFrame
-        _ = oops.frame.SpiceFrame("GLL_SCAN_PLATFORM")
+        # SSI images are spaced as closely as 1 unit in the file name, which
+        # corresponds to 80 clock ticks.  Therefore, we use a tolerance of +/-40
+        _ = oops.frame.SpiceType1Frame("GLL_SCAN_PLATFORM", -77, 40)
 
         # Load kernels
         Galileo.load_kernels()
