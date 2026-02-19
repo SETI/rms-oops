@@ -9,6 +9,7 @@ from oops.config    import LOGGING
 from oops.constants import TWOPI
 from oops.gravity   import Gravity
 
+
 class OblateGravity(Gravity):
     """A class describing the gravity field of an oblate planet using an
     expansion in gravity moments J2, J4, etc.
@@ -25,7 +26,7 @@ class OblateGravity(Gravity):
         """
 
         self.gm = gm
-        self.jn = jlist
+        self.jn = tuple(jlist)
         self.rp = radius
         self.r2 = radius * radius
 

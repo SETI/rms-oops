@@ -1,110 +1,109 @@
-################################################################################
+##########################################################################################
 # oops/path/circlepath.py: Subclass CirclePath of class Path
-################################################################################
+##########################################################################################
 
-from polymath import Qube, Scalar, Vector3
-
+from polymath          import Qube, Scalar, Vector3
 from oops.event        import Event
 from oops.frame.frame_ import Frame
 from oops.path.path_   import Path
+import oops.mutable as mutable
+
 
 class CirclePath(Path):
     """A path describing uniform circular motion about another path.
 
-    The orientation of the circle is defined by the z-axis of the given
-    frame.
+    The orientation of the circle is defined by the z-axis of the given frame.
     """
 
-    PATH_IDS = {}   # path_id to use if a path already exists upon un-pickling
+    _WAYPOINTS = {}
 
-    #===========================================================================
-    def __init__(self, radius, lon, rate, epoch, origin, frame=None,
-                       path_id=None, unpickled=False):
+    def __init__(self, radius, lon, rate, epoch, origin, frame=None, *, path_id=None):
         """Constructor for a CirclePath.
 
-        Input:
-            radius      radius of the path, km.
-            lon         longitude of the path at epoch, measured from the
-                        x-axis of the frame, toward the y-axis, in radians.
-            rate        rate of circular motion, radians/second.
+        Parameters:
+            radius (Scalar, array-like, or float): Radius of the path, km.
+            lon (Scalar, array-like, or float): Longitude of the path at epoch, measured
+                from the x-axis of the frame, toward the y-axis, in radians.
+            rate (Scalar, array-like, or float): Rate of circular motion, radians/second.
+            epoch (Scalar, array-like, or float): The time TDB relative to which all
+                orbital elements are defined.
+            origin (Path or str): The path or ID of the center of the circle.
+            frame (Frame or str, optional): The Frame or the ID of the Frame in which the
+                circular motion is defineed and in which coordinates are returned; None to
+                use the frame of the `origin` path.
+            path_id (str, optional): The ID under which to register this Path; None to
+                leave this Path unregistered.
 
-            epoch       the time TDB relative to which all orbital elements are
-                        defined.
-            origin      the path or ID of the center of the circle.
-            frame       the frame or ID of the frame in which the circular
-                        motion is defined; None to use the default frame of the
-                        origin path.
-            path_id     the name under which to register the new path; None to
-                        leave the path unregistered.
-            unpickled   True if this path has been read from a pickle file.
-
-        Note: The shape of the Path object returned is defined by broadcasting
-        together the shapes of all the orbital elements plus the epoch.
+        Raises:
+            ValueError: If the shapes of `radius`, `lon`, `rate`, `epoch`, `origin`, and
+                `frame` cannot be broadcasted.
         """
 
         # Interpret the elements
-        self.epoch  = Scalar.as_scalar(epoch)
-        self.radius = Scalar.as_scalar(radius)
-        self.lon    = Scalar.as_scalar(lon)
-        self.rate   = Scalar.as_scalar(rate)
+        self._radius = Scalar.as_scalar(radius).as_readonly()
+        self._lon    = Scalar.as_scalar(lon).as_readonly()
+        self._rate   = Scalar.as_scalar(rate).as_readonly()
+        self._epoch  = Scalar.as_scalar(epoch).as_readonly()
 
-        # Required attributes
-        self.path_id = path_id
-        self.origin  = Path.as_waypoint(origin)
-        self.frame   = Frame.as_wayframe(frame) or self.origin.frame
-        self.keys    = set()
-        self.shape   = Qube.broadcasted_shape(self.radius, self.lon,
-                                              self.rate, self.epoch,
-                                              self.origin.shape,
-                                              self.frame.shape)
+        self._origin = Path.as_waypoint(origin)
+        self._frame = (frame and Frame.as_wayframe(frame)) or self._origin._frame
+        self._shape = Qube.broadcasted_shape(self._radius, self._lon, self._rate,
+                                             self._epoch, self._origin._shape,
+                                             self._frame._shape)
 
-        # Update waypoint and path_id; register only if necessary
-        self.register(unpickled=unpickled)
+        self._register(path_id)
+        mutable.refresh(self)
 
-        # Save in internal dict for name lookup upon serialization
-        if (not unpickled and self.shape == ()
-            and self.path_id in Path.WAYPOINT_REGISTRY):
-                key = (self.radius.vals, self.lon.vals, self.rate.vals,
-                       self.epoch.vals, origin.path_id, frame.frame_id)
-                CirclePath.PATH_IDS[key] = self.path_id
+    def _waypoint_key(self):
+        return (self._radius, self._lon, self._rate, self._epoch, self._origin,
+                self._frame)
+
+    ######################################################################################
+    # Serialization support
+    ######################################################################################
 
     def __getstate__(self):
-        return (self.radius, self.lon, self.rate, self.epoch,
-                Path.as_primary_path(self.origin),
-                Frame.as_primary_frame(self.frame), self.shape)
+        mutable.refresh(self)
+        return (self._radius, self._lon, self._rate, self._epoch, self._origin,
+                self._frame, self.stripped_id)
 
     def __setstate__(self, state):
-        # If this path matches a pre-existing path, re-use its ID
-        (radius, lon, rate, epoch, origin, frame, shape) = state
-        if shape == ():
-            key = (radius.vals, lon.vals, rate.vals, epoch.vals, origin.path_id,
-                   frame.frame_id)
-            path_id = CirclePath.PATH_IDS.get(key, None)
-        else:
-            path_id = None
+        (radius, lon, rate, epoch, origin, frame, path_id) = state
+        self.__init__(radius, lon, rate, epoch, origin, frame=frame, path_id=path_id)
+        mutable.freeze(self)
 
-        self.__init__(radius, lon, rate, epoch, origin, frame, path_id=path_id,
-                      unpickled=True)
+    ######################################################################################
+    # Path API
+    ######################################################################################
 
-    #===========================================================================
-    def event_at_time(self, time, quick=False):
+    def event_at_time(self, time, *, quick=None):
         """An Event corresponding to a specified time on this path.
 
-        Input:
-            time    a time Scalar at which to evaluate the path.
+        Parameters:
+            time (Scalar, array-like, or float): The time in seconds TDB.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default QuickPath and QuickFrame parameters.
+                Use False to disable the use of QuickPaths and QuickFrames.
 
-        Return:     an Event object containing (at least) the time, position
-                    and velocity on the path.
+        Returns:
+            (Event): The Event object containing (at least) the time, position, and
+                velocity on the Path.
+
+        Raises:
+            ValueError: If the shapes of `time` and this object cannot be broadcasted.
         """
 
-        lon = self.lon + self.rate * (Scalar.as_scalar(time) - self.epoch)
-        r_cos_lon = self.radius * lon.cos()
-        r_sin_lon = self.radius * lon.sin()
+        lon = self._lon + self._rate * (Scalar.as_scalar(time) - self._epoch)
+        r_cos_lon = self._radius * lon.cos()
+        r_sin_lon = self._radius * lon.sin()
 
         pos = Vector3.from_scalars(r_cos_lon, r_sin_lon, 0.)
-        vel = Vector3.from_scalars(-r_sin_lon * self.rate,
-                                    r_cos_lon * self.rate, 0.)
+        vel = Vector3.from_scalars(-r_sin_lon * self._rate, r_cos_lon * self._rate, 0.)
 
-        return Event(time, (pos,vel), self.origin, self.frame)
+        return Event(time, (pos, vel), self._origin, self._frame)
 
-################################################################################
+##########################################################################################
+
+Path._PATH_SUBCLASSES.append(CirclePath)
+
+##########################################################################################

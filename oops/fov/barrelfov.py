@@ -12,6 +12,7 @@ from oops.fov.flatfov import FlatFOV
 
 EPSILON = sys.float_info.epsilon/2.         # actual machine precision
 
+
 class BarrelFOV(FOV):
     """Subclass of FOV that describes a field of view in which the distortion is
     described by a 1-D polynomial in distance from the image center.

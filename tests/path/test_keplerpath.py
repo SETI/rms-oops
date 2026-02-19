@@ -15,19 +15,21 @@ def _xyz_planet_derivative_test(kep, t, delta=1.e-7):
     """
 
     # Save the position and its derivatives
-    (xyz, _d_xyz_dt) = kep.xyz_planet(t, partials=True)
+    (xyz, d_xyz_dt) = kep._xyz_planet(t, partials=True)
     d_xyz_d_elem = xyz.d_delements.vals
     pos_norm = xyz.norm().vals
 
     # Create new Kepler objects for tweaking the parameters
-    khi = kep.copy()
-    klo = kep.copy()
+    khi = KeplerPath(kep._planet, kep._epoch, kep._elements.copy(), kep._observer,
+                     wobbles=kep._wobbles)
+    klo = KeplerPath(kep._planet, kep._epoch, kep._elements.copy(), kep._observer,
+                     wobbles=kep._wobbles)
 
-    params = kep.get_params()
+    params = kep.get_elements()
 
     # Loop through parameters...
-    errors = np.zeros(np.shape(t) + (3,kep.nparams))
-    for e in range(kep.nparams):
+    errors = np.zeros(np.shape(t) + (3, kep._nelements))
+    for i,e in enumerate(range(kep._nelements)):
 
         # Tweak one parameter
         hi = params.copy()
@@ -46,8 +48,8 @@ def _xyz_planet_derivative_test(kep, t, delta=1.e-7):
         klo.set_params(lo)
 
         # Compare the change with that derived from the partial derivative
-        xyz_hi = khi.xyz_planet(t, partials=False)[0].vals
-        xyz_lo = klo.xyz_planet(t, partials=False)[0].vals
+        xyz_hi = khi._xyz_planet(t, partials=False)[0].vals
+        xyz_lo = klo._xyz_planet(t, partials=False)[0].vals
         hi_lo_diff = xyz_hi - xyz_lo
 
         errors[...,:,e] = ((d_xyz_d_elem[...,:,e] * denom - hi_lo_diff) /
@@ -69,14 +71,16 @@ def _pos_derivative_test(kep, t, delta=1.e-5):
     pos_norm = event.pos.norm().vals
 
     # Create new Kepler objects for tweaking the parameters
-    khi = kep.copy()
-    klo = kep.copy()
+    khi = KeplerPath(kep.planet, kep.epoch, kep.elements.copy(), kep.observer,
+                     kep.wobbles)
+    klo = KeplerPath(kep.planet, kep.epoch, kep.elements.copy(), kep.observer,
+                     kep.wobbles)
 
-    params = kep.get_params()
+    params = kep.get_elements()
 
     # Loop through parameters...
-    errors = np.zeros(np.shape(t) + (3,kep.nparams))
-    for e in range(kep.nparams):
+    errors = np.zeros(np.shape(t) + (3,kep.nelements))
+    for e in range(kep.nelements):
 
         # Tweak one parameter
         hi = params.copy()
@@ -257,11 +261,8 @@ class Test_KeplerPath(unittest.TestCase):
         errors = _pos_derivative_test(kep, time)
         self.assertTrue(np.max(np.abs(errors)) < 1.e-4)
 
-        Frame.reset_registry()
-        Path.reset_registry()
-        Body.reset_registry()
+        Frame._reset_caches()
+        Path._reset_caches()
+        Body._reset_registry()
 
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

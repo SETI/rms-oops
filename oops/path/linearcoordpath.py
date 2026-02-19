@@ -1,85 +1,105 @@
-################################################################################
+##########################################################################################
 # oops/path/linearcoordpath.py: Subclass LinearCoordPath of class Path
-################################################################################
+##########################################################################################
 
 from polymath        import Qube, Scalar
 from oops.event      import Event
 from oops.path.path_ import Path
+import oops.mutable as mutable
+
 
 class LinearCoordPath(Path):
-    """A path defined by coordinates changing linearly on a specified Surface.
-    """
+    """A path defined by coordinates changing linearly on a specified Surface."""
 
-    # Note: LinearCoordPaths are not generally re-used, so their IDs are
-    # expendable. Their IDs are not preserved during pickling.
+    _WAYPOINTS = {}
 
-    #===========================================================================
-    def __init__(self, surface, coords, coords_dot, epoch, obs=None,
-                       path_id=None):
+    def __init__(self, surface, coords, coords_dot, epoch, *, path_id=None):
         """Constructor for a LinearCoordPath.
 
-        Input:
-            surface     a surface.
-            coords      a tuple of 2 or 3 Scalars defining the coordinates on
-                        the surface.
-            coords_dot  the time-derivative of the coords.
-            epoch       the epoch at which the coords are defined, seconds TDB.
-            obs         optional path of observer, needed to calculate points
-                        on virtual surfaces.
-            path_id     the name under which to register the new path; None to
-                        leave the path unregistered.
+        Parameters:
+            surface (Surface): The surface to which the coordinates refer.
+            coords (tuple): 2 or 3 Scalars defining the coordinates on the surface.
+            coords_dot (tuple): The time-derivatives of `coords`.
+            epoch (Scalar or float): Reference time TDB for the linear motion.
+            path_id (str, optional): The ID under which to register this Path; None to
+                leave this Path unregistered.
+
+        Raises:
+            NotImplementedError: If this Path is "virtual", meaning that its construction
+                depends on the position of the observer.
+            ValueError: If the shapes of `surface`, `coords`, `coords_dot`, `epoch`, and
+                `obs` cannot be broadcasted.
         """
 
-        if self.surface.IS_VIRTUAL:
-            raise NotImplementedError('LinearCoordPath cannot be defined for '
-                                      'virtual surface class '
-                                      + type(self.surface).__name__)
+        if surface.IS_VIRTUAL and obs is None:
+            raise NotImplementedError('LinearCoordPath requires an observation path for '
+                                      f'virtual surface class {surface}')
 
-        self.surface = surface
-        self.coords = [Scalar.as_scalar(c) for c in coords]
-        self.coords_dot = [Scalar.as_scalar(c) for c in coords_dot]
-        self.epoch = Scalar.as_scalar(epoch)
-        self.obs_path = Path.as_path(obs)
+        self._surface = surface
+        self._coords = tuple(Scalar.as_scalar(c).wod.as_readonly() for c in coords)
+        self._coords_dot = tuple(Scalar.as_scalar(c).wod.as_readonly()
+                                 for c in coords_dot)
+        self._epoch = Scalar.as_scalar(epoch).wod.as_readonly()
 
         # Required attributes
-        self.path_id = path_id
-        self.origin  = self.surface.origin
-        self.frame   = self.origin.frame
-        self.keys    = set()
-        self.shape   = Qube.broadcasted_shape(self.surface, *self.coords,
-                                              *self.coords_dot, self.epoch,
-                                              self.obs_path)
+        self._origin = self._surface._origin
+        self._frame = self._origin._frame
+        self._shape = Qube.broadcasted_shape(self._surface, *self._coords,
+                                             *self._coords_dot, self._epoch)
 
-        # Update waypoint and path_id; register only if necessary
-        self.register()
+        self._register(path_id)
+        mutable.refresh(self)
 
-    # Unpickled paths will always have temporary IDs to avoid conflicts
+    def _waypoint_key(self):
+        return (self._surface, self._coords, self._coords_dot, self._epoch)
+
+    ######################################################################################
+    # Serialization support
+    ######################################################################################
+
     def __getstate__(self):
-        return (self.surface, self.coords, self.coords_dot, self.epoch,
-                Path.as_primary_path(self.obs_path))
+        mutable.refresh(self)
+        return (self._surface, self._coords, self._coords_dot, self._epoch,
+                self.stripped_id)
 
     def __setstate__(self, state):
-        self.__init__(*state)
+        (surface, coords, coords_dot, epoch, path_id) = state
+        self.__init__(surface, coords, coords_dot, epoch, path_id=path_id)
+        mutable.freeze(self)
 
-    #===========================================================================
-    def event_at_time(self, time, quick={}):
+    ######################################################################################
+    # Path API
+    ######################################################################################
+
+    def event_at_time(self, time, *, quick=None):
         """An Event corresponding to a specified time on this path.
 
-        Input:
-            time        a time Scalar at which to evaluate the path.
+        Parameters:
+            time (Scalar, array-like, or float): The time in seconds TDB.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default QuickPath and QuickFrame parameters.
+                Use False to disable the use of QuickPaths and QuickFrames.
 
-        Return:         an Event object containing (at least) the time, position
-                        and velocity on the path.
+        Returns:
+            (Event): The Event object containing (at least) the time, position, and
+                velocity on the Path.
+
+        Raises:
+            ValueError: If the shapes of `time` and this object cannot be broadcasted.
         """
 
         new_coords = []
-        for i in range(len(self.coords)):
-            coord = self.coords[i] + self.coords_dot[i] * (time - self.epoch)
-            coord.insert_deriv('t', self.coords_dot[i])
+        for i in range(len(self._coords)):
+            coord = self._coords[i] + self._coords_dot[i] * (time - self._epoch)
+            coord.insert_deriv('t', self._coords_dot[i])
             new_coords.append(coord)
 
         new_coords = tuple(new_coords)
-        pos = self.surface.vector3_from_coords(new_coords, derivs=True)
-        return Event(time, pos, self.origin, self.frame)
+        pos = self._surface.vector3_from_coords(new_coords, derivs=True)
+        return Event(time, pos, self._origin, self._frame)
 
-################################################################################
+##########################################################################################
+
+Path._PATH_SUBCLASSES.append(LinearCoordPath)
+
+##########################################################################################

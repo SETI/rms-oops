@@ -31,15 +31,10 @@ class Test_spice_shape(unittest.TestCase):
     def runTest(self):
 
         _ = SpicePath("VENUS", "SSB", "J2000", path_id="APHRODITE")
-        _ = SpiceFrame("VENUS", "J2000", "SLOWSPINNER")
 
         body = spice_shape("VENUS")
-        self.assertEqual(Path.as_path_id(body.origin), "APHRODITE")
-        self.assertEqual(Frame.as_frame_id(body.frame),  "SLOWSPINNER")
+        self.assertEqual(Path.as_path(body.origin).path_id, "APHRODITE")
         self.assertEqual(body.req, 6051.8)
         self.assertEqual(body.squash_z, 1.)
 
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

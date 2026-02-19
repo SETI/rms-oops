@@ -11,6 +11,8 @@ from oops.fov.nullfov     import NullFOV
 from oops.frame           import Frame
 from oops.observation     import Observation
 from oops.path            import Path
+import oops.mutable as mutable
+
 
 class InSitu(Observation):
     """NOTE: This is still a work in progress. Not yet tested. Do not use.
@@ -61,9 +63,7 @@ class InSitu(Observation):
         self.u_axis = -1
         self.v_axis = -1
         self.swap_uv = False
-
-        self.uv_shape = (1,1)
-
+        self.uv_shape = (1, 1)
         self.shape = self.cadence.shape
         self.t_axis = list(np.range(len(self.shape)))
 
@@ -71,19 +71,31 @@ class InSitu(Observation):
         self.shape = self.cadence.shape
         self.uv_shape = (1,1)
 
-        # Timing
-        self.time = self.cadence.time
-        self.midtime = self.cadence.midtime
-
         # Optional subfields
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
 
     def __getstate__(self):
+        mutable.refresh(self)
         return (self.cadence, self.path, self.subfields)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
+        mutable.freeze(self)
+
+    #===========================================================================
+    def time_shift(self, dtime):
+        """A copy of the observation object with a time-shift.
+
+        Input:
+            dtime       the time offset to apply to the observation, in units of
+                        seconds. A positive value shifts the observation later.
+
+        Return:         a shallow copy of the object with a new time.
+        """
+
+        return InSitu(self.cadence.time_shift(dtime), self.path,
+                      **self.subfields)
 
 ################################################################################

@@ -33,7 +33,7 @@ class Test_Body(unittest.TestCase):
         moons = saturn.select_children(include_all=['CLASSICAL', 'IRREGULAR'])
         self.assertEqual(len(moons), 1)     # Phoebe
 
-        moons = saturn.select_children(exclude=['IRREGULAR','RING'], radius=160)
+        moons = saturn.select_children(exclude=['IRREGULAR', 'RING'], radius=160)
         self.assertEqual(len(moons), 8)     # Mimas-Iapetus
 
         rings = saturn.select_children(include_any=('RING'))
@@ -63,7 +63,4 @@ class Test_Body(unittest.TestCase):
                                       recursive=True)
         self.assertEqual(len(planets), 16)  # 9 planets + 7 Jovian moons
 
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

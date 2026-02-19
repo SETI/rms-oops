@@ -71,10 +71,7 @@ class xTest_PolarLimb(unittest.TestCase):
         cept2 = limb.vector3_from_coords(coords, obs)
         self.assertTrue((cept2 - cept).norm().median() < 1.e-10)
 
-        Path.reset_registry()
-        Frame.reset_registry()
+        Path._reset_caches()
+        Frame._reset_caches()
 
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

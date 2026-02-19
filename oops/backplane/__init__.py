@@ -14,11 +14,12 @@ from oops.surface.ansa      import Ansa
 from oops.surface.limb      import Limb
 from oops.surface.ringplane import RingPlane
 
+
 class Backplane(object):
     """Class that supports the generation and manipulation of sets of backplanes
-    with a particular observation.
+    with a particular Observation.
 
-    intermediate results are cached to speed up calculations.
+    Intermediate results are cached to speed up calculations.
     """
 
     DIAGNOSTICS = False     # set True to log diagnostics
@@ -118,15 +119,7 @@ class Backplane(object):
         else:
             self.meshgrid = meshgrid
 
-        if time is None:
-            self.time = obs.timegrid(self.meshgrid)
-        else:
-            self.time = Scalar.as_scalar(time)
-
-        # For some cases, times are all equal. If so, collapse the times.
-        dt = self.time - obs.midtime
-        if abs(dt).max() < 1.e-3:   # simplifies cases with jitter in time tags
-            self.time = Scalar(obs.midtime)
+        self._input_time = time
 
         # Intialize the inventory
         self._input_inventory = inventory
@@ -139,8 +132,23 @@ class Backplane(object):
 
         self.inventory_border = inventory_border
 
+        self._refresh()     # Fill in all internals
+
+    def _refresh(self):
+
+        if self._input_time is None:
+            self.time = self.obs.timegrid(self.meshgrid)
+        else:
+            self.time = Scalar.as_scalar(self._input_time)
+
+        # For some cases, times are all equal. If so, collapse the times.
+        dt = self.time - self.obs.midtime
+        if abs(dt).max() < 1.e-3:   # simplifies cases with jitter in time tags
+            self.time = Scalar(self.obs.midtime)
+
         # Define events
-        self.obs_event = obs.event_at_grid(self.meshgrid, time=self.time)
+        self.obs_event = self.obs.event_at_grid(self.meshgrid, time=self.time)
+        self.shape = self.obs_event.shape
 
         # dict[derivs] = event
         self.obs_events = {
@@ -148,10 +156,8 @@ class Backplane(object):
             True : self.obs_event.with_los_derivs()
         }
 
-        self.obs_gridless_event = obs.gridless_event(self.meshgrid,
-                                                     time=self.time)
-
-        self.shape = self.obs_event.shape
+        self.obs_gridless_event = self.obs.gridless_event(self.meshgrid,
+                                                          time=self.time)
 
         # The surface_events dictionary comes in two versions, with and without
         # derivatives with respect to los and time.

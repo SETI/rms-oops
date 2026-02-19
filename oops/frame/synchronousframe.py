@@ -1,78 +1,103 @@
-################################################################################
+##########################################################################################
 # oops/frame/synchronousframe.py: Subclass SynchronousFrame of class Frame
-################################################################################
+##########################################################################################
 
-from polymath       import Matrix3, Qube
+from polymath       import Matrix3
 from oops.frame     import Frame
 from oops.transform import Transform
+import oops.mutable as mutable
+
 
 class SynchronousFrame(Frame):
-    """A Frame subclass describing a a body that always keeps the x-axis pointed
-    toward a central planet and the y-axis in the negative direction of motion.
+    """A Frame subclass describing a a body that always keeps its x-axis pointed toward a
+    central planet and its y-axis in the negative direction of motion.
+
+    Note that this Frame is tied to the orbital longitude of the body, so it will
+    (incorrectly) rotate at a slightly non-uniform rate if the orbit has eccentricity.
     """
 
-    FRAME_IDS = {}  # frame_id to use if a frame already exists upon un-pickling
+    _WAYFRAMES = {}
 
-    #===========================================================================
-    def __init__(self, body_path, planet_path, frame_id=None, unpickled=False):
+    def __init__(self, orbit_path, planet_path=None, *, frame_id=None):
         """Constructor for a SynchronousFrame.
 
-        Input:
-            body_path       the path or path ID followed by the body.
-            planet_path     the path or path ID followed by the central planet.
-            frame_id        the ID to use; None to leave the frame unregistered.
-            unpickled       True if this frame has been read from a pickle file.
+        Parameters:
+            orbit_path (Path or str): The Path or the ID of the Path of the body orbiting
+                its planet.
+            planet_path (Path or str, optional): The Path or the ID of the Path for the
+                central planet. By default, this is the origin of `orbit_path`.
+            frame_id (str, optional): The ID under which to register this frame; None to
+                leave this frame unregistered. As a special case, use "+" to generate a
+                Frame ID by appending "_SYNCHRONOUS" to the ID of the `orbit_path` (if it
+                has an ID).
         """
 
-        self.body_path = Frame.PATH_CLASS.as_path(body_path)
-        self.planet_path = Frame.PATH_CLASS.as_path(planet_path)
-        self.path = Frame.PATH_CLASS.wrt(self.planet_path, self.body_path)
+        self._orbit_path = Frame._Path.as_path(orbit_path)
+        self._planet_path = ((planet_path and Frame._Path.as_waypoint(planet_path))
+                             or self._orbit_path._origin)
+        self._orbit_wrt_planet = self._orbit_path.wrt(self._planet_path)
 
-        if self.planet_path.shape:
+        if self._planet_path._shape:
             raise ValueError('SynchronousFrame requires a shapeless body path')
 
-        self.frame_id  = frame_id
-        self.reference = Frame.as_wayframe(self.planet_path.frame)
-        self.origin    = self.planet_path.origin
-        self.shape     = Qube.broadcasted_shape(self.body_path,
-                                                self.planet_path)
-        self.keys      = set()
+        self._reference = Frame.as_wayframe(self._planet_path._frame)
+        self._origin = self._planet_path
+        self._shape = self._orbit_path._shape
 
-        # Update wayframe and frame_id; register if not temporary
-        self.register(unpickled=unpickled)
+        if frame_id == '+' and self._orbit_path._path_id:
+            frame_id = self._orbit_path._path_id + '_SYNCHRONOUS'
 
-        # Save in internal dict for name lookup upon serialization
-        if (not unpickled and self.shape == ()
-            and self.frame_id in Frame.WAYFRAME_REGISTRY):
-                key = (self.body_path.path_id, self.planet_path.path_id)
-                SynchronousFrame.FRAME_IDS[key] = self.frame_id
+        self._register(frame_id)
+        mutable.refresh(self)
 
-    # Unpickled frames will always have temporary IDs to avoid conflicts
+    def _wayframe_key(self):
+        return (self._orbit_path, self._planet_path)
+
+    ######################################################################################
+    # Serialization support
+    ######################################################################################
+
     def __getstate__(self):
-        return (Frame.PATH_CLASS.as_primary_path(self.body_path),
-                Frame.PATH_CLASS.as_primary_path(self.planet_path), self.shape)
+        mutable.refresh(self)
+        return (self._orbit_path, self._planet_path, self.stripped_id)
 
     def __setstate__(self, state):
-        # If this frame matches a pre-existing frame, re-use its ID
-        (body_path, planet_path, shape) = state
-        if shape == ():
-            key = (body_path.path_id, planet_path.path_id)
-            frame_id = SynchronousFrame.FRAME_IDS.get(key, None)
-        else:
-            frame_id = None
+        (orbit_path, planet_path, frame_id) = state
+        self.__init__(orbit_path, planet_path, frame_id=frame_id)
+        mutable.freeze(self)
 
-        self.__init__(body_path, planet_path, frame_id=frame_id,
-                      unpickled=True)
+    ######################################################################################
+    # Frame API
+    ######################################################################################
 
-    #===========================================================================
-    def transform_at_time(self, time, quick=False):
-        """The Transform into the this Frame at a Scalar of times."""
+    def transform_at_time(self, time, *, quick=None):
+        """Transform that rotates coordinates from the reference frame to this frame.
 
-        event = self.path.event_at_time(time, quick=quick)
+        If the frame is rotating, then the coordinates being transformed must be given
+        relative to the center of rotation.
+
+        Parameters:
+            time (Scalar, array-like, or float): The time in seconds TDB.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default QuickPath and QuickFrame parameters.
+                Use False to disable the use of QuickPaths and QuickFrames.
+
+        Returns:
+            (Transform): The Tranform applicable at the specified time or times. It
+                rotates vectors from the reference frame to this frame.
+
+        Raises:
+            ValueError: If the shapes of `time` and this object cannot be broadcasted.
+        """
+
+        event = self._orbit_wrt_planet.event_at_time(time, quick=quick)
         matrix = Matrix3.twovec(event.pos, 0, event.vel, 1)
         omega = event.pos.cross(event.vel) / event.pos.dot(event.pos)
 
-        return Transform(matrix, omega, self.frame_id, self.reference,
-                                        self.body_path)
+        return Transform(matrix, omega, self, self._reference, self._orbit_path)
 
-################################################################################
+##########################################################################################
+
+Frame._FRAME_SUBCLASSES.append(SynchronousFrame)
+
+##########################################################################################

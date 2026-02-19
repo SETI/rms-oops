@@ -5,9 +5,6 @@
 class Gravity(object):
     """An abstract class describing the gravity field of a body."""
 
-    # To avoid circular imports...
-    BODY_CLASS = None               # filled in by oops/__init__.py
-
     GRAVITY_REGISTRY = {}           # global dictionary of gravity objects
                                     # Defined in OblateGravity
 

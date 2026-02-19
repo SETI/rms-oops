@@ -9,6 +9,8 @@ from oops.observation import Observation
 from oops.event       import Event
 from oops.frame       import Frame
 from oops.path        import Path
+import oops.mutable as mutable
+
 
 class Pixel(Observation):
     """A subclass of Observation consisting of one or more measurements obtained
@@ -82,23 +84,19 @@ class Pixel(Observation):
             shape_list[self.t_axis] = samples
         self.shape = tuple(shape_list)
 
-        # Timing
-        self.time = self.cadence.time
-        self.midtime = self.cadence.midtime
-        self._scalar_time = (Scalar(self.time[0]), Scalar(self.time[1]))
-        self._scalar_midtime = Scalar(self.cadence.midtime)
-
         # Optional subfields
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
 
     def __getstate__(self):
+        mutable.refresh(self)
         return (self.axes, self.cadence, self.fov, self.path, self.frame,
                 self.subfields)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
+        mutable.freeze(self)
 
     #===========================================================================
     def uvt(self, indices, remask=False, derivs=True):
@@ -124,7 +122,7 @@ class Pixel(Observation):
 
         if tstep is None:       # if t_axis < 0
             uv = Pair.filled(indices.shape, 0.5)
-            return (uv, self._scalar_midtime)
+            return (uv, Scalar(self.cadence.midtime))
 
         time = self.cadence.time_at_tstep(tstep, remask=remask)
         uv = Pair.filled(time.shape, 0.5, mask=time.mask)
@@ -149,7 +147,8 @@ class Pixel(Observation):
         """
 
         if self.t_axis < 0:
-            return (Pair.INT00, self.fov.uv_shape) + self._scalar_time
+            return (Pair.INT00, Pair(self.fov.uv_shape),
+                    Scalar(self.cadence.time[0]), Scalar(self.cadence.time[1]))
 
         # Works for a 1-D index or a multi-D index
         tstep = Observation.scalar_from_indices(indices, self.t_axis)

@@ -19,17 +19,17 @@ class Test_Path(unittest.TestCase):
 
     def setUp(self):
         cspyce.furnsh(TEST_SPICE_PREFIX.retrieve('de421.bsp'))
-        Path.reset_registry()
-        Frame.reset_registry()
+        Path._reset_caches()
+        Frame._reset_caches()
 
     def tearDown(self):
         pass
 
     def runTest(self):
 
-        Path.USE_QUICKPATHS = False
+        Path._USE_QUICKPATHS = False
 
-        self.assertEqual(Path.WAYPOINT_REGISTRY['SSB'], Path.SSB)
+        self.assertEqual(Path._PATH_REGISTRY['SSB'], Path.SSB)
 
         # LinkedPath tests
         _ = SpicePath('SUN', 'SSB')
@@ -99,8 +99,8 @@ class Test_Path(unittest.TestCase):
         # _ = moon.event_at_time(test, quick=False)       # takes about 15 sec
         _ = quick.event_at_time(test)                   # takes maybe 2 sec
 
-        Path.reset_registry()
-        Frame.reset_registry()
+        Path._reset_caches()
+        Frame._reset_caches()
 
         ################################
         # Test unregistered paths
@@ -143,7 +143,4 @@ class Test_Path(unittest.TestCase):
         self.assertEqual(event.pos, (0,0,0))
         self.assertEqual(event.vel, (0,0,0))
 
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

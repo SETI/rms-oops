@@ -45,6 +45,7 @@ Surface     = oops.surface.Surface
 
 from oops.backplane import Backplane
 from oops.body      import Body
+from oops.cache     import Cache
 from oops.event     import Event
 from oops.fittable  import Fittable
 from oops.meshgrid  import Meshgrid
@@ -56,6 +57,7 @@ import oops.constants     as constants
 import oops.spice_support as spice
 import oops.config        as config
 import oops.utils         as utils
+import oops.mutable       as mutable
 
 from oops.constants import C, C_INVERSE, RPD, DPR, SPR, RPS, SPD, AU, \
                            PI, TWOPI, HALFPI
@@ -75,22 +77,26 @@ except ImportError as err:
 # class earlier in the list requires this approach.
 ################################################################################
 
-Transform.FRAME_CLASS = frame.Frame
+Transform._Frame = frame.Frame
 Transform.IDENTITY = Transform(Matrix3.IDENTITY,
                                Vector3.ZERO,
                                frame.Frame.J2000,
                                frame.Frame.J2000,
                                path.Path.SSB)
 
-Frame.EVENT_CLASS = Event
-Frame.PATH_CLASS = Path
-Frame.SPICEPATH_CLASS = oops.path.SpicePath
+Cache._Frame = Frame
+Cache._Path = Path
 
-Event.PATH_CLASS = path.Path
+Frame._Event = Event
+Frame._Path = Path
+
+Event._Path = path.Path
 Event.SSB = path.Path.SSB
 
-Gravity.BODY_CLASS = Body
-Surface.BODY_CLASS = Body
-Path.BODY_CLASS = Body
+Path._Body = Body
+
+Surface._Body = Body
+
+Fittable._MUTABLE = mutable
 
 ################################################################################

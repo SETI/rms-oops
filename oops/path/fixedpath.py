@@ -1,68 +1,92 @@
-################################################################################
+##########################################################################################
 # oops/path/fixedpath.py: Subclass FixedPath of class Path
-################################################################################
+##########################################################################################
 
 from polymath          import Qube, Vector3
 from oops.event        import Event
 from oops.frame.frame_ import Frame
 from oops.path.path_   import Path
+import oops.mutable as mutable
+
 
 class FixedPath(Path):
-    """A path described by fixed coordinates relative to another path and frame.
-    """
+    """A path described by fixed coordinates relative to another path and frame."""
 
-    # Note: FixedPaths are not generally re-used, so their IDs are expendable.
-    # Their IDs are not preserved during pickling.
+    _WAYPOINTS = {}
 
-    #===========================================================================
-    def __init__(self, pos, origin, frame, path_id=None):
+    def __init__(self, pos, origin, frame=None, *, path_id=None):
         """Constructor for an FixedPath.
 
-        Input:
-            pos         a Vector3 of position vectors within the frame and
-                        relative to the specified origin.
-            origin      the path or ID of the reference point.
-            frame       the frame or ID of the frame in which the position is
-                        fixed.
-            path_id     the name under which to register the new path; None to
-                        leave the path unregistered.
+        Parameters:
+            pos (Vector3 or array-like): The position vectors within the frame and
+                relative to the specified origin.
+            origin (Path or str): The origin Path or ID of the origin.
+            frame (Frame or str): The Frame or ID of the Frame in which the fixed
+                coordinates are defined and in whicch they are returned; None to use the
+                frame of the `origin` path.
+            path_id (str, optional): The ID under which to register this Path; None to
+                leave this Path unregistered.
+
+        Raises:
+            ValueError: If the shapes of `pos`, `origin`, and `frame` cannot be
+                broadcasted.
         """
 
         # Interpret the position
         pos = Vector3.as_vector3(pos)
         pos = pos.with_deriv('t', Vector3.ZERO, method='replace')
-        self.pos = pos.as_readonly()
+        self._pos = pos.as_readonly()
 
         # Required attributes
-        self.path_id = path_id
-        self.origin  = Path.as_waypoint(origin)
-        self.frame   = Frame.as_wayframe(frame) or self.origin.frame
-        self.keys    = set()
-        self.shape   = Qube.broadcasted_shape(self.pos, self.origin, self.frame)
+        self._origin = Path.as_waypoint(origin)
+        self._frame = (frame and Frame.as_wayframe(frame)) or self._origin._frame
+        self._shape = Qube.broadcasted_shape(self._pos, self._origin._shape,
+                                             self._frame._shape)
 
-        # Update waypoint and path_id; register only if necessary
-        self.register()
+        self._register(path_id)
+        mutable.refresh(self)
 
-    # Unpickled paths will always have temporary IDs to avoid conflicts
+    def _waypoint_key(self):
+        return (self._pos, self._origin, self._frame)
+
+    ######################################################################################
+    # Serialization support
+    ######################################################################################
+
     def __getstate__(self):
-        return (self.pos,
-                Path.as_primary_path(self.origin),
-                Frame.as_primary_frame(self.frame))
+        mutable.refresh(self)
+        return (self._pos, self._origin, self._frame, self.stripped_id)
 
     def __setstate__(self, state):
-        self.__init__(*state)
+        (pos, origin, frame, path_id) = state
+        self.__init__(pos, origin, frame, path_id=path_id)
+        mutable.freeze(self)
 
-    #==========================================================================
-    def event_at_time(self, time, quick=False):
+    ######################################################################################
+    # Path API
+    ######################################################################################
+
+    def event_at_time(self, time, *, quick=None):
         """An Event corresponding to a specified time on this path.
 
-        Input:
-            time        a time Scalar at which to evaluate the path.
+        Parameters:
+            time (Scalar, array-like, or float): The time in seconds TDB.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default QuickPath and QuickFrame parameters.
+                Use False to disable the use of QuickPaths and QuickFrames.
 
-        Return:         an Event object containing (at least) the time, position
-                        and velocity on the path.
+        Returns:
+            (Event): The Event object containing (at least) the time, position, and
+                velocity on the Path.
+
+        Raises:
+            ValueError: If the shapes of `time` and this object cannot be broadcasted.
         """
 
-        return Event(time, self.pos, self.origin, self.frame)
+        return Event(time, self._pos, self._origin, self._frame)
 
-################################################################################
+##########################################################################################
+
+Path._PATH_SUBCLASSES.append(FixedPath)
+
+##########################################################################################

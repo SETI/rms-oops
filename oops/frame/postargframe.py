@@ -1,93 +1,114 @@
-################################################################################
+##########################################################################################
 # oops/frame/postargframe.py: Subclass PosTargFrame of class Frame
-################################################################################
+##########################################################################################
 
 import numpy as np
 
 from polymath       import Matrix3, Vector3
 from oops.frame     import Frame
 from oops.transform import Transform
+import oops.mutable as mutable
+
 
 class PosTargFrame(Frame):
-    """A Frame subclass describing a fixed rotation about the X and Y axes, so
-    the Z-axis of another frame falls at a slightly different position in this
-    frame.
+    """A Frame subclass describing a fixed rotation about the X and Y axes, so the Z-axis
+    of another frame falls at a slightly different position in this frame.
     """
 
-    FRAME_IDS = {}  # frame_id to use if a frame already exists upon un-pickling
+    _WAYFRAMES = {}
 
-    #===========================================================================
-    def __init__(self, xpos, ypos, reference, frame_id=None, unpickled=False):
+    def __init__(self, xpos, ypos, reference, *, frame_id=None):
         """Constructor for a PosTarg Frame.
 
-        Input:
-            xpos        the X-position of the reference frame's Z-axis in this
-                        frame, in radians.
-            ypos        the Y-position of the reference frame's Z-axis in this
-                        frame, in radians.
-            reference   the frame relative to which this frame is defined.
-            frame_id    the ID to use; None to leave the frame unregistered.
-            unpickled   True if this frame has been read from a pickle file.
+        Parameters:
+            xpos (float): The X-position of the reference Frame's Z-axis in the given
+                referece frame, in radians.
+            ypos (float): The Y-position of the reference Frame's Z-axis in the given
+                referece frame, in radians.
+            reference (Frame or str): The Frame or the ID of the Frame relative to which
+                this Frame is defined.
+            frame_id (str, optional): The ID under which to register this Frame; None to
+                leave this Frame unregistered. As a special case, use "+" to automatically
+                generate a Frame ID by appending "_POSTARG" to the ID of `reference` (if
+                it has an ID).
         """
 
-        self.xpos = float(xpos)
-        self.ypos = float(ypos)
+        self._xpos = float(xpos)
+        self._ypos = float(ypos)
 
-        cos_x = np.cos(self.xpos)
-        sin_x = np.sin(self.xpos)
-
-        cos_y = np.cos(self.ypos)
-        sin_y = np.sin(self.ypos)
-
+        cos_x = np.cos(self._xpos)
+        sin_x = np.sin(self._xpos)
+        cos_y = np.cos(self._ypos)
+        sin_y = np.sin(self._ypos)
         xmat = Matrix3([[1.,  0.,    0.   ],
                         [0.,  cos_y, sin_y],
                         [0., -sin_y, cos_y]])
-
         ymat = Matrix3([[ cos_x, 0., sin_x],
                         [ 0.,    1., 0.   ],
                         [-sin_x, 0., cos_x]])
+        self._matrix = ymat * xmat
 
-        mat = ymat * xmat
+        self._reference = Frame.as_frame(reference)
+        self._origin = self._reference._origin
+        self._shape = self._reference._shape
 
-        self.frame_id  = frame_id
-        self.reference = Frame.as_wayframe(reference)
-        self.origin    = self.reference.origin
-        self.shape     = self.reference.shape
-        self.keys      = set()
+        if frame_id == '+' and self._reference._frame_id:
+            frame_id = self._reference._frame_id + '_POSTARG'
 
-        # Update wayframe and frame_id; register if not temporary
-        self.register(unpickled=unpickled)
+        self._register(frame_id)
+        mutable.refresh(self)
 
-        # It needs a wayframe before we can define the transform
-        self.transform = Transform(mat, Vector3.ZERO,
-                                   self, self.reference, self.origin)
+    def _refresh(self):
+        self._transform = Transform(self._matrix, Vector3.ZERO, self, self._reference,
+                                    self._origin)
 
-        # Save in internal dict for name lookup upon serialization
-        if (not unpickled and self.shape == ()
-            and self.frame_id in Frame.WAYFRAME_REGISTRY):
-                key = (self.xpos, self.ypos, self.reference.frame_id)
-                PosTargFrame.FRAME_IDS[key] = self.frame_id
+    def _wayframe_key(self):
+        return (self._xpos, self._ypos, self._reference)
 
-    # Unpickled frames will always have temporary IDs to avoid conflicts
+    ######################################################################################
+    # Serialization support
+    ######################################################################################
+
     def __getstate__(self):
-        return (self.xpos, self.ypos,
-                Frame.as_primary_frame(self.reference), self.shape)
+        mutable.refresh(self)
+        return (self._xpos, self._ypos, self._reference, self.stripped_id)
 
     def __setstate__(self, state):
-        # If this frame matches a pre-existing frame, re-use its ID
-        (xpos, ypos, reference, shape) = state
-        if shape == ():
-            key = (xpos, ypos, reference.frame_id)
-            frame_id = PosTargFrame.FRAME_IDS.get(key, None)
-        else:
-            frame_id = None
+        (xpos, ypos, reference, frame_id) = state
+        self.__init__(xpos, ypos, reference, frame_id=frame_id)
+        mutable.freeze(self)
 
-        self.__init__(xpos, ypos, reference, frame_id=frame_id, unpickled=True)
+    ######################################################################################
+    # Frame API
+    ######################################################################################
 
-    #===========================================================================
-    def transform_at_time(self, time, quick={}):
-        """The Transform into the this Frame at a Scalar of times."""
+    def transform_at_time(self, time, *, quick=False):
+        """Transform that rotates coordinates from the reference frame to this frame.
 
-        return self.transform
+        If the frame is rotating, then the coordinates being transformed must be given
+        relative to the center of rotation.
 
-################################################################################
+        Parameters:
+            time (Scalar, array-like, or float): The time in seconds TDB.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default QuickPath and QuickFrame parameters.
+                Use False to disable the use of QuickPaths and QuickFrames. Ignored by
+                class PosTargFrame.
+
+        Returns:
+            (Transform): The Tranform applicable at the specified time or times. It
+                rotates vectors from the reference frame to this frame.
+
+        Notes:
+            Navigation is a fixed frame, so the transform relative to the `reference`
+            frame is independent of time. The returned Transform always has the shape of
+            this object, regardless of the shape of `time`.
+        """
+
+        return self._transform
+
+##########################################################################################
+
+Frame._FRAME_SUBCLASSES.append(PosTargFrame)
+
+##########################################################################################

@@ -7,6 +7,7 @@ import numpy as np
 from polymath     import Scalar
 from oops.cadence import Cadence
 
+
 class Instant(Cadence):
     """TODO: This is a work in progress. Not fully tested. To be used by the
     InSitu Observation subclass. DO NOT USE.

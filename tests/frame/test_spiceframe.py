@@ -28,12 +28,12 @@ class Test_SpiceFrame(unittest.TestCase):
             cspyce.furnsh(path)
         Path.USE_QUICKPATHS = False
         Frame.USE_QUICKFRAMES = False
-        Path.reset_registry()
-        Frame.reset_registry()
+        Path._reset_caches()
+        Frame._reset_caches()
 
     def tearDown(self):
-        Path.reset_registry()
-        Frame.reset_registry()
+        Path._reset_caches()
+        Frame._reset_caches()
         Path.USE_QUICKPATHS = True
         Frame.USE_QUICKFRAMES = True
 
@@ -46,15 +46,12 @@ class Test_SpiceFrame(unittest.TestCase):
         _ = SpiceFrame('IAU_EARTH', 'J2000')
         time  = Scalar(np.random.rand(3,4,2) * 1.e8)
         posvel = np.random.rand(3,4,2,6,1)
-        event = Event(time, (posvel[...,0:3,0],posvel[...,3:6,0]), 'SSB',
-                                                                   'J2000')
+        event = Event(time, (posvel[...,0:3,0],posvel[...,3:6,0]), 'SSB', 'J2000')
         rotated = event.wrt_frame('IAU_EARTH')
 
         for i,t in np.ndenumerate(time.vals):
             matrix6 = cspyce.sxform('J2000', 'IAU_EARTH', t)
-# The matrix subclass is to be deprecated? Really?
-#             spiceval = np.matrix(matrix6) * np.matrix(posvel[i])
-            spiceval = np.matmul(matrix6, posvel[i])[...,np.newaxis]
+            spiceval = np.matmul(matrix6, posvel[i])[..., np.newaxis]
 
             dpos = rotated.pos[i].vals[...,np.newaxis] - spiceval[0:3,0]
             dvel = rotated.vel[i].vals[...,np.newaxis] - spiceval[3:6,0]
@@ -63,8 +60,8 @@ class Test_SpiceFrame(unittest.TestCase):
             self.assertTrue(np.all(np.abs(dvel) < 1.e-15))
 
         # Tests of combined frames
-        Path.reset_registry()
-        Frame.reset_registry()
+        Path._reset_caches()
+        Frame._reset_caches()
 
         _ = SpicePath('EARTH', 'SSB')
         _ = SpicePath('VENUS', 'EARTH')
@@ -127,8 +124,8 @@ class Test_SpiceFrame(unittest.TestCase):
             self.assertTrue(np.all(np.abs(dmatrix) < 1.e-14))
             self.assertTrue(np.all(np.abs(domega)  < 1.e-14))
 
-        Path.reset_registry()
-        Frame.reset_registry()
+        Path._reset_caches()
+        Frame._reset_caches()
 
         ########################################
         # Test for a Cassini C kernel
@@ -183,16 +180,16 @@ class Test_SpiceFrame(unittest.TestCase):
         wac3 = SpiceFrame('CASSINI_ISS_WAC', omega_type='zero',      frame_id='wac3')
 
         # Test a single time
-        xform1 = wac1.transform_at_time(TDB, quick=None)
-        xform2 = wac2.transform_at_time(TDB, quick=None)
-        xform3 = wac3.transform_at_time(TDB, quick=None)
+        xform1 = wac1.transform_at_time(TDB, quick=False)
+        xform2 = wac2.transform_at_time(TDB, quick=False)
+        xform3 = wac3.transform_at_time(TDB, quick=False)
         self.assertEqual(xform1.matrix, xform2.matrix)
         self.assertEqual(xform1.matrix, xform3.matrix)
         self.assertEqual(xform3.omega, Vector3.ZERO)
 
         DT = 0.2
-        xform2a = wac2.transform_at_time(TDB-DT, quick=None)
-        xform2b = wac2.transform_at_time(TDB+DT, quick=None)
+        xform2a = wac2.transform_at_time(TDB-DT, quick=False)
+        xform2b = wac2.transform_at_time(TDB+DT, quick=False)
 
         axes = (Vector3.XAXIS, Vector3.YAXIS, Vector3.ZAXIS)
         for i in range(3):
@@ -206,16 +203,16 @@ class Test_SpiceFrame(unittest.TestCase):
         # Test an array of times
         times = Scalar((TDB-5., TDB+2., TDB-9.5, TDB+7.7))
 
-        xform1 = wac1.transform_at_time(times, quick=None)
-        xform2 = wac2.transform_at_time(times, quick=None)
-        xform3 = wac3.transform_at_time(times, quick=None)
+        xform1 = wac1.transform_at_time(times, quick=False)
+        xform2 = wac2.transform_at_time(times, quick=False)
+        xform3 = wac3.transform_at_time(times, quick=False)
         self.assertEqual(xform1.matrix, xform2.matrix)
         self.assertEqual(xform1.matrix, xform3.matrix)
         self.assertEqual(xform3.omega, Vector3.ZERO)
 
         DT = 1.
-        xform2a = wac2.transform_at_time(times-DT, quick=None)
-        xform2b = wac2.transform_at_time(times+DT, quick=None)
+        xform2a = wac2.transform_at_time(times-DT, quick=False)
+        xform2b = wac2.transform_at_time(times+DT, quick=False)
 
         axes = (Vector3.XAXIS, Vector3.YAXIS, Vector3.ZAXIS)
         for i in range(3):
@@ -225,16 +222,16 @@ class Test_SpiceFrame(unittest.TestCase):
             angle = rotated_time1.sep(rotated_time0)
             ratio = angle/(2.*DT) / xform2.omega.norm()
             mask = (angle.vals != 0.)
-            self.assertTrue(abs(ratio[mask]).max() - 1. < 1.e-9)
+            self.assertLess(abs(ratio[mask]).max() - 1., 1.e-9)
 
         # Test a single value using transform_at_time_if_possible
-        xform1 = wac1.transform_at_time_if_possible(TDB, quick=None)[1]
-        xform2 = wac2.transform_at_time_if_possible(TDB, quick=None)[1]
+        xform1 = wac1.transform_at_time_if_possible(TDB, quick=False)[1]
+        xform2 = wac2.transform_at_time_if_possible(TDB, quick=False)[1]
         self.assertEqual(xform1.matrix, xform2.matrix)
 
         DT = 0.2
-        xform2a = wac2.transform_at_time_if_possible(TDB-DT, quick=None)[1]
-        xform2b = wac2.transform_at_time_if_possible(TDB+DT, quick=None)[1]
+        xform2a = wac2.transform_at_time_if_possible(TDB-DT, quick=False)[1]
+        xform2b = wac2.transform_at_time_if_possible(TDB+DT, quick=False)[1]
 
         axes = (Vector3.XAXIS, Vector3.YAXIS, Vector3.ZAXIS)
         for i in range(3):
@@ -248,16 +245,16 @@ class Test_SpiceFrame(unittest.TestCase):
         # Test an array of times using transform_at_time_if_possible
         times = Scalar((TDB-5., TDB+2., TDB-9.5, TDB+7.7))
 
-        xform1 = wac1.transform_at_time_if_possible(times, quick=None)[1]
-        xform2 = wac2.transform_at_time_if_possible(times, quick=None)[1]
-        xform3 = wac3.transform_at_time_if_possible(times, quick=None)[1]
+        xform1 = wac1.transform_at_time_if_possible(times, quick=False)[1]
+        xform2 = wac2.transform_at_time_if_possible(times, quick=False)[1]
+        xform3 = wac3.transform_at_time_if_possible(times, quick=False)[1]
         self.assertEqual(xform1.matrix, xform2.matrix)
         self.assertEqual(xform1.matrix, xform3.matrix)
         self.assertEqual(xform3.omega, Vector3.ZERO)
 
         DT = 1.
-        xform2a = wac2.transform_at_time_if_possible(times-DT, quick=None)[1]
-        xform2b = wac2.transform_at_time_if_possible(times+DT, quick=None)[1]
+        xform2a = wac2.transform_at_time_if_possible(times-DT, quick=False)[1]
+        xform2b = wac2.transform_at_time_if_possible(times+DT, quick=False)[1]
 
         axes = (Vector3.XAXIS, Vector3.YAXIS, Vector3.ZAXIS)
         for i in range(3):
@@ -273,9 +270,9 @@ class Test_SpiceFrame(unittest.TestCase):
         # In this run, several times will fail.
         times = Scalar((TDB-5., TDB-1.e20, TDB+2., TDB-9.5, TDB+7.7, TDB+1.e10))
 
-        xform1 = wac1.transform_at_time_if_possible(times, quick=None)[1]
-        xform2 = wac2.transform_at_time_if_possible(times, quick=None)[1]
-        xform3 = wac3.transform_at_time_if_possible(times, quick=None)[1]
+        xform1 = wac1.transform_at_time_if_possible(times, quick=False)[1]
+        xform2 = wac2.transform_at_time_if_possible(times, quick=False)[1]
+        xform3 = wac3.transform_at_time_if_possible(times, quick=False)[1]
         self.assertEqual(xform1.matrix, xform2.matrix)
         self.assertEqual(xform1.matrix, xform3.matrix)
         self.assertEqual(xform3.omega, Vector3.ZERO)
@@ -284,8 +281,8 @@ class Test_SpiceFrame(unittest.TestCase):
         self.assertEqual(xform2.shape, (4,))
 
         DT = 1.
-        xform2a = wac2.transform_at_time_if_possible(times-DT, quick=None)[1]
-        xform2b = wac2.transform_at_time_if_possible(times+DT, quick=None)[1]
+        xform2a = wac2.transform_at_time_if_possible(times-DT, quick=False)[1]
+        xform2b = wac2.transform_at_time_if_possible(times+DT, quick=False)[1]
 
         axes = (Vector3.XAXIS, Vector3.YAXIS, Vector3.ZAXIS)
         for i in range(3):
@@ -309,27 +306,27 @@ class Test_SpiceFrame(unittest.TestCase):
         quickdict = QUICK.dictionary.copy()
         quickdict['quickframe_numerical_omega'] = False
         quickdict['frame_time_step'] = 0.01
-        wac1a = QuickFrame(wac1, (TDB-100.,TDB+100.), quickdict)
+        wac1a = QuickFrame(wac1, TDB-100., TDB+100., quick=quickdict)
 
         quickdict['quickframe_numerical_omega'] = True
-        wac1b = QuickFrame(wac1, (TDB-100.,TDB+100.), quickdict)
+        wac1b = QuickFrame(wac1, TDB-100., TDB+100., quick=quickdict)
 
-        _ = QuickFrame(wac3, (TDB-100.,TDB+100.), quickdict)
+        _ = QuickFrame(wac3, TDB-100., TDB+100., quick=quickdict)
 
         # Test a single time
         time = TDB - 44.
-        xform1 = wac1a.transform_at_time(time, quick=None)
-        xform2 = wac1b.transform_at_time(time, quick=None)
-        xform3 = wac2.transform_at_time(time, quick=None)
-        xform4 = wac3.transform_at_time(time, quick=None)
+        xform1 = wac1a.transform_at_time(time, quick=False)
+        xform2 = wac1b.transform_at_time(time, quick=False)
+        xform3 = wac2.transform_at_time(time, quick=False)
+        xform4 = wac3.transform_at_time(time, quick=False)
         self.assertEqual(xform4.omega, Vector3.ZERO)
 
         self.assertEqual(xform1.matrix, xform2.matrix)
 
-        diff = xform3.matrix.values - xform1.matrix.values
+        diff = xform3.matrix.vals - xform1.matrix.vals
         self.assertTrue(np.max(abs(diff)) < 1.e-11)
 
-        diff = xform4.matrix.values - xform1.matrix.values
+        diff = xform4.matrix.vals - xform1.matrix.vals
         self.assertTrue(np.max(abs(diff)) < 1.e-11)
 
         diff = (xform3.omega - xform2.omega).norm()
@@ -340,15 +337,15 @@ class Test_SpiceFrame(unittest.TestCase):
 
         # Test the linear interpolation limit where delta-time < 1 sec
         time = Scalar((TDB - 41.0123, TDB - 41.1357, TDB - 41.6543))
-        xform2 = wac1b.transform_at_time(time, quick=None)
-        xform3 = wac2.transform_at_time(time, quick=None)
-        xform4 = wac3.transform_at_time(time, quick=None)
+        xform2 = wac1b.transform_at_time(time, quick=False)
+        xform3 = wac2.transform_at_time(time, quick=False)
+        xform4 = wac3.transform_at_time(time, quick=False)
         self.assertEqual(xform4.omega, Vector3.ZERO)
 
-        diff = xform3.matrix.values - xform2.matrix.values
+        diff = xform3.matrix.vals - xform2.matrix.vals
         self.assertTrue(np.max(abs(diff)) < 3.e-9)
 
-        diff = xform4.matrix.values - xform2.matrix.values
+        diff = xform4.matrix.vals - xform2.matrix.vals
         self.assertTrue(np.max(abs(diff)) < 3.e-9)
 
         diff = (xform3.omega - xform2.omega).norm()
@@ -356,21 +353,18 @@ class Test_SpiceFrame(unittest.TestCase):
 
         # Test the linear interpolation limit where delta-time > 1 sec
         time = Scalar((TDB - 40.0123, TDB + 41.1357, TDB - 1.6543))
-        xform2 = wac1b.transform_at_time(time, quick=None)
-        xform3 = wac2.transform_at_time(time, quick=None)
-        xform4 = wac3.transform_at_time(time, quick=None)
+        xform2 = wac1b.transform_at_time(time, quick=False)
+        xform3 = wac2.transform_at_time(time, quick=False)
+        xform4 = wac3.transform_at_time(time, quick=False)
         self.assertEqual(xform4.omega, Vector3.ZERO)
 
-        diff = xform3.matrix.values - xform2.matrix.values
+        diff = xform3.matrix.vals - xform2.matrix.vals
         self.assertTrue(np.max(abs(diff)) < 1.e-9)
 
-        diff = xform4.matrix.values - xform2.matrix.values
+        diff = xform4.matrix.vals - xform2.matrix.vals
         self.assertTrue(np.max(abs(diff)) < 1.e-9)
 
         diff = (xform3.omega - xform2.omega).norm()
         self.assertTrue(diff.max() < 1.e-7)
 
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

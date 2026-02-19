@@ -7,7 +7,7 @@ import unittest
 
 from polymath   import Scalar, Vector3, Matrix3
 from oops       import Transform
-from oops.frame import Frame, Wayframe
+from oops.frame import Frame
 
 
 class Test_Transform(unittest.TestCase):
@@ -17,8 +17,8 @@ class Test_Transform(unittest.TestCase):
         np.random.seed(5819)
 
         # Fake out the FRAME REGISTRY with something that has .shape = ()
-        Frame.WAYFRAME_REGISTRY["TEST"] = Wayframe("J2000")
-        Frame.WAYFRAME_REGISTRY["SPIN"] = Wayframe("J2000")
+        Frame._FRAME_REGISTRY["TEST"] = Wayframe("J2000")
+        Frame._FRAME_REGISTRY["SPIN"] = Wayframe("J2000")
 
         tr = Transform(Matrix3(np.array([[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]])),
                        Vector3(np.array([0.,0.,0.])), "J2000", "J2000")
@@ -83,7 +83,4 @@ class Test_Transform(unittest.TestCase):
 
         # Transform derivatives are unit tested as part of the SpinFrame tests
 
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

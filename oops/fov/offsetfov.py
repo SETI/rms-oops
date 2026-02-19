@@ -6,6 +6,7 @@ from polymath      import Pair
 from oops.fittable import Fittable
 from oops.fov      import FOV
 
+
 class OffsetFOV(FOV, Fittable):
     """FOV subclass in which the line of sight has been shifted relative to
     another FOV. This is typically used for image navigation and pointing
@@ -44,12 +45,10 @@ class OffsetFOV(FOV, Fittable):
         if self.uv_offset is not None:
             self.xy_offset = self.fov.xy_from_uv(self.uv_offset +
                                                  self.fov.uv_los)
-
         elif self.xy_offset is not None:
             self.uv_offset = (self.fov.uv_from_xy(self.xy_offset) -
                               self.fov.uv_los)
-
-        else:                                   # default is a (0,0) offset
+        else:                                   # default is a (0, 0) offset
             self.uv_offset = Pair.ZEROS
             self.xy_offset = Pair.ZEROS
 
@@ -59,18 +58,38 @@ class OffsetFOV(FOV, Fittable):
         self.uv_area  = self.fov.uv_area
         self.uv_los   = self.fov.uv_los - self.uv_offset
 
-        # Required attributes for Fittable
-        self.nparams = 2
-        self.param_name = 'uv_offset'
-        self.cache = {}     # not used
+    ############################################################################
+    # Fittable interface
+    ############################################################################
+
+    nparams = 2
+
+    def _set_params(self, params):
+        """Redefine the (u,v) offsets of this OffsetFOV."""
+
+        self.uv_offset = Pair.as_pair(params)
+        self.xy_offset = self.fov.xy_from_uv(self.uv_offset + self.fov.uv_los)
+
+    @property
+    def params(self):
+        return tuple(self.uv_offset.vals)
+
+    ############################################################################
+    # Serialization support
+    ############################################################################
 
     def __getstate__(self):
+        self.refresh()
         return (self.fov, self.uv_offset, self.xy_offset)
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
-    #===========================================================================
+    ############################################################################
+    # FOV API
+    ############################################################################
+
     def xy_from_uvt(self, uv_pair, time=None, derivs=False, remask=False,
                                                             **keywords):
         """The (x,y) camera frame coordinates given the FOV coordinates (u,v) at
@@ -118,30 +137,5 @@ class OffsetFOV(FOV, Fittable):
         xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
         return self.fov.uv_from_xyt(xy_pair + self.xy_offset, time=time,
                                     derivs=derivs, remask=remask, **keywords)
-
-    ############################################################################
-    # Fittable interface
-    ############################################################################
-
-    def set_params(self, params):
-        """Redefine the Fittable object, using this set of parameters.
-
-        Input:
-            params      a list, tuple or 1-D Numpy array of floating-point
-                        numbers, defining the parameters to be used in the
-                        object returned.
-        """
-
-        self.uv_offset = Pair.as_pair(params)
-        self.xy_offset = self.fov.xy_from_uv(self.uv_offset - self.fov.uv_los)
-
-    #===========================================================================
-    def copy(self):
-        """A deep copy of the Fittable object.
-
-        The copy can be safely modified without affecting the original.
-        """
-
-        return OffsetFOV(self.fov, self.uv_offset.copy(), xy_offset=None)
 
 ################################################################################

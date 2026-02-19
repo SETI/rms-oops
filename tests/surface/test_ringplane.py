@@ -166,10 +166,4 @@ class Test_RingPlane(unittest.TestCase):
         # Note: Additional unit testing is performed in orbitplane.py
         ########################################################################
 
-#         Path.reset_registry()
-#         Frame.reset_registry()
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

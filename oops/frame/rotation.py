@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/frame/rotation.py: Subclass Rotation of class Frame
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -9,126 +9,171 @@ from oops.fittable  import Fittable
 from oops.frame     import Frame
 from oops.transform import Transform
 
+
 class Rotation(Frame, Fittable):
     """A Frame describing a fixed rotation about one axis of another frame."""
 
-    FRAME_IDS = {}  # frame_id to use if a frame already exists upon un-pickling
+    _WAYFRAMES = {}
+    _XYZDICT = {'X': 0, 'Y': 1, 'Z': 2, 'x': 0, 'y': 1, 'z': 2, 0: 0, 1: 1, 2: 2}
 
-    #===========================================================================
-    def __init__(self, angle, axis, reference, frame_id=None, unpickled=False):
+    def __init__(self, arg, /, axis, reference, *, freeze=False, frame_id=None):
         """Constructor for a Rotation Frame.
 
-        Input:
-            angle       the angle of rotation in radians. Can be a Scalar
-                        containing multiple values.
-            axis        the rotation axis: 0 for x, 1 for y, 2 for z.
-            reference   the frame relative to which this rotation is defined.
-            frame_id    the ID to use; None to leave the frame unregistered.
-            unpickled   True if this frame has been read from a pickle file.
+        Parameters:
+            arg (Scalar, array-like, float or Rotation): The angle of rotation in radians,
+                which can be multidimensional. Alternatively, if another Rotation is
+                given, this object's rotation angle will always match that of the
+                argument.
+            axis (int): The rotation axis: 0, "x", or "X" for x; 1, "y", or "Y" for y; 2,
+                "z", or "Z" for z.
+            reference (frame or str): The Frame or the ID of the Frame relative to which
+                this rotation is defined.
+            freeze (bool, optional): True to return a frozen object; False to leave it
+                fittable.
+            frame_id (str, optional): The ID under which to register this Frame; None to
+                leave this Frame unregistered. As a special case, use "+" to automatically
+                generate a Frame ID by appending "_ROTATED" to the ID of `reference` (if
+                it has an ID).
         """
 
-        self.angle = Scalar.as_scalar(angle)
+        # Linking to a frozen object yields a frozen object
+        if isinstance(arg, str):
+            arg = Frame.as_frame(arg)
+        if isinstance(arg, Rotation) and arg.is_frozen:
+            arg = arg._angle
+            freeze = True
 
-        self.axis2 = axis           # Most often, the Z-axis
-        self.axis0 = (self.axis2 + 1) % 3
-        self.axis1 = (self.axis2 + 2) % 3
+        if isinstance(arg, Rotation):
+            self._link = arg
+            self._angle_shape = self._link._angle_shape
+            self._angle_mask = self._link._angle_mask
+        else:
+            self._angle = Scalar.as_scalar(arg).wod.as_readonly()
+            self._angle_shape = self._angle.shape
+            self._angle_mask = self._angle.mask
+            self._link = None
 
-        self.frame_id  = frame_id
-        self.reference = Frame.as_wayframe(reference)
-        self.origin    = self.reference.origin
-        self.keys      = set()
+        self._axis2 = Rotation._XYZDICT[axis]
+        self._axis0 = (self._axis2 + 1) % 3
+        self._axis1 = (self._axis2 + 2) % 3
 
-        self.shape = Qube.broadcasted_shape(self.angle, self.reference)
+        self._reference = Frame.as_wayframe(reference)
+        self._origin = self._reference._origin
+        self._shape = Qube.broadcasted_shape(self._angle, self._reference)
 
-        mat = np.zeros(self.shape + (3,3))
-        mat[..., self.axis2, self.axis2] = 1.
-        mat[..., self.axis0, self.axis0] = np.cos(self.angle.vals)
-        mat[..., self.axis0, self.axis1] = np.sin(self.angle.vals)
-        mat[..., self.axis1, self.axis1] =  mat[..., self.axis0, self.axis0]
-        mat[..., self.axis1, self.axis0] = -mat[..., self.axis0, self.axis1]
+        if frame_id == '+' and self._reference._frame_id:
+            frame_id = self._reference._frame_id + '_ROTATED'
 
-        # Update wayframe and frame_id; register if not temporary
-        self.register(unpickled=unpickled)
+        self._register(frame_id)
+        self.refresh()
+        if freeze:
+            self.freeze()
 
-        # We need a wayframe before we can create the transform
-        self.transform = Transform(Matrix3(mat, self.angle.mask), Vector3.ZERO,
-                                   self.wayframe, self.reference, self.origin)
+    @property
+    def angle(self):
+        self.refresh()
+        return self._angle
 
-        # Save in internal dict for name lookup upon serialization
-        if (not unpickled and self.shape == ()
-            and self.frame_id in Frame.WAYFRAME_REGISTRY):
-                key = (self.angle.vals, self.axis2, self.reference.frame_id)
-                Rotation.FRAME_IDS[key] = self.frame_id
+    def _source(self):
+        """The original source of the time shift if this object is linked to another;
+        otherwise, self.
+        """
+        return self._link._source() if self._link else self
+
+    def _wayframe_key(self):
+        if self.is_frozen:
+            return (self._angle, self._reference)
+        # Use id(self) to ensure that an unlinked frame has a unique key
+        return (self._link or id(self), self._reference)
+
+    ######################################################################################
+    # Fittable interface
+    ######################################################################################
+
+    nparams = 1
+
+    def _set_params(self, params):
+        """Redefine the rotation angle of this Rotation object."""
+
+        if self._link:
+            self._link.set_params(params)
+            self._angle = self._link._angle
+        elif self._angle_shape == ():
+            self._angle = Scalar(params[0], self._angle_mask)
+        else:
+            params = np.array(params).reshape(self._angle_shape)
+            self._angle = Scalar(params, self._angle_mask)
+
+    @property
+    def params(self):
+        if self._angle_shape == ():
+            return (self._angle,)
+        else:
+            return tuple(self._angle.vals.ravel())
+
+    def _refresh(self):
+        if self._link:
+            self._angle = self._link._angle
+            self._matrix = self._link._matrix
+        else:
+            mat = np.zeros(self._shape + (3, 3))
+            mat[..., self._axis2, self._axis2] = 1.
+            mat[..., self._axis0, self._axis0] = np.cos(self._angle.vals)
+            mat[..., self._axis0, self._axis1] = np.sin(self._angle.vals)
+            mat[..., self._axis1, self._axis1] =  mat[..., self._axis0, self._axis0]
+            mat[..., self._axis1, self._axis0] = -mat[..., self._axis0, self._axis1]
+            self._matrix = Matrix3(mat, self._angle_mask)
+
+        self._transform = Transform(self._matrix, Vector3.ZERO, self, self._reference,
+                                    self._origin)
+
+    def _freeze(self):
+        self._reregister()
+
+    ######################################################################################
+    # Serialization support
+    ######################################################################################
 
     def __getstate__(self):
-        return (self.angle, self.axis2,
-                Frame.as_primary_frame(self.reference), self.shape)
+        self.refresh()
+        return (self._angle, self._axis2, self._reference, self.stripped_id)
 
     def __setstate__(self, state):
-        # If this frame matches a pre-existing frame, re-use its ID
-        (angle, axis, reference, shape) = state
-        if shape == ():
-            key = (angle.vals, axis, reference.frame_id)
-            frame_id = Rotation.FRAME_IDS.get(key, None)
-        else:
-            frame_id = None
+        (angle, axis, reference, frame_id) = state
+        self.__init__(angle, axis, reference, frame_id=frame_id)
+        self.freeze()
 
-        self.__init__(angle, axis, reference, frame_id=frame_id, unpickled=True)
+    ######################################################################################
+    # Frame API
+    ######################################################################################
 
-    #===========================================================================
-    def transform_at_time(self, time, quick=False):
-        """Transform into this Frame at a Scalar of times."""
+    def transform_at_time(self, time, *, quick=False):
+        """Transform that rotates coordinates from the reference frame to this frame.
 
-        return self.transform
+        If the frame is rotating, then the coordinates being transformed must be given
+        relative to the center of rotation.
 
-    ############################################################################
-    # Fittable interface
-    ############################################################################
+        Parameters:
+            time (Scalar, array-like, or float): The time in seconds TDB.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default QuickPath and QuickFrame parameters.
+                Use False to disable the use of QuickPaths and QuickFrames. Ignored by
+                class Rotation.
 
-    def set_params(self, params):
-        """Redefine the Fittable object, using this set of parameters.
+        Returns:
+            (Transform): The Tranform applicable at the specified time or times. It
+                rotates vectors from the reference frame to this frame.
 
-        In this case, params is the set of angles of rotation.
-
-        Input:
-            params      a list, tuple or 1-D Numpy array of floating-point
-                        numbers, defining the parameters to be used in the
-                        object returned.
+        Notes:
+            Rotation is a fixed frame, so the transform relative to the `reference` frame
+            is independent of time. The returned Transform always has the shape of this
+            object, regardless of the shape of `time`.
         """
 
-        params = Scalar.as_scalar(params)
-        if params.shape != self.shape:
-            raise ValueError('new parameter shape does not match original')
+        return self._transform
 
-        self.angle = params
+##########################################################################################
 
-        mat = np.zeros(self.shape + (3,3))
-        mat[..., self.axis2, self.axis2] = 1.
-        mat[..., self.axis0, self.axis0] = np.cos(self.angle.vals)
-        mat[..., self.axis0, self.axis1] = np.sin(self.angle.vals)
-        mat[..., self.axis1, self.axis1] =  mat[..., self.axis0, self.axis0]
-        mat[..., self.axis1, self.axis0] = -mat[..., self.axis0, self.axis1]
+Frame._FRAME_SUBCLASSES.append(Rotation)
 
-        self.transform = Transform(Matrix3(mat, self.angle.mask), Vector3.ZERO,
-                                   self.reference, self.origin)
-
-    #===========================================================================
-    def get_params(self):
-        """The current set of parameters defining this fittable object.
-
-        Return:         a Numpy 1-D array of floating-point numbers containing
-                        the parameter values defining this object.
-        """
-
-        return self.angle.vals
-
-    #===========================================================================
-    def copy(self):
-        """A deep copy of the given object.
-
-        The copy can be safely modified without affecting the original.
-        """
-
-        return Rotation(self.angle.copy(), self.axis, self.reference_id)
-
-################################################################################
+##########################################################################################

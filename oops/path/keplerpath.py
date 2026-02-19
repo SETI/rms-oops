@@ -1,145 +1,134 @@
-################################################################################
+##########################################################################################
 # oops/path/keplerpath.py: Subclass KeplerPath of class Path.
-################################################################################
+##########################################################################################
 
 import numpy as np
 
 from polymath          import Scalar, Vector3, Matrix3
+from oops.cache        import Cache
 from oops.event        import Event
 from oops.fittable     import Fittable
 from oops.frame.frame_ import Frame
 from oops.path.path_   import Path
 
-SEMIM = 0   # elements[SEMIM] = semimajor axis (km)
-MEAN0 = 1   # elements[MEAN0] = mean longitude at epoch (radians)
-DMEAN = 2   # elements[DMEAN] = mean motion (radians/s)
-ECCEN = 3   # elements[ECCEN] = eccentricity
-PERI0 = 4   # elements[PERI0] = pericenter at epoch (radians)
-DPERI = 5   # elements[DPERI] = pericenter precession rate (radians/s)
-INCLI = 6   # elements[INCLI] = inclination (radians)
-NODE0 = 7   # elements[NODE0] = longitude of ascending node at epoch
-DNODE = 8   # elements[DNODE] = nodal regression rate (radians/s, negative)
+_SEMIM = 0      # elements[SEMIM] = semimajor axis (km)
+_MEAN0 = 1      # elements[MEAN0] = mean longitude at epoch (radians)
+_DMEAN = 2      # elements[DMEAN] = mean motion (radians/s)
+_ECCEN = 3      # elements[ECCEN] = eccentricity
+_PERI0 = 4      # elements[PERI0] = pericenter at epoch (radians)
+_DPERI = 5      # elements[DPERI] = pericenter precession rate (radians/s)
+_INCLI = 6      # elements[INCLI] = inclination (radians)
+_NODE0 = 7      # elements[NODE0] = longitude of ascending node at epoch
+_DNODE = 8      # elements[DNODE] = nodal regression rate (radians/s, negative)
 
-NELEMENTS = 9
+_NELEMENTS = 9
 
-LIBAMP = 0  # libration[LIBAMP] = libration amplitude (radians)
-PHASE0 = 1  # libration[PHASE0] = libration phase at epoch (radians)
-DPHASE = 2  # libration[DPHASE] = libration rate (radians/s)
+_LIBAMP = 0     # libration[LIBAMP] = libration amplitude (radians)
+_PHASE0 = 1     # libration[PHASE0] = libration phase at epoch (radians)
+_DPHASE = 2     # libration[DPHASE] = libration rate (radians/s)
 
-NWOBBLES = 3
+_NWOBBLES = 3
+
 
 class KeplerPath(Path, Fittable):
     """A Path subclass that defines a fittable Keplerian orbit.
 
-    It is accurate to first order in eccentricity and inclination, and is
-    defined using nine orbital elements.
+    It is accurate to first order in eccentricity and inclination, and is defined using
+    nine orbital elements.
     """
 
-    PATH_IDS = {}
+    _WAYPOINTS = {}
 
-    #===========================================================================
-    def __init__(self, body, epoch, elements=None, observer=None, wobbles=(),
-                       frame=None, path_id=None, unpickled=False):
+    def __init__(self, body, epoch, elements=None, observer=None, *, wobbles=(),
+                 path_id=None):
         """Constructor for a KeplerPath.
 
-        Input:
-            body        a Body object defining the central planet, including its
-                        gravity and its ring_frame.
-            epoch       the time TDB relative to which all orbital elements are
-                        defined.
+        Parameters:
+            body (Body or str): The Body object or name of the central planet, including
+                its gravity and its ring_frame.
+            epoch (float): The time TDB relative to which all orbital elements are
+                 defined.
+            elements (array-like or dict, optional): The orbital elements and wobble
+                terms. If an array-like object is provided, this is the order of the
+                elements:
 
-            elements    a tuple, list or Numpy array containing the orbital
-                        elements and wobble terms:
-                a           mean radius of orbit, km.
-                lon         mean longitude of orbit at epoch, radians.
-                n           mean motion, radians/sec.
+                * [0]: `a`, mean radius of orbit, km.
+                * [1]: `lon`, mean longitude of orbit at epoch, radians.
+                * [2]: `n`, mean motion, radians/sec.
+                * [3]: `e`, orbital eccentricity.
+                * [4]: `peri`, longitude of pericenter at epoch, radians.
+                * [5]: `prec`,pericenter precession rate, radians/sec.
+                * [6]: `i`, inclination, radians.
+                * [7]: `node`, longitude of ascending node at epoch, radians.
+                * [8]: `regr`, nodal regression rate, radians/sec, NEGATIVE!
 
-                e           orbital eccentricity.
-                peri        longitude of pericenter at epoch, radians.
-                prec        pericenter precession rate, radians/sec.
+                You can include additional "wobble" terms, which can describe
+                non-Keplerian orbital perturbations. Repeat these three elements for each
+                wobble term:
 
-                i           inclination, radians.
-                node        longitude of ascending node at epoch, radians.
-                regr        nodal regression rate, radians/sec, NEGATIVE!
+                * [9, 12, ...] `amp`: amplitude of the term, radians.
+                * [10, 13, ...] `phase0`: initial phase of the first wobble term, radians.
+                * [11, 14, ...] `dphase_dt`: rate of change of the first wobble term,
+                  radians/s.
 
-                Repeat for each wobble:
+                Alternatively, provide a dictionary containing keys with these names (in
+                which case only one wobble term is allowed). If the elements are not
+                provided, the object remains un-initialized until `set_elements` is
+                called.
+            observer (Path or str, optional): Identification of the Path of the observer.
+                If provided, then `event_at_time` returns positions relative to this
+                observer in J2000 coordinates and with light travel time already accounted
+                for; this makes it easy to use this Path object for astrometry and orbit
+                fitting. If not provided, `event_at_time` returns positions relative to
+                the planet center and in the planet's `ring_frame`.
+            wobbles (str or tuple): The name(s) of each wobble element:
 
-                amp         amplitude of the first wobble term, radians.
-                phase0      initial phase of the first wobble term, radians.
-                dphase_dt   rate of change of the first wobble term, radians/s.
+                * "a": semimajor axis.
+                * "e": eccentricity.
+                * "i": inclination.
+                * "mean": mean motion rate.
+                * "peri": pericenter.
+                * "node": ascending node.
+                * "e2d": forced eccentricity represented by a 2-D vector.
+                * "i2d": forced inclination represented by a 2-D vector.
+                * "pole": an offset to the Laplace plane.
 
-                        Alternatively, a dictionary containing keys with these
-                        names, or None to leave the object un-initialized.
-
-            observer    an optional Path object or ID defining the observation
-                        point. Used for astrometry. If provided, the path is
-                        returned relative to the observer, in J2000 coordinates,
-                        and with light travel time from the central planet
-                        already accounted for. If None (the default), then the
-                        path is defined relative to the central planet in that
-                        planet's ring_frame.
-
-            wobbles     a string or tuple of strings containing the name of each
-                        element to which the corresponding wobble applies. Use
-                        'mean', 'peri' or 'node', 'a', 'e', or 'i', for
-                        individual elements. Use 'e2d' for a forced eccentricity
-                        and 'i2d' for a forced inclination. Use 'pole' for a
-                        Laplace plane offset).
-
-            frame       an optional frame in which the orbit is defined. By
-                        default, this is the ring_frame of the planet. Ignored
-                        if observer is defined.
-
-            path_id     the name under which to register the path.
-
-            unpickled   True if this path has been read from a pickle file.
+            path_id (str, optional): The ID under which to register this Path; None to
+                leave this Path unregistered.
         """
 
-        global SEMIM, MEAN0, DMEAN, ECCEN, PERI0, DPERI, INCLI, NODE0, DNODE
-        global NELEMENTS
+        self._wobbles = (wobbles,) if isinstance(wobbles, str) else wobbles
+        self._nwobbles = len(self._wobbles)
+        for name in self._wobbles:
+            if name not in {'mean', 'peri', 'node', 'a', 'e', 'i', 'e2d', 'i2d', 'pole'}:
+                raise ValueError(f'invalid name for wobble in KeplerPath: {name}')
 
-        global LIBAMP, PHASE0, DPHASE
-        global NWOBBLES
+        self._nelements = _NELEMENTS + self._nwobbles * _NWOBBLES
+        self.nparams = self._nelements
 
-        if isinstance(wobbles, str):
-            self.wobbles = (wobbles,)
-        else:
-            self.wobbles = wobbles
-
-        self.nwobbles = len(wobbles)
-        for name in self.wobbles:
-            if name not in {'mean', 'peri', 'node', 'a', 'e', 'i', 'e2d', 'i2d',
-                            'pole'}:
-                raise ValueError('invalid name for wobble in KeplerPath: '
-                                 + repr(name))
-
-        self.nparams = NELEMENTS + self.nwobbles * NWOBBLES
-        self.param_name = "elements"
-        self.cache = {}
-
-        self.planet = Path.BODY_CLASS.as_body(body)
-        self.center = self.planet.path
-        self.gravity = self.planet.gravity
+        self._planet = Path._Body.as_body(body)
+        self._center = self._planet.path
+        self._gravity = self._planet.gravity
+        self._epoch = float(epoch)
+        self._events = Cache()
 
         if observer is None:
-            self.observer = None
-            self.origin = self.planet.path
-            self.frame  = frame or self.planet.ring_frame
-            self.to_j2000 = Matrix3.IDENTITY
+            self._observer = None
+            self._origin = self.planet.path
+            self._frame = self.planet.ring_frame
+            self._to_j2000 = Matrix3.IDENTITY
         else:
-            self.observer = Path.as_path(observer)
-            if self.observer.shape:
+            self._observer = Path.as_waypoint(observer)
+            if self._observer._shape:
                 raise ValueError('KeplerPath requires a shapeless observer')
 
-            self.origin = self.observer
-            self.frame = frame or Frame.J2000
-            frame = self.frame.wrt(self.planet.ring_frame)
-            self.to_j2000 = frame.transform_at_time(epoch).matrix
-
-        self.epoch = float(epoch)
+            self._origin = self._observer
+            self._frame = Frame.J2000
+            frame = Frame.J2000.wrt(self._planet.ring_frame)
+            self.to_j2000 = frame.transform_at_time(self._epoch).matrix
 
         if elements is None:
-            self.elements = None
+            self._elements = None
         elif isinstance(elements, dict):
             items = [
                 elements['a'],
@@ -158,151 +147,140 @@ class KeplerPath(Path, Fittable):
                     elements['phase0'],
                     elements['dphase_dt']
                 ]
-            self.set_params(items)
+            self.set_elements(items)
         else:
-            self.set_params(elements)
+            self.set_elements(elements)
 
-        self.path_id = path_id
-        self.shape = ()
-        self.keys = set()
-        self.register(unpickled=unpickled)
+        self._shape = ()
 
-        # Save in internal dict for name lookup upon serialization
-        if self.path_id in Path.WAYPOINT_REGISTRY:
-            key = (self.planet.name, self.epoch, tuple(self.elements),
-                   self.observer.path_id if self.observer else None,
-                   self.wobbles, self.frame.frame_id)
-            KeplerPath.PATH_IDS[key] = self.path_id
+        self._register(path_id)
+        self.refresh()
 
-    # Unpickled paths will always have temporary IDs to avoid conflicts
-    def __getstate__(self):
-        return (self.planet, self.epoch, self.elements,
-                Path.as_primary_path(self.observer),
-                self.wobbles,
-                Frame.as_primary_frame(self.frame))
-
-    def __setstate__(self, state):
-        # If this path matches a pre-existing path, re-use its ID
-        (body, epoch, elements, observer, wobbles, frame) = state
-        key = (body.name, epoch, tuple(elements),
-               observer.path_id if observer else None,
-               wobbles, frame.frame_id)
-        path_id = KeplerPath.PATH_IDS.get(key, None)
-        self.__init__(*state, path_id=path_id, unpickled=True)
-
-    #===========================================================================
-    def set_params_new(self, elements):
+    def set_elements(self, elements):
         """Re-define the path given new orbital elements.
 
-        Part of the Fittable interface.
+        Parameters:
+            elements (array-like): The orbital elements and wobble terms, in this order:
 
-        Input:
-            elements    An array or list of orbital elements. In order, they are
-                            [a, mean0, dmean, e, peri0, dperi, i, node0, dnode],
-                        followed by
-                            [amp, phase0, dphase]
-                        for each wobble.
+                * [0]: `a`, mean radius of orbit, km.
+                * [1]: `lon`, mean longitude of orbit at epoch, radians.
+                * [2]: `n`, mean motion, radians/sec.
+                * [3]: `e`, orbital eccentricity.
+                * [4]: `peri`, longitude of pericenter at epoch, radians.
+                * [5]: `prec`,pericenter precession rate, radians/sec.
+                * [6]: `i`, inclination, radians.
+                * [7]: `node`, longitude of ascending node at epoch, radians.
+                * [8]: `regr`, nodal regression rate, radians/sec, NEGATIVE!
 
-              a         semimajor axis (km).
-              mean0     mean longitude (radians) at the epoch.
-              dmean     mean motion (radians/s).
-              e         eccentricity.
-              peri0     longitude of pericenter (radians) at the epoch.
-              dperi     pericenter precession rate (rad/s).
-              i         inclination (radians).
-              node0     ascending node (radians) at the epoch.
-              dnode     nodal regression rate (rad/s, < 0).
+                If the orbit has "wobble" terms, which can describe streamlines
+                of ring particles. Repeat these three elements for each wobble term:
 
-              amp       amplitude of the wobble, radians.
-              phase0    phase of the wobble at epoch, radians.
-              dphase    rate of change of the wobble, radians/s.
+                * [9, 12, ...] `amp`: amplitude of the term, radians.
+                * [10, 13, ...] `phase0`: initial phase of the first wobble term, radians.
+                * [11, 14, ...] `dphase_dt`: rate of change of the first wobble term,
+                  radians/s.
         """
 
-        global SEMIM, MEAN0, DMEAN, ECCEN, PERI0, DPERI, INCLI, NODE0, DNODE
-        global NELEMENTS
-
-        self.elements = np.asarray(elements, dtype=np.float64)
-        if self.elements.shape != (self.nparams,):
-            raise ValueError('revised KeplerPath elements do not match shape '
-                             'of original')
+        self._elements = np.asarray(elements).copy()
 
         # Make copies of the orbital elements for convenience
-        self.a = self.elements[SEMIM]
-        self.e = self.elements[ECCEN]
-        self.i = self.elements[INCLI]
-        self.cos_i = np.cos(self.i)
-        self.sin_i = np.sin(self.i)
+        self._a = self._elements[_SEMIM]
+        self._e = self._elements[_ECCEN]
+        self._i = self._elements[_INCLI]
+        self._cos_i = np.cos(self._i)
+        self._sin_i = np.sin(self._i)
 
-        self.mean0 = self.elements[MEAN0]
-        self.peri0 = self.elements[PERI0]
-        self.node0 = self.elements[NODE0]
+        self._mean0 = self._elements[_MEAN0]
+        self._peri0 = self._elements[_PERI0]
+        self._node0 = self._elements[_NODE0]
 
-        self.dmean_dt = self.elements[DMEAN]
-        self.dperi_dt = self.elements[DPERI]
-        self.dnode_dt = self.elements[DNODE]
+        self._dmean_dt = self._elements[_DMEAN]
+        self._dperi_dt = self._elements[_DPERI]
+        self._dnode_dt = self._elements[_DNODE]
 
-        self.ae = self.a * self.e
+        self._ae = self._a * self._e
 
-        self.amp       = np.array(self.elements[NELEMENTS+LIBAMP::NWOBBLES])
-        self.phase0    = np.array(self.elements[NELEMENTS+PHASE0::NWOBBLES])
-        self.dphase_dt = np.array(self.elements[NELEMENTS+DPHASE::NWOBBLES])
+        self._amp       = np.array(self._elements[_NELEMENTS+_LIBAMP::_NWOBBLES])
+        self._phase0    = np.array(self._elements[_NELEMENTS+_PHASE0::_NWOBBLES])
+        self._dphase_dt = np.array(self._elements[_NELEMENTS+_DPHASE::_NWOBBLES])
 
-        if self.amp.size == 0:      # because zero-sized arrays cause problems
-            self.amp       = 0.
-            self.phase0    = 0.
-            self.dphase_dt = 0.
+        if self._amp.size == 0:     # because zero-sized arrays cause problems
+            self._amp       = 0.
+            self._phase0    = 0.
+            self._dphase_dt = 0.
 
-        # Empty the cache
-        self.cached_observation_time = None
-        self.cached_planet_event = None
-
-    #===========================================================================
-    def copy(self):
-        """A deep copy of the object. Part of the Fittable interface."""
-
-        return KeplerPath(self.planet, self.epoch, self.get_params().copy(),
-                          self.observer, self.wobbles)
-
-    #===========================================================================
     def get_elements(self):
-        """The complete set of orbital elements, including wobbles."""
+        return self._elements
 
-        return self.elements
+    def _waypoint_key(self):
+        if self.is_frozen:
+            return (self._planet, self._epoch, self._elements, self._observer,
+                    self._wobbles)
+        # Use id(self) to ensure that an un-frozen KeplerPath has a unique key
+        return id(self)
 
-    #===========================================================================
-    def xyz_planet(self, time, partials=False):
+    ######################################################################################
+    # Fittable support
+    ######################################################################################
+
+    def _set_params(self, params):
+        """Re-define the orbital elements of this KeplerPath."""
+        self._elements = params
+
+    @property
+    def params(self):
+        return tuple(self._elements)
+
+    def _refresh(self):
+        self.set_elements(self._elements)
+
+    def _freeze(self):
+        self._reregister()
+
+    ######################################################################################
+    # Serialization support
+    ######################################################################################
+
+    def __getstate__(self):
+        self.refresh()
+        return (self._planet, self._epoch, self._elements, self._observer, self._wobbles,
+                self.stripped_id)
+
+    def __setstate__(self, state):
+        (body, epoch, elements, observer, wobbles, path_id) = state
+        self.__init__(body, epoch, elements, observer, wobbles=wobbles, path_id=path_id)
+        self.freeze()
+
+    ######################################################################################
+    # Orbit calculation relative to planet
+    ######################################################################################
+
+    def _xyz_planet(self, time, partials=False):
         """Body position and velocity relative to the planet, in planet's frame.
 
-        Results are returned in an inertial frame where the Z-axis is aligned
-        with the planet's rotation pole. Optionally, it also returns the partial
-        derivatives of the position vector with respect to the orbital elements,
-        on the the assumption that all orbital elements are independent. The
-        The coordinates are only accurate to first order in (e,i) and in the
-        wobbles. The derivatives are precise relative to the definitions of
-        these elements. However, partials are not provided for the wobbles.
+        Results are returned in an inertial frame where the Z-axis is aligned with the
+        planet's rotation pole. Optionally, it also returns the partial derivatives of the
+        position vector with respect to the orbital elements, on the the assumption that
+        all orbital elements are independent. The The coordinates are only accurate to
+        first order in (e,i) and in the wobbles. The derivatives are precise relative to
+        the definitions of these elements. However, partials are not provided for the
+        wobbles.
 
-        Input:
-            time        time (seconds) as a Scalar.
-            partials    True to include partial derivatives of the position with
-                        respect to the elements.
+        Parameters:
+            time (Scalar or float): Time in seconds TDB.
+            partials (bool, optional): True to include partial derivatives of the position
+                with respect to the elements.
 
-        Return:         (pos, vel)
-            pos         a Vector3 of position vectors.
-            vel         a Vector3 of velocity vectors.
+        Returns:
+            (tuple): (position, velocity), each represented by a Vector3.
         """
-
-        global SEMIM, MEAN0, DMEAN, ECCEN, PERI0, DPERI, INCLI, NODE0, DNODE
-        global NELEMENTS
-
-        global LIBAMP, PHASE0, DPHASE
-        global NWOBBLES
 
         # Convert to array if necessary
         time = Scalar.as_scalar(time)
-        t = time.vals - self.epoch
+        t = time.vals - self._epoch
 
         if partials:
-            partials_shape = time.shape + (self.nparams,)
+            partials_shape = time.shape + (self._nelements,)
             dmean_delem = np.zeros(partials_shape)
             dperi_delem = np.zeros(partials_shape)
             dnode_delem = np.zeros(partials_shape)
@@ -310,55 +288,55 @@ class KeplerPath(Path, Fittable):
             de_delem = np.zeros(partials_shape)
             di_delem = np.zeros(partials_shape)
 
-        ########################################################################
+        ##################################################################################
         # Determine three angles and their time derivatives
         #   mean = mean0 + t * dmean_dt
         #   peri = peri0 + t * dperi_dt
         #   node = node0 + t * dnode_dt
-        ########################################################################
+        ##################################################################################
 
-        mean = self.mean0 + t * self.dmean_dt
-        peri = self.peri0 + t * self.dperi_dt
-        node = self.node0 + t * self.dnode_dt
-        a = self.a
-        e = self.e
-        i = self.i
+        mean = self._mean0 + t * self._dmean_dt
+        peri = self._peri0 + t * self._dperi_dt
+        node = self._node0 + t * self._dnode_dt
+        a = self._a
+        e = self._e
+        i = self._i
 
         # Time derivatives...
-        dmean_dt = self.dmean_dt
-        dperi_dt = self.dperi_dt
-        dnode_dt = self.dnode_dt
+        dmean_dt = self._dmean_dt
+        dperi_dt = self._dperi_dt
+        dnode_dt = self._dnode_dt
         da_dt = 0.
         de_dt = 0.
         di_dt = 0.
 
         # Partials...
         if partials:
-            dmean_delem[..., MEAN0] = 1.
-            dmean_delem[..., DMEAN] = t
-            dperi_delem[..., PERI0] = 1.
-            dperi_delem[..., DPERI] = t
-            dnode_delem[..., NODE0] = 1.
-            dnode_delem[..., DNODE] = t
-            da_delem[..., SEMIM] = 1.
-            de_delem[..., ECCEN] = 1.
-            di_delem[..., INCLI] = 1.
+            dmean_delem[..., _MEAN0] = 1.
+            dmean_delem[..., _DMEAN] = t
+            dperi_delem[..., _PERI0] = 1.
+            dperi_delem[..., _DPERI] = t
+            dnode_delem[..., _NODE0] = 1.
+            dnode_delem[..., _DNODE] = t
+            da_delem[..., _SEMIM] = 1.
+            de_delem[..., _ECCEN] = 1.
+            di_delem[..., _INCLI] = 1.
 
-        ########################################################################
+        ##################################################################################
         # Apply the wobbles
-        ########################################################################
+        ##################################################################################
 
         # For Laplace planes
         laplace_plane = False
 
         # For each wobble...
-        start = NELEMENTS - NWOBBLES
-        for k in range(self.nwobbles):
-            start += NWOBBLES
+        start = _NELEMENTS - _NWOBBLES
+        for k in range(self._nwobbles):
+            start += _NWOBBLES
 
             # 2-D librations
-            if self.wobbles[k] in ('e2d', 'i2d'):
-                if self.wobbles[k] == 'e2d':
+            if self._wobbles[k] in ('e2d', 'i2d'):
+                if self._wobbles[k] == 'e2d':
                     amp = e
                     damp_dt = de_dt
                     angle = peri
@@ -386,12 +364,12 @@ class KeplerPath(Path, Fittable):
                 dy_dt = damp_dt * sin_angle + x * dangle_dt
 
                 if partials:
-                    dx_delem = (damp_delem * cos_angle[...,np.newaxis] -
-                                y[...,np.newaxis] * dangle_delem)
-                    dy_delem = (damp_delem * sin_angle[...,np.newaxis] +
-                                x[...,np.newaxis] * dangle_delem)
+                    dx_delem = (damp_delem * cos_angle[...,np.newaxis]
+                                - y[..., np.newaxis] * dangle_delem)
+                    dy_delem = (damp_delem * sin_angle[...,np.newaxis]
+                                + x[..., np.newaxis] * dangle_delem)
 
-                arg = self.phase0[k] + t * self.dphase_dt[k]
+                arg = self._phase0[k] + t * self._dphase_dt[k]
                 sin_arg = np.sin(arg)
                 cos_arg = np.cos(arg)
 
@@ -400,21 +378,21 @@ class KeplerPath(Path, Fittable):
                     darg_delem[...,start+1] = 1.
                     darg_delem[...,start+2] = t
 
-                x1 = self.amp[k] * cos_arg
-                y1 = self.amp[k] * sin_arg
+                x1 = self._amp[k] * cos_arg
+                y1 = self._amp[k] * sin_arg
                 dx1_dt = -y1 * self.dphase_dt[k]
                 dy1_dt =  x1 * self.dphase_dt[k]
 
                 if partials:
                     dx1_delem = np.zeros(partials_shape)
                     dy1_delem = np.zeros(partials_shape)
-                    dx1_delem[...,start] = cos_arg
-                    dy1_delem[...,start] = sin_arg
+                    dx1_delem[..., start] = cos_arg
+                    dy1_delem[..., start] = sin_arg
 
-                    dx1_darg = -self.amp[k] * sin_arg
-                    dy1_darg =  self.amp[k] * cos_arg
-                    dx1_delem += dx1_darg[...,np.newaxis] * darg_delem
-                    dy1_delem += dy1_darg[...,np.newaxis] * darg_delem
+                    dx1_darg = -self._amp[k] * sin_arg
+                    dy1_darg =  self._amp[k] * cos_arg
+                    dx1_delem += dx1_darg[..., np.newaxis] * darg_delem
+                    dy1_delem += dy1_darg[..., np.newaxis] * darg_delem
 
                 x2 = x + x1
                 y2 = y + y1
@@ -430,19 +408,19 @@ class KeplerPath(Path, Fittable):
                 damp2_dy2 = -y2 / amp2
                 damp2_dt = damp2_dx2 * dx2_dt + damp2_dy2 * dy2_dt
 
-                angle2 = np.arctan2(y2,x2)
+                angle2 = np.arctan2(y2, x2)
                 dangle2_dx2 =  x2 / (x2**2 + y2**2)
                 dangle2_dy2 = -y2 / (x2**2 + y2**2)
                 dangle2_dt = dangle2_dx2 * dx2_dt + dangle2_dy2 * dy2_dt
 
                 if partials:
-                    damp2_delem = (damp2_dx2[...,np.newaxis] * dx2_delem +
-                                   damp2_dy2[...,np.newaxis] * dy2_delem)
+                    damp2_delem = (damp2_dx2[..., np.newaxis] * dx2_delem +
+                                   damp2_dy2[..., np.newaxis] * dy2_delem)
 
-                    dangle2_delem = (dangle2_dx2[...,np.newaxis] * dx2_delem +
-                                     dangle2_dy2[...,np.newaxis] * dy2_delem)
+                    dangle2_delem = (dangle2_dx2[..., np.newaxis] * dx2_delem +
+                                     dangle2_dy2[..., np.newaxis] * dy2_delem)
 
-                if self.wobbles[k] == 'e2d':
+                if self._wobbles[k] == 'e2d':
                     e = amp2
                     de_dt = damp2_dt
                     peri = angle2
@@ -463,46 +441,46 @@ class KeplerPath(Path, Fittable):
                         dnode_delem = dangle2_delem
 
             # Single-element librations
-            elif self.wobbles[k] in ('mean', 'peri', 'node', 'a', 'e', 'i'):
+            elif self._wobbles[k] in ('mean', 'peri', 'node', 'a', 'e', 'i'):
 
-                arg = self.phase0[k] + t * self.dphase_dt[k]
+                arg = self._phase0[k] + t * self._dphase_dt[k]
                 sin_arg = np.sin(arg)
                 cos_arg = np.cos(arg)
 
-                w = self.amp[k] * cos_arg
-                dw_dt = -self.amp[k] * sin_arg * self.dphase_dt[k]
+                w = self._amp[k] * cos_arg
+                dw_dt = -self._amp[k] * sin_arg * self._dphase_dt[k]
 
                 if partials:
                     dw_delem = np.zeros(partials_shape)
-                    dw_delem[...,start] = cos_arg
-                    dw_delem[...,start+1] = self.amp[k] * cos_arg[k]
-                    dw_delem[...,start+2] = dw_delem[...,start+1] * t
+                    dw_delem[..., start] = cos_arg
+                    dw_delem[..., start+1] = self.amp[k] * cos_arg[k]
+                    dw_delem[..., start+2] = dw_delem[..., start+1] * t
 
-                if self.wobbles[k] == 'mean':
+                if self._wobbles[k] == 'mean':
                     mean     += w
                     dmean_dt += dw_dt
                     if partials:
                         dmean_delem += dw_delem
 
-                elif self.wobbles[k] == 'peri':
+                elif self._wobbles[k] == 'peri':
                     peri     += w
                     dperi_dt += dw_dt
                     if partials:
                         dperi_delem += dw_delem
 
-                elif self.wobbles[k] == 'node':
+                elif self._wobbles[k] == 'node':
                     node     += w
                     dnode_dt += dw_dt
                     if partials:
                         dnode_delem += dw_delem
 
-                elif self.wobbles[k] == 'a':
+                elif self._wobbles[k] == 'a':
                     a     += w
                     da_dt += dw_dt
                     if partials:
                         da_delem += dw_delem
 
-                elif self.wobbles[k] == 'e':
+                elif self._wobbles[k] == 'e':
                     e     += w
                     de_dt += dw_dt
                     if partials:
@@ -516,7 +494,7 @@ class KeplerPath(Path, Fittable):
 
             # Laplace plane case
             else:
-                arg = self.phase0[k] + t * self.dphase_dt[k]
+                arg = self._phase0[k] + t * self._dphase_dt[k]
                 sin_arg = np.sin(arg)
                 cos_arg = np.cos(arg)
 
@@ -526,9 +504,9 @@ class KeplerPath(Path, Fittable):
                 laplace_sin_node = sin_arg
                 laplace_cos_node = cos_arg
 
-        ########################################################################
+        ##################################################################################
         # Evaluate some derived elements
-        ########################################################################
+        ##################################################################################
 
         ae = a * e
         cos_i = np.cos(i)
@@ -542,19 +520,19 @@ class KeplerPath(Path, Fittable):
         # Partials...
         if partials:
             dae_delem = np.zeros(partials_shape)
-            dae_delem[..., SEMIM] = e
-            dae_delem[..., ECCEN] = a
+            dae_delem[..., _SEMIM] = e
+            dae_delem[..., _ECCEN] = a
 
             dcosi_delem = np.zeros(partials_shape)
             dsini_delem = np.zeros(partials_shape)
-            dcosi_delem[...,INCLI] = -sin_i
-            dsini_delem[...,INCLI] =  cos_i
+            dcosi_delem[..., _INCLI] = -sin_i
+            dsini_delem[..., _INCLI] =  cos_i
 
-        ########################################################################
+        ##################################################################################
         # Determine moon polar coordinates in orbit plane
         #   r     = a - a * e * cos(mean - peri))
         #   theta = mean -  2 * e * sin(mean - peri)
-        ########################################################################
+        ##################################################################################
 
         mp = mean - peri
         cos_mp = np.cos(mp)
@@ -574,33 +552,32 @@ class KeplerPath(Path, Fittable):
         # Partials...
         if partials:
             dmp_delem = dmean_delem - dperi_delem
-            dcosmp_delem = -sin_mp[...,np.newaxis] * dmp_delem
-            dsinmp_delem =  cos_mp[...,np.newaxis] * dmp_delem
+            dcosmp_delem = -sin_mp[..., np.newaxis] * dmp_delem
+            dsinmp_delem =  cos_mp[..., np.newaxis] * dmp_delem
 
-            dr_delem = da_delem - ae[...,np.newaxis] * dcosmp_delem - \
-                                  dae_delem * cos_mp[...,np.newaxis]
-            dtheta_delem = dmean_delem + 2. * \
-                                        (e[...,np.newaxis] * dsinmp_delem +
-                                         de_delem * sin_mp[...,np.newaxis])
+            dr_delem = (da_delem - ae[..., np.newaxis] * dcosmp_delem
+                        - dae_delem * cos_mp[..., np.newaxis])
+            dtheta_delem = (dmean_delem + 2. * (e[..., np.newaxis] * dsinmp_delem
+                                                + de_delem * sin_mp[..., np.newaxis]))
 
-        ########################################################################
+        ##################################################################################
         # Locate body on an inclined orbit, in a frame where X is along the
         # ascending node
         #   asc[X] = r cos(theta - node)
         #   asc[Y] = r sin(theta - node) cos(i)
         #   asc[Z] = r sin(theta - node) sin(i)
-        ########################################################################
+        ##################################################################################
 
         tn = theta - node
         cos_tn = np.cos(tn)
         sin_tn = np.sin(tn)
 
         unit1 = np.empty((time.shape + (3,)))
-        unit1[...,0] = cos_tn
-        unit1[...,1] = sin_tn * cos_i
-        unit1[...,2] = sin_tn * sin_i
+        unit1[..., 0] = cos_tn
+        unit1[..., 1] = sin_tn * cos_i
+        unit1[..., 2] = sin_tn * sin_i
 
-        asc = r[...,np.newaxis] * unit1
+        asc = r[..., np.newaxis] * unit1
 
         # Time-derivatives...
         dtn_dt = dtheta_dt - dnode_dt
@@ -608,9 +585,9 @@ class KeplerPath(Path, Fittable):
         dsintn_dt =  cos_tn * dtn_dt
 
         dunit1_dt = np.empty(time.shape + (3,))
-        dunit1_dt[...,0] = dcostn_dt
-        dunit1_dt[...,1] = dsintn_dt * cos_i + sin_tn * dcosi_dt
-        dunit1_dt[...,2] = dsintn_dt * sin_i + sin_tn * dsini_dt
+        dunit1_dt[..., 0] = dcostn_dt
+        dunit1_dt[..., 1] = dsintn_dt * cos_i + sin_tn * dcosi_dt
+        dunit1_dt[..., 2] = dsintn_dt * sin_i + sin_tn * dsini_dt
 
         dasc_dt = dr_dt[...,np.newaxis] * unit1 + r[...,np.newaxis] * dunit1_dt
 
@@ -621,71 +598,71 @@ class KeplerPath(Path, Fittable):
             dsintn_delem =  cos_tn[...,np.newaxis] * dtn_delem
 
             dunit1_delem = np.empty(partials_shape + (3,))
-            dunit1_delem[...,0] = dcostn_delem
-            dunit1_delem[...,1] = dsintn_delem * cos_i[...,np.newaxis] + \
-                                  sin_tn[...,np.newaxis] * dcosi_delem
-            dunit1_delem[...,2] = dsintn_delem * sin_i[...,np.newaxis] + \
-                                  sin_tn[...,np.newaxis] * dsini_delem
+            dunit1_delem[..., 0] = dcostn_delem
+            dunit1_delem[..., 1] = (dsintn_delem * cos_i[..., np.newaxis]
+                                    + sin_tn[..., np.newaxis] * dcosi_delem)
+            dunit1_delem[..., 2] = (dsintn_delem * sin_i[..., np.newaxis]
+                                    + sin_tn[..., np.newaxis] * dsini_delem)
 
-            dasc_delem = dr_delem[...,np.newaxis] * unit1[...,np.newaxis,:] + \
-                         r[...,np.newaxis,np.newaxis] * dunit1_delem
+            dasc_delem = (dr_delem[..., np.newaxis] * unit1[..., np.newaxis, :]
+                          + r[..., np.newaxis, np.newaxis] * dunit1_delem)
             # shape is (..., 9, 3)
 
-        ########################################################################
+        ##################################################################################
         # Rotate the ascending node back into position in our inertial frame
         #   xyz[X] = asc[X] * cos(node) - asc[Y] * sin(node)
         #   xyz[Y] = asc[X] * sin(node) + asc[Y] * cos(node)
         #   xyz[Z] = asc[Z]
-        ########################################################################
+        ##################################################################################
 
         cos_node = np.cos(node)
         sin_node = np.sin(node)
 
         rotate = np.zeros(time.shape + (3,3))
-        rotate[...,0,0] =  cos_node
-        rotate[...,0,1] = -sin_node
-        rotate[...,1,0] =  sin_node
-        rotate[...,1,1] =  cos_node
-        rotate[...,2,2] =  1.
+        rotate[..., 0, 0] =  cos_node
+        rotate[..., 0, 1] = -sin_node
+        rotate[..., 1, 0] =  sin_node
+        rotate[..., 1, 1] =  cos_node
+        rotate[..., 2, 2] =  1.
 
-        xyz = np.sum(rotate[...,:,:] * asc[...,np.newaxis,:], axis=-1)
+        xyz = np.sum(rotate[..., :, :] * asc[..., np.newaxis, :], axis=-1)
 
         # Time-derivatives...
         dcosnode_dt = -sin_node * dnode_dt
         dsinnode_dt =  cos_node * dnode_dt
 
         drotate_dt = np.zeros(time.shape + (3,3))
-        drotate_dt[...,0,0] =  dcosnode_dt
-        drotate_dt[...,0,1] = -dsinnode_dt
-        drotate_dt[...,1,0] =  dsinnode_dt
-        drotate_dt[...,1,1] =  dcosnode_dt
+        drotate_dt[..., 0, 0] =  dcosnode_dt
+        drotate_dt[..., 0, 1] = -dsinnode_dt
+        drotate_dt[..., 1, 0] =  dsinnode_dt
+        drotate_dt[..., 1, 1] =  dcosnode_dt
 
-        dxyz_dt = (np.sum(rotate * dasc_dt[...,np.newaxis,:], axis=-1) +
-                   np.sum(drotate_dt * asc[...,np.newaxis,:], axis=-1))
+        dxyz_dt = (np.sum(rotate * dasc_dt[..., np.newaxis, :], axis=-1) +
+                   np.sum(drotate_dt * asc[..., np.newaxis, :], axis=-1))
 
         # Partials...
         if partials:
-            dcosnode_delem = -sin_node[...,np.newaxis] * dnode_delem
-            dsinnode_delem =  cos_node[...,np.newaxis] * dnode_delem
+            dcosnode_delem = -sin_node[..., np.newaxis] * dnode_delem
+            dsinnode_delem =  cos_node[..., np.newaxis] * dnode_delem
 
-            drotate_delem = np.zeros(partials_shape + (3,3))
-            drotate_delem[...,0,0] =  dcosnode_delem
-            drotate_delem[...,0,1] = -dsinnode_delem
-            drotate_delem[...,1,0] =  dsinnode_delem
-            drotate_delem[...,1,1] =  dcosnode_delem
+            drotate_delem = np.zeros(partials_shape + (3, 3))
+            drotate_delem[..., 0, 0] =  dcosnode_delem
+            drotate_delem[..., 0, 1] = -dsinnode_delem
+            drotate_delem[..., 1, 0] =  dsinnode_delem
+            drotate_delem[..., 1, 1] =  dcosnode_delem
 
-            dxyz_delem = np.sum(rotate[...,np.newaxis,:,:] *
-                                dasc_delem[...,np.newaxis,:], axis=-1) + \
-                         np.sum(drotate_delem *
-                                asc[...,np.newaxis,np.newaxis,:], axis=-1)
+            dxyz_delem = (np.sum(rotate[..., np.newaxis, :, :]
+                                 * dasc_delem[..., np.newaxis, :], axis=-1)
+                          + np.sum(drotate_delem
+                                   * asc[..., np.newaxis, np.newaxis, :], axis=-1))
             # shape = (..., 9, 3)
 
-        ########################################################################
+        ##################################################################################
         # Apply Laplace Plane
         #   asc[X] = r cos(theta - node)
         #   asc[Y] = r sin(theta - node) cos(i)
         #   asc[Z] = r sin(theta - node) sin(i)
-        ########################################################################
+        ##################################################################################
 
         if laplace_plane:
             node = np.array([laplace_cos_node, laplace_sin_node, 0.])
@@ -694,8 +671,7 @@ class KeplerPath(Path, Fittable):
             cos2_node = laplace_cos_node**2
             sin2_node = laplace_sin_node**2
 
-            cos_sin_node_1_minus_cos_inc = (cos_sin_node *
-                                            (1. - laplace_cos_inc))
+            cos_sin_node_1_minus_cos_inc = cos_sin_node * (1. - laplace_cos_inc)
 
             rotate = np.array(
                 [[cos2_node + sin2_node * laplace_cos_inc,
@@ -709,111 +685,90 @@ class KeplerPath(Path, Fittable):
                    laplace_cos_inc]
                 ])
 
-            xyz = np.sum(rotate[...,:,:] * xyz[...,np.newaxis,:], axis=-1)
-            dxyz_dt = np.sum(rotate[...,:,:] * dxyz_dt[...,np.newaxis,:],
-                             axis=-1)
+            xyz = np.sum(rotate[..., :, :] * xyz[..., np.newaxis, :], axis=-1)
+            dxyz_dt = np.sum(rotate[..., :, :] * dxyz_dt[..., np.newaxis, :], axis=-1)
 
             if partials:
-                dxyz_delem = np.sum(rotate[...,np.newaxis,:,:] *
-                                    dxyz_delem[...,np.newaxis,:], axis=-1)
+                dxyz_delem = np.sum(rotate[..., np.newaxis, :, :]
+                                    * dxyz_delem[..., np.newaxis, :], axis=-1)
 
-        ########################################################################
+        ##################################################################################
         # Return results
-        ########################################################################
+        ##################################################################################
 
         pos = Vector3(xyz)
         vel = Vector3(dxyz_dt)
 
         if partials:
-            dxyz_delem = dxyz_delem.swapaxes(-1,-2)
+            dxyz_delem = dxyz_delem.swapaxes(-1, -2)
             pos.insert_deriv('elements', Vector3(dxyz_delem, drank=1))
 
         return (pos, vel)
 
-    #===========================================================================
-    def xyz_observed(self, time, quick={}, partials=False, planet_event=None):
-        """Body position and velocity relative to the observer in J2000 frame.
+    ######################################################################################
+    # Path API
+    ######################################################################################
 
-        Input:
-            time        time (seconds) as a Scalar.
-            partials    True to include partial derivatives of the position with
-            quick       False to disable QuickPaths; a dictionary to override
-                        specific options.
-                        respect to the elements.
-            planet_event
-                        the corresponding event of the photon leaving the
-                        planet; None to calculate this from the time. Note that
-                        this can be calculated once using planet_event(),
-                        avoiding the need to re-calculate this quantity for
-                        repeated calls using the same time(s).
+    def event_at_time(self, time, *, quick=None, partials=False):
+        """An Event corresponding to a specified time on this path.
 
-        Return:
-            pos         a Vector3 of position vectors.
-            vel         a Vector3 of velocity vectors.
-        """
+        Parameters:
+            time (Scalar, array-like, or float): The time in seconds TDB.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default QuickPath and QuickFrame parameters.
+                Use False to disable the use of QuickPaths and QuickFrames.
+            partials (bool, optional): True to include the derivatives of position with
+                respect to the orbital elements.
 
-        if planet_event is None:
-            observer_event = Event(time, Vector3.ZERO,
-                                   self.observer, self.frame)
-            planet_event = self.center.photon_to_event(observer_event,
-                                                       quick=quick)[0]
-
-        (pos, vel) = self.xyz_planet(planet_event.time, partials)
-
-        pos_j2000 = self.to_j2000.rotate(pos) + planet_event.pos
-        vel_j2000 = self.to_j2000.rotate(vel) + planet_event.vel
-
-        return (pos_j2000, vel_j2000)
-
-    #===========================================================================
-    def event_at_time(self, time, quick={}, partials=False, planet_event=None):
-        """An Event object corresponding to a Scalar time on this path.
-
-        Input:
-            time        a time Scalar at which to evaluate the path.
-            quick       False to disable QuickPaths; a dictionary to override
-                        specific options.
-            partials    True to include the derivatives of position with respect
-                        to the orbital elements; False otherwise.
-            planet_event  optional event of the photon leaving the center of the
-                        planet. Saves a re-calculation if the time is re-used.
-                        Only relevant when an observer is defined.
-
-        Return:         an Event object containing the time, position and
-                        velocity of the paths.
+        Returns:
+            (Event): The Event object containing (at least) the time, position, and
+                velocity on the Path.
         """
 
         # Without an observer, return event in the planet frame
         if self.observer is None:
-            (pos, vel) = self.xyz_planet(time, partials=partials)
-            return Event(time, (pos, vel), self.origin, self.frame)
+            (pos, vel) = self._xyz_planet(time, partials=partials)
+            return Event(time, (pos, vel), self._origin, self._frame)
 
-        # Otherwise, return the event WRT the observer
-        (pos, vel) = self.xyz_observed(time, quick, partials, planet_event)
-        return Event(time, (pos, vel), self.observer, Frame.J2000)
+        # With an observer, return event in J2000, with the light time accounted for
+        planet_event = self._photon_from_planet(time, quick=quick)[0]
+        (pos, vel) = self._xyz_planet(planet_event.time, partials=partials)
+        pos_j2000 = self.to_j2000.rotate(pos) + planet_event.pos
+        vel_j2000 = self.to_j2000.rotate(vel) + planet_event.vel
+        return Event(time, (pos_j2000, vel_j2000), self._observer, Frame.J2000)
 
-    #===========================================================================
+    def _photon_from_planet(self, time, *, derivs=False, guess=None, antimask=None,
+                            quick=None, converge={}):
+
+        # Check the cache for the planet event
+        events = self._events[time]
+        if events is None:
+            obs_event = Event(time, Vector3.ZERO, self._observer, self._frame)
+            events = self.center.photon_to_event(obs_event, derivs=derivs, guess=guess,
+                                                 antimask=antimask, quick=quick,
+                                                 converge=converge)
+            if np.size(time) == 1:
+                self._events[time] = events
+
+        return events
+
     def node_at_time(self, time):
         """The longitude of ascending node at the specified time.
 
-        Wobbles are ignored. The angle is a positive rotation about the planet's
-        ring frame.
+        Wobbles are ignored. The angle is a positive rotation about the planet's ring
+        frame.
         """
 
-        global NODE0, DNODE
-
         time = Scalar.as_scalar(time)
-        return self.elements[NODE0] + (time-self.epoch) * self.elements[DNODE]
+        return self._elements[_NODE0] + (time - self.epoch) * self._elements[_DNODE]
 
-    #===========================================================================
     def pole_at_time(self, time):
-        """The J2000 vector pointing toward the orbit's pole at the specified
-        time.
+        """The J2000 vector pointing toward the orbit's pole at the specified time.
 
         Wobbles are ignored.
         """
 
-        xform = self.frame_wrt_j2000.transform_at_time(time)
+        xform = self._frame_wrt_j2000.transform_at_time(time)
         x_axis_in_j2000 = xform.unrotate(Vector3.XAXIS)
         y_axis_in_j2000 = xform.unrotate(Vector3.YAXIS)
         z_axis_in_j2000 = xform.unrotate(Vector3.ZAXIS)
@@ -823,47 +778,49 @@ class KeplerPath(Path, Fittable):
         sin_node = np.sin(node)
 
         # This vector is 90 degrees behind of the node in the reference equator
-        target_in_j2000 = ( sin_node * x_axis_in_j2000 +
-                           -cos_node * y_axis_in_j2000)
+        target_in_j2000 = (sin_node * x_axis_in_j2000 - cos_node * y_axis_in_j2000)
 
         return self.cos_i * z_axis_in_j2000 + self.sin_i * target_in_j2000
 
-    ############################################################################
+    ######################################################################################
     # Override for the case where observer != None
-    ############################################################################
+    ######################################################################################
 
-    def photon_to_event(self, arrival, derivs=False, guess=None, quick={},
-                              converge={}, partials=False):
+    def photon_to_event(self, arrival, derivs=False, *, guess=None, antimask=None,
+                        quick=None, converge=None, partials=False):
         """The photon departure event from this path to match the arrival event.
+
+        This is an override of the default method, provided to support the partial
+        derivatives.
         """
 
-        if self.observer is None:
+        if self._observer is None:
             (path_event,
-             link_event) = super(KeplerPath,
-                                 self).photon_to_event(arrival, derivs, guess,
-                                                       quick=quick,
-                                                       converge=converge)
+             obs_event) = Path.photon_to_event(self, arrival, derivs=derivs, guess=guess,
+                                               antimask=antimask, quick=quick,
+                                               converge=converge)
             if partials:
-                (pos, vel) = self.xyz_planet(link_event.time, partials=True)
+                (pos, vel) = self._xyz_planet(path_event.time, partials=True)
                 path_event.pos.insert_deriv('elements', pos.d_delements)
 
-            return (path_event, link_event)
+            return (path_event, obs_event)
 
         (planet_event,
-         link_event) = self.center.photon_to_event(arrival, derivs, guess,
-                                                   quick, converge)
+         obs_event) = self._photon_from_planet(arrival.time, derivs=derivs, guess=guess,
+                                               antimask=antimask, quick=quick,
+                                               converge=converge)
 
-        path_event = self.event_at_time(planet_event.time, quick, partials,
-                                        planet_event)
+        path_event = self.event_at_time(planet_event.time, quick=quick, partials=partials)
+        path_event.dep_lt = path_event.time - obs_event.time
+        path_event.dep_j2000 = path_event.pos_j2000 - obs_event.pos_j2000
 
-        path_event.dep_lt = planet_event.time - link_event.time
-        path_event.dep_j2000 = path_event.pos_j2000 - link_event.pos_j2000
+        obs_event.arr_lt = path_event.dep_lt
+        obs_event.arr_j2000 = path_event.dep_j2000
 
-        link_event = Event(link_event.time, link_event.state,
-                           link_event.origin, link_event.frame)
-        link_event.arr_lt = path_event.dep_lt
-        link_event.arr_j2000 = path_event.dep_j2000
+        return (path_event, obs_event)
 
-        return (path_event, link_event)
+##########################################################################################
 
-################################################################################
+Path._PATH_SUBCLASSES.append(KeplerPath)
+
+##########################################################################################

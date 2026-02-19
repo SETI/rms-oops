@@ -2,14 +2,11 @@
 # tests/hosts/jwst/__init__.py
 ##########################################################################################
 
-import unittest
+# import unittest
+#
+# class Test_JWST(unittest.TestCase):
+#
+#     def runTest(self):
+#         pass
 
-class Test_JWST(unittest.TestCase):
-
-    def runTest(self):
-        pass
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ##########################################################################################

@@ -9,6 +9,8 @@ from oops.observation          import Observation
 from oops.observation.snapshot import Snapshot
 from oops.frame                import Frame
 from oops.path                 import Path
+import oops.mutable as mutable
+
 
 class TimedImage(Observation):
     """An image in which the individual pixels have distinct timing.
@@ -25,7 +27,7 @@ class TimedImage(Observation):
 
     #===========================================================================
     def __init__(self, axes, cadence, fov, path, frame, **subfields):
-        """Constructor for a Pushframe.
+        """Constructor for a TimedImage.
 
         Input:
             axes        a list or tuple of strings, with one value for each axis
@@ -112,10 +114,6 @@ class TimedImage(Observation):
             if len(self.cadence.shape) != 2:
                 raise ValueError('TimedImage axes requires 2-D cadence')
 
-        # Timing
-        self.time = self.cadence.time
-        self.midtime = self.cadence.midtime
-
         # Shape / Size
         self.shape = len(axes) * [0]
         self.shape[self.u_axis] = self.fov_shape[0]
@@ -182,11 +180,15 @@ class TimedImage(Observation):
                                      self.path, self.frame, **subfields)
 
     def __getstate__(self):
-        return (self.axes, self.cadence, self.fov, self.path, self.frame,
+        mutable.refresh(self)
+        return (self.axes, self.cadence, self.fov,
+                Path.as_primary_path(self.path),
+                Frame.as_primary_frame(self.frame),
                 self.subfields)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
+        mutable.freeze(self)
 
     #===========================================================================
     def uvt(self, indices, remask=False, derivs=True):

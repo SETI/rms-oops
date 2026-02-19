@@ -12,6 +12,7 @@ from oops.event        import Event
 from oops.frame.frame_ import Frame
 from oops.path.path_   import Path
 
+
 class Surface(object):
     """Surface is an abstract class describing a 2-D object that moves and
     rotates in space. A surface employs an internal coordinate system, not
@@ -32,7 +33,7 @@ class Surface(object):
     """
 
     # Class constant to avoid circular references
-    BODY_CLASS = None           # filled in by body.py
+    _Body = None            # filled in by body.py
 
     # Class constants to override where derivs are undefined
     coords_from_vector3_DERIVS_ARE_IMPLEMENTED = True
@@ -432,29 +433,29 @@ class Surface(object):
     ############################################################################
 
     def photon_to_event(self, arrival, derivs=False, guess=None, antimask=None,
-                              quick={}, converge={}):
+                              quick=None, converge=None):
         """Photon departure from this surface, given arrival and line of sight.
 
         See _solve_photon_by_los() for details.
         """
 
         return self._solve_photon_by_los(arrival, -1, derivs, guess, antimask,
-                                                      quick, converge)
+                                         quick=quick, converge=converge)
 
     #===========================================================================
     def photon_from_event(self, departure, derivs=False, guess=None,
-                                antimask=None, quick={}, converge={}):
+                                antimask=None, quick=None, converge=None):
         """Photon arrival at this surface, given departure and line of sight.
 
         See _solve_photon_by_los() for details.
         """
 
         return self._solve_photon_by_los(departure, +1, derivs, guess, antimask,
-                                                        quick, converge)
+                                         quick=quick, converge=converge)
 
     #===========================================================================
     def _solve_photon_by_los(self, link, sign, derivs=False, guess=None,
-                                   antimask=None, quick={}, converge={}):
+                                   antimask=None, quick=None, converge=None):
         """Solve for a photon surface intercept from event and line of sight.
 
         Input:
@@ -552,6 +553,8 @@ class Surface(object):
         limit = converge['dlt_limit']
 
         # Interpret the quick parameters
+        if quick is None:
+            quick = {}
         if isinstance(quick, dict):
             quick = quick.copy()
             quick['path_time_extension'] = limit
@@ -818,31 +821,33 @@ class Surface(object):
 
     def photon_to_event_by_coords(self, arrival, coords, derivs=False,
                                         guess=None, antimask=None,
-                                        quick={}, converge={}):
+                                        quick=None, converge=None):
         """Photon departure event from surface coordinates, given arrival event.
 
         See _solve_photon_by_coords() for details.
         """
 
         return self._solve_photon_by_coords(arrival, coords, -1, derivs,
-                                            guess, antimask, quick, converge)
+                                            guess, antimask, quick=quick,
+                                            converge=converge)
 
     #===========================================================================
     def photon_from_event_by_coords(self, departure, coords, derivs=False,
                                           guess=None, antimask=None,
-                                          quick={}, converge={}):
+                                          quick=None, converge=None):
         """Photon arrival event at surface coordinates, given departure event.
 
         See _solve_photon_by_coords() for details.
         """
 
         return self._solve_photon_by_coords(departure, coords, +1, derivs,
-                                            guess, antimask, quick, converge)
+                                            guess, antimask, quick=quick,
+                                            converge=converge)
 
     #===========================================================================
     def _solve_photon_by_coords(self, link, coords, sign, derivs=False,
                                       guess=None, antimask=None,
-                                      quick={}, converge={}):
+                                      quick=None, converge=None):
         """Solve for a photon surface intercept from event and coordinates.
 
         Input:
@@ -936,6 +941,8 @@ class Surface(object):
         limit = converge['dlt_limit']
 
         # Interpret the quick parameters
+        if quick is None:
+            quick = {}
         if isinstance(quick, dict):
             quick = quick.copy()
             quick['path_time_extension'] = limit
@@ -1124,7 +1131,7 @@ class Surface(object):
     ############################################################################
 
     def photon_from_normal_to_event(self, arrival, derivs=False, guess=None,
-                                          antimask=None, quick={}, converge={}):
+                                    antimask=None, quick=None, converge=None):
         """Photon departure from this surface, given the arrival event and the
         requirement that it left along the surface normal.
 
@@ -1133,11 +1140,12 @@ class Surface(object):
         """
 
         return self._solve_normal_for_photon_event(arrival, -1, derivs, guess,
-                                                   antimask, quick, converge)
+                                                   antimask, quick=quick,
+                                                   converge=converge)
 
     #===========================================================================
     def photon_from_event_to_normal(self, departure, derivs=False, guess=None,
-                                          antimask=None, quick={}, converge={}):
+                                    antimask=None, quick=None, converge=None):
         """Photon arrival at this surface, given the departure event and the
         requirement that it arrived along the surface normal.
 
@@ -1145,12 +1153,13 @@ class Surface(object):
         """
 
         return self._solve_normal_for_photon_event(departure, +1, derivs, guess,
-                                                   antimask, quick, converge)
+                                                   antimask, quick=quick,
+                                                   converge=converge)
 
     #===========================================================================
     def _solve_normal_for_photon_event(self, link, sign, derivs=False,
                                              guess=None, antimask=None,
-                                             quick={}, converge={}):
+                                             quick=None, converge=None):
         """Solve for a the surface intercept event based on remote photon event
         and the requirement that the apparent photon path be normal to the
         surface.
@@ -1257,6 +1266,8 @@ class Surface(object):
         limit = converge['dlt_limit']
 
         # Interpret the quick parameters
+        if quick is None:
+            quick = {}
         if isinstance(quick, dict):
             quick = quick.copy()
             quick['path_time_extension'] = limit
@@ -1454,7 +1465,7 @@ class Surface(object):
     ############################################################################
 
     def photon_from_path_to_normal(self, time, path, derivs=False, guess=None,
-                                         antimask=None, quick={}, converge={}):
+                                   antimask=None, quick=None, converge=None):
         """Photon departure event from a path given the requirement that it
         arrive at the surface at the specified time along a surface normal.
 
@@ -1463,12 +1474,13 @@ class Surface(object):
         """
 
         return self._solve_photon_normal_to_surface(time, path, -1, derivs,
-                                                    guess, antimask, quick,
-                                                    converge)
+                                                    guess, antimask,
+                                                    quick=quick,
+                                                    converge=converge)
 
     #===========================================================================
     def photon_from_normal_to_path(self, time, path, derivs=False, guess=None,
-                                         antimask=None, quick={}, converge={}):
+                                   antimask=None, quick=None, converge=None):
         """Photon arrival at this surface, given departure and surface normal
         requirement.
 
@@ -1476,13 +1488,14 @@ class Surface(object):
         """
 
         return self._solve_photon_normal_to_surface(time, path, +1, derivs,
-                                                    guess, antimask, quick,
-                                                    converge)
+                                                    guess, antimask,
+                                                    quick=quick,
+                                                    converge=converge)
 
     #===========================================================================
     def _solve_photon_normal_to_surface(self, time, path, sign, derivs=False,
                                               guess=None, antimask=None,
-                                              quick={}, converge={}):
+                                              quick=None, converge=None):
         """Solve for a photon surface intercept based on remote path and local
         surface normal.
 
@@ -1587,6 +1600,8 @@ class Surface(object):
         limit = converge['dlt_limit']
 
         # Interpret the quick parameters
+        if quick is None:
+            quick = {}
         if isinstance(quick, dict):
             quick = quick.copy()
             quick['path_time_extension'] = limit

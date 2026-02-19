@@ -4,6 +4,7 @@
 
 from polymath import Scalar, Pair
 
+
 class Cadence(object):
     """Cadence is an abstract class that defines the timing of an observation.
 

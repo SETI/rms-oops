@@ -12,6 +12,7 @@ from oops.fov.flatfov import FlatFOV
 
 EPSILON = sys.float_info.epsilon/2.         # actual machine precision
 
+
 class PolynomialFOV(FOV):
     """Subclass of FOV that describes a field of view in which the distortion is
     described by a 2-D polynomial.

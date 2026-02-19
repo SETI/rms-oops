@@ -28,7 +28,7 @@ class QUICK(object):
     'path_time_extension': 5.,  # secs by which to extend interval at each end.
     'path_self_check': None,    # fractional precision for self-testing.
     'path_extra_steps': 4,      # number of extra time steps at each end.
-    'quickpath_cache': 40,      # maximum number of non-overlapping quickpaths
+    'quickpath_cache_size': 40, # maximum number of non-overlapping quickpaths
                                 # to cache for any given path.
     'quickpath_linear_interpolation_threshold': 3.,
                                 # if a time span is less than this amount,
@@ -41,7 +41,7 @@ class QUICK(object):
     'frame_time_extension': 5., # secs by which to extend interval at each end.
     'frame_self_check': None,   # fractional precision for self-testing.
     'frame_extra_steps': 4,     # number of extra time steps at each end.
-    'quickframe_cache': 40,     # maximum number of non-overlapping quickframes
+    'quickframe_cache_size': 40,# maximum number of non-overlapping quickframes
                                 # to cache for any given frame.
     'quickframe_linear_interpolation_threshold': 1.,
                                 # if a time span is less than this amount,

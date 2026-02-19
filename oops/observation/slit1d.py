@@ -4,11 +4,14 @@
 
 import numpy as np
 
-from polymath               import Scalar, Pair
-from oops.observation       import Observation
-from oops.cadence.metronome import Metronome
-from oops.frame             import Frame
-from oops.path              import Path
+from polymath                 import Scalar, Pair
+from oops.observation         import Observation
+from oops.cadence             import Cadence
+from oops.cadence.snapcadence import SnapCadence
+from oops.frame               import Frame
+from oops.path                import Path
+import oops.mutable as mutable
+
 
 class Slit1D(Observation):
     """A subclass of Observation consisting of a 1-D slit measurement with no
@@ -27,8 +30,11 @@ class Slit1D(Observation):
                         if any. Only one of 'u' or 'v' can appear in a Slit1D.
 
             tstart      the start time of the observation in seconds TDB.
+                        Alternatively, a Cadence object with shape (1,) defining
+                        `tstart` and `texp`.
 
-            texp        exposure duration of the observation in seconds.
+            texp        exposure duration of the observation in seconds. Ignored
+                        if `tstart` is specified as a Cadence.
 
             fov         a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -61,7 +67,6 @@ class Slit1D(Observation):
         if ('u' in self.axes) == ('v' in self.axes):
             raise ValueError('axes are incompatible with Slit1D: '
                              + repr(tuple(axes)))
-
         self.shape = len(axes) * [0]
 
         if 'u' in self.axes:
@@ -89,17 +94,14 @@ class Slit1D(Observation):
         self.t_axis = -1
 
         # Cadence
-        self.cadence = Metronome.for_array0d(tstart, texp)
-
-        # Timing
-        self.tstart = self.cadence.tstart
-        self.texp = self.cadence.texp
-
-        self.time = self.cadence.time
-        self.midtime = self.cadence.midtime
-
-        self._scalar_time = (Scalar(self.time[0]), Scalar(self.time[1]))
-        self._scalar_midtime = Scalar(self.midtime)
+        if isinstance(tstart, Cadence):
+            self.cadence = tstart
+            if self.cadence.shape != (1,):
+                raise ValueError("Shape of a Snapshot's cadence must be (1,)")
+            self.texp = self.cadence.texp
+        else:
+            self.cadence = SnapCadence(tstart, texp)
+            self.texp = texp
 
         # Optional subfields
         self.subfields = {}
@@ -107,11 +109,13 @@ class Slit1D(Observation):
             self.insert_subfield(key, subfields[key])
 
     def __getstate__(self):
-        return (self.axes, self.tstart, self.texp, self.fov, self.path,
+        mutable.refresh(self)
+        return (self.axes, self.cadence, self.texp, self.fov, self.path,
                 self.frame, self.subfields)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
+        mutable.freeze(self)
 
     #===========================================================================
     def uvt(self, indices, remask=False, derivs=True):
@@ -149,7 +153,7 @@ class Slit1D(Observation):
         uv = Pair(uv_vals, mask=slit_coord.mask)
 
         # Create time Scalar; shapeless is OK unless there's a mask
-        time = self._scalar_midtime
+        time = Scalar(self.cadence.midtime)
 
         # Apply mask to time if necessary
         if remask and np.any(slit_coord.mask):
@@ -242,12 +246,9 @@ class Slit1D(Observation):
         Return:         a (shallow) copy of the object with a new time.
         """
 
-        obs = Slit1D(axes=self.axes, tstart=self.tstart + dtime, texp=self.texp,
-                     fov=self.fov, path=self.path, frame=self.frame)
-
-        for key in self.subfields.keys():
-            obs.insert_subfield(key, self.subfields[key])
-
-        return obs
+        cadence = self.cadence.time_shift(dtime)
+        return Slit1D(axes=self.axes, tstart=cadence, texp=self.texp,
+                      fov=self.fov, path=self.path, frame=self.frame,
+                      **self.subfields)
 
 ################################################################################

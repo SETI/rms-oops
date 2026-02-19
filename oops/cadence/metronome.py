@@ -7,6 +7,7 @@ import numpy as np
 from polymath     import Scalar, Qube
 from oops.cadence import Cadence
 
+
 class Metronome(Cadence):
     """A Cadence subclass where time steps occur at uniform intervals."""
 
@@ -51,8 +52,7 @@ class Metronome(Cadence):
         self._max_step = self.steps - 1
 
     def __getstate__(self):
-        return (self.tstart, self.tstride, self.texp, self.steps,
-                             self.clip)
+        return (self.tstart, self.tstride, self.texp, self.steps, self.clip)
 
     def __setstate__(self, state):
         self.__init__(*state)
@@ -365,17 +365,5 @@ class Metronome(Cadence):
         """
 
         return Metronome(tstart, texp + interstep_delay, texp, steps)
-
-    #===========================================================================
-    @staticmethod
-    def for_array0d(tstart, texp):
-        """Alternative constructor for a product with no time-axis.
-
-        Input:
-            tstart              start time in seconds TDB.
-            texp                exposure duration in seconds.
-        """
-
-        return Metronome(tstart, texp, texp, 1)
 
 ################################################################################

@@ -1,236 +1,298 @@
-################################################################################
+##########################################################################################
 # oops/path_/spicepath.py: Subclass SpicePath of class Path
-################################################################################
+##########################################################################################
 
+import numbers
 import numpy as np
 
 import cspyce
 
-from polymath          import Scalar, Vector3
-from oops.event        import Event
-from oops.frame.frame_ import Frame
-from oops.path.path_   import Path, ReversedPath, RotatedPath
-import oops.spice_support as spice
+from polymath              import Scalar
+from oops.event            import Event
+from oops.frame.frame_     import Frame, J2000Frame
+from oops.frame.spiceframe import SpiceFrame
+from oops.path.path_       import Path, LinkedPath, SSBPath
+from oops.path.quickpath   import QuickPath
+
 
 class SpicePath(Path):
-    """A Path subclass that returns information based on an SPICE SP kernel.
+    """A Path subclass that returns information based on an SPICE SP kernel."""
 
-    It represents the geometric position of a single target body with respect to
-    a single origin.
-    """
+    _WAYPOINTS = {}
+    _FOR_CODE = {}              # SPICE path code -> SpicePath
+    _USE_QUICKPATHS = True      # Overrides default to enable QuickPaths
 
-    # Set False to confirm that SpicePaths return the same results without
-    # shortcuts and with shortcuts
-    USE_SPICEPATH_SHORTCUTS = True
-
-    #===========================================================================
-    def __init__(self, spice_id, spice_origin="SSB", spice_frame="J2000",
-                       path_id=None, shortcut=None, unpickled=False):
+    def __init__(self, spice_path, origin=None, frame=None, *, path_id=None):
         """Constructor for a SpicePath object.
 
-        Input:
-            spice_id        the name or integer ID of the target body as used
-                            in the SPICE toolkit.
-            spice_origin    the name or integer ID of the origin body as
-                            used in the SPICE toolkit; "SSB" for the Solar
-                            System Barycenter by default. It may also be the
-                            registered name of another SpicePath.
-            spice_frame     the name or integer ID of the reference frame or of
-                            the a body with which the frame is primarily
-                            associated, as used in the SPICE toolkit.
-            path_id         the name or ID under which the path will be
-                            registered. By default, this will be the value of
-                            spice_id if that is given as a string; otherwise
-                            it will be the name as used by the SPICE toolkit.
-            shortcut        If a shortcut is specified, then this is registered
-                            as a shortcut definition; the other registered path
-                            definitions are unchanged.
-            unpickled       True if this object was read from a pickle file. If
-                            so, then it will be treated as a duplicate of a
-                            pre-existing SpicePath for the same SPICE ID.
+        Parameters:
+            spice_path (str or int): The SPICE toolkit identification of the target body
+                as a name or integer.
+            origin (SpicePath or str, optional): The Path or the ID of the path relative
+                to which this path is defined. This must be a SpicePath or else, by
+                default, the Solar System Barycenter.
+            frame (SpiceFrame or str, optional): The Frame or the ID of the Frame for the
+                returned Path coordinates. This must be a SpiceFrame or else, by default,
+                J2000.
+            path_id (str, optional): The ID under which to register this Path. If not
+                specified, the name as defined in the SPICE Toolkit is used. Note that
+                SpicePaths are always registered.
+
+        Raises:
+            LookupError: If `spice_path` is not a recognized body name or code within the
+                SPICE Toolkit.
+            ValueError: If `path` is not a SpicePath or `frame` is not a SpiceFrame.
         """
 
-        # Preserve the inputs
-        self.spice_id = spice_id
-        self.spice_origin = spice_origin
-        self.spice_frame = spice_frame
-        self.shortcut = shortcut
+        # Interpret the SPICE path
+        (self._spice_path_code,
+         self._spice_path_name) = SpicePath._body_code_and_name(spice_path)
 
-        # Interpret the SPICE IDs
-        (self.spice_target_id,
-         self.spice_target_name) = spice.body_id_and_name(spice_id)
-
-        (self.spice_origin_id,
-         self.spice_origin_name) = spice.body_id_and_name(spice_origin)
-
-        self.spice_frame_name = spice.frame_id_and_name(spice_frame)[1]
-
-        # Fill in the Path ID and save it in the global dictionary
-        if path_id is None:
-            if isinstance(spice_id, str):
-                self.path_id = spice_id
-            else:
-                self.path_id = self.spice_target_name
+        # Fill in the origin info
+        self._origin = Path.as_waypoint(origin)
+        if not isinstance(self._origin, (SpicePath, SSBPath)):
+            raise ValueError('SpicePath origin must be a SpicePath or SSB')
+        if self._origin == Path.SSB:
+            self._spice_origin_code = 0
+            self._spice_origin_name = 'SSB'
         else:
-            self.path_id = path_id
+            self._spice_origin_code = self._origin._spice_path_code
+            self._spice_origin_name = self._origin._spice_path_name
 
-        # Only save info in the PATH_TRANSLATION dictionary if it is not already
-        # there. We do not want to overwrite original definitions with those
-        # just read from pickle files.
-        if not shortcut:
-            if self.spice_target_id not in spice.PATH_TRANSLATION:
-                spice.PATH_TRANSLATION[self.spice_target_id] = self.path_id
-            if self.spice_target_name not in spice.PATH_TRANSLATION:
-                spice.PATH_TRANSLATION[self.spice_target_name] = self.path_id
+        # Fill in the frame info
+        self._frame = Frame.as_wayframe(frame)
+        if not isinstance(self._frame, (SpiceFrame, J2000Frame)):
+            raise ValueError('SpicePath frame must be a SpiceFrame or J2000')
+        if self._frame == Frame.J2000:
+            self._spice_frame_code = 1
+            self._spice_frame_name = 'J2000'
+        else:
+            self._spice_frame_code = self._frame._spice_frame_code
+            self._spice_frame_name = self._frame._spice_frame_name
 
-        # Fill in the origin waypoint, which should already be in the dictionary
-        origin_id = spice.PATH_TRANSLATION[self.spice_origin_id]
-        self.origin = Path.as_waypoint(origin_id)
+        self._shape = ()
 
-        # Fill in the frame wayframe, which should already be in the dictionary
-        frame_id = spice.FRAME_TRANSLATION[self.spice_frame_name]
-        self.frame = Frame.as_wayframe(frame_id)
+        # If the reference is not SSB/J2000, construct the primary version first
+        if self._origin != Path.SSB or self._frame != Frame.J2000:
+            wrt_ssb = SpicePath.get(self._spice_path_code, Path.SSB, Frame.J2000,
+                                    path_id=path_id)
+            # Cache but don't register under this path ID
+            self._register(path_id=None)
+            self._waypoint = wrt_ssb._waypoint
+            self._path_id = wrt_ssb._path_id
+        else:
+            _ = SpicePath._FOR_CODE.setdefault(self._spice_path_code, self)
+            self._register(path_id or self._spice_path_name.replace(' ', '_'))
 
-        # No shape, no keys
-        self.shape = ()
-        self.keys = set()
-        self.shortcut = shortcut
+    def _refresh(self):
+        if hasattr(self, '_quickpaths'):
+            self._quickpaths.clear()
 
-        # Register the SpicePath; fill in the waypoint
-        self.register(shortcut, unpickled=unpickled)
+    def _waypoint_key(self):
+        return self._spice_path_code
+
+    @staticmethod
+    def _body_code_and_name(arg):
+        """The spice_code and spice_name of frame in the SPICE Toolkit given a code or
+        name.
+        """
+
+        # Interpret an integer input
+        if isinstance(arg, numbers.Integral):
+            try:
+                name = cspyce.bodc2n_error(arg)
+            except (KeyError, LookupError):
+                raise LookupError(f'unrecognized SPICE body {arg}')
+
+            return (arg, name)
+
+        # Interpret a string input
+        else:
+            try:
+                body_code = cspyce.bodn2c_error(arg)
+                name = cspyce.bodc2n_error(body_code)
+            except (KeyError, LookupError):
+                raise LookupError(f'unrecognized SPICE body "{arg}"')
+
+            return (body_code, name)
+
+    ######################################################################################
+    # Serialization support
+    ######################################################################################
 
     def __getstate__(self):
-        return (self.spice_target_id, self.spice_origin_id,
-                self.spice_frame_name)
+        return (self._spice_path_code, self._origin, self._frame, self.stripped_id)
 
     def __setstate__(self, state):
+        (spice_path_code, origin, frame, path_id) = state
+        self.__init__(spice_path_code, origin, frame, path_id=path_id)
 
-        (spice_target_id, spice_origin_id, spice_frame_name) = state
+    ######################################################################################
+    # Path API
+    ######################################################################################
 
-        # If this is a duplicate of a pre-existing SpicePath, make sure it gets
-        # assigned the pre-existing path ID and Waypoint
-        path_id = spice.PATH_TRANSLATION.get(spice_target_id, None)
-        self.__init__(spice_target_id, spice_origin_id, spice_frame_name,
-                      path_id=path_id, unpickled=True)
+    def event_at_time(self, time, *, quick=None):
+        """An Event corresponding to a specified time on this path.
 
-    #===========================================================================
-    def event_at_time(self, time, quick={}):
-        """An Event corresponding to a specified Scalar time on this path.
+        Parameters:
+        Parameters:
+            time (Scalar, array-like, or float): The time in seconds TDB.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default QuickPath and QuickFrame parameters.
+                Use False to disable the use of QuickPaths and QuickFrames.
 
-        Input:
-            time        a time Scalar at which to evaluate the path.
-
-        Return:         an Event object containing (at least) the time, position
-                        and velocity of the path.
+        Returns:
+            (Event): The Event object containing (at least) the time, position, and
+                velocity on the Path.
         """
 
         time = Scalar.as_scalar(time).as_float()
 
-        # A fully-masked time can be handled quickly
-        if time.mask is True:
-            return Event(time, Vector3.ZERO, self.origin, self.frame)
-
-        # A single unmasked time can be handled quickly
+        # A single time can be handled quickly
         if time.shape == ():
-            (state,
-             lighttime) = cspyce.spkez(self.spice_target_id,
-                                       time.vals,
-                                       self.spice_frame_name,
-                                       'NONE',
-                                       self.spice_origin_id)
+            (state, lighttime) = cspyce.spkez(self._spice_path_code,
+                                              time.vals,
+                                              self._spice_frame_name,
+                                              'NONE',
+                                              self._spice_origin_code)
+            return Event(time, (state[0:3], state[3:6]), self._origin, self._frame)
 
-            return Event(time, (state[0:3],state[3:6]), self.origin, self.frame)
-
-        # Use a QuickPath if warranted, possibly making a recursive call
+        # Use a QuickPath if warranted
+        if quick is None:
+            quick = {}
         if isinstance(quick, dict):
-            return self.quick_path(time, quick).event_at_time(time, False)
+            path = self.quick_path(time, quick=quick)
+            if isinstance(path, QuickPath):
+                return path.event_at_time(time, quick=False)
+
+        # Handle multiple times
 
         # Fill in the states and light travel times using cspyce
         if np.any(time.mask):
-            state = cspyce.spkez_vector(self.spice_target_id,
+            state = cspyce.spkez_vector(self._spice_path_code,
                                         time.vals[time.antimask],
-                                        self.spice_frame_name,
+                                        self._spice_frame_name,
                                         'NONE',
-                                        self.spice_origin_id)[0]
-
+                                        self._spice_origin_code)[0]
             pos = np.zeros(time.shape + (3,))
             vel = np.zeros(time.shape + (3,))
-            pos[time.antimask] = state[...,0:3]
-            vel[time.antimask] = state[...,3:6]
+            pos[time.antimask] = state[..., 0:3]
+            vel[time.antimask] = state[..., 3:6]
 
         else:
-            state = cspyce.spkez_vector(self.spice_target_id,
+            state = cspyce.spkez_vector(self._spice_path_code,
                                         time.vals.ravel(),
-                                        self.spice_frame_name,
+                                        self._spice_frame_name,
                                         'NONE',
-                                        self.spice_origin_id)[0]
-            pos = state[:,0:3].reshape(time.shape + (3,))
-            vel = state[:,3:6].reshape(time.shape + (3,))
+                                        self._spice_origin_code)[0]
+            pos = state[:, 0:3].reshape(time.shape + (3,))
+            vel = state[:, 3:6].reshape(time.shape + (3,))
 
         # Convert to an Event and return
-        return Event(time, (pos,vel), self.origin, self.frame)
+        return Event(time, (pos, vel), self._origin, self._frame)
 
-    #===========================================================================
-    def wrt(self, origin, frame=None):
-        """Construct a path pointing from an origin to this target in any frame.
+    ######################################################################################
+    # SpicePath API
+    ######################################################################################
 
-        SpicePath overrides the default method to create quicker "shortcuts"
-        between SpicePaths.
+    @staticmethod
+    def get(spice_path, origin=None, frame=None, *, path_id=None):
+        """The SpicePath defined by the given parameters.
 
-        Input:
-            origin      an origin Path object or its registered name.
-            frame       a frame object or its registered ID. Default is to use
-                        the frame of the origin's path.
+        If a matching SpicePath already exists, it is returned; otherwise, a new SpicePath
+        is constructed and returned.
+
+        Parameters:
+            spice_path (str or int): The SPICE toolkit identification of the target body
+                as a name or integer.
+            origin (SpicePath or str, optional): The Path or the ID of the path relative
+                to which this frame is defined. This must be a SpicePath or else, by
+                default, the Solar System Barycenter.
+            frame (SpiceFrame or str, optional): The Frame or the ID of the Frame for the
+                returned Path coordinates. This must be a SpiceFrame or else, by default,
+                J2000.
+            path_id (str, optional): The ID under which to register this Path. If not
+                specified, the name as defined in the SPICE Toolkit is used. Note that
+                SpicePaths are always registered This input is used only if a new
+                SpicePath is constructed; otherwise, the pre-existing ID is retained.
+
+        Returns:
+            (SpicePath): The SpicePath, newly constructed if necessary.
+
+        Raises:
+            LookupError: If `spice_path` is not a recognized body name or code within the
+                SPICE Toolkit.
         """
 
-        # Use the slow method if necessary, for debugging
-        if not SpicePath.USE_SPICEPATH_SHORTCUTS:
-            return Path.wrt(self, origin, frame)
+        origin = Path.as_waypoint(origin)
+        frame = Frame.as_wayframe(frame)
 
-        # Interpret the origin path
-        origin = Path.as_primary_path(origin)
-        if origin in (Path.SSB, None):
-            spice_origin_id = 0
-        elif isinstance(origin, SpicePath):
-            spice_origin_id = origin.spice_target_id
+        # Handle a SpicePath input; use it if it matches
+        if isinstance(spice_path, SpicePath):
+            if origin == spice_path._origin and frame == spice_path._frame:
+                return spice_path
+            # Otherwise, identify the code and continue
+            code = spice_path._spice_path_code
         else:
-            # If the origin is not a SpicePath, seek from the other direction
-            return ReversedPath(origin.wrt(self, frame))
+            (code, _) = SpicePath._body_code_and_name(spice_path)
 
-        origin_id = spice.PATH_TRANSLATION[spice_origin_id]
+        # Intervene for the SSB
+        if code == 0:
+            return Path.SSB
 
-        # Interpret the frame
-        frame = Frame.as_primary_frame(frame)
-        if frame in (Frame.J2000, None):
-            spice_frame_name = 'J2000'
-            uses_spiceframe = True
-        elif type(frame).__name__ == 'SpiceFrame':  # avoids a circular load
-            spice_frame_name = frame.spice_frame_name
-            uses_spiceframe = True
-        else:
-            uses_spiceframe = False     # not a SpiceFrame
-            spice_frame_name = 'J2000'
+        # If this body code has not been used, return a new SpicePath
+        if code not in SpicePath._FOR_CODE:
+            return SpicePath(code, origin, frame, path_id=path_id)
 
-        if uses_spiceframe:
-            frame_id = spice.FRAME_TRANSLATION[spice_frame_name]
-        else:
-            frame_id = 'J2000'
+        # Use the Path we need if it is already registered
+        wayframe = SpicePath._FOR_CODE[code]
+        key = (wayframe, origin, frame)
+        if key in Path._PATH_CACHE:
+            return Path._PATH_CACHE[key]
 
-        shortcut = ('SPICE_SHORTCUT[' + str(self.path_id) + ',' +
-                                        str(origin_id)    + ',' +
-                                        str(frame_id)     + ']')
+        # Construct a new SpicePath for this code, origin, and frame
+        return SpicePath(code, origin, frame, path_id=path_id)
 
-        result = SpicePath(self.spice_target_id, spice_origin_id,
-                           spice_frame_name, self.path_id, shortcut)
+    def _get_shortcut(self, origin, frame):
+        """A Path that directly transforms from the given orign and frame to this
+        SpicePath.
 
-        # If the path uses a non-spice frame, add a rotated version
-        if not uses_spiceframe:
-            shortcut = ('SHORTCUT_' + str(self.path_id) + '_' +
-                                      str(origin_id)    + '_' +
-                                      str(frame.frame_id))
-            result = RotatedPath(result, frame)
-            result.register(shortcut)
+        This is an override of the default method, needed because the SPICE Toolkit can
+        handle the connections between SpicePaths and the SSB very efficiently.
 
-        return result
+        Parameters:
+            origin (SpicePath or str, optional): The Path or the ID of the path relative
+                to which this frame is defined. This must be a SpicePath or else, by
+                default, the Solar System Barycenter.
+            frame (SpiceFrame or str, optional): The Frame or the ID of the Frame for the
+                Path coordinates. This must be a SpiceFrame or else, by default, J2000.
+        """
 
-################################################################################
+        # Find the first SpicePath that's an ancestor of the origin
+        ancestor_origin = origin
+        while not isinstance(ancestor_origin, (SpicePath, SSBPath)):
+            ancestor_origin = ancestor_origin._origin
+
+        # Find the first SpiceFrame that's an ancestor of the frame
+        ancestor_frame = frame
+        while not isinstance(ancestor_frame, (SpiceFrame, J2000Frame)):
+            ancestor_frame = ancestor_frame._reference
+
+        # Get the SpicePath to the ancestor origin and frame
+        spice_path = SpicePath.get(self, ancestor_origin, ancestor_frame)
+
+        # Maybe we're done
+        if ancestor_origin == origin and ancestor_frame == frame:
+            return spice_path
+
+        # Get the "remainder" frame from the ancestor, then link
+        remainder = ancestor_origin._wrt(origin, frame, use_shortcuts=False)
+        return LinkedPath(spice_path, remainder)
+
+##########################################################################################
+
+Path._PATH_SUBCLASSES.append(SpicePath)
+Path._SpicePath = SpicePath
+Frame._SpicePath = SpicePath
+
+##########################################################################################

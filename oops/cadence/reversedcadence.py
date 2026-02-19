@@ -5,6 +5,7 @@
 from polymath     import Scalar
 from oops.cadence import Cadence
 
+
 class ReversedCadence(Cadence):
     """A 1-D Cadence made by reversing the index order of a given Cadence.
 
@@ -40,6 +41,14 @@ class ReversedCadence(Cadence):
         self._max_step = self.steps - 1
 
         # Beginning of new first time step; end of new last time step
+        self._first_time = self.cadence.time_range_at_tstep(self._max_step)[0]
+        self._last_time  = self.cadence.time_range_at_tstep(0)[1]
+
+    def _refresh(self):
+        """Update internals if self.cadence is Fittable."""
+        self.time = self.cadence.time
+        self.midtime = self.cadence.midtime
+        self.lasttime = self.cadence.lasttime
         self._first_time = self.cadence.time_range_at_tstep(self._max_step)[0]
         self._last_time  = self.cadence.time_range_at_tstep(0)[1]
 

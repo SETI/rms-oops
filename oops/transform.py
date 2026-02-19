@@ -50,7 +50,7 @@ class Transform(object):
     """
 
     # Class constants to avoid circular references
-    FRAME_CLASS = None          # filled in by oops/__init__.py
+    _Frame = None           # class filled in by oops/__init__.py
 
     #===========================================================================
     def __init__(self, matrix, omega, frame, reference, origin=None):
@@ -72,8 +72,8 @@ class Transform(object):
 
         self.is_fixed = (self.omega == Vector3.ZERO)
 
-        self.frame     = Transform.FRAME_CLASS.as_wayframe(frame)
-        self.reference = Transform.FRAME_CLASS.as_wayframe(reference)
+        self.frame     = Transform._Frame.as_wayframe(frame)
+        self.reference = Transform._Frame.as_wayframe(reference)
 
         if origin is not None:
             self.origin = origin
@@ -87,6 +87,7 @@ class Transform(object):
         self.filled_matrix_with_deriv = None
         self.filled_inverse_matrix = None
         self.filled_inverse_with_deriv = None
+        self._filled_wod = None
 
     def __getstate__(self):
         return (self.matrix, self.omega, self.frame, self.reference,
@@ -157,6 +158,17 @@ class Transform(object):
             self.filled_inverse_with_deriv = inverse
 
         return self.filled_inverse_with_deriv
+
+    #===========================================================================
+    @property
+    def wod(self):
+        """This Transform without any time-derivatives."""
+        if self._filled_wod is None:
+            self._filled_wod = Transform(self.matrix, Vector3.ZERO, self.frame,
+                                         self.reference, self.origin)
+            self._filled_wod = self._filled_wod
+
+        return self._filled_wod
 
     #===========================================================================
     def __str__(self):

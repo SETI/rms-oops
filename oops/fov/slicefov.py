@@ -4,6 +4,8 @@
 
 from polymath import Pair
 from oops.fov import FOV
+import oops.mutable as mutable
+
 
 class SliceFOV(FOV):
     """A subclass of FOV in which only a slice of another FOV's (u,v) array is
@@ -37,10 +39,12 @@ class SliceFOV(FOV):
         self.uv_area  = self.fov.uv_area
 
     def __getstate__(self):
+        mutable.refresh(self)
         return (self.fov, self.uv_origin, self.shape)
 
     def __setstate__(self, state):
         self.__init__(*state)
+        mutable.freeze(self)
 
     #===========================================================================
     def xy_from_uvt(self, uv_pair, time=None, derivs=False, remask=False,

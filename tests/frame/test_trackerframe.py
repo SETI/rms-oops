@@ -41,7 +41,4 @@ class Test_TrackerFrame(unittest.TestCase):
         (path_event, obs_event) = mars.photon_to_event(obs_event)
         self.assertTrue(abs(obs_event.arr_ap.unit() - start_arr).max() < 1.e-6)
 
-#########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

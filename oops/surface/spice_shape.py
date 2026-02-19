@@ -1,49 +1,49 @@
-################################################################################
+##########################################################################################
 # oops/surface_/spice_shape.py: For bodies with shapes defined in SPICE.
-################################################################################
+##########################################################################################
 
 import cspyce
 
+from oops.frame.spiceframe  import SpiceFrame
+from oops.path.spicepath    import SpicePath
 from oops.surface.ellipsoid import Ellipsoid
 from oops.surface.spheroid  import Spheroid
-import oops.spice_support as spice
 
-def spice_shape(spice_id, frame_id=None, default_radii=None):
-    """Construct a Spheroid or Ellipsoid defining the path, orientation and
-    shape of a body defined in the SPICE toolkit.
 
-    Input:
-        spice_id        the name or ID of the body as defined in the SPICE
-                        toolkit.
-        frame_id        the ID of the body's frame if already defined; otherwise
-                        None. This typically allows a Synchronous frame to be
-                        used if the SPICE frame is missing.
-        default_radii   three radii values to use if PCK values are not found;
-                        None to raise a LookupError on missing radii.
+def spice_shape(spice_id, frame=None, default_radii=None):
+    """Construct a Spheroid or Ellipsoid defining the shape and orientation of a body
+    defined in the SPICE toolkit.
+
+    Parameters:
+        spice_id (str or int): The SPICE body name or integer code.
+        frame (Frame, optional): The rotation Frame of the body. By default, this is
+            inferred from the `spice_id`.
+        default_radii (tuple, optional): Three radius values to use if the PCK radius
+            values are not found.
+
+    Returns:
+        (Spheroid or Ellipsoid): The surface of the Body.
+
+    Raises:
+        KeyError: If the radius values are missing from the SPICE kernel pool and default
+            values are not provided.
+        LookupError: If the `spice_id` is not recognized.
     """
 
-    spice_body_id = spice.body_id_and_name(spice_id)[0]
-    origin_id = spice.PATH_TRANSLATION[spice_body_id]
-
-    if frame_id is None:
-        try:
-            spice_frame_name = spice.frame_id_and_name(spice_id)[1]
-        except LookupError:     # moons with unknown spin inherit from the planet
-            planet_id = 100 * int(str(spice_id)[0]) + 99
-            spice_frame_name = spice.frame_id_and_name(planet_id)[1]
-
-        frame_id = spice.FRAME_TRANSLATION[spice_frame_name]
+    spice_body_code = SpicePath._body_code_and_name(spice_id)[0]
+    path = SpicePath.get(spice_body_code)
+    frame = frame or SpiceFrame.get(spice_body_code)
 
     try:
-        radii = cspyce.bodvcd(spice_body_id, "RADII")
+        radii = cspyce.bodvcd(spice_body_code, 'RADII')
     except (RuntimeError, KeyError) as e:
         if default_radii is None:
             raise e
         radii = default_radii
 
     if radii[0] == radii[1]:
-        return Spheroid(origin_id, frame_id, (radii[0], radii[2]))
+        return Spheroid(path, frame, (radii[0], radii[2]))
     else:
-        return Ellipsoid(origin_id, frame_id, radii)
+        return Ellipsoid(path, frame, radii)
 
-################################################################################
+##########################################################################################
