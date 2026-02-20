@@ -41,7 +41,7 @@ def from_file(filespec,
     filespec = FCPath(filespec)
 
     # Load the PDS label
-    label = pdsparser.Pds3Label(filespec).as_dict()
+    label = pdsparser.Pds3Label(filespec, method='fast').as_dict()
 
     # Load the data array
     vic = vicar.VicarImage.from_file(filespec)
