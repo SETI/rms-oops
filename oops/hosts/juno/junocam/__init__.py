@@ -118,7 +118,7 @@ def from_file(filespec, fast_distortion=True,
 #        item.insert_subfield('spice_kernels', \
 #                   Juno.used_kernels(item.time, 'junocam', return_all_planets))
         item.insert_subfield('filespec', filespec)
-        item.insert_subfield('basename', os.path.basename(filespec))
+        item.insert_subfield('basename', filespec.name)
         obs.append(item)
 
     return obs
