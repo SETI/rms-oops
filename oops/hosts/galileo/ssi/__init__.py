@@ -87,15 +87,13 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
 
     # Read the index file
     COLUMNS = []        # Return all columns
-    local_path = filespec.retrieve(filespec)
-    table = pdstable.PdsTable(local_path, columns=COLUMNS)
+    table = pdstable.PdsTable(filespec, columns=COLUMNS)
     row_dicts = table.dicts_by_row()
 
     # Read the supplemental index file
     if supplemental_filespec is not None:
         supplemental_filespec = FCPath(supplemental_filespec)
-        supplemental_local_path = supplemental_filespec.retrieve()
-        table = pdstable.PdsTable(supplemental_local_path)
+        table = pdstable.PdsTable(supplemental_filespec)
         supplemental_row_dicts = table.dicts_by_row()
 
 #        # Sort supplemental rows to match index file
