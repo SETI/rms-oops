@@ -47,14 +47,9 @@ def from_file(filespec, fast_distortion=True,
 ### I think we recommend a blank line after a multi-line docstring.
 
     filespec = FCPath(filespec)
+
     # Load the PDS label
-    lbl_filespec = filespec.with_suffix('.LBL')
-### This failed for me because the files come off the PDS archive volumes in
-### upper case, so they end in '.IMG', not 'img'. You need to find a way to make
-### this work regardless of the case of either file extension.
-    local_lbl_filespec = lbl_filespec.retrieve()
-    recs = pdsparser.PdsLabel.load_file(local_lbl_filespec)
-    label = pdsparser.PdsLabel.from_string(recs).as_dict()
+    label = pdsparser.Pds3Label(filespec).as_dict()
 
     # Get composite image metadata
     meta = Metadata(label)

@@ -30,11 +30,7 @@ def from_file(filespec, return_all_planets=False, **parameters):
 
     # Load the PDS label
     filespec = FCPath(filespec)
-    lbl_filespec = filespec.with_suffix('.LBL')
-    local_filespec = filespec.retrieve()
-    local_lbl_filespec = lbl_filespec.retrieve()
-    recs = pdsparser.PdsLabel.load_file(local_lbl_filespec)
-    label = pdsparser.PdsLabel.from_string(recs).as_dict()
+    label = pdsparser.Pds3Label(filespec).as_dict()
 
     # Get common metadata
     meta = Metadata(label)
@@ -49,13 +45,13 @@ def from_file(filespec, return_all_planets=False, **parameters):
     # Image
     if ext.upper() == '.IMG':
         from . import img
-        return img.from_file(local_filespec, label,
+        return img.from_file(filespec, label,
                              return_all_planets=False, **parameters)
 
     # Spectrum
     if ext.upper() == '.DAT':
         from . import spe
-        return spe.from_file(local_filespec, label,
+        return spe.from_file(filespec, label,
                              return_all_planets=False, **parameters)
 
     return None
