@@ -20,7 +20,7 @@ from filecache import FCPath
 # Standard class methods
 ################################################################################
 def from_file(filespec,
-              return_all_planets=False, full_fov=False, **parameters):
+              return_all_planets=False, full_fov=False, method='strict', **parameters):
     """A general, static method to return a Snapshot object based on a given
     Galileo SSI image file.  By default, only the valid image region is
     returned.
@@ -33,6 +33,7 @@ def from_file(filespec,
 
         full_fov:           If True, the full image is returned with a mask
                             describing the regions with no data.
+        method:             Label reading method to be passed to Pds3Label.
     """
 
     SSI.initialize()    # Define everything the first time through; use defaults
@@ -41,7 +42,7 @@ def from_file(filespec,
     filespec = FCPath(filespec)
 
     # Load the PDS label
-    label = pdsparser.Pds3Label(filespec, method='fast').as_dict()
+    label = pdsparser.Pds3Label(filespec, method=method).as_dict()
 
     # Load the data array
     vic = vicar.VicarImage.from_file(filespec)

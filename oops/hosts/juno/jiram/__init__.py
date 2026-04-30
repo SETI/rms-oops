@@ -17,20 +17,21 @@ from filecache import FCPath
 ################################################################################
 # Standard class methods
 ################################################################################
-def from_file(filespec, return_all_planets=False, **parameters):
+def from_file(filespec, return_all_planets=False, method='strict', **parameters):
     """A general, static method to return a Snapshot object based on a given
     JIRAM image or spectrum file.
 
     Inputs:
         return_all_planets  Include kernels for all planets not just
                             Jupiter or Saturn.
+        method              Label reading method to be passed to Pds3Label.
     """
     JIRAM.initialize()    # Define everything the first time through; use
                           # defaults unless initialize() is called explicitly.
 
     # Load the PDS label
     filespec = FCPath(filespec)
-    label = pdsparser.Pds3Label(filespec).as_dict()
+    label = pdsparser.Pds3Label(filespec, method=method).as_dict()
 
     # Get common metadata
     meta = Metadata(label)
@@ -46,13 +47,13 @@ def from_file(filespec, return_all_planets=False, **parameters):
     if ext.upper() == '.IMG':
         from . import img
         return img.from_file(filespec, label,
-                             return_all_planets=False, **parameters)
+                             return_all_planets=return_all_planets, **parameters)
 
     # Spectrum
     if ext.upper() == '.DAT':
         from . import spe
         return spe.from_file(filespec, label,
-                             return_all_planets=False, **parameters)
+                             return_all_planets=return_all_planets, **parameters)
 
     return None
 

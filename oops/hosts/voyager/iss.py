@@ -18,8 +18,7 @@ from filecache import FCPath
 ################################################################################
 # Standard class methods
 ################################################################################
-
-def from_file(filespec, astrometry=False, action='error', parameters={}):
+def from_file(filespec, astrometry=False, action='error', method='strict', parameters={}):
     """A general, static method to return a Snapshot object based on a given
     Voyager ISS image file or its label.
 
@@ -29,6 +28,7 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
         action          What to do for a missing C kernel entry, via the Python
                         warnings interface: 'error', 'ignore', 'always',
                         'default', 'module', 'once'.
+        method          Label reading method to be passed to Pds3Label.
     """
     ISS.initialize()    # Define everything the first time through
 
@@ -36,7 +36,7 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
 
     # Load the PDS label if available
     if filespec.name.upper().endswith('.LBL'):
-        label_dict = pdsparser.Pds3Label(filespec, method='fast').as_dict()
+        label_dict = pdsparser.Pds3Label(filespec, method=method).as_dict()
         imagefile = label_dict['^IMAGE'][0]
         imagespec = filespec.with_name(imagefile)
     else:
@@ -105,7 +105,7 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
         factor = None
 
     # Interpret the GEOMED parameter
-    if 'GEOMA' in vic['TASK+']:
+    if (not astrometry) and ('GEOMA' in vic['TASK+']):
         assert vic.data_2d.shape == (1000,1000)
         fovs = {
             'NAC': ISS.fovs['NAC_GEOMED'],
@@ -169,8 +169,8 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
     result = oops.obs.Snapshot(('v','u'), tstart, texp, fovs[camera],
                                path = spacecraft,
                                frame = image_frame,
-                               dict = vicar_dict,           # Add the VICAR dict
-                               data = vic.data_2d,          # Add the data array
+                               dict = vicar_dict,                            # Add the VICAR dict
+                               data = (None if astrometry else vic.data_2d), # Add the data array
                                instrument = 'ISS',
                                detector = camera,
                                filter = filter,

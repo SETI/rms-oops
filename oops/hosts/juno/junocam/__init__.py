@@ -1,5 +1,5 @@
 ################################################################################
-# oops/inst/juno/junocam.py
+# oops/inst/juno/junocam/__init__.py
 ################################################################################
 
 import re
@@ -25,7 +25,7 @@ from filecache import FCPath
 #===============================================================================
 ### Avoid two horizontal separators in a row. One should suffice.
 def from_file(filespec, fast_distortion=True,
-              return_all_planets=False, snap=False, **parameters):
+              return_all_planets=False, snap=False, method='strict', **parameters):
     """A general, static method to return a Pushframe object based on a given
     JUNOCAM image file.
 
@@ -41,6 +41,7 @@ def from_file(filespec, fast_distortion=True,
 
         snap                True to model the image as a Snapshot rather than as
                             a TimedImage.
+        method              Label reading method to be passed to Pds3Label.
     """
     JUNOCAM.initialize()    # Define everything the first time through; use
                             # defaults unless initialize() is called explicitly.
@@ -49,7 +50,7 @@ def from_file(filespec, fast_distortion=True,
     filespec = FCPath(filespec)
 
     # Load the PDS label
-    label = pdsparser.Pds3Label(filespec).as_dict()
+    label = pdsparser.Pds3Label(filespec, method=method).as_dict()
 
     # Get composite image metadata
     meta = Metadata(label)
