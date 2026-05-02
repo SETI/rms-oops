@@ -18,7 +18,7 @@ from filecache import FCPath
 ################################################################################
 # Standard class methods
 ################################################################################
-def from_file(filespec, astrometry=False, action='error', method='strict', parameters={}):
+def from_file(filespec, astrometry=False, action='error', method='strict', parameters=None):
     """A general, static method to return a Snapshot object based on a given
     Voyager ISS image file or its label.
 
@@ -28,8 +28,12 @@ def from_file(filespec, astrometry=False, action='error', method='strict', param
         action          What to do for a missing C kernel entry, via the Python
                         warnings interface: 'error', 'ignore', 'always',
                         'default', 'module', 'once'.
+        parameters:     Dictionary of VGR-ISS-specific parameters.
         method          Label reading method to be passed to Pds3Label.
     """
+    if not parameters:
+        parameters={}
+
     ISS.initialize()    # Define everything the first time through
 
     filespec = FCPath(filespec)
@@ -47,7 +51,7 @@ def from_file(filespec, astrometry=False, action='error', method='strict', param
             labelspec = filespec.with_suffix('.lbl')
 
         try:
-            label_dict = pdsparser.Pds3Label(labelspe, method=method).as_dict()
+            label_dict = pdsparser.Pds3Label(labelspec, method=method).as_dict()
         except FileNotFoundError:
             label_dict = None
 
