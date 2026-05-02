@@ -47,7 +47,7 @@ def from_file(filespec, astrometry=False, action='error', method='strict', param
             labelspec = filespec.with_suffix('.lbl')
 
         try:
-            label_dict = pdsparser.Pds3Label(labelspec).as_dict()
+            label_dict = pdsparser.Pds3Label(labelspe, method=method).as_dict()
         except FileNotFoundError:
             label_dict = None
 

@@ -189,7 +189,7 @@ BAND_BIN_CENTER_FMT = pdsparser.Pds3Label("""\
 # Standard class methods
 ##########################################################################################
 
-def from_file(filespec, method='strict', data=True):
+def from_file(filespec, data=True, method='strict'):
     """A general, static method to return a pair of Observation objects based on a given
     Cassini VIMS data file or label file.
 
