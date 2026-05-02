@@ -64,7 +64,7 @@ def from_file(filespec, astrometry=False, action='error', method='strict', param
         vicar_dict = vic.as_dict()
 
     # Get key information, preferably from the PDS label
-    if label_dict is not None:
+    if label_dict:
         stop_time = label_dict['STOP_TIME']
         texp = max(1.e-6, label_dict['EXPOSURE_DURATION'])
 
@@ -83,7 +83,7 @@ def from_file(filespec, astrometry=False, action='error', method='strict', param
         target = label_dict['TARGET_NAME']
         filter = label_dict['FILTER_NAME']
         factor = label_dict['IMAGE']['REFLECTANCE_SCALING_FACTOR']
-    else:
+    else if vicar_dict:
         lab02 = vicar_dict['LAB02']
         lab03 = vicar_dict['LAB03']
         stop_time = '19%s-%sT%s' % (lab02[47:49],lab02[50:53],lab02[54:62])
@@ -107,6 +107,7 @@ def from_file(filespec, astrometry=False, action='error', method='strict', param
 
         filter = lab03[37:43].rstrip()
         factor = None
+    else return None
 
     # Interpret the GEOMED parameter
     if (not astrometry) and ('GEOMA' in vic['TASK+']):
@@ -183,7 +184,7 @@ def from_file(filespec, astrometry=False, action='error', method='strict', param
                                filespec = filespec,
                                basename = filespec.name)
 
-    # TODO if factor is not None:
+    # TODO if factor:
     #     result.insert_subfield('extended_calib',
     #                            oops.calib.ExtendedSource('I/F', factor))
 
