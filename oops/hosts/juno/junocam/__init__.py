@@ -1,5 +1,5 @@
 ################################################################################
-# oops/inst/juno/junocam.py
+# oops/inst/juno/junocam/__init__.py
 ################################################################################
 
 import re
@@ -25,7 +25,7 @@ from filecache import FCPath
 #===============================================================================
 ### Avoid two horizontal separators in a row. One should suffice.
 def from_file(filespec, fast_distortion=True,
-              return_all_planets=False, snap=False, **parameters):
+              return_all_planets=False, snap=False, method='strict', **parameters):
     """A general, static method to return a Pushframe object based on a given
     JUNOCAM image file.
 
@@ -41,20 +41,16 @@ def from_file(filespec, fast_distortion=True,
 
         snap                True to model the image as a Snapshot rather than as
                             a TimedImage.
+        method              Label reading method to be passed to Pds3Label.
     """
     JUNOCAM.initialize()    # Define everything the first time through; use
                             # defaults unless initialize() is called explicitly.
 ### I think we recommend a blank line after a multi-line docstring.
 
     filespec = FCPath(filespec)
+
     # Load the PDS label
-    lbl_filespec = filespec.with_suffix('.LBL')
-### This failed for me because the files come off the PDS archive volumes in
-### upper case, so they end in '.IMG', not 'img'. You need to find a way to make
-### this work regardless of the case of either file extension.
-    local_lbl_filespec = lbl_filespec.retrieve()
-    recs = pdsparser.PdsLabel.load_file(local_lbl_filespec)
-    label = pdsparser.PdsLabel.from_string(recs).as_dict()
+    label = pdsparser.Pds3Label(filespec, method=method).as_dict()
 
     # Get composite image metadata
     meta = Metadata(label)
@@ -118,7 +114,7 @@ def from_file(filespec, fast_distortion=True,
 #        item.insert_subfield('spice_kernels', \
 #                   Juno.used_kernels(item.time, 'junocam', return_all_planets))
         item.insert_subfield('filespec', filespec)
-        item.insert_subfield('basename', os.path.basename(filespec))
+        item.insert_subfield('basename', filespec.name)
         obs.append(item)
 
     return obs

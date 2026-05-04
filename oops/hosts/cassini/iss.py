@@ -38,8 +38,7 @@ def from_file(filespec, fast_distortion=True,
 
     # Load the VICAR file
     filespec = FCPath(filespec)
-    local_path = filespec.retrieve()
-    vic = vicar.VicarImage.from_file(local_path, strict=False)
+    vic = vicar.VicarImage.from_file(filespec, strict=False)
     vicar_dict = vic.as_dict()
 
     # Get key information from the header
@@ -108,8 +107,7 @@ def from_index(filespec, **parameters):
     # Read the index file
     COLUMNS = []        # Return all columns
     TIMES = ['START_TIME']
-    local_path = filespec.retrieve()
-    table = pdstable.PdsTable(local_path, columns=COLUMNS, times=TIMES)
+    table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
     row_dicts = table.dicts_by_row()
 
     # Create a list of Snapshot objects

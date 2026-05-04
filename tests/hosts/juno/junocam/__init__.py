@@ -1,8 +1,6 @@
 ################################################################################
-# oops/inst/juno/junocam.py
+# oops/inst/juno/junocam/__init__.py
 ################################################################################
-
-import os
 import unittest
 import oops.gold_master as gm
 
@@ -13,7 +11,7 @@ class Test_Juno_Junocam_GoldMaster(unittest.TestCase):
 
     #===========================================================================
     def setUp(self):
-        from oops.hosts.juno.junocam import standard_obs
+        from tests.hosts.juno.junocam import standard_obs
 
     #===========================================================================
     def test_JNCR_2016347_03C00192_V01(self):

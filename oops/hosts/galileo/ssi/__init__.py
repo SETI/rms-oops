@@ -20,7 +20,7 @@ from filecache import FCPath
 # Standard class methods
 ################################################################################
 def from_file(filespec,
-              return_all_planets=False, full_fov=False, **parameters):
+              return_all_planets=False, full_fov=False, method='strict', **parameters):
     """A general, static method to return a Snapshot object based on a given
     Galileo SSI image file.  By default, only the valid image region is
     returned.
@@ -33,6 +33,7 @@ def from_file(filespec,
 
         full_fov:           If True, the full image is returned with a mask
                             describing the regions with no data.
+        method:             Label reading method to be passed to Pds3Label.
     """
 
     SSI.initialize()    # Define everything the first time through; use defaults
@@ -41,7 +42,7 @@ def from_file(filespec,
     filespec = FCPath(filespec)
 
     # Load the PDS label
-    label = pdsparser.Pds3Label(filespec).as_dict()
+    label = pdsparser.Pds3Label(filespec, method=method).as_dict()
 
     # Load the data array
     vic = vicar.VicarImage.from_file(filespec)
@@ -87,15 +88,13 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
 
     # Read the index file
     COLUMNS = []        # Return all columns
-    local_path = filespec.retrieve(filespec)
-    table = pdstable.PdsTable(local_path, columns=COLUMNS)
+    table = pdstable.PdsTable(filespec, columns=COLUMNS)
     row_dicts = table.dicts_by_row()
 
     # Read the supplemental index file
     if supplemental_filespec is not None:
         supplemental_filespec = FCPath(supplemental_filespec)
-        supplemental_local_path = supplemental_filespec.retrieve()
-        table = pdstable.PdsTable(supplemental_local_path)
+        table = pdstable.PdsTable(supplemental_filespec)
         supplemental_row_dicts = table.dicts_by_row()
 
 #        # Sort supplemental rows to match index file
