@@ -28,10 +28,10 @@ def from_file(filespec, astrometry=False, action='error', method='strict', param
         action          What to do for a missing C kernel entry, via the Python
                         warnings interface: 'error', 'ignore', 'always',
                         'default', 'module', 'once'.
-        parameters:     Dictionary of VGR-ISS-specific parameters.
+        parameters      Dictionary of VGR-ISS-specific parameters.
         method          Label reading method to be passed to Pds3Label.
     """
-    if not parameters:
+    if parameters is None:
         parameters={}
 
     ISS.initialize()    # Define everything the first time through
@@ -64,7 +64,7 @@ def from_file(filespec, astrometry=False, action='error', method='strict', param
         vicar_dict = vic.as_dict()
 
     # Get key information, preferably from the PDS label
-    if label_dict:
+    if label_dict is not None:
         stop_time = label_dict['STOP_TIME']
         texp = max(1.e-6, label_dict['EXPOSURE_DURATION'])
 
@@ -83,7 +83,7 @@ def from_file(filespec, astrometry=False, action='error', method='strict', param
         target = label_dict['TARGET_NAME']
         filter = label_dict['FILTER_NAME']
         factor = label_dict['IMAGE']['REFLECTANCE_SCALING_FACTOR']
-    else if vicar_dict:
+    elif vicar_dict is not None:
         lab02 = vicar_dict['LAB02']
         lab03 = vicar_dict['LAB03']
         stop_time = '19%s-%sT%s' % (lab02[47:49],lab02[50:53],lab02[54:62])
@@ -107,7 +107,8 @@ def from_file(filespec, astrometry=False, action='error', method='strict', param
 
         filter = lab03[37:43].rstrip()
         factor = None
-    else return None
+    else:
+        return None
 
     # Interpret the GEOMED parameter
     if (not astrometry) and ('GEOMA' in vic['TASK+']):
