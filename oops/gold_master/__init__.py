@@ -1147,31 +1147,19 @@ class BackplaneTest(object):
             log_path = (BACKPLANE_OUTPUT_PREFIX / self.output_dir /
                         f'{self.task}.log')
 
-            localpath = None
-            try:
-                localpath = log_path.retrieve()
-            except FileNotFoundError:
-                pass
-
-            if localpath:
+            localpath = log_path.get_local_path()
+            if os.path.exists(localpath):
+                
                 # Append the latest modification date to the pre-existing file
                 dt = datetime.datetime.fromtimestamp(os.path.getmtime(localpath))
                 suffix = dt.strftime('-%Y-%m-%dT%H-%M-%S')
-                dated_localpath = localpath[:-4] + suffix + '.log'
                 dated_logpath = log_path[:-4] + suffix + '.log'
-                # Note that for a cloud destination, this doesn't actually delete
-                # the original summary.py file in the cloud, since you can't rename
-                # files in the cloud. Instead we upload a copy with the new dated
-                # name and then the write below will overwrite the old version.
-                # Also notice that this attempt to use the modification date of the
-                # original summary.py file won't work in the cloud, because
-                # creation/modification times are not preserved when a file is
-                # retrieved. Instead, it will use the time the file was downloaded.
-                os.rename(localpath, dated_localpath)
-                (BACKPLANE_OUTPUT_PREFIX / dated_logpath).upload()
+                
+                # Move or copy the old log to its timestamped filename using
+                # filecache-aware replacement semantics.
+                log_path.replace(dated_logpath)
 
-            abs_log_path = log_path.get_local_path()
-            handler = logging.FileHandler(abs_log_path)
+            handler = logging.FileHandler(localpath)
             LOGGING.logger.addHandler(handler)
 
         # Run the tests
@@ -2325,28 +2313,17 @@ class BackplaneTest(object):
 
         filepath = outdir / 'summary.py'
 
-        localpath = None
-        try:
-            localpath = str(filepath.retrieve(filepath))
-        except FileNotFoundError:
-            pass
-
-        if localpath:
+        localpath = filepath.get_local_path()
+        if os.path.exists(localpath):
+            
             # Append the latest modification date to any pre-existing file
             dt = datetime.datetime.fromtimestamp(os.path.getmtime(localpath))
             suffix = dt.strftime('-%Y-%m-%dT%H-%M-%S')
-            dated_localpath = localpath[:-3] + suffix + '.py'
             dated_filepath = filepath[:-3] + suffix + '.py'
-            # Note that for a cloud destination, this doesn't actually delete
-            # the original summary.py file in the cloud, since you can't rename
-            # files in the cloud. Instead we upload a copy with the new dated
-            # name and then the write below will overwrite the old version.
-            # Also notice that this attempt to use the modification date of the
-            # original summary.py file won't work in the cloud, because
-            # creation/modification times are not preserved when a file is
-            # retrieved. Instead, it will use the time the file was downloaded.
-            os.rename(localpath, dated_localpath)
-            dated_filepath.upload()
+            
+            # Move or copy the old summary to its timestamped filename using
+            # filecache-aware replacement semantics.
+            filepath.replace(dated_filepath)
             LOGGING.info('Previous summary moved to:', dated_filepath.name)
 
         titles = list(self.summary.keys())
