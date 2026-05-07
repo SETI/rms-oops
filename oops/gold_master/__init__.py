@@ -2313,10 +2313,10 @@ class BackplaneTest(object):
 
         filepath = outdir / 'summary.py'
 
-        if log_path.exists():
+        if filepath.exists():
             
             # Append the latest modification date to any pre-existing file
-            dt = datetime.datetime.fromtimestamp(log_path.modification_time(),
+            dt = datetime.datetime.fromtimestamp(filepath.modification_time(),
                                                  tz=datetime.timezone.utc)
             suffix = dt.strftime('-%Y-%m-%dT%H-%M-%S')
             dated_filepath = filepath[:-3] + suffix + '.py'
