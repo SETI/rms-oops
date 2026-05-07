@@ -1159,7 +1159,7 @@ class BackplaneTest(object):
                 # filecache-aware replacement semantics.
                 log_path.replace(dated_logpath)
 
-            handler = logging.FileHandler(logpath.get_localpath(), mode='w')
+            handler = logging.FileHandler(logpath.as_posix(), mode='w')
             LOGGING.logger.addHandler(handler)
 
         # Run the tests
