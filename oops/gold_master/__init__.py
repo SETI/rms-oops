@@ -1147,11 +1147,10 @@ class BackplaneTest(object):
             log_path = (BACKPLANE_OUTPUT_PREFIX / self.output_dir /
                         f'{self.task}.log')
 
-            localpath = log_path.get_local_path()
-            if os.path.exists(localpath):
+            if log_path.exists():
                 
                 # Append the latest modification date to the pre-existing file
-                dt = datetime.datetime.fromtimestamp(os.path.getmtime(localpath),
+                dt = datetime.datetime.fromtimestamp(log_path.modification_time(),
                                                      tz=datetime.timezone.utc)
                 suffix = dt.strftime('-%Y-%m-%dT%H-%M-%S')
                 dated_logpath = log_path[:-4] + suffix + '.log'
@@ -1160,7 +1159,7 @@ class BackplaneTest(object):
                 # filecache-aware replacement semantics.
                 log_path.replace(dated_logpath)
 
-            handler = logging.FileHandler(localpath, mode='w')
+            handler = logging.FileHandler(logpath.get_localpath(), mode='w')
             LOGGING.logger.addHandler(handler)
 
         # Run the tests
@@ -2314,11 +2313,10 @@ class BackplaneTest(object):
 
         filepath = outdir / 'summary.py'
 
-        localpath = filepath.get_local_path()
-        if os.path.exists(localpath):
+        if log_path.exists():
             
             # Append the latest modification date to any pre-existing file
-            dt = datetime.datetime.fromtimestamp(os.path.getmtime(localpath),
+            dt = datetime.datetime.fromtimestamp(log_path.modification_time(),
                                                  tz=datetime.timezone.utc)
             suffix = dt.strftime('-%Y-%m-%dT%H-%M-%S')
             dated_filepath = filepath[:-3] + suffix + '.py'
