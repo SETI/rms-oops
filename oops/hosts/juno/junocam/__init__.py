@@ -120,7 +120,7 @@ def _load_data(filespec, label, meta):
 
     # Read data
     bits = label['IMAGE']['SAMPLE_BITS']
-    dtype = '>u' + str(int(bits//8))
+    dtype = '>u' + str(int(bits // 8))
     local_path = filespec.retrieve()
     data = np.fromfile(local_path, dtype=dtype).reshape(meta.nlines, meta.nsamples)
 
