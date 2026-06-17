@@ -77,6 +77,7 @@ class Juno(object):
         """
         if Juno.initialized: return
 
+        asof = kwargs.pop('asof', None)
         (ck, spk) = ('NONE', 'NONE')
 
         # Define some important paths and frames

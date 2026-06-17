@@ -6,7 +6,6 @@ import numpy as np
 import julian
 import cspyce
 from polymath import *
-import os.path
 import oops
 
 from oops.hosts.juno.jiram import JIRAM
@@ -41,7 +40,7 @@ def from_file(filespec, label, fast_distortion=True,
     filespec = FCPath(filespec)
 
     # Get metadata
-    meta = Metadata(label)
+    meta = _Metadata(label)
 
     # Define everything the first time through
     IMG.initialize(meta.tstart)
@@ -52,7 +51,7 @@ def from_file(filespec, label, fast_distortion=True,
     # Construct a Snapshot for each framelet
     obs = []
     for i in range(meta.nframelets):
-        fmeta = Metadata(flabels[i])
+        fmeta = _Metadata(flabels[i])
 
         item = oops.obs.Snapshot(('v','u'),
                                  fmeta.tstart, fmeta.exposure, fmeta.fov,
@@ -64,7 +63,7 @@ def from_file(filespec, label, fast_distortion=True,
 #        item.insert_subfield('spice_kernels', \
 #                   Juno.used_kernels(item.time, 'jiram', return_all_planets))
         item.insert_subfield('filespec', filespec)
-        item.insert_subfield('basename', os.path.basename(filespec))
+        item.insert_subfield('basename', filespec.name)
         obs.append(item)
 
     return obs
@@ -118,7 +117,7 @@ def _load_data(filespec, label, meta):
 
 
 #*******************************************************************************
-class Metadata(object):
+class _Metadata(object):
 
     #===========================================================================
     def __init__(self, label):
@@ -209,9 +208,7 @@ class IMG(object):
 
     #===========================================================================
     @staticmethod
-    def initialize(time, ck='reconstructed', planets=None, asof=None,
-                         spk='reconstructed', gapfill=True,
-                         mst_pck=True, irregulars=True):
+    def initialize(time, asof=None, **kwargs):
         """Initialize key information about the IMG instrument.
 
         Must be called first. After the first call, later calls to this function
@@ -220,27 +217,16 @@ class IMG(object):
         Input:
             time        time at which to define the inertialy fixed mirror-
                         corrected frame.
-            ck,spk      'predicted', 'reconstructed', or 'none', depending on which
-                        kernels are to be used. Defaults are 'reconstructed'. Use
-                        'none' if the kernels are to be managed manually.
-            planets     A list of planets to pass to define_solar_system. None or
-                        0 means all.
-            asof        Only use SPICE kernels that existed before this date; None
-                        to ignore.
-            gapfill     True to include gapfill CKs. False otherwise.
-            mst_pck     True to include MST PCKs, which update the rotation models
-                        for some of the small moons.
-            irregulars  True to include the irregular satellites;
-                        False otherwise.
+            asof        Only use SPICE kernels that existed before this date;
+                        None to ignore.
+            kwargs:     Arguments for juno.initialize() and Body.define_solar_system()
         """
 
         # Quick exit after first call
         if IMG.initialized: return
 
         # initialize JIRAM
-        JIRAM.initialize(ck=ck, planets=planets, asof=asof,
-                         spk=spk, gapfill=gapfill,
-                         mst_pck=mst_pck, irregulars=irregulars)
+        JIRAM.initialize(asof=asof, **kwargs)
 
         # Construct the SpiceFrames
         JIRAM.create_frame(time, 'I_MBAND')

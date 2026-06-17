@@ -6,7 +6,6 @@ import numpy as np
 import julian
 import cspyce
 from polymath import *
-import os.path
 import pdsparser
 import oops
 
@@ -34,7 +33,7 @@ def from_file(filespec, return_all_planets=False, method='strict', **parameters)
     label = pdsparser.Pds3Label(filespec, method=method).as_dict()
 
     # Get common metadata
-    meta = Metadata(label)
+    meta = _Metadata(label)
 
     # Load time-dependent kernels
     Juno.load_cks(meta.tstart, meta.tstart + 3600.)
@@ -59,7 +58,7 @@ def from_file(filespec, return_all_planets=False, method='strict', **parameters)
 
 
 #*******************************************************************************
-class Metadata(object):
+class _Metadata(object):
 
     #===========================================================================
     def __init__(self, label):
@@ -97,37 +96,26 @@ class JIRAM(object):
 
     #===========================================================================
     @staticmethod
-    def initialize(ck='reconstructed', planets=None, asof=None,
-                   spk='reconstructed', gapfill=True,
-                   mst_pck=True, irregulars=True):
-        """Initialize key information about the JIRAM instrument.
+    def initialize(asof=None, **kwargs):
+        """
+        Initialize key information about the JUNOCAM instrument; fill in key
+        information about the WAC and NAC.
 
         Must be called first. After the first call, later calls to this function
         are ignored.
 
         Input:
-            ck,spk      'predicted', 'reconstructed', or 'none', depending on
-                        which kernels are to be used. Defaults are
-                        'reconstructed'. Use 'none' if the kernels are to be
-                        managed manually.
-            planets     A list of planets to pass to define_solar_system. None
-                        or 0 means all.
             asof        Only use SPICE kernels that existed before this date;
                         None to ignore.
-            gapfill     True to include gapfill CKs. False otherwise.
-            mst_pck     True to include MST PCKs, which update the rotation
-                        models for some of the small moons.
-            irregulars  True to include the irregular satellites;
-                        False otherwise.
+            kwargs:     Arguments for juno.initialize() and Body.define_solar_system()
         """
 
         # Quick exit after first call
-        if JIRAM.initialized: return
+        if JIRAM.initialized:
+            return
 
         # initialize Juno
-        Juno.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
-                        gapfill=gapfill,
-                        mst_pck=mst_pck, irregulars=irregulars)
+        Juno.initialize(asof=asof, **kwargs)
         Juno.load_instruments(asof=asof)
 
         JIRAM.initialized = True
