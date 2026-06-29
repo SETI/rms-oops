@@ -28,8 +28,9 @@ def from_file(filespec, return_all_planets=False, method='strict', **parameters)
     JIRAM.initialize()    # Define everything the first time through; use
                           # defaults unless initialize() is called explicitly.
 
-    # Load the PDS label
     filespec = FCPath(filespec)
+
+    # Load the PDS label
     label = pdsparser.Pds3Label(filespec, method=method).as_dict()
 
     # Get common metadata

@@ -84,7 +84,6 @@ def _load_data(filespec, label, meta):
     """
 
     # Read data
-    # seems like this should be handled in a readpds-style function somewhere
     local_path = filespec.retrieve()
     data = np.fromfile(local_path, dtype='<f4').reshape(meta.nlines,meta.nsamples)
 

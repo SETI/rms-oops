@@ -84,14 +84,12 @@ def _load_data(filespec, label, meta):
         label           Label for composite image.
         meta            Image Metadata object.
 
-    Return:             (framelets, framelet_labels)
-        framelets       A Numpy array containing the individual frames in
-                        axis order (line, sample, framelet #).
-        framelet_labels List of labels for each framelet.
+    Return:             (spectra)
+        spectra         A Numpy array containing the individual spectra in
+                        wavelength order (spectrum #, sample).
     """
 
     # Read data
-    # seems like this should be handled in a readpds-style function somewhere
     local_path = filespec.retrieve()
     data = np.fromfile(local_path, dtype='<f4').reshape(meta.nlines,meta.nsamples)
 
