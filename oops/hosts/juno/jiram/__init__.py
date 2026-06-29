@@ -99,7 +99,7 @@ class JIRAM(object):
     @staticmethod
     def initialize(asof=None, **kwargs):
         """
-        Initialize key information about the JUNOCAM instrument; fill in key
+        Initialize key information about the JIRAM instrument; fill in key
         information about the WAC and NAC.
 
         Must be called first. After the first call, later calls to this function

@@ -222,7 +222,8 @@ class IMG(object):
         """
 
         # Quick exit after first call
-        if IMG.initialized: return
+        if IMG.initialized:
+            return
 
         # initialize JIRAM
         JIRAM.initialize(asof=asof, **kwargs)
