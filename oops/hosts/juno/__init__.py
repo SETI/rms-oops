@@ -62,9 +62,7 @@ class Juno(object):
 
     #===========================================================================
     @staticmethod
-    def initialize(ck='reconstructed', planets=None, asof=None,
-                   spk='reconstructed', gapfill=True,
-                   mst_pck=True, irregulars=True):
+    def initialize(ck='reconstructed', spk='reconstructed', gapfill=True, **kwargs):
         """Intialize the Juno mission internals.
 
         After the first call, later calls to this function are ignored.
@@ -74,26 +72,15 @@ class Juno(object):
                         'reconstructed' for the reconstructed kernels (default);
                         'predicted' for the predicted kernels;
                         'none' to allow manual control of the C kernels.
-            planets     A list of planets to pass to define_solar_system. None
-                        or 0 means all.
-            asof        Only use SPICE kernels that existed before this date;
-                        None to ignore.
             gapfill     True to include gapfill CKs. False otherwise.
-            mst_pck     True to include MST PCKs, which update the rotation
-                        models for some of the small moons.
-            irregulars  True to include the irregular satellites;
-                        False otherwise.
+            kwargs:     Arguments for juno.__init__() and Body.define_solar_system()
         """
         if Juno.initialized: return
 
         (ck, spk) = ('NONE', 'NONE')
 
         # Define some important paths and frames
-        Body.define_solar_system(Juno.START_TIME, Juno.STOP_TIME,
-                                 asof=asof,
-                                 planets=planets,
-                                 mst_pck=mst_pck,
-                                 irregulars=irregulars)
+        Body.define_solar_system(Juno.START_TIME, Juno.STOP_TIME, **kwargs)
 
         ignore = oops.path.SpicePath('JUNO', 'JUPITER')
 
