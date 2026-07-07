@@ -9,6 +9,7 @@ from oops.cadence.metronome       import Metronome
 from oops.cadence.reshapedcadence import ReshapedCadence
 from oops.cadence.reversedcadence import ReversedCadence
 from oops.cadence.sequence        import Sequence
+from oops.cadence.snapcadence     import SnapCadence
 from oops.cadence.tdicadence      import TDICadence
 
 ################################################################################

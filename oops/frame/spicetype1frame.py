@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/frame/spicetype1frame.py: Subclass SpiceType1Frame of Frame
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -12,36 +12,23 @@ from oops.transform      import Transform
 import oops.spice_support as spice
 
 class SpiceType1Frame(Frame):
-    """A Frame object defined within the SPICE toolkit as a Type 1 (discrete) C
-    kernel.
-    """
+    """A Frame object defined within the SPICE toolkit as a Type 1 (discrete) C kernel."""
 
-    #===========================================================================
-    def __init__(self, spice_frame, spice_host, tick_tolerance,
-                       spice_reference="J2000", frame_id=None, unpickled=False):
+    def __init__(self, spice_frame, spice_host, tick_tolerance, *,
+                 spice_reference='J2000', frame_id=None):
         """Constructor for a SpiceType1Frame.
 
         Input:
-            spice_frame     the name or integer ID of the destination frame or
-                            of the central body as used in the SPICE toolkit.
-
-            spice_host      the name or integer ID of the spacecraft. This is
-                            needed to evaluate the spacecraft clock ticks.
-
-            tick_tolerance  a number or string defining the error tolerance in
-                            spacecraft clock ticks for the frame returned.
-
-            spice_reference the name or integer ID of the reference frame as
-                            used in the SPICE toolkit; "J2000" by default.
-
-            frame_id        the name or ID under which the frame will be
-                            registered. By default, this will be the value of
-                            spice_id if that is given as a string; otherwise
-                            it will be the name as used by the SPICE toolkit.
-
-            unpickled       True if this object was read from a pickle file. If
-                            so, then it will be treated as a duplicate of a
-                            pre-existing SpicePath for the same SPICE ID.
+            spice_frame (str or int): The name, frame ID, or body ID as used in the SPICE
+                toolkit.
+            spice_host (str or int)" The name or integer ID of the spacecraft. This is
+                needed to evaluate the spacecraft clock ticks.
+            tick_tolerance (float, int or str): A number or string defining the error
+                tolerance in spacecraft clock ticks for the frame returned.
+            spice_reference (str or int, optional): The name or ID of the reference frame
+                as used in the SPICE toolkit.
+            frame_id (str, optional): The name under which the frame will be registered.
+                By default, this is the name as used by the SPICE toolkit.
         """
 
         # Preserve the inputs
@@ -57,13 +44,11 @@ class SpiceType1Frame(Frame):
         (self.spice_reference_id,
          self.spice_reference_name) = spice.frame_id_and_name(spice_reference)
 
-        (self.spice_body_id,
-         self.spice_body_name) = spice.body_id_and_name(spice_host)
+        (self.spice_body_id, self.spice_body_name) = spice.body_id_and_name(spice_host)
 
         # Fill in the time tolerances
         if isinstance(tick_tolerance, str):
-            self.tick_tolerance = cspyce.sctiks(self.spice_body_id,
-                                                tick_tolerance)
+            self.tick_tolerance = cspyce.sctiks(self.spice_body_id, tick_tolerance)
         else:
             self.tick_tolerance = tick_tolerance
 
@@ -71,7 +56,7 @@ class SpiceType1Frame(Frame):
 
         # Fill in the Frame ID and save it in the SPICE global dictionary
         self.frame_id = frame_id or self.spice_frame_name
-        spice.FRAME_TRANSLATION[self.spice_frame_id]   = self.frame_id
+        spice.FRAME_TRANSLATION[self.spice_frame_id] = self.frame_id
         spice.FRAME_TRANSLATION[self.spice_frame_name] = self.frame_id
 
         # Fill in the reference wayframe
@@ -79,7 +64,7 @@ class SpiceType1Frame(Frame):
         self.reference = Frame.as_wayframe(reference_id)
 
         # Fill in the origin waypoint
-        self.spice_origin_id   = cspyce.frinfo(self.spice_frame_id)[0]
+        self.spice_origin_id = cspyce.frinfo(self.spice_frame_id)[0]
         self.spice_origin_name = cspyce.bodc2n(self.spice_origin_id)
 
         try:
@@ -89,34 +74,36 @@ class SpiceType1Frame(Frame):
             origin_path = Frame.SPICEPATH_CLASS(self.spice_origin_id)
             self.origin = origin_path.waypoint
 
-        # No shape, no keys
+        # No shape
         self.shape = ()
-        self.keys = set()
 
-        # Always register a SpiceType1Frame
-        # This also fills in the waypoint
-        self.register(unpickled=unpickled)
+        # Always register a SpiceFrame. This also fills in the waypoint.
+        self.register()
 
         # Initialize cache
-        self.cached_shape = None
-        self.cached_time = None
-        self.cached_transform = None
+        self._latest_shape = None
+        self._latest_time = None
+        self._latest_transform = None
+
+    ######################################################################################
+    # Serialization support
+    ######################################################################################
 
     def __getstate__(self):
         return (self.spice_frame, self.spice_host, self.tick_tolerance,
-                self.spice_reference)
+                self.spice_reference, self._state_id())
 
     def __setstate__(self, state):
+        (spice_frame_name, spice_host, tick_tolerance, spice_reference, frame_id) = state
+        if frame_id is None:
+            frame_id = spice.FRAME_TRANSLATION.get(spice_frame_name, None)
+        self.__init__(spice_frame_name, spice_host, tick_tolerance, spice_reference,
+                      frame_id=frame_id)
 
-        (spice_frame_name, spice_host, tick_tolerance, spice_reference) = state
+    ######################################################################################
+    # Frame API
+    ######################################################################################
 
-        # If this is a duplicate of a pre-existing SpiceType1Frame, make sure it
-        # gets assigned the pre-existing frame ID and Wayframe.
-        frame_id = spice.FRAME_TRANSLATION.get(spice_frame_name, None)
-        self.__init__(spice_frame_name, spice_host, tick_tolerance,
-                      spice_reference, frame_id=frame_id, unpickled=True)
-
-    #===========================================================================
     def transform_at_time(self, time, quick={}):
         """A Transform that rotates from the reference frame into this frame.
 
@@ -131,16 +118,15 @@ class SpiceType1Frame(Frame):
         if self.time_tolerance is None:
             time = Scalar.as_scalar(time)
             ticks = cspyce.sce2c(self.spice_body_id, time.vals)
-            ticks_per_sec = cspyce.sce2c(self.spice_body_id,
-                                         time.vals + 1.) - ticks
+            ticks_per_sec = cspyce.sce2c(self.spice_body_id, time.vals + 1.) - ticks
             self.time_tolerance = self.tick_tolerance / ticks_per_sec
 
         # Check to see if the cached transform is adequate
         time = Scalar.as_scalar(time)
-        if np.shape(time.vals) == self.cached_shape:
+        if np.shape(time.vals) == self._cached_shape:
             diff = np.abs(time.vals - self.cached_time)
             if np.all(diff < self.time_tolerance):
-                return self.cached_transform
+                return self._cached_transform
 
         # A single input time can be handled quickly
         if time.shape == ():
@@ -149,14 +135,14 @@ class SpiceType1Frame(Frame):
                                                 self.tick_tolerance,
                                                 self.spice_reference_name)
 
-            self.cached_shape = time.shape
-            self.cached_time = cspyce.sct2e(self.spice_body_id, true_ticks)
-            self.cached_transform = Transform(matrix3, Vector3.ZERO,
-                                              self.frame_id, self.reference_id)
-            return self.cached_transform
+            self._cached_shape = time.shape
+            self._cached_time = cspyce.sct2e(self.spice_body_id, true_ticks)
+            self._cached_transform = Transform(matrix3, Vector3.ZERO, self.frame_id,
+                                               self.reference_id)
+            return self._cached_transform
 
         # Create the buffers
-        matrix = np.empty(time.shape + (3,3))
+        matrix = np.empty(time.shape + (3, 3))
         omega  = np.zeros(time.shape + (3,))
         true_times = np.empty(time.shape)
 
@@ -174,8 +160,8 @@ class SpiceType1Frame(Frame):
 
             self.cached_shape = time.shape
             self.cached_time = true_times
-            self.cached_transform = Transform(matrix, omega,
-                                              self.frame_id, self.reference_id)
+            self.cached_transform = Transform(matrix, omega, self.frame_id,
+                                              self.reference_id)
             return self.cached_transform
 
         # Otherwise, iterate through the array...
@@ -187,10 +173,10 @@ class SpiceType1Frame(Frame):
             matrix[i] = matrix3
             true_times[i] = cspyce.sct2e(self.spice_body_id, true_ticks)
 
-        self.cached_shape = time.shape
-        self.cached_time = true_times
-        self.cached_transform = Transform(matrix, omega,
-                                          self.frame_id, self.reference_id)
-        return self.cached_transform
+        self._latest_shape = time.shape
+        self._latest_time = true_times
+        self._latest_transform = Transform(matrix, omega, self.frame_id,
+                                           self.reference_id)
+        return self.latest_transform
 
-################################################################################
+##########################################################################################

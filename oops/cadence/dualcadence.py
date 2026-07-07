@@ -46,11 +46,25 @@ class DualCadence(Cadence):
 
         self._max_long_tstep = self.long.shape[0] - 1
 
+    def _refresh(self):
+        """Update internals if self.long or self.short is Fittable."""
+        self.time = (self.long.time[0],
+                     self.long.lasttime + self.short.time[1])
+        self.midtime = (self.time[0] + self.time[1]) * 0.5
+        self.lasttime = self.long.lasttime + self.short.lasttime
+
     def __getstate__(self):
+        self.refresh()
         return (self.long, self.short)
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
+
+        self.time = (self.long.time[0],
+                     self.long.lasttime + self.short.time[1])
+        self.midtime = (self.time[0] + self.time[1]) * 0.5
+        self.lasttime = self.long.lasttime + self.short.lasttime
 
     #===========================================================================
     def time_at_tstep(self, tstep, remask=False, derivs=False, inclusive=True):

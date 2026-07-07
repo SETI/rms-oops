@@ -1,16 +1,16 @@
-################################################################################
+##########################################################################################
 # oops/path_/spicepath.py: Subclass SpicePath of class Path
-################################################################################
-
-import numpy as np
+##########################################################################################
 
 import cspyce
+import numpy as np
 
 from polymath          import Scalar, Vector3
 from oops.event        import Event
 from oops.frame.frame_ import Frame
 from oops.path.path_   import Path, ReversedPath, RotatedPath
 import oops.spice_support as spice
+
 
 class SpicePath(Path):
     """A Path subclass that returns information based on an SPICE SP kernel.
@@ -19,35 +19,32 @@ class SpicePath(Path):
     a single origin.
     """
 
-    # Set False to confirm that SpicePaths return the same results without
-    # shortcuts and with shortcuts
+    # Set False to confirm that SpicePaths return the same results without shortcuts and
+    # with shortcuts
     USE_SPICEPATH_SHORTCUTS = True
 
-    #===========================================================================
-    def __init__(self, spice_id, spice_origin="SSB", spice_frame="J2000",
-                       path_id=None, shortcut=None, unpickled=False):
+    _PATH_IDS = {}
+
+    def __init__(self, spice_id, spice_origin='SSB', spice_frame='J2000', path_id=None,
+                 shortcut=None):
         """Constructor for a SpicePath object.
 
-        Input:
-            spice_id        the name or integer ID of the target body as used
-                            in the SPICE toolkit.
-            spice_origin    the name or integer ID of the origin body as
-                            used in the SPICE toolkit; "SSB" for the Solar
-                            System Barycenter by default. It may also be the
-                            registered name of another SpicePath.
-            spice_frame     the name or integer ID of the reference frame or of
-                            the a body with which the frame is primarily
-                            associated, as used in the SPICE toolkit.
-            path_id         the name or ID under which the path will be
-                            registered. By default, this will be the value of
-                            spice_id if that is given as a string; otherwise
-                            it will be the name as used by the SPICE toolkit.
-            shortcut        If a shortcut is specified, then this is registered
-                            as a shortcut definition; the other registered path
-                            definitions are unchanged.
-            unpickled       True if this object was read from a pickle file. If
-                            so, then it will be treated as a duplicate of a
-                            pre-existing SpicePath for the same SPICE ID.
+        Parameters:
+            spice_id (str or int): The SPICE toolkit identification of the target body.
+            spice_origin (str or int, optional): The SPICE toolkit identification of the
+                origin body; "SSB" for the Solar System Barycenter by default. It may also
+                be the registered name of another SpicePath.
+            spice_frame (str or int, optional): The SPICE toolkit identification of the
+                reference frame or of the a body with which the frame is primarily
+                associated.
+            path_id (str, optional): The name or ID under which the path will be
+                registered. By default, this will be the value of spice_id if that is
+                given as a string; otherwise it will be the name as used by the SPICE
+                toolkit.
+            shortcut (str, optional): If a shortcut name is specified, then this object is
+                registered as a shortcut definition; the other registered path definitions
+                are unchanged. Note that most shortcut definitions are handled
+                automatically, so users should not need to use this option.
         """
 
         # Preserve the inputs
@@ -59,10 +56,8 @@ class SpicePath(Path):
         # Interpret the SPICE IDs
         (self.spice_target_id,
          self.spice_target_name) = spice.body_id_and_name(spice_id)
-
         (self.spice_origin_id,
          self.spice_origin_name) = spice.body_id_and_name(spice_origin)
-
         self.spice_frame_name = spice.frame_id_and_name(spice_frame)[1]
 
         # Fill in the Path ID and save it in the global dictionary
@@ -74,9 +69,9 @@ class SpicePath(Path):
         else:
             self.path_id = path_id
 
-        # Only save info in the PATH_TRANSLATION dictionary if it is not already
-        # there. We do not want to overwrite original definitions with those
-        # just read from pickle files.
+        # Only save info in the PATH_TRANSLATION dictionary if it is not already there. We
+        # do not want to overwrite original definitions with those just read from pickle
+        # files.
         if not shortcut:
             if self.spice_target_id not in spice.PATH_TRANSLATION:
                 spice.PATH_TRANSLATION[self.spice_target_id] = self.path_id
@@ -91,37 +86,47 @@ class SpicePath(Path):
         frame_id = spice.FRAME_TRANSLATION[self.spice_frame_name]
         self.frame = Frame.as_wayframe(frame_id)
 
-        # No shape, no keys
+        # No shape
         self.shape = ()
-        self.keys = set()
-        self.shortcut = shortcut
 
         # Register the SpicePath; fill in the waypoint
-        self.register(shortcut, unpickled=unpickled)
+        self.register(shortcut=shortcut)
+        self._cache_id()
+
+    ######################################################################################
+    # Serialization support
+    ######################################################################################
+
+    def _path_key(self):
+        return (self.spice_target_id, self.spice_origin_id, self.spice_frame_name)
 
     def __getstate__(self):
-        return (self.spice_target_id, self.spice_origin_id,
-                self.spice_frame_name)
+        return (self.spice_target_id, self.spice_origin_id, self.spice_frame_name,
+                self._state_id())
 
     def __setstate__(self, state):
+        (spice_target_id, spice_origin_id, spice_frame_name, path_id) = state
+        if path_id is None:
+            path_id = spice.PATH_TRANSLATION.get(spice_target_id, None)
+        self.__init__(spice_target_id, spice_origin_id, spice_frame_name, path_id=path_id)
 
-        (spice_target_id, spice_origin_id, spice_frame_name) = state
+    ######################################################################################
+    # Path API
+    ######################################################################################
 
-        # If this is a duplicate of a pre-existing SpicePath, make sure it gets
-        # assigned the pre-existing path ID and Waypoint
-        path_id = spice.PATH_TRANSLATION.get(spice_target_id, None)
-        self.__init__(spice_target_id, spice_origin_id, spice_frame_name,
-                      path_id=path_id, unpickled=True)
-
-    #===========================================================================
     def event_at_time(self, time, quick={}):
-        """An Event corresponding to a specified Scalar time on this path.
+        """An Event corresponding to a specified time on this path.
 
-        Input:
-            time        a time Scalar at which to evaluate the path.
+        Parameters:
+            time (Scalar, array-like, or float): Time at which to evaluate the path, in
+                seconds TDB.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default QuickPath and QuickFrame parameters;
+                use False to disable the use of QuickPaths and QuickFrames.
 
-        Return:         an Event object containing (at least) the time, position
-                        and velocity of the path.
+        Returns:
+            (Event): Event object containing (at least) the time, position, and velocity
+                on the path.
         """
 
         time = Scalar.as_scalar(time).as_float()
@@ -132,14 +137,12 @@ class SpicePath(Path):
 
         # A single unmasked time can be handled quickly
         if time.shape == ():
-            (state,
-             lighttime) = cspyce.spkez(self.spice_target_id,
-                                       time.vals,
-                                       self.spice_frame_name,
-                                       'NONE',
-                                       self.spice_origin_id)
-
-            return Event(time, (state[0:3],state[3:6]), self.origin, self.frame)
+            (state, lighttime) = cspyce.spkez(self.spice_target_id,
+                                              time.vals,
+                                              self.spice_frame_name,
+                                              'NONE',
+                                              self.spice_origin_id)
+            return Event(time, (state[0:3], state[3:6]), self.origin, self.frame)
 
         # Use a QuickPath if warranted, possibly making a recursive call
         if isinstance(quick, dict):
@@ -152,7 +155,6 @@ class SpicePath(Path):
                                         self.spice_frame_name,
                                         'NONE',
                                         self.spice_origin_id)[0]
-
             pos = np.zeros(time.shape + (3,))
             vel = np.zeros(time.shape + (3,))
             pos[time.antimask] = state[...,0:3]
@@ -170,17 +172,16 @@ class SpicePath(Path):
         # Convert to an Event and return
         return Event(time, (pos,vel), self.origin, self.frame)
 
-    #===========================================================================
     def wrt(self, origin, frame=None):
         """Construct a path pointing from an origin to this target in any frame.
 
-        SpicePath overrides the default method to create quicker "shortcuts"
-        between SpicePaths.
+        SpicePath overrides the default method to create quicker "shortcuts" between
+        SpicePaths.
 
-        Input:
-            origin      an origin Path object or its registered name.
-            frame       a frame object or its registered ID. Default is to use
-                        the frame of the origin's path.
+        Parameters:
+            origin (Path or str): The origin Path object or its ID.
+            frame (Frame or str, optional): The frame to use. Default is to use the frame
+                of the origin's path.
         """
 
         # Use the slow method if necessary, for debugging
@@ -208,7 +209,7 @@ class SpicePath(Path):
             spice_frame_name = frame.spice_frame_name
             uses_spiceframe = True
         else:
-            uses_spiceframe = False     # not a SpiceFrame
+            uses_spiceframe = False                 # not a SpiceFrame
             spice_frame_name = 'J2000'
 
         if uses_spiceframe:
@@ -216,21 +217,18 @@ class SpicePath(Path):
         else:
             frame_id = 'J2000'
 
-        shortcut = ('SPICE_SHORTCUT[' + str(self.path_id) + ',' +
-                                        str(origin_id)    + ',' +
-                                        str(frame_id)     + ']')
-
-        result = SpicePath(self.spice_target_id, spice_origin_id,
-                           spice_frame_name, self.path_id, shortcut)
+        shortcut = ('SPICE_SHORTCUT[' + str(self.path_id) + ',' +  str(origin_id)
+                    + ',' + str(frame_id) + ']')
+        result = SpicePath(self.spice_target_id, spice_origin_id, spice_frame_name,
+                           self.path_id, shortcut=shortcut)
 
         # If the path uses a non-spice frame, add a rotated version
         if not uses_spiceframe:
-            shortcut = ('SHORTCUT_' + str(self.path_id) + '_' +
-                                      str(origin_id)    + '_' +
-                                      str(frame.frame_id))
+            shortcut = ('SHORTCUT_' + str(self.path_id) + '_' + str(origin_id)
+                        + '_' + str(frame.frame_id))
             result = RotatedPath(result, frame)
-            result.register(shortcut)
+            result.register(shortcut=shortcut)
 
         return result
 
-################################################################################
+##########################################################################################

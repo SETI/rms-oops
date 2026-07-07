@@ -6,8 +6,10 @@ import numpy as np
 import scipy.interpolate as interp
 
 from polymath          import Qube, Scalar, Vector3
+from oops.cache        import Cache
 from oops.config       import QUICK, PATH_PHOTONS, LOGGING, PICKLE_CONFIG
 from oops.event        import Event
+from oops.fittable     import Fittable_
 from oops.frame.frame_ import Frame
 import oops.constants as constants
 
@@ -186,7 +188,7 @@ class Path(object):
         Path.initialize_registry()
 
     #===========================================================================
-    def register(self, shortcut=None, override=False, unpickled=False):
+    def register(self, shortcut=None, override=False):
         """Register a Path's definition.
 
         A shortcut makes it possible to calculate the state of one SPICE body
@@ -199,10 +201,6 @@ class Path(object):
         definition of any previous path with the same name. The old path will
         still exist, but it will not be available from the registry.
 
-        If unpickled is True and a path with the same ID is already in the
-        registry, then this path is not registered. Instead, its will share its
-        waypoint with the existing, registered path of the same name.
-
         If the path ID is None, blank, or begins with '.', this is treated as a
         temporary path and is not registered.
         """
@@ -212,6 +210,8 @@ class Path(object):
             Path.initialize_registry()
 
         path_id = self.path_id
+        if not hasattr(self, 'keys'):
+            self.keys = set()
 
         # Handle a shortcut
         if shortcut is not None:
@@ -290,24 +290,21 @@ class Path(object):
             if not hasattr(self, 'waypoint') or self.waypoint is None:
                 self.waypoint = Path.WAYPOINT_REGISTRY[path_id]
 
-            # If this is not an unpickled path, make it the path returned by
-            # any of the standard keys.
-            if not unpickled:
-                # Cache (self.waypoint, self.origin); overwrite if necessary
-                key = (self.waypoint, self.origin)
-                if key in Path.PATH_CACHE:          # remove an old version
-                    Path.PATH_CACHE[key].keys -= {key}
+            # Cache (self.waypoint, self.origin); overwrite if necessary
+            key = (self.waypoint, self.origin)
+            if key in Path.PATH_CACHE:          # remove an old version
+                Path.PATH_CACHE[key].keys -= {key}
 
-                Path.PATH_CACHE[key] = self
-                self.keys |= {key}
+            Path.PATH_CACHE[key] = self
+            self.keys |= {key}
 
-                # Cache (self.waypoint, self.origin, self.frame)
-                key = (self.waypoint, self.origin, self.frame)
-                if key in Path.PATH_CACHE:          # remove an old version
-                    Path.PATH_CACHE[key].keys -= {key}
+            # Cache (self.waypoint, self.origin, self.frame)
+            key = (self.waypoint, self.origin, self.frame)
+            if key in Path.PATH_CACHE:          # remove an old version
+                Path.PATH_CACHE[key].keys -= {key}
 
-                Path.PATH_CACHE[key] = self
-                self.keys |= {key}
+            Path.PATH_CACHE[key] = self
+            self.keys |= {key}
 
     #===========================================================================
     @staticmethod
@@ -379,6 +376,70 @@ class Path(object):
         """True if this path is registered."""
 
         return (self.path_id in Path.WAYPOINT_REGISTRY)
+
+    #===========================================================================
+    @staticmethod
+    def id_is_registered(path_id):
+        """True if the given path ID is registered."""
+
+        return (path_id in Path.WAYPOINT_REGISTRY)
+
+    #===========================================================================
+    @staticmethod
+    def id_is_temporary(frame_id):
+        """True if this is a temporary frame ID."""
+
+        return frame_id.startswith('TEMPORARY_')
+
+    ############################################################################
+    # Serialization support
+    ############################################################################
+
+    def _cache_id(self):
+        """Save this object's path ID in a class dictionary `_PATH_IDS`.
+
+        This dictionary is keyed by a tuple of attributes of the object, as
+        returned by the method `_path_key`. It returns the path ID.
+
+        If an object is constructed with a default paath ID, and an existing
+        path with the same key already exists, the path ID is reused (although
+        it will still be different, unique object).
+        """
+
+        if self.shape != ():                            # shapeless
+            return
+        if not Path.id_is_temporary(self.path_id):      # permanent id
+            return
+        if self.path_id in self._PATH_IDS.values():     # don't overwrite
+            return
+        if not Fittable_.is_frozen(self):               # frozen
+            return
+
+        key = Cache.clean_key(self._path_key())
+        if key in self._PATH_IDS:                       # don't overwrite
+            return
+
+        self._PATH_IDS[key] = self.path_id
+
+    def _recover_id(self, path_id=None):
+        """If the given path ID is None, check the class's `_PATH_IDS`
+        dictionary for a matching object and use its ID if found.
+        """
+
+        if path_id is not None:
+            return path_id
+
+        if hasattr(self, '_PATH_IDS'):
+            key = Cache.clean_key(self._path_key())
+            if key in self._PATH_IDS:
+                return self._PATH_IDS[key]
+
+        return None
+
+    def _state_id(self):
+        if Path.id_is_temporary(self.path_id):
+            return None
+        return self.path_id
 
     ############################################################################
     # Event operations
@@ -1314,7 +1375,7 @@ class QuickPath(Path):
 
         self.slowpath = path
         self.waypoint = path.waypoint
-        self.path_id  =  path.path_id
+        self.path_id  = path.path_id
         self.origin   = path.origin
         self.frame    = path.frame
         self.shape    = ()

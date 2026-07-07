@@ -8,6 +8,7 @@ from polymath               import Pair
 from oops.observation       import Observation
 from oops.cadence           import Cadence
 from oops.cadence.metronome import Metronome
+from oops.fittable          import Fittable_
 from oops.frame             import Frame
 from oops.path              import Path
 
@@ -112,16 +113,13 @@ class RasterSlit1D(Observation):
         else:
             raise TypeError('Invalid cadence class: ' + type(cadence).__name__)
 
-        # Timing
-        self.time = self.cadence.time
-        self.midtime = self.cadence.midtime
-
         # Optional subfields
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
 
     def __getstate__(self):
+        Fittable_.refresh(self)
         return (self.axes, self.cadence, self.fov, self.path, self.frame,
                 self.subfields)
 

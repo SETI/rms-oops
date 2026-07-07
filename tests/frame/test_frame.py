@@ -105,7 +105,7 @@ class Test_Frame(unittest.TestCase):
         self.assertEqual(xform.matrix.vals[2,2], 1)
 
         # Attempt to register a frame defined relative to an unregistered frame
-        self.assertRaises(ValueError, Rotation, -np.pi, 2, rot_neg60, 'NEG180')
+        self.assertRaises(ValueError, Rotation, -np.pi, 2, rot_neg60, frame_id='NEG180')
 
         # Link unregistered frame to registered frame
         identity = rot_neg120.wrt('J2000')
