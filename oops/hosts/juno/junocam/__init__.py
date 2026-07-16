@@ -120,7 +120,7 @@ def _load_data(filespec, label, meta):
 
     # Read data
     bits = label['IMAGE']['SAMPLE_BITS']
-    dtype = '>u' + str(int(bits//8))
+    dtype = '>u' + str(int(bits // 8))
     local_path = filespec.retrieve()
     data = np.fromfile(local_path, dtype=dtype).reshape(meta.nlines, meta.nsamples)
 
@@ -273,7 +273,7 @@ class _Metadata(object):
         match = RATIONALE_RE.match(label['RATIONALE_DESC'])
         if match:
             return float(match.group(1))
-        return 0
+        return cy
 
 #*******************************************************************************
 class JUNOCAM(object):
@@ -300,7 +300,8 @@ class JUNOCAM(object):
         """
 
         # Quick exit after first call
-        if JUNOCAM.initialized: return
+        if JUNOCAM.initialized:
+            return
 
         # Initialize Juno
         Juno.initialize(asof=asof, **kwargs)
