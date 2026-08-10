@@ -21,7 +21,7 @@ class Cmatrix(Frame):
     # expendable. Frame IDs are not preserved during pickling.
 
     #===========================================================================
-    def __init__(self, cmatrix, reference=None, frame_id=None):
+    def __init__(self, cmatrix, reference=None, frame_id=None, override=False):
         """Constructor for a Cmatrix frame.
 
         Input:
@@ -30,6 +30,8 @@ class Cmatrix(Frame):
                         None for J2000.
             frame_id    the ID under which the frame will be registered; None
                         to leave the frame unregistered
+            override    if True, replace the primary definition of any frame
+                        already registered under this frame_id.
         """
 
         self.cmatrix = Matrix3.as_matrix3(cmatrix)
@@ -42,7 +44,7 @@ class Cmatrix(Frame):
         self.keys      = set()
 
         # Update wayframe and frame_id; register if not temporary
-        self.register()
+        self.register(override=override)
 
         # It needs a wayframe before we can construct the transform
         self.transform = Transform(cmatrix, Vector3.ZERO,

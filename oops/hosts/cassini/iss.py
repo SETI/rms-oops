@@ -18,7 +18,8 @@ from oops.hosts.cassini import Cassini
 ################################################################################
 
 def from_file(filespec, fast_distortion=True,
-              return_all_planets=False, **parameters):
+              return_all_planets=False, cmatrix=None, frame_id=None,
+              map_other_camera=False, **parameters):
     """A general, static method to return a Snapshot object based on a given
     Cassini ISS image file.
 
@@ -31,6 +32,21 @@ def from_file(filespec, fast_distortion=True,
 
         return_all_planets  Include kernels for all planets not just
                             Jupiter or Saturn.
+
+        cmatrix             an oops.Matrix3 (or 3x3 array) giving the rotation
+                            from J2000 into the camera image frame, used instead
+                            of SPICE pointing. None uses SPICE as before.
+
+        frame_id            when cmatrix is given and map_other_camera is False,
+                            register the C-matrix under this frame ID and use only
+                            that frame; None overrides the global
+                            CASSINI_ISS_<camera> frame.
+
+        map_other_camera    when True, also derive and register the other camera's
+                            frame from the fixed inter-camera rotation (uses
+                            SPICE); frame_id is ignored. When False (default),
+                            only the label camera's frame is created and SPICE
+                            pointing is completely circumvented (no CK loaded).
     """
 
     ISS.initialize()    # Define everything the first time through; use defaults
@@ -67,15 +83,30 @@ def from_file(filespec, fast_distortion=True,
     elif vicar_dict['GAIN_MODE_ID'][:2] == '12':
         gain_mode = 3
 
-    # Make sure the SPICE kernels are loaded
-    Cassini.load_cks( tstart, tstart + texp)
+    # Make sure the SPICE kernels are loaded. SPKs are always needed for the
+    # spacecraft path; CKs (pointing) are only needed when the pointing comes
+    # from SPICE, i.e. no custom cmatrix, or when mapping to the other camera.
     Cassini.load_spks(tstart, tstart + texp)
+    if cmatrix is None or map_other_camera:
+        Cassini.load_cks(tstart, tstart + texp)
+
+    # Determine the observation frame, applying a custom C-matrix if given.
+    # ISS.set_cmatrix registers the frame(s); SPICE pointing is circumvented
+    # unless the other camera is being mapped.
+    frame = 'CASSINI_ISS_' + camera
+    if cmatrix is not None:
+        ISS.set_cmatrix(cmatrix, camera, frame_id=frame_id,
+                        map_other_camera=map_other_camera, time=tstart)
+        if frame_id is not None and not map_other_camera:
+            frame = frame_id
+    else:
+        ISS.define_camera_frames()      # use the SPICE-derived pointing
 
     # Create a Snapshot
     result = oops.obs.Snapshot(('v','u'), tstart, texp,
                                ISS.fovs[camera,mode, fast_distortion],
                                path = 'CASSINI',
-                               frame = 'CASSINI_ISS_' + camera,
+                               frame = frame,
                                dict = vicar_dict,       # Add the VICAR dict
                                data = vic.data_2d,      # Add the data array
                                instrument = 'ISS',
@@ -101,6 +132,7 @@ def from_index(filespec, **parameters):
     label of the index file.
     """
     ISS.initialize()    # Define everything the first time through
+    ISS.define_camera_frames()          # use the SPICE-derived pointing
 
     filespec = FCPath(filespec)
 
@@ -186,6 +218,8 @@ class ISS(object):
     instrument_kernel = None
     fovs = {}
     initialized = False
+    frames_defined = False
+    offset_wac = False
 
     # Create a master version of the NAC and WAC distortion models from
     #   Owen Jr., W.M., 2003. Cassini ISS Geometric Calibration of April 2003.
@@ -374,6 +408,27 @@ class ISS(object):
             ISS.fovs[detector, 'SUM2'] = oops.fov.SubsampledFOV(full_fov_none, 2)
             ISS.fovs[detector, 'SUM4'] = oops.fov.SubsampledFOV(full_fov_none, 4)
 
+        # Remember the WAC offset option. The SPICE-derived camera frames are
+        # built lazily by define_camera_frames(), so an observation that supplies
+        # a custom C-matrix (without mapping) never depends on SPICE pointing.
+        ISS.offset_wac = offset_wac
+
+        ISS.initialized = True
+
+    #===========================================================================
+    @staticmethod
+    def define_camera_frames():
+        """Register the SPICE-derived CASSINI_ISS_NAC and CASSINI_ISS_WAC frames.
+
+        ISS.initialize() must have been called first. Built lazily (and only
+        once) so that observations using a custom C-matrix without mapping never
+        construct or depend on the SPICE camera frames.
+        """
+
+        # Quick exit after first call
+        if ISS.frames_defined:
+            return
+
         # Construct a SpiceFrame for each camera
         # Deal with the fact that the instrument's internal
         # coordinate  system is rotated 180 degrees
@@ -385,7 +440,7 @@ class ISS(object):
         nac_frame = oops.frame.Cmatrix(rot180, nac_flipped,
                                        frame_id='CASSINI_ISS_NAC')
 
-        if offset_wac:
+        if ISS.offset_wac:
 
             # Apply offset for WAC relative to NAC
             info = ISS.instrument_kernel['INS']['CASSINI_ISS_NAC']
@@ -408,7 +463,56 @@ class ISS(object):
             wac_frame = oops.frame.Cmatrix(rot180, wac_flipped,
                                            frame_id='CASSINI_ISS_WAC')
 
-        ISS.initialized = True
+        ISS.frames_defined = True
+
+    #===========================================================================
+    @staticmethod
+    def set_cmatrix(cmatrix, camera, frame_id=None, map_other_camera=False,
+                    time=None):
+        """Register a custom C-matrix as an ISS observation's pointing, replacing
+        the SPICE-derived camera frame.
+
+        ISS.initialize() must have been called first. The C-matrix gives the
+        rotation from J2000 into the camera image frame (X right, Y down, Z along
+        the optic axis).
+
+        Input:
+            cmatrix     an oops.Matrix3 (or 3x3 array) for the named camera.
+            camera      'NAC' or 'WAC', the camera the cmatrix applies to.
+            frame_id    when map_other_camera is False, register the C-matrix
+                        under this frame ID; None overrides the global
+                        CASSINI_ISS_<camera> frame.
+            map_other_camera  when True, also derive and register the other
+                        camera's frame from the fixed inter-camera rotation (uses
+                        SPICE); frame_id is ignored.
+            time        the observation time (TDB), required to evaluate the
+                        inter-camera rotation when map_other_camera is True.
+        """
+
+        cmatrix = oops.Matrix3.as_matrix3(cmatrix)
+
+        if map_other_camera:
+            # rel = M_other<-label, the fixed rotation read from the
+            # SPICE-derived frames at the observation time.
+            ISS.define_camera_frames()
+            other = 'WAC' if camera == 'NAC' else 'NAC'
+            label_wf = oops.frame.Frame.as_wayframe('CASSINI_ISS_' + camera)
+            other_wf = oops.frame.Frame.as_wayframe('CASSINI_ISS_' + other)
+            rel = other_wf.wrt(label_wf).transform_at_time(time).matrix
+
+            oops.frame.Cmatrix(cmatrix, frame_id='CASSINI_ISS_' + camera,
+                               override=True)
+            oops.frame.Cmatrix(rel * cmatrix,
+                               frame_id='CASSINI_ISS_' + other, override=True)
+
+        elif frame_id is not None:
+            # Single custom frame; global frames untouched
+            oops.frame.Cmatrix(cmatrix, frame_id=frame_id)
+
+        else:
+            # Override the label camera's global frame
+            oops.frame.Cmatrix(cmatrix, frame_id='CASSINI_ISS_' + camera,
+                               override=True)
 
     #===========================================================================
     @staticmethod
@@ -421,6 +525,8 @@ class ISS(object):
         ISS.instrument_kernel = None
         ISS.fovs = {}
         ISS.initialized = False
+        ISS.frames_defined = False
+        ISS.offset_wac = False
 
         Cassini.reset()
 
