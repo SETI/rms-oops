@@ -8,6 +8,7 @@ import numbers
 from polymath              import Scalar, Pair, Vector, Vector3, Qube
 from oops.config           import LOGGING, PATH_PHOTONS
 from oops.event            import Event
+from oops.frame            import Frame
 from oops.frame.navigation import Navigation
 from oops.meshgrid         import Meshgrid
 
@@ -449,6 +450,39 @@ class Observation(object):
 
         (time0, time1) = self.time_range_at_uv(uv)
         return tfrac * (time0 + time1)
+
+    #===========================================================================
+    def cmatrix(self, uv=None, time=None, reference=None):
+        """The 3x3 rotation matrix that rotates a reference frame into this
+        observation's frame at a selected time.
+
+        This is the same J2000 -> camera-frame rotation accepted as a
+        "cmatrix" input elsewhere in this package (e.g.,
+        oops.hosts.cassini.iss.from_file(cmatrix=...)), so the result of this
+        method can be fed back in to reproduce this observation's pointing.
+
+        Input:
+            uv          a (u,v) pixel location, used only to select a time
+                        when this observation's frame is time-dependent (e.g.,
+                        a slewing spacecraft during a raster or TDI exposure);
+                        None to use the center of the FOV. Ignored if time is
+                        given explicitly.
+            time        the time in seconds TDB at which to evaluate the
+                        frame; None to derive it from uv via midtime_at_uv().
+            reference   the frame or frame ID that the returned matrix rotates
+                        from; None for J2000.
+
+        Return:         a Matrix3 giving the rotation from the reference frame
+                        into this observation's frame at the selected time.
+        """
+
+        if time is None:
+            uv = self.fov.uv_shape / 2. if uv is None else Pair.as_pair(uv)
+            time = self.midtime_at_uv(uv)
+
+        reference = Frame.as_wayframe(reference) or Frame.J2000
+        xform = self.frame.wrt(reference).transform_at_time(time)
+        return xform.matrix
 
     #===========================================================================
     def meshgrid(self, origin=None, undersample=1, oversample=1, limit=None,

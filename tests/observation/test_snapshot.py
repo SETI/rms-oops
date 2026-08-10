@@ -5,8 +5,9 @@
 import numpy as np
 import unittest
 
-from polymath         import Pair, Vector
+from polymath         import Matrix3, Pair, Vector
 from oops.fov         import FlatFOV
+from oops.frame       import Cmatrix
 from oops.observation import Snapshot
 
 
@@ -123,6 +124,19 @@ class Test_Snapshot(unittest.TestCase):
 
         self.assertEqual(uv[:4], indices.to_pair((2,0))[:4])
         self.assertTrue(np.all(uv.mask == 4*[False] + [True]))
+
+        # cmatrix()
+        m = Matrix3([[0,1,0],[0,0,-1],[-1,0,0]])
+        cmatrix_frame = Cmatrix(m, frame_id='TEST_SNAPSHOT_CMATRIX')
+
+        obs = Snapshot(('u','v'), tstart=98., texp=2.,
+                       fov=fov, path='SSB', frame=cmatrix_frame)
+
+        self.assertTrue(np.all(obs.cmatrix().vals == m.vals))
+        self.assertTrue(np.all(obs.cmatrix(uv=(3,4)).vals == m.vals))
+        self.assertTrue(np.all(obs.cmatrix(time=99.).vals == m.vals))
+        self.assertTrue(np.all(obs.cmatrix(reference=obs.frame).vals
+                               == np.eye(3)))
 
 ################################################################################
 if __name__ == '__main__':
