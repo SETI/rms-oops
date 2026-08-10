@@ -437,8 +437,6 @@ class ISS(object):
                                             frame_id='CASSINI_ISS_NAC_FLIPPED')
         wac_flipped = oops.frame.SpiceFrame('CASSINI_ISS_WAC',
                                             frame_id='CASSINI_ISS_WAC_FLIPPED')
-        nac_frame = oops.frame.Cmatrix(rot180, nac_flipped,
-                                       frame_id='CASSINI_ISS_NAC')
 
         if ISS.offset_wac:
 
@@ -455,13 +453,41 @@ class ISS(object):
             # This is Rob's determination of WAC - NAC in units of NAC pixels
             xshift = -7. * xpixel
             yshift = 4.4 * ypixel
+
+        # Dedicated SPICE-derived image frames, kept under their own frame IDs.
+        # set_cmatrix only ever overrides CASSINI_ISS_NAC/WAC, so these *_SPICE
+        # frames are never replaced by a custom C-matrix and remain a reliable
+        # reference for the inter-camera rotation (see set_cmatrix). override=True
+        # so a rebuild after ISS.reset() refreshes them to the current pointing.
+        oops.frame.Cmatrix(rot180, nac_flipped,
+                           frame_id='CASSINI_ISS_NAC_SPICE', override=True)
+        if ISS.offset_wac:
+            wac_spice_no = oops.frame.Cmatrix(rot180, wac_flipped,
+                                    frame_id='CASSINI_ISS_WAC-NO_OFFSET_SPICE',
+                                    override=True)
+            oops.frame.Navigation((xshift,yshift), wac_spice_no,
+                                  frame_id='CASSINI_ISS_WAC_SPICE', override=True)
+        else:
+            oops.frame.Cmatrix(rot180, wac_flipped,
+                               frame_id='CASSINI_ISS_WAC_SPICE', override=True)
+
+        # Observation-facing camera frames. These start out identical to the
+        # *_SPICE frames above, but set_cmatrix may later replace them with a
+        # custom C-matrix. override=True: a prior custom C-matrix may already
+        # have replaced the primary definition of this frame ID; reclaim it.
+        nac_frame = oops.frame.Cmatrix(rot180, nac_flipped,
+                                       frame_id='CASSINI_ISS_NAC', override=True)
+
+        if ISS.offset_wac:
             wac_frame_no = oops.frame.Cmatrix(rot180, wac_flipped,
-                                              frame_id='CASSINI_ISS_WAC-NO_OFFSET')
+                                              frame_id='CASSINI_ISS_WAC-NO_OFFSET',
+                                              override=True)
             wac_frame = oops.frame.Navigation((xshift,yshift), wac_frame_no,
-                                               frame_id='CASSINI_ISS_WAC')
+                                               frame_id='CASSINI_ISS_WAC',
+                                               override=True)
         else:
             wac_frame = oops.frame.Cmatrix(rot180, wac_flipped,
-                                           frame_id='CASSINI_ISS_WAC')
+                                           frame_id='CASSINI_ISS_WAC', override=True)
 
         ISS.frames_defined = True
 
@@ -492,12 +518,17 @@ class ISS(object):
         cmatrix = oops.Matrix3.as_matrix3(cmatrix)
 
         if map_other_camera:
-            # rel = M_other<-label, the fixed rotation read from the
-            # SPICE-derived frames at the observation time.
+            # rel = M_other<-label, the fixed rotation read from the dedicated
+            # *_SPICE frames at the observation time. These are used (rather than
+            # CASSINI_ISS_NAC/WAC) because a prior set_cmatrix override may have
+            # replaced the CASSINI_ISS_<camera> frames with a custom C-matrix,
+            # which would corrupt the inter-camera rotation.
             ISS.define_camera_frames()
             other = 'WAC' if camera == 'NAC' else 'NAC'
-            label_wf = oops.frame.Frame.as_wayframe('CASSINI_ISS_' + camera)
-            other_wf = oops.frame.Frame.as_wayframe('CASSINI_ISS_' + other)
+            label_wf = oops.frame.Frame.as_wayframe('CASSINI_ISS_' + camera
+                                                    + '_SPICE')
+            other_wf = oops.frame.Frame.as_wayframe('CASSINI_ISS_' + other
+                                                    + '_SPICE')
             rel = other_wf.wrt(label_wf).transform_at_time(time).matrix
 
             oops.frame.Cmatrix(cmatrix, frame_id='CASSINI_ISS_' + camera,
