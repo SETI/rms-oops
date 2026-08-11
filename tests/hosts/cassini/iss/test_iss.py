@@ -104,6 +104,30 @@ class Test_Cassini_ISS_Cmatrix(unittest.TestCase):
                                     spice_cmatrix.vals))
 
     #===========================================================================
+    def test_get_cmatrix_inverts_set(self):
+        """ISS.get_cmatrix returns the SPICE-convention C-matrix (matching
+        pxform) and inverts the cmatrix given to from_file."""
+
+        baseline = from_file(self.filespec)
+        camera = baseline.dict['INSTRUMENT_ID'][3:] + 'C'
+        spice0 = self._spice_cmatrix(camera, baseline.tstart)
+
+        # For a SPICE-loaded observation, get_cmatrix matches pxform.
+        self.assertTrue(np.allclose(
+                ISS.get_cmatrix(baseline, time=baseline.tstart).vals, spice0.vals))
+
+        # It recovers the exact cmatrix given to from_file (the custom Snapshot
+        # frame is fixed in time, so no time argument is needed).
+        custom = _PERTURBATION * spice0
+        obs = from_file(self.filespec, cmatrix=custom)
+        recovered = ISS.get_cmatrix(obs)
+        self.assertTrue(np.allclose(recovered.vals, custom.vals))
+
+        # Round-trip: feeding it back into from_file reproduces the pointing.
+        obs2 = from_file(self.filespec, cmatrix=recovered)
+        self.assertTrue(np.allclose(obs2.cmatrix().vals, obs.cmatrix().vals))
+
+    #===========================================================================
     def test_default_frame_is_unregistered_and_isolated(self):
         """With frame_id=None each observation gets its own unregistered frame,
         so loading another image never changes an earlier one's pointing."""

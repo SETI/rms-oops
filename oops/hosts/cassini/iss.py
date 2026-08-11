@@ -619,6 +619,30 @@ class ISS(object):
 
     #===========================================================================
     @staticmethod
+    def get_cmatrix(obs, uv=None, time=None):
+        """The SPICE camera-frame C-matrix of an ISS observation.
+
+        The inverse of set_cmatrix(): it returns the observation's pointing in
+        the SPICE camera-frame convention (the rotation from J2000 into SPICE's
+        CASSINI_ISS_<camera> frame, as cspyce.pxform() would return), so feeding
+        the result back into from_file(cmatrix=...) reproduces the pointing.
+
+        Input:
+            obs         an ISS observation (e.g. a Snapshot from from_file); its
+                        frame must be the oops ISS observation frame.
+            uv          a (u,v) pixel location, used only to select a time when
+                        the observation frame is time-dependent; None to use the
+                        center of the FOV. Ignored if time is given.
+            time        the time in seconds TDB at which to evaluate the frame;
+                        None to derive it from uv.
+
+        Return:         an oops.Matrix3, the SPICE camera-frame C-matrix.
+        """
+
+        return ISS.host_from_oops(obs.cmatrix(uv=uv, time=time))
+
+    #===========================================================================
+    @staticmethod
     def reset():
         """Reset the internal Cassini ISS parameters.
 
