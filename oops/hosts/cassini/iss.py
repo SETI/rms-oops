@@ -575,36 +575,12 @@ class ISS(object):
                         ID (frame_id given, or map_other_camera).
         """
 
+        if map_other_camera:
+            return ISS.set_cmatrix_both_cameras(cmatrix, camera, time)
+
         # Convert the SPICE camera-frame C-matrix into the oops observation-frame
         # attitude by applying the fixed 180-degree instrument rotation.
         attitude = ISS.oops_from_host(cmatrix)
-
-        if map_other_camera:
-            # rel = M_other<-label, the fixed rotation read from the dedicated
-            # *_SPICE frames at the observation time. These are used (rather than
-            # CASSINI_ISS_NAC/WAC) because a prior set_cmatrix override may have
-            # replaced the CASSINI_ISS_<camera> frames with a custom C-matrix,
-            # which would corrupt the inter-camera rotation.
-            ISS.define_camera_frames()
-            other = 'WAC' if camera == 'NAC' else 'NAC'
-            label_wf = oops.frame.Frame.as_wayframe('CASSINI_ISS_' + camera
-                                                    + '_SPICE')
-            other_wf = oops.frame.Frame.as_wayframe('CASSINI_ISS_' + other
-                                                    + '_SPICE')
-            rel = other_wf.wrt(label_wf).transform_at_time(time).matrix
-
-            oops.frame.Cmatrix(attitude, frame_id='CASSINI_ISS_' + camera,
-                               override=True)
-            oops.frame.Cmatrix(rel * attitude,
-                               frame_id='CASSINI_ISS_' + other, override=True)
-
-            # The global camera frames now hold this observation's custom
-            # pointing. Force define_camera_frames() to rebuild them from SPICE on
-            # the next plain load; otherwise its quick-exit would leak this
-            # pointing into the next image.
-            ISS.frames_defined = False
-
-            return 'CASSINI_ISS_' + camera
 
         if frame_id is not None:
             # Register a single, shared custom frame; global frames untouched.
@@ -615,6 +591,60 @@ class ISS(object):
         # enters the global registry, so it neither collides with nor is
         # overwritten by any other image's pointing.
         return oops.frame.Cmatrix(attitude, frame_id=None)
+
+    #===========================================================================
+    @staticmethod
+    def set_cmatrix_both_cameras(cmatrix, camera, time):
+        """Register both CASSINI_ISS_NAC and CASSINI_ISS_WAC from one camera's
+        custom C-matrix, and return the label camera's frame ID.
+
+        The other camera's frame is derived from the fixed, SPICE-derived
+        inter-camera rotation, so the two co-mounted cameras stay consistent
+        under the custom pointing. Unlike the single-camera path in
+        set_cmatrix(), this overrides the global camera frames (it is the
+        map_other_camera=True case of set_cmatrix()).
+
+        ISS.initialize() must have been called first.
+
+        Input:
+            cmatrix     an oops.Matrix3 (or 3x3 array) for the named camera, in
+                        the SPICE camera-frame convention (see set_cmatrix()).
+            camera      'NAC' or 'WAC', the camera the cmatrix applies to.
+            time        the observation time (TDB), used to evaluate the
+                        inter-camera rotation.
+
+        Return:         'CASSINI_ISS_<camera>', the label camera's frame ID.
+        """
+
+        # Convert the SPICE camera-frame C-matrix into the oops observation-frame
+        # attitude by applying the fixed 180-degree instrument rotation.
+        attitude = ISS.oops_from_host(cmatrix)
+
+        # rel = M_other<-label, the fixed rotation read from the dedicated
+        # *_SPICE frames at the observation time. These are used (rather than
+        # CASSINI_ISS_NAC/WAC) because a prior set_cmatrix override may have
+        # replaced the CASSINI_ISS_<camera> frames with a custom C-matrix,
+        # which would corrupt the inter-camera rotation.
+        ISS.define_camera_frames()
+        other = 'WAC' if camera == 'NAC' else 'NAC'
+        label_wf = oops.frame.Frame.as_wayframe('CASSINI_ISS_' + camera
+                                                + '_SPICE')
+        other_wf = oops.frame.Frame.as_wayframe('CASSINI_ISS_' + other
+                                                + '_SPICE')
+        rel = other_wf.wrt(label_wf).transform_at_time(time).matrix
+
+        oops.frame.Cmatrix(attitude, frame_id='CASSINI_ISS_' + camera,
+                           override=True)
+        oops.frame.Cmatrix(rel * attitude,
+                           frame_id='CASSINI_ISS_' + other, override=True)
+
+        # The global camera frames now hold this observation's custom pointing.
+        # Force define_camera_frames() to rebuild them from SPICE on the next
+        # plain load; otherwise its quick-exit would leak this pointing into the
+        # next image.
+        ISS.frames_defined = False
+
+        return 'CASSINI_ISS_' + camera
 
     #===========================================================================
     @staticmethod
