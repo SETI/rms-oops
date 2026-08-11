@@ -576,7 +576,7 @@ class ISS(object):
         """
 
         if map_other_camera:
-            return ISS.set_cmatrix_both_cameras(cmatrix, camera, time)
+            return ISS.map_other_camera(cmatrix, camera, time)
 
         # Convert the SPICE camera-frame C-matrix into the oops observation-frame
         # attitude by applying the fixed 180-degree instrument rotation.
@@ -594,7 +594,7 @@ class ISS(object):
 
     #===========================================================================
     @staticmethod
-    def set_cmatrix_both_cameras(cmatrix, camera, time):
+    def map_other_camera(cmatrix, camera, time):
         """Register both CASSINI_ISS_NAC and CASSINI_ISS_WAC from one camera's
         custom C-matrix, and return the label camera's frame ID.
 
