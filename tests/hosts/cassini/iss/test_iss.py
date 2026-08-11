@@ -9,7 +9,7 @@ import oops
 from oops.body                import Body
 from oops.frame               import Frame
 from oops.hosts.cassini       import Cassini
-from oops.hosts.cassini.iss   import ISS, from_file
+from oops.hosts.cassini.iss   import ISS, from_file, ROT180
 from oops.unittester_support  import TEST_DATA_PREFIX
 
 # A rotation distinguishable from any SPICE-derived pointing, used to build
@@ -21,12 +21,18 @@ class Test_Cassini_ISS_Cmatrix(unittest.TestCase):
     """Tests for the custom C-matrix support in hosts/cassini/iss.py
     (from_file's cmatrix/frame_id/map_other_camera arguments and
     ISS.set_cmatrix), plus the generic Observation.cmatrix() getter.
+
+    The `cmatrix` accepted by from_file is the SPICE camera-frame C-matrix (the
+    J2000 -> CASSINI_ISS_<camera> rotation, as returned by cspyce.pxform). The
+    oops observation frame is that frame rotated 180 degrees about the boresight,
+    so an observation's attitude (Observation.cmatrix()) equals ROT180 times the
+    SPICE C-matrix that produced it.
     """
 
     FILESPEC = 'cassini/ISS/W1573721822_1.IMG'      # a WAC image
 
     def setUp(self):
-        # Custom C-matrices can override the global CASSINI_ISS_NAC/WAC
+        # A mapped custom C-matrix can override the global CASSINI_ISS_NAC/WAC
         # frames, so every test starts from a clean registry.
         Body.reset_registry()
         Body.define_solar_system()
@@ -40,42 +46,125 @@ class Test_Cassini_ISS_Cmatrix(unittest.TestCase):
         ISS.reset()
 
     #===========================================================================
-    def test_default_override(self):
-        """A custom cmatrix with no frame_id overrides the global camera
-        frame, and Observation.cmatrix() round-trips it."""
+    def _spice_cmatrix(self, camera, time):
+        """The recorded SPICE camera-frame C-matrix for the given camera and
+        time. CASSINI_ISS_<camera>_FLIPPED is the SpiceFrame wrapping SPICE's
+        CASSINI_ISS_<camera>, so its J2000 attitude is exactly
+        cspyce.pxform('J2000', 'CASSINI_ISS_<camera>', time). Requires a prior
+        plain load (define_camera_frames) so the *_FLIPPED frame is registered.
+        """
+
+        return (Frame.as_wayframe('CASSINI_ISS_' + camera + '_FLIPPED')
+                     .wrt(Frame.J2000).transform_at_time(time).matrix)
+
+    #===========================================================================
+    def test_pxform_roundtrip(self):
+        """Feeding the recorded SPICE C-matrix (what pxform returns) straight
+        into from_file reproduces the SPICE pointing exactly, because the fixed
+        180-degree instrument rotation is applied at the boundary."""
+
+        baseline = from_file(self.filespec)             # SPICE pointing
+        camera = baseline.dict['INSTRUMENT_ID'][3:] + 'C'
+        spice_cmatrix = self._spice_cmatrix(camera, baseline.tstart)
+
+        obs = from_file(self.filespec, cmatrix=spice_cmatrix)
+
+        # Same pointing as the SPICE-derived observation: zero offset.
+        self.assertTrue(np.allclose(obs.cmatrix().vals, baseline.cmatrix().vals))
+
+        # The boundary rotation really was applied: the observation-frame
+        # attitude is ROT180 times the raw SPICE C-matrix, not the C-matrix
+        # itself (the two differ by the full 180 degrees).
+        self.assertTrue(np.allclose(obs.cmatrix().vals,
+                                    (ROT180 * spice_cmatrix).vals))
+        self.assertFalse(np.allclose(obs.cmatrix().vals, spice_cmatrix.vals))
+
+    #===========================================================================
+    def test_convention_conversions(self):
+        """ISS.oops_from_host / host_from_oops convert between the two
+        conventions, are mutual inverses, and match the from_file /
+        Observation.cmatrix() endpoints."""
+
+        # Mutual inverses, for an arbitrary rotation.
+        m = _PERTURBATION * ROT180 * _PERTURBATION
+        self.assertTrue(np.allclose(m.vals,
+                        ISS.host_from_oops(ISS.oops_from_host(m)).vals))
+        self.assertTrue(np.allclose(m.vals,
+                        ISS.oops_from_host(ISS.host_from_oops(m)).vals))
+
+        # They tie the SPICE C-matrix (pxform) to the oops observation-frame
+        # attitude used by from_file() and returned by Observation.cmatrix().
+        baseline = from_file(self.filespec)
+        camera = baseline.dict['INSTRUMENT_ID'][3:] + 'C'
+        spice_cmatrix = self._spice_cmatrix(camera, baseline.tstart)
+
+        self.assertTrue(np.allclose(ISS.oops_from_host(spice_cmatrix).vals,
+                                    baseline.cmatrix().vals))
+        self.assertTrue(np.allclose(ISS.host_from_oops(baseline.cmatrix()).vals,
+                                    spice_cmatrix.vals))
+
+    #===========================================================================
+    def test_default_frame_is_unregistered_and_isolated(self):
+        """With frame_id=None each observation gets its own unregistered frame,
+        so loading another image never changes an earlier one's pointing."""
 
         baseline = from_file(self.filespec)
         camera = baseline.dict['INSTRUMENT_ID'][3:] + 'C'
-        custom = _PERTURBATION * baseline.cmatrix()
+        spice0 = self._spice_cmatrix(camera, baseline.tstart)
 
-        obs = from_file(self.filespec, cmatrix=custom)
+        custom1 = _PERTURBATION * spice0
+        obs1 = from_file(self.filespec, cmatrix=custom1)
+        saved1 = obs1.cmatrix()
 
-        self.assertEqual(obs.frame.frame_id, 'CASSINI_ISS_' + camera)
-        self.assertTrue(np.all(obs.cmatrix().vals == custom.vals))
+        # The observation owns an unregistered frame, not the global wayframe.
+        self.assertFalse(obs1.frame.is_registered())
+        self.assertTrue(np.allclose(obs1.cmatrix().vals, (ROT180 * custom1).vals))
 
-        # The global frame really was replaced, not merely shadowed
-        direct = (Frame.as_wayframe('CASSINI_ISS_' + camera)
-                       .wrt(Frame.J2000).transform_at_time(obs.tstart).matrix)
-        self.assertTrue(np.all(direct.vals == custom.vals))
+        # Loading a second custom image must not disturb the first.
+        custom2 = _PERTURBATION * _PERTURBATION * spice0
+        obs2 = from_file(self.filespec, cmatrix=custom2)
+
+        self.assertIsNot(obs1.frame, obs2.frame)
+        self.assertTrue(np.all(obs1.cmatrix().vals == saved1.vals))
+        self.assertTrue(np.allclose(obs2.cmatrix().vals, (ROT180 * custom2).vals))
+        self.assertFalse(np.allclose(obs1.cmatrix().vals, obs2.cmatrix().vals))
+
+    #===========================================================================
+    def test_default_does_not_leak_into_plain_load(self):
+        """A default custom load never touches the global camera frame, so a
+        subsequent plain load reads back its own SPICE pointing."""
+
+        baseline = from_file(self.filespec)
+        m0 = baseline.cmatrix()
+        camera = baseline.dict['INSTRUMENT_ID'][3:] + 'C'
+        spice0 = self._spice_cmatrix(camera, baseline.tstart)
+
+        _ = from_file(self.filespec, cmatrix=_PERTURBATION * spice0)
+
+        plain = from_file(self.filespec)
+        self.assertTrue(np.allclose(plain.cmatrix().vals, m0.vals))
 
     #===========================================================================
     def test_explicit_frame_id_leaves_global_untouched(self):
         """A custom cmatrix with an explicit frame_id registers a separate
-        frame and leaves the global CASSINI_ISS_<camera> frame alone."""
+        frame (with the boundary rotation applied) and leaves the global
+        CASSINI_ISS_<camera> frame alone."""
 
         baseline = from_file(self.filespec)
+        camera = baseline.dict['INSTRUMENT_ID'][3:] + 'C'
         m0 = baseline.cmatrix()
-        custom = _PERTURBATION * m0
+        spice0 = self._spice_cmatrix(camera, baseline.tstart)
+        custom = _PERTURBATION * spice0
 
         obs = from_file(self.filespec, cmatrix=custom,
                         frame_id='TEST_ISS_CUSTOM_FRAME')
 
         self.assertEqual(obs.frame.frame_id, 'TEST_ISS_CUSTOM_FRAME')
-        self.assertTrue(np.all(obs.cmatrix().vals == custom.vals))
+        self.assertTrue(np.allclose(obs.cmatrix().vals, (ROT180 * custom).vals))
 
-        # The global camera frame is untouched
+        # The global camera frame is untouched.
         unaffected = from_file(self.filespec)
-        self.assertTrue(np.all(unaffected.cmatrix().vals == m0.vals))
+        self.assertTrue(np.allclose(unaffected.cmatrix().vals, m0.vals))
 
     #===========================================================================
     def test_map_other_camera(self):
@@ -86,64 +175,81 @@ class Test_Cassini_ISS_Cmatrix(unittest.TestCase):
         baseline = from_file(self.filespec)
         camera = baseline.dict['INSTRUMENT_ID'][3:] + 'C'
         other = 'NAC' if camera == 'WAC' else 'WAC'
-        m0 = baseline.cmatrix()
+        spice0 = self._spice_cmatrix(camera, baseline.tstart)
 
         baseline_rel = (Frame.as_wayframe('CASSINI_ISS_' + other)
                              .wrt(Frame.as_wayframe('CASSINI_ISS_' + camera))
                              .transform_at_time(baseline.tstart).matrix)
 
-        custom = _PERTURBATION * m0
+        custom = _PERTURBATION * spice0
         obs = from_file(self.filespec, cmatrix=custom, map_other_camera=True)
 
         self.assertEqual(obs.frame.frame_id, 'CASSINI_ISS_' + camera)
-        self.assertTrue(np.all(obs.cmatrix().vals == custom.vals))
+        self.assertTrue(np.allclose(obs.cmatrix().vals, (ROT180 * custom).vals))
 
-        # The fixed inter-camera rotation is preserved under the override
+        # The fixed inter-camera rotation is preserved under the override.
         new_rel = (Frame.as_wayframe('CASSINI_ISS_' + other)
                         .wrt(Frame.as_wayframe('CASSINI_ISS_' + camera))
                         .transform_at_time(baseline.tstart).matrix)
         self.assertTrue(np.allclose(new_rel.vals, baseline_rel.vals))
 
-        # ...and the other camera's absolute pointing was updated accordingly
+        # ...and the other camera's absolute pointing was updated accordingly.
         other_matrix = (Frame.as_wayframe('CASSINI_ISS_' + other)
                              .wrt(Frame.J2000)
                              .transform_at_time(baseline.tstart).matrix)
         self.assertTrue(np.allclose(other_matrix.vals,
-                                    (baseline_rel * custom).vals))
+                                    (baseline_rel * ROT180 * custom).vals))
 
     #===========================================================================
-    def test_map_after_single_camera_override(self):
-        """A single-camera override followed by a mapped-camera load must still
-        derive the inter-camera rotation from SPICE, not from the overridden
-        CASSINI_ISS_<camera> frame."""
+    def test_map_reclaims_global_on_plain_load(self):
+        """A mapped custom load overrides the global camera frames; a later
+        plain load must rebuild them from SPICE rather than inheriting the
+        custom pointing."""
+
+        baseline = from_file(self.filespec)
+        m0 = baseline.cmatrix()
+        camera = baseline.dict['INSTRUMENT_ID'][3:] + 'C'
+        spice0 = self._spice_cmatrix(camera, baseline.tstart)
+
+        _ = from_file(self.filespec, cmatrix=_PERTURBATION * spice0,
+                      map_other_camera=True)
+
+        plain = from_file(self.filespec)
+        self.assertTrue(np.allclose(plain.cmatrix().vals, m0.vals))
+
+    #===========================================================================
+    def test_map_after_map_override(self):
+        """A mapped load followed by another mapped load must still derive the
+        inter-camera rotation from the dedicated *_SPICE frames, not from the
+        CASSINI_ISS_<camera> frames a prior mapped load overrode."""
 
         baseline = from_file(self.filespec)
         camera = baseline.dict['INSTRUMENT_ID'][3:] + 'C'
         other = 'NAC' if camera == 'WAC' else 'WAC'
-        m0 = baseline.cmatrix()
+        spice0 = self._spice_cmatrix(camera, baseline.tstart)
 
-        # The true, SPICE-derived inter-camera rotation
+        # The true, SPICE-derived inter-camera rotation.
         baseline_rel = (Frame.as_wayframe('CASSINI_ISS_' + other)
                              .wrt(Frame.as_wayframe('CASSINI_ISS_' + camera))
                              .transform_at_time(baseline.tstart).matrix)
 
-        # First override the label camera alone with an unrelated custom
-        # pointing. This replaces the global CASSINI_ISS_<camera> frame.
-        bogus = _PERTURBATION * _PERTURBATION * m0
-        _ = from_file(self.filespec, cmatrix=bogus)
+        # First mapped load with an unrelated pointing overrides both global
+        # camera frames.
+        bogus = _PERTURBATION * _PERTURBATION * spice0
+        _ = from_file(self.filespec, cmatrix=bogus, map_other_camera=True)
 
-        # Now load with mapping. rel must come from the dedicated *_SPICE
-        # frames, unaffected by the override above.
-        custom = _PERTURBATION * m0
+        # Second mapped load: rel must come from the dedicated *_SPICE frames,
+        # unaffected by the override above.
+        custom = _PERTURBATION * spice0
         obs = from_file(self.filespec, cmatrix=custom, map_other_camera=True)
 
-        self.assertTrue(np.all(obs.cmatrix().vals == custom.vals))
+        self.assertTrue(np.allclose(obs.cmatrix().vals, (ROT180 * custom).vals))
 
         other_matrix = (Frame.as_wayframe('CASSINI_ISS_' + other)
                              .wrt(Frame.J2000)
                              .transform_at_time(baseline.tstart).matrix)
         self.assertTrue(np.allclose(other_matrix.vals,
-                                    (baseline_rel * custom).vals))
+                                    (baseline_rel * ROT180 * custom).vals))
 
     #===========================================================================
     def test_no_ck_loaded_without_mapping(self):
@@ -178,9 +284,11 @@ class Test_Cassini_ISS_Cmatrix(unittest.TestCase):
 
         baseline = from_file(self.filespec)
         m0 = baseline.cmatrix()
+        camera = baseline.dict['INSTRUMENT_ID'][3:] + 'C'
+        spice0 = self._spice_cmatrix(camera, baseline.tstart)
 
-        custom = _PERTURBATION * m0
-        _ = from_file(self.filespec, cmatrix=custom)
+        _ = from_file(self.filespec, cmatrix=_PERTURBATION * spice0,
+                      map_other_camera=True)
 
         ISS.reset()
         restored = from_file(self.filespec)

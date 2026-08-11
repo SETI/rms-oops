@@ -13,6 +13,14 @@ from filecache import FCPath
 import oops
 from oops.hosts.cassini import Cassini
 
+# The ISS observation frame is deliberately the SPICE camera frame rotated 180
+# degrees about the boresight, because the instrument's internal coordinate
+# system is flipped relative to the SPICE CASSINI_ISS_<camera> frame. A recorded
+# C-matrix (from a CK or cspyce.pxform) is in the *SPICE* camera
+# frame, so this rotation is applied at the boundary to convert it into an oops
+# observation frame. It is its own inverse.
+ROT180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
+
 ################################################################################
 # Standard class methods
 ################################################################################
@@ -33,14 +41,19 @@ def from_file(filespec, fast_distortion=True,
         return_all_planets  Include kernels for all planets not just
                             Jupiter or Saturn.
 
-        cmatrix             an oops.Matrix3 (or 3x3 array) giving the rotation
-                            from J2000 into the camera image frame, used instead
-                            of SPICE pointing. None uses SPICE as before.
+        cmatrix             an oops.Matrix3 (or 3x3 array) giving the SPICE
+                            camera-frame C-matrix: the rotation from J2000 into
+                            the SPICE CASSINI_ISS_<camera> frame, exactly as
+                            returned by cspyce.pxform() or recorded in a CK. The
+                            fixed 180-degree instrument rotation relating that
+                            frame to the oops observation frame is applied
+                            internally. None uses SPICE pointing as before.
 
         frame_id            when cmatrix is given and map_other_camera is False,
                             register the C-matrix under this frame ID and use only
-                            that frame; None overrides the global
-                            CASSINI_ISS_<camera> frame.
+                            that (shared, registered) frame. None (default) gives
+                            the observation its own unregistered frame, so loading
+                            other images never disturbs this one's pointing.
 
         map_other_camera    when True, also derive and register the other camera's
                             frame from the fixed inter-camera rotation (uses
@@ -91,16 +104,15 @@ def from_file(filespec, fast_distortion=True,
         Cassini.load_cks(tstart, tstart + texp)
 
     # Determine the observation frame, applying a custom C-matrix if given.
-    # ISS.set_cmatrix registers the frame(s); SPICE pointing is circumvented
-    # unless the other camera is being mapped.
-    frame = 'CASSINI_ISS_' + camera
+    # ISS.set_cmatrix builds the frame(s) and returns the one to attach to this
+    # observation; SPICE pointing is circumvented unless the other camera is
+    # being mapped.
     if cmatrix is not None:
-        ISS.set_cmatrix(cmatrix, camera, frame_id=frame_id,
-                        map_other_camera=map_other_camera, time=tstart)
-        if frame_id is not None and not map_other_camera:
-            frame = frame_id
+        frame = ISS.set_cmatrix(cmatrix, camera, frame_id=frame_id,
+                                map_other_camera=map_other_camera, time=tstart)
     else:
         ISS.define_camera_frames()      # use the SPICE-derived pointing
+        frame = 'CASSINI_ISS_' + camera
 
     # Create a Snapshot
     result = oops.obs.Snapshot(('v','u'), tstart, texp,
@@ -432,7 +444,7 @@ class ISS(object):
         # Construct a SpiceFrame for each camera
         # Deal with the fact that the instrument's internal
         # coordinate  system is rotated 180 degrees
-        rot180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
+        rot180 = ROT180
         nac_flipped = oops.frame.SpiceFrame('CASSINI_ISS_NAC',
                                             frame_id='CASSINI_ISS_NAC_FLIPPED')
         wac_flipped = oops.frame.SpiceFrame('CASSINI_ISS_WAC',
@@ -493,29 +505,80 @@ class ISS(object):
 
     #===========================================================================
     @staticmethod
-    def set_cmatrix(cmatrix, camera, frame_id=None, map_other_camera=False,
-                    time=None):
-        """Register a custom C-matrix as an ISS observation's pointing, replacing
-        the SPICE-derived camera frame.
+    def oops_from_host(cmatrix):
+        """Convert a host C-matrix into the oops observation-frame attitude.
 
-        ISS.initialize() must have been called first. The C-matrix gives the
-        rotation from J2000 into the camera image frame (X right, Y down, Z along
-        the optic axis).
+        The host convention is the SPICE camera-frame C-matrix: the rotation
+        from J2000 into SPICE's CASSINI_ISS_<camera> frame, as returned by
+        cspyce.pxform() or recorded in a CK. The oops convention is the attitude
+        of the oops observation frame (what Observation.cmatrix() returns), which
+        is that SPICE camera frame rotated 180 degrees about the boresight.
 
         Input:
-            cmatrix     an oops.Matrix3 (or 3x3 array) for the named camera.
+            cmatrix     an oops.Matrix3 (or 3x3 array) in the host (SPICE
+                        camera-frame) convention.
+
+        Return:         an oops.Matrix3 in the oops observation-frame convention.
+        """
+
+        return ROT180 * oops.Matrix3.as_matrix3(cmatrix)
+
+    #===========================================================================
+    @staticmethod
+    def host_from_oops(cmatrix):
+        """Convert an oops observation-frame attitude into a host C-matrix.
+
+        The inverse of oops_from_host(); see that method for the two conventions.
+        Because the frames differ by a 180-degree rotation (its own inverse),
+        this applies the same rotation.
+
+        Input:
+            cmatrix     an oops.Matrix3 (or 3x3 array) in the oops
+                        observation-frame convention (e.g. Observation.cmatrix()).
+
+        Return:         an oops.Matrix3 in the host (SPICE camera-frame)
+                        convention.
+        """
+
+        return ROT180 * oops.Matrix3.as_matrix3(cmatrix)
+
+    #===========================================================================
+    @staticmethod
+    def set_cmatrix(cmatrix, camera, frame_id=None, map_other_camera=False,
+                    time=None):
+        """Build an oops observation frame from a custom SPICE camera-frame
+        C-matrix and return the frame to attach to the observation.
+
+        ISS.initialize() must have been called first. The C-matrix is the SPICE
+        camera-frame pointing (the rotation from J2000 into SPICE's
+        CASSINI_ISS_<camera> frame, as returned by cspyce.pxform() or recorded in
+        a CK). The oops observation frame is that frame rotated 180 degrees about
+        the boresight (see ROT180); this rotation is applied here, at the
+        boundary, so a recorded C-matrix reproduces the observation's pointing.
+
+        Input:
+            cmatrix     an oops.Matrix3 (or 3x3 array) for the named camera, in
+                        the SPICE camera-frame convention.
             camera      'NAC' or 'WAC', the camera the cmatrix applies to.
-            frame_id    when map_other_camera is False, register the C-matrix
-                        under this frame ID; None overrides the global
-                        CASSINI_ISS_<camera> frame.
+            frame_id    when map_other_camera is False: None (default) returns a
+                        fresh unregistered frame owned by the observation, so
+                        loading other images never disturbs its pointing;
+                        otherwise the frame is registered under this frame ID (a
+                        shared, registered frame).
             map_other_camera  when True, also derive and register the other
                         camera's frame from the fixed inter-camera rotation (uses
                         SPICE); frame_id is ignored.
             time        the observation time (TDB), required to evaluate the
                         inter-camera rotation when map_other_camera is True.
+
+        Return:         the frame to attach to the observation: a Cmatrix frame
+                        object (unregistered default case) or a registered frame
+                        ID (frame_id given, or map_other_camera).
         """
 
-        cmatrix = oops.Matrix3.as_matrix3(cmatrix)
+        # Convert the SPICE camera-frame C-matrix into the oops observation-frame
+        # attitude by applying the fixed 180-degree instrument rotation.
+        attitude = ISS.oops_from_host(cmatrix)
 
         if map_other_camera:
             # rel = M_other<-label, the fixed rotation read from the dedicated
@@ -531,19 +594,28 @@ class ISS(object):
                                                     + '_SPICE')
             rel = other_wf.wrt(label_wf).transform_at_time(time).matrix
 
-            oops.frame.Cmatrix(cmatrix, frame_id='CASSINI_ISS_' + camera,
+            oops.frame.Cmatrix(attitude, frame_id='CASSINI_ISS_' + camera,
                                override=True)
-            oops.frame.Cmatrix(rel * cmatrix,
+            oops.frame.Cmatrix(rel * attitude,
                                frame_id='CASSINI_ISS_' + other, override=True)
 
-        elif frame_id is not None:
-            # Single custom frame; global frames untouched
-            oops.frame.Cmatrix(cmatrix, frame_id=frame_id)
+            # The global camera frames now hold this observation's custom
+            # pointing. Force define_camera_frames() to rebuild them from SPICE on
+            # the next plain load; otherwise its quick-exit would leak this
+            # pointing into the next image.
+            ISS.frames_defined = False
 
-        else:
-            # Override the label camera's global frame
-            oops.frame.Cmatrix(cmatrix, frame_id='CASSINI_ISS_' + camera,
-                               override=True)
+            return 'CASSINI_ISS_' + camera
+
+        if frame_id is not None:
+            # Register a single, shared custom frame; global frames untouched.
+            oops.frame.Cmatrix(attitude, frame_id=frame_id)
+            return frame_id
+
+        # Default: a fresh unregistered frame owned by this observation. It never
+        # enters the global registry, so it neither collides with nor is
+        # overwritten by any other image's pointing.
+        return oops.frame.Cmatrix(attitude, frame_id=None)
 
     #===========================================================================
     @staticmethod

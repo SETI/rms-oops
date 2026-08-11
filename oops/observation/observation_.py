@@ -456,10 +456,13 @@ class Observation(object):
         """The 3x3 rotation matrix that rotates a reference frame into this
         observation's frame at a selected time.
 
-        This is the same J2000 -> camera-frame rotation accepted as a
-        "cmatrix" input elsewhere in this package (e.g.,
-        oops.hosts.cassini.iss.from_file(cmatrix=...)), so the result of this
-        method can be fed back in to reproduce this observation's pointing.
+        This returns the attitude of the observation frame itself (by default,
+        the J2000 -> observation-frame rotation). Note that a host's "cmatrix"
+        input may use a different convention: e.g.
+        oops.hosts.cassini.iss.from_file(cmatrix=...) takes the SPICE
+        camera-frame C-matrix, which for ISS differs from the observation frame
+        by a fixed 180-degree rotation about the boresight. The value returned
+        here is therefore not, in general, interchangeable with such an input.
 
         Input:
             uv          a (u,v) pixel location, used only to select a time
