@@ -443,8 +443,7 @@ class ISS(object):
 
         # Construct a SpiceFrame for each camera
         # Deal with the fact that the instrument's internal
-        # coordinate  system is rotated 180 degrees
-        rot180 = ROT180
+        # coordinate  system is rotated 180 degrees (see ROT180)
         nac_flipped = oops.frame.SpiceFrame('CASSINI_ISS_NAC',
                                             frame_id='CASSINI_ISS_NAC_FLIPPED')
         wac_flipped = oops.frame.SpiceFrame('CASSINI_ISS_WAC',
@@ -471,34 +470,34 @@ class ISS(object):
         # frames are never replaced by a custom C-matrix and remain a reliable
         # reference for the inter-camera rotation (see set_cmatrix). override=True
         # so a rebuild after ISS.reset() refreshes them to the current pointing.
-        oops.frame.Cmatrix(rot180, nac_flipped,
+        oops.frame.Cmatrix(ROT180, nac_flipped,
                            frame_id='CASSINI_ISS_NAC_SPICE', override=True)
         if ISS.offset_wac:
-            wac_spice_no = oops.frame.Cmatrix(rot180, wac_flipped,
+            wac_spice_no = oops.frame.Cmatrix(ROT180, wac_flipped,
                                     frame_id='CASSINI_ISS_WAC-NO_OFFSET_SPICE',
                                     override=True)
             oops.frame.Navigation((xshift,yshift), wac_spice_no,
                                   frame_id='CASSINI_ISS_WAC_SPICE', override=True)
         else:
-            oops.frame.Cmatrix(rot180, wac_flipped,
+            oops.frame.Cmatrix(ROT180, wac_flipped,
                                frame_id='CASSINI_ISS_WAC_SPICE', override=True)
 
         # Observation-facing camera frames. These start out identical to the
         # *_SPICE frames above, but set_cmatrix may later replace them with a
         # custom C-matrix. override=True: a prior custom C-matrix may already
         # have replaced the primary definition of this frame ID; reclaim it.
-        nac_frame = oops.frame.Cmatrix(rot180, nac_flipped,
+        nac_frame = oops.frame.Cmatrix(ROT180, nac_flipped,
                                        frame_id='CASSINI_ISS_NAC', override=True)
 
         if ISS.offset_wac:
-            wac_frame_no = oops.frame.Cmatrix(rot180, wac_flipped,
+            wac_frame_no = oops.frame.Cmatrix(ROT180, wac_flipped,
                                               frame_id='CASSINI_ISS_WAC-NO_OFFSET',
                                               override=True)
             wac_frame = oops.frame.Navigation((xshift,yshift), wac_frame_no,
                                                frame_id='CASSINI_ISS_WAC',
                                                override=True)
         else:
-            wac_frame = oops.frame.Cmatrix(rot180, wac_flipped,
+            wac_frame = oops.frame.Cmatrix(ROT180, wac_flipped,
                                            frame_id='CASSINI_ISS_WAC', override=True)
 
         ISS.frames_defined = True
