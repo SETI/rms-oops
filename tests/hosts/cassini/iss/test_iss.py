@@ -9,7 +9,7 @@ import oops
 from oops.body                import Body
 from oops.frame               import Frame
 from oops.hosts.cassini       import Cassini
-from oops.hosts.cassini.iss   import ISS, from_file, CMATRIX_ROTATION
+from oops.hosts.cassini.iss   import ISS, from_file
 from oops.unittester_support  import TEST_DATA_PREFIX
 
 # A rotation distinguishable from any SPICE-derived pointing, used to build
@@ -55,18 +55,6 @@ class Test_Cassini_ISS_Cmatrix(unittest.TestCase):
 
         return (Frame.as_wayframe('CASSINI_ISS_' + camera + '_SPICE')
                      .wrt(Frame.J2000).transform_at_time(time).matrix)
-
-    #===========================================================================
-    def test_convention_conversions(self):
-        """ISS.oops_from_spice / spice_from_oops convert between the two
-        conventions and are mutual inverses."""
-
-        # Mutual inverses, for an arbitrary rotation.
-        m = _PERTURBATION * CMATRIX_ROTATION * _PERTURBATION
-        self.assertTrue(np.allclose(m.vals,
-                        ISS.spice_from_oops(ISS.oops_from_spice(m)).vals))
-        self.assertTrue(np.allclose(m.vals,
-                        ISS.oops_from_spice(ISS.spice_from_oops(m)).vals))
 
     #===========================================================================
     def test_get_cmatrix_inverts_set(self):

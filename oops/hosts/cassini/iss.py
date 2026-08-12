@@ -496,46 +496,6 @@ class ISS(object):
 
     #===========================================================================
     @staticmethod
-    def oops_from_spice(cmatrix):
-        """Convert a spice-frame C-matrix into the oops-frame attitude.
-
-        The spice-frame is the SPICE camera-frame C-matrix: the rotation from
-        J2000 into SPICE's CASSINI_ISS_<camera> frame, as returned by
-        cspyce.pxform() or recorded in a CK (z along the line of sight, x left,
-        y up). The oops-frame is the oops observation frame, that SPICE frame
-        rotated 180 degrees about the boresight (z along the line of sight, x
-        right, y down).
-
-        Input:
-            cmatrix     an oops.Matrix3 (or 3x3 array) in the spice-frame
-                        convention.
-
-        Return:         an oops.Matrix3 in the oops-frame convention.
-        """
-
-        return CMATRIX_ROTATION * oops.Matrix3.as_matrix3(cmatrix)
-
-    #===========================================================================
-    @staticmethod
-    def spice_from_oops(cmatrix):
-        """Convert an oops-frame attitude into a spice-frame C-matrix.
-
-        The inverse of oops_from_spice(); see that method for the two
-        conventions and their axes. Because the frames differ by a 180-degree
-        rotation (its own inverse), this applies the same rotation.
-
-        Input:
-            cmatrix     an oops.Matrix3 (or 3x3 array) in the oops-frame
-                        convention (z along the line of sight, x right, y down).
-
-        Return:         an oops.Matrix3 in the spice-frame convention (z along
-                        the line of sight, x left, y up).
-        """
-
-        return CMATRIX_ROTATION * oops.Matrix3.as_matrix3(cmatrix)
-
-    #===========================================================================
-    @staticmethod
     def reset():
         """Reset the internal Cassini ISS parameters.
 
