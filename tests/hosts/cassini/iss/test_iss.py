@@ -19,8 +19,8 @@ _PERTURBATION = oops.Matrix3([[0,1,0],[-1,0,0],[0,0,1]])
 
 class Test_Cassini_ISS_Cmatrix(unittest.TestCase):
     """Tests for the custom C-matrix support in hosts/cassini/iss.py
-    (from_file's cmatrix/frame_id arguments and ISS.set_cmatrix), plus the
-    generic Observation.get_cmatrix() getter.
+    (from_file's cmatrix/frame_id arguments), plus the generic
+    Observation.get_cmatrix() / Observation.set_cmatrix() methods.
 
     The `cmatrix` accepted by from_file is the SPICE camera-frame C-matrix (the
     J2000 -> CASSINI_ISS_<camera> rotation, as returned by cspyce.pxform). The

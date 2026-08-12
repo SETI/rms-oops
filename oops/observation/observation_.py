@@ -488,8 +488,7 @@ class Observation(object):
 
     #===========================================================================
     def set_cmatrix(self, cmatrix, frame_id=None):
-        """Build an oops observation frame from a spice-convention C-matrix and
-        return the frame to attach to the observation.
+        """Set this observation's frame from a spice-convention C-matrix.
 
         This is the inverse of get_cmatrix(): it takes the spice-convention
         C-matrix (for ISS, the spice-frame pointing: the rotation from J2000
@@ -499,19 +498,16 @@ class Observation(object):
         (the 'host' subfield's CMATRIX_ROTATION attribute; z along the line of
         sight, x right, y down). Because that rotation is its own inverse, the
         same product recovers the observation attitude from the C-matrix that
-        get_cmatrix() applied to produce it.
+        get_cmatrix() applied to produce it. The resulting frame replaces
+        self.frame.
 
         Input:
             cmatrix     an oops.Matrix3 (or 3x3 array) in the spice-convention
                         C-matrix, as returned by get_cmatrix().
-            frame_id    None (default) returns a fresh unregistered frame owned by
-                        the observation, so loading other images never disturbs
-                        its pointing; otherwise the frame is registered under this
-                        frame ID (a shared, registered frame).
-
-        Return:         the frame to attach to the observation: a Cmatrix frame
-                        object (unregistered default case) or a registered frame
-                        ID (frame_id given).
+            frame_id    None (default) attaches a fresh unregistered frame owned
+                        by the observation, so loading other images never
+                        disturbs its pointing; otherwise the frame is registered
+                        under this frame ID (a shared, registered frame).
         """
 
         # Convert the spice-convention C-matrix into the oops observation-frame
@@ -520,13 +516,14 @@ class Observation(object):
 
         if frame_id is not None:
             # Register a single, shared custom frame; global frames untouched.
-            Cmatrix(attitude, frame_id=frame_id)
-            return frame_id
+            frame = Cmatrix(attitude, frame_id=frame_id)
+        else:
+            # A fresh unregistered frame owned by this observation. It never
+            # enters the global registry, so it neither collides with nor is
+            # overwritten by any other image's pointing.
+            frame = Cmatrix(attitude, frame_id=None)
 
-        # Default: a fresh unregistered frame owned by this observation. It never
-        # enters the global registry, so it neither collides with nor is
-        # overwritten by any other image's pointing.
-        return Cmatrix(attitude, frame_id=None)
+        self.frame = Frame.as_wayframe(frame)
 
     #===========================================================================
     def meshgrid(self, origin=None, undersample=1, oversample=1, limit=None,
