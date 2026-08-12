@@ -5,9 +5,8 @@
 import numpy as np
 import unittest
 
-from polymath         import Matrix3, Pair, Scalar, Vector
+from polymath         import Pair, Vector
 from oops.fov         import FlatFOV
-from oops.frame       import Cmatrix, SpinFrame
 from oops.observation import Snapshot
 
 
@@ -124,58 +123,6 @@ class Test_Snapshot(unittest.TestCase):
 
         self.assertEqual(uv[:4], indices.to_pair((2,0))[:4])
         self.assertTrue(np.all(uv.mask == 4*[False] + [True]))
-
-        # cmatrix()
-        m = Matrix3([[0,1,0],[0,0,-1],[-1,0,0]])
-        cmatrix_frame = Cmatrix(m, frame_id='TEST_SNAPSHOT_CMATRIX')
-
-        obs = Snapshot(('u','v'), tstart=98., texp=2.,
-                       fov=fov, path='SSB', frame=cmatrix_frame)
-
-        self.assertTrue(np.all(obs.cmatrix().vals == m.vals))
-        self.assertTrue(np.all(obs.cmatrix(uv=(3,4)).vals == m.vals))
-        self.assertTrue(np.all(obs.cmatrix(time=99.).vals == m.vals))
-        self.assertTrue(np.all(obs.cmatrix(reference=obs.frame).vals
-                               == np.eye(3)))
-
-        # cmatrix() with a time-dependent frame, using both uv and time
-        #
-        # The Cmatrix frame above is fixed in time, so it cannot reveal whether
-        # cmatrix() actually consults uv and time. Here we combine a rotating
-        # SpinFrame (a different matrix at every time) with an observation whose
-        # midtime_at_uv() varies with the u coordinate, so distinct UVs must map
-        # to distinct times and therefore distinct matrices.
-
-        spin = SpinFrame(0., 1., 0., 2, 'J2000',
-                         frame_id='TEST_SNAPSHOT_SPIN')
-
-        def spin_matrix(t):
-            # The J2000 -> SpinFrame rotation at time t (see SpinFrame, axis=2)
-            (c, s) = (np.cos(t), np.sin(t))
-            return np.array([[c, s, 0.], [-s, c, 0.], [0., 0., 1.]])
-
-        class TimeDependentSnapshot(Snapshot):
-            # midtime depends on the u coordinate: midtime == u
-            def midtime_at_uv(self, uv, tfrac=0.5):
-                return Scalar.as_scalar(Pair.as_pair(uv).to_scalar(0))
-
-        obs = TimeDependentSnapshot(('u','v'), tstart=98., texp=2.,
-                                    fov=fov, path='SSB', frame=spin)
-
-        # Selecting different UVs selects different times -> different matrices
-        cmat1 = obs.cmatrix(uv=(1.,4.))
-        cmat2 = obs.cmatrix(uv=(2.,4.))
-        self.assertTrue(np.allclose(cmat1.vals, spin_matrix(1.)))
-        self.assertTrue(np.allclose(cmat2.vals, spin_matrix(2.)))
-        self.assertFalse(np.allclose(cmat1.vals, cmat2.vals))
-
-        # The default uv is the center of the FOV (uv_shape/2 -> u == 5)
-        self.assertTrue(np.allclose(obs.cmatrix().vals, spin_matrix(5.)))
-
-        # An explicit time is used directly, overriding uv
-        self.assertTrue(np.allclose(obs.cmatrix(time=3.).vals, spin_matrix(3.)))
-        self.assertTrue(np.allclose(obs.cmatrix(uv=(1.,4.), time=3.).vals,
-                                    spin_matrix(3.)))
 
 ################################################################################
 if __name__ == '__main__':

@@ -452,40 +452,38 @@ class Observation(object):
         return tfrac * (time0 + time1)
 
     #===========================================================================
-    def cmatrix(self, uv=None, time=None, reference=None):
-        """The 3x3 rotation matrix that rotates a reference frame into this
-        observation's frame at a selected time.
+    def get_cmatrix(self, uv=None, time=None):
+        """The host-convention C-matrix of this observation.
 
-        This returns the attitude of the observation frame itself (by default,
-        the J2000 -> observation-frame rotation). Note that a host's "cmatrix"
-        input may use a different convention: e.g.
-        oops.hosts.cassini.iss.from_file(cmatrix=...) takes the SPICE
-        camera-frame C-matrix, which for ISS differs from the observation frame
-        by a fixed 180-degree rotation about the boresight. The value returned
-        here is therefore not, in general, interchangeable with such an input.
+        This derives the observation's pointing from its own frame and the fixed
+        convention rotation exposed by its host (the 'host' subfield's CMATRIX_ROTATION
+        attribute): it evaluates the oops observation-frame attitude and applies
+        the host rotation. For ISS the result is the spice-frame C-matrix: the
+        rotation from J2000 into SPICE's CASSINI_ISS_<camera> frame, as
+        cspyce.pxform() returns, with z along the line of sight, x left, y up.
+        Note this is NOT the oops-frame convention (z along the line of sight, x
+        right, y down) of the observation frame itself; the two differ by that
+        180-degree rotation about the boresight. Because it is derived from
+        self.frame at call time, the result reflects this observation's own
+        pointing and is unaffected by other loads.
 
         Input:
-            uv          a (u,v) pixel location, used only to select a time
-                        when this observation's frame is time-dependent (e.g.,
-                        a slewing spacecraft during a raster or TDI exposure);
-                        None to use the center of the FOV. Ignored if time is
-                        given explicitly.
-            time        the time in seconds TDB at which to evaluate the
-                        frame; None to derive it from uv via midtime_at_uv().
-            reference   the frame or frame ID that the returned matrix rotates
-                        from; None for J2000.
+            uv          a (u,v) pixel location, used only to select a time when
+                        this observation's frame is time-dependent; None to use
+                        the center of the FOV. Ignored if time is given.
+            time        the time in seconds TDB at which to evaluate the frame;
+                        None to derive it from uv via midtime_at_uv().
 
-        Return:         a Matrix3 giving the rotation from the reference frame
-                        into this observation's frame at the selected time.
+        Return:         a Matrix3 giving the host-convention C-matrix (for ISS,
+                        the spice-frame C-matrix).
         """
 
         if time is None:
             uv = self.fov.uv_shape / 2. if uv is None else Pair.as_pair(uv)
             time = self.midtime_at_uv(uv)
 
-        reference = Frame.as_wayframe(reference) or Frame.J2000
-        xform = self.frame.wrt(reference).transform_at_time(time)
-        return xform.matrix
+        oops_attitude = self.frame.wrt(Frame.J2000).transform_at_time(time).matrix
+        return self.host.CMATRIX_ROTATION * oops_attitude
 
     #===========================================================================
     def meshgrid(self, origin=None, undersample=1, oversample=1, limit=None,
