@@ -5,10 +5,11 @@
 import numpy as np
 import numbers
 
-from polymath              import Scalar, Pair, Vector, Vector3, Qube
+from polymath              import Scalar, Pair, Vector, Vector3, Qube, Matrix3
 from oops.config           import LOGGING, PATH_PHOTONS
 from oops.event            import Event
 from oops.frame            import Frame
+from oops.frame.cmatrix    import Cmatrix
 from oops.frame.navigation import Navigation
 from oops.meshgrid         import Meshgrid
 
@@ -453,7 +454,7 @@ class Observation(object):
 
     #===========================================================================
     def get_cmatrix(self, uv=None, time=None):
-        """The host-convention C-matrix of this observation.
+        """The spice-convention C-matrix of this observation.
 
         This derives the observation's pointing from its own frame and the fixed
         convention rotation exposed by its host (the 'host' subfield's CMATRIX_ROTATION
@@ -474,7 +475,7 @@ class Observation(object):
             time        the time in seconds TDB at which to evaluate the frame;
                         None to derive it from uv via midtime_at_uv().
 
-        Return:         a Matrix3 giving the host-convention C-matrix (for ISS,
+        Return:         a Matrix3 giving the spice-convention C-matrix (for ISS,
                         the spice-frame C-matrix).
         """
 
@@ -484,6 +485,48 @@ class Observation(object):
 
         oops_attitude = self.frame.wrt(Frame.J2000).transform_at_time(time).matrix
         return self.host.CMATRIX_ROTATION * oops_attitude
+
+    #===========================================================================
+    def set_cmatrix(self, cmatrix, frame_id=None):
+        """Build an oops observation frame from a spice-convention C-matrix and
+        return the frame to attach to the observation.
+
+        This is the inverse of get_cmatrix(): it takes the spice-convention
+        C-matrix (for ISS, the spice-frame pointing: the rotation from J2000
+        into SPICE's CASSINI_ISS_<camera> frame, with z along the line of sight,
+        x left, y up) and converts it into the oops observation-frame attitude by
+        applying the fixed convention rotation exposed by the observation's host
+        (the 'host' subfield's CMATRIX_ROTATION attribute; z along the line of
+        sight, x right, y down). Because that rotation is its own inverse, the
+        same product recovers the observation attitude from the C-matrix that
+        get_cmatrix() applied to produce it.
+
+        Input:
+            cmatrix     an oops.Matrix3 (or 3x3 array) in the spice-convention
+                        C-matrix, as returned by get_cmatrix().
+            frame_id    None (default) returns a fresh unregistered frame owned by
+                        the observation, so loading other images never disturbs
+                        its pointing; otherwise the frame is registered under this
+                        frame ID (a shared, registered frame).
+
+        Return:         the frame to attach to the observation: a Cmatrix frame
+                        object (unregistered default case) or a registered frame
+                        ID (frame_id given).
+        """
+
+        # Convert the spice-convention C-matrix into the oops observation-frame
+        # attitude by applying the fixed instrument convention rotation.
+        attitude = self.host.CMATRIX_ROTATION * Matrix3.as_matrix3(cmatrix)
+
+        if frame_id is not None:
+            # Register a single, shared custom frame; global frames untouched.
+            Cmatrix(attitude, frame_id=frame_id)
+            return frame_id
+
+        # Default: a fresh unregistered frame owned by this observation. It never
+        # enters the global registry, so it neither collides with nor is
+        # overwritten by any other image's pointing.
+        return Cmatrix(attitude, frame_id=None)
 
     #===========================================================================
     def meshgrid(self, origin=None, undersample=1, oversample=1, limit=None,
