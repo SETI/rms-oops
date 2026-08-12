@@ -19,8 +19,8 @@ _PERTURBATION = oops.Matrix3([[0,1,0],[-1,0,0],[0,0,1]])
 
 class Test_Cassini_ISS_Cmatrix(unittest.TestCase):
     """Tests for the custom C-matrix support in hosts/cassini/iss.py
-    (from_file's cmatrix/frame_id/map_other_camera arguments and
-    ISS.set_cmatrix), plus the generic Observation.get_cmatrix() getter.
+    (from_file's cmatrix/frame_id arguments and ISS.set_cmatrix), plus the
+    generic Observation.get_cmatrix() getter.
 
     The `cmatrix` accepted by from_file is the SPICE camera-frame C-matrix (the
     J2000 -> CASSINI_ISS_<camera> rotation, as returned by cspyce.pxform). The
@@ -47,13 +47,13 @@ class Test_Cassini_ISS_Cmatrix(unittest.TestCase):
     #===========================================================================
     def _spice_cmatrix(self, camera, time):
         """The recorded SPICE camera-frame C-matrix for the given camera and
-        time. CASSINI_ISS_<camera>_FLIPPED is the SpiceFrame wrapping SPICE's
+        time. CASSINI_ISS_<camera>_SPICE is the SpiceFrame wrapping SPICE's
         CASSINI_ISS_<camera>, so its J2000 attitude is exactly
         cspyce.pxform('J2000', 'CASSINI_ISS_<camera>', time). Requires a prior
-        plain load (define_camera_frames) so the *_FLIPPED frame is registered.
+        plain load (define_camera_frames) so the *_SPICE frame is registered.
         """
 
-        return (Frame.as_wayframe('CASSINI_ISS_' + camera + '_FLIPPED')
+        return (Frame.as_wayframe('CASSINI_ISS_' + camera + '_SPICE')
                      .wrt(Frame.J2000).transform_at_time(time).matrix)
 
     #===========================================================================
@@ -157,91 +157,8 @@ class Test_Cassini_ISS_Cmatrix(unittest.TestCase):
                                     baseline.get_cmatrix().vals))
 
     #===========================================================================
-    def test_map_other_camera(self):
-        """map_other_camera=True derives the co-mounted camera's frame from
-        the fixed, SPICE-derived inter-camera rotation, preserving it under a
-        custom C-matrix."""
-
-        baseline = from_file(self.filespec)
-        camera = baseline.dict['INSTRUMENT_ID'][3:] + 'C'
-        other = 'NAC' if camera == 'WAC' else 'WAC'
-        spice0 = self._spice_cmatrix(camera, baseline.tstart)
-
-        baseline_rel = (Frame.as_wayframe('CASSINI_ISS_' + other)
-                             .wrt(Frame.as_wayframe('CASSINI_ISS_' + camera))
-                             .transform_at_time(baseline.tstart).matrix)
-
-        custom = _PERTURBATION * spice0
-        obs = from_file(self.filespec, cmatrix=custom, map_other_camera=True)
-
-        self.assertEqual(obs.frame.frame_id, 'CASSINI_ISS_' + camera)
-
-        # The fixed inter-camera rotation is preserved under the override.
-        new_rel = (Frame.as_wayframe('CASSINI_ISS_' + other)
-                        .wrt(Frame.as_wayframe('CASSINI_ISS_' + camera))
-                        .transform_at_time(baseline.tstart).matrix)
-        self.assertTrue(np.allclose(new_rel.vals, baseline_rel.vals))
-
-        # ...and the other camera's absolute pointing was updated accordingly.
-        other_matrix = (Frame.as_wayframe('CASSINI_ISS_' + other)
-                             .wrt(Frame.J2000)
-                             .transform_at_time(baseline.tstart).matrix)
-        self.assertTrue(np.allclose(other_matrix.vals,
-                                    (baseline_rel * CMATRIX_ROTATION * custom).vals))
-
-    #===========================================================================
-    def test_map_reclaims_global_on_plain_load(self):
-        """A mapped custom load overrides the global camera frames; a later
-        plain load must rebuild them from SPICE rather than inheriting the
-        custom pointing."""
-
-        baseline = from_file(self.filespec)
-        m0 = baseline.get_cmatrix()
-        camera = baseline.dict['INSTRUMENT_ID'][3:] + 'C'
-        spice0 = self._spice_cmatrix(camera, baseline.tstart)
-
-        _ = from_file(self.filespec, cmatrix=_PERTURBATION * spice0,
-                      map_other_camera=True)
-
-        plain = from_file(self.filespec)
-        self.assertTrue(np.allclose(plain.get_cmatrix().vals, m0.vals))
-
-    #===========================================================================
-    def test_map_after_map_override(self):
-        """A mapped load followed by another mapped load must still derive the
-        inter-camera rotation from the dedicated *_SPICE frames, not from the
-        CASSINI_ISS_<camera> frames a prior mapped load overrode."""
-
-        baseline = from_file(self.filespec)
-        camera = baseline.dict['INSTRUMENT_ID'][3:] + 'C'
-        other = 'NAC' if camera == 'WAC' else 'WAC'
-        spice0 = self._spice_cmatrix(camera, baseline.tstart)
-
-        # The true, SPICE-derived inter-camera rotation.
-        baseline_rel = (Frame.as_wayframe('CASSINI_ISS_' + other)
-                             .wrt(Frame.as_wayframe('CASSINI_ISS_' + camera))
-                             .transform_at_time(baseline.tstart).matrix)
-
-        # First mapped load with an unrelated pointing overrides both global
-        # camera frames.
-        bogus = _PERTURBATION * _PERTURBATION * spice0
-        _ = from_file(self.filespec, cmatrix=bogus, map_other_camera=True)
-
-        # Second mapped load: rel must come from the dedicated *_SPICE frames,
-        # unaffected by the override above.
-        custom = _PERTURBATION * spice0
-        _ = from_file(self.filespec, cmatrix=custom, map_other_camera=True)
-
-        other_matrix = (Frame.as_wayframe('CASSINI_ISS_' + other)
-                             .wrt(Frame.J2000)
-                             .transform_at_time(baseline.tstart).matrix)
-        self.assertTrue(np.allclose(other_matrix.vals,
-                                    (baseline_rel * CMATRIX_ROTATION * custom).vals))
-
-    #===========================================================================
-    def test_no_ck_loaded_without_mapping(self):
-        """A custom cmatrix without map_other_camera never loads a CK (no
-        SPICE pointing dependency)."""
+    def test_custom_cmatrix_loads_no_ck(self):
+        """A custom cmatrix never loads a CK (no SPICE pointing dependency)."""
 
         self.assertFalse(np.any(Cassini.CK_LOADED))
 
@@ -250,36 +167,12 @@ class Test_Cassini_ISS_Cmatrix(unittest.TestCase):
         self.assertFalse(np.any(Cassini.CK_LOADED))
 
     #===========================================================================
-    def test_mapping_or_spice_pointing_loads_ck(self):
-        """SPICE pointing (no cmatrix), and map_other_camera=True, each load
-        a CK."""
+    def test_spice_pointing_loads_ck(self):
+        """SPICE pointing (no cmatrix) loads a CK."""
 
         self.assertFalse(np.any(Cassini.CK_LOADED))
         _ = from_file(self.filespec)
         self.assertTrue(np.any(Cassini.CK_LOADED))
-
-        ISS.reset()
-        self.assertFalse(np.any(Cassini.CK_LOADED))
-        _ = from_file(self.filespec, cmatrix=oops.Matrix3(np.eye(3)),
-                     map_other_camera=True)
-        self.assertTrue(np.any(Cassini.CK_LOADED))
-
-    #===========================================================================
-    def test_reset_restores_spice_pointing(self):
-        """After ISS.reset(), from_file() without cmatrix restores the
-        SPICE-derived pointing even if a custom cmatrix was used earlier."""
-
-        baseline = from_file(self.filespec)
-        m0 = baseline.get_cmatrix()
-        camera = baseline.dict['INSTRUMENT_ID'][3:] + 'C'
-        spice0 = self._spice_cmatrix(camera, baseline.tstart)
-
-        _ = from_file(self.filespec, cmatrix=_PERTURBATION * spice0,
-                      map_other_camera=True)
-
-        ISS.reset()
-        restored = from_file(self.filespec)
-        self.assertTrue(np.allclose(restored.get_cmatrix().vals, m0.vals))
 
 ############################################
 if __name__ == '__main__':
