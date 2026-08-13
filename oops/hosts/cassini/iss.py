@@ -134,9 +134,14 @@ def from_file(filespec, fast_distortion=True,
     if cmatrix is not None:
         result.set_cmatrix(cmatrix, frame_id=frame_id)
 
+    # With a custom cmatrix, pointing never came from a CK, so any CK that
+    # happens to be furnished (e.g. the gapfill CKs loaded unconditionally by
+    # Cassini.initialize()) is unrelated to this observation and must not be
+    # reported as used.
     result.insert_subfield('spice_kernels',
                            Cassini.used_kernels(result.time, 'iss',
-                                                return_all_planets))
+                                                return_all_planets,
+                                                ck=(cmatrix is None)))
     result.insert_subfield('filespec', filespec)
     result.insert_subfield('basename', filespec.name)
 

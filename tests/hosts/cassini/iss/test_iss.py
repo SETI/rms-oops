@@ -217,6 +217,23 @@ class Test_Cassini_ISS_Cmatrix(unittest.TestCase):
         _ = from_file(self.filespec)
         self.assertTrue(np.any(Cassini.CK_LOADED))
 
+    #===========================================================================
+    def test_custom_cmatrix_reports_no_ck_kernels(self):
+        """A custom cmatrix's spice_kernels must not report any CK, even one
+        furnished for an unrelated reason (e.g. the gapfill CKs loaded
+        unconditionally by Cassini.initialize(), or a CK furnished earlier in
+        the session by a plain SPICE-pointed load)."""
+
+        # A plain load furnishes and reports at least one CK.
+        plain = from_file(self.filespec)
+        self.assertTrue(any(name.endswith('.bc') for name in plain.spice_kernels))
+
+        # A subsequent custom-cmatrix load must report none, despite CKs
+        # (including the one just furnished above) being present in the
+        # kernel pool.
+        custom = from_file(self.filespec, cmatrix=oops.Matrix3(np.eye(3)))
+        self.assertFalse(any(name.endswith('.bc') for name in custom.spice_kernels))
+
 ############################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
