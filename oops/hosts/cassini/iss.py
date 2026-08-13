@@ -59,8 +59,11 @@ def from_file(filespec, fast_distortion=True,
                             this frame ID and use only that (shared, registered)
                             frame. None (default) gives the observation its own
                             unregistered frame, so loading other images never
-                            disturbs this one's pointing.
+                            disturbs this one's pointing. Requires cmatrix.
     """
+
+    if cmatrix is None and frame_id is not None:
+        raise ValueError('frame_id requires a cmatrix')
 
     ISS.initialize()    # Define everything the first time through; use defaults
                         # unless initialize() is called explicitly.
