@@ -145,6 +145,61 @@ class Test_Cassini_ISS_Cmatrix(unittest.TestCase):
                                     baseline.get_cmatrix().vals))
 
     #===========================================================================
+    def test_reused_frame_id_replaces_primary(self):
+        """Re-using a frame_id re-points every observation sharing that
+        registered frame; the primary registry definition is cleanly replaced,
+        not shadowed by a stale entry (Frame.register's secondary-definition
+        path)."""
+
+        baseline = from_file(self.filespec)
+        camera = baseline.dict['INSTRUMENT_ID'][3:] + 'C'
+        spice0 = self._spice_cmatrix(camera, baseline.tstart)
+
+        custom1 = _PERTURBATION * spice0
+        obs1 = from_file(self.filespec, cmatrix=custom1,
+                         frame_id='TEST_REUSED_FRAME')
+        self.assertTrue(np.allclose(obs1.get_cmatrix().vals, custom1.vals))
+
+        custom2 = _PERTURBATION * _PERTURBATION * spice0
+        obs2 = from_file(self.filespec, cmatrix=custom2,
+                         frame_id='TEST_REUSED_FRAME')
+        self.assertTrue(np.allclose(obs2.get_cmatrix().vals, custom2.vals))
+
+        # The primary registry definition must reflect the new pointing, not
+        # a stale first definition left behind by a secondary registration.
+        primary = Frame.as_primary_frame('TEST_REUSED_FRAME')
+        attitude = primary.wrt(Frame.J2000).transform_at_time(baseline.tstart).matrix
+        recovered = ISS.CMATRIX_ROTATION.transpose() * attitude
+        self.assertTrue(np.allclose(recovered.vals, custom2.vals))
+        self.assertFalse(np.allclose(recovered.vals, custom1.vals))
+
+    #===========================================================================
+    def test_frame_id_without_cmatrix_raises(self):
+        """frame_id is only meaningful together with cmatrix; passing it alone
+        must raise rather than being silently ignored."""
+
+        with self.assertRaises(ValueError):
+            from_file(self.filespec, frame_id='TEST_FRAME_ID_ALONE')
+
+    #===========================================================================
+    def test_missing_host_contract_raises(self):
+        """set_cmatrix/get_cmatrix on an observation with no `host` subfield
+        raise an informative ValueError rather than a bare AttributeError."""
+
+        baseline = from_file(self.filespec)
+        bare = oops.obs.Snapshot(('v', 'u'), baseline.tstart, baseline.texp,
+                                 baseline.fov, path=baseline.path,
+                                 frame=baseline.frame)
+
+        self.assertFalse(hasattr(bare, 'host'))
+
+        with self.assertRaises(ValueError):
+            bare.get_cmatrix()
+
+        with self.assertRaises(ValueError):
+            bare.set_cmatrix(oops.Matrix3(np.eye(3)))
+
+    #===========================================================================
     def test_custom_cmatrix_loads_no_ck(self):
         """A custom cmatrix never loads a CK (no SPICE pointing dependency)."""
 

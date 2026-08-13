@@ -14,7 +14,7 @@ import oops
 from oops.hosts.cassini import Cassini
 
 # There are two C-matrix conventions here, related by CMATRIX_ROTATION (a 180-degree spin
-# about the boresight; it is its own inverse):
+# about the boresight):
 #   * spice-frame: the pointing straight from SPICE (a CK or cspyce.pxform), i.e.
 #     the J2000 -> CASSINI_ISS_<camera> rotation. Axes: z along the line of
 #     sight, x to the left, y up.
@@ -22,7 +22,9 @@ from oops.hosts.cassini import Cassini
 #     oops convention: z along the line of sight, x to the right, y down.
 # oops-frame = CMATRIX_ROTATION * spice-frame. The instrument's internal coordinate system
 # matches the oops-frame, so a recorded (spice-frame) C-matrix is rotated by
-# CMATRIX_ROTATION at the boundary to build the observation frame.
+# CMATRIX_ROTATION at the boundary to build the observation frame. The
+# generic Observation.get_cmatrix()/set_cmatrix() methods derive the inverse
+# (spice-frame from oops-frame) by transposing CMATRIX_ROTATION.
 CMATRIX_ROTATION = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
 
 ################################################################################
@@ -235,9 +237,12 @@ class ISS(object):
     frames_defined = False
     offset_wac = False
 
-    # Exposed on the class so the generic Observation.get_cmatrix() can read the
-    # host's oops-frame -> spice-frame convention rotation via the observation's
-    # `host` subfield. See the module-level CMATRIX_ROTATION definition above.
+    # Exposed on the class so the generic Observation.set_cmatrix() and
+    # get_cmatrix() can read the host's convention rotation via the
+    # observation's `host` subfield: CMATRIX_ROTATION converts spice-frame to
+    # oops-frame. Any host supporting the generic cmatrix methods must expose
+    # this single attribute; the inverse (oops-frame to spice-frame) is
+    # derived by transposition. See the module-level definition above.
     CMATRIX_ROTATION = CMATRIX_ROTATION
 
     # Create a master version of the NAC and WAC distortion models from

@@ -457,16 +457,13 @@ class Observation(object):
         """The spice-convention C-matrix of this observation.
 
         This derives the observation's pointing from its own frame and the fixed
-        convention rotation exposed by its host (the 'host' subfield's CMATRIX_ROTATION
-        attribute): it evaluates the oops observation-frame attitude and applies
-        the host rotation. For ISS the result is the spice-frame C-matrix: the
-        rotation from J2000 into SPICE's CASSINI_ISS_<camera> frame, as
-        cspyce.pxform() returns, with z along the line of sight, x left, y up.
-        Note this is NOT the oops-frame convention (z along the line of sight, x
-        right, y down) of the observation frame itself; the two differ by that
-        180-degree rotation about the boresight. Because it is derived from
-        self.frame at call time, the result reflects this observation's own
-        pointing and is unaffected by other loads.
+        convention rotation exposed by its host: it evaluates the oops
+        observation-frame attitude and applies the transpose of the host's
+        spice-frame -> oops-frame rotation (the 'host' subfield's
+        CMATRIX_ROTATION attribute, the same rotation applied by
+        set_cmatrix()). The result is the spice-frame C-matrix, as returned by
+        cspyce.pxform(). Note this is NOT the oops-frame convention (z along
+        the line of sight, x right, y down) of the observation frame itself.
 
         Input:
             uv          a (u,v) pixel location, used only to select a time when
@@ -479,49 +476,58 @@ class Observation(object):
                         the spice-frame C-matrix).
         """
 
+        try:
+            rotation = self.host.CMATRIX_ROTATION
+        except AttributeError:
+            raise ValueError('get_cmatrix requires an observation whose host '
+                             'class defines CMATRIX_ROTATION (the spice-frame '
+                             '-> oops-frame convention rotation)')
+
         if time is None:
             uv = self.fov.uv_shape / 2. if uv is None else Pair.as_pair(uv)
             time = self.midtime_at_uv(uv)
 
         oops_attitude = self.frame.wrt(Frame.J2000).transform_at_time(time).matrix
-        return self.host.CMATRIX_ROTATION * oops_attitude
+        return rotation.transpose() * oops_attitude
 
     #===========================================================================
     def set_cmatrix(self, cmatrix, frame_id=None):
         """Set this observation's frame from a spice-convention C-matrix.
 
-        This is the inverse of get_cmatrix(): it takes the spice-convention
-        C-matrix (for ISS, the spice-frame pointing: the rotation from J2000
-        into SPICE's CASSINI_ISS_<camera> frame, with z along the line of sight,
-        x left, y up) and converts it into the oops observation-frame attitude by
-        applying the fixed convention rotation exposed by the observation's host
-        (the 'host' subfield's CMATRIX_ROTATION attribute; z along the line of
-        sight, x right, y down). Because that rotation is its own inverse, the
-        same product recovers the observation attitude from the C-matrix that
-        get_cmatrix() applied to produce it. The resulting frame replaces
-        self.frame.
+        Converts the spice-convention C-matrix into the oops observation-frame
+        attitude by applying the host's spice-frame -> oops-frame rotation (the
+        'host' subfield's CMATRIX_ROTATION attribute; get_cmatrix() applies its
+        transpose). The resulting frame replaces self.frame.
 
         Input:
-            cmatrix     an oops.Matrix3 (or 3x3 array) in the spice-convention
+            cmatrix     an oops.Matrix3 (or 3x3 array) giving the spice-convention
                         C-matrix, as returned by get_cmatrix().
             frame_id    None (default) attaches a fresh unregistered frame owned
                         by the observation, so loading other images never
                         disturbs its pointing; otherwise the frame is registered
-                        under this frame ID (a shared, registered frame).
+                        under this frame ID (a shared, registered frame). Note
+                        that re-using a frame_id re-points every observation
+                        that shares that registered frame; that sharing is the
+                        point of giving it an ID, but it is worth stating
+                        explicitly.
         """
+
+        try:
+            rotation = self.host.CMATRIX_ROTATION
+        except AttributeError:
+            raise ValueError('set_cmatrix requires an observation whose host '
+                             'class defines CMATRIX_ROTATION (the spice-frame '
+                             '-> oops-frame convention rotation)')
 
         # Convert the spice-convention C-matrix into the oops observation-frame
         # attitude by applying the fixed instrument convention rotation.
-        attitude = self.host.CMATRIX_ROTATION * Matrix3.as_matrix3(cmatrix)
+        attitude = rotation * Matrix3.as_matrix3(cmatrix)
 
-        if frame_id is not None:
-            # Register a single, shared custom frame; global frames untouched.
-            frame = Cmatrix(attitude, frame_id=frame_id)
-        else:
-            # A fresh unregistered frame owned by this observation. It never
-            # enters the global registry, so it neither collides with nor is
-            # overwritten by any other image's pointing.
-            frame = Cmatrix(attitude, frame_id=None)
+        # frame_id=None attaches a fresh unregistered frame owned by this
+        # observation, isolated from the global registry. A given frame_id
+        # registers (or re-registers, with override=True) a single shared
+        # frame under that ID, cleanly replacing any prior primary definition.
+        frame = Cmatrix(attitude, frame_id=frame_id, override=(frame_id is not None))
 
         self.frame = Frame.as_wayframe(frame)
 
