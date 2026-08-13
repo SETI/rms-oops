@@ -463,7 +463,7 @@ class ISS(object):
 
         # Construct a SpiceFrame for each camera
         # Deal with the fact that the instrument's internal
-        # coordinate  system is rotated 180 degrees (see CMATRIX_ROTATION)
+        # coordinate system is rotated 180 degrees (see CMATRIX_ROTATION)
         nac_frame_spice = oops.frame.SpiceFrame('CASSINI_ISS_NAC',
                                             frame_id='CASSINI_ISS_NAC_SPICE')
         wac_frame_spice = oops.frame.SpiceFrame('CASSINI_ISS_WAC',
@@ -489,8 +489,12 @@ class ISS(object):
         # 180 degrees about the boresight (CMATRIX_ROTATION) into the oops-frame
         # convention. The *_SPICE SpiceFrames above stay registered as the
         # spice-convention pointing (exactly what cspyce.pxform returns).
-        # override=True so a rebuild after ISS.reset() refreshes them to the
-        # current pointing.
+        # override=True replaces CASSINI_ISS_NAC/_WAC's primary registration on
+        # each rebuild. Note that neither ISS.reset() nor Cassini.reset() clears
+        # the frame registry, so the *_SPICE SpiceFrames above (registered
+        # without override) leave a stale primary definition after a rebuild;
+        # that's harmless here since nac_frame_spice/wac_frame_spice are used
+        # directly as object references below, not looked up by ID.
         nac_frame = oops.frame.Cmatrix(CMATRIX_ROTATION, nac_frame_spice,
                                        frame_id='CASSINI_ISS_NAC', override=True)
 
