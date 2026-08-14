@@ -18,8 +18,7 @@ from filecache import FCPath
 ################################################################################
 # Standard class methods
 ################################################################################
-
-def from_file(filespec, astrometry=False, action='error', parameters={}):
+def from_file(filespec, astrometry=False, action='error', method='strict', parameters=None):
     """A general, static method to return a Snapshot object based on a given
     Voyager ISS image file or its label.
 
@@ -29,15 +28,19 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
         action          What to do for a missing C kernel entry, via the Python
                         warnings interface: 'error', 'ignore', 'always',
                         'default', 'module', 'once'.
+        parameters      Dictionary of VGR-ISS-specific parameters.
+        method          Label reading method to be passed to Pds3Label.
     """
+    if parameters is None:
+        parameters={}
+
     ISS.initialize()    # Define everything the first time through
 
     filespec = FCPath(filespec)
 
     # Load the PDS label if available
     if filespec.name.upper().endswith('.LBL'):
-        local_path = filespec.retrieve()
-        label_dict = pdsparser.PdsLabel.from_file(local_path).as_dict()
+        label_dict = pdsparser.Pds3Label(filespec, method=method).as_dict()
         imagefile = label_dict['^IMAGE'][0]
         imagespec = filespec.with_name(imagefile)
     else:
@@ -48,19 +51,16 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
             labelspec = filespec.with_suffix('.lbl')
 
         try:
-            local_labelspec = labelspec.retrieve()
+            label_dict = pdsparser.Pds3Label(labelspec, method=method).as_dict()
         except FileNotFoundError:
             label_dict = None
-        else:
-            label_dict = pdsparser.PdsLabel.from_file(local_labelspec).as_dict()
 
         imagespec = filespec
 
     # Load the VICAR file
     vicar_dict = label_dict
     if not astrometry:
-        local_imagespec = imagespec.retrieve()
-        vic = vicar.VicarImage.from_file(local_imagespec)
+        vic = vicar.VicarImage.from_file(imagespec)
         vicar_dict = vic.as_dict()
 
     # Get key information, preferably from the PDS label
@@ -83,7 +83,7 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
         target = label_dict['TARGET_NAME']
         filter = label_dict['FILTER_NAME']
         factor = label_dict['IMAGE']['REFLECTANCE_SCALING_FACTOR']
-    else:
+    elif vicar_dict is not None:
         lab02 = vicar_dict['LAB02']
         lab03 = vicar_dict['LAB03']
         stop_time = '19%s-%sT%s' % (lab02[47:49],lab02[50:53],lab02[54:62])
@@ -107,9 +107,11 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
 
         filter = lab03[37:43].rstrip()
         factor = None
+    else:
+        return None
 
     # Interpret the GEOMED parameter
-    if 'GEOMA' in vic['TASK+']:
+    if (not astrometry) and ('GEOMA' in vic['TASK+']):
         assert vic.data_2d.shape == (1000,1000)
         fovs = {
             'NAC': ISS.fovs['NAC_GEOMED'],
@@ -173,8 +175,8 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
     result = oops.obs.Snapshot(('v','u'), tstart, texp, fovs[camera],
                                path = spacecraft,
                                frame = image_frame,
-                               dict = vicar_dict,           # Add the VICAR dict
-                               data = vic.data_2d,          # Add the data array
+                               dict = vicar_dict,                            # Add the VICAR dict
+                               data = (None if astrometry else vic.data_2d), # Add the data array
                                instrument = 'ISS',
                                detector = camera,
                                filter = filter,
@@ -183,7 +185,7 @@ def from_file(filespec, astrometry=False, action='error', parameters={}):
                                filespec = filespec,
                                basename = filespec.name)
 
-    # TODO if factor is not None:
+    # TODO if factor:
     #     result.insert_subfield('extended_calib',
     #                            oops.calib.ExtendedSource('I/F', factor))
 
@@ -211,8 +213,7 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
 
     # Read the index file
     COLUMNS = []                # Return all columns
-    local_path = filespec.retrieve()
-    table = pdstable.PdsTable(local_path, columns=COLUMNS)
+    table = pdstable.PdsTable(filespec, columns=COLUMNS)
     row_dicts = table.dicts_by_row()
 
     # Interpret GEOMED parameter

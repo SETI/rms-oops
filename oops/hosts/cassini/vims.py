@@ -18,7 +18,6 @@ import cspyce
 import oops
 
 from oops.hosts.cassini import Cassini
-from oops.hosts.pds3    import pds3
 
 from filecache import FCPath
 
@@ -79,7 +78,7 @@ VIS_FULL_FOV = oops.fov.FlatFOV(VIS_NORMAL_SCALE, oops.Pair((64,64)))
 # FMT files have fixed values
 ##########################################################################################
 
-CORE_DESCRIPTION_FMT = pds3.fast_dict("""\
+CORE_DESCRIPTION_FMT = pdsparser.Pds3Label("""\
   CORE_ITEM_BYTES                = 2
   CORE_ITEM_TYPE                 = SUN_INTEGER
   CORE_BASE                      = 0.0
@@ -93,9 +92,9 @@ CORE_DESCRIPTION_FMT = pds3.fast_dict("""\
   CORE_MINIMUM_DN                = -122
   CORE_NAME                      = "RAW DATA NUMBER"
   CORE_UNIT                      = DIMENSIONLESS
-""")
+""", method='fast').as_dict()
 
-SUFFIX_DESCRIPTION_FMT = pds3.fast_dict("""\
+SUFFIX_DESCRIPTION_FMT = pdsparser.Pds3Label("""\
   GROUP                          = SAMPLE_SUFFIX
     SUFFIX_NAME                  = BACKGROUND
     SUFFIX_UNIT                  = DIMENSIONLESS
@@ -130,9 +129,9 @@ SUFFIX_DESCRIPTION_FMT = pds3.fast_dict("""\
     SUFFIX_HIGH_INSTR_SAT        = (-32765,-32765,-32765,-32765)
     SUFFIX_HIGH_REPR_SAT         = (-32764,-32764,-32764,-32764)
   END_GROUP                      = BAND_SUFFIX
-""")
+""", method='fast').as_dict()
 
-BAND_BIN_CENTER_FMT = pds3.fast_dict("""\
+BAND_BIN_CENTER_FMT = pdsparser.Pds3Label("""\
   GROUP                          = BAND_BIN
     BAND_BIN_CENTER = (0.35,0.36,0.37,0.37,0.38,0.39,0.40,0.40,0.41,0.42,
       0.42,0.43,0.44,0.45,0.45,0.46,0.47,0.48,0.49,0.49,0.50,0.51,0.51,0.52,
@@ -184,13 +183,13 @@ BAND_BIN_CENTER_FMT = pds3.fast_dict("""\
       327,328,329,330,331,332,333,334,335,336,337,338,339,340,341,342,343,344,
       345,346,347,348,349,350,351)
   END_GROUP                      = BAND_BIN
-""")
+""", method='fast').as_dict()
 
 ##########################################################################################
 # Standard class methods
 ##########################################################################################
 
-def from_file(filespec, data=True):
+def from_file(filespec, data=True, method='strict'):
     """A general, static method to return a pair of Observation objects based on a given
     Cassini VIMS data file or label file.
 
@@ -199,6 +198,7 @@ def from_file(filespec, data=True):
         data            if True, data arrays are included in the returned observation
                         objects. Use a tuple of two booleans to specify whether to include
                         the VIS and IR data independently.
+        method          Label reading method to be passed to Pds3Label.
 
     Return:             (vis, ir)
         vis             the VIS observation, or None if the VIS channel was inactive.
@@ -213,7 +213,7 @@ def from_file(filespec, data=True):
 
     filespec = FCPath(filespec)
 
-    label = pds3.fast_dict(filespec)
+    label = pdsparser.Pds3Label(filespec, method=method).as_dict()
 
     # Insert "data_file" and "header_recs"
     # Convert ISIS .qub info to a standard PDS3 label dictionary

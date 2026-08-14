@@ -6,7 +6,6 @@ import numpy as np
 import julian
 import cspyce
 from polymath import *
-import os.path
 import pdsparser
 import oops
 
@@ -17,27 +16,25 @@ from filecache import FCPath
 ################################################################################
 # Standard class methods
 ################################################################################
-def from_file(filespec, return_all_planets=False, **parameters):
+def from_file(filespec, return_all_planets=False, method='strict', **parameters):
     """A general, static method to return a Snapshot object based on a given
     JIRAM image or spectrum file.
 
     Inputs:
         return_all_planets  Include kernels for all planets not just
                             Jupiter or Saturn.
+        method              Label reading method to be passed to Pds3Label.
     """
     JIRAM.initialize()    # Define everything the first time through; use
                           # defaults unless initialize() is called explicitly.
 
-    # Load the PDS label
     filespec = FCPath(filespec)
-    lbl_filespec = filespec.with_suffix('.LBL')
-    local_filespec = filespec.retrieve()
-    local_lbl_filespec = lbl_filespec.retrieve()
-    recs = pdsparser.PdsLabel.load_file(local_lbl_filespec)
-    label = pdsparser.PdsLabel.from_string(recs).as_dict()
+
+    # Load the PDS label
+    label = pdsparser.Pds3Label(filespec, method=method).as_dict()
 
     # Get common metadata
-    meta = Metadata(label)
+    meta = _Metadata(label)
 
     # Load time-dependent kernels
     Juno.load_cks(meta.tstart, meta.tstart + 3600.)
@@ -49,20 +46,20 @@ def from_file(filespec, return_all_planets=False, **parameters):
     # Image
     if ext.upper() == '.IMG':
         from . import img
-        return img.from_file(local_filespec, label,
-                             return_all_planets=False, **parameters)
+        return img.from_file(filespec, label,
+                             return_all_planets=return_all_planets, **parameters)
 
     # Spectrum
     if ext.upper() == '.DAT':
         from . import spe
-        return spe.from_file(local_filespec, label,
-                             return_all_planets=False, **parameters)
+        return spe.from_file(filespec, label,
+                             return_all_planets=return_all_planets, **parameters)
 
     return None
 
 
 #*******************************************************************************
-class Metadata(object):
+class _Metadata(object):
 
     #===========================================================================
     def __init__(self, label):
@@ -100,37 +97,26 @@ class JIRAM(object):
 
     #===========================================================================
     @staticmethod
-    def initialize(ck='reconstructed', planets=None, asof=None,
-                   spk='reconstructed', gapfill=True,
-                   mst_pck=True, irregulars=True):
-        """Initialize key information about the JIRAM instrument.
+    def initialize(asof=None, **kwargs):
+        """
+        Initialize key information about the JIRAM instrument; fill in key
+        information about the WAC and NAC.
 
         Must be called first. After the first call, later calls to this function
         are ignored.
 
         Input:
-            ck,spk      'predicted', 'reconstructed', or 'none', depending on
-                        which kernels are to be used. Defaults are
-                        'reconstructed'. Use 'none' if the kernels are to be
-                        managed manually.
-            planets     A list of planets to pass to define_solar_system. None
-                        or 0 means all.
             asof        Only use SPICE kernels that existed before this date;
                         None to ignore.
-            gapfill     True to include gapfill CKs. False otherwise.
-            mst_pck     True to include MST PCKs, which update the rotation
-                        models for some of the small moons.
-            irregulars  True to include the irregular satellites;
-                        False otherwise.
+            kwargs:     Arguments for juno.initialize() and Body.define_solar_system()
         """
 
         # Quick exit after first call
-        if JIRAM.initialized: return
+        if JIRAM.initialized:
+            return
 
         # initialize Juno
-        Juno.initialize(ck=ck, planets=planets, asof=asof, spk=spk,
-                        gapfill=gapfill,
-                        mst_pck=mst_pck, irregulars=irregulars)
+        Juno.initialize(asof=asof, **kwargs)
         Juno.load_instruments(asof=asof)
 
         JIRAM.initialized = True
