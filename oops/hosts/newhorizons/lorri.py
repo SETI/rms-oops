@@ -357,8 +357,7 @@ def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
     # Read the index file
     COLUMNS = []                # Return all columns
     TIMES = ['START_TIME']      # Convert this one to TAI
-    local_path = filespec.retrieve()
-    table = pdstable.PdsTable(local_path, columns=COLUMNS, times=TIMES)
+    table = pdstable.PdsTable(filespec, columns=COLUMNS, times=TIMES)
     row_dicts = table.dicts_by_row()
 
     # Create a list of Snapshot objects

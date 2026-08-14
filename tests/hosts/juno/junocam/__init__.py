@@ -1,8 +1,6 @@
 ################################################################################
-# oops/inst/juno/junocam.py
+# oops/inst/juno/junocam/__init__.py
 ################################################################################
-
-import os
 import unittest
 import oops.gold_master as gm
 

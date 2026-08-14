@@ -30,7 +30,7 @@ def limb_altitude(self, event_key, zmin=None, zmax=None, scaled=False):
         radius = body.surface.radii.max()
         if zmin is not None:
             zmin = zmin * radius
-        if zmin is not None:
+        if zmax is not None:
             zmax = zmax * radius
 
     key = ('limb_altitude', event_key, zmin, zmax)
@@ -78,7 +78,7 @@ def _fill_limb_intercepts(self, event_key):
                              'squashed'), event.coord1)
     self.register_backplane(('latitude', event_key, 'squashed'), event.coord2)
     self.register_backplane(('limb_altitude', event_key, None, None),
-                            event.coord3)
+                             event.coord3)
 
 #===============================================================================
 def limb_longitude(self, event_key, reference='iau', direction='west',
@@ -170,6 +170,7 @@ def limb_clock_angle(self, event_key):
                         array.
     """
 
+    # Create the clock angle backplane
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, LIMB_BACKPLANES,
                                                      default='LIMB')
@@ -182,11 +183,6 @@ def limb_clock_angle(self, event_key):
     if key in self.backplanes:
         return self.get_backplane(key)
 
-    # Make sure the limb event is defined
-    default_key = ('limb_clock_angle', event_key)
-    if default_key not in self.backplanes:
-        self._fill_limb_intercepts(event_key)
-
     surface = Backplane.get_surface(event_key[1])
     event = self.get_surface_event(event_key)
 
@@ -194,8 +190,9 @@ def limb_clock_angle(self, event_key):
     event = polar_surface.apply_coords_to_event(event, obs=self.obs_event,
                                                        axes=2,
                                                        derivs=self.ALL_DERIVS)
+    clock_angle = event.coord2
 
-    return self.register_backplane(key, event.coord2)
+    return self.register_backplane(key, clock_angle)
 
 ################################################################################
 
