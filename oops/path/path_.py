@@ -1374,14 +1374,16 @@ class RotatedPath(Path):
 
         Raises:
             KeyError: If `path` or `frame` is an ID string that has not been registered.
-            ValueError: If the `path` and `frame` have incompatible origins or if the
-                object shapes cannot be broadcasted.
+            ValueError: If the object shapes cannot be broadcasted.
         """
 
         path = Path.as_path(path)
+
+        # The Frame's center of rotation need not match the Path's origin. Expressing a
+        # state in rotating axes uses (d/dt)_rot A = (d/dt)_inertial A - omega x A, which
+        # holds for any vector A; only the relative state being rotated is involved, not
+        # the position of the center of rotation.
         rotation = Frame.as_frame(frame).wrt(path._frame)
-        if rotation._origin not in (path._origin, None):
-            raise ValueError(f'RotatedPath path origin mismatch: {path}, {rotation}')
 
         self._path = path
         self._rotation = rotation

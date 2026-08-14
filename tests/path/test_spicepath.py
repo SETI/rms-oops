@@ -38,12 +38,13 @@ class Test_SpicePath(unittest.TestCase):
 
     def runTest(self):
 
-        # These tests should also run with Path._USE_SHORTCUTS and Frame._USE_SHORTCUTS
-        # set False, since the shortcut and the general ancestry walk must agree. They do
-        # not yet: Path.as_path('SSB').wrt('EARTH', 'IAU_MARS') below succeeds through the
-        # SpicePath shortcut and matches SPICE, but without it RotatedPath rejects a frame
-        # whose center of rotation differs from the path's origin. Restore the loop once
-        # that is resolved.
+      # Repeat the tests without and then with shortcuts. The two must agree; a result
+      # that appears only one way indicates a fault in the shortcut or in the general
+      # ancestry walk.
+      for use_shortcuts in (False, True):
+        Path._USE_SHORTCUTS = use_shortcuts
+        Frame._USE_SHORTCUTS = use_shortcuts
+
         Path._reset_caches()
         Frame._reset_caches()
 
