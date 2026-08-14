@@ -392,10 +392,10 @@ class ISS(object):
         ignore = oops.path.SpicePath('VOYAGER 2', path_id='VOYAGER2')
 
         # Construct a SpiceType1Frame for each scan platform
-        _ = oops.frame.SpiceType1Frame('VG1_SCAN_PLATFORM', -31, TOL_TICKS,
+        _ = oops.frame.SpiceType1Frame('VG1_SCAN_PLATFORM', TOL_TICKS,
                                        frame_id='VOYAGER1_SCAN_PLATFORM')
 
-        _ = oops.frame.SpiceType1Frame('VG2_SCAN_PLATFORM', -32, TOL_TICKS,
+        _ = oops.frame.SpiceType1Frame('VG2_SCAN_PLATFORM', TOL_TICKS,
                                        frame_id='VOYAGER2_SCAN_PLATFORM')
 
         # Construct additional rotations for each camera

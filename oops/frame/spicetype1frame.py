@@ -65,7 +65,7 @@ class SpiceType1Frame(SpiceFrame):
             self._frame_id = wrt_j2000._frame_id
         else:
             # If the reference is J2000, register as normal
-            _ = SpiceFrame._FOR_CODE.setdefault(self._spice_frame_name, self)
+            _ = SpiceFrame._FOR_NAME.setdefault(self._spice_frame_name, self)
             self._register(frame_id or self._spice_frame_name.replace(' ', '_'))
 
         self._refresh()
@@ -122,8 +122,8 @@ class SpiceType1Frame(SpiceFrame):
         # Fill in the time tolerance in seconds
         if self._time_tolerance is None:
             time = Scalar.as_scalar(time)
-            ticks = cspyce.sce2c(self._spice_body_code, time.vals)
-            ticks_per_sec = cspyce.sce2c(self._spice_body_code, time.vals + 1.) - ticks
+            ticks = cspyce.sce2c(self._spice_origin_code, time.vals)
+            ticks_per_sec = cspyce.sce2c(self._spice_origin_code, time.vals + 1.) - ticks
             self._time_tolerance = self._tick_tolerance / ticks_per_sec
 
         # A single input time can be handled quickly
@@ -134,7 +134,7 @@ class SpiceType1Frame(SpiceFrame):
             if xform:
                 return xform
 
-            ticks = cspyce.sce2c(self._spice_body_code, time.vals)
+            ticks = cspyce.sce2c(self._spice_origin_code, time.vals)
             (matrix3, true_ticks) = cspyce.ckgp(self._spice_frame_code, ticks,
                                                 self._tick_tolerance,
                                                 self._spice_reference_name)
@@ -152,11 +152,11 @@ class SpiceType1Frame(SpiceFrame):
         time_min = time.vals.min()
         time_max = time.vals.max()
         if (time_max - time_min) < self._time_tolerance:
-            tick = cspyce.sce2c(self._spice_body_code, (time_min + time_max)/2.)
+            tick = cspyce.sce2c(self._spice_origin_code, (time_min + time_max)/2.)
             (matrix3, true_tick) = cspyce.ckgp(self._spice_frame_code, tick,
                                                self._tick_tolerance,
                                                self._spice_reference_name)
-            true_time = cspyce.sct2e(self._spice_body_code, true_tick)
+            true_time = cspyce.sct2e(self._spice_origin_code, true_tick)
 
             self._cached_shape = time.shape
             self._cached_time = true_time
@@ -165,12 +165,12 @@ class SpiceType1Frame(SpiceFrame):
             return self._cached_transform
 
         # Otherwise, process the array...
-        ticks = cspyce.sce2c_vector(self._spice_body_code, time.vals.ravel())
+        ticks = cspyce.sce2c_vector(self._spice_origin_code, time.vals.ravel())
         matrix3, true_ticks = cspyce.ckgp_vector(self._spice_frame_code, ticks,
                                                  self._tick_tolerance,
                                                  self._spice_reference_name)
         matrix3 = Matrix3.as_matrix3(matrix3).reshape(time.shape)
-        true_times = cspyce.sct2e_vector(self._spice_body_code, true_ticks)
+        true_times = cspyce.sct2e_vector(self._spice_origin_code, true_ticks)
 
         self._cached_shape = time.shape
         self._cached_time = true_times
@@ -206,8 +206,8 @@ class SpiceType1Frame(SpiceFrame):
         # Fill in the time tolerance in seconds
         if self._time_tolerance is None:
             time = Scalar.as_scalar(time)
-            ticks = cspyce.sce2c(self._spice_body_code, time.vals)
-            ticks_per_sec = cspyce.sce2c(self._spice_body_code, time.vals + 1.) - ticks
+            ticks = cspyce.sce2c(self._spice_origin_code, time.vals)
+            ticks_per_sec = cspyce.sce2c(self._spice_origin_code, time.vals + 1.) - ticks
             self._time_tolerance = self._tick_tolerance / ticks_per_sec
 
         # A single input time can be handled quickly
@@ -218,7 +218,7 @@ class SpiceType1Frame(SpiceFrame):
             if xform:
                 return xform
 
-            ticks = cspyce.sce2c(self._spice_body_code, time.vals)
+            ticks = cspyce.sce2c(self._spice_origin_code, time.vals)
             (matrix3, true_ticks) = cspyce.ckgp(self._spice_frame_code, ticks,
                                                 self._tick_tolerance,
                                                 self._spice_reference_name)
@@ -236,11 +236,11 @@ class SpiceType1Frame(SpiceFrame):
         time_min = time.vals.min()
         time_max = time.vals.max()
         if (time_max - time_min) < self._time_tolerance:
-            tick = cspyce.sce2c(self._spice_body_code, (time_min + time_max)/2.)
+            tick = cspyce.sce2c(self._spice_origin_code, (time_min + time_max)/2.)
             (matrix3, true_tick) = cspyce.ckgp(self._spice_frame_code, tick,
                                                self._tick_tolerance,
                                                self._spice_reference_name)
-            true_time = cspyce.sct2e(self._spice_body_code, true_tick)
+            true_time = cspyce.sct2e(self._spice_origin_code, true_tick)
 
             self._cached_shape = time.shape
             self._cached_time = true_time
@@ -249,12 +249,12 @@ class SpiceType1Frame(SpiceFrame):
             return self._cached_transform
 
         # Otherwise, process the array...
-        ticks = cspyce.sce2c_vector(self._spice_body_code, time.vals.ravel())
+        ticks = cspyce.sce2c_vector(self._spice_origin_code, time.vals.ravel())
         matrix3, true_ticks = cspyce.ckgp_vector(self._spice_frame_code, ticks,
                                                  self._tick_tolerance,
                                                  self._spice_reference_name)
         matrix3 = Matrix3.as_matrix3(matrix3).reshape(time.shape)
-        true_times = cspyce.sct2e_vector(self._spice_body_code, true_ticks)
+        true_times = cspyce.sct2e_vector(self._spice_origin_code, true_ticks)
 
         self._cached_shape = time.shape
         self._cached_time = true_times

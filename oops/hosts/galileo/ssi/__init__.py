@@ -370,7 +370,7 @@ class SSI(object):
         # Construct the SpiceFrame
         # SSI images are spaced as closely as 1 unit in the file name, which
         # corresponds to 80 clock ticks.  Therefore, we use a tolerance of +/-40
-        _ = oops.frame.SpiceType1Frame("GLL_SCAN_PLATFORM", -77, 40)
+        _ = oops.frame.SpiceType1Frame("GLL_SCAN_PLATFORM", 40)
 
         # Load kernels
         Galileo.load_kernels()

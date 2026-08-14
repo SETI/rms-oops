@@ -105,8 +105,11 @@ class SpiceFrame(Frame):
             raise ValueError(f'{type(self).__name__} reference must be a SpiceFrame or '
                              'J2000')
 
-        # Determine the origin Path, constructing it if necessary
+        # Determine the origin Path, constructing it if necessary. The origin code is
+        # retained because SpiceType1Frame needs it to convert between ET and the host's
+        # spacecraft clock; for a spacecraft-mounted frame it is the spacecraft ID.
         spice_origin_code = cspyce.frinfo(self._spice_frame_name)[0]
+        self._spice_origin_code = spice_origin_code
         if spice_origin_code == 0:  # if the origin is the SSB, this Frame is inertial
             self._origin = None
             self._is_inertial = True
