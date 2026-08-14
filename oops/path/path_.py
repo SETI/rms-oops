@@ -91,6 +91,13 @@ class Path(object):
 
     _USE_QUICKPATHS = False     # Override to True if the class uses QuickPaths
 
+    # Set False to disable the class-specific shortcuts returned by _get_shortcut(), which
+    # is useful when debugging: the shortcut and the general ancestry walk must agree, so
+    # a discrepancy that appears only with shortcuts enabled localizes the fault. This is
+    # read from Path itself rather than from the instance, so that a subclass cannot
+    # shadow it and leave part of the hierarchy still taking shortcuts.
+    _USE_SHORTCUTS = True
+
     ######################################################################################
     # Serialization support
     ######################################################################################
@@ -901,7 +908,7 @@ class Path(object):
             return Path._PATH_CACHE[key]
 
         # See if there's a shortcut
-        if use_shortcuts:
+        if use_shortcuts and Path._USE_SHORTCUTS:
             shortcut = self._get_shortcut(origin, frame)
             if shortcut:
                 Path._PATH_CACHE[key] = shortcut

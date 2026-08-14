@@ -20,6 +20,8 @@ class Test_SpicePath(unittest.TestCase):
     def setUp(self):
         self.saved_use_quickpaths = Path._USE_QUICKPATHS
         self.saved_use_quickframes = Frame._USE_QUICKFRAMES
+        self.saved_path_shortcuts = Path._USE_SHORTCUTS
+        self.saved_frame_shortcuts = Frame._USE_SHORTCUTS
         Path._USE_QUICKPATHS = False
         Frame._USE_QUICKFRAMES = False
         paths = TEST_SPICE_PREFIX.retrieve(["pck00010.tpc",
@@ -31,12 +33,17 @@ class Test_SpicePath(unittest.TestCase):
         spice.initialize()
         Path._USE_QUICKPATHS = self.saved_use_quickpaths
         Frame._USE_QUICKFRAMES = self.saved_use_quickframes
+        Path._USE_SHORTCUTS = self.saved_path_shortcuts
+        Frame._USE_SHORTCUTS = self.saved_frame_shortcuts
 
     def runTest(self):
 
-        # Note: this used to run twice, toggling SpicePath.USE_SPICEPATH_SHORTCUTS. That
-        # switch no longer exists; shortcuts are selected by the use_shortcuts option of
-        # Path._wrt(), which the public wrt() always enables.
+        # These tests should also run with Path._USE_SHORTCUTS and Frame._USE_SHORTCUTS
+        # set False, since the shortcut and the general ancestry walk must agree. They do
+        # not yet: Path.as_path('SSB').wrt('EARTH', 'IAU_MARS') below succeeds through the
+        # SpicePath shortcut and matches SPICE, but without it RotatedPath rejects a frame
+        # whose center of rotation differs from the path's origin. Restore the loop once
+        # that is resolved.
         Path._reset_caches()
         Frame._reset_caches()
 

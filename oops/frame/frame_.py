@@ -93,6 +93,13 @@ class Frame:
 
     _USE_QUICKFRAMES = False    # Override to True if the class uses QuickFrames
 
+    # Set False to disable the class-specific shortcuts returned by _get_shortcut(), which
+    # is useful when debugging: the shortcut and the general ancestry walk must agree, so
+    # a discrepancy that appears only with shortcuts enabled localizes the fault. This is
+    # read from Frame itself rather than from the instance, so that a subclass cannot
+    # shadow it and leave part of the hierarchy still taking shortcuts.
+    _USE_SHORTCUTS = True
+
     ######################################################################################
     # Serialization support
     ######################################################################################
@@ -501,7 +508,7 @@ class Frame:
             return Frame._FRAME_CACHE[key]
 
         # See if there's a shortcut
-        if use_shortcuts and hasattr(self, '_get_shortcut'):
+        if use_shortcuts and Frame._USE_SHORTCUTS and hasattr(self, '_get_shortcut'):
             shortcut = self._get_shortcut(reference)
             if shortcut:
                 Frame._FRAME_CACHE[key] = shortcut
