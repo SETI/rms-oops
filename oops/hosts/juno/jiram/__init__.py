@@ -5,7 +5,6 @@
 import numpy as np
 import julian
 import cspyce
-from polymath import *
 import pdsparser
 import oops
 
