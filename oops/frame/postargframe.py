@@ -65,6 +65,14 @@ class PosTargFrame(Frame):
     def _wayframe_key(self):
         return (self._xpos, self._ypos, self._reference)
 
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        return (f'{name}({self._xpos}, {self._ypos},\n'
+                f'{blanks}{self._reference.show(level-1, skip)}')
+
     ######################################################################################
     # Serialization support
     ######################################################################################

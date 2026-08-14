@@ -23,7 +23,7 @@ class Test_Body(unittest.TestCase):
         self.assertEqual(Body.lookup('DAPHNIS').barycenter.name,
                          'SATURN')
         self.assertEqual(Body.lookup('PHOEBE').barycenter.name,
-                         'SATURN BARYCENTER')
+                         'SATURN_BARYCENTER')
 
         mars = Body.lookup('MARS')
         moons = mars.select_children(include_all=['SATELLITE'])

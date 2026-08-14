@@ -220,6 +220,15 @@ class Frame:
     def __repr__(self):
         return self.__str__()
 
+    def show(self, level, indent=0):
+        if level == 0 and self._frame_id and self._reference is Frame.J2000:
+            return '"' + self._frame_id + '"'
+
+        if level <= 1:
+            return str(self)
+
+        return self._show(level, indent)
+
     @property
     def wayframe(self):
         """The canonical version of this Frame, used as a global key for indexing."""
@@ -505,7 +514,7 @@ class Frame:
 
         # Check for a null transform
         if wayframe == reference:
-            return NullFrame(frame)
+            return NullFrame(self)
 
         # Connect through this frame's reference, then link
         parent = self._reference._wrt(reference, use_shortcuts=use_shortcuts)
@@ -678,6 +687,9 @@ class J2000Frame(NullFrame):
     def __str__(self):
         return 'J2000'
 
+    def _show(self, level, indent=0):
+        return '"J2000"'
+
     @property
     def string_id(self):
         return 'J2000'
@@ -720,7 +732,11 @@ class LinkedFrame(Frame):
         parent = Frame.as_frame(parent)
         if frame._reference != parent._wayframe:
             raise ValueError(f'LinkedFrame mismatch: {frame}, {parent._wayframe}')
-        if parent._origin not in (frame._origin, Frame.J2000, None):
+        # A frame without an origin is not rotating, so it inherits the origin of the
+        # other frame; see the assignment of _origin below. Only two conflicting,
+        # non-null origins are a genuine mismatch.
+        if (frame._origin is not None and parent._origin is not None
+                and frame._origin != parent._origin):
             raise ValueError(f'LinkedFrame origin mismatch: {frame._origin}, '
                              f'{parent._origin}')
 

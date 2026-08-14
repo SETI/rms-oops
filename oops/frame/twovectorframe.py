@@ -61,6 +61,15 @@ class TwoVectorFrame(Frame):
     def _wayframe_key(self):
         return (self._reference, self._vector1, self._axis1, self._vector2, self._axis2)
 
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        return (f'{name}({self._reference.show(level-1, skip)},\n',
+                f'{blanks}{self._vector1.mvals}, {self._axis1},\n',
+                f'{blanks}{self._vector2.mvals}, {self._axis2})')
+
     ######################################################################################
     # Serialization support
     ######################################################################################

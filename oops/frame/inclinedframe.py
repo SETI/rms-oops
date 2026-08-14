@@ -21,7 +21,8 @@ class InclinedFrame(Frame):
 
     _WAYFRAMES = {}
 
-    def __init__(self, inc, node, rate, epoch, reference, *, despin=True, frame_id=None):
+    def __init__(self, inc, node, rate, epoch, *, despin=True, reference=None,
+                 frame_id=None):
         """Constructor for a InclinedFrame.
 
         Parameters:
@@ -76,6 +77,23 @@ class InclinedFrame(Frame):
     def _wayframe_key(self):
         return (self._inc, self._node, self._rate, self._epoch, self._reference,
                 self._despin)
+
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        if self._reference == Frame.J2000:
+            ref_str = '"J2000"'
+        else:
+            ref_str = self._reference.show(level-1, skip)
+
+        return (f'{name}(inc = {self._inc.mvals},\n'
+                f'{blanks}node = {self._node.mvals},\n'
+                f'{blanks}rate = {self._rate.mvals},\n'
+                f'{blanks}epoch = {self._epoch.mvals},\n'
+                f'{blanks}reference = {ref_str}\n'
+                f'{blanks}despin = {self._despin})')
 
     ######################################################################################
     # Serialization support

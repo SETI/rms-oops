@@ -84,11 +84,11 @@ class Test_Path(unittest.TestCase):
 
         # QuickPath tests
         moon = SpicePath('MOON', 'EARTH')
-        quick = QuickPath(moon, (-5.,5.), QUICK.dictionary)
+        quick = QuickPath(moon, -5., 5., QUICK.dictionary)
 
         # Perfect precision is impossible
         try:
-            quick = QuickPath(moon, np.arange(0.,100.,0.0001),
+            quick = QuickPath(moon, 0., 100.,
                               dict(QUICK.dictionary, **{'path_self_check':0.}))
             self.assertTrue(False, 'No ValueError raised for PRECISION = 0.')
         except ValueError:
@@ -109,21 +109,21 @@ class Test_Path(unittest.TestCase):
         ssb = Path.as_waypoint('SSB')
 
         slider1 = LinearPath(([3,0,0],[0,3,0]), 0., ssb)
-        self.assertTrue(slider1.path_id.startswith('TEMPORARY'))
+        self.assertFalse(slider1.is_registered)
 
         event = slider1.event_at_time(1.)
         self.assertEqual(event.pos, (3,3,0))
         self.assertEqual(event.vel, (0,3,0))
 
         slider2 = LinearPath(([-2,0,0],[0,0,-2]), 0., slider1)
-        self.assertTrue(slider2.path_id.startswith('TEMPORARY'))
+        self.assertFalse(slider2.is_registered)
 
         event = slider2.event_at_time(1.)
         self.assertEqual(event.pos, (-2,0,-2))
         self.assertEqual(event.vel, (0,0,-2))
 
         slider3 = LinearPath(([-1,0,0],[0,-3,2]), 0., slider2)
-        self.assertTrue(slider3.path_id.startswith('TEMPORARY'))
+        self.assertFalse(slider3.is_registered)
 
         event = slider3.event_at_time(1.)
         self.assertEqual(event.pos, (-1,-3,2))

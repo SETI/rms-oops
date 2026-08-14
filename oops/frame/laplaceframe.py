@@ -72,6 +72,14 @@ class LaplaceFrame(Frame):
     def _wayframe_key(self):
         return (self._orbit, self._tilt)
 
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        return (f'{name}(orbit = {self._orbit.show(level-1, skip)},\n'
+                f'{blanks}tilt = {self._tilt.mvals})')
+
     ######################################################################################
     # Serialization support
     ######################################################################################

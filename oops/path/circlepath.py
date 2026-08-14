@@ -58,6 +58,23 @@ class CirclePath(Path):
         return (self._radius, self._lon, self._rate, self._epoch, self._origin,
                 self._frame)
 
+
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        parts = [f'{name}(radius = {self._radius.mvals}',
+                 f'{blanks}lon = {self._lon.mvals}',
+                 f'{blanks}rate = {self._rate.mvals}',
+                 f'{blanks}epoch = {self._epoch.mvals}',
+                 f'{blanks}origin = {self._origin.show(level-1, skip+9)})']
+
+        if self._frame != self._origin._frame:
+            parts.append(f'{blanks}(frame = {self._frame.show(level-1, skip+8)})')
+
+        return ',\n'.join(parts) + ')'
+
     ######################################################################################
     # Serialization support
     ######################################################################################

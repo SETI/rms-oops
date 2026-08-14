@@ -21,7 +21,7 @@ DEBUG = False       # True to assert that the data array must have null
 # Standard class methods
 ##########################################################################################
 
-def from_file(filespec, data=True, enclose=False, **parameters):
+def from_file(filespec, data=True, enclose=False, method='strict', **parameters):
     """A general, static method to return one or more Observation subclass
     objects based on a label for a given Cassini UVIS file.
 
@@ -34,13 +34,14 @@ def from_file(filespec, data=True, enclose=False, **parameters):
                         enclosing limits in line and band, and the binning is assumed to
                         be 1. If False and multiple windows are used, the function returns
                         a tuple of observations rather than a single observation.
+        method:         Label reading method to be passed to Pds3Label.
     """
 
     UVIS.initialize()   # Define everything the first time through; use defaults unless
                         # initialize() is called explicitly.
 
     # Get the label dictionary and data array dimensions
-    label = pdsparser.Pds3Label(filespec, method='fast').as_dict()
+    label = pdsparser.Pds3Label(filespec, method=method).as_dict()
 
     # Load any needed SPICE kernels
     tstart = julian.tdb_from_tai(julian.tai_from_iso(label['START_TIME']))

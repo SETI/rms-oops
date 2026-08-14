@@ -17,8 +17,8 @@ class Test_Transform(unittest.TestCase):
         np.random.seed(5819)
 
         # Fake out the FRAME REGISTRY with something that has .shape = ()
-        Frame._FRAME_REGISTRY["TEST"] = Wayframe("J2000")
-        Frame._FRAME_REGISTRY["SPIN"] = Wayframe("J2000")
+        Frame._FRAME_REGISTRY["TEST"] = Frame.as_wayframe("J2000")
+        Frame._FRAME_REGISTRY["SPIN"] = Frame.as_wayframe("J2000")
 
         tr = Transform(Matrix3(np.array([[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]])),
                        Vector3(np.array([0.,0.,0.])), "J2000", "J2000")

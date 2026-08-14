@@ -10,15 +10,16 @@ import oops.spice_support as spice
 import oops.constants as constants
 
 from polymath   import Vector3
-from oops.body  import Body
 from oops.frame import Frame, SpiceFrame
-from oops.path  import Path, SpicePath
+from oops.path  import NullPath, Path, SpicePath
 from oops.unittester_support import TEST_SPICE_PREFIX
 
 
 class Test_SpicePath(unittest.TestCase):
 
     def setUp(self):
+        self.saved_use_quickpaths = Path._USE_QUICKPATHS
+        self.saved_use_quickframes = Frame._USE_QUICKFRAMES
         Path._USE_QUICKPATHS = False
         Frame._USE_QUICKFRAMES = False
         paths = TEST_SPICE_PREFIX.retrieve(["pck00010.tpc",
@@ -28,14 +29,14 @@ class Test_SpicePath(unittest.TestCase):
 
     def tearDown(self):
         spice.initialize()
-        Path._USE_QUICKPATHS = True
-        Frame._USE_QUICKFRAMES = True
+        Path._USE_QUICKPATHS = self.saved_use_quickpaths
+        Frame._USE_QUICKFRAMES = self.saved_use_quickframes
 
     def runTest(self):
 
-      # Repeat the tests without and then with shortcuts
-      for SpicePath.USE_SPICEPATH_SHORTCUTS in (False, True):
-
+        # Note: this used to run twice, toggling SpicePath.USE_SPICEPATH_SHORTCUTS. That
+        # switch no longer exists; shortcuts are selected by the use_shortcuts option of
+        # Path._wrt(), which the public wrt() always enables.
         Path._reset_caches()
         Frame._reset_caches()
 
@@ -117,8 +118,6 @@ class Test_SpicePath(unittest.TestCase):
 
         self.assertEqual(saturn.path_id, 'SATURN_BARYCENTER')
         self.assertEqual(saturn.waypoint, saturn)
-        print('saturn', id(saturn), saturn.__dict__)
-        print('waypoint', id(saturn_wrt_moon.waypoint), saturn_wrt_moon.waypoint.__dict__)
         self.assertEqual(saturn_wrt_moon.waypoint, saturn)
         self.assertEqual(saturn_wrt_moon.waypoint.path_id, 'SATURN_BARYCENTER')
         self.assertEqual(saturn_wrt_moon.path_id, 'SATURN_BARYCENTER')
@@ -142,7 +141,7 @@ class Test_SpicePath(unittest.TestCase):
 
         _ = SpicePath("MARS", "SSB")
         _ = SpiceFrame("IAU_MARS", "J2000")
-        earth_wrt_iau_mars = SpicePath("EARTH", "SSB", "IAU_MARS")
+        _ = SpicePath("EARTH", "SSB", "IAU_MARS")
 
         path = Path.as_path("EARTH").wrt("SSB", "J2000")
         event = path.event_at_time(times)
@@ -283,7 +282,8 @@ class Test_SpicePath(unittest.TestCase):
                                           - saturn_rel.vel[i].vals) < 1.e-3))
 
         # Check light travel time corrections, Saturn wrt Earth, Earth-centered
-        earth_event = Path.as_path("EARTH").event_at_time(times)
+        # NullPath provides the Earth-relative event that Waypoint used to provide
+        earth_event = NullPath("EARTH").event_at_time(times)
         self.assertEqual(earth_event.pos, (0.,0.,0.))
         self.assertEqual(earth_event.vel, (0.,0.,0.))
 
@@ -451,9 +451,10 @@ class Test_SpicePath(unittest.TestCase):
         _ = SpiceFrame("IAU_EARTH", "B1950")
 
         mars = SpicePath.get("MARS", "SSB")
-        earth = SpicePath.get("EARTH", "MARS", "IAU_MARS")
+        _ = SpicePath.get("EARTH", "MARS", "IAU_MARS")
 
-        earth_event = earth.event_at_time(times)
+        # An Earth-centered event expressed in B1950, as AliasPath used to provide
+        earth_event = NullPath("EARTH", frame="B1950").event_at_time(times)
         (mars_event,earth_event) = mars.photon_to_event(earth_event)
         mars_rel = mars_event.sub(earth_event)
 

@@ -33,6 +33,7 @@ class SynchronousFrame(Frame):
         """
 
         self._orbit_path = Frame._Path.as_path(orbit_path)
+        self._input_planet_path = planet_path
         self._planet_path = ((planet_path and Frame._Path.as_waypoint(planet_path))
                              or self._orbit_path._origin)
         self._orbit_wrt_planet = self._orbit_path.wrt(self._planet_path)
@@ -52,6 +53,16 @@ class SynchronousFrame(Frame):
 
     def _wayframe_key(self):
         return (self._orbit_path, self._planet_path)
+
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+
+        if self._input_planet_path is None:
+            return f'{name}({self._orbit_path.show(level-1, skip)})'
+
+        return (f'{name}({self._orbit_path.show(level-1, skip)},\n'
+                f'{name}({self._planet_path.show(level-1, skip)})')
 
     ######################################################################################
     # Serialization support

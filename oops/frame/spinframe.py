@@ -69,6 +69,17 @@ class SpinFrame(Frame):
     def _wayframe_key(self):
         return (self._offset, self._rate, self._epoch, self._axis2, self._reference)
 
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        return (f'{name}(offset = {self._offset.mvals},\n'
+                f'{blanks}rate = {self._rate.mvals},\n'
+                f'{blanks}epoch = {self._epoch.mvals},\n'
+                f'{blanks}axis = {self._axis2},\n'
+                f'{blanks}reference = {self._reference.show(level-1, skip)})')
+
     ######################################################################################
     # Serialization support
     ######################################################################################

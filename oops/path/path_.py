@@ -150,20 +150,30 @@ class Path(object):
         path_id = self.string_id
         frame_id = self._frame.string_id
 
-        if self._origin == Path.SSB:
-            if self._frame == Frame.J2000:
+        if self._origin is Path.SSB:
+            if self._frame is Frame.J2000:
                 return (f'{type(self).__name__}({path_id})')
             else:
                 return (f'{type(self).__name__}({path_id}/{frame_id})')
         else:
             origin_id = self._origin.string_id
-            if self._frame == Frame.J2000:
+            if self._frame is Frame.J2000:
                 return (f'{type(self).__name__}({path_id}-{origin_id})')
             else:
                 return (f'{type(self).__name__}([{path_id}-{origin_id}]/{frame_id})')
 
     def __repr__(self):
         return self.__str__()
+
+    def show(self, level, indent=0):
+        if (level == 0 and self._path_id and self._origin is Path.SSB
+                and self._frame is Frame.J2000):
+            return '"' + self._path_id + '"'
+
+        if level <= 1:
+            return str(self)
+
+        return self._show(level, indent)
 
     @property
     def waypoint(self):
@@ -303,6 +313,7 @@ class Path(object):
             self._wrt_ssb = Path._PATH_CACHE[self._waypoint].wrt_ssb
         else:
             Path._PATH_CACHE[self._waypoint] = self
+            Path._PATH_CACHE[self._waypoint, self._origin] = self
             Path._PATH_CACHE[self._waypoint, self._origin, self._frame] = self
 
             # Follow this path's ancestry and register a LinkedPath at each step
@@ -896,6 +907,16 @@ class Path(object):
                 Path._PATH_CACHE[key] = shortcut
                 return shortcut
 
+        # Check for a reversal. Without this, linking a Path to one of its own descendants
+        # would recurse forever, because the loop below only ever walks this Path's
+        # ancestry and the ancestry of a root such as the SSB never advances.
+        reversed_key = (origin, waypoint)
+        if reversed_key in Path._PATH_CACHE:
+            new_path = ReversedPath(Path._PATH_CACHE[reversed_key])
+            if new_path._frame == frame:
+                return new_path
+            return RotatedPath(new_path, frame)
+
         # If the Path and origin match, just rotate
         if waypoint == origin:
             if frame == origin._frame:
@@ -1018,8 +1039,8 @@ class NullPath(Path):
         self._primary  = self
 
         key = (self._waypoint, self._waypoint, self._frame)
-        if key not in Frame._FRAME_CACHE:
-            Frame._FRAME_CACHE[key] = self
+        if key not in Path._PATH_CACHE:
+            Path._PATH_CACHE[key] = self
 
     def __str__(self):
         return f'NullPath({self.string_id})'
@@ -1095,6 +1116,9 @@ class SSBPath(NullPath):
     def __str__(self):
         return 'SSB'
 
+    def _show(self, level, indent=0):
+        return '"SSB"'
+
     @property
     def string_id(self):
         return 'SSB'
@@ -1164,8 +1188,8 @@ class LinkedPath(Path):
 
         for key in [(self._waypoint, self._origin),
                     (self._waypoint, self._origin, self._frame)]:
-            if key not in Frame._FRAME_CACHE:
-                Frame._FRAME_CACHE[key] = self
+            if key not in Path._PATH_CACHE:
+                Path._PATH_CACHE[key] = self
 
     def __getstate__(self):
         return (self._path, self._parent)
@@ -1222,6 +1246,10 @@ class RelativePath(Path):
                              f'{origin._origin}')
 
         self._path = path
+        # Retain the origin Path itself, not just its waypoint. The waypoint is the
+        # canonical definition of the same body but is defined relative to a different
+        # origin, so it cannot perform the subtraction in event_at_time().
+        self._new_origin = origin
         self._origin = origin._waypoint
         if path._frame == origin._frame:
             self._rotation = None
@@ -1229,7 +1257,10 @@ class RelativePath(Path):
             self._rotation = origin._frame.wrt(path._frame)
 
         self._waypoint = path._waypoint
-        self._frame    = path._frame
+        # This Path uses the frame of the origin Path, as stated above. event_at_time()
+        # rotates into that frame before the subtraction, so this is the frame of every
+        # Event it returns.
+        self._frame    = origin._frame
         self._shape    = Qube.broadcasted_shape(path._shape, origin._shape)
         self._path_id  = path._path_id
         self._primary  = self
@@ -1237,11 +1268,11 @@ class RelativePath(Path):
 
         for key in [(self._waypoint, self._origin),
                     (self._waypoint, self._origin, self._frame)]:
-            if key not in Frame._FRAME_CACHE:
-                Frame._FRAME_CACHE[key] = self
+            if key not in Path._PATH_CACHE:
+                Path._PATH_CACHE[key] = self
 
     def __getstate__(self):
-        return (self._path, self._origin)
+        return (self._path, self._new_origin)
 
     def __setstate__(self, state):
         self.__init__(*state)
@@ -1265,7 +1296,7 @@ class RelativePath(Path):
         if self._rotation:
             event = event.rotate_by_frame(self._rotation, quick=quick)
 
-        return self._origin.subtract_from_event(event, quick=quick)
+        return self._new_origin.subtract_from_event(event, quick=quick)
 
 
 class ReversedPath(Path):
@@ -1296,8 +1327,8 @@ class ReversedPath(Path):
         self._wrt_ssb  = None
 
         key = (self._waypoint, self._origin, self._frame)
-        if key not in Frame._FRAME_CACHE:
-            Frame._FRAME_CACHE[key] = self
+        if key not in Path._PATH_CACHE:
+            Path._PATH_CACHE[key] = self
 
     def __getstate__(self):
         return (self._path,)
@@ -1358,8 +1389,8 @@ class RotatedPath(Path):
 
         for key in [(self._waypoint, self._origin),
                     (self._waypoint, self._origin, self._frame)]:
-            if key not in Frame._FRAME_CACHE:
-                Frame._FRAME_CACHE[key] = self
+            if key not in Path._PATH_CACHE:
+                Path._PATH_CACHE[key] = self
 
     def __getstate__(self):
         return (self._path, self._rotation)

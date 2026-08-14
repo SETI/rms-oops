@@ -189,7 +189,7 @@ BAND_BIN_CENTER_FMT = pdsparser.Pds3Label("""\
 # Standard class methods
 ##########################################################################################
 
-def from_file(filespec, data=True):
+def from_file(filespec, data=True, method='strict'):
     """A general, static method to return a pair of Observation objects based on a given
     Cassini VIMS data file or label file.
 
@@ -198,6 +198,7 @@ def from_file(filespec, data=True):
         data            if True, data arrays are included in the returned observation
                         objects. Use a tuple of two booleans to specify whether to include
                         the VIS and IR data independently.
+        method          Label reading method to be passed to Pds3Label.
 
     Return:             (vis, ir)
         vis             the VIS observation, or None if the VIS channel was inactive.
@@ -212,7 +213,7 @@ def from_file(filespec, data=True):
 
     filespec = FCPath(filespec)
 
-    label = pdsparser.Pds3Label(filespec, method='fast').as_dict()
+    label = pdsparser.Pds3Label(filespec, method=method).as_dict()
 
     # Insert "data_file" and "header_recs"
     # Convert ISIS .qub info to a standard PDS3 label dictionary

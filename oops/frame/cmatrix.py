@@ -56,6 +56,18 @@ class Cmatrix(Frame):
     def _wayframe_key(self):
         return (self._cmatrix, self._reference)
 
+    def _show(self, level, indent=0):
+        skip = indent + 8
+        blanks = skip * ' '
+
+        if self._reference == Frame.J2000:
+            ref_str = '"J2000"'
+        else:
+            ref_str = self._reference.show(level-1, skip)
+
+        return (f'Cmatrix({self._cmatrix.mvals},\n'
+                f'{blanks}{ref_str})')
+
     ######################################################################################
     # Serialization support
     ######################################################################################

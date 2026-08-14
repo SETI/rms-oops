@@ -84,7 +84,7 @@ class Test_Cache(unittest.TestCase):
         key = (1, Vector([[1,2],[3,4]]), path, frame)
         self.assertEqual(clean_key(key), (1, ('Vector', (2,), (1, 2, 3, 4), False),
                                           path.waypoint, frame.wayframe))
-        test = {key}                # TypeError if unhashable
+        test = {clean_key(key)}     # TypeError if unhashable
 
     def test_Cache(self):
 

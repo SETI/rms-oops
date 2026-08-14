@@ -58,6 +58,20 @@ class LinearPath(Path):
     def _waypoint_key(self):
         return (self._pos, self._vel, self._epoch, self._origin, self._frame)
 
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        parts = [f'{name}(pos = ({self._pos.mvals}',
+                 f'{blanks}        {self._vel.mvals})',
+                 f'{blanks}epoch = {self._epoch}',
+                 f'{blanks}origin = {self._origin.show(level-1, skip+9)}']
+        if self._frame != self._origin._frame:
+            parts.append(f'{blanks}frame = {self._frame.show(level-1, skip+8)}')
+
+        return ',\n'.join(parts) + ')'
+
     ######################################################################################
     # Serialization support
     ######################################################################################

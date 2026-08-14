@@ -21,9 +21,9 @@ class FixedPath(Path):
             pos (Vector3 or array-like): The position vectors within the frame and
                 relative to the specified origin.
             origin (Path or str): The origin Path or ID of the origin.
-            frame (Frame or str): The Frame or ID of the Frame in which the fixed
-                coordinates are defined and in whicch they are returned; None to use the
-                frame of the `origin` path.
+            frame (Frame or str, optional): The Frame or ID of the Frame in which the
+                fixed coordinates are defined and in which they are returned; None to use
+                the frame of the `origin` path.
             path_id (str, optional): The ID under which to register this Path; None to
                 leave this Path unregistered.
 

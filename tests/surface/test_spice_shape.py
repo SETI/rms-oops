@@ -20,6 +20,10 @@ class Test_spice_shape(unittest.TestCase):
 
     def setUp(self):
         spice.initialize()
+        # A custom path_id only takes effect when a new SpicePath is constructed, so the
+        # registry must be clear of any VENUS path left behind by an earlier test
+        Path._reset_caches()
+        Frame._reset_caches()
         paths = TEST_SPICE_PREFIX.retrieve(["pck00010.tpc",
                                             "de421.bsp"])
         for path in paths:

@@ -84,12 +84,30 @@ class SpicePath(Path):
             _ = SpicePath._FOR_CODE.setdefault(self._spice_path_code, self)
             self._register(path_id or self._spice_path_name.replace(' ', '_'))
 
+        # Also make this Path findable under the name the caller used
+        if isinstance(spice_path, str):
+            SpicePath._register_alias(spice_path, self)
+
     def _refresh(self):
         if hasattr(self, '_quickpaths'):
             self._quickpaths.clear()
 
     def _waypoint_key(self):
         return self._spice_path_code
+
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        if self._origin == Path.SSB and self._frame == Frame.J2000:
+            return f'{type(self).__name__}("{self._spice_path_name}")'
+
+        parts = [f'{type(self).__name__}("{self._spice_path_name}"'
+                 f'{blanks}{self._origin.show(level-1, skip)}']
+        if self._frame != Frame.J2000:
+            parts.append(f'{blanks}{self._frame.show(level-1, skip)}')
+        return ',\n'.join(parts) + ')'
 
     @staticmethod
     def _body_code_and_name(arg):
@@ -196,6 +214,29 @@ class SpicePath(Path):
     ######################################################################################
 
     @staticmethod
+    def _register_alias(alias, path):
+        """Register an additional ID for a Path, leaving its primary ID unchanged.
+
+        The SPICE Toolkit recognizes several names for the same body; "GLL" and "GALILEO
+        ORBITER" both refer to body -77. A caller that identifies a body by one of these
+        names expects to look the Path up again by that same name, so the name used is
+        registered alongside the canonical one.
+
+        An alias already present in the registry is left alone, so this can never take an
+        ID away from the Path that owns it.
+
+        Parameters:
+            alias (str): An additional ID under which to register the Path.
+            path (Path): The Path to be found under this ID.
+        """
+
+        if not alias or alias in Path._PATH_REGISTRY:
+            return
+
+        # Resolve through the primary ID so that both IDs return the same object
+        Path._PATH_REGISTRY[alias] = Path._PATH_REGISTRY.get(path._path_id, path)
+
+    @staticmethod
     def get(spice_path, origin=None, frame=None, *, path_id=None):
         """The SpicePath defined by the given parameters.
 
@@ -236,22 +277,32 @@ class SpicePath(Path):
         else:
             (code, _) = SpicePath._body_code_and_name(spice_path)
 
-        # Intervene for the SSB
-        if code == 0:
-            return Path.SSB
+        # Intervene for the SSB, but only where the canonical SSB Path is what was asked
+        # for. Relative to any other origin or frame, the SSB needs a Path of its own;
+        # returning Path.SSB here would silently ignore `origin` and `frame`.
+        if code == 0 and origin == Path.SSB and frame == Frame.J2000:
+            result = Path.SSB
 
-        # If this body code has not been used, return a new SpicePath
-        if code not in SpicePath._FOR_CODE:
-            return SpicePath(code, origin, frame, path_id=path_id)
+        # If this body code has not been used, construct a new SpicePath
+        elif code not in SpicePath._FOR_CODE:
+            result = SpicePath(code, origin, frame, path_id=path_id)
 
-        # Use the Path we need if it is already registered
-        wayframe = SpicePath._FOR_CODE[code]
-        key = (wayframe, origin, frame)
-        if key in Path._PATH_CACHE:
-            return Path._PATH_CACHE[key]
+        else:
+            # Use the Path we need if it is already registered
+            waypoint = SpicePath._FOR_CODE[code]
+            key = (waypoint, origin, frame)
+            if key in Path._PATH_CACHE:
+                result = Path._PATH_CACHE[key]
+            else:
+                # Otherwise, construct a new SpicePath for this code, origin, and frame
+                result = SpicePath(code, origin, frame, path_id=path_id)
 
-        # Construct a new SpicePath for this code, origin, and frame
-        return SpicePath(code, origin, frame, path_id=path_id)
+        # The constructor above receives the integer code, so it never sees the name the
+        # caller used; register that name here instead
+        if isinstance(spice_path, str):
+            SpicePath._register_alias(spice_path, result)
+
+        return result
 
     def _get_shortcut(self, origin, frame):
         """A Path that directly transforms from the given orign and frame to this

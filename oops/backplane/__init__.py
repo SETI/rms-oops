@@ -19,7 +19,7 @@ class Backplane(object):
     """Class that supports the generation and manipulation of sets of backplanes
     with a particular Observation.
 
-    Intermediate results are cached to speed up calculations.
+    intermediate results are cached to speed up calculations.
     """
 
     DIAGNOSTICS = False     # set True to log diagnostics
@@ -905,7 +905,10 @@ class Backplane(object):
 
         # For reference, we add the key as an attribute of each backplane
         # object
-        backplane.key = key
+        if hasattr(backplane, 'add_attr'):      # temporary!
+            backplane.add_attr('key', key)
+        else:
+            backplane.key = key                 # needed for old polymath
         backplane = backplane.as_readonly(recursive=True)
         self.backplanes[key] = backplane.wod
 

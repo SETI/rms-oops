@@ -139,6 +139,14 @@ class QuickFrame(Frame):
                                                 self._xforms.omega.vals[..., i],
                                                 k=KIND)
 
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        return (f'{name}({self._slowframe.show(level-1, skip)},\n'
+                f'{blanks}{self._tmin}, {self._tmax})')
+
     ######################################################################################
     # Serialization support
     ######################################################################################
@@ -394,11 +402,14 @@ class QuickFrame(Frame):
             return
 
         # Extend the interval
-        extend = self.quickdict('frame_time_extension')
-        extras = int(self.quickdict('frame_extra_steps'))
+        extend = self._quickdict['frame_time_extension']
+        extras = int(self._quickdict['frame_extra_steps'])
         if tmin < self._tmin:
             tmin = self._tstep * ((tmin - extend) // self._tstep - extras)
-            t = np.arange(tmin, self._tmin, self._tstep)
+            # Stop half a step short of the existing tabulation; roundoff in arange() can
+            # otherwise place the last new sample fractionally below the old first sample,
+            # leaving the merged time array non-increasing at the seam.
+            t = np.arange(tmin, self._tmin - self._tstep/2., self._tstep)
             (time0, xform0) = self._slowframe.transform_at_time_if_possible(t)
             count0 = len(time0)
         else:
@@ -448,6 +459,7 @@ class QuickFrame(Frame):
 
         # Generate the new _xforms
         self._times = times
+        self._steps = len(times)
         self._tmin = self._times[0]
         self._tmax = self._times[-1]
         self._xforms = Transform(Matrix3(matrix_vals), Vector3(omega_vals),
@@ -482,6 +494,9 @@ class QuickFrame(Frame):
             QuickFrame. If a QuickFrame is found in the list that partially covers the
             time range, that QuickFrame is extended to cover the full range and returned.
         """
+
+        if isinstance(frame, QuickFrame):    # a QuickFrame is already quick
+            return frame
 
         if not frame._USE_QUICKFRAMES:
             return frame
@@ -566,7 +581,7 @@ class QuickFrame(Frame):
                 if LOGGING.quickframe_creation:
                     LOGGING.diagnostic(f'Extending QuickFrame for {frame}, '
                                        f'{tmin:.3f}, {tmax:.3f})')
-                quickframe.extend((tmin, tmax))
+                quickframe.extend(tmin, tmax)
                 return quickframe
 
         # Otherwise, construct a new QuickFrame

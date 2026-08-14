@@ -6,7 +6,6 @@ import numpy as np
 import julian
 import cspyce
 from polymath import *
-import os.path
 import oops
 
 from oops.hosts.juno.jiram import JIRAM
@@ -64,7 +63,7 @@ def from_file(filespec, label, fast_distortion=True,
 #        item.insert_subfield('spice_kernels', \
 #                   Juno.used_kernels(item.time, 'jiram', return_all_planets))
         item.insert_subfield('filespec', filespec)
-        item.insert_subfield('basename', os.path.basename(filespec))
+        item.insert_subfield('basename', filespec.name)
         obs.append(item)
 
     return obs

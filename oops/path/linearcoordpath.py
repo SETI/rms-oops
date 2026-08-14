@@ -13,7 +13,7 @@ class LinearCoordPath(Path):
 
     _WAYPOINTS = {}
 
-    def __init__(self, surface, coords, coords_dot, epoch, *, path_id=None):
+    def __init__(self, surface, coords, coords_dot, epoch, *, obs=None, path_id=None):
         """Constructor for a LinearCoordPath.
 
         Parameters:
@@ -33,25 +33,51 @@ class LinearCoordPath(Path):
 
         if surface.IS_VIRTUAL and obs is None:
             raise NotImplementedError('LinearCoordPath requires an observation path for '
-                                      f'virtual surface class {surface}')
+                                      f'virtual surface class {type(surface).__name_}')
 
         self._surface = surface
         self._coords = tuple(Scalar.as_scalar(c).wod.as_readonly() for c in coords)
         self._coords_dot = tuple(Scalar.as_scalar(c).wod.as_readonly()
                                  for c in coords_dot)
         self._epoch = Scalar.as_scalar(epoch).wod.as_readonly()
+        self._obs_path = obs and Path.as_path(obs)
 
         # Required attributes
         self._origin = self._surface._origin
         self._frame = self._origin._frame
         self._shape = Qube.broadcasted_shape(self._surface, *self._coords,
-                                             *self._coords_dot, self._epoch)
+                                             *self._coords_dot, self._epoch,
+                                             self.obs_path)
 
         self._register(path_id)
         mutable.refresh(self)
 
     def _waypoint_key(self):
         return (self._surface, self._coords, self._coords_dot, self._epoch)
+
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        coord_strs = [coord.mvals for coord in self._coords]
+        parts = [f'{name}(surface = {self._surface}',
+                 f'{blanks}coords = ({coord_strs[0]}']
+        for coord_str in coord_strs[1:-1]:
+            parts.append(f'{blanks}           {coord_str}')
+        parts.append(f'{blanks}           {coord_strs[-1]})')
+
+        coord_strs = [coord.mvals for coord in self._coords_dot]
+        parts.append(f'{blanks}coords_dot = ({coord_strs[0]}')
+        for coord_str in coord_strs[1:-1]:
+            parts.append(f'{blanks}              {coord_str}')
+        parts.append(f'{blanks}              {coord_strs[-1]})')
+
+        parts.append(f'{blanks}epoch = {self._epoch},')
+        if self._obs_path:
+            parts.append(f'{blanks}obs = {self._obs_path.show(level-1, indent+6)}')
+
+        return ',\n'.join(parts)
 
     ######################################################################################
     # Serialization support
@@ -60,11 +86,11 @@ class LinearCoordPath(Path):
     def __getstate__(self):
         mutable.refresh(self)
         return (self._surface, self._coords, self._coords_dot, self._epoch,
-                self.stripped_id)
+                self._obs_path, self.stripped_id)
 
     def __setstate__(self, state):
-        (surface, coords, coords_dot, epoch, path_id) = state
-        self.__init__(surface, coords, coords_dot, epoch, path_id=path_id)
+        (surface, coords, coords_dot, epoch, obs, path_id) = state
+        self.__init__(surface, coords, coords_dot, epoch, obs, path_id=path_id)
         mutable.freeze(self)
 
     ######################################################################################
@@ -95,7 +121,8 @@ class LinearCoordPath(Path):
             new_coords.append(coord)
 
         new_coords = tuple(new_coords)
-        pos = self._surface.vector3_from_coords(new_coords, derivs=True)
+        pos = self._surface.vector3_from_coords(new_coords, obs=self._obs_path,
+                                                derivs=True)
         return Event(time, pos, self._origin, self._frame)
 
 ##########################################################################################

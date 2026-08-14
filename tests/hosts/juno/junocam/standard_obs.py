@@ -3,7 +3,7 @@
 ################################################################################
 import os
 import unittest
-import oops.backplane.gold_master as gm
+import oops.gold_master as gm
 
 from oops.unittester_support import TEST_DATA_PREFIX
 

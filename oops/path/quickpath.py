@@ -102,6 +102,14 @@ class QuickPath(Path):
                                             self._times,
                                             self._events.vel.vals[:, 2], k=KIND)
 
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        return (f'{name}({self._slowpath.show(level-1, skip)},\n'
+                f'{blanks}{self._tmin}, {self._tmax})')
+
     ######################################################################################
     # Serialization support
     ######################################################################################
@@ -224,16 +232,18 @@ class QuickPath(Path):
             return
 
         # Extend the interval
-        extend = self.quickdict('frame_time_extension')
-        extras = int(self.quickdict('frame_extra_steps'))
+        extend = self._quickdict['path_time_extension']
+        extras = int(self._quickdict['path_extra_steps'])
         if tmin < self._tmin:
             self._input_tmin = tmin
             tmin = self._tstep * ((tmin - extend) // self._tstep - extras)
-            time0 = np.arange(tmin, self._tmin, self._tstep)
-            event0 = self._slowpath.event_at_time(time0)
+            # Stop half a step short of the existing tabulation; roundoff in arange() can
+            # otherwise place the last new sample fractionally below the old first sample,
+            # leaving the merged time array non-increasing at the seam.
+            time0 = np.arange(tmin, self._tmin - self._tstep/2., self._tstep)
+            event0 = self._slowpath.event_at_time(time0, quick=False)
             count0 = len(time0)
         else:
-            tmin = self._tmin
             count0 = 0
 
         if tmax > self._tmax:
@@ -241,10 +251,9 @@ class QuickPath(Path):
             tmax = self._tstep * ((tmax + extend) // self._tstep + extras + 1)
             time1 = np.arange(self._tmax + self._tstep, tmax + self._tstep/2.,
                               self._tstep)
-            event1 = self._slowpath.event_at_time(time1)
+            event1 = self._slowpath.event_at_time(time1, quick=False)
             count1 = len(time1)
         else:
-            tmax = self._tmax
             count1 = 0
 
         if count0 + count1 == 0:
@@ -254,29 +263,36 @@ class QuickPath(Path):
         old_size = self._times.size
         new_size = old_size + count0 + count1
 
+        times = np.empty(new_size)
         pos_vals = np.empty((new_size, 3))
         vel_vals = np.empty((new_size, 3))
 
         # Copy the new arrays
         if count0 > 0:
+            times[:count0] = time0
             pos_vals[0:count0] = event0.pos.vals
             vel_vals[0:count0] = event0.vel.vals
 
         if count1 > 0:
+            times[-count1:] = time1
             pos_vals[-count1:] = event1.pos.vals
             vel_vals[-count1:] = event1.vel.vals
         else:
             count1 = -new_size      # this makes the indexing below work correctly
 
-        pos_vals[count0:-count1] = self.events.pos.vals
-        vel_vals[count0:-count1] = self.events.vel.vals
+        times[count0:-count1] = self._times
+        pos_vals[count0:-count1] = self._events.pos.vals
+        vel_vals[count0:-count1] = self._events.vel.vals
 
-        # Generate the new events
-        self._times = np.arange(tmin, tmax + self._tstep/2., self._tstep)
-        self._tmin = tmin
-        self._tmax = tmax
-        self._events = Event(Scalar(self._times), (Vector3(pos_vals), Vector3(vel_vals)),
-                             self._events._origin, self._events._frame)
+        # Generate the new events. The tabulated times are assembled from the samples
+        # actually evaluated, because re-deriving them with arange() would accumulate
+        # roundoff and could disagree with the length of the tabulation.
+        self._times = times
+        self._steps = new_size
+        self._tmin = times[0]
+        self._tmax = times[-1]
+        self._events = Event(Scalar(times), (Vector3(pos_vals), Vector3(vel_vals)),
+                             self._events.origin, self._events.frame)
 
         # Regenerate the splines
         self._spline_setup()
@@ -307,6 +323,9 @@ class QuickPath(Path):
             If a QuickPath is found in the list that partially covers the time range, that
             QuickPath is extended to cover the full range and returned.
         """
+
+        if isinstance(path, QuickPath):     # a QuickPath is already quick
+            return path
 
         if not path._USE_QUICKPATHS:
             return path
@@ -391,7 +410,7 @@ class QuickPath(Path):
                 if LOGGING.quickpath_creation:
                     LOGGING.diagnostic(f'Extending QuickPath for {path}: '
                                        f'{tmin:.3f}, {tmax:.3f})')
-                quickpath.extend((tmin, tmax))
+                quickpath.extend(tmin, tmax)
                 return quickpath
 
         # Otherwise, construct a new QuickFrame

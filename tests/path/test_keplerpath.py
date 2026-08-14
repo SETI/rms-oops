@@ -71,16 +71,16 @@ def _pos_derivative_test(kep, t, delta=1.e-5):
     pos_norm = event.pos.norm().vals
 
     # Create new Kepler objects for tweaking the parameters
-    khi = KeplerPath(kep.planet, kep.epoch, kep.elements.copy(), kep.observer,
-                     kep.wobbles)
-    klo = KeplerPath(kep.planet, kep.epoch, kep.elements.copy(), kep.observer,
-                     kep.wobbles)
+    khi = KeplerPath(kep._planet, kep._epoch, kep._elements.copy(), kep._observer,
+                     wobbles=kep._wobbles)
+    klo = KeplerPath(kep._planet, kep._epoch, kep._elements.copy(), kep._observer,
+                     wobbles=kep._wobbles)
 
     params = kep.get_elements()
 
     # Loop through parameters...
-    errors = np.zeros(np.shape(t) + (3,kep.nelements))
-    for e in range(kep.nelements):
+    errors = np.zeros(np.shape(t) + (3,kep._nelements))
+    for e in range(kep._nelements):
 
         # Tweak one parameter
         hi = params.copy()
@@ -263,6 +263,6 @@ class Test_KeplerPath(unittest.TestCase):
 
         Frame._reset_caches()
         Path._reset_caches()
-        Body._reset_registry()
+        Body.reset_registry()
 
 ################################################################################

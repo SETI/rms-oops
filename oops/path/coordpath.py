@@ -48,6 +48,19 @@ class CoordPath(Path):
     def _waypoint_key(self):
         return (self._surface, self._coords)
 
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        coord_strs = [coord.mvals for coord in self._coords]
+        parts = [f'{name}(surface = {self._surface}',
+                 f'{blanks}coords = ({coord_strs[0]}']
+        for coord_str in coord_strs[1:]:
+            parts.append(f'{blanks}           {coord_str}')
+
+        return ',\n'.join(parts) + '))'
+
     ######################################################################################
     # Serialization support
     ######################################################################################

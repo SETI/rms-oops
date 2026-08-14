@@ -88,6 +88,19 @@ class PoleFrame(Frame):
     def _wayframe_key(self):
         return (self._planet_frame, self._invariable_pole, self._retrograde, self._aries)
 
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        parts = [f'{name}(frame = {self._planet_frame.show(level-1, skip+8)}',
+                 f'{blanks}pole = {self._invariable_pole.mvals}']
+        if self._retrograde:
+            parts.append(f'{blanks}retrograde = {self._retrograde}')
+        if self._aries:
+            parts.append(f'{blanks}aries = {self._aries}')
+        return ', '.join(parts) + ')'
+
     ######################################################################################
     # Serialization support
     ######################################################################################

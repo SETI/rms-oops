@@ -9,6 +9,8 @@ import oops.mutable as mutable
 
 
 class A(Fittable):
+    nparams = 1
+
     def __init__(self, x):
         self.x = x
         self._refresh()
@@ -20,7 +22,7 @@ class A(Fittable):
         self.x = params[0]
 
     @property
-    def _params(self):
+    def params(self):
         return (self.x,)
 
 class B:
@@ -34,6 +36,8 @@ class B:
 
 
 class C(Fittable):
+    nparams = 1
+
     def __init__(self, x, a):
         self.x = x
         self.a = a
@@ -44,7 +48,7 @@ class C(Fittable):
         self.x = params[0]
 
     @property
-    def _params(self):
+    def params(self):
         return (self.x,)
 
     def _refresh(self):
@@ -68,43 +72,41 @@ class Test_Fittable(unittest.TestCase):
 
         a = A(7)
         self.assertEqual(a.x_squared, 49)
-        self.assertEqual(mutable.get_params(a), (7,))
-        self.assertIsInstance(mutable.get_params(a), tuple)
-        self.assertEqual(mutable.get_params(a, as_dict=True), {'':(7,)})
+        self.assertEqual(a.params, (7,))
+        self.assertEqual(a.version, 0)
+        self.assertIsInstance(a.params, tuple)
         self.assertTrue(mutable.is_fittable(a))
+        self.assertTrue(mutable.is_mutable(a))
         self.assertEqual(mutable.mutable_names(a), [])
         self.assertEqual(mutable.version(a), 0)
 
-        self.assertEqual(a.get_params(), (7,))
-        self.assertEqual(a.get_params(as_dict=True), {'':(7,)})
-        self.assertEqual(a.version(), 0)
-
         a.set_params([5])
-        self.assertEqual(mutable.get_params(a), (5,))
+        self.assertEqual(a.params, (5,))
         self.assertEqual(a.x_squared, 25)
+        self.assertGreater(a.version, 0)
         self.assertEqual(mutable.mutable_names(a), [])
         self.assertTrue(mutable.is_fittable(a))
-        self.assertEqual(mutable.version(a), 1)
 
         b = B(1, a)
+        mutable.set_param_order(b, 'a')
         self.assertEqual(b.x_plus_a2, 26)
-        self.assertEqual(mutable.get_params(b), ())
-        self.assertEqual(mutable.get_params(b, as_dict=True), {'a':(5,)})
+        self.assertEqual(mutable.get_params(b), (5.,))
+        self.assertIsInstance(mutable.get_params(b)[0], float)
+        self.assertFalse(mutable.is_fittable(b))
+        self.assertTrue(mutable.is_mutable(b))
 
-        self.assertTrue(mutable.is_fittable(b))
-        mutable.set_params(b, {'a':7})
+        mutable.set_params(b, 7)
         self.assertEqual(b.x_plus_a2, 50)
         self.assertEqual(mutable.mutable_names(b), ['a'])
-        self.assertEqual(mutable.mutable_names(b, frozen=True), ['a'])
-        self.assertEqual(mutable.mutable_names(b, frozen=False), ['a'])
+        self.assertEqual(mutable.unfrozen_names(b), ['a'])
 
         mutable.freeze(a)
-        self.assertEqual(mutable.mutable_names(b, frozen=True), ['a'])
-        self.assertEqual(mutable.mutable_names(b, frozen=False), [])
+        self.assertEqual(mutable.mutable_names(b), ['a'])
+        self.assertEqual(mutable.unfrozen_names(b), [])
 
         a = A(5)
         c = C(1, a)
-        self.assertEqual(mutable.mutable_names(c), ['a', 'c'])
+        self.assertEqual(mutable.mutable_names(c), ['a'])
         self.assertTrue(mutable.is_fittable(c))
         self.assertEqual(c.x_plus_a2_plus_cx_plus_ccx, 28)
 
@@ -117,62 +119,61 @@ class Test_Fittable(unittest.TestCase):
         a = A(5)
         c = C(1, a)
         self.assertEqual(c.x_plus_a2_plus_cx_plus_ccx, 28)
-        c.set_params({'':1, 'a':6})
+
+        mutable.set_param_order(c, ['', 'a'])
+        self.assertEqual(mutable.get_param_order(c), ['', 'a'])
+        self.assertEqual(mutable.get_nparams(c), 2)
+        self.assertEqual(mutable.get_params(c), (1,5))
+
+        mutable.set_params(c, [1, 6])
         self.assertEqual(c.x_plus_a2_plus_cx_plus_ccx, 39)
         self.assertFalse(c.refresh())
         self.assertEqual(mutable.get_params(a), (6,))
-        self.assertEqual(mutable.get_params(a, as_dict=True), {'': (6,)})
-        self.assertEqual(mutable.get_params(c), (1,))
-        self.assertEqual(mutable.get_params(c, as_dict=True), {'': (1,), 'a': (6,)})
+        self.assertEqual(mutable.get_params(c), (1,6))
 
         self.assertFalse(mutable.is_frozen(a))
         self.assertFalse(mutable.is_frozen(c))
-        self.assertFalse(a.is_frozen())
-        self.assertFalse(c.is_frozen())
+        self.assertFalse(a.is_frozen)
+        self.assertFalse(c.is_frozen)
 
         mutable.freeze(a)
         self.assertTrue(mutable.is_frozen(a))
         self.assertFalse(mutable.is_frozen(c))
         self.assertRaises(ValueError, mutable.set_params, a, 2)
 
-        self.assertEqual(mutable.mutable_names(c), ['c'])
-        self.assertEqual(mutable.mutable_names(c, frozen=True), ['a', 'c'])
+        self.assertEqual(mutable.mutable_names(c), ['a'])
+        self.assertEqual(mutable.unfrozen_names(c), [])
         self.assertTrue(mutable.is_fittable(a))
         self.assertTrue(mutable.is_fittable(c))
-        self.assertEqual(mutable.get_params(c), (1,))
-        self.assertEqual(mutable.get_params(c, as_dict=True), {'': (1,)})
-        self.assertEqual(mutable.get_params(c, as_dict=True, frozen=True),
-                         {'': (1,), 'a': (6,)})
-        self.assertEqual(c.get_params(), (1,))
-        self.assertEqual(c.get_params(as_dict=True), {'': (1,)})
-        self.assertEqual(c.get_params(as_dict=True, frozen=True),
-                         {'': (1,), 'a': (6,)})
+        self.assertEqual(mutable.get_params(c), (1,6))
+        self.assertEqual(c.params, (1,))
 
         a = A(5)
         c = C(1, a)
         mutable.freeze(c)
         self.assertTrue(mutable.is_frozen(a))
         self.assertTrue(mutable.is_frozen(c))
-        self.assertTrue(a.is_frozen())
-        self.assertTrue(c.is_frozen())
+        self.assertTrue(a.is_frozen)
+        self.assertTrue(c.is_frozen)
         self.assertRaises(ValueError, mutable.set_params, a, 2)
         self.assertRaises(ValueError, mutable.set_params, c, 2)
 
-        self.assertEqual(mutable.mutable_names(c), [])
-        self.assertEqual(mutable.mutable_names(c, frozen=True), ['a', 'c'])
+        self.assertEqual(mutable.unfrozen_names(c), [])
+        self.assertEqual(mutable.mutable_names(c), ['a'])
         self.assertTrue(mutable.is_fittable(a))
         self.assertTrue(mutable.is_fittable(c))
 
-        # type class has __data__ but is immutable
+        # type `class` has __data__ but is immutable
         d = D(int)
-        self.assertEqual(len(mutable._FROZEN_IDS), 0)
+        self.assertEqual(len(mutable._IMMUTABLE_OBJECTS), 0)
         self.assertEqual(mutable.get_params(d), ())
         self.assertTrue(mutable.is_frozen(d))
-        self.assertEqual(len(mutable._FROZEN_IDS), 1)
-        self.assertRaises(ValueError, mutable.set_params, d, ())
+        self.assertEqual(len(mutable._IMMUTABLE_OBJECTS), 1)
+        self.assertFalse(mutable.set_params(d, ()))
+        self.assertRaises(ValueError, mutable.set_params, d, (1.,))
 
         d = D(float)
-        self.assertIs(mutable.freeze(d), None)    # tests TypeError check in freeze()
+        self.assertIs(mutable.freeze(d), False)  # tests TypeError check in freeze()
 
 #########################################
 if __name__ == '__main__':

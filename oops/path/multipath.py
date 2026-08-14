@@ -54,6 +54,22 @@ class MultiPath(Path):
     def _waypoint_key(self):
         return self._paths
 
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        parts = [f'{name}(paths = ({self._paths[0].show(level-1, skip+9)}']
+        for path in self._paths[1:-1]:
+            parts.append(f'{blanks}         {path.show(level-1, skip+9)}')
+        parts.append(f'{blanks}         {self._paths[-1].show(level-1, skip+9)})')
+
+        parts.append(f'{blanks}origin = {self._origin.show(level-1, skip+9)}')
+        if self._frame != self._origin._frame:
+            parts.append(f'{blanks}frame = {self._frame.show(level-1, skip+8)}')
+
+        return ',\n'.join(parts) + ')'
+
     ######################################################################################
     # Serialization support
     ######################################################################################

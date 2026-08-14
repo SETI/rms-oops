@@ -84,6 +84,16 @@ class TrackerFrame(Frame):
     def _wayframe_key(self):
         return (self._fixed_frame, self._target_path, self._observer_path, self._epoch)
 
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        return (f'{name}(frame = {self._fixed_frame.show(level-1, skip)},\n',
+                f'{blanks}target = {self._target_path.show(level-1, skip)},\n',
+                f'{blanks}observer = {self._observer_path.show(level-1, skip)},\n',
+                f'{blanks}epoch = {self._epoch})')
+
     ######################################################################################
     # Serialization support
     ######################################################################################

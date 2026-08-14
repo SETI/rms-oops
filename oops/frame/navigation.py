@@ -41,7 +41,7 @@ class Navigation(Frame, Fittable):
 
         # Linking to a frozen object yields a frozen object
         if isinstance(arg, str):
-            arg = Frame.as_frame(frame)
+            arg = Frame.as_frame(arg)
         if isinstance(arg, Navigation) and arg.is_frozen:
             arg = arg._angles
             freeze = True
@@ -88,6 +88,19 @@ class Navigation(Frame, Fittable):
             return (self._angles, self._reference)
         # Use id(self) to ensure that an unlinked frame has a unique key
         return (self._link or id(self), self._reference)
+
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        if self._link:
+            arg_str = self._link.show(level-1, skip)
+        else:
+            arg_str = str(self._angles)
+
+        return (f'{name}({arg_str},\n'
+                f'{blanks}{self._reference.show(level-1, skip)})')
 
     ######################################################################################
     # Serialization support

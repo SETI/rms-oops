@@ -86,6 +86,22 @@ class Rotation(Frame, Fittable):
         # Use id(self) to ensure that an unlinked frame has a unique key
         return (self._link or id(self), self._reference)
 
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        if hasattr(self._link, 'show'):
+            parts = [self._link.show(level-1, skip),
+                     str(self._axis2),
+                     self._reference.show(level-1, skip)]
+        else:
+            parts = [f'{self._angle.mvals}, {self._axis2}',
+                     self._reference.show(level-1, skip)]
+
+
+        return f'{name}(' + f'\n{blanks}'.join(parts) + ')'
+
     ######################################################################################
     # Fittable interface
     ######################################################################################

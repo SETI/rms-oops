@@ -74,6 +74,20 @@ class PathShift(Path, Fittable):
         # Use id(self) to ensure that an unlinked PathShift has a unique key
         return (self._link or id(self), self._path)
 
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        if hasattr(self._link, 'show'):
+            return (f'{name}({self._link.show(level-1, skip)},\n'
+                    f'{blanks}{self._path.show(level-1, skip)})')
+        if self._link is not None:
+            return (f'{name}({self._link},\n'
+                    f'{blanks}{self._path.show(level-1, skip)})')
+        head = f'{name}({self._dt}, '
+        return head + self._path.show(level-1, indent + len(head))
+
     ######################################################################################
     # Fittable interface
     ######################################################################################

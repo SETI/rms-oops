@@ -114,8 +114,8 @@ class KeplerPath(Path, Fittable):
 
         if observer is None:
             self._observer = None
-            self._origin = self.planet.path
-            self._frame = self.planet.ring_frame
+            self._origin = self._planet.path
+            self._frame = self._planet.ring_frame
             self._to_j2000 = Matrix3.IDENTITY
         else:
             self._observer = Path.as_waypoint(observer)
@@ -125,7 +125,7 @@ class KeplerPath(Path, Fittable):
             self._origin = self._observer
             self._frame = Frame.J2000
             frame = Frame.J2000.wrt(self._planet.ring_frame)
-            self.to_j2000 = frame.transform_at_time(self._epoch).matrix
+            self._to_j2000 = frame.transform_at_time(self._epoch).matrix
 
         if elements is None:
             self._elements = None
@@ -218,6 +218,21 @@ class KeplerPath(Path, Fittable):
                     self._wobbles)
         # Use id(self) to ensure that an un-frozen KeplerPath has a unique key
         return id(self)
+
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        parts = [f'{name}(body = {self._body}',
+                 f'{blanks}epoch = {self._epoch}',
+                 f'{blanks}elements = {self.params}']
+        if self._observer:
+            parts.append(f'{blanks}observer = {self._observer.show(level-1, skip+11)}')
+        if self._wobbles:
+            parts.append(f'{blanks}wobbles = {self._wobbles}')
+
+        return ',\n'.join(parts) + ')'
 
     ######################################################################################
     # Fittable support
@@ -380,8 +395,8 @@ class KeplerPath(Path, Fittable):
 
                 x1 = self._amp[k] * cos_arg
                 y1 = self._amp[k] * sin_arg
-                dx1_dt = -y1 * self.dphase_dt[k]
-                dy1_dt =  x1 * self.dphase_dt[k]
+                dx1_dt = -y1 * self._dphase_dt[k]
+                dy1_dt =  x1 * self._dphase_dt[k]
 
                 if partials:
                     dx1_delem = np.zeros(partials_shape)
@@ -453,7 +468,7 @@ class KeplerPath(Path, Fittable):
                 if partials:
                     dw_delem = np.zeros(partials_shape)
                     dw_delem[..., start] = cos_arg
-                    dw_delem[..., start+1] = self.amp[k] * cos_arg[k]
+                    dw_delem[..., start+1] = self._amp[k] * cos_arg[k]
                     dw_delem[..., start+2] = dw_delem[..., start+1] * t
 
                 if self._wobbles[k] == 'mean':
@@ -499,8 +514,8 @@ class KeplerPath(Path, Fittable):
                 cos_arg = np.cos(arg)
 
                 laplace_plane = True
-                laplace_sin_inc = np.sin(self.amp[k])
-                laplace_cos_inc = np.cos(self.amp[k])
+                laplace_sin_inc = np.sin(self._amp[k])
+                laplace_cos_inc = np.cos(self._amp[k])
                 laplace_sin_node = sin_arg
                 laplace_cos_node = cos_arg
 
@@ -726,15 +741,15 @@ class KeplerPath(Path, Fittable):
         """
 
         # Without an observer, return event in the planet frame
-        if self.observer is None:
+        if self._observer is None:
             (pos, vel) = self._xyz_planet(time, partials=partials)
             return Event(time, (pos, vel), self._origin, self._frame)
 
         # With an observer, return event in J2000, with the light time accounted for
         planet_event = self._photon_from_planet(time, quick=quick)[0]
         (pos, vel) = self._xyz_planet(planet_event.time, partials=partials)
-        pos_j2000 = self.to_j2000.rotate(pos) + planet_event.pos
-        vel_j2000 = self.to_j2000.rotate(vel) + planet_event.vel
+        pos_j2000 = self._to_j2000.rotate(pos) + planet_event.pos
+        vel_j2000 = self._to_j2000.rotate(vel) + planet_event.vel
         return Event(time, (pos_j2000, vel_j2000), self._observer, Frame.J2000)
 
     def _photon_from_planet(self, time, *, derivs=False, guess=None, antimask=None,
@@ -744,7 +759,7 @@ class KeplerPath(Path, Fittable):
         events = self._events[time]
         if events is None:
             obs_event = Event(time, Vector3.ZERO, self._observer, self._frame)
-            events = self.center.photon_to_event(obs_event, derivs=derivs, guess=guess,
+            events = self._center.photon_to_event(obs_event, derivs=derivs, guess=guess,
                                                  antimask=antimask, quick=quick,
                                                  converge=converge)
             if np.size(time) == 1:
@@ -760,7 +775,7 @@ class KeplerPath(Path, Fittable):
         """
 
         time = Scalar.as_scalar(time)
-        return self._elements[_NODE0] + (time - self.epoch) * self._elements[_DNODE]
+        return self._elements[_NODE0] + (time - self._epoch) * self._elements[_DNODE]
 
     def pole_at_time(self, time):
         """The J2000 vector pointing toward the orbit's pole at the specified time.
@@ -780,7 +795,7 @@ class KeplerPath(Path, Fittable):
         # This vector is 90 degrees behind of the node in the reference equator
         target_in_j2000 = (sin_node * x_axis_in_j2000 - cos_node * y_axis_in_j2000)
 
-        return self.cos_i * z_axis_in_j2000 + self.sin_i * target_in_j2000
+        return self._cos_i * z_axis_in_j2000 + self._sin_i * target_in_j2000
 
     ######################################################################################
     # Override for the case where observer != None

@@ -111,7 +111,7 @@ class SpiceFrame(Frame):
             self._origin = None
             self._is_inertial = True
             if self._reference._origin is None:     # no omega if both frames are inertial
-                omega_type = 'zero'
+                self._omega_type = 'zero'
         else:
             self._origin = Frame._SpicePath.get(spice_origin_code)
             self._is_inertial = False
@@ -124,6 +124,17 @@ class SpiceFrame(Frame):
 
     def _wayframe_key(self):
         return self._spice_frame_name
+
+    def _show(self, level, indent=0):
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        if self._reference == Frame.J2000:
+            return f'{type(self).__name__}("{self._spice_frame_name}")'
+
+        return (f'{type(self).__name__}("{self._spice_frame_name}",\n',
+                f'{blanks}{self._reference.show(level-1, skip)}')
 
     @staticmethod
     def _frame_code_and_name(arg):
