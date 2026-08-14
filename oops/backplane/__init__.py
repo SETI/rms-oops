@@ -899,7 +899,10 @@ class Backplane(object):
 
         # For reference, we add the key as an attribute of each backplane
         # object
-        backplane.key = key
+        if hasattr(backplane, 'add_attr'):      # temporary!
+            backplane.add_attr('key', key)
+        else:
+            backplane.key = key                 # needed for old polymath
         backplane = backplane.as_readonly(recursive=True)
         self.backplanes[key] = backplane.wod
 
