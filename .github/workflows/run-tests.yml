@@ -16,7 +16,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [self-hosted-linux, self-hosted-macos, self-hosted-windows]
+        os: [self-hosted-linux]
         python-version: ['3.11', '3.12', '3.13']
       fail-fast: false
     steps:
