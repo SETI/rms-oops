@@ -207,7 +207,7 @@ def from_index(filespec, **parameters):
     return snapshots
 
 #===============================================================================
-def initialize(ck='reconstructed', planets=None, offset_wac=False, asof=None,
+def initialize(ck='reconstructed', planets=None, asof=None,
                spk='reconstructed', gapfill=True,
                mst_pck=True, irregulars=True):
     """Initialize key information about the ISS instrument.
@@ -221,8 +221,6 @@ def initialize(ck='reconstructed', planets=None, offset_wac=False, asof=None,
                     'none' if the kernels are to be managed manually.
         planets     A list of planets to pass to define_solar_system. None or
                     0 means all.
-        offset_wac  True to offset the WAC frame relative to the NAC frame as
-                    determined by star positions.
         asof        Only use SPICE kernels that existed before this date; None
                     to ignore.
         gapfill     True to include gapfill CKs. False otherwise.
@@ -231,7 +229,7 @@ def initialize(ck='reconstructed', planets=None, offset_wac=False, asof=None,
         irregulars  True to include the irregular satellites;
                     False otherwise.
     """
-    ISS.initialize(ck=ck, planets=planets, offset_wac=offset_wac, asof=asof,
+    ISS.initialize(ck=ck, planets=planets, asof=asof,
                    spk=spk, gapfill=gapfill,
                    mst_pck=mst_pck, irregulars=irregulars)
 
@@ -243,7 +241,6 @@ class ISS(object):
     fovs = {}
     initialized = False
     frames_defined = False
-    offset_wac = False
 
     # Exposed on the class so the generic Observation.set_cmatrix() and
     # get_cmatrix() can read the host's convention rotation via the
@@ -360,7 +357,7 @@ class ISS(object):
 
     #===========================================================================
     @staticmethod
-    def initialize(ck='reconstructed', planets=None, offset_wac=False, asof=None,
+    def initialize(ck='reconstructed', planets=None, asof=None,
                    spk='reconstructed', gapfill=True,
                    mst_pck=True, irregulars=True):
         """Initialize key information about the ISS instrument.
@@ -375,8 +372,6 @@ class ISS(object):
                         managed manually.
             planets     A list of planets to pass to define_solar_system. None
                         or 0 means all.
-            offset_wac  True to offset the WAC frame relative to the NAC frame
-                        as determined by star positions.
             asof        Only use SPICE kernels that existed before this date;
                         None to ignore.
             gapfill     True to include gapfill CKs. False otherwise.
@@ -440,11 +435,6 @@ class ISS(object):
             ISS.fovs[detector, 'SUM2'] = oops.fov.SubsampledFOV(full_fov_none, 2)
             ISS.fovs[detector, 'SUM4'] = oops.fov.SubsampledFOV(full_fov_none, 4)
 
-        # Remember the WAC offset option. The SPICE-derived camera frames are
-        # built lazily by define_camera_frames(), so an observation that supplies
-        # a custom C-matrix (without mapping) never depends on SPICE pointing.
-        ISS.offset_wac = offset_wac
-
         ISS.initialized = True
 
     #===========================================================================
@@ -469,22 +459,6 @@ class ISS(object):
         wac_frame_spice = oops.frame.SpiceFrame('CASSINI_ISS_WAC',
                                             frame_id='CASSINI_ISS_WAC_SPICE')
 
-        if ISS.offset_wac:
-
-            # Apply offset for WAC relative to NAC
-            info = ISS.instrument_kernel['INS']['CASSINI_ISS_NAC']
-            xfov = info['FOV_REF_ANGLE']
-            yfov = info['FOV_CROSS_ANGLE']
-            lines = info['PIXEL_LINES']
-            samples = info['PIXEL_SAMPLES']
-
-            xpixel = np.arctan(np.tan(xfov * oops.RPD) / (samples/2.))
-            ypixel = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
-
-            # This is Rob's determination of WAC - NAC in units of NAC pixels
-            xshift = -7. * xpixel
-            yshift = 4.4 * ypixel
-
         # Observation-facing camera frames: the raw *_SPICE pointing rotated
         # 180 degrees about the boresight (CMATRIX_ROTATION) into the oops-frame
         # convention. The *_SPICE SpiceFrames above stay registered as the
@@ -497,17 +471,8 @@ class ISS(object):
         # directly as object references below, not looked up by ID.
         nac_frame = oops.frame.Cmatrix(CMATRIX_ROTATION, nac_frame_spice,
                                        frame_id='CASSINI_ISS_NAC', override=True)
-
-        if ISS.offset_wac:
-            wac_frame_spice_raw = oops.frame.Cmatrix(CMATRIX_ROTATION, wac_frame_spice,
-                                              frame_id='CASSINI_ISS_WAC-NO_OFFSET',
-                                              override=True)
-            wac_frame = oops.frame.Navigation((xshift,yshift), wac_frame_spice_raw,
-                                               frame_id='CASSINI_ISS_WAC',
-                                               override=True)
-        else:
-            wac_frame = oops.frame.Cmatrix(CMATRIX_ROTATION, wac_frame_spice,
-                                           frame_id='CASSINI_ISS_WAC', override=True)
+        wac_frame = oops.frame.Cmatrix(CMATRIX_ROTATION, wac_frame_spice,
+                                       frame_id='CASSINI_ISS_WAC', override=True)
 
         ISS.frames_defined = True
 
@@ -523,7 +488,6 @@ class ISS(object):
         ISS.fovs = {}
         ISS.initialized = False
         ISS.frames_defined = False
-        ISS.offset_wac = False
 
         Cassini.reset()
 
