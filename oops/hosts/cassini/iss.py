@@ -53,13 +53,24 @@ def from_file(filespec, fast_distortion=True,
                             cspyce.pxform() or recorded in a CK (z along the line
                             of sight, x left, y up). The fixed 180-degree rotation
                             relating it to the oops-frame observation frame is
-                            applied internally. None uses SPICE pointing as before.
+                            applied internally. It must be a proper rotation with
+                            floating-point values; anything else raises
+                            ValueError. None uses SPICE pointing as before.
+                            Note that with a custom cmatrix no CK is loaded, so
+                            the SPICE camera frame has no pointing for this
+                            epoch: the observation's pointing lives only in its
+                            oops frame, and cspyce.pxform() against
+                            CASSINI_ISS_<camera> at this epoch will fail.
 
         frame_id            when cmatrix is given, register the C-matrix under
                             this frame ID and use only that (shared, registered)
                             frame. None (default) gives the observation its own
                             unregistered frame, so loading other images never
-                            disturbs this one's pointing. Requires cmatrix.
+                            disturbs this one's pointing. Requires cmatrix. An ID
+                            already registered by anything other than a previous
+                            custom-cmatrix load (e.g. 'CASSINI_ISS_NAC' or
+                            'J2000') raises ValueError rather than silently
+                            replacing that frame.
     """
 
     if cmatrix is None and frame_id is not None:

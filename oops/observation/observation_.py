@@ -491,6 +491,16 @@ class Observation(object):
         return rotation.transpose() * oops_attitude
 
     #===========================================================================
+    # Tolerance for accepting a supplied C-matrix as a proper rotation.
+    # Float64 rotation matrices (e.g. from cspyce.pxform) are orthonormal to
+    # ~1e-15, so this never rejects a legitimate matrix.
+    CMATRIX_TOL = 1.e-8
+
+    # Frame IDs registered by set_cmatrix() itself. set_cmatrix only overrides
+    # a registered frame whose ID appears here; it refuses to replace a frame
+    # registered by anything else (e.g. 'CASSINI_ISS_NAC' or 'J2000').
+    _cmatrix_frame_ids = set()
+
     def set_cmatrix(self, cmatrix, frame_id=None):
         """Set this observation's frame from a spice-convention C-matrix.
 
@@ -499,9 +509,17 @@ class Observation(object):
         'host' subfield's CMATRIX_ROTATION attribute; get_cmatrix() applies its
         transpose). The resulting frame replaces self.frame.
 
+        Note that geometry already derived against the previous frame (e.g.
+        Backplanes) is not invalidated by this call; anything built before the
+        call still answers the old pointing and must be rebuilt.
+
         Input:
             cmatrix     an oops.Matrix3 (or 3x3 array) giving the spice-convention
-                        C-matrix, as returned by get_cmatrix().
+                        C-matrix, as returned by get_cmatrix(). It must be a
+                        proper rotation with floating-point values: non-finite
+                        values, integer or boolean data (a signature of a
+                        corrupted metadata record), reflections, and
+                        non-orthogonal matrices all raise ValueError.
             frame_id    None (default) attaches a fresh unregistered frame owned
                         by the observation, so loading other images never
                         disturbs its pointing; otherwise the frame is registered
@@ -509,7 +527,9 @@ class Observation(object):
                         that re-using a frame_id re-points every observation
                         that shares that registered frame; that sharing is the
                         point of giving it an ID, but it is worth stating
-                        explicitly.
+                        explicitly. A frame_id already registered by anything
+                        other than a previous set_cmatrix() call raises
+                        ValueError rather than silently replacing that frame.
         """
 
         try:
@@ -519,15 +539,50 @@ class Observation(object):
                              'class defines CMATRIX_ROTATION (the spice-frame '
                              '-> oops-frame convention rotation)')
 
+        # Validate the supplied C-matrix as a proper rotation. A recorded
+        # C-matrix arriving from a metadata file can carry NaNs, booleans,
+        # integer arrays, or a damaged matrix; each is an attributable error
+        # here rather than NaN or skewed geometry an hour downstream.
+        raw = cmatrix.values if isinstance(cmatrix, Qube) else np.asarray(cmatrix)
+        if not np.issubdtype(raw.dtype, np.floating):
+            raise ValueError('cmatrix must have floating-point values; got '
+                             'dtype %s' % raw.dtype)
+
+        matrix = Matrix3.as_matrix3(cmatrix)
+        values = matrix.values
+        if not np.all(np.isfinite(values)):
+            raise ValueError('cmatrix contains non-finite values')
+
+        det = np.linalg.det(values)
+        ortho_error = np.max(np.abs(values.dot(values.T) - np.eye(3)))
+        if (abs(det - 1.) > Observation.CMATRIX_TOL
+                or ortho_error > Observation.CMATRIX_TOL):
+            raise ValueError('cmatrix is not a proper rotation matrix: '
+                             'det = %.6g (should be 1), '
+                             'max|C CT - I| = %.6g' % (det, ortho_error))
+
         # Convert the spice-convention C-matrix into the oops observation-frame
         # attitude by applying the fixed instrument convention rotation.
-        attitude = rotation * Matrix3.as_matrix3(cmatrix)
+        attitude = rotation * matrix
 
-        # frame_id=None attaches a fresh unregistered frame owned by this
-        # observation, isolated from the global registry. A given frame_id
-        # registers (or re-registers, with override=True) a single shared
-        # frame under that ID, cleanly replacing any prior primary definition.
-        frame = Cmatrix(attitude, frame_id=frame_id, override=(frame_id is not None))
+        if frame_id is None:
+            # A fresh unregistered frame owned by this observation, isolated
+            # from the global registry.
+            frame = Cmatrix(attitude)
+        else:
+            # A given frame_id registers (or re-registers, with override=True)
+            # a single shared frame under that ID -- but only an ID that
+            # set_cmatrix itself handed out may be replaced. (A registry that
+            # was cleared via Frame.reset_registry() forgets prior ownership;
+            # _cmatrix_frame_ids may then permit an override it should not,
+            # which matches the debugging-only status of reset_registry.)
+            registered = frame_id in Frame.WAYFRAME_REGISTRY
+            if registered and frame_id not in Observation._cmatrix_frame_ids:
+                raise ValueError('frame_id %r is already registered by '
+                                 'another frame; choose a different ID'
+                                 % frame_id)
+            frame = Cmatrix(attitude, frame_id=frame_id, override=registered)
+            Observation._cmatrix_frame_ids.add(frame_id)
 
         self.frame = Frame.as_wayframe(frame)
 

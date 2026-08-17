@@ -174,6 +174,56 @@ class Test_Cassini_ISS_Cmatrix(unittest.TestCase):
         self.assertFalse(np.allclose(recovered.vals, custom1.vals))
 
     #===========================================================================
+    def test_colliding_frame_id_raises(self):
+        """A frame_id already registered by anything other than set_cmatrix
+        (e.g. the global camera frames or J2000) must raise rather than
+        silently replacing that frame's primary definition."""
+
+        baseline = from_file(self.filespec)
+        m0 = baseline.get_cmatrix()
+        camera = baseline.dict['INSTRUMENT_ID'][3:] + 'C'
+        spice0 = self._spice_cmatrix(camera, baseline.tstart)
+        custom = _PERTURBATION * spice0
+
+        with self.assertRaises(ValueError):
+            from_file(self.filespec, cmatrix=custom,
+                      frame_id='CASSINI_ISS_' + camera)
+
+        with self.assertRaises(ValueError):
+            from_file(self.filespec, cmatrix=custom, frame_id='J2000')
+
+        # The refused registrations left the global pointing untouched.
+        plain = from_file(self.filespec)
+        self.assertTrue(np.allclose(plain.get_cmatrix().vals, m0.vals))
+
+    #===========================================================================
+    def test_rejects_non_rotation_cmatrix(self):
+        """set_cmatrix (and therefore from_file's cmatrix argument) must
+        reject anything that is not a proper floating-point rotation: NaNs,
+        zeros, scalings, reflections, and boolean/integer data."""
+
+        obs = from_file(self.filespec, cmatrix=oops.Matrix3(np.eye(3)))
+
+        bad_matrices = [
+            np.diag([1., 2., 1.]),          # scaling, det = 2
+            np.diag([1., 1., -1.]),         # reflection, det = -1
+            np.full((3, 3), np.nan),        # non-finite
+            np.zeros((3, 3)),               # det = 0
+            np.eye(3, dtype=bool),          # boolean data
+            np.eye(3, dtype=int),           # integer data
+        ]
+        for bad in bad_matrices:
+            with self.assertRaises(ValueError, msg=repr(bad)):
+                obs.set_cmatrix(bad)
+
+        with self.assertRaises(ValueError):
+            from_file(self.filespec, cmatrix=np.diag([1., 1., -1.]))
+
+        # A legitimate rotation still passes.
+        obs.set_cmatrix(_PERTURBATION)
+        self.assertTrue(np.allclose(obs.get_cmatrix().vals, _PERTURBATION.vals))
+
+    #===========================================================================
     def test_frame_id_without_cmatrix_raises(self):
         """frame_id is only meaningful together with cmatrix; passing it alone
         must raise rather than being silently ignored."""
