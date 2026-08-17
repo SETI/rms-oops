@@ -492,7 +492,7 @@ class LORRI(object):
         flipxyz = oops.Matrix3([[ 1, 0, 0],
                                 [ 0,-1, 0],
                                 [ 0, 0,-1]])
-        ignore = oops.frame.Cmatrix(flipxyz, lorri_flipped, 'NH_LORRI')
+        ignore = oops.frame.Cmatrix(flipxyz, lorri_flipped, frame_id='NH_LORRI')
 
         LORRI.initialized = True
         LORRI.asof = asof
