@@ -245,6 +245,20 @@ class Juno(object):
             'Juno/IK/juno_jiram_v02.ti',
             'Juno/SPK/de421.bsp',
             'Juno/SPK/de432s.bsp',
+
+            # Late-2023/2024 encounters (SRU images)
+            'Juno/CK/juno_sc_rec_231229_231230_v02.bc',
+            'Juno/SPK/spk_rec_231212_240118_240119.bsp',
+            'Juno/CK/juno_sc_rec_240407_240413_v01.bc',
+            'Juno/SPK/spk_rec_240325_240426_240430.bsp',
+            'Juno/CK/juno_sc_rec_240612_240614_v02.bc',
+            'Juno/SPK/spk_rec_240529_240701_240705.bsp',
+
+            # This SCLK must be furnished after jno_sclkscet_00128 so the
+            # newer clock correlation takes priority; the old kernel
+            # extrapolated to 2024 is off by several seconds, which matters
+            # at the ~2 rpm spacecraft spin rate.
+            'Juno/SCLK/JNO_SCLKSCET.00210.tsc',
         ])
         for path in paths:
             cspyce.furnsh(path)
