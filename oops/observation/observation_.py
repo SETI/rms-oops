@@ -501,6 +501,45 @@ class Observation(object):
     # registered by anything else (e.g. 'CASSINI_ISS_NAC' or 'J2000').
     _cmatrix_frame_ids = set()
 
+    @staticmethod
+    def validate_cmatrix(cmatrix):
+        """Validate a C-matrix as a proper rotation; return it as a Matrix3.
+
+        A recorded C-matrix arriving from a metadata file can carry NaNs,
+        booleans, integer arrays, or a damaged matrix; each raises an
+        attributable ValueError here rather than producing NaN or skewed
+        geometry an hour downstream.
+
+        Input:
+            cmatrix     an oops.Matrix3 (or 3x3 array). It must be a proper
+                        rotation with floating-point values: non-finite values,
+                        integer or boolean data (a signature of a corrupted
+                        metadata record), reflections, and non-orthogonal
+                        matrices all raise ValueError.
+
+        Return:         the validated C-matrix as a Matrix3.
+        """
+
+        raw = cmatrix.values if isinstance(cmatrix, Qube) else np.asarray(cmatrix)
+        if not np.issubdtype(raw.dtype, np.floating):
+            raise ValueError('cmatrix must have floating-point values; got '
+                             'dtype %s' % raw.dtype)
+
+        matrix = Matrix3.as_matrix3(cmatrix)
+        values = matrix.values
+        if not np.all(np.isfinite(values)):
+            raise ValueError('cmatrix contains non-finite values')
+
+        det = np.linalg.det(values)
+        ortho_error = np.max(np.abs(values.dot(values.T) - np.eye(3)))
+        if (abs(det - 1.) > Observation.CMATRIX_TOL
+                or ortho_error > Observation.CMATRIX_TOL):
+            raise ValueError('cmatrix is not a proper rotation matrix: '
+                             'det = %.6g (should be 1), '
+                             'max|C CT - I| = %.6g' % (det, ortho_error))
+
+        return matrix
+
     def set_cmatrix(self, cmatrix, frame_id=None):
         """Set this observation's frame from a spice-convention C-matrix.
 
@@ -516,10 +555,8 @@ class Observation(object):
         Input:
             cmatrix     an oops.Matrix3 (or 3x3 array) giving the spice-convention
                         C-matrix, as returned by get_cmatrix(). It must be a
-                        proper rotation with floating-point values: non-finite
-                        values, integer or boolean data (a signature of a
-                        corrupted metadata record), reflections, and
-                        non-orthogonal matrices all raise ValueError.
+                        proper rotation with floating-point values; anything
+                        else raises ValueError (see validate_cmatrix()).
             frame_id    None (default) attaches a fresh unregistered frame owned
                         by the observation, so loading other images never
                         disturbs its pointing; otherwise the frame is registered
@@ -539,27 +576,7 @@ class Observation(object):
                              'class defines CMATRIX_ROTATION (the spice-frame '
                              '-> oops-frame convention rotation)')
 
-        # Validate the supplied C-matrix as a proper rotation. A recorded
-        # C-matrix arriving from a metadata file can carry NaNs, booleans,
-        # integer arrays, or a damaged matrix; each is an attributable error
-        # here rather than NaN or skewed geometry an hour downstream.
-        raw = cmatrix.values if isinstance(cmatrix, Qube) else np.asarray(cmatrix)
-        if not np.issubdtype(raw.dtype, np.floating):
-            raise ValueError('cmatrix must have floating-point values; got '
-                             'dtype %s' % raw.dtype)
-
-        matrix = Matrix3.as_matrix3(cmatrix)
-        values = matrix.values
-        if not np.all(np.isfinite(values)):
-            raise ValueError('cmatrix contains non-finite values')
-
-        det = np.linalg.det(values)
-        ortho_error = np.max(np.abs(values.dot(values.T) - np.eye(3)))
-        if (abs(det - 1.) > Observation.CMATRIX_TOL
-                or ortho_error > Observation.CMATRIX_TOL):
-            raise ValueError('cmatrix is not a proper rotation matrix: '
-                             'det = %.6g (should be 1), '
-                             'max|C CT - I| = %.6g' % (det, ortho_error))
+        matrix = Observation.validate_cmatrix(cmatrix)
 
         # Convert the spice-convention C-matrix into the oops observation-frame
         # attitude by applying the fixed instrument convention rotation.
