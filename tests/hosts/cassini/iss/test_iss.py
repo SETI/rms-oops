@@ -109,6 +109,42 @@ class Test_Cassini_ISS_Cmatrix(unittest.TestCase):
                                      obs2.get_cmatrix().vals))
 
     #===========================================================================
+    def test_default_frames_are_distinct_and_stay_out_of_registry(self):
+        """Pin the frame_id=None isolation contract against registry rewrites:
+        observations given equal-valued C-matrices must get distinct frame
+        objects, and a default set_cmatrix must leave the global frame
+        registry and cache unchanged. A registry that dedups or retains
+        unregistered frames (e.g. a per-subclass wayframe table) breaks the
+        documented per-observation ownership; this test makes that a failure
+        here instead of a silent semantic change."""
+
+        baseline = from_file(self.filespec)
+        camera = baseline.dict['INSTRUMENT_ID'][3:] + 'C'
+        spice0 = self._spice_cmatrix(camera, baseline.tstart)
+        custom = _PERTURBATION * spice0
+
+        # Warm every lazy path once (load + get_cmatrix) before measuring.
+        obs1 = from_file(self.filespec, cmatrix=custom)
+        _ = obs1.get_cmatrix()
+
+        n_wayframes = len(Frame.WAYFRAME_REGISTRY)
+        n_cached = len(Frame.FRAME_CACHE)
+
+        # Equal-valued C-matrices: distinct frame objects per observation.
+        obs2 = from_file(self.filespec, cmatrix=custom)
+        obs3 = from_file(self.filespec, cmatrix=custom)
+        _ = obs2.get_cmatrix()
+        _ = obs3.get_cmatrix()
+
+        self.assertIsNot(obs1.frame, obs2.frame)
+        self.assertIsNot(obs2.frame, obs3.frame)
+        self.assertTrue(np.all(obs2.get_cmatrix().vals == custom.vals))
+
+        # No global retention: the registry and cache did not grow.
+        self.assertEqual(len(Frame.WAYFRAME_REGISTRY), n_wayframes)
+        self.assertEqual(len(Frame.FRAME_CACHE), n_cached)
+
+    #===========================================================================
     def test_default_does_not_leak_into_plain_load(self):
         """A default custom load never touches the global camera frame, so a
         subsequent plain load reads back its own SPICE pointing."""
