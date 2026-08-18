@@ -35,20 +35,21 @@ def from_file(filespec, return_all_planets=False, method='strict', **parameters)
 
     filespec = FCPath(filespec)
 
-    # Locate the data file and its detached label
-    ext = filespec.suffix
-    if ext.upper() == '.LBL':
-        lblspec = filespec
-        datspec = filespec.with_suffix('.fit' if ext.islower() else '.FIT')
-    else:
-        datspec = filespec
-        lblspec = filespec.with_suffix('.lbl' if ext.islower() else '.LBL')
-
-    # Load the PDS label
-    label = pdsparser.Pds3Label(lblspec, method=method).as_dict()
+    # Load the PDS label; given a data file path, Pds3Label reads the
+    # detached .LBL/.lbl label alongside it
+    label = pdsparser.Pds3Label(filespec, method=method).as_dict()
 
     # Get metadata
     meta = _Metadata(label)
+
+    # Locate the data file; when given the label, take the file name from the
+    # label's ^IMAGE pointer
+    if filespec.suffix.upper() == '.LBL':
+        pointer = label['^IMAGE']
+        name = pointer[0] if isinstance(pointer, (tuple, list)) else pointer
+        datspec = filespec.parent / name
+    else:
+        datspec = filespec
 
     # Load time-dependent kernels
     Juno.load_cks(meta.tstart, meta.tstop)
