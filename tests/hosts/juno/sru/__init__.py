@@ -51,10 +51,62 @@ class Test_Juno_SRU_FOV(unittest.TestCase):
 
 #===============================================================================
 class Test_Juno_SRU(unittest.TestCase):
+    """Regression tests for from_file() using a real EDR from the shared test
+    data tree. Skipped if the test data or SPICE kernels are unavailable.
+    """
+
+    DATA = 'juno/sru/SRU_1_2024100T045333_60_V01.FIT'
 
     #===========================================================================
     def runTest(self):
-        pass
+        import julian
+        import oops
+        import oops.hosts.juno.sru as sru
+        from oops.unittester_support import TEST_DATA_PREFIX
+
+        from polymath import Vector3
+
+        datspec = TEST_DATA_PREFIX / self.DATA
+        try:
+            datspec.retrieve()
+            obs = sru.from_file(datspec)
+        except (FileNotFoundError, OSError) as e:
+            self.skipTest('SRU test data or kernels unavailable: ' + str(e))
+
+        # Metadata extraction
+        self.assertEqual(obs.instrument, 'SRU1')
+        self.assertEqual(obs.target, 'IO')
+        self.assertTrue(obs.tdi_on)
+        self.assertEqual(obs.texp, 0.01)
+        tstart = julian.tdb_from_tai(julian.tai_from_iso('2024-04-09T04:53:33.955'))
+        self.assertTrue(abs(obs.tstart - tstart) < 1.e-6)
+
+        # FITS data array in (line, sample) order; dummy columns 0-1 and rows
+        # 510-511 are zero
+        self.assertEqual(obs.data.shape, (512, 512))
+        self.assertTrue(np.all(obs.data[:,0:2] == 0))
+        self.assertTrue(np.all(obs.data[510:512,:] == 0))
+        self.assertTrue(obs.data.max() > 0)
+
+        # Detached-label resolution: the .LBL path yields the same observation
+        obs2 = sru.from_file(datspec.with_suffix('.LBL'))
+        self.assertTrue(np.all(obs2.data == obs.data))
+        self.assertEqual(obs2.tstart, obs.tstart)
+
+        # The camera frame is inertially frozen at START_TIME...
+        xform0 = obs.frame.wrt(oops.frame.Frame.J2000).transform_at_time(obs.tstart)
+        xform1 = obs.frame.wrt(oops.frame.Frame.J2000).transform_at_time(obs.tstart + 1000.)
+        self.assertTrue(np.all(xform0.matrix.vals == xform1.matrix.vals))
+
+        # ...and the boresight there matches the label RA/DEC
+        bore = xform0.unrotate(Vector3((0., 0., 1.))).vals
+        ra = np.degrees(np.arctan2(bore[1], bore[0])) % 360.
+        dec = np.degrees(np.arcsin(bore[2]))
+        self.assertTrue(abs(ra - obs.dict['RIGHT_ASCENSION']) < 0.01)
+        self.assertTrue(abs(dec - obs.dict['DECLINATION']) < 0.01)
+
+        # Distinct observations own distinct frame objects
+        self.assertIsNot(obs2.frame, obs.frame)
 
 
 ##############################################
