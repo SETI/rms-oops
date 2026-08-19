@@ -5,10 +5,11 @@
 import numpy as np
 import numbers
 
-from polymath              import Scalar, Pair, Vector, Vector3, Qube
+from polymath              import Matrix3, Scalar, Pair, Vector, Vector3, Qube
 from oops.config           import LOGGING, PATH_PHOTONS
 from oops.event            import Event
 from oops.frame            import Frame
+from oops.frame.cmatrix    import Cmatrix
 from oops.frame.navigation import Navigation
 from oops.meshgrid         import Meshgrid
 import oops.mutable as mutable
@@ -492,6 +493,27 @@ class Observation(object):
         frame = self.frame.wrt(Frame.J2000)
         xform = frame.transform_at_time(self.midtime)
         return self.spice_to_cmatrix.inverse() * xform.matrix
+
+    #===========================================================================
+    def set_spice_cmatrix(self, matrix):
+        """Set this Observation's frame as a C matrix, using the convention of
+        the SPICE toolkit's C kernel rather than the OOPS convention.
+
+        This replaces the frame outright, so the observation is left with a
+        fixed pointing relative to J2000.
+
+        Input:
+            matrix      the C matrix rotating J2000 coordinates into the SPICE
+                        frame of the instrument, as a Matrix3 or as anything
+                        that can be converted to one.
+        """
+
+        if not hasattr(self, 'spice_to_cmatrix'):
+            raise AttributeError(f'{type(self).__name__} does not have a '
+                                 '"spice_to_cmatrix" attribute')
+
+        frame = Cmatrix(self.spice_to_cmatrix * Matrix3.as_matrix3(matrix))
+        self.set_frame(frame)
 
     ############################################################################
     # Subfield support methods
