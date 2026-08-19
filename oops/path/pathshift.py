@@ -10,8 +10,6 @@ import oops.mutable as mutable
 
 class PathShift(Path, Fittable):
     """A path defined by a time-shift along another path.
-
-    PLACEHOLDER CODE. "CONCEPTUALLY" CORRECT BUT NOT YET TESTED.
     """
 
     _WAYPOINTS = {}

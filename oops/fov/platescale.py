@@ -9,8 +9,6 @@ from polymath      import Pair
 
 class Platescale(FOV, Fittable):
     """An FOV defined by applying a plate scale to another FOV.
-
-    PLACEHOLDER CODE. "CONCEPTUALLY" CORRECT BUT NOT YET TESTED.
     """
 
     def __init__(self, factor, /, fov):
@@ -27,7 +25,6 @@ class Platescale(FOV, Fittable):
 
         self.uv_los = self.fov.uv_los
         self.uv_shape = self.fov.uv_shape
-        self.uv_area = self.fov.uv_area
 
         self._refresh()
 
@@ -35,14 +32,20 @@ class Platescale(FOV, Fittable):
     # Fittable API
     ######################################################################################
 
+    nparams = 1
+
     def _refresh(self):
         self.uv_scale = self.fov.uv_scale * self.factor
+
+        # (x,y) are scaled by the factor, so a unit step in (u,v) covers the square of
+        # the factor in area; area_factor() divides by this value
+        self.uv_area = self.fov.uv_area * self.factor**2
 
     def _set_params(self, params):
         self.factor = params[0]
 
     @property
-    def _params(self):
+    def params(self):
         return (self.factor,)
 
     ######################################################################################

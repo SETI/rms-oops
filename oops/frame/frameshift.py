@@ -10,8 +10,6 @@ import oops.mutable as mutable
 
 class FrameShift(Frame, Fittable):
     """A frame defined by a time-shift of another frame.
-
-    PLACEHOLDER CODE. "CONCEPTUALLY" CORRECT BUT NOT YET TESTED.
     """
 
     _WAYFRAMES = {}     # frame key -> wayframe
@@ -51,8 +49,8 @@ class FrameShift(Frame, Fittable):
         self._origin = self._reference._origin
         self._shape = self._frame._shape
 
-        if frame_id == '+' and self._frame._path_id:
-            frame_id = self._frame._path_id + '_SHIFT'
+        if frame_id == '+' and self._frame._frame_id:
+            frame_id = self._frame._frame_id + '_SHIFT'
 
         self._register(frame_id)
         self.refresh()
@@ -165,7 +163,7 @@ class FrameShift(Frame, Fittable):
         """
 
         time = Scalar.as_scalar(time)
-        return self.frame.transform_at_time(time + self._dt, quick=quick)
+        return self._frame.transform_at_time(time + self._dt, quick=quick)
 
 ##########################################################################################
 

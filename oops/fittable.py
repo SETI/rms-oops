@@ -107,7 +107,7 @@ class Fittable(object):
         if params == self.params:
             return False
         if len(params) != self.nparams:
-            plural = 's' if self._nparams > 1 else ''
+            plural = 's' if self.nparams > 1 else ''
             raise ValueError(f'{type(self).__name__} object requires {self.nparams} fit '
                              f'parameter{plural}')
 
