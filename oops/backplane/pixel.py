@@ -1,7 +1,6 @@
 ################################################################################
 # oops/backplanes/pixel.py: pixel coordinate backplanes
 ################################################################################
-import numpy as np
 
 from oops.constants import C
 from oops.backplane import Backplane

@@ -10,7 +10,6 @@ import vicar
 import pdstable
 import pdsparser
 import numpy as np
-import os
 import warnings
 
 from filecache import FCPath

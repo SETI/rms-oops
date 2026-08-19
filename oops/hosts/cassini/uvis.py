@@ -4,7 +4,6 @@
 
 import numpy as np
 import numbers
-import os
 
 import julian
 import oops

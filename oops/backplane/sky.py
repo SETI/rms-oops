@@ -4,7 +4,7 @@
 
 import numpy as np
 
-from polymath       import Scalar, Vector3
+from polymath       import Vector3
 from oops.backplane import Backplane
 from oops.frame     import Frame
 

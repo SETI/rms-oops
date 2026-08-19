@@ -15,4 +15,8 @@ from oops.fov.subsampledfov import SubsampledFOV
 from oops.fov.tdifov        import TDIFOV
 from oops.fov.wcsfov        import WCSFOV
 
+__all__ = ['FOV', 'BarrelFOV', 'FlatFOV', 'NullFOV', 'OffsetFOV', 'Platescale',
+           'PolynomialFOV', 'SliceFOV', 'Subarray', 'SubsampledFOV', 'TDIFOV',
+           'WCSFOV']
+
 ################################################################################

@@ -2,7 +2,6 @@
 # oops/hosts/cassini/iss.py
 ################################################################################
 
-import os
 import numpy as np
 import julian
 import vicar

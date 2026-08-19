@@ -3,7 +3,6 @@
 ##########################################################################################
 """Support for Fittable (mutable) OOPS objects."""
 
-import numpy as np
 from collections.abc import Iterable
 from typing import Any
 

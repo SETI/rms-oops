@@ -10,4 +10,7 @@ from oops.observation.slit1d       import Slit1D
 from oops.observation.snapshot     import Snapshot
 from oops.observation.timedimage   import TimedImage
 
+__all__ = ['Observation', 'InSitu', 'Pixel', 'RasterSlit1D', 'Slit1D',
+           'Snapshot', 'TimedImage']
+
 ################################################################################

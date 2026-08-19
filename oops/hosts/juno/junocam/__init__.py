@@ -14,6 +14,7 @@ from filecache import FCPath
 
 from oops.hosts.juno import Juno
 
+__all__ = ['from_file', 'JUNOCAM']
 
 RATIONALE_RE = re.compile(r' *INS-61504_DISTORTION_Y = ([\d\.]+)')
 ################################################################################

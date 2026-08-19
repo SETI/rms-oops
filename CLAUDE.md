@@ -53,8 +53,11 @@ house style. Do not "fix" alignment or blank-line counts that flake8 passes.
   `surface_`, `fov_`, `observation_`, `cadence_`, `calibration_`, `gravity_`.
   Subclass modules are lowercase with no separators (`twovectorframe.py`).
 - Imports are absolute; `polymath` is grouped with the `oops` imports, not treated
-  as third-party. No `__all__`. Type annotations appear only in `fittable.py` and
-  `mutable.py`.
+  as third-party. Type annotations appear only in `fittable.py` and `mutable.py`.
+- Every `__init__.py` declares its public API in `__all__`: the re-exported names
+  for a package that only re-exports, the public classes and functions it defines
+  otherwise. A module that exists only for its import side effects (`all.py`)
+  carries `# flake8: noqa: F401` instead.
 
 ## Architecture traps
 

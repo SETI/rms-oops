@@ -5,12 +5,11 @@
 ################################################################################
 
 import numpy as np
-import unittest
 
-import julian
-import textkernel
 import spicedb
 import oops
+
+__all__ = ['lrange', 'NewHorizons']
 
 def lrange(*args):
     return list(range(*args))

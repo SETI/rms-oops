@@ -14,4 +14,8 @@ from oops.path.pathshift  import PathShift
 from oops.path.quickpath  import QuickPath
 from oops.path.spicepath  import SpicePath
 
+__all__ = ['Path', 'NullPath', 'SSBPath', 'LinkedPath', 'RelativePath', 'ReversedPath',
+           'RotatedPath', 'CirclePath', 'CoordPath', 'FixedPath', 'KeplerPath',
+           'LinearPath', 'MultiPath', 'PathShift', 'QuickPath', 'SpicePath']
+
 ##########################################################################################

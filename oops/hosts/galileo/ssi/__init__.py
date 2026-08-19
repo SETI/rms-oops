@@ -15,6 +15,7 @@ from oops.hosts.galileo import Galileo
 
 from filecache import FCPath
 
+__all__ = ['from_file', 'from_index', 'initialize', 'Metadata', 'SSI']
 
 ################################################################################
 # Standard class methods

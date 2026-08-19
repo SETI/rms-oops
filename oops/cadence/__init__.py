@@ -13,4 +13,8 @@ from oops.cadence.snapcadence     import SnapCadence
 from oops.cadence.tdicadence      import TDICadence
 from oops.cadence.timeshift       import TimeShift
 
+__all__ = ['Cadence', 'DualCadence', 'Instant', 'Metronome', 'ReshapedCadence',
+           'ReversedCadence', 'Sequence', 'SnapCadence', 'TDICadence',
+           'TimeShift']
+
 ################################################################################

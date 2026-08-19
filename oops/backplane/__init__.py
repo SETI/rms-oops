@@ -14,6 +14,7 @@ from oops.surface.ansa      import Ansa
 from oops.surface.limb      import Limb
 from oops.surface.ringplane import RingPlane
 
+__all__ = ['Backplane']
 
 class Backplane(object):
     """Class that supports the generation and manipulation of sets of backplanes

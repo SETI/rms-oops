@@ -14,6 +14,8 @@ import oops
 
 from oops.body import Body
 
+__all__ = ['Cassini']
+
 TOUR = (2003 - 2000) * 365 * 86400      # Rough ET dividing Saturn from Jupiter
 
 ################################################################################

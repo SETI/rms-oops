@@ -2,15 +2,15 @@
 # oops/inst/juno/jiram/__init__.py
 ################################################################################
 
-import numpy as np
 import julian
-import cspyce
 import pdsparser
 import oops
 
 from oops.hosts.juno import Juno
 
 from filecache import FCPath
+
+__all__ = ['from_file', 'JIRAM']
 
 ################################################################################
 # Standard class methods

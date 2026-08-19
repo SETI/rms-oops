@@ -8,4 +8,6 @@ from oops.calibration.nullcalib    import NullCalib
 from oops.calibration.radiance     import Radiance
 from oops.calibration.rawcounts    import RawCounts
 
+__all__ = ['Calibration', 'FlatCalib', 'NullCalib', 'Radiance', 'RawCounts']
+
 ################################################################################
