@@ -39,8 +39,10 @@ class OffsetFOV(FOV, Fittable):
             raise ValueError('only one of uv_offset and xy_offset can be '
                              + 'specified')
 
-        self.uv_offset = uv_offset
-        self.xy_offset = xy_offset
+        # Coerce to Pair so that the Fittable interface, which reads
+        # uv_offset.vals, works regardless of how the offset was given
+        self.uv_offset = None if uv_offset is None else Pair.as_pair(uv_offset)
+        self.xy_offset = None if xy_offset is None else Pair.as_pair(xy_offset)
 
         if self.uv_offset is not None:
             self.xy_offset = self.fov.xy_from_uv(self.uv_offset +
@@ -80,7 +82,11 @@ class OffsetFOV(FOV, Fittable):
 
     def __getstate__(self):
         self.refresh()
-        return (self.fov, self.uv_offset, self.xy_offset)
+
+        # Only one of the two offsets can be given to the constructor,
+        # which derives the other from it; uv_offset is the one used by
+        # the Fittable interface
+        return (self.fov, self.uv_offset)
 
     def __setstate__(self, state):
         self.__init__(*state)
