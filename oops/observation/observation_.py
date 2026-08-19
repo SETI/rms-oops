@@ -8,8 +8,10 @@ import numbers
 from polymath              import Scalar, Pair, Vector, Vector3, Qube
 from oops.config           import LOGGING, PATH_PHOTONS
 from oops.event            import Event
+from oops.frame            import Frame
 from oops.frame.navigation import Navigation
 from oops.meshgrid         import Meshgrid
+import oops.mutable as mutable
 
 
 class Observation(object):
@@ -368,9 +370,57 @@ class Observation(object):
                                   'is not implemented')
 
     #===========================================================================
+    def copy(self):
+        """An independent copy of this observation.
+
+        The data array, if any, is shared with the original rather than
+        duplicated. The frame, path, FOV and cadence are shared as well; these
+        are canonical objects, registered and shared throughout OOPS, and
+        duplicating them would break the identities that the Frame and Path
+        registries rely on. What the copy does not share is its own state: it
+        gets a new subfield dictionary, so subfields can be inserted into or
+        deleted from either observation without disturbing the other, and it
+        carries none of the original's internal record of what has been
+        modified.
+
+        A Fittable sub-object, such as a Navigation frame, is the exception: it
+        is duplicated, so that fitting one observation leaves the other
+        unchanged. The object to which it applies is still shared.
+
+        Return:         A new Observation.
+        """
+
+        fittables = [name for name in mutable.mutable_names(self)
+                     if mutable.is_fittable(self.__dict__[name])]
+
+        obs = object.__new__(type(self))
+        obs.__dict__ = self.__dict__.copy()
+        obs.subfields = self.subfields.copy()
+
+        # Anything that can be modified in place gets duplicated; a subfield is
+        # also an attribute, so both records have to be updated
+        for name in fittables:
+            subobj = self.__dict__[name].copy()
+            obs.__dict__[name] = subobj
+            if name in obs.subfields:
+                obs.subfields[name] = subobj
+
+        # The copy is a new object, so it must not inherit the bookkeeping that
+        # describes the original; otherwise the two would share one record of
+        # which sub-objects are mutable and when each was last refreshed
+        for key in [k for k in obs.__dict__ if k.startswith('_MUTABLE')]:
+            del obs.__dict__[key]
+
+        return obs
+
+    #===========================================================================
     def navigate(self, angles):
         """A copy of this Observation object after two or three rotation angles
         of a Navigation object applied.
+
+        The copy is created by copy(), so it shares the data array with this
+        observation but is given a Navigation frame of its own; re-pointing the
+        copy leaves this observation unchanged.
 
         Input:
             angles      two or three angles of rotation in radians. The order of
@@ -381,17 +431,67 @@ class Observation(object):
         Return:         A new Observation with the navigation applied.
         """
 
-        # Identify the non-navigated frame
-        if isinstance(self.frame, Navigation):
-            frame = self.frame.reference
-        else:
-            frame = self.frame
+        obs = self.copy()
 
-        # Copy and update the frame
-        obs = object.__new__(type(self))
-        obs.__dict__ = self.__dict__.copy()
+        # Identify the non-navigated frame, so that repeated calls replace the
+        # Navigation rather than stacking a second one on top of it
+        if isinstance(obs.frame, Navigation):
+            frame = obs.frame.reference
+        else:
+            frame = obs.frame
+
         obs.frame = Navigation(angles, reference=frame)
+        mutable._invalidate(obs)
+        mutable._increment(obs)
         return obs
+
+    #===========================================================================
+    def set_frame(self, frame):
+        """Replace the frame of this observation in place.
+
+        This modifies the observation itself rather than returning a copy. Any
+        object already holding a reference to this observation, such as a
+        Backplane, sees the new frame but retains everything it derived from
+        the old one; call mutable.refresh() on such an object afterward.
+
+        Input:
+            frame       the new frame.
+        """
+
+        # An observation that is not mutable reports itself as frozen because it
+        # has nothing to freeze, so both tests are needed to single out an
+        # observation that was frozen deliberately
+        if mutable.is_mutable(self) and mutable.is_frozen(self):
+            raise ValueError(f'{type(self).__name__} object is frozen')
+
+        self.frame = frame
+
+        # The new frame may be Fittable where the old one was not, or vice
+        # versa, so the record of which sub-objects are mutable is now stale
+        mutable._invalidate(self)
+        mutable._increment(self)
+
+    #===========================================================================
+    def get_spice_cmatrix(self):
+        """The C matrix at the mid-time of this observation, in the convention
+        used by the SPICE toolkit.
+
+        This observation must carry a "spice_to_cmatrix" subfield, the rotation
+        from the SPICE frame convention of the instrument to the oops
+        convention. It is inserted by the host module that created the
+        observation.
+
+        Return:         a Matrix3 rotating J2000 coordinates into the SPICE
+                        frame of the instrument.
+        """
+
+        if not hasattr(self, 'spice_to_cmatrix'):
+            raise AttributeError(f'{type(self).__name__} does not have a '
+                                 '"spice_to_cmatrix" attribute')
+
+        frame = self.frame.wrt(Frame.J2000)
+        xform = frame.transform_at_time(self.midtime)
+        return self.spice_to_cmatrix.inverse() * xform.matrix
 
     ############################################################################
     # Subfield support methods
