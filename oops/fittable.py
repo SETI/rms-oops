@@ -136,6 +136,33 @@ class Fittable(object):
 
         return Fittable._MUTABLE.refresh(self)
 
+    def copy(self) -> 'Fittable':
+        """An independent, unfrozen copy of this object.
+
+        The copy begins with the same parameter values as this object, but the two can be
+        fitted separately; changing one has no effect on the other. Any object to which
+        this one applies, such as the reference frame of a Navigation or the FOV of a
+        Platescale, is shared with the copy rather than duplicated. The copy is not
+        registered under an ID.
+
+        This implementation reconstructs the object from the constructor arguments
+        returned by `__getstate__`, dropping the trailing ID of a registered Frame or
+        Path. A subclass whose constructor cannot be called with those arguments
+        positionally must override this method.
+
+        Returns:
+            (Fittable): A new, unfrozen object of the same class.
+        """
+
+        state = self.__getstate__()     # this also refreshes the object
+
+        # Frame and Path subclasses return their registered ID as the last item; the copy
+        # is left unregistered, so it is dropped
+        if hasattr(self, 'stripped_id'):
+            state = state[:-1]
+
+        return type(self)(*state)
+
     def freeze(self) -> bool:
         """Freeze this object and any Fittable sub-objects.
 

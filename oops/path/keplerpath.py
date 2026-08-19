@@ -259,6 +259,19 @@ class KeplerPath(Path, Fittable):
         self.__init__(body, epoch, elements, observer, wobbles=wobbles, path_id=path_id)
         self.freeze()
 
+    def copy(self):
+        """An independent, unfrozen copy of this path.
+
+        This override is required because `wobbles` is a keyword-only parameter of the
+        constructor. See Fittable.copy().
+
+        Returns:
+            (KeplerPath): A new, unfrozen KeplerPath.
+        """
+
+        (body, epoch, elements, observer, wobbles, _) = self.__getstate__()
+        return KeplerPath(body, epoch, elements, observer, wobbles=wobbles)
+
     ######################################################################################
     # Orbit calculation relative to planet
     ######################################################################################
