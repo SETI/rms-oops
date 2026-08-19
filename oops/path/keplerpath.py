@@ -748,10 +748,20 @@ class KeplerPath(Path, Fittable):
             return Event(time, (pos, vel), self._origin, self._frame)
 
         # With an observer, return event in J2000, with the light time accounted for
-        planet_event = self._photon_from_planet(time, quick=quick)[0]
+        (planet_event, obs_event) = self._photon_from_planet(time, quick=quick)
         (pos, vel) = self._xyz_planet(planet_event.time, partials=partials)
-        pos_j2000 = self._to_j2000.rotate(pos) + planet_event.pos
-        vel_j2000 = self._to_j2000.rotate(vel) + planet_event.vel
+
+        # A photon solution places each event relative to its own path, so the planet
+        # has to be located relative to the observer here. The planet is taken at the
+        # time the photon departed and the observer at the time it arrived, exactly as
+        # in Path._solve_photon.
+        planet_wrt_ssb = planet_event.wrt_ssb(quick=quick)
+        obs_wrt_ssb = obs_event.wrt_ssb(quick=quick)
+        planet_pos = planet_wrt_ssb.pos - obs_wrt_ssb.pos
+        planet_vel = planet_wrt_ssb.vel - obs_wrt_ssb.vel
+
+        pos_j2000 = self._to_j2000.rotate(pos) + planet_pos
+        vel_j2000 = self._to_j2000.rotate(vel) + planet_vel
         return Event(time, (pos_j2000, vel_j2000), self._observer, Frame.J2000)
 
     def _photon_from_planet(self, time, *, derivs=False, guess=None, antimask=None,
@@ -829,13 +839,11 @@ class KeplerPath(Path, Fittable):
 
         path_event = self.event_at_time(planet_event.time, quick=quick, partials=partials)
 
-        # The Event above places this path relative to the planet, so the planet's own
-        # position is needed to locate it relative to the observer. The signs of the
-        # light travel times follow Path._solve_photon, where the time is measured
-        # forward from the departure event and backward from the arrival event.
-        planet_wrt_ssb = planet_event.wrt_ssb(quick=quick).pos
-        obs_wrt_ssb = obs_event.wrt_ssb(quick=quick).pos
-        ray_j2000 = obs_wrt_ssb - (planet_wrt_ssb + path_event.pos.wod)
+        # The Event above is defined relative to the observer, so the ray from this path
+        # to the observer is the negative of its position. The signs of the light travel
+        # times follow Path._solve_photon, where the time is measured forward from the
+        # departure event and backward from the arrival event.
+        ray_j2000 = -path_event.pos.wod
         lt = obs_event.time - path_event.time
 
         path_event = path_event.replace('dep_j2000', ray_j2000, 'dep_lt', lt)
