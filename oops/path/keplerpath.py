@@ -39,6 +39,8 @@ class KeplerPath(Path, Fittable):
 
     _WAYPOINTS = {}
 
+    _USE_QUICKPATHS = True      # orbital elements are costly to evaluate
+
     def __init__(self, body, epoch, elements=None, observer=None, *, wobbles=(),
                  path_id=None):
         """Constructor for a KeplerPath.

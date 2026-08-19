@@ -89,7 +89,12 @@ class Path(object):
     _Body = None                # Filled in by oops/__init__.py
     _QuickPath = None           # Filled in by oops/path/quickpath.py
 
-    _USE_QUICKPATHS = False     # Override to True if the class uses QuickPaths
+    # Override to True if the class uses QuickPaths. Set this True only if this Path's
+    # own events are costly to evaluate and vary with time; a Path that returns a fixed
+    # Event has nothing to tabulate, and one that is already cheap gains nothing.
+    # LinkedPath, RelativePath, ReversedPath, and RotatedPath inherit the value from the
+    # paths they combine.
+    _USE_QUICKPATHS = False
 
     # Set False to disable the class-specific shortcuts returned by _get_shortcut(), which
     # is useful when debugging: the shortcut and the general ancestry walk must agree, so
@@ -782,12 +787,13 @@ class Path(object):
         converged = False
         for count in range(iters):
 
-            # Quicken the path and frame evaluations on first iteration
-            # Hereafter, we specify quick=False because it's already quick.
+            # Quicken the path as soon as the range of times indicates that this would
+            # be beneficial. `quick` is still passed below, because a Path that does not
+            # use QuickPaths itself might be built upon one that does.
             path_wrt_ssb = path_wrt_ssb.quick_path(path_time, quick=quick)
 
             # Evaluate the photon's current SSB position based on time
-            path_event_ssb = path_wrt_ssb.event_at_time(path_time, quick=False)
+            path_event_ssb = path_wrt_ssb.event_at_time(path_time, quick=quick)
             delta_pos_ssb = path_event_ssb.pos.wod - link_pos_ssb
             delta_vel_ssb = path_event_ssb.vel.wod - link_vel_ssb
 
@@ -1180,6 +1186,7 @@ class LinkedPath(Path):
 
         self._path = path
         self._parent = parent
+        self._USE_QUICKPATHS = (path._USE_QUICKPATHS or parent._USE_QUICKPATHS)
         if path._frame == parent._frame:
             self._rotation = None
         else:
@@ -1257,6 +1264,7 @@ class RelativePath(Path):
         # canonical definition of the same body but is defined relative to a different
         # origin, so it cannot perform the subtraction in event_at_time().
         self._new_origin = origin
+        self._USE_QUICKPATHS = (path._USE_QUICKPATHS or origin._USE_QUICKPATHS)
         self._origin = origin._waypoint
         if path._frame == origin._frame:
             self._rotation = None
@@ -1324,6 +1332,7 @@ class ReversedPath(Path):
 
         path = Path.as_path(path)
         self._path = path
+        self._USE_QUICKPATHS = path._USE_QUICKPATHS
 
         self._waypoint = path._origin
         self._origin   = path._waypoint
@@ -1387,6 +1396,7 @@ class RotatedPath(Path):
 
         self._path = path
         self._rotation = rotation
+        self._USE_QUICKPATHS = path._USE_QUICKPATHS
 
         self._waypoint = path._waypoint
         self._origin   = path._origin

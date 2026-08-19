@@ -73,6 +73,16 @@ class QuickPath(Path):
         times = np.arange(self._tmin, self._tmax + self._tstep/2., self._tstep)
         self._steps = len(times)
         self._events = self._slowpath.event_at_time(times, quick=False)
+
+        # A Path whose state does not vary with time returns one position and velocity
+        # for the entire tabulation, which cannot be interpolated. Such a Path has
+        # nothing to gain from a QuickPath anyway, so it should not have set
+        # _USE_QUICKPATHS. Note that the Event still takes its shape from the times, so
+        # it is the state that has to be checked.
+        if self._events.pos.shape != times.shape:
+            raise ValueError(f'{self._slowpath} returns a state independent of time; '
+                             'it cannot be tabulated by a QuickPath')
+
         self._times = times
         self._spline_setup()
 
