@@ -34,6 +34,7 @@ class Test_PathShift(unittest.TestCase):
         mars = SpicePath('MARS', 'SSB')
         shifted = PathShift(DT, mars, path_id='mars_shifted')
         self.assertEqual(shifted.dt, DT)
+        self.assertIsNone(shifted.link)
 
         # The shifted path at time t matches the original path at time t + dt
         time = Scalar(1.e8 + np.arange(10) * 1000.)
@@ -44,6 +45,7 @@ class Test_PathShift(unittest.TestCase):
 
         # A linked PathShift tracks the offset of the object it is linked to
         linked = PathShift(shifted, mars, path_id='mars_shifted_2')
+        self.assertIs(linked.link, shifted)
         self.assertEqual(linked.dt, DT)
 
         shifted.set_params(np.array([2. * DT]))

@@ -65,6 +65,7 @@ class FrameShift(Frame, Fittable):
 
     @property
     def link(self):
+        """The object to which this one is linked, or None if it is unlinked."""
         return self._link
 
     def _source(self):

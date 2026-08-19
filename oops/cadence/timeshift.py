@@ -22,10 +22,10 @@ class TimeShift(Cadence, Fittable):
         """
 
         if hasattr(arg, 'dt'):
-            self.link = arg
+            self._link = arg
         else:
             self.dt = arg
-            self.link = None
+            self._link = None
 
         self.cadence = cadence
         self._refresh()
@@ -36,11 +36,16 @@ class TimeShift(Cadence, Fittable):
         self.min_tstride = cadence.min_tstride
         self.max_tstride = cadence.max_tstride
 
+    @property
+    def link(self):
+        """The object to which this one is linked, or None if it is unlinked."""
+        return self._link
+
     def _source(self):
         """The original source of the time shift if this object is linked to another;
         otherwise, self.
         """
-        return self.link._source() if self.link else self
+        return self._link._source() if self._link else self
 
     ######################################################################################
     # Fittable support
@@ -60,18 +65,18 @@ class TimeShift(Cadence, Fittable):
         redefined.
         """
 
-        if self.link:
-            self.link.set_params(params)
-            self.dt = self.link.dt
+        if self._link:
+            self._link.set_params(params)
+            self.dt = self._link.dt
         else:
             self.dt = params[0]
 
     def _refresh(self):
         """Update the internals."""
 
-        if self.link:
-            self.link._refresh()
-            self.dt = self.link.dt
+        if self._link:
+            self._link._refresh()
+            self.dt = self._link.dt
 
         self.time = (self.cadence.time[0] + self.dt, self.cadence.time[1] + self.dt)
         self.midtime = 0.5 * (self.time[0] + self.time[1])
@@ -208,11 +213,11 @@ class TimeShift(Cadence, Fittable):
             secs (float): The number of seconds to shift the time later.
         """
 
-        return TimeShift(self.link or self.dt, self.cadence.time_shift(secs))
+        return TimeShift(self._link or self.dt, self.cadence.time_shift(secs))
 
     def as_continuous(self):
         """Construct a shallow copy of this Cadence, forced to be continuous."""
 
-        return TimeShift(self.link or self.dt, self.cadence.as_continuous())
+        return TimeShift(self._link or self.dt, self.cadence.as_continuous())
 
 ##########################################################################################
