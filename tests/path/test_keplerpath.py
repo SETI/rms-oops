@@ -302,11 +302,15 @@ class Test_KeplerPath(unittest.TestCase):
 
         # The ray is the same vector at both ends, and its length is the distance the
         # photon travels. The light time is solved to the planet rather than to the body
-        # itself, so the two agree only to the scale of the orbit divided by the range,
-        # about 1e-4 here, plus the planet's own motion over the light travel time.
+        # itself, so the two agree only to the radial part of the orbital offset divided
+        # by the range, which is bounded by 1e-4 for this orbit.
         self.assertEqual(arrival_event.arr_j2000, path_event.dep_j2000)
         ratio = (path_event.dep_j2000.norm() / (C * path_event.dep_lt)).vals
-        self.assertTrue(np.max(np.abs(ratio - 1.)) < 5.e-4)
+        self.assertTrue(np.max(np.abs(ratio - 1.)) < 1.e-4)
+
+        # The departure precedes the arrival by exactly the light travel time
+        self.assertTrue(np.all(path_event.time.vals < arrival_time.vals))
+        self.assertEqual(arrival_time - path_event.time, path_event.dep_lt)
 
         Frame._reset_caches()
         Path._reset_caches()

@@ -837,7 +837,14 @@ class KeplerPath(Path, Fittable):
                                                antimask=antimask, quick=quick,
                                                converge=converge)
 
-        path_event = self.event_at_time(planet_event.time, quick=quick, partials=partials)
+        # event_at_time() takes the time at the observer and applies the light travel
+        # time itself, so it receives the arrival time here. The Event it returns is
+        # positioned where this path was when the photon departed, but is stamped with
+        # the observer's time, so the departure event is that state at the departure
+        # time.
+        apparent = self.event_at_time(obs_event.time, quick=quick, partials=partials)
+        path_event = Event(planet_event.time, (apparent.pos, apparent.vel),
+                           self._origin, Frame.J2000)
 
         # The Event above is defined relative to the observer, so the ray from this path
         # to the observer is the negative of its position. The signs of the light travel
