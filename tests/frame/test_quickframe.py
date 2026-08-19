@@ -40,6 +40,28 @@ class Test_QuickFrame(unittest.TestCase):
         time = Scalar(epoch + np.arange(0., 100., 0.01))
 
         ########################################
+        # Tabulating a Frame does not spawn a second, nested QuickFrame
+        ########################################
+
+        # SpiceFrame quickens itself when handed an array of times, so the tabulation
+        # inside QuickFrame must not re-enter that machinery. The span is short enough
+        # that a QuickFrame of the tabulation times would otherwise be judged worthwhile.
+        short_time = Scalar(epoch + np.arange(0., 0.5, 0.001))
+        self.assertIsInstance(mars.quick_frame(short_time, quick={}), QuickFrame)
+        self.assertEqual(len(mars._quickframes), 1)
+
+        # The same must hold when the frame being tabulated is a composite, which
+        # requires LinkedFrame to forward `quick` to the frames it combines. The times
+        # are well clear of the tabulation above, so a second QuickFrame of IAU_MARS
+        # could not be mistaken for a re-use of the first.
+        linked_time = short_time + 1000.
+        twovector = TwoVectorFrame(mars, Vector3.XAXIS, 'X', Vector3.YAXIS, 'Y',
+                                   frame_id='nested_twovector')
+        linked = twovector.wrt(Frame.J2000)
+        self.assertIsInstance(linked.quick_frame(linked_time, quick={}), QuickFrame)
+        self.assertEqual(len(mars._quickframes), 1)
+
+        ########################################
         # A Frame whose transform is fixed in time is never tabulated
         ########################################
 

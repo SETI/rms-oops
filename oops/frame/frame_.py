@@ -829,10 +829,10 @@ class LinkedFrame(Frame):
               vectors from the reference frame to this frame.
         """
 
-        (time1, parent) = self._parent.transform_at_time_if_possible(time)
-        (time2, xform) = self._frame.transform_at_time_if_possible(time1)
+        (time1, parent) = self._parent.transform_at_time_if_possible(time, quick=quick)
+        (time2, xform) = self._frame.transform_at_time_if_possible(time1, quick=quick)
         if time1.shape != time2.shape:
-            parent = self._parent.transform_at_time(time2)
+            parent = self._parent.transform_at_time(time2, quick=quick)
 
         return (time2, xform.rotate_transform(parent))
 

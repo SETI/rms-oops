@@ -93,7 +93,8 @@ class QuickFrame(Frame):
 
         times = np.arange(self._tmin, self._tmax + self._tstep/2., self._tstep)
         self._steps = len(times)
-        (times, self._xforms) = self._slowframe.transform_at_time_if_possible(times)
+        (times,
+         self._xforms) = self._slowframe.transform_at_time_if_possible(times, quick=False)
 
         # A Frame whose transform does not vary with time returns one Transform for the
         # entire tabulation, which cannot be interpolated. Such a Frame has nothing to
@@ -445,7 +446,8 @@ class QuickFrame(Frame):
             # otherwise place the last new sample fractionally below the old first sample,
             # leaving the merged time array non-increasing at the seam.
             t = np.arange(tmin, self._tmin - self._tstep/2., self._tstep)
-            (time0, xform0) = self._slowframe.transform_at_time_if_possible(t)
+            (time0,
+             xform0) = self._slowframe.transform_at_time_if_possible(t, quick=False)
             count0 = len(time0)
         else:
             count0 = 0
@@ -453,7 +455,8 @@ class QuickFrame(Frame):
         if tmax > self._tmax:
             tmax = self._tstep * ((tmax + extend) // self._tstep + extras + 1)
             t = np.arange(self._tmax + self._tstep, tmax + self._tstep/2., self._tstep)
-            (time1, xform1) = self._slowframe.transform_at_time_if_possible(t)
+            (time1,
+             xform1) = self._slowframe.transform_at_time_if_possible(t, quick=False)
             count1 = len(time1)
         else:
             count1 = 0
