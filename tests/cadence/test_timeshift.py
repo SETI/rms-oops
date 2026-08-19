@@ -21,6 +21,17 @@ class Test_TimeShift(unittest.TestCase):
         self.assertEqual(shifted.dt, DT)
         self.assertIsNone(shifted.link)
 
+        # The shift is held privately and published as a property, as in PathShift and
+        # FrameShift; everything the Cadence contract requires stays a public attribute,
+        # as in the other Cadence subclasses
+        self.assertIsInstance(type(shifted).dt, property)
+        self.assertIsInstance(type(shifted).link, property)
+        self.assertEqual(sorted(a for a in vars(shifted) if a.startswith('_')),
+                         ['_dt', '_link'])
+        for name in ('cadence', 'time', 'midtime', 'lasttime', 'shape',
+                     'is_continuous', 'is_unique', 'min_tstride', 'max_tstride'):
+            self.assertIn(name, vars(shifted))
+
         # Every time is offset by dt, and the shape is unchanged
         self.assertEqual(shifted.shape, cadence.shape)
         self.assertEqual(shifted.time, (cadence.time[0] + DT, cadence.time[1] + DT))

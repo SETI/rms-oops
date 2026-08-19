@@ -24,7 +24,7 @@ class TimeShift(Cadence, Fittable):
         if hasattr(arg, 'dt'):
             self._link = arg
         else:
-            self.dt = arg
+            self._dt = arg
             self._link = None
 
         self.cadence = cadence
@@ -35,6 +35,11 @@ class TimeShift(Cadence, Fittable):
         self.is_unique = cadence.is_unique
         self.min_tstride = cadence.min_tstride
         self.max_tstride = cadence.max_tstride
+
+    @property
+    def dt(self):
+        """The time shift in seconds. A positive value shifts times later."""
+        return self._dt
 
     @property
     def link(self):
@@ -56,7 +61,7 @@ class TimeShift(Cadence, Fittable):
 
     @property
     def params(self):
-        return (self.dt,)
+        return (self._dt,)
 
     def _set_params(self, params):
         """Update the time shift in seconds.
@@ -67,20 +72,20 @@ class TimeShift(Cadence, Fittable):
 
         if self._link:
             self._link.set_params(params)
-            self.dt = self._link.dt
+            self._dt = self._link.dt
         else:
-            self.dt = params[0]
+            self._dt = params[0]
 
     def _refresh(self):
         """Update the internals."""
 
         if self._link:
             self._link._refresh()
-            self.dt = self._link.dt
+            self._dt = self._link.dt
 
-        self.time = (self.cadence.time[0] + self.dt, self.cadence.time[1] + self.dt)
+        self.time = (self.cadence.time[0] + self._dt, self.cadence.time[1] + self._dt)
         self.midtime = 0.5 * (self.time[0] + self.time[1])
-        self.lasttime = self.cadence.lasttime + self.dt
+        self.lasttime = self.cadence.lasttime + self._dt
 
     ######################################################################################
     # Serialization support
@@ -88,7 +93,7 @@ class TimeShift(Cadence, Fittable):
 
     def __getstate__(self):
         self.refresh()
-        return (self.dt, self.cadence)
+        return (self._dt, self.cadence)
 
     def __setstate__(self, state):
         self.__init__(*state)
@@ -120,7 +125,7 @@ class TimeShift(Cadence, Fittable):
 
         return (self.cadence.time_at_tstep(tstep=tstep, remask=remask, derivs=derivs,
                                            inclusive=inclusive)
-                + self.dt)
+                + self._dt)
 
     def time_range_at_tstep(self, tstep, remask=False, inclusive=True,
                             shift=True):
@@ -144,7 +149,7 @@ class TimeShift(Cadence, Fittable):
 
         times = self.cadence.time_range_at_tstep(tstep, remask=remask,
                                                  inclusive=inclusive, shift=shift)
-        return (times[0] + self.dt, times[1] + self.dt)
+        return (times[0] + self._dt, times[1] + self._dt)
 
     def tstep_at_time(self, time, remask=False, derivs=False, inclusive=True):
         """Time step for the given time.
@@ -166,7 +171,7 @@ class TimeShift(Cadence, Fittable):
             (Scalar or Pair): Time step index or indices.
         """
 
-        return self.cadence.tstep_at_time(time - self.dt, remask=remask, derivs=derivs,
+        return self.cadence.tstep_at_time(time - self._dt, remask=remask, derivs=derivs,
                                           inclusive=inclusive)
 
     def tstep_range_at_time(self, time, remask=False, inclusive=True):
@@ -188,7 +193,7 @@ class TimeShift(Cadence, Fittable):
         """
 
         time = Scalar.as_scalar(time)
-        return self.cadence.tstep_range_at_time(time - self.dt, remask=remask,
+        return self.cadence.tstep_range_at_time(time - self._dt, remask=remask,
                                                 inclusive=inclusive)
 
     def time_is_outside(self, time, inclusive=True):
@@ -204,7 +209,7 @@ class TimeShift(Cadence, Fittable):
         """
 
         time = Scalar.as_scalar(time)
-        return self.cadence.time_is_outside(time - self.dt, inclusive=inclusive)
+        return self.cadence.time_is_outside(time - self._dt, inclusive=inclusive)
 
     def time_shift(self, secs):
         """Construct a duplicate of this Cadence with all times shifted by given amount.
@@ -213,11 +218,11 @@ class TimeShift(Cadence, Fittable):
             secs (float): The number of seconds to shift the time later.
         """
 
-        return TimeShift(self._link or self.dt, self.cadence.time_shift(secs))
+        return TimeShift(self._link or self._dt, self.cadence.time_shift(secs))
 
     def as_continuous(self):
         """Construct a shallow copy of this Cadence, forced to be continuous."""
 
-        return TimeShift(self._link or self.dt, self.cadence.as_continuous())
+        return TimeShift(self._link or self._dt, self.cadence.as_continuous())
 
 ##########################################################################################
