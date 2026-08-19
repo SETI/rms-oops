@@ -352,9 +352,21 @@ class Cassini(object):
 
     #===========================================================================
     @staticmethod
-    def used_kernels(time, inst, return_all_planets=False):
+    def used_kernels(time, inst, return_all_planets=False, ck=True):
         """The list of kernels associated with a Cassini observation at a
         selected range of times.
+
+        Input:
+            time                a (start, stop) tuple of times in seconds TDB.
+            inst                the instrument name, e.g., 'iss'.
+            return_all_planets  Include kernels for all planets not just
+                                Jupiter or Saturn.
+            ck                  True (default) to include CK (pointing)
+                                kernels; False to exclude them, e.g. for an
+                                observation whose pointing came from a custom
+                                cmatrix rather than SPICE, where any
+                                furnished CK is unrelated to how the
+                                observation was actually pointed.
         """
         if return_all_planets:
             bodies = [1, 199, 2, 299, 3, 399, 4, 499, 5, 599, 6, 699,
@@ -369,7 +381,11 @@ class Cassini(object):
             else:
                 bodies = [5, 599] + Body.JUPITER_MOONS_LOADED
 
-        return spicedb.used_basenames(time=time, inst=inst, sc=-82,
-                                      bodies=bodies)
+        types = None
+        if not ck:
+            types = [t for t in spicedb.KERNEL_TYPE_SORT_ORDER if t != 'CK']
+
+        return spicedb.used_basenames(types=types, time=time, inst=inst,
+                                      sc=-82, bodies=bodies)
 
 ################################################################################
