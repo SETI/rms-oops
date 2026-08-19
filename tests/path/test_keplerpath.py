@@ -265,6 +265,23 @@ class Test_KeplerPath(unittest.TestCase):
         self.assertTrue(np.max(np.abs(errors)) < 1.e-4)
 
         ####################
+        # Photon solution without an observer, which returns events in the ring frame
+        ####################
+
+        kep = KeplerPath(Body.lookup("SATURN"), 0.,
+                       (a, 1., dmean_dt, 0.2, 3., dperi_dt, 0.1, 5., dnode_dt),
+                       path_id='kepler_unobserved')
+
+        arrival_time = Scalar(1.e8 + np.arange(5) * 100.)
+        arrival = Event(arrival_time, (Vector3.ZERO, Vector3.ZERO), 'EARTH', 'J2000')
+        (path_event, arrival_event) = kep.photon_to_event(arrival)
+
+        # Here the light travel time is solved to the body itself, so the ray length and
+        # the light travel time agree exactly
+        ratio = (path_event.dep_j2000.norm() / (C * path_event.dep_lt)).vals
+        self.assertTrue(np.max(np.abs(ratio - 1.)) < 1.e-12)
+
+        ####################
         # Photon solution when an observer is defined
         ####################
 

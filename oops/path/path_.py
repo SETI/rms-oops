@@ -1193,7 +1193,9 @@ class LinkedPath(Path):
             self._rotation = parent._frame.wrt(path._frame)
 
         self._waypoint = path._waypoint
-        self._frame    = path._frame
+        # This Path uses the frame of the parent Path. event_at_time() rotates into that
+        # frame before the addition, so this is the frame of every Event it returns.
+        self._frame    = parent._frame
         self._origin   = parent._origin
         self._shape    = Qube.broadcasted_shape(self._path._shape, self._parent._shape)
         self._path_id  = path._path_id
