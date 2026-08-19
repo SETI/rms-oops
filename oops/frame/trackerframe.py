@@ -21,6 +21,7 @@ class TrackerFrame(Frame):
     """
 
     _WAYFRAMES = {}
+    _USE_QUICKFRAMES = True     # always a slowly-changing frame
 
     def __init__(self, frame, target, observer, epoch, frame_id=None, cache_size=100):
         """Constructor for a Tracker Frame.

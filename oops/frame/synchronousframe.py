@@ -42,6 +42,9 @@ class SynchronousFrame(Frame):
             raise ValueError('SynchronousFrame requires a shapeless body path')
 
         self._reference = Frame.as_wayframe(self._planet_path._frame)
+        self._USE_QUICKFRAMES = (self._reference._USE_QUICKFRAMES
+                                 or self._planet_path._USE_QUICKPATHS
+                                 or self._orbit_path._USE_QUICKPATHS)
         self._origin = self._planet_path
         self._shape = self._orbit_path._shape
 

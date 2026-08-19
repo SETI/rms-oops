@@ -21,6 +21,8 @@ class InclinedFrame(Frame):
 
     _WAYFRAMES = {}
 
+    _USE_QUICKFRAMES = True     # nodal precession is always slow
+
     def __init__(self, inc, node, rate, epoch, *, despin=True, reference=None,
                  frame_id=None):
         """Constructor for a InclinedFrame.

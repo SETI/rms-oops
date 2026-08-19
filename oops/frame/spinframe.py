@@ -19,6 +19,8 @@ class SpinFrame(Frame):
     """
 
     _WAYFRAMES = {}
+    # _USE_QUICKFRAMES is False because rotation might be rapid and calculation is fairly
+    # efficient.
 
     def __init__(self, offset, rate, epoch, axis, reference, *, frame_id=None):
         """Constructor for a Spin Frame.

@@ -91,7 +91,12 @@ class Frame:
     _QuickFrame = None          # Filled in by oops/frame/quickframe.py
     _SpicePath = None           # Filled in by oops/path/spicepath.py
 
-    _USE_QUICKFRAMES = False    # Override to True if the class uses QuickFrames
+    # Override to True if the class uses QuickFrames. Set this True only if this Frame's
+    # own transform varies with time; a Frame that returns a fixed Transform has nothing
+    # to tabulate. The time dependence of the reference frame does not matter here,
+    # because `transform_at_time` is always relative to the reference; LinkedFrame and
+    # ReversedFrame inherit the value from the frames they combine.
+    _USE_QUICKFRAMES = False
 
     # Set False to disable the class-specific shortcuts returned by _get_shortcut(), which
     # is useful when debugging: the shortcut and the general ancestry walk must agree, so
@@ -749,6 +754,7 @@ class LinkedFrame(Frame):
 
         self._frame     = frame
         self._parent    = parent
+        self._USE_QUICKFRAMES = (frame._USE_QUICKFRAMES or parent._USE_QUICKFRAMES)
 
         self._wayframe  = frame._wayframe
         self._reference = parent._reference
@@ -823,10 +829,10 @@ class LinkedFrame(Frame):
               vectors from the reference frame to this frame.
         """
 
-        (time1, parent) = self.parent.transform_at_time_if_possible(time)
-        (time2, xform) = self.frame.transform_at_time_if_possible(time1)
+        (time1, parent) = self._parent.transform_at_time_if_possible(time)
+        (time2, xform) = self._frame.transform_at_time_if_possible(time1)
         if time1.shape != time2.shape:
-            parent = self.parent.transform_at_time(time2)
+            parent = self._parent.transform_at_time(time2)
 
         return (time2, xform.rotate_transform(parent))
 
@@ -846,6 +852,7 @@ class ReversedFrame(Frame):
 
         frame = Frame.as_frame(frame)
         self._frame     = frame
+        self._USE_QUICKFRAMES = frame._USE_QUICKFRAMES
         self._reference = frame._wayframe
         self._origin    = frame._origin
         self._shape     = frame._shape

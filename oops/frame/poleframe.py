@@ -20,6 +20,7 @@ class PoleFrame(Frame):
     """
 
     _WAYFRAMES = {}
+    _USE_QUICKFRAMES = True     # always a slowly-changing frame
 
     def __init__(self, frame, pole, *, retrograde=False, aries=False, frame_id=None,
                  cache_size=100):

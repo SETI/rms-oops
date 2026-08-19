@@ -94,6 +94,14 @@ class QuickFrame(Frame):
         times = np.arange(self._tmin, self._tmax + self._tstep/2., self._tstep)
         self._steps = len(times)
         (times, self._xforms) = self._slowframe.transform_at_time_if_possible(times)
+
+        # A Frame whose transform does not vary with time returns one Transform for the
+        # entire tabulation, which cannot be interpolated. Such a Frame has nothing to
+        # gain from a QuickFrame anyway, so it should not have set _USE_QUICKFRAMES.
+        if self._xforms.shape != times.shape:
+            raise ValueError(f'{self._slowframe} returns a Transform independent of '
+                             'time; it cannot be tabulated by a QuickFrame')
+
         self._times = times.vals
 
         # Check for omega requirement
@@ -111,10 +119,11 @@ class QuickFrame(Frame):
 
         # Create splines for all four components of the quaternion
         quaternions = Quaternion.as_quaternion(self._xforms.matrix)
+        quat_vals = QuickFrame._unwrap_quaternions(quaternions.vals)
         self._quat_splines = np.empty((4,), dtype='object')
         for i in range(4):
             self._quat_splines[i] = InterpolatedUnivariateSpline(self._times,
-                                                                 quaternions.vals[...,i],
+                                                                 quat_vals[...,i],
                                                                  k=KIND)
 
         # Don't interpolate omega if frame is inertial
@@ -138,6 +147,32 @@ class QuickFrame(Frame):
                                                 self._times,
                                                 self._xforms.omega.vals[..., i],
                                                 k=KIND)
+
+    @staticmethod
+    def _unwrap_quaternions(vals):
+        """The given quaternion values, made continuous in sign.
+
+        Quaternions q and -q describe the same rotation, so the values tabulated for a
+        sequence of times can reverse sign abruptly, typically where the rotation angle
+        passes pi. The splines cannot represent such a discontinuity, so each sample is
+        flipped, where necessary, into the same hemisphere as its predecessor.
+
+        Parameters:
+            vals (array): The tabulated quaternion values, with shape (steps,4).
+
+        Returns:
+            (array): Values of shape (steps,4) describing the same rotations, but without
+                sign reversals between successive samples. The input array is returned if
+                it contains no reversals.
+        """
+
+        signs = np.where(np.sum(vals[:-1] * vals[1:], axis=-1) < 0., -1., 1.)
+        if np.all(signs > 0.):
+            return vals
+
+        vals = vals.copy()
+        vals[1:] *= np.cumprod(signs)[:, np.newaxis]
+        return vals
 
     def _show(self, level, indent=0):
         name = type(self).__name__

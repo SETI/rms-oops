@@ -26,6 +26,7 @@ class LaplaceFrame(Frame):
     """
 
     _WAYFRAMES = {}
+    _USE_QUICKFRAMES = True     # always a slowly-changing frame
 
     def __init__(self, orbit, tilt=0., *, frame_id=None, cache_size=100):
         """Constructor for a LaplaceFrame.

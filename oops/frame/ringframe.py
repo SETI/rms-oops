@@ -58,6 +58,7 @@ class RingFrame(Frame):
 
         self._reference = Frame.J2000
         self._is_inertial = self._epoch is not None
+        self._USE_QUICKFRAMES = not self._is_inertial
         self._origin = self._planet_frame._origin if self._epoch is None else None
         self._shape = Qube.broadcasted_shape(self._planet_frame, self._epoch)
 

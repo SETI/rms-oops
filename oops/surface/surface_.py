@@ -632,8 +632,10 @@ class Surface(object):
             path_wrt_ssb = path_wrt_ssb.quick_path(surface_time, quick=quick)
             frame_wrt_j2000 = frame_wrt_j2000.quick_frame(surface_time,
                                                           quick=quick)
-                # Below, we specify quick=False because the path and frame are
-                # already quickened.
+                # Below, we specify quick=False for the path because it is
+                # already quickened. The frame still receives quick, because a
+                # Frame subclass that does not use QuickFrames itself might be
+                # built upon one that does.
 
             # Locate the intercept points relative to the origin in SSB/J2000,
             # using the current surface time
@@ -643,7 +645,7 @@ class Surface(object):
 
             # Rotate into the surface-fixed frame
             surface_xform = frame_wrt_j2000.transform_at_time(surface_time,
-                                                              quick=False)
+                                                              quick=quick)
             cept_in_frame = surface_xform.rotate(cept_in_j2000, derivs=False)
             los_in_frame = surface_xform.rotate(los_in_j2000, derivs=False)
 
@@ -703,7 +705,7 @@ class Surface(object):
         cept_in_j2000 = (obs_wrt_ssb - origin_wrt_ssb) + lt * los_in_j2000
 
         surface_xform = frame_wrt_j2000.transform_at_time(surface_time,
-                                                          quick=False)
+                                                          quick=quick)
         cept_in_frame = surface_xform.rotate(cept_in_j2000, derivs=True)
         los_in_frame = surface_xform.rotate(los_in_j2000, derivs=True)
 
@@ -1024,8 +1026,10 @@ class Surface(object):
             path_wrt_ssb = path_wrt_ssb.quick_path(surface_time, quick=quick)
             frame_wrt_j2000 = frame_wrt_j2000.quick_frame(surface_time,
                                                           quick=quick)
-                # Below, we specify quick=False because the path and frame are
-                # already quickened.
+                # Below, we specify quick=False for the path because it is
+                # already quickened. The frame still receives quick, because a
+                # Frame subclass that does not use QuickFrames itself might be
+                # built upon one that does.
 
 
             # Quicken the path and frame evaluations on first iteration
@@ -1041,7 +1045,7 @@ class Surface(object):
 
             # Locate the coordinate position relative to the current surface
             surface_xform = frame_wrt_j2000.transform_at_time(surface_time,
-                                                              quick=False)
+                                                              quick=quick)
             if self.IS_VIRTUAL:
                obs_wrt_origin_frame = surface_xform.rotate(obs_wrt_origin_j2000,
                                                            derivs=True)
