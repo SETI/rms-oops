@@ -568,12 +568,15 @@ class QuickFrame(Frame):
         if not hasattr(frame, '_quickframes'):
             frame._quickframes = []
 
-        # If an existing QuickFrame covers the whole time range, just return it
+        # If an existing QuickFrame covers the whole time range, just return it. It is
+        # refreshed first, because the Frame it tabulates might have been re-fit since
+        # the tabulation was made.
         for quickframe in frame._quickframes:
             if tmin >= quickframe._tmin and tmax <= quickframe._tmax:
                 if LOGGING.quickframe_creation:
                     LOGGING.diagnostic(f'Re-using QuickFrame for {frame}, '
                                        f'{tmin:.3f}, {tmax:.3f})')
+                mutable.refresh(quickframe)
                 return quickframe
 
         # This is a quick-and-dirty algorithm to determine whether the use of a QuickFrame
@@ -619,6 +622,7 @@ class QuickFrame(Frame):
                 if LOGGING.quickframe_creation:
                     LOGGING.diagnostic(f'Extending QuickFrame for {frame}, '
                                        f'{tmin:.3f}, {tmax:.3f})')
+                mutable.refresh(quickframe)
                 quickframe.extend(tmin, tmax)
                 return quickframe
 

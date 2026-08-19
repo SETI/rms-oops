@@ -8,8 +8,8 @@ import unittest
 import cspyce
 
 from polymath   import Matrix3, Quaternion, Scalar, Vector3
-from oops.frame import (Frame, Cmatrix, PosTargFrame, QuickFrame, Rotation,
-                        SpiceFrame, SpinFrame, TwoVectorFrame)
+from oops.frame import (Frame, Cmatrix, Navigation, PosTargFrame, QuickFrame,
+                        Rotation, SpiceFrame, SpinFrame, TwoVectorFrame)
 from oops.path  import Path, SpicePath
 from oops.unittester_support import TEST_SPICE_PREFIX
 
@@ -120,5 +120,30 @@ class Test_QuickFrame(unittest.TestCase):
 
         # A tabulation without sign reversals is returned unchanged
         self.assertIs(QuickFrame._unwrap_quaternions(unwrapped), unwrapped)
+
+        ########################################
+        # A tabulation of a fittable Frame is redone after that Frame is re-fit
+        ########################################
+
+        # The Cmatrix contributes no time dependence, but the SpiceFrame underneath it
+        # does, so the composite is worth tabulating
+        cmatrix = Cmatrix([[0., 1., 0.], [-1., 0., 0.], [0., 0., 1.]], mars,
+                          frame_id='fitted_cmatrix')
+        nav = Navigation((1.e-3, 2.e-3), cmatrix, frame_id='fitted_nav')
+        nav_wrt_j2000 = nav.wrt(Frame.J2000)
+        self.assertTrue(nav_wrt_j2000._USE_QUICKFRAMES)
+
+        quick = nav_wrt_j2000.quick_frame(time, quick={})
+        self.assertIsInstance(quick, QuickFrame)
+
+        nav.set_params(np.array([0.5, 0.5]))
+        exact = nav_wrt_j2000.transform_at_time(time, quick=False)
+
+        # The same QuickFrame is handed back, but tabulated afresh
+        reused = nav_wrt_j2000.quick_frame(time, quick={})
+        self.assertIs(reused, quick)
+        error = np.max(np.abs(reused.transform_at_time(time).matrix.vals
+                              - exact.matrix.vals))
+        self.assertLess(error, 1.e-8)
 
 ################################################################################

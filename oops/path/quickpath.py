@@ -368,12 +368,15 @@ class QuickPath(Path):
         if not hasattr(path, '_quickpaths'):
             path._quickpaths = []
 
-        # If an existing QuickPath covers the whole time range, just return it
+        # If an existing QuickPath covers the whole time range, just return it. It is
+        # refreshed first, because the Path it tabulates might have been re-fit since the
+        # tabulation was made.
         for quickpath in path._quickpaths:
             if tmin >= quickpath._tmin and tmax <= quickpath._tmax:
                 if LOGGING.quickpath_creation:
                     LOGGING.diagnostic(f'Re-using QuickPath for {path}: '
                                        f'{tmin:.3f}, {tmax:.3f})')
+                mutable.refresh(quickpath)
                 return quickpath
 
         # This is a quick-and-dirty algorithm to determine whether the use of a QuickPath
@@ -419,6 +422,7 @@ class QuickPath(Path):
                 if LOGGING.quickpath_creation:
                     LOGGING.diagnostic(f'Extending QuickPath for {path}: '
                                        f'{tmin:.3f}, {tmax:.3f})')
+                mutable.refresh(quickpath)
                 quickpath.extend(tmin, tmax)
                 return quickpath
 
