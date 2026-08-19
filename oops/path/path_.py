@@ -285,10 +285,13 @@ class Path(object):
             this Path un-registered.
         """
 
-        # Fill in the _key and the wayframe
+        # Fill in the _key and the waypoint. A class without a _WAYPOINTS dictionary
+        # does not share waypoints; each of its instances is its own waypoint.
         if hasattr(type(self), '_WAYPOINTS'):
             self._key = Cache.clean_key(self._waypoint_key())
             self._waypoint = self._WAYPOINTS.setdefault(self._key, self)
+        else:
+            self._waypoint = self
 
         # Fill in the path ID and register if necessary
         if path_id:
@@ -341,6 +344,10 @@ class Path(object):
 
     def _reregister(self):
         """Update this Path's key in the cache if it has now been frozen."""
+
+        # A Path that is its own waypoint has no key to update
+        if not hasattr(type(self), '_WAYPOINTS'):
+            return
 
         # Remove the definition from the cache under the old key
         if self._key in self._WAYPOINTS and self._WAYPOINTS[self._key] is self:

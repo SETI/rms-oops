@@ -37,8 +37,6 @@ class KeplerPath(Path, Fittable):
     nine orbital elements.
     """
 
-    _WAYPOINTS = {}
-
     _USE_QUICKPATHS = True      # orbital elements are costly to evaluate
 
     def __init__(self, body, epoch, elements=None, observer=None, *, wobbles=(),
@@ -213,13 +211,6 @@ class KeplerPath(Path, Fittable):
 
     def get_elements(self):
         return self._elements
-
-    def _waypoint_key(self):
-        if self.is_frozen:
-            return (self._planet, self._epoch, self._elements, self._observer,
-                    self._wobbles)
-        # Use id(self) to ensure that an un-frozen KeplerPath has a unique key
-        return id(self)
 
     def _show(self, level, indent=0):
         name = type(self).__name__

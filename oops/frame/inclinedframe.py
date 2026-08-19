@@ -69,6 +69,7 @@ class InclinedFrame(Frame):
         self._spin1 = SpinFrame(self._node, self._rate, self._epoch, axis=2,
                                 reference=self._reference)
         self._rotate = Rotation(self._inc, axis=0, reference=self._spin1)
+        self._rotate.freeze()
 
         if self._despin:
             self._spin2 = SpinFrame(-self._node, -self._rate, self._epoch, axis=2,

@@ -346,10 +346,13 @@ class Frame:
                 leave this Frame un-registered.
         """
 
-        # Fill in the _key and the wayframe
+        # Fill in the _key and the wayframe. A class without a _WAYFRAMES dictionary
+        # does not share wayframes; each of its instances is its own wayframe.
         if hasattr(type(self), '_WAYFRAMES'):
             self._key = Cache.clean_key(self._wayframe_key())
             self._wayframe = self._WAYFRAMES.setdefault(self._key, self)
+        else:
+            self._wayframe = self
 
         # Fill in the frame ID and register if necessary
         if frame_id:
@@ -400,6 +403,10 @@ class Frame:
 
     def _reregister(self):
         """Update this Frame's key in the cache if it has now been frozen."""
+
+        # A Frame that is its own wayframe has no key to update
+        if not hasattr(type(self), '_WAYFRAMES'):
+            return
 
         # Remove the definition from the cache under the old key
         if self._key in self._WAYFRAMES and self._WAYFRAMES[self._key] is self:

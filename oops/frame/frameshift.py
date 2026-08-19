@@ -12,8 +12,6 @@ class FrameShift(Frame, Fittable):
     """A frame defined by a time-shift of another frame.
     """
 
-    _WAYFRAMES = {}     # frame key -> wayframe
-
     def __init__(self, arg, /, frame, *, frame_id=None, freeze=False):
         """Constructor for a FrameShift.
 
@@ -71,12 +69,6 @@ class FrameShift(Frame, Fittable):
         otherwise, self.
         """
         return self._link and self._link._source() or self
-
-    def _wayframe_key(self):
-        if self.is_frozen:
-            return (self._dt, self._frame)
-        # Use id(self) to ensure that an unlinked FrameShift has a unique key
-        return (self._link or id(self), self._frame)
 
     def _show(self, level, indent=0):
         name = type(self).__name__

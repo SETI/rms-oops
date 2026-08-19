@@ -13,7 +13,6 @@ from oops.transform import Transform
 class Rotation(Frame, Fittable):
     """A Frame describing a fixed rotation about one axis of another frame."""
 
-    _WAYFRAMES = {}
     _XYZDICT = {'X': 0, 'Y': 1, 'Z': 2, 'x': 0, 'y': 1, 'z': 2, 0: 0, 1: 1, 2: 2}
 
     def __init__(self, arg, /, axis, reference, *, freeze=False, frame_id=None):
@@ -79,12 +78,6 @@ class Rotation(Frame, Fittable):
         otherwise, self.
         """
         return self._link._source() if self._link else self
-
-    def _wayframe_key(self):
-        if self.is_frozen:
-            return (self._angle, self._reference)
-        # Use id(self) to ensure that an unlinked frame has a unique key
-        return (self._link or id(self), self._reference)
 
     def _show(self, level, indent=0):
         name = type(self).__name__

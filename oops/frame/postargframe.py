@@ -15,8 +15,6 @@ class PosTargFrame(Frame):
     of another frame falls at a slightly different position in this frame.
     """
 
-    _WAYFRAMES = {}
-
     def __init__(self, xpos, ypos, reference, *, frame_id=None):
         """Constructor for a PosTarg Frame.
 
@@ -61,9 +59,6 @@ class PosTargFrame(Frame):
     def _refresh(self):
         self._transform = Transform(self._matrix, Vector3.ZERO, self, self._reference,
                                     self._origin)
-
-    def _wayframe_key(self):
-        return (self._xpos, self._ypos, self._reference)
 
     def _show(self, level, indent=0):
         name = type(self).__name__

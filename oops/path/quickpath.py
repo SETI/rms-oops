@@ -13,8 +13,7 @@ import oops.mutable as mutable
 
 
 class QuickPath(Path):
-    """QuickPath returns positions and velocities by interpolating another Path.
-    """
+    """QuickPath returns positions and velocities by interpolating another Path."""
 
     def __init__(self, path, tmin, tmax, quickdict):
         """Constructor for a QuickPath.

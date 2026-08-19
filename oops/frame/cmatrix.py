@@ -19,8 +19,6 @@ class Cmatrix(Frame):
     downward.
     """
 
-    _WAYFRAMES = {}
-
     def __init__(self, cmatrix, reference=None, *, frame_id=None):
         """Constructor for a Cmatrix frame.
 
@@ -52,9 +50,6 @@ class Cmatrix(Frame):
     def _refresh(self):
         self._transform = Transform(self._cmatrix, Vector3.ZERO, self._wayframe,
                                     self._reference)
-
-    def _wayframe_key(self):
-        return (self._cmatrix, self._reference)
 
     def _show(self, level, indent=0):
         skip = indent + 8

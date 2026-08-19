@@ -12,8 +12,6 @@ class PathShift(Path, Fittable):
     """A path defined by a time-shift along another path.
     """
 
-    _WAYPOINTS = {}
-
     def __init__(self, arg, /, path, *, path_id=None, freeze=False):
         """Constructor for a PathShift.
 
@@ -70,12 +68,6 @@ class PathShift(Path, Fittable):
         otherwise, self.
         """
         return self._link and self._link._source() or self
-
-    def _waypoint_key(self):
-        if self.is_frozen:
-            return (self._dt, self._path)
-        # Use id(self) to ensure that an unlinked PathShift has a unique key
-        return (self._link or id(self), self._path)
 
     def _show(self, level, indent=0):
         name = type(self).__name__
