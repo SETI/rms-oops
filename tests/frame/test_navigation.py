@@ -40,6 +40,8 @@ class Test_Navigation(unittest.TestCase):
         nav = Navigation((ay, ax), mars, frame_id='+')
         self.assertEqual(nav.frame_id, 'IAU_MARS_NAV')
         self.assertEqual(nav.nparams, 2)
+        self.assertIsInstance(type(nav).link, property)
+        self.assertIsNone(nav.link)
 
         zaxis = nav.transform_at_time(time).rotate(Vector3.ZAXIS)
         self.assertAlmostEqual(zaxis.sep(Vector3.ZAXIS).vals,
@@ -55,6 +57,7 @@ class Test_Navigation(unittest.TestCase):
 
         # A linked Navigation tracks the angles of the object it is linked to
         linked = Navigation(nav, mars, frame_id='nav_linked')
+        self.assertIs(linked.link, nav)
         self.assertEqual(linked.nparams, 2)
 
         linked.set_params(np.array([5.e-3, 6.e-3]))

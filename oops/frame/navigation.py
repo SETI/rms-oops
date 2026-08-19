@@ -77,6 +77,11 @@ class Navigation(Frame, Fittable):
         self.refresh()
         return self._angles
 
+    @property
+    def link(self):
+        """The object to which this one is linked, or None if it is unlinked."""
+        return self._link
+
     def _source(self):
         """The original source of the time shift if this object is linked to another;
         otherwise, self.
