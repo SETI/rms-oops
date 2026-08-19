@@ -5,7 +5,10 @@
 import numpy as np
 import unittest
 
+from polymath     import Scalar, Vector3
 from oops.body    import Body
+from oops.constants import C
+from oops.event   import Event
 from oops.frame   import Frame
 from oops.gravity import Gravity
 from oops.path    import Path, KeplerPath
@@ -260,6 +263,32 @@ class Test_KeplerPath(unittest.TestCase):
 
         errors = _pos_derivative_test(kep, time)
         self.assertTrue(np.max(np.abs(errors)) < 1.e-4)
+
+        ####################
+        # Photon solution when an observer is defined
+        ####################
+
+        kep = KeplerPath(Body.lookup("SATURN"), 0.,
+                       (a, 1., dmean_dt, 0.2, 3., dperi_dt, 0.1, 5., dnode_dt),
+                       Path.as_path("EARTH"), path_id='kepler_observed')
+
+        arrival_time = Scalar(1.e8 + np.arange(5) * 100.)
+        arrival = Event(arrival_time, (Vector3.ZERO, Vector3.ZERO), 'EARTH', 'J2000')
+        (path_event, arrival_event) = kep.photon_to_event(arrival)
+
+        # The photon departs before it arrives, so the departure time is measured
+        # forward and the arrival time backward, as in Path._solve_photon
+        self.assertTrue(np.all(path_event.time.vals < arrival_time.vals))
+        self.assertTrue(np.all(path_event.dep_lt.vals > 0.))
+        self.assertTrue(np.all(arrival_event.arr_lt.vals < 0.))
+        self.assertEqual(arrival_event.arr_lt, -path_event.dep_lt)
+
+        # The ray is the same vector at both ends, and its length is the distance the
+        # photon travels. The light time is solved to the planet rather than to the body
+        # itself, so the two agree to the scale of the orbit divided by the range.
+        self.assertEqual(arrival_event.arr_j2000, path_event.dep_j2000)
+        ratio = (path_event.dep_j2000.norm() / (C * path_event.dep_lt)).vals
+        self.assertTrue(np.max(np.abs(ratio - 1.)) < 1.e-4)
 
         Frame._reset_caches()
         Path._reset_caches()

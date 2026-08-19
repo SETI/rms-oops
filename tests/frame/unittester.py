@@ -5,6 +5,7 @@
 import unittest
 
 from tests.frame.test_frame            import Test_Frame
+from tests.frame.test_navigation       import Test_Navigation
 from tests.frame.test_cmatrix          import Test_Cmatrix
 from tests.frame.test_poleframe        import Test_PoleFrame
 from tests.frame.test_postargframe     import Test_PosTargFrame

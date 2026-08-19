@@ -15,7 +15,7 @@ class Navigation(Frame, Fittable):
     two or three rotation angles.
     """
 
-    _FRAME_IDS = {}
+    _WAYFRAMES = {}
 
     def __init__(self, arg, /, reference, *, freeze=False, frame_id=None, _matrix=None):
         """Constructor for a Navigation Frame.
@@ -49,6 +49,7 @@ class Navigation(Frame, Fittable):
         if isinstance(arg, Navigation):
             self._link = arg
             self._link.refresh()
+            self._angles = self._link._angles
             self._matrix = None
         else:
             self._angles = tuple(arg)
@@ -64,8 +65,7 @@ class Navigation(Frame, Fittable):
         self._shape = self._reference._shape
 
         if frame_id == '+' and self._reference._frame_id:
-            if self._epoch is None:
-                frame_id = self._reference._frame_id + '_NAV'
+            frame_id = self._reference._frame_id + '_NAV'
 
         self._register(frame_id)
         self._refresh(matrix=self._matrix)
@@ -122,7 +122,7 @@ class Navigation(Frame, Fittable):
     def _set_params(self, params):
         """Redefine the navigation angles."""
 
-        if self.link:
+        if self._link:
             self._link.set_params(params)
             self._angles = self._link._angles
         else:

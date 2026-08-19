@@ -112,7 +112,7 @@ class PathShift(Path, Fittable):
         return (self._dt,)
 
     def _refresh(self):
-        if self.link:
+        if self._link:
             self._dt = self._link.dt
 
     def _freeze(self):

@@ -828,11 +828,18 @@ class KeplerPath(Path, Fittable):
                                                converge=converge)
 
         path_event = self.event_at_time(planet_event.time, quick=quick, partials=partials)
-        path_event.dep_lt = path_event.time - obs_event.time
-        path_event.dep_j2000 = path_event.pos_j2000 - obs_event.pos_j2000
 
-        obs_event.arr_lt = path_event.dep_lt
-        obs_event.arr_j2000 = path_event.dep_j2000
+        # The Event above places this path relative to the planet, so the planet's own
+        # position is needed to locate it relative to the observer. The signs of the
+        # light travel times follow Path._solve_photon, where the time is measured
+        # forward from the departure event and backward from the arrival event.
+        planet_wrt_ssb = planet_event.wrt_ssb(quick=quick).pos
+        obs_wrt_ssb = obs_event.wrt_ssb(quick=quick).pos
+        ray_j2000 = obs_wrt_ssb - (planet_wrt_ssb + path_event.pos.wod)
+        lt = obs_event.time - path_event.time
+
+        path_event = path_event.replace('dep_j2000', ray_j2000, 'dep_lt', lt)
+        obs_event = obs_event.replace('arr_j2000', ray_j2000, 'arr_lt', -lt)
 
         return (path_event, obs_event)
 
