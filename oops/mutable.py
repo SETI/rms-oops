@@ -143,6 +143,15 @@ def _refresh_internal(obj: Any, /, memo: dict, info_memo: dict) -> bool:
         if hasattr(obj, '_refresh'):
             obj._refresh()
 
+            # _refresh() is free to replace a sub-object with a newly constructed one,
+            # which has never been refreshed itself. Unless it is refreshed now, it
+            # reports that it is stale on every subsequent test, and so does the object
+            # that contains it, forever.
+            for name in info.unfrozen_names:
+                subobj = obj.__dict__[name]
+                if _needs_refresh_internal(subobj, info_memo):
+                    _refresh_internal(subobj, memo, info_memo)
+
     # Now everything is up to date
     for name in info.unfrozen_names:
         info.versions[name] = version(obj.__dict__[name])
@@ -170,7 +179,8 @@ def needs_refresh(obj: Any, /) -> bool:
     return _needs_refresh_internal(obj, info_memo={})
 
 
-def _needs_refresh_internal(obj: Any, info_memo: dict) -> bool:
+def _needs_refresh_internal(obj: Any, info_memo: dict,
+                            visited: set | None = None) -> bool:
     """True if any internally cached information of the given object or any of its
     sub-objects needs to be refreshed.
 
@@ -179,10 +189,21 @@ def _needs_refresh_internal(obj: Any, info_memo: dict) -> bool:
     Parameters:
         obj: Object to test.
         info_memo: `memo` input to `_get_info`.
+        visited: Ids of the objects already under test; prevents infinite recursion when
+            objects refer to one another or to themselves.
 
     Returns:
         True if the given object needs to be refreshed.
     """
+
+    if visited is None:
+        visited = set()
+
+    # An object already under test higher up in the recursion offers no new information
+    obj_id = id(obj)
+    if obj_id in visited:
+        return False
+    visited.add(obj_id)
 
     info = _get_info(obj, info_memo)
 
@@ -197,7 +218,7 @@ def _needs_refresh_internal(obj: Any, info_memo: dict) -> bool:
     # If any unfrozen subobject is stale, return True
     for name in info.unfrozen_names:
         subobj = obj.__dict__[name]
-        if _needs_refresh_internal(subobj, info_memo):
+        if _needs_refresh_internal(subobj, info_memo, visited):
             return True
         if info.versions[name] < version(subobj):
             return True
@@ -649,5 +670,25 @@ def _increment(obj: Any, /) -> int:
         return 0
 
     return obj._MUTABLE_version
+
+
+def _invalidate(obj: Any, /) -> None:
+    """Discard the cached information about the mutable sub-objects of the given object.
+
+    Call this after replacing one of the sub-objects of `obj` in place. The set of mutable
+    sub-objects is determined once and then cached, so without this call a sub-object that
+    has become mutable, or has ceased to be mutable, is not noticed. The information is
+    reconstructed on the next call that requires it, at which point `obj` also reports
+    that it needs to be refreshed.
+
+    This only updates the given object. Call `_increment` as well so that any object
+    holding `obj` as a sub-object can detect the change.
+
+    Parameters:
+        obj: The object whose sub-objects have changed.
+    """
+
+    if hasattr(obj, '_MUTABLE_info'):
+        del obj._MUTABLE_info
 
 ##########################################################################################
