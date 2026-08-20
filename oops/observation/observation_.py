@@ -477,7 +477,7 @@ class Observation(mutable.Mutable):
         """The C matrix at the mid-time of this observation, in the convention
         used by the SPICE toolkit.
 
-        This observation must carry a "spice_to_cmatrix" subfield, the rotation
+        This observation must carry a "spice_to_frame" subfield, the rotation
         from the SPICE frame convention of the instrument to the oops
         convention. It is inserted by the host module that created the
         observation.
@@ -486,13 +486,13 @@ class Observation(mutable.Mutable):
                         frame of the instrument.
         """
 
-        if not hasattr(self, 'spice_to_cmatrix'):
+        if not hasattr(self, 'spice_to_frame'):
             raise AttributeError(f'{type(self).__name__} does not have a '
-                                 '"spice_to_cmatrix" attribute')
+                                 '"spice_to_frame" attribute')
 
         frame = self.frame.wrt(Frame.J2000)
         xform = frame.transform_at_time(self.midtime)
-        return self.spice_to_cmatrix.inverse() * xform.matrix
+        return self.spice_to_frame.inverse() * xform.matrix
 
     #===========================================================================
     def set_spice_cmatrix(self, matrix):
@@ -508,11 +508,11 @@ class Observation(mutable.Mutable):
                         that can be converted to one.
         """
 
-        if not hasattr(self, 'spice_to_cmatrix'):
+        if not hasattr(self, 'spice_to_frame'):
             raise AttributeError(f'{type(self).__name__} does not have a '
-                                 '"spice_to_cmatrix" attribute')
+                                 '"spice_to_frame" attribute')
 
-        frame = Cmatrix(self.spice_to_cmatrix * Matrix3.as_matrix3(matrix))
+        frame = Cmatrix(self.spice_to_frame * Matrix3.as_matrix3(matrix))
         self.set_frame(frame)
 
     ############################################################################

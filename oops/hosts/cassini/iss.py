@@ -22,7 +22,7 @@ from oops.hosts.cassini import Cassini
 # oops-frame = CMATRIX_ROTATION * spice-frame. The instrument's internal coordinate system
 # matches the oops-frame, so a recorded (spice-frame) C-matrix is rotated by
 # CMATRIX_ROTATION to build the observation frame. The generic
-# Snapshot.get_spice_cmatrix() uses this matrix as attribute `spice_to_cmatrix`.
+# Snapshot.get_spice_cmatrix() uses this matrix as attribute `spice_to_frame`.
 CMATRIX_ROTATION = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
 
 ################################################################################
@@ -123,7 +123,7 @@ def from_file(filespec, *, fast_distortion=True,
                                                 ck=using_cks))
     result.insert_subfield('filespec', filespec)
     result.insert_subfield('basename', filespec.name)
-    result.insert_subfield('spice_to_cmatrix', CMATRIX_ROTATION)
+    result.insert_subfield('spice_to_frame', CMATRIX_ROTATION)
 
     return result
 
@@ -185,7 +185,7 @@ def from_index(filespec, fast_distortion=True, return_all_planets=False,
                              row_dict['VOLUME_ID'] + '/'
                              + row_dict['FILE_SPECIFICATION_NAME'])
         item.insert_subfield('basename', row_dict['FILE_NAME'])
-        item.insert_subfield('spice_to_cmatrix', CMATRIX_ROTATION)
+        item.insert_subfield('spice_to_frame', CMATRIX_ROTATION)
 
         snapshots.append(item)
 
