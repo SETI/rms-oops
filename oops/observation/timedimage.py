@@ -9,7 +9,6 @@ from oops.observation          import Observation
 from oops.observation.snapshot import Snapshot
 from oops.frame                import Frame
 from oops.path                 import Path
-import oops.mutable as mutable
 
 
 class TimedImage(Observation):
@@ -180,7 +179,7 @@ class TimedImage(Observation):
                                      self.path, self.frame, **subfields)
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self.axes, self.cadence, self.fov,
                 Path.as_primary_path(self.path),
                 Frame.as_primary_frame(self.frame),
@@ -188,7 +187,7 @@ class TimedImage(Observation):
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
-        mutable.freeze(self)
+        self.freeze()
 
     #===========================================================================
     def uvt(self, indices, remask=False, derivs=True):

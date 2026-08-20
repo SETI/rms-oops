@@ -9,7 +9,6 @@ from oops.observation import Observation
 from oops.event       import Event
 from oops.frame       import Frame
 from oops.path        import Path
-import oops.mutable as mutable
 
 
 class Pixel(Observation):
@@ -90,13 +89,13 @@ class Pixel(Observation):
             self.insert_subfield(key, subfields[key])
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self.axes, self.cadence, self.fov, self.path, self.frame,
                 self.subfields)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
-        mutable.freeze(self)
+        self.freeze()
 
     #===========================================================================
     def uvt(self, indices, remask=False, derivs=True):

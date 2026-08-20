@@ -10,7 +10,6 @@ from oops.cadence             import Cadence
 from oops.cadence.snapcadence import SnapCadence
 from oops.frame               import Frame
 from oops.path                import Path
-import oops.mutable as mutable
 
 
 class Slit1D(Observation):
@@ -109,13 +108,13 @@ class Slit1D(Observation):
             self.insert_subfield(key, subfields[key])
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self.axes, self.cadence, self.texp, self.fov, self.path,
                 self.frame, self.subfields)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
-        mutable.freeze(self)
+        self.freeze()
 
     #===========================================================================
     def uvt(self, indices, remask=False, derivs=True):

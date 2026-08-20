@@ -21,6 +21,7 @@ def resolution(self, event_key, axis='u'):
     if axis not in ('u', 'v'):
         raise ValueError('invalid axis: ' + repr(axis))
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('resolution', event_key, axis)
     if key not in self.backplanes:
@@ -48,6 +49,7 @@ def center_resolution(self, event_key, axis='u'):
     if axis not in ('u', 'v'):
         raise ValueError('invalid axis: ' + repr(axis))
 
+    self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
     key = ('center_resolution', gridless_key, axis)
     if key not in self.backplanes:
@@ -68,6 +70,7 @@ def finest_resolution(self, event_key):
         event_key       key defining the ring surface event.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('finest_resolution', event_key)
     if key not in self.backplanes:
@@ -84,6 +87,7 @@ def coarsest_resolution(self, event_key):
         event_key       key defining the ring surface event.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('coarsest_resolution', event_key)
     if key not in self.backplanes:

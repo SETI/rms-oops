@@ -6,7 +6,6 @@ from polymath             import Qube, Scalar
 from oops.frame           import Frame
 from oops.frame.rotation  import Rotation
 from oops.frame.spinframe import SpinFrame
-import oops.mutable as mutable
 
 
 class InclinedFrame(Frame):
@@ -63,7 +62,7 @@ class InclinedFrame(Frame):
             frame_id = self._reference._frame_id + '_INCLINED'
 
         self._register(frame_id)
-        mutable.refresh(self)
+        self.refresh()
 
     def _refresh(self):
         self._spin1 = SpinFrame(self._node, self._rate, self._epoch, axis=2,
@@ -103,7 +102,7 @@ class InclinedFrame(Frame):
     ######################################################################################
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self._inc, self._node, self._rate, self._epoch, self._reference,
                 self._despin, self.stripped_id)
 
@@ -111,7 +110,7 @@ class InclinedFrame(Frame):
         (inc, node, rate, epoch, reference, despin, frame_id) = state
         self.__init__(inc, node, rate, epoch, reference=reference, despin=despin,
                       frame_id=frame_id)
-        mutable.freeze(self)
+        self.freeze()
 
     ######################################################################################
     # Frame API

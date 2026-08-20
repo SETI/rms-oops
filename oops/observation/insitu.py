@@ -11,7 +11,6 @@ from oops.fov.nullfov     import NullFOV
 from oops.frame           import Frame
 from oops.observation     import Observation
 from oops.path            import Path
-import oops.mutable as mutable
 
 
 class InSitu(Observation):
@@ -77,12 +76,12 @@ class InSitu(Observation):
             self.insert_subfield(key, subfields[key])
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self.cadence, self.path, self.subfields)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
-        mutable.freeze(self)
+        self.freeze()
 
     #===========================================================================
     def time_shift(self, dtime):

@@ -14,6 +14,7 @@ def incidence_angle(self, event_key, apparent=True):
                         False for the actual.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('incidence_angle', event_key, apparent)
     if key in self.backplanes:
@@ -51,6 +52,7 @@ def emission_angle(self, event_key, apparent=True):
                         False for the actual.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('emission_angle', event_key, apparent)
     if key in self.backplanes:
@@ -87,6 +89,7 @@ def phase_angle(self, event_key, apparent=True):
                         False for the actual.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('phase_angle', event_key, apparent)
     if key in self.backplanes:
@@ -106,6 +109,7 @@ def scattering_angle(self, event_key, apparent=True):
                         False for the actual.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('scattering_angle', event_key, apparent)
     if key in self.backplanes:
@@ -127,6 +131,7 @@ def center_incidence_angle(self, event_key, apparent=True):
                         False for the actual.
     """
 
+    self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
     return self.incidence_angle(gridless_key, apparent=apparent)
 
@@ -143,6 +148,7 @@ def center_emission_angle(self, event_key, apparent=True):
                         False for the actual.
     """
 
+    self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
     return self.emission_angle(gridless_key, apparent=apparent)
 
@@ -156,6 +162,7 @@ def center_phase_angle(self, event_key, apparent=True):
                         False for the actual.
     """
 
+    self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
     return self.phase_angle(gridless_key, apparent=apparent)
 
@@ -169,6 +176,7 @@ def center_scattering_angle(self, event_key, apparent=True):
                         False for the actual.
     """
 
+    self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
     return self.scattering_angle(gridless_key, apparent=apparent)
 
@@ -182,6 +190,7 @@ def mu0(self, event_key, apparent=True):
                         False for the actual.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('mu0', event_key, apparent)
     if key in self.backplanes:
@@ -200,6 +209,7 @@ def mu(self, event_key, apparent=True):
                         False for the actual.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('mu', event_key, apparent)
     if key in self.backplanes:
@@ -216,6 +226,7 @@ def lambert_law(self, event_key):
         event_key       key defining the surface event.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('lambert_law', event_key)
     if key in self.backplanes:
@@ -238,6 +249,7 @@ def minnaert_law(self, event_key, k, k2=None, clip=0.2):
                         Minnaert law diverges near the limb. Default 0.2.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
 
     if k2 is None:
@@ -263,6 +275,7 @@ def lommel_seeliger_law(self, event_key):
         event_key       key defining the surface event.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('lommel_seeliger_law', event_key)
     if key in self.backplanes:

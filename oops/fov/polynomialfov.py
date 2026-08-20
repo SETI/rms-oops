@@ -155,11 +155,13 @@ class PolynomialFOV(FOV):
         self.xy_precision = EPSILON * min(dx_du, abs(dy_dv))
 
     def __getstate__(self):
+        self.refresh()
         return (self.uv_shape, self.coefft_xy_from_uv, self.coefft_uv_from_xy,
                 self.uv_los, self.uv_area, self.iters)
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
     #===========================================================================
     def xy_from_uvt(self, uv, time=None, derivs=False, remask=False):

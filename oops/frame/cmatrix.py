@@ -8,7 +8,6 @@ from polymath       import Matrix3, Qube, Scalar, Vector3
 from oops.frame     import Frame
 from oops.transform import Transform
 from oops.constants import RPD
-import oops.mutable as mutable
 
 
 class Cmatrix(Frame):
@@ -43,7 +42,7 @@ class Cmatrix(Frame):
         self._shape = Qube.broadcasted_shape(self._cmatrix, self._reference)
 
         self._register(frame_id)
-        mutable.refresh(self)
+        self.refresh()
 
     @property
     def transform(self):
@@ -73,13 +72,13 @@ class Cmatrix(Frame):
     ######################################################################################
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self._cmatrix, self._reference, self.stripped_id)
 
     def __setstate__(self, state):
         (cmatrix, reference, frame_id) = state
         self.__init__(cmatrix, reference, frame_id=frame_id)
-        mutable.freeze(self)
+        self.freeze()
 
     ######################################################################################
     # Alternative constructor

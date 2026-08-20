@@ -6,7 +6,6 @@ from polymath          import Qube, Vector3
 from oops.event        import Event
 from oops.frame.frame_ import Frame
 from oops.path.path_   import Path
-import oops.mutable as mutable
 
 
 class FixedPath(Path):
@@ -44,7 +43,7 @@ class FixedPath(Path):
                                              self._frame._shape)
 
         self._register(path_id)
-        mutable.refresh(self)
+        self.refresh()
 
     def _waypoint_key(self):
         return (self._pos, self._origin, self._frame)
@@ -54,13 +53,13 @@ class FixedPath(Path):
     ######################################################################################
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self._pos, self._origin, self._frame, self.stripped_id)
 
     def __setstate__(self, state):
         (pos, origin, frame, path_id) = state
         self.__init__(pos, origin, frame, path_id=path_id)
-        mutable.freeze(self)
+        self.freeze()
 
     ######################################################################################
     # Path API

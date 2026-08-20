@@ -22,11 +22,11 @@ def ansa_radius(self, event_key, radius_type='positive', rmax=None):
         rmax            maximum absolute value of the radius in km, if any.
     """
 
-    # Validate inputs
     if radius_type not in ('right', 'left', 'positive'):
         raise ValueError('invalid radius_type: ' + repr(radius_type))
 
     # Look up under the desired radius type and maximum
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key, default='ANSA')
     key = ('ansa_radius', event_key, radius_type, rmax)
     if key in self.backplanes:
@@ -65,6 +65,7 @@ def ansa_altitude(self, event_key):
                         inherits the mask of the given backplane array.
     """
 
+    self.refresh()
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, ANSA_BACKPLANES,
                                                      default='ANSA')
@@ -101,6 +102,7 @@ def ansa_longitude(self, event_key, reference='node'):
     if reference not in ('aries', 'node', 'obs', 'oha', 'sun', 'sha'):
         raise ValueError('invalid longitude reference: ' + repr(reference))
 
+    self.refresh()
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, ANSA_BACKPLANES,
                                                      default='ANSA')
@@ -192,6 +194,7 @@ def ansa_radial_resolution(self, event_key):
                         inherits the mask of the given backplane array.
     """
 
+    self.refresh()
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, ANSA_BACKPLANES,
                                                      default='ANSA')
@@ -225,6 +228,7 @@ def ansa_vertical_resolution(self, event_key):
                         inherits the mask of the given backplane array.
     """
 
+    self.refresh()
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, ANSA_BACKPLANES,
                                                      default='ANSA')

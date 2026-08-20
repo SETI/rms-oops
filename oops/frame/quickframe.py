@@ -9,7 +9,6 @@ from polymath       import Matrix3, Quaternion, Scalar, Vector3
 from oops.config    import QUICK, LOGGING
 from oops.frame     import Frame
 from oops.transform import Transform
-import oops.mutable as mutable
 
 
 class QuickFrame(Frame):
@@ -35,7 +34,7 @@ class QuickFrame(Frame):
         if isinstance(frame, QuickFrame):
             raise ValueError('QuickFrame cannot be constructed from another QuickFrame')
 
-        mutable.refresh(frame)
+        frame.refresh()
         self._slowframe = frame
         self._wayframe  = frame._wayframe
         self._primary   = frame._primary
@@ -67,7 +66,7 @@ class QuickFrame(Frame):
         self._omega_zero = quickdict['ignore_quickframe_omega']
         self._omega_fixed = None        # filled in by first call to `_refresh`
 
-        mutable.refresh(self)
+        self.refresh()
 
         # Test the precision
         precision = quickdict['frame_self_check']
@@ -188,7 +187,7 @@ class QuickFrame(Frame):
     ######################################################################################
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         if self.pickle_quickframe_details:
             return self.__dict__
         else:
@@ -199,7 +198,7 @@ class QuickFrame(Frame):
             self.__init__(*state)
         else:
             self.__dict__ = state
-        mutable.freeze(self)
+        self.freeze()
 
     ######################################################################################
     # Frame API
@@ -576,7 +575,7 @@ class QuickFrame(Frame):
                 if LOGGING.quickframe_creation:
                     LOGGING.diagnostic(f'Re-using QuickFrame for {frame}, '
                                        f'{tmin:.3f}, {tmax:.3f})')
-                mutable.refresh(quickframe)
+                quickframe.refresh()
                 return quickframe
 
         # This is a quick-and-dirty algorithm to determine whether the use of a QuickFrame
@@ -622,7 +621,7 @@ class QuickFrame(Frame):
                 if LOGGING.quickframe_creation:
                     LOGGING.diagnostic(f'Extending QuickFrame for {frame}, '
                                        f'{tmin:.3f}, {tmax:.3f})')
-                mutable.refresh(quickframe)
+                quickframe.refresh()
                 quickframe.extend(tmin, tmax)
                 return quickframe
 

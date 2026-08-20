@@ -10,10 +10,11 @@ from oops.config       import SURFACE_PHOTONS, LOGGING
 from oops.constants    import C
 from oops.event        import Event
 from oops.frame.frame_ import Frame
+from oops.mutable      import Mutable
 from oops.path.path_   import Path
 
 
-class Surface(object):
+class Surface(Mutable):
     """Surface is an abstract class describing a 2-D object that moves and
     rotates in space. A surface employs an internal coordinate system, not
     necessarily rectangular, in which two primary coordinates define locations

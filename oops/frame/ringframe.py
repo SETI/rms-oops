@@ -6,7 +6,6 @@ from polymath       import Matrix3, Qube, Scalar, Vector3
 from oops.cache     import Cache
 from oops.frame     import Frame
 from oops.transform import Transform
-import oops.mutable as mutable
 
 
 class RingFrame(Frame):
@@ -69,7 +68,7 @@ class RingFrame(Frame):
                 frame_id = self._planet_frame._frame_id + '_DESPUN'
 
         self._register(frame_id)
-        mutable.refresh(self)
+        self.refresh()
 
     def _refresh(self):
         self._planet_wrt_j2000 = self._planet_frame.wrt(Frame.J2000)
@@ -111,7 +110,7 @@ class RingFrame(Frame):
     ######################################################################################
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self._planet_frame, self._epoch, self._retrograde,  self._aries,
                 self.stripped_id, self._cache_size)
 
@@ -119,7 +118,7 @@ class RingFrame(Frame):
         (frame, epoch, retrograde, aries, frame_id, cache_size) = state
         self.__init__(frame, epoch, retrograde=retrograde, aries=aries,
                       frame_id=frame_id, cache_size=cache_size)
-        mutable.freeze(self)
+        self.freeze()
 
     ######################################################################################
     # Frame API

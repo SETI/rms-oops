@@ -198,6 +198,7 @@ class OrbitPlane(Surface):
             self.unmasked.radii = None
 
     def __getstate__(self):
+        self.refresh()
         return (tuple(self.elements), self.epoch,
                 Path.as_primary_path(self.defined_origin),
                 Frame.as_primary_frame(self.defined_frame),
@@ -205,6 +206,7 @@ class OrbitPlane(Surface):
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
     #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,

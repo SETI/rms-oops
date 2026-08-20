@@ -20,9 +20,11 @@ class SnapCadence(Metronome):
         Metronome.__init__(self, tstart, texp, texp, 1, clip=clip)
 
     def __getstate__(self):
+        self.refresh()
         return (self.tstart, self.texp, self.clip)
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
 ################################################################################

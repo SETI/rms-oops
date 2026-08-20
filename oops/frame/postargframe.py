@@ -7,7 +7,6 @@ import numpy as np
 from polymath       import Matrix3, Vector3
 from oops.frame     import Frame
 from oops.transform import Transform
-import oops.mutable as mutable
 
 
 class PosTargFrame(Frame):
@@ -56,7 +55,7 @@ class PosTargFrame(Frame):
             frame_id = self._reference._frame_id + '_POSTARG'
 
         self._register(frame_id)
-        mutable.refresh(self)
+        self.refresh()
 
     def _refresh(self):
         self._transform = Transform(self._matrix, Vector3.ZERO, self, self._reference,
@@ -78,13 +77,13 @@ class PosTargFrame(Frame):
     ######################################################################################
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self._xpos, self._ypos, self._reference, self.stripped_id)
 
     def __setstate__(self, state):
         (xpos, ypos, reference, frame_id) = state
         self.__init__(xpos, ypos, reference, frame_id=frame_id)
-        mutable.freeze(self)
+        self.freeze()
 
     ######################################################################################
     # Frame API

@@ -5,7 +5,6 @@
 from polymath       import Matrix3, Qube, Vector3
 from oops.frame     import Frame
 from oops.transform import Transform
-import oops.mutable as mutable
 
 
 class TwoVectorFrame(Frame):
@@ -50,7 +49,7 @@ class TwoVectorFrame(Frame):
                                              self._reference)
 
         self._register(frame_id)
-        mutable.refresh(self)
+        self.refresh()
 
     def _refresh(self):
         matrix = Matrix3.twovec(self._vector1, self._axis1, self._vector2, self._axis2)
@@ -75,14 +74,14 @@ class TwoVectorFrame(Frame):
     ######################################################################################
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self._reference,  self._vector1, self._axis1, self._vector2, self._axis2,
                 self.stripped_id)
 
     def __setstate__(self, state):
         (frame, vector1, axis1, vector2, axis2, frame_id) = state
         self.__init__(frame, vector1, axis1, vector2, axis2, frame_id=frame_id)
-        mutable.freeze(self)
+        self.freeze()
 
     ######################################################################################
     # Frame API

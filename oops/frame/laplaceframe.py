@@ -8,7 +8,6 @@ from polymath       import Matrix3, Qube, Scalar, Vector3
 from oops.cache     import Cache
 from oops.frame     import Frame
 from oops.transform import Transform
-import oops.mutable as mutable
 
 
 class LaplaceFrame(Frame):
@@ -63,7 +62,7 @@ class LaplaceFrame(Frame):
             frame_id = self._orbit._path_id + '_LAPLACE'
 
         self._register(frame_id)
-        mutable.refresh(self)
+        self.refresh()
 
     def _refresh(self):
         self._orbit_wrt_j2000 = self._orbit._frame.wrt_j2000
@@ -86,13 +85,13 @@ class LaplaceFrame(Frame):
     ######################################################################################
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self._orbit, self._tilt, self._stripped_id, self._cache_size)
 
     def __setstate__(self, state):
         (orbit, tilt, frame_id, cache_size) = state
         self.__init__(orbit, tilt, frame_id=frame_id, cache_size=cache_size)
-        mutable.freeze(self)
+        self.freeze()
 
     ######################################################################################
     # Frame API

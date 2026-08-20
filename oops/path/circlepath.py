@@ -6,7 +6,6 @@ from polymath          import Qube, Scalar, Vector3
 from oops.event        import Event
 from oops.frame.frame_ import Frame
 from oops.path.path_   import Path
-import oops.mutable as mutable
 
 
 class CirclePath(Path):
@@ -52,7 +51,7 @@ class CirclePath(Path):
                                              self._frame._shape)
 
         self._register(path_id)
-        mutable.refresh(self)
+        self.refresh()
 
     def _waypoint_key(self):
         return (self._radius, self._lon, self._rate, self._epoch, self._origin,
@@ -80,14 +79,14 @@ class CirclePath(Path):
     ######################################################################################
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self._radius, self._lon, self._rate, self._epoch, self._origin,
                 self._frame, self.stripped_id)
 
     def __setstate__(self, state):
         (radius, lon, rate, epoch, origin, frame, path_id) = state
         self.__init__(radius, lon, rate, epoch, origin, frame=frame, path_id=path_id)
-        mutable.freeze(self)
+        self.freeze()
 
     ######################################################################################
     # Path API

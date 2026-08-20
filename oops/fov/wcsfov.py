@@ -230,10 +230,12 @@ class WCSFOV(FOV):
 
     #===========================================================================
     def __getstate__(self):
+        self.refresh()
         return (self.header, self.ref_axis, self.fast)
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
     #===========================================================================
     @staticmethod

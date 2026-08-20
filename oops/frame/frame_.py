@@ -7,10 +7,11 @@ import re
 from polymath       import Matrix3, Qube, Scalar, Vector3
 from oops.cache     import Cache
 from oops.config    import PICKLE_CONFIG
+from oops.mutable   import Mutable
 from oops.transform import Transform
 
 
-class Frame:
+class Frame(Mutable):
     """A Frame is an abstract class that can return a Transform (rotation matrix and
     optional spin vector) given a time or Scalar of times. This Transform converts from a
     specified "reference" frame to this frame's coordinates. The methods
@@ -240,6 +241,10 @@ class Frame:
             return str(self)
 
         return self._show(level, indent)
+
+    ######################################################################################
+    # Properties
+    ######################################################################################
 
     @property
     def wayframe(self):

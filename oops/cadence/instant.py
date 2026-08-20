@@ -33,10 +33,12 @@ class Instant(Cadence):
         self.is_continuous = False
 
     def __getstate__(self):
+        self.refresh()
         return (self.tdb)
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
     #===========================================================================
     def time_at_tstep(self, tstep, remask=False, derivs=False, inclusive=True):

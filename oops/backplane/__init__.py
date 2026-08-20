@@ -10,13 +10,14 @@ import types
 from polymath               import Boolean, Qube, Scalar, Vector3
 from oops.body              import Body
 from oops.config            import LOGGING
+from oops.mutable           import Mutable
 from oops.surface.ansa      import Ansa
 from oops.surface.limb      import Limb
 from oops.surface.ringplane import RingPlane
 
 __all__ = ['Backplane']
 
-class Backplane(object):
+class Backplane(Mutable):
     """Class that supports the generation and manipulation of sets of backplanes
     with a particular Observation.
 
@@ -133,7 +134,7 @@ class Backplane(object):
 
         self.inventory_border = inventory_border
 
-        self._refresh()     # Fill in all internals
+        self.refresh()
 
     def _refresh(self):
 

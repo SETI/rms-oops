@@ -323,14 +323,14 @@ def set_param_order(obj: Any, names: list[str]) -> None:
             temp_obj = obj.__dict__[name]
         else:
             if not isinstance(obj, Fittable):
-                raise ValueError(f'object is not Fittable')
+                raise ValueError('object is not Fittable')
             temp_obj = obj
 
         nparams += temp_obj.nparams
         params += list(get_params(temp_obj))
 
     if nparams == 0:
-        raise ValueError(f'no fittable parameters')
+        raise ValueError('no fittable parameters')
 
     obj._MUTABLE_param_names = list(names)
     obj._MUTABLE_nparams = nparams
@@ -690,5 +690,89 @@ def _invalidate(obj: Any, /) -> None:
 
     if hasattr(obj, '_MUTABLE_info'):
         del obj._MUTABLE_info
+
+##########################################################################################
+# Mutable class and API
+##########################################################################################
+
+class Mutable:
+
+    def refresh(self) -> bool:
+        """Update any internally cached information if this object or any of its
+        sub-objects has been modified.
+
+        Use this call to ensure that an object is fully self-consistent, not containing
+        any stale information.
+
+        If this object and all Fittable sub-object(s) are already up to date, the given
+        object is not changed.
+
+        Returns:
+            True if the given object was modified as a result of this call.
+        """
+
+        return refresh(self)
+
+    def _needs_refresh(self) -> bool:
+        """True if any internally cached information of this object or any of its
+        sub-objects needs to be refreshed.
+
+        If the given object and all Fittable sub-object(s) are already up to date, this
+        function returns False.
+
+        Returns:
+            (bool): True if the given object needs to be refreshed.
+        """
+
+        return needs_refresh(self)
+
+    def freeze(self) -> bool:
+        """Freeze this object and all of its sub-objects.
+
+        A frozen object can no longer be modified.
+
+        Returns:
+            True if the given object was frozen as a result of this call; False if it is
+            immutable or was already frozen.
+        """
+
+        return freeze(self)
+
+    def _is_mutable(self) -> bool:
+        """True if this object is mutable.
+
+        An object is mutable if it is Fittable or if it contains any Fittable sub-object
+        (recursively).
+        """
+
+        return is_mutable(self)
+
+    def _is_frozen(self) -> bool:
+        """True if this object is frozen or immutable."""
+
+        return is_frozen(self)
+
+    def _mutable_names(self) -> list[str]:
+        """The list of names of the mutable sub-objects of this object."""
+
+        return mutable_names(self)
+
+
+    def _unfrozen_names(self) -> list[str]:
+        """The list of names of the mutable sub-objects of this object that are not
+        currently frozen.
+        """
+
+        return unfrozen_names(self)
+
+    def _version(self) -> int:
+        """The version number of this object.
+
+        The version number is incremented each time an object of any of its sub-objects is
+        modified.
+        """
+
+        return version(self)
+
 
 ##########################################################################################

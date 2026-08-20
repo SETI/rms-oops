@@ -8,7 +8,6 @@ from polymath          import Qube, Scalar, Vector3
 from oops.event        import Event
 from oops.frame.frame_ import Frame
 from oops.path.path_   import Path
-import oops.mutable as mutable
 
 
 class MultiPath(Path):
@@ -38,7 +37,7 @@ class MultiPath(Path):
         self._paths = np.empty(self._shape, dtype='object')
 
         self._register(path_id)
-        mutable.refresh(self)
+        self.refresh()
 
     def _refresh(self):
         for k, path in np.ndenumerate(self._input_paths):
@@ -75,13 +74,13 @@ class MultiPath(Path):
     ######################################################################################
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self._paths, self._origin, self._frame, self.stripped_id)
 
     def __setstate__(self, state):
         (paths, origin, frame, path_id) = state
         self.__init__(paths, origin, frame, path_id=path_id)
-        mutable.freeze(self)
+        self.freeze()
 
     ######################################################################################
     # Path API

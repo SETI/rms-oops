@@ -9,7 +9,6 @@ from polymath        import Scalar, Vector3
 from oops.config     import QUICK, LOGGING
 from oops.event      import Event
 from oops.path.path_ import Path
-import oops.mutable as mutable
 
 
 class QuickPath(Path):
@@ -31,7 +30,7 @@ class QuickPath(Path):
         if isinstance(path, QuickPath):
             raise ValueError('QuickPath cannot be constructed from another QuickPath')
 
-        mutable.refresh(path)
+        path.refresh()
         self._slowpath = path
         self._waypoint = path._waypoint
         self._primary  = path._primary
@@ -51,7 +50,7 @@ class QuickPath(Path):
         self._tmax = tstep * ((tmax + extend) // tstep + extras + 1)
         self._quickdict = quickdict
 
-        mutable.refresh(self)
+        self.refresh()
 
         # Test the precision
         precision = quickdict['path_self_check']
@@ -124,7 +123,7 @@ class QuickPath(Path):
     ######################################################################################
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         if self.pickle_quickpath_details:
             return self.__dict__
         else:
@@ -135,7 +134,7 @@ class QuickPath(Path):
             self.__init__(*state)
         else:
             self.__dict__ = state
-        mutable.freeze(self)
+        self.freeze()
 
     ######################################################################################
     # Path API
@@ -376,7 +375,7 @@ class QuickPath(Path):
                 if LOGGING.quickpath_creation:
                     LOGGING.diagnostic(f'Re-using QuickPath for {path}: '
                                        f'{tmin:.3f}, {tmax:.3f})')
-                mutable.refresh(quickpath)
+                quickpath.refresh()
                 return quickpath
 
         # This is a quick-and-dirty algorithm to determine whether the use of a QuickPath
@@ -422,7 +421,7 @@ class QuickPath(Path):
                 if LOGGING.quickpath_creation:
                     LOGGING.diagnostic(f'Extending QuickPath for {path}: '
                                        f'{tmin:.3f}, {tmax:.3f})')
-                mutable.refresh(quickpath)
+                quickpath.refresh()
                 quickpath.extend(tmin, tmax)
                 return quickpath
 

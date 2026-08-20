@@ -13,7 +13,6 @@ from oops.event               import Event
 from oops.frame               import Frame
 from oops.path                import Path
 from oops.path.multipath      import MultiPath
-import oops.mutable as mutable
 
 
 class Snapshot(Observation):
@@ -96,13 +95,13 @@ class Snapshot(Observation):
             self.insert_subfield(key, subfields[key])
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self.axes, self.cadence, self.texp, self.fov, self.path,
                 self.frame, self.subfields)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
-        mutable.freeze(self)
+        self.freeze()
 
     #===========================================================================
     def uvt(self, indices, remask=False, derivs=True):

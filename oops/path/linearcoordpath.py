@@ -5,7 +5,6 @@
 from polymath        import Qube, Scalar
 from oops.event      import Event
 from oops.path.path_ import Path
-import oops.mutable as mutable
 
 
 class LinearCoordPath(Path):
@@ -50,7 +49,7 @@ class LinearCoordPath(Path):
                                              self.obs_path)
 
         self._register(path_id)
-        mutable.refresh(self)
+        self.refresh()
 
     def _waypoint_key(self):
         return (self._surface, self._coords, self._coords_dot, self._epoch)
@@ -84,14 +83,14 @@ class LinearCoordPath(Path):
     ######################################################################################
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self._surface, self._coords, self._coords_dot, self._epoch,
                 self._obs_path, self.stripped_id)
 
     def __setstate__(self, state):
         (surface, coords, coords_dot, epoch, obs, path_id) = state
         self.__init__(surface, coords, coords_dot, epoch, obs, path_id=path_id)
-        mutable.freeze(self)
+        self.freeze()
 
     ######################################################################################
     # Path API

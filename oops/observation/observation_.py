@@ -15,7 +15,7 @@ from oops.meshgrid         import Meshgrid
 import oops.mutable as mutable
 
 
-class Observation(object):
+class Observation(mutable.Mutable):
     """An Observation is an abstract class that defines the timing and pointing
     of the samples that comprise a data array.
 

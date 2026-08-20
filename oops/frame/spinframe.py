@@ -7,7 +7,6 @@ import numpy as np
 from polymath       import Matrix3, Qube, Scalar, Vector3
 from oops.frame     import Frame
 from oops.transform import Transform
-import oops.mutable as mutable
 
 
 class SpinFrame(Frame):
@@ -66,7 +65,7 @@ class SpinFrame(Frame):
             frame_id = self._reference._frame_id + '_SPIN'
 
         self._register(frame_id)
-        mutable.refresh(self)
+        self.refresh()
 
     def _wayframe_key(self):
         return (self._offset, self._rate, self._epoch, self._axis2, self._reference)
@@ -87,14 +86,14 @@ class SpinFrame(Frame):
     ######################################################################################
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self._offset, self._rate, self._epoch, self._axis2, self._reference,
                 self.stripped_id)
 
     def __setstate__(self, state):
         (offset, rate, epoch, axis, reference, frame_id) = state
         self.__init__(offset, rate, epoch, axis, reference, frame_id=frame_id)
-        mutable.freeze(self)
+        self.freeze()
 
     ######################################################################################
     # Frame API

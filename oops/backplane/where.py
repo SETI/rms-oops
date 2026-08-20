@@ -12,6 +12,7 @@ from oops.backplane import Backplane
 def where_intercepted(self, event_key):
     """A Boolean array that is True where the surface was intercepted."""
 
+    self.refresh()
     event_key  = Backplane.standardize_event_key(event_key)
     key = ('where_intercepted', event_key)
     if key in self.backplanes:
@@ -46,6 +47,7 @@ def where_outside_shadow(self, event_key, surface_key, tvl=False):
 
 def _where_inside_or_outside_shadow(self, event_key, surface_key, tvl, inside):
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     if len(event_key) != 2:
         raise ValueError('invalid event key for shadowing: ', event_key)
@@ -114,6 +116,7 @@ def where_in_back(self, event_key, surface_key, tvl=False):
 
 def _where_in_front_or_in_back(self, event_key, surface_key, tvl, in_front):
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
 
     surface_key = surface_key.upper()
@@ -170,6 +173,7 @@ def where_antisunward(self, event_key, tvl=False):
 
 def _where_sunward_or_antisunward(self, event_key, tvl, sunward):
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
 
     if sunward:
@@ -226,6 +230,7 @@ def where_outside(self, event_key, surface_key, tvl=False):
 
 def _where_inside_or_outside(self, event_key, surface_key, tvl, inside):
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     if len(event_key) != 2:
         raise ValueError('invalid event key for inside/outside calculations: ',
@@ -270,6 +275,7 @@ def where_below(self, backplane_key, value, tvl=False):
     remain masked; otherwise, they are False.
     """
 
+    self.refresh()
     backplane_key = self.standardize_backplane_key(backplane_key)
 
     value = value.vals if isinstance(value, Scalar) else value
@@ -296,6 +302,7 @@ def where_above(self, backplane_key, value, tvl=False):
     remain masked; otherwise, they are False.
     """
 
+    self.refresh()
     backplane_key = self.standardize_backplane_key(backplane_key)
 
     value = value.vals if isinstance(value, Scalar) else value
@@ -322,6 +329,7 @@ def where_between(self, backplane_key, low, high, tvl=False):
     remain masked; otherwise, they are False.
     """
 
+    self.refresh()
     backplane_key = self.standardize_backplane_key(backplane_key)
 
     low  = low.vals  if isinstance(low,  Scalar) else low
@@ -350,6 +358,7 @@ def where_not(self, backplane_key, tvl=False):
     remain masked; otherwise, they are False.
     """
 
+    self.refresh()
     backplane_key = self.standardize_backplane_key(backplane_key)
     key = ('where_not', backplane_key, tvl)
 
@@ -374,6 +383,7 @@ def where_any(self, *backplane_keys, tvl=False):
     remain masked; otherwise, they are False.
     """
 
+    self.refresh()
     key = ('where_any',) + backplane_keys + (tvl,)
     if key not in self.backplanes:
         tvl_result = self.evaluate(backplane_keys[0]).copy()
@@ -397,6 +407,7 @@ def where_all(self, *backplane_keys, tvl=False):
     remain masked; otherwise, they are False.
     """
 
+    self.refresh()
     key = ('where_all',) + backplane_keys + (tvl,)
     if key not in self.backplanes:
         tvl_result = self.evaluate(backplane_keys[0]).copy()

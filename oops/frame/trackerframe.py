@@ -6,7 +6,6 @@ from polymath       import Qube, Scalar, Vector3, Matrix3
 from oops.cache     import Cache
 from oops.frame     import Frame
 from oops.transform import Transform
-import oops.mutable as mutable
 
 
 class TrackerFrame(Frame):
@@ -61,7 +60,7 @@ class TrackerFrame(Frame):
             frame_id = self._fixed_frame._frame_id + '_TRACKER'
 
         self._register(frame_id)
-        mutable.refresh(self)
+        self.refresh()
 
     def _refresh(self):
 
@@ -100,7 +99,7 @@ class TrackerFrame(Frame):
     ######################################################################################
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self._fixed_frame, self._target_path, self._observer_path, self._epoch,
                 self.stripped_id, self._cache_size)
 
@@ -108,7 +107,7 @@ class TrackerFrame(Frame):
         (frame, target, observer, epoch, frame_id, cache_size) = state
         self.__init__(frame, target, observer, epoch, frame_id=frame_id,
                       cache_size=cache_size)
-        mutable.freeze(self)
+        self.freeze()
 
     ######################################################################################
     # Frame API

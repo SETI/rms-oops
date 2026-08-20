@@ -53,10 +53,12 @@ class ReversedCadence(Cadence):
         self._last_time  = self.cadence.time_range_at_tstep(0)[1]
 
     def __getstate__(self):
+        self.refresh()
         return (self.cadence,)
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
     #===========================================================================
     def time_at_tstep(self, tstep, remask=False, derivs=False, inclusive=True):

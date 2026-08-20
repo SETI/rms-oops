@@ -26,6 +26,7 @@ def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
     if axis not in {'u', 'v', 'min', 'max'}:
         raise ValueError('invalid axis: ' + repr(axis))
 
+    self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
 
     key = ('body_diameter_in_pixels', gridless_key, radius, axis)
@@ -66,6 +67,7 @@ def center_coordinate(self, event_key, axis="u"):
     if axis not in {'u', 'v'}:
         raise ValueError('invalid axis: ' + repr(axis))
 
+    self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
 
     key = ('center_coordinate', gridless_key, axis)

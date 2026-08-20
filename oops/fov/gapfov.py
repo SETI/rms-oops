@@ -7,7 +7,6 @@ import numpy as np
 
 from polymath import Pair
 from oops.fov import FOV
-import oops.mutable as mutable
 
 
 class GapFOV(FOV):
@@ -47,12 +46,12 @@ class GapFOV(FOV):
         self.uv_shape = self.fov.uv_shape
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self.fov, self.uv_size)
 
     def __setstate__(self, state):
         self.__init__(*state)
-        mutable.freeze(self)
+        self.freeze()
 
     #===========================================================================
     def xy_from_uvt(self, uv_pair, time=None, derivs=False, remask=False,

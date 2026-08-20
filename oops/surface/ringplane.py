@@ -106,6 +106,7 @@ class RingPlane(Surface):
                                       self.elevation, 0., 0., 0., 0.)
 
     def __getstate__(self):
+        self.refresh()
         return (Path.as_primary_path(self.origin),
                 Frame.as_primary_frame(self.frame),
                 None if self.radii is None else tuple(self.radii),
@@ -113,6 +114,7 @@ class RingPlane(Surface):
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
     #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,

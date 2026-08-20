@@ -11,10 +11,11 @@ from oops.config           import PATH_PHOTONS, LOGGING, PICKLE_CONFIG
 from oops.event            import Event
 from oops.frame.frame_     import Frame, J2000Frame
 from oops.frame.spiceframe import SpiceFrame
+from oops.mutable          import Mutable
 import oops.constants as constants
 
 
-class Path(object):
+class Path(Mutable):
     """Path is an abstract class that can return an Event (time, position and velocity)
     given a time or Scalar times. The coordinates are specified in a particular frame and
     relative to another path. The method `event_at_time` generates these Events.

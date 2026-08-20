@@ -3,9 +3,9 @@
 ################################################################################
 
 from polymath import Scalar, Pair
+from oops.mutable import Mutable
 
-
-class Cadence(object):
+class Cadence(Mutable):
     """Cadence is an abstract class that defines the timing of an observation.
 
     At minimum, these attributes are required:

@@ -5,7 +5,6 @@
 from polymath       import Matrix3
 from oops.frame     import Frame
 from oops.transform import Transform
-import oops.mutable as mutable
 
 
 class SynchronousFrame(Frame):
@@ -52,7 +51,7 @@ class SynchronousFrame(Frame):
             frame_id = self._orbit_path._path_id + '_SYNCHRONOUS'
 
         self._register(frame_id)
-        mutable.refresh(self)
+        self.refresh()
 
     def _wayframe_key(self):
         return (self._orbit_path, self._planet_path)
@@ -72,13 +71,13 @@ class SynchronousFrame(Frame):
     ######################################################################################
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self._orbit_path, self._planet_path, self.stripped_id)
 
     def __setstate__(self, state):
         (orbit_path, planet_path, frame_id) = state
         self.__init__(orbit_path, planet_path, frame_id=frame_id)
-        mutable.freeze(self)
+        self.freeze()
 
     ######################################################################################
     # Frame API

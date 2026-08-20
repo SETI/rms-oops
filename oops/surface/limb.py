@@ -64,10 +64,12 @@ class Limb(Surface):
         self.intercept_key = ('limb',) + self.ground.intercept_key
 
     def __getstate__(self):
+        self.refresh()
         return (self.ground, self.limits)
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
     #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,

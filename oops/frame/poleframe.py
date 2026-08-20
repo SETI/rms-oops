@@ -6,7 +6,6 @@ from polymath       import Matrix3, Qube, Scalar, Vector3
 from oops.cache     import Cache
 from oops.frame     import Frame
 from oops.transform import Transform
-import oops.mutable as mutable
 
 
 class PoleFrame(Frame):
@@ -80,7 +79,7 @@ class PoleFrame(Frame):
             frame_id = self._planet_frame._frame_id + '_POLE'
 
         self._register(frame_id)
-        mutable.refresh(self)
+        self.refresh()
 
     def _refresh(self):
         self._planet_wrt_j2000 = self._planet_frame.wrt(Frame.J2000)
@@ -107,7 +106,7 @@ class PoleFrame(Frame):
     ######################################################################################
 
     def __getstate__(self):
-        mutable.refresh(self)
+        self.refresh()
         return (self._planet_frame, self._invariable_pole, self._retrograde, self._aries,
                 self.stripped_id, self._cache_size)
 
@@ -115,7 +114,7 @@ class PoleFrame(Frame):
         (frame, pole, retrograde, aries, frame_id, cache_size) = state
         self.__init__(frame, pole, retrograde=retrograde, aries=aries, frame_id=frame_id,
                       cache_size=cache_size)
-        mutable.freeze(self)
+        self.freeze()
 
     ######################################################################################
     # Frame API
