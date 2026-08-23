@@ -473,7 +473,7 @@ class Observation(mutable.Mutable):
         mutable._increment(self)
 
     #===========================================================================
-    def get_spice_cmatrix(self, tstep=None, time=None):
+    def get_spice_cmatrix(self, tstep=None, *, time=None):
         """The C matrix of this observation, in the convention used by the
         SPICE toolkit.
 
