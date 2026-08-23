@@ -473,25 +473,43 @@ class Observation(mutable.Mutable):
         mutable._increment(self)
 
     #===========================================================================
-    def get_spice_cmatrix(self):
-        """The C matrix at the mid-time of this observation, in the convention
-        used by the SPICE toolkit.
+    def get_spice_cmatrix(self, tstep=None, time=None):
+        """The C matrix of this observation, in the convention used by the
+        SPICE toolkit.
 
         This observation must carry a "spice_to_frame" subfield, the rotation
         from the SPICE frame convention of the instrument to the oops
         convention. It is inserted by the host module that created the
         observation.
 
-        Return:         a Matrix3 rotating J2000 coordinates into the SPICE
-                        frame of the instrument.
+        Parameters:
+            tstep (float or Scalar): The time step index or sequence of time
+                step index values, as interpreted by this Observation's
+                cadence.
+            time (float or Scalar): The time in seconds TDB during the
+                Observation. Note that at most one of `tstep` and `time` can be
+                specified; if neither is given, the midtime of this Observation
+                is used.
+
+        Returns:
+            (Matrix3): The rotation from J2000 coordinates into the SPICE
+                frame of the instrument or host.
         """
 
         if not hasattr(self, 'spice_to_frame'):
             raise AttributeError(f'{type(self).__name__} does not have a '
                                  '"spice_to_frame" attribute')
 
+        if time is None:
+            if tstep is None:
+                time = self.midtime
+            else:
+                time = self.cadence.time_at_tstep(tstep)
+        elif tstep is not None:
+            raise ValueError('tstep and time cannot both be specified')
+
         frame = self.frame.wrt(Frame.J2000)
-        xform = frame.transform_at_time(self.midtime)
+        xform = frame.transform_at_time(time)
         return self.spice_to_frame.inverse() * xform.matrix
 
     #===========================================================================
