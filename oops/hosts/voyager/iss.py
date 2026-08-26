@@ -183,6 +183,12 @@ def from_file(filespec, astrometry=False, action='error', method='strict', param
                                target = target,
                                filespec = filespec,
                                basename = filespec.name)
+    result.insert_subfield('spice_to_frame', oops.Matrix3.IDENTITY)
+    result.insert_subfield('spice_frame_name', f'VG{ivgr}_ISS{camera[:2]}')
+    result.insert_subfield('spice_frame_id',
+                           scan_platform_id - (1 if camera == 'NAC' else 2))
+    result.insert_subfield('abspath', imagespec.get_local_path().resolve())
+    result.insert_subfield('image_url', imagespec.absolute().as_posix())
 
     # TODO if factor:
     #     result.insert_subfield('extended_calib',
@@ -197,7 +203,7 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
     in an ISS index file. The filespec refers to the label of the index file.
 
     Input:
-        filespec        name of the image file or its PDS3 label.
+        filespec        name of the index file or its PDS3 label.
         geomed          assume the image is geomed (1000x1000).
         action          What to do for a missing C kernel entry or a missing
                         time, via the Python warnings interface: 'error',
@@ -292,15 +298,25 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
 
             image_frame = spacecraft + '_ISS_' + camera
 
-        item = oops.obs.Snapshot(('v','u'), tstart, texp, fovs[camera],
-                                 spacecraft,
-                                 image_frame,
+        item = oops.obs.Snapshot(('v','u'), tstart, texp,
+                                 fov = fovs[camera],
+                                 path = spacecraft,
+                                 frame = image_frame,
                                  dict = label_dict,     # Add index dictionary
                                  instrument = 'ISS',
                                  detector = camera,
                                  filter = filter,
                                  planet = planet,
                                  target = target)
+
+        filepath = label_dict['VOLUME_ID'] + '/' + label_dict['FILE_SPECIFICATION_NAME']
+        basename = label_dict['FILE_SPECIFICATION_NAME'].rpartition('/')[-1]
+        item.insert_subfield('filespec', filepath)
+        item.insert_subfield('basename', basename)
+        item.insert_subfield('spice_to_frame', oops.Matrix3.IDENTITY)
+        item.insert_subfield('spice_frame_name', f'VG{ivgr}_ISS{camera[:2]}')
+        item.insert_subfield('spice_frame_id',
+                             scan_platform_id - (1 if camera == 'NAC' else 2))
 
         snapshots.append(item)
 

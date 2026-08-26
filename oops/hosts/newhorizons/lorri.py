@@ -19,6 +19,11 @@ from . import NewHorizons
 
 from filecache import FCPath
 
+# The SPICE IK gives the boresight along -Z, so flip axes
+SPICE_TO_FRAME = oops.Matrix3([[ 1, 0, 0],
+                               [ 0,-1, 0],
+                               [ 0, 0,-1]])
+
 ################################################################################
 # Standard routines for interpreting WCS parameters, adapted from STSCI source.
 #
@@ -246,9 +251,20 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         los = event.neg_arr_ap_j2000
 
     # Create a Snapshot
-    snapshot = oops.obs.Snapshot(('v','u'), tstart, texp, fov, path, frame,
+    snapshot = oops.obs.Snapshot(('v','u'), tstart, texp,
+                                 fov = fov,
+                                 path = path,
+                                 frame = frame,
                                  target = target_name,
                                  instrument = 'LORRI')
+
+    snapshot.insert_subfield('filespec', filespec)
+    snapshot.insert_subfield('basename', filespec.name)
+    snapshot.insert_subfield('spice_to_frame', SPICE_TO_FRAME)
+    snapshot.insert_subfield('spice_frame_name', 'NH_LORRI')
+    snapshot.insert_subfield('spice_frame_id', -98300)
+    snapshot.insert_subfield('abspath', local_path.resolve())
+    snapshot.insert_subfield('image_url', filespec.absolute().as_posix())
 
     # Interpret loader options
     if ('astrometry' in parameters) and parameters['astrometry']:
@@ -371,12 +387,22 @@ def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
 
         # Create a Snapshot
         item = oops.obs.Snapshot(('v','u'), tstart, texp,
-                                 fov, 'NEW HORIZONS', 'NH_LORRI',
+                                 fov = fov,
+                                 path = 'NEW HORIZONS',
+                                 frame = 'NH_LORRI',
                                  dict = dict,
                                  index_dict = dict,
                                  target = target_name,
                                  instrument = 'LORRI')
 
+        # PATH_NAME carries a leading slash, which would otherwise be doubled
+        filepath = (dict['VOLUME_ID'] + '/' + dict['PATH_NAME'].strip('/') + '/'
+                    + dict['FILE_NAME'])
+        item.insert_subfield('filespec', filepath)
+        item.insert_subfield('basename', dict['FILE_NAME'])
+        item.insert_subfield('spice_to_frame', SPICE_TO_FRAME)
+        item.insert_subfield('spice_frame_name', 'NH_LORRI')
+        item.insert_subfield('spice_frame_id', -98300)
         snapshots.append(item)
 
     return snapshots
@@ -489,10 +515,7 @@ class LORRI(object):
                                                     frame_id='NH_LORRI_FLIPPED')
 
         # The SPICE IK gives the boresight along -Z, so flip axes
-        flipxyz = oops.Matrix3([[ 1, 0, 0],
-                                [ 0,-1, 0],
-                                [ 0, 0,-1]])
-        ignore = oops.frame.Cmatrix(flipxyz, lorri_flipped, frame_id='NH_LORRI')
+        ignore = oops.frame.Cmatrix(SPICE_TO_FRAME, lorri_flipped, frame_id='NH_LORRI')
 
         LORRI.initialized = True
         LORRI.asof = asof
@@ -509,8 +532,6 @@ class LORRI(object):
         LORRI.instrument_kernel = None
         LORRI.fovs = {}
         LORRI.initialized = False
-        LORRI.asof = asof
-        LORRI.meta = meta
 
         NewHorizons.reset()
 

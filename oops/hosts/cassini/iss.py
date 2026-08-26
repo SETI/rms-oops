@@ -124,6 +124,10 @@ def from_file(filespec, *, fast_distortion=True,
     result.insert_subfield('filespec', filespec)
     result.insert_subfield('basename', filespec.name)
     result.insert_subfield('spice_to_frame', CMATRIX_ROTATION)
+    result.insert_subfield('spice_frame_name', 'CASSINI_ISS_' + camera)
+    result.insert_subfield('spice_frame_id', -82360 if camera == 'NAC' else -82361)
+    result.insert_subfield('abspath', filespec.get_local_path().resolve())
+    result.insert_subfield('image_url', filespec.absolute().as_posix())
 
     return result
 
@@ -181,11 +185,12 @@ def from_index(filespec, fast_distortion=True, return_all_planets=False,
         item.insert_subfield('spice_kernels',
                              Cassini.used_kernels(item.time, 'iss',
                                                   return_all_planets=return_all_planets))
-        item.insert_subfield('filespec',
-                             row_dict['VOLUME_ID'] + '/'
-                             + row_dict['FILE_SPECIFICATION_NAME'])
+        filepath = row_dict['VOLUME_ID'] + '/' + row_dict['FILE_SPECIFICATION_NAME']
+        item.insert_subfield('filespec', filepath)
         item.insert_subfield('basename', row_dict['FILE_NAME'])
         item.insert_subfield('spice_to_frame', CMATRIX_ROTATION)
+        item.insert_subfield('spice_frame_name', 'CASSINI_ISS_' + camera)
+        item.insert_subfield('spice_frame_id', -82360 if camera == 'NAC' else -82361)
 
         snapshots.append(item)
 
