@@ -1,5 +1,5 @@
 ################################################################################
-# tests/unittester.py
+# tests/unittester_with_hosts.py
 ################################################################################
 
 import unittest
@@ -13,7 +13,9 @@ from tests.observation.unittester import *
 from tests.path.unittester        import *
 from tests.surface.unittester     import *
 from tests.test_body              import *
+from tests.test_cache             import *
 from tests.test_event             import *
+from tests.test_fittable          import *
 from tests.test_transform         import *
 from tests.test_utils             import *
 

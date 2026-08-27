@@ -14,6 +14,8 @@ from polymath import Vector3
 
 from filecache import FCPath
 
+__all__ = ['from_file', 'JWST']
+
 # A handy constant
 RADIANS_PER_ARCSEC = oops.RPD / 3600.
 

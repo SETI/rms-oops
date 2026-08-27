@@ -33,17 +33,15 @@ def longitude(self, event_key, reference='iau', direction='west',
 
     if reference not in ('iau', 'sun', 'sha', 'obs', 'oha'):
         raise ValueError('invalid longitude reference: ' + repr(reference))
-
     if direction not in ('east', 'west'):
         raise ValueError('invalid longitude direction: ' + repr(direction))
-
     if minimum not in (0, -180):
         raise ValueError('invalid longitude minimum: ' + repr(minimum))
-
     if lon_type not in ('centric', 'graphic', 'squashed'):
         raise ValueError('invalid longitude type: ' + repr(lon_type))
 
     # Look up under the desired reference
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key0 = ('longitude', event_key)
     key = key0 + (reference, direction, minimum, lon_type)
@@ -115,6 +113,7 @@ def latitude(self, event_key, lat_type='centric'):
         raise ValueError('invalid latitude type: ' + repr(lat_type))
 
     # Look up under the desired reference
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key0 = ('latitude', event_key)
     key = key0 + (lat_type,)
@@ -258,6 +257,7 @@ def sub_observer_longitude(self, event_key, reference='iau', direction='west',
                     -180.
     """
 
+    self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
 
     key0 = ('sub_observer_longitude', gridless_key)
@@ -302,6 +302,7 @@ def sub_solar_longitude(self, event_key, reference='iau',
                     -180.
     """
 
+    self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
 
     key0 = ('sub_solar_longitude', gridless_key)
@@ -375,6 +376,7 @@ def sub_observer_latitude(self, event_key, lat_type='centric'):
     if lat_type not in ('centric', 'graphic'):
         raise ValueError('invalid latitude type: ' + repr(lat_type))
 
+    self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
     key = ('sub_observer_latitude', gridless_key, lat_type)
     if key in self.backplanes:
@@ -403,6 +405,7 @@ def sub_solar_latitude(self, event_key, lat_type='centric'):
     if lat_type not in ('centric', 'graphic'):
         raise ValueError('invalid latitude type: ' + repr(lat_type))
 
+    self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
     key = ('sub_solar_latitude', gridless_key, lat_type)
     if key in self.backplanes:

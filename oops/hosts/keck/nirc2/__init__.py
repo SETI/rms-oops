@@ -12,9 +12,10 @@ except ImportError:
     import pyfits
 import oops
 from oops.hosts.keck import Keck
-import numpy as np
 
 from filecache import FCPath
+
+__all__ = ['from_file', 'NIRC2']
 
 ################################################################################
 # Standard class methods

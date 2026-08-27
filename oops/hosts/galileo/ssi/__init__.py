@@ -15,6 +15,7 @@ from oops.hosts.galileo import Galileo
 
 from filecache import FCPath
 
+__all__ = ['from_file', 'from_index', 'initialize', 'Metadata', 'SSI']
 
 ################################################################################
 # Standard class methods
@@ -59,7 +60,7 @@ def from_file(filespec,
 
     # Create a Snapshot
     result = oops.obs.Snapshot(('v','u'), meta.tstart, meta.exposure,
-                               FOV,
+                               fov = FOV,
                                path = 'GLL',
                                frame = 'GLL_SCAN_PLATFORM',
                                dict = vicar_dict,       # Add the VICAR dict
@@ -72,6 +73,11 @@ def from_file(filespec,
     result.insert_subfield('spice_kernels',
                            Galileo.used_kernels(result.time, 'ssi',
                                                 return_all_planets))
+    result.insert_subfield('spice_to_frame', oops.Matrix3.IDENTITY)
+    result.insert_subfield('spice_frame_name', 'GLL_SCAN_PLATFORM')
+    result.insert_subfield('spice_frame_id', -77001)
+    result.insert_subfield('abspath', filespec.get_local_path().resolve())
+    result.insert_subfield('image_url', filespec.absolute().as_posix())
 
     return result
 
@@ -121,7 +127,8 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
     # Create a list of Snapshot objects
     snapshots = []
     for row_dict in row_dicts:
-        file = row_dict['FILE_SPECIFICATION_NAME']
+        filepath = row_dict['VOLUME_ID'] + '/' + row_dict['FILE_SPECIFICATION_NAME']
+        basename = os.path.basename(filepath)
 
         # Get image metadata; do not return observations with zero exposures
         meta = Metadata(row_dict)
@@ -133,22 +140,20 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
         FOV = meta.fov(full_fov=full_fov)
 
         # Create a Snapshot
-        basename = os.path.basename(file)
         item = oops.obs.Snapshot(('v','u'), meta.tstart, meta.exposure,
-                                 FOV,
+                                 fov = FOV,
                                  path = 'GLL',
                                  frame = 'GLL_SCAN_PLATFORM',
                                  dict = row_dict,         # Add the index dict
                                  instrument = 'SSI',
                                  filter = meta.filter,
-                                 filespec = file,
-                                 basename=basename)
+                                 filespec = filepath,
+                                 basename = basename)
 
+        item.insert_subfield('spice_to_frame', oops.Matrix3.IDENTITY)
+        item.insert_subfield('spice_frame_name', 'GLL_SCAN_PLATFORM')
+        item.insert_subfield('spice_frame_id', -77001)
         item.spice_kernels = Galileo.used_kernels(item.time, 'ssi')
-
-        item.filespec = (row_dict['VOLUME_ID'] + '/' +
-                         row_dict['FILE_SPECIFICATION_NAME'])
-        item.basename = basename
 
         snapshots.append(item)
 
@@ -370,7 +375,7 @@ class SSI(object):
         # Construct the SpiceFrame
         # SSI images are spaced as closely as 1 unit in the file name, which
         # corresponds to 80 clock ticks.  Therefore, we use a tolerance of +/-40
-        _ = oops.frame.SpiceType1Frame("GLL_SCAN_PLATFORM", -77, 40)
+        _ = oops.frame.SpiceType1Frame("GLL_SCAN_PLATFORM", 40)
 
         # Load kernels
         Galileo.load_kernels()

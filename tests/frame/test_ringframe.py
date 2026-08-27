@@ -23,8 +23,8 @@ class Test_RingFrame(unittest.TestCase):
                                             "de421.bsp"])
         for path in paths:
             cspyce.furnsh(path)
-        Path.reset_registry()
-        Frame.reset_registry()
+        Path._reset_caches()
+        Frame._reset_caches()
 
     def tearDown(self):
         pass
@@ -37,7 +37,7 @@ class Test_RingFrame(unittest.TestCase):
 
         _ = SpicePath("MARS", "SSB")
         planet = SpiceFrame("IAU_MARS", "J2000")
-        rings  = RingFrame(planet)
+        rings  = RingFrame(planet, frame_id='+')
         self.assertEqual(Frame.as_wayframe("IAU_MARS"), planet.wayframe)
         self.assertEqual(Frame.as_wayframe("IAU_MARS_DESPUN"), rings.wayframe)
 
@@ -62,7 +62,7 @@ class Test_RingFrame(unittest.TestCase):
         self.assertTrue(np.all(test.pos.mvals[...,1] > 0.))
 
         # Check that pole wanders when epoch is fixed
-        rings2 = RingFrame(planet, 0.)
+        rings2 = RingFrame(planet, 0., frame_id='+')
         self.assertEqual(Frame.as_wayframe("IAU_MARS_INERTIAL"), rings2.wayframe)
         inertial = event.wrt_frame("IAU_MARS_INERTIAL")
 
@@ -70,10 +70,4 @@ class Test_RingFrame(unittest.TestCase):
         self.assertTrue(np.all(np.abs(diff.values) < 1.e-4))
         self.assertTrue(np.mean(np.abs(diff.values) > 1.e-8))
 
-#         Path.reset_registry()
-#         Frame.reset_registry()
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

@@ -4,7 +4,7 @@
 
 import numpy as np
 
-from polymath       import Scalar, Vector3
+from polymath       import Vector3
 from oops.backplane import Backplane
 from oops.frame     import Frame
 
@@ -23,6 +23,7 @@ def right_ascension(self, event_key=(), apparent=True, direction='arr'):
                         'dep' to return the direction of a departing photon.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('right_ascension', event_key, apparent, direction)
     if key not in self.backplanes:
@@ -46,6 +47,7 @@ def declination(self, event_key=(), apparent=True, direction='arr'):
                         'dep' to base the direction on a departing photon.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('declination', event_key, apparent, direction)
     if key not in self.backplanes:
@@ -84,6 +86,7 @@ def celestial_north_angle(self, event_key=()):
                         refer to the observation.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('celestial_north_angle', event_key)
     if key in self.backplanes:
@@ -110,6 +113,7 @@ def celestial_east_angle(self, event_key=()):
                         refer to the observation.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('celestial_east_angle', event_key)
     if key in self.backplanes:
@@ -176,6 +180,7 @@ def center_right_ascension(self, event_key, apparent=True, direction='arr'):
                         'dep' to return the direction of a departing photon.
     """
 
+    self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
     key = ('center_right_ascension', gridless_key, apparent, direction)
     if key not in self.backplanes:
@@ -196,6 +201,7 @@ def center_declination(self, event_key, apparent=True, direction='arr'):
                         'dep' to return the direction of a departing photon.
     """
 
+    self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
     key = ('center_declination', gridless_key, apparent, direction)
     if key not in self.backplanes:

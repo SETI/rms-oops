@@ -4,10 +4,11 @@
 
 import numpy as np
 
-from polymath    import Boolean, Scalar, Pair, Vector3, Qube
-from oops.config import AREA_FACTOR
+from polymath     import Boolean, Scalar, Pair, Vector3, Qube
+from oops.config  import AREA_FACTOR
+from oops.mutable import Mutable
 
-class FOV(object):
+class FOV(Mutable):
     """The FOV (Field of View) abstract class provides a description of the
     geometry of a field of view.
 

@@ -6,20 +6,17 @@
 ################################################################################
 
 import numpy as np
-import os
-import re
 try:
     import astropy.io.fits as pyfits
 except ImportError:
     import pyfits
-import glob
 
 import julian
-import solar
-import tabulation as tab
 import oops
 
 from filecache import FCPath
+
+__all__ = ['from_file', 'Keck']
 
 ########################################
 # Global Variables

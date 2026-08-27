@@ -11,7 +11,6 @@ except ImportError:
     import pyfits
 import oops
 from . import Keck
-import numpy as np
 
 ################################################################################
 # Standard class methods

@@ -10,6 +10,7 @@ from oops.constants    import C_INVERSE
 from oops.frame.frame_ import Frame
 from oops.transform    import Transform
 
+
 class Event(object):
     """An Event is defined by a time, position and velocity. It always has these
     attributes:
@@ -104,7 +105,7 @@ class Event(object):
     """
 
     # To avoid circular imports; filled in by oops/__init__.py
-    PATH_CLASS = None
+    _Path = None
     SSB = None
 
     # Property names, categorized
@@ -164,7 +165,7 @@ class Event(object):
 
         self._state_ = state.as_readonly()
         self._pos_ = self._state_.without_deriv('t')
-        self._origin_ = Event.PATH_CLASS.as_waypoint(origin)
+        self._origin_ = Event._Path.as_waypoint(origin)
         self._frame_ = Frame.as_wayframe(frame) or origin.frame
 
         self._ssb_ = None
@@ -392,7 +393,7 @@ class Event(object):
             self._ssb_._antimask_ = None
             self._ssb_._shape_ = None
 
-    def reinit(self):
+    def _refresh(self):
         """Remove all internal information; needed for Events that involve
         Fittable objects.
         """
@@ -1359,7 +1360,7 @@ class Event(object):
         if path is None:
             path = self._origin_
         else:
-            path = Event.PATH_CLASS.as_path(path)
+            path = Event._Path.as_path(path)
 
         if frame is None:
             frame = self._frame_
@@ -1433,7 +1434,7 @@ class Event(object):
         if path is None:
             path = self._origin_
         else:
-            path = Event.PATH_CLASS.as_path(path)
+            path = Event._Path.as_path(path)
 
         if self._origin_.waypoint == path.waypoint:
             if derivs:

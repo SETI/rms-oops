@@ -120,10 +120,12 @@ class Sequence(Cadence):
         return
 
     def __getstate__(self):
+        self.refresh()
         return (self.tlist, self._state_texp)
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
     #===========================================================================
     def time_at_tstep(self, tstep, remask=False, derivs=False, inclusive=True):

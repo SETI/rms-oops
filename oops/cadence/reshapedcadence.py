@@ -7,6 +7,7 @@ import numpy as np
 from polymath     import Qube, Scalar, Pair, Vector
 from oops.cadence import Cadence
 
+
 class ReshapedCadence(Cadence):
     """A Cadence that has been reshaped.
 
@@ -49,11 +50,19 @@ class ReshapedCadence(Cadence):
         self._old_rank = len(self.cadence.shape)
         self._old_stride = np.cumprod((self._old_shape + (1,))[::-1])[-2::-1]
 
+    def _refresh(self):
+        """Update internals if self.cadence is Fittable."""
+        self.time = self.cadence.time
+        self.midtime = self.cadence.midtime
+        self.lasttime = self.cadence.lasttime
+
     def __getstate__(self):
+        self.refresh()
         return (self.cadence, self.shape)
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
     #===========================================================================
     @staticmethod

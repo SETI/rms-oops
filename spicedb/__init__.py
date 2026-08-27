@@ -22,6 +22,19 @@ import cspyce
 
 import spicedb.sqlite_db as db
 
+__all__ = ['lrange', 'KernelInfo', 'kernels_from_filespec', 'set_spice_path',
+           'get_spice_path', 'get_spice_filecache',
+           'get_spice_filecache_prefix', 'open_db', 'close_db', 'db_is_open',
+           'set_translator', 'select_lsk', 'select_pck', 'select_spk',
+           'select_inst', 'select_ck', 'select_by_name', 'select_by_filespec',
+           'as_dict', 'furnish_kernels', 'furnish_lsk', 'furnish_pck',
+           'furnish_spk', 'furnish_inst', 'furnish_ck', 'furnish_by_name',
+           'furnish_by_metafile', 'furnish_by_filepath', 'unload_by_name',
+           'unload_by_type', 'unload_by_filepath', 'unload_all', 'as_names',
+           'furnished_names', 'furnished_basenames', 'used_basenames',
+           'furnish_cassini_kernels', 'furnish_solar_system', 'test_KernelInfo',
+           'test_spicedb']
+
 # For testing and debugging
 DEBUG = False   # If true, no files are furnished.
 ABSPATH_LIST = []   # If DEBUG, lists the files that would have been furnished.

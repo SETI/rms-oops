@@ -17,6 +17,7 @@ def distance(self, event_key, direction='dep'):
     if direction not in ('dep', 'arr'):
         raise ValueError('invalid photon direction: ' + repr(direction))
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('distance', event_key, direction)
     if key in self.backplanes:
@@ -38,6 +39,7 @@ def light_time(self, event_key, direction='dep'):
     if direction not in ('dep', 'arr'):
         raise ValueError('invalid photon direction: ' + repr(direction))
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('light_time', event_key, direction)
     if key in self.backplanes:
@@ -60,6 +62,7 @@ def event_time(self, event_key):
         event_key       key defining the surface event.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
 
     key = ('event_time', event_key)

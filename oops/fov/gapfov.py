@@ -8,6 +8,7 @@ import numpy as np
 from polymath import Pair
 from oops.fov import FOV
 
+
 class GapFOV(FOV):
     """A subclass of FOV in which there gaps between the individual pixels."""
 
@@ -45,10 +46,12 @@ class GapFOV(FOV):
         self.uv_shape = self.fov.uv_shape
 
     def __getstate__(self):
+        self.refresh()
         return (self.fov, self.uv_size)
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
     #===========================================================================
     def xy_from_uvt(self, uv_pair, time=None, derivs=False, remask=False,

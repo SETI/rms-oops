@@ -223,6 +223,9 @@ PLUTO_RADIUS  = 19591.
 CHARON_RADIUS = 606.
 PLUTO_CHARON_DISTANCE = 19591.
 
+#### Standard inertial frames
+_INERTIALS = ['B1950', 'GALACTIC', 'ECLIPJ2000']
+
 ################################################################################
 
 class Body(object):
@@ -459,31 +462,28 @@ class Body(object):
 
         # On a repeat call, make sure the frames match
         if isinstance(self.ring_frame, RingFrame) and pole is None:
-            if (self.ring_frame.epoch != epoch or
-                self.ring_frame.retrograde != retrograde):
+            if (self.ring_frame._epoch != epoch or
+                self.ring_frame._retrograde != retrograde):
                     raise ValueError('re-definition of RingFrame is '
                                      + 'incompatible with the original')
 
         if isinstance(self.ring_frame, PoleFrame) and pole is not None:
-            if (self.ring_frame.retrograde != retrograde or
-                self.ring_frame.invariable_pole != pole):
+            if (self.ring_frame._retrograde != retrograde or
+                self.ring_frame._invariable_pole != pole):
                     raise ValueError('re-definition of PoleFrame is '
                                      + 'incompatible with the original')
 
         if pole is not None:
             pole = Vector3.as_vector3(pole)
-            self.ring_frame = PoleFrame(self.frame, pole=pole,
-                                                    retrograde=retrograde)
+            self.ring_frame = PoleFrame(self.frame, pole=pole, retrograde=retrograde,
+                                        frame_id='+')
 
             x_axis = Vector3.ZAXIS.ucross(pole)
-            self.invariable_frame = TwoVectorFrame(Frame.J2000,
-                                            pole, 'Z', x_axis, 'X',
-                                            frame_id=self.name + '_INVARIABLE')
+            self.invariable_frame = TwoVectorFrame(Frame.J2000, pole, 'Z', x_axis, 'X')
             self.invariable_pole = pole
 
         else:
-            self.ring_frame = RingFrame(self.frame, epoch=epoch,
-                                                    retrograde=retrograde)
+            self.ring_frame = RingFrame(self.frame, epoch=epoch, retrograde=retrograde)
             self.invariable_frame = self.ring_frame
 
         self.ring_epoch = epoch
@@ -797,7 +797,7 @@ class Body(object):
         for body in bodies:
             paths.append(body.path)
 
-        return MultiPath(paths, origin, frame, path_id)
+        return MultiPath(paths, origin, frame, path_id=path_id)
 
     ############################################################################
     # Body registry
@@ -857,8 +857,8 @@ class Body(object):
 
         spice_support.initialize()
 
-        Path.reset_registry()
-        Frame.reset_registry()
+        Path._reset_caches()
+        Frame._reset_caches()
 
     #===========================================================================
     def as_path(self):
@@ -992,11 +992,13 @@ class Body(object):
         names += spicedb.furnish_spk(planets, time=(start_time, stop_time),
                                      asof=asof)
 
-        # Define B1950 in addition to J2000
-        _ = SpiceFrame('B1950', 'J2000')
+        # Define standard inertial frames
+        for name in _INERTIALS:
+            _ = SpiceFrame.get(name, Frame.J2000)
 
         # SSB and Sun
-        Body.define_bodies(['SSB'], None, None, ['SUN', 'BARYCENTER'], True)
+        Body.define_body('SSB', None, None, ['SUN', 'BARYCENTER'], True, name='SSB')
+        # ^otherwise, the name defaults to "SOLAR SYSTEM BARYCENTER"
         Body.define_bodies(['SUN'], None, None, ['SUN'], True)
 
         # Mercury, Venus, Earth orbit the Sun
@@ -1043,7 +1045,6 @@ class Body(object):
     @staticmethod
     def _define_mars(start_time, stop_time, asof=None):
         """Define components of the Mars system."""
-
 
         Body.MARS_MOONS_LOADED += MARS_ALL_MOONS
         names = spicedb.furnish_spk(Body.MARS_MOONS_LOADED,
@@ -1105,11 +1106,11 @@ class Body(object):
 
         if irregulars:
             Body.define_bodies(JUPITER_IRREGULAR, 'JUPITER',
-                               'JUPITER BARYCENTER',
+                               'JUPITER_BARYCENTER',
                               ['SATELLITE', 'IRREGULAR'], is_standard=True)
 
             for (ids, names) in JUPITER_ALIASES:
-                Body.define_bodies([ids[0]], 'JUPITER', 'JUPITER BARYCENTER',
+                Body.define_bodies([ids[0]], 'JUPITER', 'JUPITER_BARYCENTER',
                                    ['SATELLITE', 'IRREGULAR'], is_standard=True)
 
         ring = Body.define_ring('JUPITER', 'JUPITER_RING_PLANE', None, [],
@@ -1159,18 +1160,18 @@ class Body(object):
                            ['SATELLITE', 'CLASSICAL', 'REGULAR'],
                            is_standard=True)
         Body.define_bodies(SATURN_CLASSICAL_OUTER, 'SATURN',
-                           'SATURN BARYCENTER',
+                           'SATURN_BARYCENTER',
                            ['SATELLITE', 'CLASSICAL', 'REGULAR'],
                            is_standard=True)
         Body.define_bodies(SATURN_CLASSICAL_IRREG, 'SATURN',
-                           'SATURN BARYCENTER',
+                           'SATURN_BARYCENTER',
                            ['SATELLITE', 'CLASSICAL', 'IRREGULAR'],
                            is_standard=True)
         Body.define_bodies(SATURN_REGULAR, 'SATURN', 'SATURN',
                            ['SATELLITE', 'REGULAR'], is_standard=True)
 
         if irregulars:
-            Body.define_bodies(SATURN_IRREGULAR, 'SATURN', 'SATURN BARYCENTER',
+            Body.define_bodies(SATURN_IRREGULAR, 'SATURN', 'SATURN_BARYCENTER',
                                ['SATELLITE', 'IRREGULAR'], is_standard=True)
 
         ring = Body.define_ring('SATURN', 'SATURN_RING_PLANE', None, [],
@@ -1288,7 +1289,8 @@ class Body(object):
 
         URANUS_EPOCH = cspyce.utc2et('1977-03-10T20:00:00')
 
-        uranus_wrt_b1950 = Frame.as_frame('IAU_URANUS').wrt('B1950')
+        b1950 = SpiceFrame.get('B1950')
+        uranus_wrt_b1950 = SpiceFrame.get('IAU_URANUS').wrt(b1950)
         _ = RingFrame(uranus_wrt_b1950, URANUS_EPOCH, retrograde=True,
                       frame_id='URANUS_RINGS_B1950')
 
@@ -1345,7 +1347,7 @@ class Body(object):
                            ['SATELLITE', 'CLASSICAL', 'REGULAR'],
                            is_standard=True)
         Body.define_bodies(NEPTUNE_CLASSICAL_OUTER, 'NEPTUNE',
-                           'NEPTUNE BARYCENTER',
+                           'NEPTUNE_BARYCENTER',
                            ['SATELLITE', 'CLASSICAL', 'IRREGULAR'],
                            is_standard=True)
         Body.define_bodies(NEPTUNE_REGULAR, 'NEPTUNE', 'NEPTUNE',
@@ -1355,7 +1357,7 @@ class Body(object):
             _ = spicedb.furnish_spk(NEPTUNE_IRREGULAR,
                                     time=(start_time, stop_time), asof=asof)
 
-        Body.define_bodies(NEPTUNE_IRREGULAR, 'NEPTUNE', 'NEPTUNE BARYCENTER',
+        Body.define_bodies(NEPTUNE_IRREGULAR, 'NEPTUNE', 'NEPTUNE_BARYCENTER',
                            ['SATELLITE', 'IRREGULAR'], True)
 
     #     ra  = cspyce.bodvrd('NEPTUNE', 'POLE_RA')[0]  * np.pi/180
@@ -1401,16 +1403,16 @@ class Body(object):
         Body.define_bodies([9], 'SUN', 'SSB', ['BARYCENTER'], is_standard=True)
 
         # Pluto and all the moons orbit the Pluto system barycenter
-        Body.define_bodies([999], 'SUN', 'PLUTO BARYCENTER', ['PLANET'],
+        Body.define_bodies([999], 'SUN', 'PLUTO_BARYCENTER', ['PLANET'],
                            is_standard=True)
-        Body.define_bodies(CHARON, 'PLUTO', 'PLUTO BARYCENTER',
+        Body.define_bodies(CHARON, 'PLUTO', 'PLUTO_BARYCENTER',
                            ['SATELLITE', 'CLASSICAL', 'REGULAR'],
                            is_standard=True)
-        Body.define_bodies(PLUTO_REGULAR, 'PLUTO', 'PLUTO BARYCENTER',
+        Body.define_bodies(PLUTO_REGULAR, 'PLUTO', 'PLUTO_BARYCENTER',
                            ['SATELLITE', 'REGULAR'], is_standard=True)
 
         ring = Body.define_ring('PLUTO', 'PLUTO_RING_PLANE', None, [],
-                                barycenter_name='PLUTO BARYCENTER',
+                                barycenter_name='PLUTO_BARYCENTER',
                                 is_standard=True)
         ring.backplane_id = 'PLUTO:RING'
         ring.backplane_limits = None
@@ -1422,7 +1424,7 @@ class Body(object):
         ring.backplane_id = 'PLUTO_INNER_RING_PLANE'
         ring.backplane_limits = (0., PLUTO_CHARON_DISTANCE)
 
-        barycenter = Body.BODY_REGISTRY['PLUTO BARYCENTER']
+        barycenter = Body.BODY_REGISTRY['PLUTO_BARYCENTER']
         barycenter.ring_frame = Body.BODY_REGISTRY['PLUTO'].ring_frame
 
         return names
@@ -1440,61 +1442,69 @@ class Body(object):
         """
 
         for spice_id in spice_ids:
+            Body.define_body(spice_id, parent=parent, barycenter=barycenter,
+                             keywords=keywords, is_standard=is_standard)
 
-            # Define the body's path
-            path = SpicePath(spice_id, 'SSB')
+    @staticmethod
+    def define_body(spice_id, parent, barycenter, keywords,
+                    is_standard=False, name=None):
+        """Define the path, frame, surface for a single body by name or SPICE ID."""
 
-            # The name of the path is the name of the body
+        # Define the body's path
+        path = SpicePath.get(spice_id, Path.SSB)
+
+        if not name:
             name = path.path_id
+        if not name:
+            raise ValueError('missing name for Body {spice_id}')
 
-            # If the body already exists, skip it
-            if name in Body.BODY_REGISTRY:
-                continue
+        # If the body already exists, skip it
+        if name in Body.BODY_REGISTRY:
+            return
 
-            # Sometimes a frame is undefined for a new moon; in this case assume
-            # it is synchronous
-            try:
-                frame = SpiceFrame(spice_id)
-            except LookupError:
-                if ('BARYCENTER' in keywords) or ('IRREGULAR' in keywords):
-                    frame = Frame.J2000
-                else:
-                    frame = SynchronousFrame(path, parent,
-                                             frame_id='SYNCHRONOUS_' + name)
-
-            # Define the planet's body
-            # Note that this will overwrite any registered body of the same name
-            body = Body(name, name, frame.frame_id, parent, barycenter)
-            body.add_keywords(keywords)
-
-            # Add the gravity object if it exists
-            try:
-                body.apply_gravity(Gravity.lookup(name))
-            except KeyError:
-                pass
-
-            # Add the surface object if shape information is available
-            # RuntimeError was raised by old version of cspyce;
-            # KeyError raised during a name lookup if the body name is unknown;
-            # ValueError raised during a SPICE ID lookup if the ID is unknown.
-            try:
-                shape = spice_shape(spice_id, frame.frame_id, (1.,1.,1.))
-            except (RuntimeError, ValueError, KeyError):
-                shape = NullSurface(path, frame)
-                body.apply_surface(shape, 0., 0.)
-                shape.body = body
+        # Sometimes a frame is undefined for a new moon; in this case assume a regular
+        # satellite is synchronous; an irregular satellite is not rotating.
+        try:
+            frame = SpiceFrame.get(spice_id)
+        except LookupError:
+            if ('BARYCENTER' in keywords) or ('IRREGULAR' in keywords):
+                frame = Frame.J2000
             else:
-                body.apply_surface(shape, shape.req, shape.rpol)
-                shape.body = body
+                frame = SynchronousFrame(path, Body.as_body(parent).path)
 
-            # Add a planet name to any satellite or barycenter
-            if 'SATELLITE' in body.keywords and parent is not None:
-                body.add_keywords(parent)
+        # Define the planet's body
+        # Note that this will overwrite any registered body of the same name
+        body = Body(name, name, frame, parent, barycenter)
+        body.add_keywords(keywords)
 
-            if 'BARYCENTER' in body.keywords and parent is not None:
-                body.add_keywords(parent)
+        # Add the gravity object if it exists
+        try:
+            body.apply_gravity(Gravity.lookup(name))
+        except KeyError:
+            pass
 
-            body.is_standard = bool(is_standard)
+        # Add the surface object if shape information is available
+        # RuntimeError was raised by old version of cspyce;
+        # KeyError raised during a name lookup if the body name is unknown;
+        # ValueError raised during a SPICE ID lookup if the ID is unknown.
+        try:
+            shape = spice_shape(spice_id, frame, (1.,1.,1.))
+        except (RuntimeError, ValueError, KeyError):
+            shape = NullSurface(path, frame)
+            body.apply_surface(shape, 0., 0.)
+            shape.body = body
+        else:
+            body.apply_surface(shape, shape.req, shape.rpol)
+            shape.body = body
+
+        # Add a planet name to any satellite or barycenter
+        if 'SATELLITE' in body.keywords and parent is not None:
+            body.add_keywords([parent])
+
+        if 'BARYCENTER' in body.keywords and parent is not None:
+            body.add_keywords([parent])
+
+        body.is_standard = bool(is_standard)
 
     #===========================================================================
     @staticmethod
@@ -1619,21 +1629,19 @@ class Body(object):
         if name in Body.BODY_REGISTRY:
             return
 
-        # Sometimes a frame is undefined for a new moon; in this case assume it
-        # is synchronous
+        # Sometimes a frame is undefined for a new moon; in this case assume it is
+        # synchronous
         try:
-            frame = SpiceFrame(spice_id)
+            frame = SpiceFrame.get(spice_id)
         except LookupError:
             if ('BARYCENTER' in keywords) or ('IRREGULAR' in keywords):
                 frame = Frame.J2000
             else:
-                frame = SynchronousFrame(path, parent,
-                                         frame_id='SYNCHRONOUS_' + name)
+                frame = SynchronousFrame(path, parent.path, frame_id='+')
 
         # Define the planet's body
-        body = Body(name, path.path_id, frame.frame_id,
-                          parent=Body.lookup(parent),
-                          barycenter=Body.lookup(barycenter))
+        body = Body(name, path, frame, parent=Body.lookup(parent),
+                    barycenter=Body.lookup(barycenter))
         body.add_keywords(keywords)
 
         # Add the gravity object if it exists
@@ -1644,7 +1652,7 @@ class Body(object):
 
         # Add the surface object if shape information is available
         try:
-            shape = spice_shape(spice_id, frame.frame_id, (1.,1.,1.))
+            shape = spice_shape(spice_id, frame, (1.,1.,1.))
             body.apply_surface(shape, shape.req, shape.rpol)
         except RuntimeError:
             shape = NullSurface(path, frame)

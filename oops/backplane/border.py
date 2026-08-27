@@ -27,6 +27,7 @@ def border_atop(self, backplane_key, value):
     from below to above.
     """
 
+    self.refresh()
     backplane_key = self.standardize_backplane_key(backplane_key)
     key = ('border_atop', backplane_key, value)
     if key in self.backplanes:
@@ -55,6 +56,7 @@ def border_atop(self, backplane_key, value):
 def _border_above_or_below(self, sign, backplane_key, value):
     """The locus of points <= or >= a specified value."""
 
+    self.refresh()
     backplane_key = self.standardize_backplane_key(backplane_key)
 
     if sign > 0:
@@ -101,6 +103,7 @@ def _border_outside_or_inside(self, backplane_key, is_inside=True):
     False pixels.
     """
 
+    self.refresh()
     backplane_key = self.standardize_backplane_key(backplane_key)
 
     if is_inside:

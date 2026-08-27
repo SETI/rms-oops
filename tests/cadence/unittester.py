@@ -10,6 +10,7 @@ from tests.cadence.test_reshapedcadence import Test_ReshapedCadence
 from tests.cadence.test_reversedcadence import Test_ReversedCadence
 from tests.cadence.test_sequence        import Test_Sequence
 from tests.cadence.test_tdicadence      import Test_TDICadence
+from tests.cadence.test_timeshift       import Test_TimeShift
 
 ########################################
 if __name__ == '__main__':

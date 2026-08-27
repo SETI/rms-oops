@@ -53,10 +53,12 @@ class Subarray(FOV):
         self.uv_area  = self.fov.uv_area
 
     def __getstate__(self):
+        self.refresh()
         return (self.fov, self.new_los, self.uv_shape, self.uv_los)
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
     #===========================================================================
     def xy_from_uvt(self, uv_pair, time=None, derivs=False, remask=False,

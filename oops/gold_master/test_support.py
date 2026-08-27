@@ -7,6 +7,10 @@ from oops.unittester_support import (OOPS_RESOURCES,
                                      TEST_DATA_FILECACHE,
                                      TEST_DATA_PREFIX)
 
+__all__ = ['OOPS_GOLD_MASTER_PATH', 'OOPS_BACKPLANE_OUTPUT_PATH',
+           'GOLD_MASTER_PREFIX', 'BACKPLANE_OUTPUT_PREFIX',
+           'TEST_DATA_FILECACHE', 'TEST_DATA_PREFIX']
+
 # import filecache
 # filecache.set_easy_logger()
 

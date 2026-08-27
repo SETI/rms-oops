@@ -2,7 +2,6 @@
 # oops/hosts/cassini/iss.py
 ################################################################################
 
-import os
 import numpy as np
 import julian
 import vicar
@@ -13,12 +12,25 @@ from filecache import FCPath
 import oops
 from oops.hosts.cassini import Cassini
 
+# There are two C-matrix conventions here, related by CMATRIX_ROTATION (a 180-degree spin
+# about the boresight):
+#   * spice-frame: the pointing straight from SPICE (a CK or cspyce.pxform), i.e.
+#     the J2000 -> CASSINI_ISS_<camera> rotation. Axes: z along the line of
+#     sight, x to the left, y up.
+#   * oops-frame: the oops observation frame that the FOV uses. Axes follow the
+#     oops convention: z along the line of sight, x to the right, y down.
+# oops-frame = CMATRIX_ROTATION * spice-frame. The instrument's internal coordinate system
+# matches the oops-frame, so a recorded (spice-frame) C-matrix is rotated by
+# CMATRIX_ROTATION to build the observation frame. The generic
+# Snapshot.get_spice_cmatrix() uses this matrix as attribute `spice_to_frame`.
+CMATRIX_ROTATION = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
+
 ################################################################################
 # Standard class methods
 ################################################################################
 
-def from_file(filespec, fast_distortion=True,
-              return_all_planets=False, **parameters):
+def from_file(filespec, *, fast_distortion=True,
+              return_all_planets=False, frame=None, navigation=False, **kwargs):
     """A general, static method to return a Snapshot object based on a given
     Cassini ISS image file.
 
@@ -31,6 +43,13 @@ def from_file(filespec, fast_distortion=True,
 
         return_all_planets  Include kernels for all planets not just
                             Jupiter or Saturn.
+
+        frame               An alternative Frame object to use for this
+                            Observation; default is to use the SPICE C kernel
+                            frame for Cassini.
+
+        navigation          True to wrap the frame inside a Navigation frame
+                            to make it Fittable.
     """
 
     ISS.initialize()    # Define everything the first time through; use defaults
@@ -48,7 +67,7 @@ def from_file(filespec, fast_distortion=True,
     mode = vicar_dict['INSTRUMENT_MODE_ID']
 
     id = vicar_dict['INSTRUMENT_ID']
-    camera = id[3:]+'C'
+    camera = id[3:] + 'C'
 
     if 'FILTER_NAME' in vicar_dict:
         filter1, filter2 = vicar_dict['FILTER_NAME']
@@ -67,15 +86,24 @@ def from_file(filespec, fast_distortion=True,
     elif vicar_dict['GAIN_MODE_ID'][:2] == '12':
         gain_mode = 3
 
-    # Make sure the SPICE kernels are loaded
-    Cassini.load_cks( tstart, tstart + texp)
+    # Make sure the SPICE kernels are loaded; construct the frame
     Cassini.load_spks(tstart, tstart + texp)
+    using_cks = frame is None
+    if using_cks:
+        Cassini.load_cks(tstart, tstart + texp)
+        ISS.define_camera_frames()
+        frame = oops.Frame.as_frame('CASSINI_ISS_' + camera)
+    else:
+        frame = oops.Frame.as_frame(frame)
+
+    if navigation:
+        frame = oops.frame.Navigation((0.,0.), frame)
 
     # Create a Snapshot
     result = oops.obs.Snapshot(('v','u'), tstart, texp,
-                               ISS.fovs[camera,mode, fast_distortion],
+                               fov = ISS.fovs[camera, mode, fast_distortion],
                                path = 'CASSINI',
-                               frame = 'CASSINI_ISS_' + camera,
+                               frame = frame,
                                dict = vicar_dict,       # Add the VICAR dict
                                data = vic.data_2d,      # Add the data array
                                instrument = 'ISS',
@@ -85,22 +113,44 @@ def from_file(filespec, fast_distortion=True,
                                filter2 = filter2,
                                gain_mode = gain_mode)
 
+    # With a custom frame, pointing never came from a CK, so any CK that
+    # happens to be furnished (e.g. the gapfill CKs loaded unconditionally by
+    # Cassini.initialize()) is unrelated to this observation and must not be
+    # reported as used.
     result.insert_subfield('spice_kernels',
                            Cassini.used_kernels(result.time, 'iss',
-                                                return_all_planets))
+                                                return_all_planets=return_all_planets,
+                                                ck=using_cks))
     result.insert_subfield('filespec', filespec)
     result.insert_subfield('basename', filespec.name)
+    result.insert_subfield('spice_to_frame', CMATRIX_ROTATION)
+    result.insert_subfield('spice_frame_name', 'CASSINI_ISS_' + camera)
+    result.insert_subfield('spice_frame_id', -82360 if camera == 'NAC' else -82361)
+    result.insert_subfield('abspath', filespec.get_local_path().resolve())
+    result.insert_subfield('image_url', filespec.absolute().as_posix())
 
     return result
 
 #===============================================================================
-def from_index(filespec, **parameters):
+def from_index(filespec, fast_distortion=True, return_all_planets=False,
+               navigation=False, **kwargs):
     """A static method to return a list of Snapshot objects.
 
-    One object for each row in an ISS index file. The filespec refers to the
-    label of the index file.
+    Inputs:
+        filespec            The full path to a Cassini ISS file or its PDS label.
+
+        fast_distortion     True to use a pre-inverted polynomial;
+                            False to use a dynamically solved polynomial;
+                            None to use a FlatFOV.
+
+        return_all_planets  Include kernels for all planets not just
+                            Jupiter or Saturn.
+
+        navigation          True to wrap the frame inside a Navigation frame
+                            to make it Fittable.
     """
     ISS.initialize()    # Define everything the first time through
+    ISS.define_camera_frames()          # use the SPICE-derived pointing
 
     filespec = FCPath(filespec)
 
@@ -117,27 +167,30 @@ def from_index(filespec, **parameters):
         tstart = julian.tdb_from_tai(row_dict['START_TIME'])
         texp = max(1.e-3, row_dict['EXPOSURE_DURATION']) / 1000.
         mode = row_dict['INSTRUMENT_MODE_ID']
-
-        name = row_dict['INSTRUMENT_NAME']
-        if 'WIDE' in name:
-            camera = 'WAC'
-        else:
-            camera = 'NAC'
+        camera = 'WAC' if 'WIDE' in row_dict['INSTRUMENT_NAME'] else 'NAC'
+        frame = oops.Frame.as_frame('CASSINI_ISS_' + camera)
+        if navigation:
+            frame = oops.frame.Navigation((0., 0.), frame)
 
         item = oops.obs.Snapshot(('v','u'), tstart, texp,
-                                 ISS.fovs[camera,mode,False],
-                                 'CASSINI', 'CASSINI_ISS_' + camera,
+                                 fov = ISS.fovs[camera, mode, False],
+                                 path = 'CASSINI',
+                                 frame = frame,
                                  dict = row_dict,       # Add index dictionary
                                  index_dict = row_dict, # Old name
                                  instrument = 'ISS',
                                  detector = camera,
                                  sampling = mode)
 
-        item.spice_kernels = Cassini.used_kernels(item.time, 'iss')
-
-        item.filespec = (row_dict['VOLUME_ID'] + '/' +
-                         row_dict['FILE_SPECIFICATION_NAME'])
-        item.basename = row_dict['FILE_NAME']
+        item.insert_subfield('spice_kernels',
+                             Cassini.used_kernels(item.time, 'iss',
+                                                  return_all_planets=return_all_planets))
+        filepath = row_dict['VOLUME_ID'] + '/' + row_dict['FILE_SPECIFICATION_NAME']
+        item.insert_subfield('filespec', filepath)
+        item.insert_subfield('basename', row_dict['FILE_NAME'])
+        item.insert_subfield('spice_to_frame', CMATRIX_ROTATION)
+        item.insert_subfield('spice_frame_name', 'CASSINI_ISS_' + camera)
+        item.insert_subfield('spice_frame_id', -82360 if camera == 'NAC' else -82361)
 
         snapshots.append(item)
 
@@ -151,7 +204,7 @@ def from_index(filespec, **parameters):
     return snapshots
 
 #===============================================================================
-def initialize(ck='reconstructed', planets=None, offset_wac=False, asof=None,
+def initialize(ck='reconstructed', planets=None, asof=None,
                spk='reconstructed', gapfill=True,
                mst_pck=True, irregulars=True):
     """Initialize key information about the ISS instrument.
@@ -165,8 +218,6 @@ def initialize(ck='reconstructed', planets=None, offset_wac=False, asof=None,
                     'none' if the kernels are to be managed manually.
         planets     A list of planets to pass to define_solar_system. None or
                     0 means all.
-        offset_wac  True to offset the WAC frame relative to the NAC frame as
-                    determined by star positions.
         asof        Only use SPICE kernels that existed before this date; None
                     to ignore.
         gapfill     True to include gapfill CKs. False otherwise.
@@ -175,7 +226,7 @@ def initialize(ck='reconstructed', planets=None, offset_wac=False, asof=None,
         irregulars  True to include the irregular satellites;
                     False otherwise.
     """
-    ISS.initialize(ck=ck, planets=planets, offset_wac=offset_wac, asof=asof,
+    ISS.initialize(ck=ck, planets=planets, asof=asof,
                    spk=spk, gapfill=gapfill,
                    mst_pck=mst_pck, irregulars=irregulars)
 
@@ -294,7 +345,7 @@ class ISS(object):
 
     #===========================================================================
     @staticmethod
-    def initialize(ck='reconstructed', planets=None, offset_wac=False, asof=None,
+    def initialize(ck='reconstructed', planets=None, asof=None,
                    spk='reconstructed', gapfill=True,
                    mst_pck=True, irregulars=True):
         """Initialize key information about the ISS instrument.
@@ -309,8 +360,6 @@ class ISS(object):
                         managed manually.
             planets     A list of planets to pass to define_solar_system. None
                         or 0 means all.
-            offset_wac  True to offset the WAC frame relative to the NAC frame
-                        as determined by star positions.
             asof        Only use SPICE kernels that existed before this date;
                         None to ignore.
             gapfill     True to include gapfill CKs. False otherwise.
@@ -374,41 +423,32 @@ class ISS(object):
             ISS.fovs[detector, 'SUM2'] = oops.fov.SubsampledFOV(full_fov_none, 2)
             ISS.fovs[detector, 'SUM4'] = oops.fov.SubsampledFOV(full_fov_none, 4)
 
-        # Construct a SpiceFrame for each camera
-        # Deal with the fact that the instrument's internal
-        # coordinate  system is rotated 180 degrees
-        rot180 = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
-        nac_flipped = oops.frame.SpiceFrame('CASSINI_ISS_NAC',
-                                            frame_id='CASSINI_ISS_NAC_FLIPPED')
-        wac_flipped = oops.frame.SpiceFrame('CASSINI_ISS_WAC',
-                                            frame_id='CASSINI_ISS_WAC_FLIPPED')
-        nac_frame = oops.frame.Cmatrix(rot180, nac_flipped,
-                                       frame_id='CASSINI_ISS_NAC')
-
-        if offset_wac:
-
-            # Apply offset for WAC relative to NAC
-            info = ISS.instrument_kernel['INS']['CASSINI_ISS_NAC']
-            xfov = info['FOV_REF_ANGLE']
-            yfov = info['FOV_CROSS_ANGLE']
-            lines = info['PIXEL_LINES']
-            samples = info['PIXEL_SAMPLES']
-
-            xpixel = np.arctan(np.tan(xfov * oops.RPD) / (samples/2.))
-            ypixel = np.arctan(np.tan(yfov * oops.RPD) / (lines/2.))
-
-            # This is Rob's determination of WAC - NAC in units of NAC pixels
-            xshift = -7. * xpixel
-            yshift = 4.4 * ypixel
-            wac_frame_no = oops.frame.Cmatrix(rot180, wac_flipped,
-                                              frame_id='CASSINI_ISS_WAC-NO_OFFSET')
-            wac_frame = oops.frame.Navigation((xshift,yshift), wac_frame_no,
-                                               frame_id='CASSINI_ISS_WAC')
-        else:
-            wac_frame = oops.frame.Cmatrix(rot180, wac_flipped,
-                                           frame_id='CASSINI_ISS_WAC')
-
         ISS.initialized = True
+
+    #===========================================================================
+    @staticmethod
+    def define_camera_frames():
+        """Register the SPICE-derived CASSINI_ISS_NAC and CASSINI_ISS_WAC frames.
+
+        ISS.initialize() must have been called first. Built lazily (and only
+        once) so that observations using a custom C-matrix never construct or
+        depend on the SPICE camera frames.
+        """
+
+        # Each camera is tested individually against the Frame registry rather than
+        # against a flag on this class. Registering a second frame under an ID that
+        # already exists does not fail; it is renamed CASSINI_ISS_NAC_2 and never found
+        # again, so the test has to ask the registry what it actually holds.
+        for camera in ('NAC', 'WAC'):
+            frame_id = 'CASSINI_ISS_' + camera
+            if oops.Frame.frame_id_exists(frame_id):
+                continue
+
+            # The SpiceFrame takes the "flipped" ID, leaving the camera's own ID for the
+            # Cmatrix that rotates it into the oops-frame convention
+            spice_frame = oops.frame.SpiceFrame(frame_id,
+                                                frame_id=frame_id + '_FLIPPED')
+            oops.frame.Cmatrix(CMATRIX_ROTATION, spice_frame, frame_id=frame_id)
 
     #===========================================================================
     @staticmethod
@@ -423,9 +463,5 @@ class ISS(object):
         ISS.initialized = False
 
         Cassini.reset()
-
-
-
-
 
 ################################################################################

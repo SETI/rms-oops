@@ -5,6 +5,8 @@
 import unittest
 
 from tests.path.test_path       import Test_Path
+from tests.path.test_pathshift  import Test_PathShift
+from tests.path.test_quickpath  import Test_QuickPath
 from tests.path.test_circlepath import Test_CirclePath
 from tests.path.test_keplerpath import Test_KeplerPath
 from tests.path.test_multipath  import Test_MultiPath

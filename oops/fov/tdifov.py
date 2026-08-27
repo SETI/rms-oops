@@ -51,10 +51,12 @@ class TDIFOV(FOV):
         self.uv_area  = self.fov.uv_area
 
     def __getstate__(self):
+        self.refresh()
         return (self.fov, self.tstop, self.tdi_texp, self.tdi_axis)
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
     #===========================================================================
     def xy_from_uvt(self, uv_pair, time=None, derivs=False, remask=False,

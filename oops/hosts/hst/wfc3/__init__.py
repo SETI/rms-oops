@@ -3,10 +3,11 @@
 ##########################################################################################
 
 import astropy.io.fits as pyfits
-import oops
 from .. import HST
 
 from filecache import FCPath
+
+__all__ = ['from_file', 'WFC3']
 
 ##########################################################################################
 # Standard class method
