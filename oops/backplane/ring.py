@@ -24,6 +24,7 @@ def ring_radius(self, event_key, rmin=None, rmax=None):
                         the event_key.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key, default='RING')
     key = ('ring_radius', event_key, rmin, rmax)
     if key in self.backplanes:
@@ -66,6 +67,8 @@ def ring_longitude(self, event_key, reference='node'):
                         'sha'   for the anti-solar longitude, returning the
                                 solar hour angle.
     """
+
+    self.refresh()
 
     # Handle embedded backplane
     (event_key,
@@ -135,6 +138,7 @@ def radial_mode(self, backplane_key, cycles, epoch, amp, peri0, speed,
                         options as for ring_longitude
     """
 
+    self.refresh()
     backplane_key = self.standardize_backplane_key(backplane_key)
     key = ('radial_mode', backplane_key, cycles, epoch, amp, peri0, speed,
                           a0, dperi_da, reference)
@@ -232,6 +236,7 @@ def ring_azimuth(self, event_key, direction='obs', apparent=True):
                         False for the actual azimuth.
     """
 
+    self.refresh()
     if direction not in ('obs', 'sun'):
         raise ValueError('invalid azimuth direction: ' + repr(direction))
 
@@ -290,6 +295,7 @@ def ring_elevation(self, event_key, direction='obs', pole='prograde',
                         False for the actual elevation.
     """
 
+    self.refresh()
     if direction not in ('obs', 'sun'):
         raise ValueError('invalid elevation direction: ' + repr(direction))
 
@@ -367,6 +373,7 @@ def ring_incidence_angle(self, event_key, pole='sunward', apparent=True):
     if pole not in ('sunward', 'observed', 'north', 'prograde'):
         raise ValueError('invalid incidence angle pole: ' + repr(pole))
 
+    self.refresh()
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
                                                      default='RING')
@@ -434,6 +441,7 @@ def ring_emission_angle(self, event_key, pole='sunward', apparent=True):
     if pole not in ('sunward', 'observed', 'north', 'prograde'):
         raise ValueError('invalid emission angle pole: ' + repr(pole))
 
+    self.refresh()
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
                                                      default='RING')
@@ -492,6 +500,7 @@ def ring_sub_observer_longitude(self, event_key, reference='node'):
         raise ValueError('invalid longitude reference: ' + repr(reference))
 
     # Look up under the desired reference
+    self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key, default='RING')
     key0 = ('ring_sub_observer_longitude', gridless_key)
     key = key0 + (reference,)
@@ -544,6 +553,7 @@ def ring_sub_solar_longitude(self, event_key, reference='node'):
         raise ValueError('invalid longitude reference: ' + repr(reference))
 
     # Look up under the desired reference
+    self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key, default='RING')
     key0 = ('ring_sub_solar_longitude', gridless_key)
     key = key0 + (reference,)
@@ -593,6 +603,7 @@ def ring_center_incidence_angle(self, event_key, pole='sunward', apparent=True):
                         False for the actual.
     """
 
+    self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key, default='RING')
     return self.ring_incidence_angle(gridless_key, pole=pole, apparent=apparent)
 
@@ -617,6 +628,7 @@ def ring_center_emission_angle(self, event_key, pole='sunward', apparent=True):
                         False for the actual.
     """
 
+    self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key, default='RING')
     return self.ring_emission_angle(gridless_key, pole=pole, apparent=apparent)
 
@@ -631,6 +643,7 @@ def ring_radial_resolution(self, event_key):
                         array.
     """
 
+    self.refresh()
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
                                                      default='RING')
@@ -665,9 +678,10 @@ def ring_angular_resolution(self, event_key, units="rad"):
         units           longitude representation; "rad" or "km"
     """
 
-    if units not in {"rad", "km"}:
+    if units not in {'rad', 'km'}:
         raise ValueError('invalid units: ' + repr(units))
 
+    self.refresh()
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
                                                      default='RING')
@@ -706,6 +720,7 @@ def ring_gradient_angle(self, event_key):
                         array.
     """
 
+    self.refresh()
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
                                                      default='RING')
@@ -735,6 +750,7 @@ def ring_shadow_radius(self, event_key, ring_surface_key):
     """Radius in the ring plane that casts a shadow at each point on this body.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     ring_surface_key = ring_surface_key.upper()
 
@@ -758,6 +774,7 @@ def ring_shadow_incidence(self, event_key, ring_surface_key):
     this body.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     ring_surface_key = ring_surface_key.upper()
 
@@ -782,6 +799,7 @@ def ring_shadow_incidence(self, event_key, ring_surface_key):
 def ring_radius_in_front(self, event_key, ring_surface_key):
     """Radius in the ring plane that obscures each point on this body."""
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     ring_surface_key = ring_surface_key.upper()
 

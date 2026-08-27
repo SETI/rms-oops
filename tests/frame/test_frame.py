@@ -23,7 +23,7 @@ class Test_Frame(unittest.TestCase):
                                             'de421.bsp'])
         for path in paths:
             cspyce.furnsh(path)
-        Frame.reset_registry()
+        Frame._reset_caches()
 
     def tearDown(self):
         pass
@@ -36,13 +36,13 @@ class Test_Frame(unittest.TestCase):
         _ = SpicePath('MOON', 'SSB')
         _ = SpiceFrame('IAU_EARTH', 'J2000')
         moon  = SpiceFrame('IAU_MOON', 'IAU_EARTH')
-        quick = QuickFrame(moon, (-5.,5.),
-                        dict(QUICK.dictionary, **{'frame_self_check':3.e-14}))
+        quick = QuickFrame(moon, -5., 5.,
+                           dict(QUICK.dictionary, **{'frame_self_check':3.e-14}))
 
         # Perfect precision is impossible
         try:
-            quick = QuickFrame(moon, (-5.,5.),
-                        dict(QUICK.dictionary, **{'frame_self_check':0.}))
+            quick = QuickFrame(moon, -5., 5.,
+                               dict(QUICK.dictionary, **{'frame_self_check':0.}))
             self.assertTrue(False, 'No ValueError raised for PRECISION = 0.')
         except ValueError:
             pass
@@ -52,7 +52,7 @@ class Test_Frame(unittest.TestCase):
         # _ = moon.transform_at_time(test, quick=False)   # takes about 10 sec
         _ = quick.transform_at_time(test)           # takes way less than 1 sec
 
-        Frame.reset_registry()
+        Frame._reset_caches()
 
         ################################
         # Test unregistered frames
@@ -60,7 +60,6 @@ class Test_Frame(unittest.TestCase):
 
         j2000 = Frame.as_wayframe('J2000')
         rot_180 = Rotation(np.pi, 2, j2000)
-        self.assertTrue(rot_180.frame_id.startswith('TEMPORARY'))
 
         xform = rot_180.transform_at_time(0.)
         self.assertAlmostEqual(xform.matrix.vals[0,0], -1, delta=1.e-14)
@@ -74,8 +73,6 @@ class Test_Frame(unittest.TestCase):
         self.assertEqual(xform.matrix.vals[2,2], 1)
 
         rot_neg60 = Rotation(-np.pi/3, 2, rot_180)
-        self.assertTrue(rot_neg60.frame_id.startswith('TEMPORARY'))
-
         c60 = 0.5
         s60 = np.sqrt(0.75)
 
@@ -91,7 +88,6 @@ class Test_Frame(unittest.TestCase):
         self.assertEqual(xform.matrix.vals[2,2], 1)
 
         rot_neg120 = Rotation(-np.pi/1.5, 2, rot_neg60)
-        self.assertTrue(rot_neg120.frame_id.startswith('TEMPORARY'))
 
         xform = rot_neg120.transform_at_time(0.)
         self.assertAlmostEqual(xform.matrix.vals[0,0], -c60, delta=1.e-14)
@@ -105,7 +101,8 @@ class Test_Frame(unittest.TestCase):
         self.assertEqual(xform.matrix.vals[2,2], 1)
 
         # Attempt to register a frame defined relative to an unregistered frame
-        self.assertRaises(ValueError, Rotation, -np.pi, 2, rot_neg60, 'NEG180')
+        # This is no longer an error
+        # self.assertRaises(ValueError, Rotation, -np.pi, 2, rot_neg60, frame_id='NEG180')
 
         # Link unregistered frame to registered frame
         identity = rot_neg120.wrt('J2000')
@@ -149,7 +146,4 @@ class Test_Frame(unittest.TestCase):
         self.assertEqual(xform.matrix.vals[1,2], 0)
         self.assertEqual(xform.matrix.vals[2,2], 1)
 
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

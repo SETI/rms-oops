@@ -23,6 +23,7 @@ def limb_altitude(self, event_key, zmin=None, zmax=None, scaled=False):
         scaled          if True, zmin and zmax are in units of the maximum body radius.
     """
 
+    self.refresh()
     event_key = Backplane.standardize_event_key(event_key, default='LIMB')
 
     if scaled:
@@ -71,6 +72,7 @@ def _fill_limb_intercepts(self, event_key):
                          + surface.COORDINATE_TYPE)
 
     # Get the ring intercept coordinates
+    self.refresh()
     event = self.get_surface_event(event_key)
 
     # Register the default backplanes
@@ -110,6 +112,7 @@ def limb_longitude(self, event_key, reference='iau', direction='west',
                         matters for Ellipsoids.
     """
 
+    self.refresh()
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, LIMB_BACKPLANES,
                                                      default='LIMB')
@@ -142,6 +145,7 @@ def limb_latitude(self, event_key, lat_type='centric'):
                                     internally.
     """
 
+    self.refresh()
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, LIMB_BACKPLANES,
                                                      default='LIMB')
@@ -171,6 +175,7 @@ def limb_clock_angle(self, event_key):
     """
 
     # Create the clock angle backplane
+    self.refresh()
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, LIMB_BACKPLANES,
                                                      default='LIMB')

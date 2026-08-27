@@ -10,6 +10,7 @@ from oops.path.path_        import Path
 from oops.surface.surface_  import Surface
 from oops.surface.ringplane import RingPlane
 
+
 class Ansa(Surface):
     """This surface is defined as the locus of points where a radius vector from
     the pole of the Z-axis is perpendicular to the line of sight. This provides
@@ -82,12 +83,14 @@ class Ansa(Surface):
                                       self.frame.wayframe)
 
     def __getstate__(self):
+        self.refresh()
         return (Path.as_primary_path(self.origin),
                 Frame.as_primary_frame(self.frame),
                 self.gravity, self._state_ringplane, tuple(self.radii))
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
     #===========================================================================
     @staticmethod

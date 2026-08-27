@@ -11,6 +11,7 @@ from oops.cadence.metronome import Metronome
 from oops.frame             import Frame
 from oops.path              import Path
 
+
 class RasterSlit1D(Observation):
     """A subclass of Observation consisting of a 1-D observation in which the
     one dimension is constructed by sweeping a single pixel along a slit.
@@ -112,21 +113,19 @@ class RasterSlit1D(Observation):
         else:
             raise TypeError('Invalid cadence class: ' + type(cadence).__name__)
 
-        # Timing
-        self.time = self.cadence.time
-        self.midtime = self.cadence.midtime
-
         # Optional subfields
         self.subfields = {}
         for key in subfields.keys():
             self.insert_subfield(key, subfields[key])
 
     def __getstate__(self):
+        self.refresh()
         return (self.axes, self.cadence, self.fov, self.path, self.frame,
                 self.subfields)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
+        self.freeze()
 
     #===========================================================================
     def uvt(self, indices, remask=False, derivs=True):

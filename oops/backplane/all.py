@@ -3,6 +3,7 @@
 ################################################################################
 
 # Define all Backplane methods
+# flake8: noqa: F401 -- these imports exist for their side effects
 
 import oops.backplane.ansa
 import oops.backplane.border

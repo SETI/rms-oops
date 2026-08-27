@@ -62,10 +62,12 @@ class FlatFOV(FOV):
                              [0., 1/scale.vals[1]]], drank=1).as_readonly()
 
     def __getstate__(self):
+        self.refresh()
         return (self.uv_scale, self.uv_shape, self.uv_los, self.uv_area)
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
     #===========================================================================
     def xy_from_uvt(self, uv_pair, time=None, derivs=False, remask=False):

@@ -163,6 +163,9 @@ from oops.gold_master.test_support import (BACKPLANE_OUTPUT_PREFIX,
                                            TEST_DATA_FILECACHE,
                                            TEST_DATA_PREFIX)
 
+__all__ = ['set_default_obs', 'define_standard_obs', 'set_default_args',
+           'override', 'execute_as_command', 'execute_as_unittest', 'run_tests',
+           'register_test_suite', 'get_test_suite', 'BackplaneTest']
 
 ################################################################################
 # Use set_default_obs() and set_standard_obs() to define the observation used
@@ -372,7 +375,7 @@ def execute_as_command():
         **options       overrides for any default gold_master input arguments.
     """
 
-    import oops.gold_master.all         # define all test suites
+    import oops.gold_master.all         # noqa: F401 -- defines all test suites
 
     # Define parser...
     parser = argparse.ArgumentParser(
@@ -611,7 +614,7 @@ def execute_as_unittest(testcase, obsname='default'):
     """
 
     import traceback
-    import oops.gold_master.all         # define all test suites
+    import oops.gold_master.all         # noqa: F401 -- defines all test suites
 
     # This try-except is needed to ensure that a unit-test failure is
     # triggered in the event of an error.

@@ -10,13 +10,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        # Python 3.11 is the earliest version supported; see requires-python in
+        # pyproject.toml.
         include:
-          - os: self-hosted-windows
-            python-version: "3.8"
-          - os: self-hosted-windows
-            python-version: "3.9"
-          - os: self-hosted-windows
-            python-version: "3.10"
           - os: self-hosted-windows
             python-version: "3.11"
           - os: self-hosted-windows

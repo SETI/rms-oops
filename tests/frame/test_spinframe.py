@@ -14,8 +14,8 @@ from oops.path  import Path
 class Test_SpinFrame(unittest.TestCase):
 
     def setUp(self):
-        Frame.reset_registry()
-        Path.reset_registry()
+        Frame._reset_caches()
+        Path._reset_caches()
 
     def tearDown(self):
         pass
@@ -24,10 +24,10 @@ class Test_SpinFrame(unittest.TestCase):
 
         np.random.seed(6521)
 
-        spin1 = SpinFrame(0., 1., 0., 2, "J2000", "spin1")
-        _ = SpinFrame(0., 2., 0., 2, "J2000", "spin2")
-        _ = SpinFrame(0., 1., 0., 2, "spin2", "spin3")
-        _ = SpinFrame(1., 1., 1., 2, "J2000", "spin1a")
+        spin1 = SpinFrame(0., 1., 0., 2, "J2000", frame_id="spin1")
+        _ = SpinFrame(0., 2., 0., 2, "J2000", frame_id="spin2")
+        _ = SpinFrame(0., 1., 0., 2, "spin2", frame_id="spin3")
+        _ = SpinFrame(1., 1., 1., 2, "J2000", frame_id="spin1a")
 
         event = Event(Scalar.ZERO, Vector3.XAXIS, "SSB", "J2000")
         self.assertEqual(event.pos, (1,0,0))
@@ -104,7 +104,4 @@ class Test_SpinFrame(unittest.TestCase):
         dpos_dt_test = (pos1 - pos0) / dt
         self.assertTrue(abs(dpos_dt_test - pos0.d_dt).max() < 1.e-5)
 
-#########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

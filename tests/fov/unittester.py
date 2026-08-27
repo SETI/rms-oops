@@ -6,6 +6,8 @@ import unittest
 
 from tests.fov.test_barrelfov     import Test_BarrelFOV
 from tests.fov.test_flatfov       import Test_FlatFOV
+from tests.fov.test_offsetfov     import Test_OffsetFOV
+from tests.fov.test_platescale    import Test_Platescale
 from tests.fov.test_polynomialfov import Test_PolynomialFOV
 from tests.fov.test_subarray      import Test_Subarray
 from tests.fov.test_subsampledfov import Test_SubsampledFOV

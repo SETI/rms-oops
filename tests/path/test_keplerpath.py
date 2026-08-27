@@ -5,7 +5,10 @@
 import numpy as np
 import unittest
 
+from polymath     import Scalar, Vector3
 from oops.body    import Body
+from oops.constants import C
+from oops.event   import Event
 from oops.frame   import Frame
 from oops.gravity import Gravity
 from oops.path    import Path, KeplerPath
@@ -15,19 +18,21 @@ def _xyz_planet_derivative_test(kep, t, delta=1.e-7):
     """
 
     # Save the position and its derivatives
-    (xyz, _d_xyz_dt) = kep.xyz_planet(t, partials=True)
+    (xyz, d_xyz_dt) = kep._xyz_planet(t, partials=True)
     d_xyz_d_elem = xyz.d_delements.vals
     pos_norm = xyz.norm().vals
 
     # Create new Kepler objects for tweaking the parameters
-    khi = kep.copy()
-    klo = kep.copy()
+    khi = KeplerPath(kep._planet, kep._epoch, kep._elements.copy(), kep._observer,
+                     wobbles=kep._wobbles)
+    klo = KeplerPath(kep._planet, kep._epoch, kep._elements.copy(), kep._observer,
+                     wobbles=kep._wobbles)
 
-    params = kep.get_params()
+    params = kep.get_elements()
 
     # Loop through parameters...
-    errors = np.zeros(np.shape(t) + (3,kep.nparams))
-    for e in range(kep.nparams):
+    errors = np.zeros(np.shape(t) + (3, kep._nelements))
+    for i,e in enumerate(range(kep._nelements)):
 
         # Tweak one parameter
         hi = params.copy()
@@ -46,8 +51,8 @@ def _xyz_planet_derivative_test(kep, t, delta=1.e-7):
         klo.set_params(lo)
 
         # Compare the change with that derived from the partial derivative
-        xyz_hi = khi.xyz_planet(t, partials=False)[0].vals
-        xyz_lo = klo.xyz_planet(t, partials=False)[0].vals
+        xyz_hi = khi._xyz_planet(t, partials=False)[0].vals
+        xyz_lo = klo._xyz_planet(t, partials=False)[0].vals
         hi_lo_diff = xyz_hi - xyz_lo
 
         errors[...,:,e] = ((d_xyz_d_elem[...,:,e] * denom - hi_lo_diff) /
@@ -69,14 +74,16 @@ def _pos_derivative_test(kep, t, delta=1.e-5):
     pos_norm = event.pos.norm().vals
 
     # Create new Kepler objects for tweaking the parameters
-    khi = kep.copy()
-    klo = kep.copy()
+    khi = KeplerPath(kep._planet, kep._epoch, kep._elements.copy(), kep._observer,
+                     wobbles=kep._wobbles)
+    klo = KeplerPath(kep._planet, kep._epoch, kep._elements.copy(), kep._observer,
+                     wobbles=kep._wobbles)
 
-    params = kep.get_params()
+    params = kep.get_elements()
 
     # Loop through parameters...
-    errors = np.zeros(np.shape(t) + (3,kep.nparams))
-    for e in range(kep.nparams):
+    errors = np.zeros(np.shape(t) + (3,kep._nelements))
+    for e in range(kep._nelements):
 
         # Tweak one parameter
         hi = params.copy()
@@ -257,11 +264,56 @@ class Test_KeplerPath(unittest.TestCase):
         errors = _pos_derivative_test(kep, time)
         self.assertTrue(np.max(np.abs(errors)) < 1.e-4)
 
-        Frame.reset_registry()
-        Path.reset_registry()
+        ####################
+        # Photon solution without an observer, which returns events in the ring frame
+        ####################
+
+        kep = KeplerPath(Body.lookup("SATURN"), 0.,
+                       (a, 1., dmean_dt, 0.2, 3., dperi_dt, 0.1, 5., dnode_dt),
+                       path_id='kepler_unobserved')
+
+        arrival_time = Scalar(1.e8 + np.arange(5) * 100.)
+        arrival = Event(arrival_time, (Vector3.ZERO, Vector3.ZERO), 'EARTH', 'J2000')
+        (path_event, arrival_event) = kep.photon_to_event(arrival)
+
+        # Here the light travel time is solved to the body itself, so the ray length and
+        # the light travel time agree exactly
+        ratio = (path_event.dep_j2000.norm() / (C * path_event.dep_lt)).vals
+        self.assertTrue(np.max(np.abs(ratio - 1.)) < 1.e-12)
+
+        ####################
+        # Photon solution when an observer is defined
+        ####################
+
+        kep = KeplerPath(Body.lookup("SATURN"), 0.,
+                       (a, 1., dmean_dt, 0.2, 3., dperi_dt, 0.1, 5., dnode_dt),
+                       Path.as_path("EARTH"), path_id='kepler_observed')
+
+        arrival_time = Scalar(1.e8 + np.arange(5) * 100.)
+        arrival = Event(arrival_time, (Vector3.ZERO, Vector3.ZERO), 'EARTH', 'J2000')
+        (path_event, arrival_event) = kep.photon_to_event(arrival)
+
+        # The photon departs before it arrives, so the departure time is measured
+        # forward and the arrival time backward, as in Path._solve_photon
+        self.assertTrue(np.all(path_event.time.vals < arrival_time.vals))
+        self.assertTrue(np.all(path_event.dep_lt.vals > 0.))
+        self.assertTrue(np.all(arrival_event.arr_lt.vals < 0.))
+        self.assertEqual(arrival_event.arr_lt, -path_event.dep_lt)
+
+        # The ray is the same vector at both ends, and its length is the distance the
+        # photon travels. The light time is solved to the planet rather than to the body
+        # itself, so the two agree only to the radial part of the orbital offset divided
+        # by the range, which is bounded by 1e-4 for this orbit.
+        self.assertEqual(arrival_event.arr_j2000, path_event.dep_j2000)
+        ratio = (path_event.dep_j2000.norm() / (C * path_event.dep_lt)).vals
+        self.assertTrue(np.max(np.abs(ratio - 1.)) < 1.e-4)
+
+        # The departure precedes the arrival by exactly the light travel time
+        self.assertTrue(np.all(path_event.time.vals < arrival_time.vals))
+        self.assertEqual(arrival_time - path_event.time, path_event.dep_lt)
+
+        Frame._reset_caches()
+        Path._reset_caches()
         Body.reset_registry()
 
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

@@ -3,6 +3,7 @@
 ################################################################################
 
 # Define all gold_master tests suites
+# flake8: noqa: F401 -- these imports exist for their side effects
 
 import oops.gold_master.ansa
 import oops.gold_master.border

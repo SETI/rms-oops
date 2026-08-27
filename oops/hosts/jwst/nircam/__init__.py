@@ -12,6 +12,8 @@ from oops.hosts.jwst import JWST
 
 from filecache import FCPath
 
+__all__ = ['from_file', 'NIRCam']
+
 # Not currently used, but might be useful...
 READ_PATTERNS = {   # (number averaged, stride)
     'RAPID'   : (1,  1),

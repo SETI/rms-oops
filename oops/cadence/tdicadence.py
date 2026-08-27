@@ -58,11 +58,13 @@ class TDICadence(Cadence):
         self._scalar_end_time = Scalar(self.time[1])
 
     def __getstate__(self):
+        self.refresh()
         return (self.lines, self.tstart, self.tdi_texp, self.tdi_stages,
                 self.tdi_sign)
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
     ############################################################################
     # Methods unique to this class

@@ -37,10 +37,12 @@ class SubsampledFOV(FOV):
         self.uv_shape = self.fov.uv_shape.element_div(self.rescale).as_int()
 
     def __getstate__(self):
+        self.refresh()
         return (self.fov, self.rescale)
 
     def __setstate__(self, state):
         self.__init__(*state)
+        self.freeze()
 
     #===========================================================================
     def xy_from_uvt(self, uv_pair, time=None, derivs=False, remask=False,

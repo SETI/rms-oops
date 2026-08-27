@@ -23,8 +23,8 @@ class Test_Cmatrix(unittest.TestCase):
                                             'de421.bsp'])
         for path in paths:
             cspyce.furnsh(path)
-        Path.reset_registry()
-        Frame.reset_registry()
+        Path._reset_caches()
+        Frame._reset_caches()
 
     def tearDown(self):
         pass
@@ -99,9 +99,6 @@ class Test_Cmatrix(unittest.TestCase):
         self.assertTrue(np.all(wrt_mars.vel.vals[...,1][:,0] == -wrt_mars90s.vel.vals[...,0][:,3]))
         self.assertTrue(np.all(wrt_mars.vel.vals[...,2][:,0] ==  wrt_mars90s.vel.vals[...,2][:,3]))
 
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################
 # Notes from the PDS Data Dictionary
 #

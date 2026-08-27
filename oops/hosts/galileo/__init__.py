@@ -13,6 +13,8 @@ import oops
 
 from oops.body import Body
 
+__all__ = ['Galileo']
+
 # Mission targets, rough time divisions
 TIMELINE = [ {'ET': 0, 'UTC': '1989-10-18T12:00:00.00', 'target': 'VENUS',   'moons': False},
              {'ET': 0, 'UTC': '1990-07-08T12:00:00.00', 'target': 'EARTH',   'moons': True},

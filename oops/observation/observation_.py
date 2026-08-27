@@ -5,13 +5,17 @@
 import numpy as np
 import numbers
 
-from polymath              import Scalar, Pair, Vector, Vector3, Qube
+from polymath              import Matrix3, Scalar, Pair, Vector, Vector3, Qube
 from oops.config           import LOGGING, PATH_PHOTONS
 from oops.event            import Event
+from oops.frame            import Frame
+from oops.frame.cmatrix    import Cmatrix
 from oops.frame.navigation import Navigation
 from oops.meshgrid         import Meshgrid
+import oops.mutable as mutable
 
-class Observation(object):
+
+class Observation(mutable.Mutable):
     """An Observation is an abstract class that defines the timing and pointing
     of the samples that comprise a data array.
 
@@ -30,12 +34,14 @@ class Observation(object):
 
     At minimum, these attributes are used to describe the observation:
 
+        cadence         a Cadence object defining the timing of the observation.
+
         time            a tuple or Pair defining the start time and end time of
-                        the observation overall, in seconds TDB.
+                        the observation overall, in seconds TDB. Inherited from
+                        `cadence`.
 
         midtime         the mid-time of the observation, in seconds TDB.
-
-        cadence         a Cadence object defining the timing of the observation.
+                        Inherited from `cadence`.
 
         fov             a FOV (field-of-view) object, which describes the field
                         of view including any spatial distortion. It maps
@@ -43,8 +49,9 @@ class Observation(object):
                         coordinates (x,y).
 
         uv_shape        a tuple defining the 2-D shape of the spatial axes of
-                        the data array, in (u,v) order. Note that this may
-                        differ from fov.uv_shape.
+                        the data array, in (u,v) order. Note that this will
+                        differ from fov.uv_shape in cases where the
+                        time-dependence introduces an extra dimension.
 
         u_axis, v_axis  integers identifying the axes of the data array
                         associated with the u-axis and the v-axis. Use -1 if
@@ -91,6 +98,14 @@ class Observation(object):
         """A constructor."""
 
         pass
+
+    @property
+    def time(self):
+        return self.cadence.time
+
+    @property
+    def midtime(self):
+        return self.cadence.midtime
 
     #===========================================================================
     def uvt(self, indices, remask=False, derivs=True):
@@ -356,9 +371,57 @@ class Observation(object):
                                   'is not implemented')
 
     #===========================================================================
+    def copy(self):
+        """An independent copy of this observation.
+
+        The data array, if any, is shared with the original rather than
+        duplicated. The frame, path, FOV and cadence are shared as well; these
+        are canonical objects, registered and shared throughout OOPS, and
+        duplicating them would break the identities that the Frame and Path
+        registries rely on. What the copy does not share is its own state: it
+        gets a new subfield dictionary, so subfields can be inserted into or
+        deleted from either observation without disturbing the other, and it
+        carries none of the original's internal record of what has been
+        modified.
+
+        A Fittable sub-object, such as a Navigation frame, is the exception: it
+        is duplicated, so that fitting one observation leaves the other
+        unchanged. The object to which it applies is still shared.
+
+        Return:         A new Observation.
+        """
+
+        fittables = [name for name in mutable.mutable_names(self)
+                     if mutable.is_fittable(self.__dict__[name])]
+
+        obs = object.__new__(type(self))
+        obs.__dict__ = self.__dict__.copy()
+        obs.subfields = self.subfields.copy()
+
+        # Anything that can be modified in place gets duplicated; a subfield is
+        # also an attribute, so both records have to be updated
+        for name in fittables:
+            subobj = self.__dict__[name].copy()
+            obs.__dict__[name] = subobj
+            if name in obs.subfields:
+                obs.subfields[name] = subobj
+
+        # The copy is a new object, so it must not inherit the bookkeeping that
+        # describes the original; otherwise the two would share one record of
+        # which sub-objects are mutable and when each was last refreshed
+        for key in [k for k in obs.__dict__ if k.startswith('_MUTABLE')]:
+            del obs.__dict__[key]
+
+        return obs
+
+    #===========================================================================
     def navigate(self, angles):
         """A copy of this Observation object after two or three rotation angles
         of a Navigation object applied.
+
+        The copy is created by copy(), so it shares the data array with this
+        observation but is given a Navigation frame of its own; re-pointing the
+        copy leaves this observation unchanged.
 
         Input:
             angles      two or three angles of rotation in radians. The order of
@@ -369,17 +432,106 @@ class Observation(object):
         Return:         A new Observation with the navigation applied.
         """
 
-        # Identify the non-navigated frame
-        if isinstance(self.frame, Navigation):
-            frame = self.frame.reference
-        else:
-            frame = self.frame
+        obs = self.copy()
 
-        # Copy and update the frame
-        obs = type(self).__new__(type(self))
-        obs.__dict__ = self.__dict__.copy()
+        # Identify the non-navigated frame, so that repeated calls replace the
+        # Navigation rather than stacking a second one on top of it
+        if isinstance(obs.frame, Navigation):
+            frame = obs.frame.reference
+        else:
+            frame = obs.frame
+
         obs.frame = Navigation(angles, reference=frame)
+        mutable._invalidate(obs)
+        mutable._increment(obs)
         return obs
+
+    #===========================================================================
+    def set_frame(self, frame):
+        """Replace the frame of this observation in place.
+
+        This modifies the observation itself rather than returning a copy. Any
+        object already holding a reference to this observation, such as a
+        Backplane, sees the new frame but retains everything it derived from
+        the old one; call mutable.refresh() on such an object afterward.
+
+        Input:
+            frame       the new frame.
+        """
+
+        # An observation that is not mutable reports itself as frozen because it
+        # has nothing to freeze, so both tests are needed to single out an
+        # observation that was frozen deliberately
+        if mutable.is_mutable(self) and mutable.is_frozen(self):
+            raise ValueError(f'{type(self).__name__} object is frozen')
+
+        self.frame = frame
+
+        # The new frame may be Fittable where the old one was not, or vice
+        # versa, so the record of which sub-objects are mutable is now stale
+        mutable._invalidate(self)
+        mutable._increment(self)
+
+    #===========================================================================
+    def get_spice_cmatrix(self, tstep=None, *, time=None):
+        """The C matrix of this observation, in the convention used by the
+        SPICE toolkit.
+
+        This observation must carry a "spice_to_frame" subfield, the rotation
+        from the SPICE frame convention of the instrument to the oops
+        convention. It is inserted by the host module that created the
+        observation.
+
+        Parameters:
+            tstep (float or Scalar): The time step index or sequence of time
+                step index values, as interpreted by this Observation's
+                cadence.
+            time (float or Scalar): The time in seconds TDB during the
+                Observation. Note that at most one of `tstep` and `time` can be
+                specified; if neither is given, the midtime of this Observation
+                is used.
+
+        Returns:
+            (Matrix3): The rotation from J2000 coordinates into the SPICE
+                frame of the instrument or host.
+        """
+
+        if not hasattr(self, 'spice_to_frame'):
+            raise AttributeError(f'{type(self).__name__} does not have a '
+                                 '"spice_to_frame" attribute')
+
+        if time is None:
+            if tstep is None:
+                time = self.midtime
+            else:
+                time = self.cadence.time_at_tstep(tstep)
+        elif tstep is not None:
+            raise ValueError('tstep and time cannot both be specified')
+
+        frame = self.frame.wrt(Frame.J2000)
+        xform = frame.transform_at_time(time)
+        return self.spice_to_frame.inverse() * xform.matrix
+
+    #===========================================================================
+    def set_spice_cmatrix(self, matrix):
+        """Set this Observation's frame as a C matrix, using the convention of
+        the SPICE toolkit's C kernel rather than the OOPS convention.
+
+        This replaces the frame outright, so the observation is left with a
+        fixed pointing relative to J2000.
+
+        Input:
+            matrix      the C matrix rotating J2000 coordinates into the SPICE
+                        frame of the instrument, as a Matrix3 or as anything
+                        that can be converted to one.
+        """
+
+        if not hasattr(self, 'spice_to_frame'):
+            raise AttributeError(f'{type(self).__name__} does not have a '
+                                 '"spice_to_frame" attribute')
+
+        frame = Cmatrix(self.spice_to_frame * Matrix3.as_matrix3(matrix))
+        self.set_frame(frame)
 
     ############################################################################
     # Subfield support methods

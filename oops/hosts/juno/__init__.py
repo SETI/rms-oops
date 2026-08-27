@@ -14,6 +14,8 @@ import oops
 
 from oops.body import Body
 
+__all__ = ['Juno']
+
 ################################################################################
 # Routines for managing the loading of C and SP kernels
 ################################################################################
