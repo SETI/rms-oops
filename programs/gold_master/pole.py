@@ -1,8 +1,8 @@
 ################################################################################
-# oops/gold_master/pole.py
+# programs/gold_master/pole.py
 ################################################################################
 
-from oops.gold_master import register_test_suite
+from programs.gold_master import register_test_suite
 
 def pole_test_suite(bpt):
 

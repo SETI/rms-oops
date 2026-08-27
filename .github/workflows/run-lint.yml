@@ -25,10 +25,10 @@ jobs:
         with:
           python-version: 3.12
 
-      - name: Run flake8 on oops
+      - name: Run flake8 on the library packages
         run: |
-          flake8 oops
+          flake8 src
 
-      - name: Run flake8 on spicedb
+      - name: Run flake8 on the programs
         run: |
-          flake8 spicedb
+          flake8 programs

@@ -1,5 +1,5 @@
 ################################################################################
-# oops/gold_master/__init__.py: Backplane gold master tester and support.
+# programs/gold_master/__init__.py: Backplane gold master tester and support.
 ################################################################################
 """\
 ########################################################################
@@ -9,7 +9,7 @@
 ####################################
 
 import unittest
-import oops.gold_master as gm
+import programs.gold_master as gm
 
 class Test_<your test name>(unittest.TestCase):
 
@@ -34,7 +34,7 @@ class Test_<your test name>(unittest.TestCase):
 ####################################
 
 import unittest
-import oops.gold_master as gm
+import programs.gold_master as gm
 
 class Test_<your test name>(unittest.TestCase):
 
@@ -70,7 +70,7 @@ class Test_<your test name>(unittest.TestCase):
 ########################################################################
 
 import os
-import oops.gold_master as gm
+import programs.gold_master as gm
 
 # Define the default observation and any number of others for testing;
 # note that the selection can be overridden on the command line.
@@ -96,7 +96,7 @@ if __name__ == '__main__':
 ########################################################################
 
 A single record of the log file has this format:
-    "<time> | oops.gold_master | <level> | <suite> | <message>"
+    "<time> | programs.gold_master | <level> | <suite> | <message>"
 where
     <time>  is the local time to the level of ms.
     <level> is one of "DEBUG", "INFO", "WARNING", "ERROR", "FATAL".
@@ -157,7 +157,7 @@ from oops.config    import LOGGING
 from oops.constants import DPR
 from polymath       import Boolean, Pair, Qube, Scalar
 
-from oops.gold_master.test_support import (BACKPLANE_OUTPUT_PREFIX,
+from programs.gold_master.test_support import (BACKPLANE_OUTPUT_PREFIX,
                                            GOLD_MASTER_PREFIX,
                                            OOPS_BACKPLANE_OUTPUT_PATH,
                                            TEST_DATA_FILECACHE,
@@ -375,7 +375,7 @@ def execute_as_command():
         **options       overrides for any default gold_master input arguments.
     """
 
-    import oops.gold_master.all         # noqa: F401 -- defines all test suites
+    import programs.gold_master.all         # noqa: F401 -- defines all test suites
 
     # Define parser...
     parser = argparse.ArgumentParser(
@@ -614,7 +614,7 @@ def execute_as_unittest(testcase, obsname='default'):
     """
 
     import traceback
-    import oops.gold_master.all         # noqa: F401 -- defines all test suites
+    import programs.gold_master.all         # noqa: F401 -- defines all test suites
 
     # This try-except is needed to ensure that a unit-test failure is
     # triggered in the event of an error.
@@ -1991,7 +1991,7 @@ class BackplaneTest(object):
         """Log this comparison info.
 
         A single record of the log file has this format:
-          "<time> | oops.gold_master | <level> | <suite> | <message>"
+          "<time> | programs.gold_master | <level> | <suite> | <message>"
         where
           <time>  is the local time to the level of ms.
           <level> is one of "DEBUG", "INFO", "WARNING", "ERROR", "FATAL".
@@ -2365,7 +2365,7 @@ class BackplaneTest(object):
 
 if __name__ == '__main__':
 
-    import oops.gold_master as gm
+    import programs.gold_master as gm
 
     # Define the default observation
     gm.set_default_obs(

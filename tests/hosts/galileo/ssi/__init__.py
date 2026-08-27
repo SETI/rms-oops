@@ -2,7 +2,7 @@
 # tests/hosts/galileo/ssi/__init__.py
 ################################################################################
 import unittest
-import oops.gold_master as gm
+import programs.gold_master as gm
 
 from oops.body import Body
 from oops.unittester_support import TEST_DATA_PREFIX

@@ -1,10 +1,10 @@
 ################################################################################
-# oops/gold_master/distance.py
+# programs/gold_master/distance.py
 ################################################################################
 
 import numpy as np
 
-from oops.gold_master import register_test_suite
+from programs.gold_master import register_test_suite
 
 def distance_test_suite(bpt):
 

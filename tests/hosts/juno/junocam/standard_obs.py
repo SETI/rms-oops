@@ -3,7 +3,7 @@
 ################################################################################
 import os
 import unittest
-import oops.gold_master as gm
+import programs.gold_master as gm
 
 # Because JunoCam has such a large, distorted FOV, we need to assign the
 # backplanes an especially large inventory border: border=10 seems to work.

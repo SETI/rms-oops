@@ -1,8 +1,8 @@
 ################################################################################
-# oops/gold_master/border.py
+# programs/gold_master/border.py
 ################################################################################
 
-from oops.gold_master import register_test_suite
+from programs.gold_master import register_test_suite
 
 def border_test_suite(bpt):
 

@@ -25,6 +25,35 @@
 
 This package is under development. Use with extreme caution.
 
+# Repository Layout
+
+- `src/oops`: The `oops` library.
+- `src/spicedb`: The `spicedb` library.
+- `programs/gold_master`: The gold master backplane test framework, imported as
+  `programs.gold_master`. It is a runnable tool rather than part of the `oops` API, so
+  it lives outside `src`.
+- `tests`: The unit tests, mirroring `src/oops`, plus the host tests under
+  `tests/hosts`.
+- `scripts`: `setup-venv.sh`, `run-all-checks.sh`, and the automated test script CI
+  runs.
+
+# Development Setup
+
+The library packages live under `src`, so they are importable only after an editable
+install (or with `src` on `PYTHONPATH`). To create the virtual environment the check
+script expects and install the package with its development extras:
+
+```sh
+./scripts/setup-venv.sh
+source venv/bin/activate
+```
+
+To run the checks:
+
+```sh
+./scripts/run-all-checks.sh
+```
+
 # Environment Variables
 
 - `OOPS_RESOURCES`: The top-level directory containing all files needed by OOPS. Unless

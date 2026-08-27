@@ -1,9 +1,9 @@
 ################################################################################
-# oops/gold_master/where.py
+# programs/gold_master/where.py
 ################################################################################
 
 from polymath         import Scalar
-from oops.gold_master import register_test_suite
+from programs.gold_master import register_test_suite
 
 def where_test_suite(bpt):
 

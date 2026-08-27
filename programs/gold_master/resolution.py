@@ -1,8 +1,8 @@
 ################################################################################
-# oops/gold_master/resolution.py
+# programs/gold_master/resolution.py
 ################################################################################
 
-from oops.gold_master import register_test_suite
+from programs.gold_master import register_test_suite
 
 def resolution_test_suite(bpt):
 

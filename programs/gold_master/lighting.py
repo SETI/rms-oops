@@ -1,5 +1,5 @@
 ################################################################################
-# oops/gold_master/lighting.py
+# programs/gold_master/lighting.py
 ################################################################################
 
 import numpy as np
@@ -7,7 +7,7 @@ import numpy as np
 from polymath         import Scalar
 from oops.body        import Body
 from oops.constants   import DPR
-from oops.gold_master import register_test_suite
+from programs.gold_master import register_test_suite
 
 def lighting_test_suite(bpt):
 

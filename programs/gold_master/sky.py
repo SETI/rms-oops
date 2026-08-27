@@ -1,12 +1,12 @@
 ################################################################################
-# oops/gold_master/sky.py: Sky plane (celestial coordinates) backplanes
+# programs/gold_master/sky.py: Sky plane (celestial coordinates) backplanes
 ################################################################################
 
 import numpy as np
 
 from polymath         import Scalar
 from oops.constants   import DPR
-from oops.gold_master import register_test_suite
+from programs.gold_master import register_test_suite
 
 def sky_test_suite(bpt):
 

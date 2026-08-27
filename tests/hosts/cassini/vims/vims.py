@@ -2,7 +2,7 @@
 # tests/hosts/cassini/vims.py
 ##########################################################################################
 import unittest
-import oops.gold_master as gm
+import programs.gold_master as gm
 
 
 class Test_Cassini_VIMS_GoldMaster_v1690952775(unittest.TestCase):

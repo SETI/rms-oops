@@ -1,8 +1,8 @@
 ################################################################################
-# oops/gold_master/orbit.py
+# programs/gold_master/orbit.py
 ################################################################################
 
-from oops.gold_master import register_test_suite
+from programs.gold_master import register_test_suite
 
 def orbit_test_suite(bpt):
 

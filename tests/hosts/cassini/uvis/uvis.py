@@ -2,7 +2,7 @@
 # tests/hosts/cassini/uvis.py
 ##########################################################################################
 import unittest
-import oops.gold_master as gm
+import programs.gold_master as gm
 
 
 #===============================================================================

@@ -7,6 +7,11 @@ science: it models instruments, spacecraft trajectories, and target bodies, and
 computes per-pixel geometry ("backplanes") for real observations. It is built on
 SPICE (via `cspyce`) and on the `polymath` array types.
 
+Two library packages live under `src/`: `src/oops` and `src/spicedb`. The gold
+master backplane test framework is `programs/gold_master`, imported as
+`programs.gold_master`; it is a runnable tool rather than part of the `oops` API,
+so it sits outside `src/` and outside the library.
+
 ## Environment
 
 Nothing runs without external data. `OOPS_RESOURCES` must point at the resource
@@ -16,19 +21,35 @@ imports fail because these are unset, say so; do not report it as a code defect.
 
 ## Build, test, lint
 
-- Tests use `unittest`, **not** pytest. There is no `conftest.py` and no pytest
-  config. Test classes define a single `runTest` method.
+- Because the packages live under `src/`, nothing imports from a bare checkout.
+  Work inside the virtualenv `./scripts/setup-venv.sh` creates, which installs
+  `-e ".[dev]"`. Never install into system Python.
+- `scripts/run-all-checks.sh` runs the gates; `-h` lists the flags. It defaults
+  to the three unittest suites. flake8, ruff, pip-audit, and PyMarkdown are
+  configured but off by default (`ENABLE_*` in the script), because each still
+  reports pre-existing findings against the legacy modules — turning one on is a
+  cleanup project, not a gate. `.github/workflows/run-lint.yml` is dispatch-only
+  for the same reason.
+- Tests use `unittest`, **not** pytest. There is no `conftest.py`. Test classes
+  define a single `runTest` method.
   - `python -m unittest tests/unittester.py` — main suite
   - `python -m unittest tests/unittester_with_hosts.py` — main suite plus hosts
   - `python -m unittest tests/hosts/unittester.py` — host tests incl. gold masters
+  - `python -m unittest spicedb` — the spicedb tests
+- `pyproject.toml` does carry a `[tool.pytest.ini_options]` block, and `pytest`
+  collects the `runTest` methods, but it reaches only the `tests/test_*.py`
+  modules: the host tests are not named `test_*`, so `unittest` remains the way
+  to run everything. `-n auto` and `filterwarnings = ["error"]` are deliberately
+  absent — see the comments there before adding either.
 - Each test subdirectory has its own `unittester.py` that aggregates its modules.
   A new test module is not run until it is added to the enclosing `unittester.py`.
 - Gold-master tests for a single instrument take command-line options:
   `PYTHONPATH=. python tests/hosts/cassini/iss/gold_master.py --help`
 - CI runs `scripts/automated_tests/oops_main_test.sh`, which reinstalls all
-  dependencies from `requirements.txt` and requires `SPICE_PATH`,
-  `SPICE_SQLITE_DB_NAME`, and `OOPS_RESOURCES`.
-- Lint is flake8, on two targets: `flake8 oops` and `flake8 spicedb`.
+  dependencies from `-e ".[dev]"` and requires `SPICE_PATH`,
+  `SPICE_SQLITE_DB_NAME`, and `OOPS_RESOURCES`. Keep it in step with
+  `run-all-checks.sh`.
+- Lint is flake8, on two targets: `flake8 src` and `flake8 programs`.
 
 ## Code style
 
@@ -42,7 +63,9 @@ house style. Do not "fix" alignment or blank-line counts that flake8 passes.
 - Every file opens with a banner of `#` characters at the file's line width, then
   `# oops/path/to/file.py: description`, then the banner again; the file's last
   line is a closing banner of the same width. Legacy files also put a
-  `#===...` separator above each `def`. Preserve all of these.
+  `#===...` separator above each `def`. Preserve all of these. The banner names
+  the path from the import root, so a module under `src/oops` says `oops/...`
+  with no `src/` prefix, and one under `programs` says `programs/...`.
 - Docstrings come in two coexisting styles. Modern: Google-ish, using
   `Parameters:` (never `Args:`), with class-level `Properties:` bullets and
   noun-phrase summary lines. Legacy: two-column `Input:` / `Return:` blocks
@@ -86,7 +109,11 @@ house style. Do not "fix" alignment or blank-line counts that flake8 passes.
 - All changes go through a pull request into `main`.
 - Python 3.11 is the minimum supported version; see `requires-python` in
   `pyproject.toml` and the CI matrices.
+- Dependencies and tool configuration live in `pyproject.toml` only.
+  `requirements.txt` contains just `-e .`, and there is no `setup.cfg` or
+  `.coveragerc`. Versions come from `setuptools_scm`; never hand-edit
+  `src/oops/_version.py`.
 - `.claude/rules/` and `.claude/skills/` are generic RMS-wide templates and are
-  aspirational here. Where they conflict with this repository — Ruff vs. flake8,
-  a `src/` layout, a Sphinx docs tree, `scripts/run-all-checks.sh` —
+  still partly aspirational here. Where they conflict with this repository —
+  Ruff vs. flake8, pytest vs. unittest, a Sphinx docs tree —
   **the repository's actual conventions win.**

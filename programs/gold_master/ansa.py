@@ -1,11 +1,11 @@
 ################################################################################
-# oops/gold_master/ansa_backplanes.py
+# programs/gold_master/ansa.py
 ################################################################################
 
 import numpy as np
 
 from polymath         import Scalar
-from oops.gold_master import register_test_suite
+from programs.gold_master import register_test_suite
 
 def ansa_test_suite(bpt):
 

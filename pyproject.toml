@@ -50,15 +50,108 @@ classifiers = [
   "Operating System :: Microsoft :: Windows"
 ]
 
+[project.optional-dependencies]
+dev = [
+  "coverage>=7.0",
+  "flake8",
+  "pip-audit>=2.7",
+  "pymarkdownlnt>=0.9.35",
+  "pytest>=7.0",
+  "pytest-cov>=4.0",
+  "pytest-xdist>=3.8.0",
+  "ruff>=0.8"
+]
+
 [project.urls]
 Homepage = "https://github.com/SETI/rms-oops"
 Repository = "https://github.com/SETI/rms-oops"
 Source = "https://github.com/SETI/rms-oops"
 Issues = "https://github.com/SETI/rms-oops/issues"
 
-[tool.setuptools]
-packages = ["oops", "spicedb"]
+[tool.setuptools.packages.find]
+# The two library packages live under src/; `programs` holds the runnable tools that
+# are not part of the library API, so it stays at the top level (as in rms-pdstemplate).
+where = ["src", "."]
+include = ["oops*", "spicedb*", "programs*"]
+namespaces = false
 
 [tool.setuptools_scm]
 local_scheme = "no-local-version"
-write_to = "oops/_version.py"
+write_to = "src/oops/_version.py"
+
+# Tool configuration
+
+[tool.pytest.ini_options]
+# src/ is on the path so `import oops` and `import spicedb` resolve without an install;
+# the repository root is prepended by pytest itself, which is what makes `tests.*` and
+# `programs.gold_master` importable.
+pythonpath = ["src"]
+testpaths = ["tests"]
+# Every test module is named test_*.py. Dropping pytest's second default pattern,
+# *_test.py, keeps tests/hosts/hst/wfc3/wfc3_pointing_test.py out of collection: it is a
+# standalone plotting script that no unittester.py aggregates and that imports pylab.
+python_files = ["test_*.py"]
+# The suite is still unittest-based (TestCase classes with a single runTest method), so
+# neither `-n auto` nor `filterwarnings = ["error"]` is enabled: the tests share SPICE
+# and backplane caches and are not yet order-independent, and the legacy modules still
+# emit NumPy warnings. Both belong here once the suite is converted to pytest.
+addopts = ["--strict-markers", "--strict-config"]
+markers = []
+
+[tool.coverage.run]
+branch = true
+# `include` rather than `source`, as in the .coveragerc this replaces. `source` names
+# each measured file relative to its own root, which collapses src/oops/__init__.py and
+# src/spicedb/__init__.py onto one path and leaves codecov unable to map either back to
+# the repository; `include` keeps the paths repository-relative.
+relative_files = true
+include = ["src/*", "programs/*"]
+omit = ["*/_version.py", "*venv*/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "def __repr__",
+  "raise NotImplementedError",
+  "if __name__ == '__main__':",
+]
+# No `fail_under` yet. Large parts of oops.hosts are exercised only by the gold master
+# tests, which need the full OOPS_RESOURCES tree, so a floor would measure the
+# environment rather than the tests.
+
+[tool.ruff]
+target-version = "py311"
+# 90 in the refactored modules, 80 in the legacy ones; E501 is off either way (see below).
+line-length = 90
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint]
+# flake8 is the linter of record for this repository, and `.flake8` is authoritative.
+# The select/ignore pair below mirrors it, so that `ruff check` run by hand reports the
+# same findings. The wider rule set used by rms-polymath (I, UP, B, SIM, C4, A, N, PT,
+# RUF) is not enabled here: it reports several thousand findings against the legacy
+# modules, which is a cleanup project rather than a gate.
+select = ["E", "F", "W"]
+# These are the codes ignored in .flake8; the comments there explain the house style
+# they protect, which is column-aligned assignments, imports, and trailing comments.
+# The continuation-line codes .flake8 also ignores (E121, E122, E124, E126-E129, E131)
+# are absent because ruff implements no rule in the E121-E133 range; naming one here is
+# an error rather than a no-op. That range is the one pycodestyle family only flake8
+# can report.
+ignore = [
+  "E111", "E114", "E115", "E116", "E117",
+  "E201", "E202", "E203", "E211", "E221", "E222", "E225", "E226", "E227", "E228",
+  "E231", "E241", "E251", "E261", "E262", "E265", "E266", "E272",
+  "E302", "E303", "E305", "E402", "E501", "E741",
+  "W291", "W391",
+]
+
+[tool.pymarkdown.plugins.md013]
+# Line length: the Markdown files use longer lines than the default 80.
+enabled = false
+
+[tool.pymarkdown.plugins.md033]
+# Inline HTML (e.g. <br>) is used in README.md.
+enabled = false

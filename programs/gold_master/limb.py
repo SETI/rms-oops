@@ -1,10 +1,10 @@
 ################################################################################
-# oops/gold_master/limb_backplanes.py
+# programs/gold_master/limb.py
 ################################################################################
 
 import numpy as np
 
-from oops.gold_master import register_test_suite
+from programs.gold_master import register_test_suite
 
 def limb_test_suite(bpt):
 
