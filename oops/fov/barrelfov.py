@@ -325,7 +325,7 @@ class BarrelFOV(FOV):
 
         # Handle fully-masked case
         if np.all(f.mask):
-            return Pair(np.ones(f.shape), True)
+            return Scalar(np.ones(f.shape), True)
 
         # Because convergence is quadratic in Newton's method, once we get half-
         # way to convergence, the next iteration should be exact.

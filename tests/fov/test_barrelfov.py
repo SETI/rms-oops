@@ -251,6 +251,36 @@ class Test_BarrelFOV(unittest.TestCase):
         self.assertTrue(abs(uv.d_drs.vals[...,0] - duv_dr.vals).max() <= DEL)
         self.assertTrue(abs(uv.d_drs.vals[...,1] - duv_ds.vals).max() <= DEL)
 
+class Test_BarrelFOV_masked(unittest.TestCase):
+
+    def runTest(self):
+
+        # A fully masked input must yield a fully masked Pair, not raise.
+        # These are Juno SRU parameters, defining xy_from_uv only, so
+        # uv_from_xy goes through the polynomial inversion whose fully-masked
+        # shortcut once returned a malformed Pair instead of a Scalar ratio.
+        coefft_xy_from_uv = np.array([0.999432579,
+                                     -0.0295412410,
+                                      0.2733020107,
+                                      0.,
+                                     -1.9368112951])
+        scale = 1./1760.21137
+        fov = BarrelFOV(scale, (512,512), coefft_xy_from_uv=coefft_xy_from_uv)
+
+        for shape in ((7,), (100,), (5,4)):
+            xy = Pair(np.full(shape + (2,), 0.01), True)
+            uv = fov.uv_from_xyt(xy)
+            self.assertEqual(type(uv), Pair)
+            self.assertEqual(uv.shape, shape)
+            self.assertTrue(np.all(uv.mask))
+
+            uv = Pair(np.full(shape + (2,), 200.), True)
+            xy = fov.xy_from_uvt(uv)
+            self.assertEqual(type(xy), Pair)
+            self.assertEqual(xy.shape, shape)
+            self.assertTrue(np.all(xy.mask))
+
+
 ########################################
 if __name__ == '__main__':
     unittest.main(verbosity=2)
