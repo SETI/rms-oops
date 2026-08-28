@@ -3,7 +3,6 @@
 ################################################################################
 
 import numpy as np
-import unittest
 
 import oops
 from tests.cadence.test_tdicadence import (case_tdicadence_10_100_10_2_down,
@@ -13,13 +12,9 @@ from tests.cadence.test_metronome import (case_continuous, case_discontinuous,
                                           case_non_unique, case_partial_overlap)
 
 
-class Test_ReversedCadence(unittest.TestCase):
-
-  # Test using TDICadence, which already has the feature that the "up" and the
-  # "down" versions are index-reversed.
-
-  def runTest(self):
-
+# Test using TDICadence, which already has the feature that the "up" and the
+# "down" versions are index-reversed.
+def test_reversedcadence():
     np.random.seed(3547)
 
     ########################################
@@ -28,7 +23,7 @@ class Test_ReversedCadence(unittest.TestCase):
 
     tdicad = oops.cadence.TDICadence(10, 100., 10., 2, tdi_sign=1)
     cad = oops.cadence.ReversedCadence(tdicad)
-    case_tdicadence_10_100_10_2_down(self, cad)
+    case_tdicadence_10_100_10_2_down(cad)
 
     ########################################
     # 10 lines, 2 stages, TDI upward
@@ -36,7 +31,7 @@ class Test_ReversedCadence(unittest.TestCase):
 
     tdicad = oops.cadence.TDICadence(10, 100., 10., 2, tdi_sign=-1)
     cad = oops.cadence.ReversedCadence(tdicad)
-    case_tdicadence_10_100_10_2_up(self, cad)
+    case_tdicadence_10_100_10_2_up(cad)
 
     ########################################
     # 100 lines, 100 stages, TDI downward
@@ -44,7 +39,7 @@ class Test_ReversedCadence(unittest.TestCase):
 
     tdicad = oops.cadence.TDICadence(100, 1000., 10., 100, tdi_sign=1)
     cad = oops.cadence.ReversedCadence(tdicad)
-    case_tdicadence_100_1000_10_100_down(self, cad)
+    case_tdicadence_100_1000_10_100_down(cad)
 
     ############################################
     # Doubly-reversed Metronome, continuous
@@ -53,7 +48,7 @@ class Test_ReversedCadence(unittest.TestCase):
 
     cadence = oops.cadence.Metronome(100., 10., 10., 4)
     cadence = oops.cadence.ReversedCadence(oops.cadence.ReversedCadence(cadence))
-    case_continuous(self, cadence)
+    case_continuous(cadence)
 
     ############################################
     # Doubly-reversed Metronome, discontinuous case
@@ -62,7 +57,7 @@ class Test_ReversedCadence(unittest.TestCase):
 
     cadence = oops.cadence.Metronome(100., 10., 7.5, 4)
     cadence = oops.cadence.ReversedCadence(oops.cadence.ReversedCadence(cadence))
-    case_discontinuous(self, cadence)
+    case_discontinuous(cadence)
 
     ############################################
     # Doubly-reversed Metronome, non-unique case
@@ -71,7 +66,7 @@ class Test_ReversedCadence(unittest.TestCase):
 
     cadence = oops.cadence.Metronome(100., 10., 40., 4)
     cadence = oops.cadence.ReversedCadence(oops.cadence.ReversedCadence(cadence))
-    case_non_unique(self, cadence)
+    case_non_unique(cadence)
 
     ############################################
     # Doubly-reversed Metronome, partial overlap case
@@ -80,9 +75,5 @@ class Test_ReversedCadence(unittest.TestCase):
 
     cadence = oops.cadence.Metronome(100., 30., 40., 4)
     cadence = oops.cadence.ReversedCadence(oops.cadence.ReversedCadence(cadence))
-    case_partial_overlap(self, cadence)
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    case_partial_overlap(cadence)
 ################################################################################

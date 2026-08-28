@@ -3,7 +3,7 @@
 ################################################################################
 
 import numpy as np
-import unittest
+import pytest
 
 from polymath     import Scalar, Vector3
 from oops.body    import Body
@@ -112,208 +112,203 @@ def _pos_derivative_test(kep, t, delta=1.e-5):
     return errors
 
 #===============================================================================
-class Test_KeplerPath(unittest.TestCase):
+@pytest.fixture(autouse=True)
+def _solar_system():
+    Body.reset_registry()
+    Body._undefine_solar_system()
+    Body.define_solar_system("2000-01-01", "2010-01-01")
 
-    def setUp(self):
-        Body.reset_registry()
-        Body._undefine_solar_system()
-        Body.define_solar_system("2000-01-01", "2010-01-01")
+def test_keplerpath():
+    from oops.body import Body
 
-    def tearDown(self):
-        pass
+    # SEMIM = 0    elements[SEMIM] = semimajor axis (km)
+    # MEAN0 = 1    elements[MEAN0] = mean longitude at epoch (radians)
+    # DMEAN = 2    elements[DMEAN] = mean motion (radians/s)
+    # ECCEN = 3    elements[ECCEN] = eccentricity
+    # PERI0 = 4    elements[PERI0] = pericenter at epoch (radians)
+    # DPERI = 5    elements[DPERI] = pericenter precession rate (radians/s)
+    # INCLI = 6    elements[INCLI] = inclination (radians)
+    # NODE0 = 7    elements[NODE0] = longitude of ascending node at epoch
+    # DNODE = 8    elements[DNODE] = nodal regression rate (radians/s)
 
-    def runTest(self):
-        from oops.body import Body
+    a = 140000.
 
-        # SEMIM = 0    elements[SEMIM] = semimajor axis (km)
-        # MEAN0 = 1    elements[MEAN0] = mean longitude at epoch (radians)
-        # DMEAN = 2    elements[DMEAN] = mean motion (radians/s)
-        # ECCEN = 3    elements[ECCEN] = eccentricity
-        # PERI0 = 4    elements[PERI0] = pericenter at epoch (radians)
-        # DPERI = 5    elements[DPERI] = pericenter precession rate (radians/s)
-        # INCLI = 6    elements[INCLI] = inclination (radians)
-        # NODE0 = 7    elements[NODE0] = longitude of ascending node at epoch
-        # DNODE = 8    elements[DNODE] = nodal regression rate (radians/s)
+    saturn = Gravity.lookup('SATURN')
+    dmean_dt = saturn.n(a)
+    dperi_dt = saturn.dperi_dt(a)
+    dnode_dt = saturn.dnode_dt(a)
 
-        a = 140000.
+    TIMESTEPS = 100
+    time = 3600. * np.arange(TIMESTEPS)
 
-        saturn = Gravity.lookup('SATURN')
-        dmean_dt = saturn.n(a)
-        dperi_dt = saturn.dperi_dt(a)
-        dnode_dt = saturn.dnode_dt(a)
+    kep = KeplerPath(Body.lookup("SATURN"), 0.,
+                   (a, 1., dmean_dt, 0.2, 3., dperi_dt, 0.1, 5., dnode_dt),
+                   Path.as_path("EARTH"))
 
-        TIMESTEPS = 100
-        time = 3600. * np.arange(TIMESTEPS)
+    errors = _xyz_planet_derivative_test(kep, time)
+    assert np.max(np.abs(errors)) < 1.e-8
 
-        kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                       (a, 1., dmean_dt, 0.2, 3., dperi_dt, 0.1, 5., dnode_dt),
-                       Path.as_path("EARTH"))
+    errors = _pos_derivative_test(kep, time)
+    assert np.max(np.abs(errors)) < 1.e-8
 
-        errors = _xyz_planet_derivative_test(kep, time)
-        self.assertTrue(np.max(np.abs(errors)) < 1.e-8)
+    ####################
 
-        errors = _pos_derivative_test(kep, time)
-        self.assertTrue(np.max(np.abs(errors)) < 1.e-8)
+    kep = KeplerPath(Body.lookup("SATURN"), 0.,
+                   (a, 1., dmean_dt,
+                    0.2, 3., dperi_dt,
+                    0.1, 5., dnode_dt,
+                    dmean_dt * 0.10, 2., dmean_dt / 100.,
+                    dperi_dt * 0.08, 4., dmean_dt / 50.,
+                    dnode_dt * 0.12, 6., dmean_dt / 200.),
+                   Path.as_path("EARTH"), wobbles=('mean', 'peri', 'node'))
 
-        ####################
+    errors = _xyz_planet_derivative_test(kep, time)
+    assert np.max(np.abs(errors)) < 1.e-8
 
-        kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                       (a, 1., dmean_dt,
-                        0.2, 3., dperi_dt,
-                        0.1, 5., dnode_dt,
-                        dmean_dt * 0.10, 2., dmean_dt / 100.,
-                        dperi_dt * 0.08, 4., dmean_dt / 50.,
-                        dnode_dt * 0.12, 6., dmean_dt / 200.),
-                       Path.as_path("EARTH"), wobbles=('mean', 'peri', 'node'))
+    errors = _pos_derivative_test(kep, time)
+    assert np.max(np.abs(errors)) < 1.e-8
 
-        errors = _xyz_planet_derivative_test(kep, time)
-        self.assertTrue(np.max(np.abs(errors)) < 1.e-8)
+    ####################
 
-        errors = _pos_derivative_test(kep, time)
-        self.assertTrue(np.max(np.abs(errors)) < 1.e-8)
+    kep = KeplerPath(Body.lookup("SATURN"), 0.,
+                   (a, 1., dmean_dt,
+                    0.2, 3., dperi_dt,
+                    0.1, 5., dnode_dt,
+                    a * 0.10, 2., dmean_dt / 100.),
+                   Path.as_path("EARTH"), wobbles=('a',))
 
-        ####################
+    errors = _xyz_planet_derivative_test(kep, time)
+    assert np.max(np.abs(errors)) < 1.e-7
 
-        kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                       (a, 1., dmean_dt,
-                        0.2, 3., dperi_dt,
-                        0.1, 5., dnode_dt,
-                        a * 0.10, 2., dmean_dt / 100.),
-                       Path.as_path("EARTH"), wobbles=('a',))
+    errors = _pos_derivative_test(kep, time)
+    assert np.max(np.abs(errors)) < 1.e-5
 
-        errors = _xyz_planet_derivative_test(kep, time)
-        self.assertTrue(np.max(np.abs(errors)) < 1.e-7)
+    ####################
 
-        errors = _pos_derivative_test(kep, time)
-        self.assertTrue(np.max(np.abs(errors)) < 1.e-5)
+    kep = KeplerPath(Body.lookup("SATURN"), 0.,
+                   (a, 1., dmean_dt,
+                    0.2, 3., dperi_dt,
+                    0.1, 5., dnode_dt,
+                    0.1, 4., dmean_dt / 50.),
+                   Path.as_path("EARTH"), wobbles=('e',))
 
-        ####################
+    errors = _xyz_planet_derivative_test(kep, time)
+    assert np.max(np.abs(errors)) < 3.e-7
 
-        kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                       (a, 1., dmean_dt,
-                        0.2, 3., dperi_dt,
-                        0.1, 5., dnode_dt,
-                        0.1, 4., dmean_dt / 50.),
-                       Path.as_path("EARTH"), wobbles=('e',))
+    errors = _pos_derivative_test(kep, time)
+    assert np.max(np.abs(errors)) < 3.e-5
 
-        errors = _xyz_planet_derivative_test(kep, time)
-        self.assertTrue(np.max(np.abs(errors)) < 3.e-7)
+    ####################
 
-        errors = _pos_derivative_test(kep, time)
-        self.assertTrue(np.max(np.abs(errors)) < 3.e-5)
+    kep = KeplerPath(Body.lookup("SATURN"), 0.,
+                   (a, 1., dmean_dt,
+                    0.2, 3., dperi_dt,
+                    0.1, 5., dnode_dt,
+                    0.15, 2., dmean_dt / 150.),
+                   Path.as_path("EARTH"), wobbles=('i',))
 
-        ####################
+    errors = _xyz_planet_derivative_test(kep, time)
+    assert np.max(np.abs(errors)) < 1.e-7
 
-        kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                       (a, 1., dmean_dt,
-                        0.2, 3., dperi_dt,
-                        0.1, 5., dnode_dt,
-                        0.15, 2., dmean_dt / 150.),
-                       Path.as_path("EARTH"), wobbles=('i',))
+    errors = _pos_derivative_test(kep, time)
+    assert np.max(np.abs(errors)) < 1.e-5
 
-        errors = _xyz_planet_derivative_test(kep, time)
-        self.assertTrue(np.max(np.abs(errors)) < 1.e-7)
+    ####################
 
-        errors = _pos_derivative_test(kep, time)
-        self.assertTrue(np.max(np.abs(errors)) < 1.e-5)
+    kep = KeplerPath(Body.lookup("SATURN"), 0.,
+                   (a, 1., dmean_dt,
+                    0.2, 3., dperi_dt,
+                    0.1, 5., dnode_dt,
+                    1.e-4, 3., dperi_dt/100.),
+                   Path.as_path("EARTH"), wobbles=('e2d',))
 
-        ####################
+    errors = _xyz_planet_derivative_test(kep, time)
+    assert np.max(np.abs(errors)) < 1.e-5
 
-        kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                       (a, 1., dmean_dt,
-                        0.2, 3., dperi_dt,
-                        0.1, 5., dnode_dt,
-                        1.e-4, 3., dperi_dt/100.),
-                       Path.as_path("EARTH"), wobbles=('e2d',))
+    errors = _pos_derivative_test(kep, time)
+    assert np.max(np.abs(errors)) < 1.e-4
 
-        errors = _xyz_planet_derivative_test(kep, time)
-        self.assertTrue(np.max(np.abs(errors)) < 1.e-5)
+    ####################
 
-        errors = _pos_derivative_test(kep, time)
-        self.assertTrue(np.max(np.abs(errors)) < 1.e-4)
+    kep = KeplerPath(Body.lookup("SATURN"), 0.,
+                   (a, 1., dmean_dt,
+                    0.2, 3., dperi_dt,
+                    0.1, 5., dnode_dt,
+                    1.e-4, 2., dnode_dt/150.),
+                   Path.as_path("EARTH"), wobbles=('i2d',))
 
-        ####################
+    errors = _xyz_planet_derivative_test(kep, time)
+    assert np.max(np.abs(errors)) < 1.e-6
 
-        kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                       (a, 1., dmean_dt,
-                        0.2, 3., dperi_dt,
-                        0.1, 5., dnode_dt,
-                        1.e-4, 2., dnode_dt/150.),
-                       Path.as_path("EARTH"), wobbles=('i2d',))
+    errors = _pos_derivative_test(kep, time)
+    assert np.max(np.abs(errors)) < 1.e-5
 
-        errors = _xyz_planet_derivative_test(kep, time)
-        self.assertTrue(np.max(np.abs(errors)) < 1.e-6)
+    ####################
 
-        errors = _pos_derivative_test(kep, time)
-        self.assertTrue(np.max(np.abs(errors)) < 1.e-5)
+    kep = KeplerPath(Body.lookup("SATURN"), 0.,
+                   (a, 1., dmean_dt,
+                    0.2, 3., dperi_dt,
+                    0.1, 5., dnode_dt,
+                    1.e-4, 2., dperi_dt/150.,
+                    2.e-4, 3., dnode_dt/200.,
+                    a * 1.e-3, 4., dmean_dt/150.),
+                   Path.as_path("EARTH"), wobbles=('i2d','e2d','a'))
 
-        ####################
+    errors = _xyz_planet_derivative_test(kep, time)
+    assert np.max(np.abs(errors)) < 1.e-5
 
-        kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                       (a, 1., dmean_dt,
-                        0.2, 3., dperi_dt,
-                        0.1, 5., dnode_dt,
-                        1.e-4, 2., dperi_dt/150.,
-                        2.e-4, 3., dnode_dt/200.,
-                        a * 1.e-3, 4., dmean_dt/150.),
-                       Path.as_path("EARTH"), wobbles=('i2d','e2d','a'))
+    errors = _pos_derivative_test(kep, time)
+    assert np.max(np.abs(errors)) < 1.e-4
 
-        errors = _xyz_planet_derivative_test(kep, time)
-        self.assertTrue(np.max(np.abs(errors)) < 1.e-5)
+    ####################
+    # Photon solution without an observer, which returns events in the ring frame
+    ####################
 
-        errors = _pos_derivative_test(kep, time)
-        self.assertTrue(np.max(np.abs(errors)) < 1.e-4)
+    kep = KeplerPath(Body.lookup("SATURN"), 0.,
+                   (a, 1., dmean_dt, 0.2, 3., dperi_dt, 0.1, 5., dnode_dt),
+                   path_id='kepler_unobserved')
 
-        ####################
-        # Photon solution without an observer, which returns events in the ring frame
-        ####################
+    arrival_time = Scalar(1.e8 + np.arange(5) * 100.)
+    arrival = Event(arrival_time, (Vector3.ZERO, Vector3.ZERO), 'EARTH', 'J2000')
+    (path_event, arrival_event) = kep.photon_to_event(arrival)
 
-        kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                       (a, 1., dmean_dt, 0.2, 3., dperi_dt, 0.1, 5., dnode_dt),
-                       path_id='kepler_unobserved')
+    # Here the light travel time is solved to the body itself, so the ray length and
+    # the light travel time agree exactly
+    ratio = (path_event.dep_j2000.norm() / (C * path_event.dep_lt)).vals
+    assert np.max(np.abs(ratio - 1.)) < 1.e-12
 
-        arrival_time = Scalar(1.e8 + np.arange(5) * 100.)
-        arrival = Event(arrival_time, (Vector3.ZERO, Vector3.ZERO), 'EARTH', 'J2000')
-        (path_event, arrival_event) = kep.photon_to_event(arrival)
+    ####################
+    # Photon solution when an observer is defined
+    ####################
 
-        # Here the light travel time is solved to the body itself, so the ray length and
-        # the light travel time agree exactly
-        ratio = (path_event.dep_j2000.norm() / (C * path_event.dep_lt)).vals
-        self.assertTrue(np.max(np.abs(ratio - 1.)) < 1.e-12)
+    kep = KeplerPath(Body.lookup("SATURN"), 0.,
+                   (a, 1., dmean_dt, 0.2, 3., dperi_dt, 0.1, 5., dnode_dt),
+                   Path.as_path("EARTH"), path_id='kepler_observed')
 
-        ####################
-        # Photon solution when an observer is defined
-        ####################
+    arrival_time = Scalar(1.e8 + np.arange(5) * 100.)
+    arrival = Event(arrival_time, (Vector3.ZERO, Vector3.ZERO), 'EARTH', 'J2000')
+    (path_event, arrival_event) = kep.photon_to_event(arrival)
 
-        kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                       (a, 1., dmean_dt, 0.2, 3., dperi_dt, 0.1, 5., dnode_dt),
-                       Path.as_path("EARTH"), path_id='kepler_observed')
+    # The photon departs before it arrives, so the departure time is measured
+    # forward and the arrival time backward, as in Path._solve_photon
+    assert np.all(path_event.time.vals < arrival_time.vals)
+    assert np.all(path_event.dep_lt.vals > 0.)
+    assert np.all(arrival_event.arr_lt.vals < 0.)
+    assert arrival_event.arr_lt == -path_event.dep_lt
 
-        arrival_time = Scalar(1.e8 + np.arange(5) * 100.)
-        arrival = Event(arrival_time, (Vector3.ZERO, Vector3.ZERO), 'EARTH', 'J2000')
-        (path_event, arrival_event) = kep.photon_to_event(arrival)
+    # The ray is the same vector at both ends, and its length is the distance the
+    # photon travels. The light time is solved to the planet rather than to the body
+    # itself, so the two agree only to the radial part of the orbital offset divided
+    # by the range, which is bounded by 1e-4 for this orbit.
+    assert arrival_event.arr_j2000 == path_event.dep_j2000
+    ratio = (path_event.dep_j2000.norm() / (C * path_event.dep_lt)).vals
+    assert np.max(np.abs(ratio - 1.)) < 1.e-4
 
-        # The photon departs before it arrives, so the departure time is measured
-        # forward and the arrival time backward, as in Path._solve_photon
-        self.assertTrue(np.all(path_event.time.vals < arrival_time.vals))
-        self.assertTrue(np.all(path_event.dep_lt.vals > 0.))
-        self.assertTrue(np.all(arrival_event.arr_lt.vals < 0.))
-        self.assertEqual(arrival_event.arr_lt, -path_event.dep_lt)
+    # The departure precedes the arrival by exactly the light travel time
+    assert np.all(path_event.time.vals < arrival_time.vals)
+    assert arrival_time - path_event.time == path_event.dep_lt
 
-        # The ray is the same vector at both ends, and its length is the distance the
-        # photon travels. The light time is solved to the planet rather than to the body
-        # itself, so the two agree only to the radial part of the orbital offset divided
-        # by the range, which is bounded by 1e-4 for this orbit.
-        self.assertEqual(arrival_event.arr_j2000, path_event.dep_j2000)
-        ratio = (path_event.dep_j2000.norm() / (C * path_event.dep_lt)).vals
-        self.assertTrue(np.max(np.abs(ratio - 1.)) < 1.e-4)
-
-        # The departure precedes the arrival by exactly the light travel time
-        self.assertTrue(np.all(path_event.time.vals < arrival_time.vals))
-        self.assertEqual(arrival_time - path_event.time, path_event.dep_lt)
-
-        Frame._reset_caches()
-        Path._reset_caches()
-        Body.reset_registry()
-
+    Frame._reset_caches()
+    Path._reset_caches()
+    Body.reset_registry()
 ################################################################################

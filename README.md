@@ -33,7 +33,7 @@ This package is under development. Use with extreme caution.
   `programs.gold_master`. It is a runnable tool rather than part of the `oops` API, so
   it lives outside `src`.
 - `tests`: The unit tests, mirroring `src/oops`, plus the host tests under
-  `tests/hosts`.
+  `tests/hosts` and the `spicedb` tests under `tests/spicedb`.
 - `scripts`: `setup-venv.sh`, `run-all-checks.sh`, and the automated test script CI
   runs.
 
@@ -81,22 +81,30 @@ To run the checks:
 
 # Running Tests
 
+The tests use pytest.
+
 - To run the main oops unit tests:
 
 ```sh
-python -m unittest tests/unittester.py
+pytest tests --ignore=tests/hosts --ignore=tests/spicedb
 ```
 
-- To run the host tests including golden master tests:
+- To run the host tests, which are the gold master tests:
 
 ```sh
-python -m unittest tests/hosts/unittester.py
+pytest tests/hosts
 ```
 
-- To run the main oops unit tests and the host tests:
+- To run the spicedb tests:
 
 ```sh
-python -m unittest tests/unittester_with_hosts.py
+pytest tests/spicedb
+```
+
+- To run everything:
+
+```sh
+pytest tests
 ```
 
 - To run the gold master tests for one instrument with the ability to specify command

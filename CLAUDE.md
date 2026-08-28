@@ -7,10 +7,13 @@ science: it models instruments, spacecraft trajectories, and target bodies, and
 computes per-pixel geometry ("backplanes") for real observations. It is built on
 SPICE (via `cspyce`) and on the `polymath` array types.
 
-Two library packages live under `src/`: `src/oops` and `src/spicedb`. The gold
-master backplane test framework is `programs/gold_master`, imported as
+Two library packages live under `src/`: `src/oops` and `src/spicedb`. Neither
+contains test code; the tests for both live under `tests/`. The gold master
+backplane test framework is `programs/gold_master`, imported as
 `programs.gold_master`; it is a runnable tool rather than part of the `oops` API,
-so it sits outside `src/` and outside the library.
+so it sits outside `src/` and outside the library. Its
+`execute_as_pytest(obsname)` is what a host test calls to compare one standard
+observation against its gold masters.
 
 ## Environment
 
@@ -25,24 +28,29 @@ imports fail because these are unset, say so; do not report it as a code defect.
   Work inside the virtualenv `./scripts/setup-venv.sh` creates, which installs
   `-e ".[dev]"`. Never install into system Python.
 - `scripts/run-all-checks.sh` runs the gates; `-h` lists the flags. It defaults
-  to the three unittest suites. flake8, ruff, pip-audit, and PyMarkdown are
+  to the three pytest suites. flake8, ruff, pip-audit, and PyMarkdown are
   configured but off by default (`ENABLE_*` in the script), because each still
   reports pre-existing findings against the legacy modules — turning one on is a
   cleanup project, not a gate. `.github/workflows/run-lint.yml` is dispatch-only
   for the same reason.
-- Tests use `unittest`, **not** pytest. There is no `conftest.py`. Test classes
-  define a single `runTest` method.
-  - `python -m unittest tests/unittester.py` — main suite
-  - `python -m unittest tests/unittester_with_hosts.py` — main suite plus hosts
-  - `python -m unittest tests/hosts/unittester.py` — host tests incl. gold masters
-  - `python -m unittest spicedb` — the spicedb tests
-- `pyproject.toml` does carry a `[tool.pytest.ini_options]` block, and `pytest`
-  collects the `runTest` methods, but it reaches only the `tests/test_*.py`
-  modules: the host tests are not named `test_*`, so `unittest` remains the way
-  to run everything. `-n auto` and `filterwarnings = ["error"]` are deliberately
-  absent — see the comments there before adding either.
-- Each test subdirectory has its own `unittester.py` that aggregates its modules.
-  A new test module is not run until it is added to the enclosing `unittester.py`.
+- Tests use **pytest**: module-level `test_*` functions and plain `assert`. There
+  are no `unittest.TestCase` classes and no `runTest` methods.
+  - `pytest tests --ignore=tests/hosts --ignore=tests/spicedb` — main suite
+  - `pytest tests/hosts` — host tests, which are the gold masters
+  - `pytest tests/spicedb` — the spicedb tests
+  - `pytest tests` — all three; they pass together, but the check script and CI
+    run them as three invocations so a failure is attributable to one suite.
+- Shared fixtures live in `tests/conftest.py` (`core_kernels`, which furnishes the
+  leap-second, PCK, and DE421 kernels with the Path and Frame registries cleared)
+  and `tests/spicedb/conftest.py`. Setup that is specific to one module stays in
+  that module as an `autouse` fixture.
+- `-n auto` and `filterwarnings = ["error"]` are deliberately absent from
+  `[tool.pytest.ini_options]` — read the comments there before adding either.
+- Only files named `test_*.py` are collected. Several host modules
+  (`tests/hosts/juno/**`, `tests/hosts/hst/__init__.py`,
+  `tests/hosts/cassini/{uvis,vims}/*.py`) hold converted tests that no suite ran
+  before the conversion either; they keep names pytest does not collect, and
+  wiring them up means fixing the tests, not renaming the files.
 - Gold-master tests for a single instrument take command-line options:
   `PYTHONPATH=. python tests/hosts/cassini/iss/gold_master.py --help`
 - CI runs `scripts/automated_tests/oops_main_test.sh`, which reinstalls all
@@ -115,5 +123,5 @@ house style. Do not "fix" alignment or blank-line counts that flake8 passes.
   `src/oops/_version.py`.
 - `.claude/rules/` and `.claude/skills/` are generic RMS-wide templates and are
   still partly aspirational here. Where they conflict with this repository —
-  Ruff vs. flake8, pytest vs. unittest, a Sphinx docs tree —
-  **the repository's actual conventions win.**
+  Ruff vs. flake8, a Sphinx docs tree — **the repository's actual conventions
+  win.**

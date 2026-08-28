@@ -33,11 +33,11 @@ echo "================================================================"
 echo
 echo "Test start:" `date`
 echo
-python -m coverage run -m unittest spicedb -v
+python -m coverage run -m pytest tests/spicedb -v
 if [ $? -ne 0 ]; then
-    echo "*********************************"
-    echo "*** SPICEDB FAILED UNIT TESTS ***"
-    echo "*********************************"
+    echo "****************************"
+    echo "*** SPICEDB TESTS FAILED ***"
+    echo "****************************"
     echo
     echo "Test end:" `date`
     exit -1
@@ -52,11 +52,11 @@ echo "================================================================"
 echo
 echo "Test start:" `date`
 echo
-python -m coverage run -a -m unittest tests/hosts/unittester.py -v
+python -m coverage run -a -m pytest tests/hosts -v
 if [ $? -ne 0 ]; then
-    echo "************************************"
-    echo "*** OOPS.HOSTS FAILED UNIT TESTS ***"
-    echo "************************************"
+    echo "*******************************"
+    echo "*** OOPS.HOSTS TESTS FAILED ***"
+    echo "*******************************"
     echo
     echo "Test end:" `date`
     exit -1
@@ -71,11 +71,11 @@ echo "================================================================"
 echo
 echo "Test start:" `date`
 echo
-python -m coverage run -a -m unittest tests/unittester.py -v
+python -m coverage run -a -m pytest tests --ignore=tests/hosts --ignore=tests/spicedb -v
 if [ $? -ne 0 ]; then
-    echo "******************************"
-    echo "*** OOPS FAILED UNIT TESTS ***"
-    echo "******************************"
+    echo "*************************"
+    echo "*** OOPS TESTS FAILED ***"
+    echo "*************************"
     echo
     echo "Test end:" `date`
     exit -1

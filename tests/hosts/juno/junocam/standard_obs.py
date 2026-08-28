@@ -2,7 +2,6 @@
 # tests/hosts/juno/junocam/standard_obs.py:
 ################################################################################
 import os
-import unittest
 import programs.gold_master as gm
 
 # Because JunoCam has such a large, distorted FOV, we need to assign the

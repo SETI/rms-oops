@@ -2,7 +2,7 @@
 #
 # rms-oops - Run All Checks Script
 #
-# This script runs linting, the unit test suites, and Markdown lint as separate
+# This script runs linting, the pytest suites, and Markdown lint as separate
 # checks. In parallel mode all requested checks run concurrently.
 #
 # Usage:
@@ -15,9 +15,9 @@
 #   -m, --markdown         Run only PyMarkdown (RUN_PYMARKDOWN)
 #   --flake8               Run flake8 only (may combine with other --* flags)
 #   --ruff-check           Run ruff check only
-#   --unittest             Run the main oops unit test suite only
-#   --unittest-hosts       Run the host (gold master) unit test suite only
-#   --unittest-spicedb     Run the spicedb unit tests only
+#   --pytest               Run the main oops test suite only
+#   --pytest-hosts         Run the host (gold master) test suite only
+#   --pytest-spicedb       Run the spicedb tests only
 #   --pip-audit            Run pip-audit only
 #   --pymarkdown           Run PyMarkdown scan only
 #   -h, --help             Show this help message
@@ -33,16 +33,17 @@
 #   environment problem rather than a code defect.
 #
 #   RUN_* (set by this script from CLI or full-run defaults): RUN_FLAKE8,
-#   RUN_RUFF_CHECK, RUN_UNITTEST, RUN_UNITTEST_HOSTS, RUN_UNITTEST_SPICEDB,
+#   RUN_RUFF_CHECK, RUN_PYTEST, RUN_PYTEST_HOSTS, RUN_PYTEST_SPICEDB,
 #   RUN_PIP_AUDIT, RUN_PYMARKDOWN
 #
 #   Per-check toggles (true/false). Each check runs only if both RUN_* and
 #   ENABLE_* are true (RUN_* from CLI or defaults below; ENABLE_* from env):
 #     ENABLE_FLAKE8            (default: false; see the note below)
 #     ENABLE_RUFF_CHECK        (default: false; see the note below)
-#     ENABLE_UNITTEST          main suite, tests/unittester.py (default: true)
-#     ENABLE_UNITTEST_HOSTS    host suite, tests/hosts/unittester.py (default: true)
-#     ENABLE_UNITTEST_SPICEDB  spicedb tests (default: true)
+#     ENABLE_PYTEST            main suite, tests/ minus hosts and spicedb
+#                              (default: true)
+#     ENABLE_PYTEST_HOSTS      host suite, tests/hosts (default: true)
+#     ENABLE_PYTEST_SPICEDB    spicedb tests, tests/spicedb (default: true)
 #     ENABLE_PIP_AUDIT         (default: false)
 #     ENABLE_PYMARKDOWN        PyMarkdown scan (default: false)
 #
@@ -52,8 +53,13 @@
 #   gate. .github/workflows/run-lint.yml is dispatch-only for the same reason.
 #
 # Checks (each run separately):
-#   Code:     the three unittest suites, and optionally flake8 (the linter of
+#   Code:     the three pytest suites, and optionally flake8 (the linter of
 #             record; .flake8 is authoritative), ruff check, and pip-audit.
+#
+#             The three suites are separate pytest invocations rather than one
+#             `pytest tests` run so that each keeps its own process, as it had
+#             under unittest. They pass either way; running them apart keeps a
+#             failure attributable to one suite.
 #   Markdown: pymarkdown scan .claude/ README.md CONTRIBUTING.md
 #
 # The CI workflow runs scripts/automated_tests/oops_main_test.sh, which wraps the
@@ -79,9 +85,9 @@ RESET='\033[0m'
 PARALLEL=true
 RUN_FLAKE8=false
 RUN_RUFF_CHECK=false
-RUN_UNITTEST=false
-RUN_UNITTEST_HOSTS=false
-RUN_UNITTEST_SPICEDB=false
+RUN_PYTEST=false
+RUN_PYTEST_HOSTS=false
+RUN_PYTEST_SPICEDB=false
 RUN_PIP_AUDIT=false
 RUN_PYMARKDOWN=false
 SCOPE_SPECIFIED=false
@@ -90,9 +96,9 @@ SCOPE_SPECIFIED=false
 # permanently change here)
 : "${ENABLE_FLAKE8:=false}"
 : "${ENABLE_RUFF_CHECK:=false}"
-: "${ENABLE_UNITTEST:=true}"
-: "${ENABLE_UNITTEST_HOSTS:=true}"
-: "${ENABLE_UNITTEST_SPICEDB:=true}"
+: "${ENABLE_PYTEST:=true}"
+: "${ENABLE_PYTEST_HOSTS:=true}"
+: "${ENABLE_PYTEST_SPICEDB:=true}"
 : "${ENABLE_PIP_AUDIT:=false}"
 : "${ENABLE_PYMARKDOWN:=false}"
 
@@ -193,9 +199,9 @@ while [[ $# -gt 0 ]]; do
         -c|--code)
             RUN_FLAKE8=true
             RUN_RUFF_CHECK=true
-            RUN_UNITTEST=true
-            RUN_UNITTEST_HOSTS=true
-            RUN_UNITTEST_SPICEDB=true
+            RUN_PYTEST=true
+            RUN_PYTEST_HOSTS=true
+            RUN_PYTEST_SPICEDB=true
             RUN_PIP_AUDIT=true
             SCOPE_SPECIFIED=true
             shift
@@ -215,18 +221,18 @@ while [[ $# -gt 0 ]]; do
             SCOPE_SPECIFIED=true
             shift
             ;;
-        --unittest)
-            RUN_UNITTEST=true
+        --pytest)
+            RUN_PYTEST=true
             SCOPE_SPECIFIED=true
             shift
             ;;
-        --unittest-hosts)
-            RUN_UNITTEST_HOSTS=true
+        --pytest-hosts)
+            RUN_PYTEST_HOSTS=true
             SCOPE_SPECIFIED=true
             shift
             ;;
-        --unittest-spicedb)
-            RUN_UNITTEST_SPICEDB=true
+        --pytest-spicedb)
+            RUN_PYTEST_SPICEDB=true
             SCOPE_SPECIFIED=true
             shift
             ;;
@@ -256,9 +262,9 @@ done
 if [ "$SCOPE_SPECIFIED" = false ]; then
     RUN_FLAKE8=true
     RUN_RUFF_CHECK=true
-    RUN_UNITTEST=true
-    RUN_UNITTEST_HOSTS=true
-    RUN_UNITTEST_SPICEDB=true
+    RUN_PYTEST=true
+    RUN_PYTEST_HOSTS=true
+    RUN_PYTEST_SPICEDB=true
     RUN_PIP_AUDIT=true
     RUN_PYMARKDOWN=true
 fi
@@ -277,14 +283,14 @@ fi
 _code_checks_any_scheduled() {
     [ "$RUN_FLAKE8" = true ] && [ "$ENABLE_FLAKE8" = true ] && return 0
     [ "$RUN_RUFF_CHECK" = true ] && [ "$ENABLE_RUFF_CHECK" = true ] && return 0
-    [ "$RUN_UNITTEST" = true ] && [ "$ENABLE_UNITTEST" = true ] && return 0
-    [ "$RUN_UNITTEST_HOSTS" = true ] && [ "$ENABLE_UNITTEST_HOSTS" = true ] && return 0
-    [ "$RUN_UNITTEST_SPICEDB" = true ] && [ "$ENABLE_UNITTEST_SPICEDB" = true ] && return 0
+    [ "$RUN_PYTEST" = true ] && [ "$ENABLE_PYTEST" = true ] && return 0
+    [ "$RUN_PYTEST_HOSTS" = true ] && [ "$ENABLE_PYTEST_HOSTS" = true ] && return 0
+    [ "$RUN_PYTEST_SPICEDB" = true ] && [ "$ENABLE_PYTEST_SPICEDB" = true ] && return 0
     [ "$RUN_PIP_AUDIT" = true ] && [ "$ENABLE_PIP_AUDIT" = true ] && return 0
     return 1
 }
 
-# ---- Code checks (flake8, ruff, the unittest suites, pip-audit) ----
+# ---- Code checks (flake8, ruff, the pytest suites, pip-audit) ----
 run_code_checks() {
     local output_file="${1:-}"
     local status_file="${2:-}"
@@ -336,36 +342,36 @@ run_code_checks() {
         fi
     fi
 
-    if [ "$RUN_UNITTEST_SPICEDB" = true ] && [ "$ENABLE_UNITTEST_SPICEDB" = true ]; then
-        print_info "Running the spicedb unit tests..."
-        if python -m unittest spicedb; then
-            print_success "Spicedb unit tests passed"
+    if [ "$RUN_PYTEST_SPICEDB" = true ] && [ "$ENABLE_PYTEST_SPICEDB" = true ]; then
+        print_info "Running the spicedb tests..."
+        if python -m pytest tests/spicedb; then
+            print_success "Spicedb tests passed"
         else
-            print_error "Spicedb unit tests failed"
+            print_error "Spicedb tests failed"
             failed=true
-            failed_checks="${failed_checks}Code - Spicedb unit tests"$'\n'
+            failed_checks="${failed_checks}Code - Spicedb tests"$'\n'
         fi
     fi
 
-    if [ "$RUN_UNITTEST" = true ] && [ "$ENABLE_UNITTEST" = true ]; then
-        print_info "Running the main oops unit test suite..."
-        if python -m unittest tests/unittester.py; then
-            print_success "Main unit test suite passed"
+    if [ "$RUN_PYTEST" = true ] && [ "$ENABLE_PYTEST" = true ]; then
+        print_info "Running the main oops test suite..."
+        if python -m pytest tests --ignore=tests/hosts --ignore=tests/spicedb; then
+            print_success "Main test suite passed"
         else
-            print_error "Main unit test suite failed"
+            print_error "Main test suite failed"
             failed=true
-            failed_checks="${failed_checks}Code - Main unit test suite"$'\n'
+            failed_checks="${failed_checks}Code - Main test suite"$'\n'
         fi
     fi
 
-    if [ "$RUN_UNITTEST_HOSTS" = true ] && [ "$ENABLE_UNITTEST_HOSTS" = true ]; then
-        print_info "Running the host unit test suite (gold masters)..."
-        if python -m unittest tests/hosts/unittester.py; then
-            print_success "Host unit test suite passed"
+    if [ "$RUN_PYTEST_HOSTS" = true ] && [ "$ENABLE_PYTEST_HOSTS" = true ]; then
+        print_info "Running the host test suite (gold masters)..."
+        if python -m pytest tests/hosts; then
+            print_success "Host test suite passed"
         else
-            print_error "Host unit test suite failed"
+            print_error "Host test suite failed"
             failed=true
-            failed_checks="${failed_checks}Code - Host unit test suite"$'\n'
+            failed_checks="${failed_checks}Code - Host test suite"$'\n'
         fi
     fi
 

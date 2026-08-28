@@ -89,12 +89,16 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 # Every test module is named test_*.py. Dropping pytest's second default pattern,
 # *_test.py, keeps tests/hosts/hst/wfc3/wfc3_pointing_test.py out of collection: it is a
-# standalone plotting script that no unittester.py aggregates and that imports pylab.
+# standalone plotting script that imports pylab. The host modules that are not named
+# test_*.py are likewise left uncollected, which is the state they were in when the
+# suite ran under unittest.
 python_files = ["test_*.py"]
-# The suite is still unittest-based (TestCase classes with a single runTest method), so
-# neither `-n auto` nor `filterwarnings = ["error"]` is enabled: the tests share SPICE
-# and backplane caches and are not yet order-independent, and the legacy modules still
-# emit NumPy warnings. Both belong here once the suite is converted to pytest.
+# `-n auto` is deliberately absent: under xdist the Galileo SSI gold master
+# C0368369200R fails, because the gold master tests share the Body registry and the
+# QuickPath/QuickFrame caches with whatever else lands on the same worker.
+# `filterwarnings = ["error"]` is absent for the same reason it always was: the spicedb
+# tests raise a RuntimeWarning for a kernel that is missing from the resource tree, and
+# the legacy modules still emit NumPy warnings. Both belong here once those are fixed.
 addopts = ["--strict-markers", "--strict-config"]
 markers = []
 

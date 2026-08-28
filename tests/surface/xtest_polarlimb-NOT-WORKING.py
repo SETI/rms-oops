@@ -3,7 +3,6 @@
 ################################################################################
 
 import numpy as np
-import unittest
 
 from polymath               import Vector3
 from oops.constants         import HALFPI
@@ -17,61 +16,59 @@ from oops.surface.ellipsoid import Ellipsoid
 # TODO: This test was erroneously testing class Limb instead of class PolarLimb.
 # When I change Limb() to PolarLimb(), it fails. This needs to be fixed!!
 
-class xTest_PolarLimb(unittest.TestCase):
+def xtest_polarlimb():
 
-    def runTest(self):
+    REQ  = 60268.
+    RMID = 54364.
+    RPOL = 50000.
 
-        REQ  = 60268.
-        RMID = 54364.
-        RPOL = 50000.
+    ground = Spheroid('SSB', 'J2000', (REQ, RPOL))
+    limb = PolarLimb(ground)
 
-        ground = Spheroid('SSB', 'J2000', (REQ, RPOL))
-        limb = PolarLimb(ground)
+    obs = Vector3([4*REQ,0,0])
 
-        obs = Vector3([4*REQ,0,0])
+    los_vals = np.empty((220,220,3))
+    los_vals[...,0] = -4 *REQ
+    los_vals[...,1] = np.arange(-1.10,1.10,0.01)[:,np.newaxis] * REQ
+    los_vals[...,2] = np.arange(-1.10,1.10,0.01) * REQ
+    los = Vector3(los_vals)
 
-        los_vals = np.empty((220,220,3))
-        los_vals[...,0] = -4 *REQ
-        los_vals[...,1] = np.arange(-1.10,1.10,0.01)[:,np.newaxis] * REQ
-        los_vals[...,2] = np.arange(-1.10,1.10,0.01) * REQ
-        los = Vector3(los_vals)
+    (cept, t, track) = limb.intercept(obs, los, groundtrack=True)
 
-        (cept, t, track) = limb.intercept(obs, los, groundtrack=True)
+    perp = limb.normal(track)
+    assert abs(perp.sep(los) - HALFPI).max() < 1.e-12
 
-        perp = limb.normal(track)
-        self.assertTrue(abs(perp.sep(los) - HALFPI).max() < 1.e-12)
+    coords = limb.coords_from_vector3(cept, obs, axes=3)
+    assert abs(coords[2]).max() < 1.e6
 
-        coords = limb.coords_from_vector3(cept, obs, axes=3)
-        self.assertTrue(abs(coords[2]).max() < 1.e6)
+    cept2 = limb.vector3_from_coords(coords, obs)
+    assert (cept2 - cept).norm().median() < 1.e-10
 
-        cept2 = limb.vector3_from_coords(coords, obs)
-        self.assertTrue((cept2 - cept).norm().median() < 1.e-10)
+    ####################
 
-        ####################
+    ground = Ellipsoid('SSB', 'J2000', (REQ, RMID, RPOL))
+    limb = PolarLimb(ground)
 
-        ground = Ellipsoid('SSB', 'J2000', (REQ, RMID, RPOL))
-        limb = PolarLimb(ground)
+    obs = Vector3([4*REQ,0,0])
 
-        obs = Vector3([4*REQ,0,0])
+    los_vals = np.empty((220,220,3))
+    los_vals[...,0] = -4 *REQ
+    los_vals[...,1] = np.arange(-1.10,1.10,0.01)[:,np.newaxis] * REQ
+    los_vals[...,2] = np.arange(-1.10,1.10,0.01) * REQ
+    los = Vector3(los_vals)
 
-        los_vals = np.empty((220,220,3))
-        los_vals[...,0] = -4 *REQ
-        los_vals[...,1] = np.arange(-1.10,1.10,0.01)[:,np.newaxis] * REQ
-        los_vals[...,2] = np.arange(-1.10,1.10,0.01) * REQ
-        los = Vector3(los_vals)
+    (cept, t, track) = limb.intercept(obs, los, groundtrack=True)
 
-        (cept, t, track) = limb.intercept(obs, los, groundtrack=True)
+    perp = limb.normal(track)
+    assert abs(perp.sep(los) - HALFPI).max() < 1.e-12
 
-        perp = limb.normal(track)
-        self.assertTrue(abs(perp.sep(los) - HALFPI).max() < 1.e-12)
+    coords = limb.coords_from_vector3(cept, obs, axes=3)
+    assert abs(coords[2]).max() < 1.e6
 
-        coords = limb.coords_from_vector3(cept, obs, axes=3)
-        self.assertTrue(abs(coords[2]).max() < 1.e6)
+    cept2 = limb.vector3_from_coords(coords, obs)
+    assert (cept2 - cept).norm().median() < 1.e-10
 
-        cept2 = limb.vector3_from_coords(coords, obs)
-        self.assertTrue((cept2 - cept).norm().median() < 1.e-10)
-
-        Path._reset_caches()
-        Frame._reset_caches()
+    Path._reset_caches()
+    Frame._reset_caches()
 
 ################################################################################

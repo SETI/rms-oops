@@ -2,65 +2,56 @@
 # test/test_body.py
 ################################################################################
 
-import unittest
+import pytest
 
 from oops.body  import Body
 from oops.frame import Frame
 from oops.path  import Path
 
 
-class Test_Body(unittest.TestCase):
+@pytest.fixture(autouse=True)
+def _solar_system():
+    Body._undefine_solar_system()
+    Body.define_solar_system('2000-01-01', '2020-01-01')
 
-    def setUp(self):
-        Body._undefine_solar_system()
-        Body.define_solar_system('2000-01-01', '2020-01-01')
+def test_body():
+    assert Body.lookup('DAPHNIS').barycenter.name == 'SATURN'
+    assert Body.lookup('PHOEBE').barycenter.name == 'SATURN_BARYCENTER'
 
-    def tearDown(self):
-        pass
+    mars = Body.lookup('MARS')
+    moons = mars.select_children(include_all=['SATELLITE'])
+    assert len(moons) == 2     # Phobos, Deimos
 
-    def runTest(self):
+    saturn = Body.lookup('SATURN')
+    moons = saturn.select_children(include_all=['CLASSICAL', 'IRREGULAR'])
+    assert len(moons) == 1     # Phoebe
 
-        self.assertEqual(Body.lookup('DAPHNIS').barycenter.name,
-                         'SATURN')
-        self.assertEqual(Body.lookup('PHOEBE').barycenter.name,
-                         'SATURN_BARYCENTER')
+    moons = saturn.select_children(exclude=['IRREGULAR', 'RING'], radius=160)
+    assert len(moons) == 8     # Mimas-Iapetus
 
-        mars = Body.lookup('MARS')
-        moons = mars.select_children(include_all=['SATELLITE'])
-        self.assertEqual(len(moons), 2)     # Phobos, Deimos
+    rings = saturn.select_children(include_any=('RING'))
+    assert len(rings) == 8     # A, B, C, AB, Main, all, plane, system
 
-        saturn = Body.lookup('SATURN')
-        moons = saturn.select_children(include_all=['CLASSICAL', 'IRREGULAR'])
-        self.assertEqual(len(moons), 1)     # Phoebe
+    moons = saturn.select_children(include_all='SATELLITE',
+                                   exclude=('IRREGULAR'), radius=1000)
+    assert len(moons) == 1     # Titan only
 
-        moons = saturn.select_children(exclude=['IRREGULAR', 'RING'], radius=160)
-        self.assertEqual(len(moons), 8)     # Mimas-Iapetus
+    sun = Body.lookup('SUN')
+    planets = sun.select_children(include_any=['PLANET'])
+    assert len(planets) == 9
 
-        rings = saturn.select_children(include_any=('RING'))
-        self.assertEqual(len(rings), 8)     # A, B, C, AB, Main, all, plane,
-                                            # system
+    sun = Body.lookup('SUN')
+    planets = sun.select_children(include_any=['PLANET', 'EARTH'])
+    assert len(planets) == 9
 
-        moons = saturn.select_children(include_all='SATELLITE',
-                                       exclude=('IRREGULAR'), radius=1000)
-        self.assertEqual(len(moons), 1)     # Titan only
+    sun = Body.lookup('SUN')
+    planets = sun.select_children(include_any=['PLANET', 'EARTH'],
+                                  recursive=True)
+    assert len(planets) == 10  # 9 planets plus Earth's moon
 
-        sun = Body.lookup('SUN')
-        planets = sun.select_children(include_any=['PLANET'])
-        self.assertEqual(len(planets), 9)
-
-        sun = Body.lookup('SUN')
-        planets = sun.select_children(include_any=['PLANET', 'EARTH'])
-        self.assertEqual(len(planets), 9)
-
-        sun = Body.lookup('SUN')
-        planets = sun.select_children(include_any=['PLANET', 'EARTH'],
-                                      recursive=True)
-        self.assertEqual(len(planets), 10)  # 9 planets plus Earth's moon
-
-        sun = Body.lookup('SUN')
-        planets = sun.select_children(include_any=['PLANET', 'JUPITER'],
-                                      exclude=['IRREGULAR', 'BARYCENTER', 'IO'],
-                                      recursive=True)
-        self.assertEqual(len(planets), 16)  # 9 planets + 7 Jovian moons
-
+    sun = Body.lookup('SUN')
+    planets = sun.select_children(include_any=['PLANET', 'JUPITER'],
+                                  exclude=['IRREGULAR', 'BARYCENTER', 'IO'],
+                                  recursive=True)
+    assert len(planets) == 16  # 9 planets + 7 Jovian moons
 ################################################################################

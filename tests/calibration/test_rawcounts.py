@@ -3,7 +3,6 @@
 ################################################################################
 
 import numpy as np
-import unittest
 
 from polymath         import Pair, Scalar
 from oops.calibration import RawCounts
@@ -12,79 +11,76 @@ from oops.constants   import RPD
 from oops.config      import AREA_FACTOR
 
 
-class Test_RawCounts(unittest.TestCase):
-
-  def runTest(self):
-
+def test_rawcounts():
     try:
         AREA_FACTOR.old = True
 
         flat_fov = FlatFOV((RPD/3600.,RPD/3600.), (1024,1024))
         cal = RawCounts('TEST', flat_fov, 5.)
-        self.assertEqual(cal.extended_from_dn(0., (512,512)), 0.)
-        self.assertEqual(cal.extended_from_dn(0., (10,10)), 0.)
-        self.assertEqual(cal.extended_from_dn(5., (512,512)), 25.)
-        self.assertEqual(cal.extended_from_dn(5., (10,10)), 25.)
-        self.assertEqual(cal.extended_from_dn(.5, (512,512)), 2.5)
-        self.assertEqual(cal.extended_from_dn(.5, (10,10)), 2.5)
+        assert cal.extended_from_dn(0., (512,512)) == 0.
+        assert cal.extended_from_dn(0., (10,10)) == 0.
+        assert cal.extended_from_dn(5., (512,512)) == 25.
+        assert cal.extended_from_dn(5., (10,10)) == 25.
+        assert cal.extended_from_dn(.5, (512,512)) == 2.5
+        assert cal.extended_from_dn(.5, (10,10)) == 2.5
 
-        self.assertEqual(cal.dn_from_extended(0., (512,512)), 0.)
-        self.assertEqual(cal.dn_from_extended(0., (10,10)), 0.)
-        self.assertEqual(cal.dn_from_extended(25., (512,512)), 5.)
-        self.assertEqual(cal.dn_from_extended(25., (10,10)), 5.)
-        self.assertEqual(cal.dn_from_extended(2.5, (512,512)), .5)
-        self.assertEqual(cal.dn_from_extended(2.5, (10,10)), .5)
+        assert cal.dn_from_extended(0., (512,512)) == 0.
+        assert cal.dn_from_extended(0., (10,10)) == 0.
+        assert cal.dn_from_extended(25., (512,512)) == 5.
+        assert cal.dn_from_extended(25., (10,10)) == 5.
+        assert cal.dn_from_extended(2.5, (512,512)) == .5
+        assert cal.dn_from_extended(2.5, (10,10)) == .5
 
-        self.assertEqual(cal.point_from_dn(0., (512,512)), 0.)
-        self.assertEqual(cal.point_from_dn(0., (10,10)), 0.)
-        self.assertEqual(cal.point_from_dn(5., (512,512)), 25.)
-        self.assertEqual(cal.point_from_dn(5., (10,10)), 25.)
-        self.assertEqual(cal.point_from_dn(.5, (512,512)), 2.5)
-        self.assertEqual(cal.point_from_dn(.5, (10,10)), 2.5)
+        assert cal.point_from_dn(0., (512,512)) == 0.
+        assert cal.point_from_dn(0., (10,10)) == 0.
+        assert cal.point_from_dn(5., (512,512)) == 25.
+        assert cal.point_from_dn(5., (10,10)) == 25.
+        assert cal.point_from_dn(.5, (512,512)) == 2.5
+        assert cal.point_from_dn(.5, (10,10)) == 2.5
 
-        self.assertEqual(cal.dn_from_point(0., (512,512)), 0.)
-        self.assertEqual(cal.dn_from_point(0., (10,10)), 0.)
-        self.assertEqual(cal.dn_from_point(25., (512,512)), 5.)
-        self.assertEqual(cal.dn_from_point(25., (10,10)), 5.)
-        self.assertEqual(cal.dn_from_point(2.5, (512,512)), .5)
-        self.assertEqual(cal.dn_from_point(2.5, (10,10)), .5)
+        assert cal.dn_from_point(0., (512,512)) == 0.
+        assert cal.dn_from_point(0., (10,10)) == 0.
+        assert cal.dn_from_point(25., (512,512)) == 5.
+        assert cal.dn_from_point(25., (10,10)) == 5.
+        assert cal.dn_from_point(2.5, (512,512)) == .5
+        assert cal.dn_from_point(2.5, (10,10)) == .5
 
         a = Scalar(np.arange(10000).reshape((100,100)))
-        self.assertEqual(a, cal.dn_from_extended(cal.extended_from_dn(a, (10,10)), (10,10)))
-        self.assertEqual(a, cal.dn_from_point(cal.point_from_dn(a, (10,10)), (10,10)))
+        assert a == cal.dn_from_extended(cal.extended_from_dn(a, (10,10)), (10,10))
+        assert a == cal.dn_from_point(cal.point_from_dn(a, (10,10)), (10,10))
 
         cal = RawCounts('TEST', flat_fov, 5., 1.)
-        self.assertEqual(cal.extended_from_dn(1., (512,512)), 0.)
-        self.assertEqual(cal.extended_from_dn(1., (10,10)), 0.)
-        self.assertEqual(cal.extended_from_dn(6., (512,512)), 25.)
-        self.assertEqual(cal.extended_from_dn(6., (10,10)), 25.)
-        self.assertEqual(cal.extended_from_dn(1.5, (512,512)), 2.5)
-        self.assertEqual(cal.extended_from_dn(1.5, (10,10)), 2.5)
+        assert cal.extended_from_dn(1., (512,512)) == 0.
+        assert cal.extended_from_dn(1., (10,10)) == 0.
+        assert cal.extended_from_dn(6., (512,512)) == 25.
+        assert cal.extended_from_dn(6., (10,10)) == 25.
+        assert cal.extended_from_dn(1.5, (512,512)) == 2.5
+        assert cal.extended_from_dn(1.5, (10,10)) == 2.5
 
-        self.assertEqual(cal.dn_from_extended(0., (512,512)), 1.)
-        self.assertEqual(cal.dn_from_extended(0., (10,10)), 1.)
-        self.assertEqual(cal.dn_from_extended(25., (512,512)), 6.)
-        self.assertEqual(cal.dn_from_extended(25., (10,10)), 6.)
-        self.assertEqual(cal.dn_from_extended(2.5, (512,512)), 1.5)
-        self.assertEqual(cal.dn_from_extended(2.5, (10,10)), 1.5)
+        assert cal.dn_from_extended(0., (512,512)) == 1.
+        assert cal.dn_from_extended(0., (10,10)) == 1.
+        assert cal.dn_from_extended(25., (512,512)) == 6.
+        assert cal.dn_from_extended(25., (10,10)) == 6.
+        assert cal.dn_from_extended(2.5, (512,512)) == 1.5
+        assert cal.dn_from_extended(2.5, (10,10)) == 1.5
 
-        self.assertEqual(cal.point_from_dn(1., (512,512)), 0.)
-        self.assertEqual(cal.point_from_dn(1., (10,10)), 0.)
-        self.assertEqual(cal.point_from_dn(6., (512,512)), 25.)
-        self.assertEqual(cal.point_from_dn(6., (10,10)), 25.)
-        self.assertEqual(cal.point_from_dn(1.5, (512,512)), 2.5)
-        self.assertEqual(cal.point_from_dn(1.5, (10,10)), 2.5)
+        assert cal.point_from_dn(1., (512,512)) == 0.
+        assert cal.point_from_dn(1., (10,10)) == 0.
+        assert cal.point_from_dn(6., (512,512)) == 25.
+        assert cal.point_from_dn(6., (10,10)) == 25.
+        assert cal.point_from_dn(1.5, (512,512)) == 2.5
+        assert cal.point_from_dn(1.5, (10,10)) == 2.5
 
-        self.assertEqual(cal.dn_from_point(0., (512,512)), 1.)
-        self.assertEqual(cal.dn_from_point(0., (10,10)), 1.)
-        self.assertEqual(cal.dn_from_point(25., (512,512)), 6.)
-        self.assertEqual(cal.dn_from_point(25., (10,10)), 6.)
-        self.assertEqual(cal.dn_from_point(2.5, (512,512)), 1.5)
-        self.assertEqual(cal.dn_from_point(2.5, (10,10)), 1.5)
+        assert cal.dn_from_point(0., (512,512)) == 1.
+        assert cal.dn_from_point(0., (10,10)) == 1.
+        assert cal.dn_from_point(25., (512,512)) == 6.
+        assert cal.dn_from_point(25., (10,10)) == 6.
+        assert cal.dn_from_point(2.5, (512,512)) == 1.5
+        assert cal.dn_from_point(2.5, (10,10)) == 1.5
 
         a = Scalar(np.arange(10000).reshape((100,100)))
-        self.assertEqual(a, cal.dn_from_extended(cal.extended_from_dn(a, (10,10)), (10,10)))
-        self.assertEqual(a, cal.dn_from_point(cal.point_from_dn(a, (10,10)), (10,10)))
+        assert a == cal.dn_from_extended(cal.extended_from_dn(a, (10,10)), (10,10))
+        assert a == cal.dn_from_point(cal.point_from_dn(a, (10,10)), (10,10))
 
         # fov[0,0] = 1; fov[9,9] = 1.125
         fov = 1 + np.arange(100).reshape((10,10))/1000
@@ -96,78 +92,78 @@ class Test_RawCounts(unittest.TestCase):
         # values = 5 * dn
         cal = RawCounts('CAL', fov, 5.)
         values = cal.extended_from_dn(dn, uv)
-        self.assertEqual(values[0], 5*2)
-        self.assertEqual(values[1], 5*3 / fov[9,9])
+        assert values[0] == 5*2
+        assert values[1] == 5*3 / fov[9,9]
 
         dn2 = cal.dn_from_extended(values, uv)
-        self.assertEqual(dn[0], dn2[0])
-        self.assertEqual(dn[1], dn2[1])
+        assert dn[0] == dn2[0]
+        assert dn[1] == dn2[1]
 
         values = cal.point_from_dn(dn, uv)
-        self.assertEqual(values[0], 10)
-        self.assertEqual(values[1], 15)
+        assert values[0] == 10
+        assert values[1] == 15
 
         dn2 = cal.dn_from_point(values, uv)
-        self.assertEqual(dn[0], dn2[0])
-        self.assertEqual(dn[1], dn2[1])
+        assert dn[0] == dn2[0]
+        assert dn[1] == dn2[1]
 
         # values = 5 * (dn - 1)
         cal = RawCounts('CAL', fov, 5., baseline=1.)
         values = cal.extended_from_dn(dn, uv)
-        self.assertEqual(values[0], 5)
-        self.assertEqual(values[1], 10 / fov[9,9])
+        assert values[0] == 5
+        assert values[1] == 10 / fov[9,9]
 
         dn2 = cal.dn_from_extended(values, uv)
-        self.assertEqual(dn[0], dn2[0])
-        self.assertEqual(dn[1], dn2[1])
+        assert dn[0] == dn2[0]
+        assert dn[1] == dn2[1]
 
         values = cal.point_from_dn(dn, uv)
-        self.assertEqual(values[0], 5)
-        self.assertEqual(values[1], 10)
+        assert values[0] == 5
+        assert values[1] == 10
 
         dn2 = cal.dn_from_point(values, uv)
-        self.assertEqual(dn[0], dn2[0])
-        self.assertEqual(dn[1], dn2[1])
+        assert dn[0] == dn2[0]
+        assert dn[1] == dn2[1]
 
         # values = 5 * ((4*dn) - 1)
         cal2 = cal.prescale(4, name='X4')
-        self.assertEqual(cal2.name, 'X4')
+        assert cal2.name == 'X4'
 
         values = cal2.extended_from_dn(dn, uv)
-        self.assertEqual(values[0], 5*(8-1))
-        self.assertEqual(values[1], 5*(12-1) / fov[9,9])
+        assert values[0] == 5*(8-1)
+        assert values[1] == 5*(12-1) / fov[9,9]
 
         dn2 = cal2.dn_from_extended(values, uv)
-        self.assertEqual(dn[0], dn2[0])
-        self.assertEqual(dn[1], dn2[1])
+        assert dn[0] == dn2[0]
+        assert dn[1] == dn2[1]
 
         values = cal2.point_from_dn(dn, uv)
-        self.assertEqual(values[0], 5*(8-1))
-        self.assertEqual(values[1], 5*(12-1))
+        assert values[0] == 5*(8-1)
+        assert values[1] == 5*(12-1)
 
         dn2 = cal2.dn_from_point(values, uv)
-        self.assertEqual(dn[0], dn2[0])
-        self.assertEqual(dn[1], dn2[1])
+        assert dn[0] == dn2[0]
+        assert dn[1] == dn2[1]
 
         # values = 5 * ((4*(dn - 1)) - 1)
         cal2 = cal.prescale(4,1)
-        self.assertEqual(cal2.name, cal.name)
+        assert cal2.name == cal.name
 
         values = cal2.extended_from_dn(dn, uv)
-        self.assertEqual(values[0], 5*(4-1))
-        self.assertEqual(values[1], 5*(8-1) / fov[9,9])
+        assert values[0] == 5*(4-1)
+        assert values[1] == 5*(8-1) / fov[9,9]
 
         dn2 = cal2.dn_from_extended(values, uv)
-        self.assertEqual(dn[0], dn2[0])
-        self.assertEqual(dn[1], dn2[1])
+        assert dn[0] == dn2[0]
+        assert dn[1] == dn2[1]
 
         values = cal2.point_from_dn(dn, uv)
-        self.assertEqual(values[0], 5*(4-1))
-        self.assertEqual(values[1], 5*(8-1))
+        assert values[0] == 5*(4-1)
+        assert values[1] == 5*(8-1)
 
         dn2 = cal2.dn_from_point(values, uv)
-        self.assertEqual(dn[0], dn2[0])
-        self.assertEqual(dn[1], dn2[1])
+        assert dn[0] == dn2[0]
+        assert dn[1] == dn2[1]
 
         # Alternative shape:
         # Data array has shape (3,10,10); new scale factor has shape (3,)
@@ -178,24 +174,20 @@ class Test_RawCounts(unittest.TestCase):
         dn = np.array(3*[[2,3]])
 
         values = cal2.extended_from_dn(dn, uv)
-        self.assertEqual(values.shape, (3,2))
-        self.assertEqual(values[:,0], 5*factors*(2-1) - 5)
-        self.assertEqual(values[:,1], (5*factors*(3-1) - 5) / fov[9,9])
+        assert values.shape == (3,2)
+        assert values[:,0] == 5*factors*(2-1) - 5
+        assert values[:,1] == (5*factors*(3-1) - 5) / fov[9,9]
 
         dn2 = cal2.dn_from_extended(values, uv)
-        self.assertEqual(dn, dn2)
+        assert dn == dn2
 
         values = cal2.point_from_dn(dn, uv)
-        self.assertEqual(values[:,0], 5*factors*(2-1) - 5)
-        self.assertEqual(values[:,1], 5*factors*(3-1) - 5)
+        assert values[:,0] == 5*factors*(2-1) - 5
+        assert values[:,1] == 5*factors*(3-1) - 5
 
         dn2 = cal2.dn_from_point(values, uv)
-        self.assertEqual(dn, dn2)
+        assert dn == dn2
 
     finally:
         AREA_FACTOR.old = False
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

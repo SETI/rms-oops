@@ -2,14 +2,9 @@
 # tests/hosts/keck/__init__.py
 ################################################################################
 
-class Test_Keck(unittest.TestCase):
+def test_keck():
 
-    def runTest(self):
+    import cspyce
+    from .keck import Keck
 
-        import cspyce
-        from .keck import Keck
-
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
 ################################################################################

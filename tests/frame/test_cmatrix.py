@@ -3,101 +3,82 @@
 ################################################################################
 
 import numpy as np
-import unittest
-
-import cspyce
 
 from polymath   import Scalar
 from oops.body  import Body
 from oops.event import Event
-from oops.frame import Frame, Cmatrix, SpiceFrame
-from oops.path  import Path, SpicePath
-from oops.unittester_support import TEST_SPICE_PREFIX
+from oops.frame import Cmatrix, SpiceFrame
+from oops.path  import SpicePath
 
 
-class Test_Cmatrix(unittest.TestCase):
+def test_cmatrix(core_kernels):
+    np.random.seed(7316)
 
-    def setUp(self):
-        paths = TEST_SPICE_PREFIX.retrieve(['naif0009.tls',
-                                            'pck00010.tpc',
-                                            'de421.bsp'])
-        for path in paths:
-            cspyce.furnsh(path)
-        Path._reset_caches()
-        Frame._reset_caches()
+    _ = SpicePath('MARS', 'SSB')
+    _ = SpiceFrame('IAU_MARS', 'J2000')
 
-    def tearDown(self):
-        pass
+    # Define a version of the IAU Mars frame always rotated by 180 degrees
+    # around the Z-axis
+    mars180 = Cmatrix([[-1,0,0],[0,-1,0],[0,0,1]], 'IAU_MARS')
 
-    def runTest(self):
+    time = Scalar(np.random.rand(100) * 1.e8)
+    posvel = np.random.rand(100,6)
+    event = Event(time, (posvel[...,0:3], posvel[...,3:6]), 'MARS', 'J2000')
 
-        np.random.seed(7316)
+    wrt_mars = event.wrt_frame('IAU_MARS')
+    wrt_mars180 = event.wrt_frame(mars180)
 
-        _ = SpicePath('MARS', 'SSB')
-        _ = SpiceFrame('IAU_MARS', 'J2000')
+    # Confirm that the components are related as expected
+    assert np.all(wrt_mars.pos.vals[...,0] == -wrt_mars180.pos.vals[...,0])
+    assert np.all(wrt_mars.pos.vals[...,1] == -wrt_mars180.pos.vals[...,1])
+    assert np.all(wrt_mars.pos.vals[...,2] ==  wrt_mars180.pos.vals[...,2])
 
-        # Define a version of the IAU Mars frame always rotated by 180 degrees
-        # around the Z-axis
-        mars180 = Cmatrix([[-1,0,0],[0,-1,0],[0,0,1]], 'IAU_MARS')
+    assert np.all(wrt_mars.vel.vals[...,0] == -wrt_mars180.vel.vals[...,0])
+    assert np.all(wrt_mars.vel.vals[...,1] == -wrt_mars180.vel.vals[...,1])
+    assert np.all(wrt_mars.vel.vals[...,2] ==  wrt_mars180.vel.vals[...,2])
 
-        time = Scalar(np.random.rand(100) * 1.e8)
-        posvel = np.random.rand(100,6)
-        event = Event(time, (posvel[...,0:3], posvel[...,3:6]), 'MARS', 'J2000')
+    # Define a version of the IAU Mars frame containing four 90-degree
+    # rotations
+    matrices = []
+    for (cos,sin) in ((1,0), (0,1), (-1,0), (0,-1)):
+        matrices.append([[cos,sin,0],[-sin,cos,0],[0,0,1]])
 
-        wrt_mars = event.wrt_frame('IAU_MARS')
-        wrt_mars180 = event.wrt_frame(mars180)
+    mars90s = Cmatrix(matrices, 'IAU_MARS')
 
-        # Confirm that the components are related as expected
-        self.assertTrue(np.all(wrt_mars.pos.vals[...,0] == -wrt_mars180.pos.vals[...,0]))
-        self.assertTrue(np.all(wrt_mars.pos.vals[...,1] == -wrt_mars180.pos.vals[...,1]))
-        self.assertTrue(np.all(wrt_mars.pos.vals[...,2] ==  wrt_mars180.pos.vals[...,2]))
+    time = Scalar(np.random.rand(100,1) * 1.e8)
+    posvel = np.random.rand(100,1,6)
+    event = Event(time, (posvel[...,0:3], posvel[...,3:6]), 'MARS', 'J2000')
 
-        self.assertTrue(np.all(wrt_mars.vel.vals[...,0] == -wrt_mars180.vel.vals[...,0]))
-        self.assertTrue(np.all(wrt_mars.vel.vals[...,1] == -wrt_mars180.vel.vals[...,1]))
-        self.assertTrue(np.all(wrt_mars.vel.vals[...,2] ==  wrt_mars180.vel.vals[...,2]))
+    wrt_mars = event.wrt_frame('IAU_MARS')
+    wrt_mars90s = event.wrt_frame(mars90s)
 
-        # Define a version of the IAU Mars frame containing four 90-degree
-        # rotations
-        matrices = []
-        for (cos,sin) in ((1,0), (0,1), (-1,0), (0,-1)):
-            matrices.append([[cos,sin,0],[-sin,cos,0],[0,0,1]])
+    assert wrt_mars.shape == (100,1)
+    assert wrt_mars90s.shape == (100,4)
 
-        mars90s = Cmatrix(matrices, 'IAU_MARS')
+    # Confirm that the components are related as expected
+    assert wrt_mars.pos[:,0] == wrt_mars90s.pos[:,0]
+    assert wrt_mars.vel[:,0] == wrt_mars90s.vel[:,0]
 
-        time = Scalar(np.random.rand(100,1) * 1.e8)
-        posvel = np.random.rand(100,1,6)
-        event = Event(time, (posvel[...,0:3], posvel[...,3:6]), 'MARS', 'J2000')
+    assert np.all(wrt_mars.pos.vals[...,0][:,0] == -wrt_mars90s.pos.vals[...,0][:,2])
+    assert np.all(wrt_mars.pos.vals[...,1][:,0] == -wrt_mars90s.pos.vals[...,1][:,2])
+    assert np.all(wrt_mars.pos.vals[...,2][:,0] ==  wrt_mars90s.pos.vals[...,2][:,2])
+    assert np.all(wrt_mars.vel.vals[...,0][:,0] == -wrt_mars90s.vel.vals[...,0][:,2])
+    assert np.all(wrt_mars.vel.vals[...,1][:,0] == -wrt_mars90s.vel.vals[...,1][:,2])
+    assert np.all(wrt_mars.vel.vals[...,2][:,0] ==  wrt_mars90s.vel.vals[...,2][:,2])
 
-        wrt_mars = event.wrt_frame('IAU_MARS')
-        wrt_mars90s = event.wrt_frame(mars90s)
+    assert np.all(wrt_mars.pos.vals[...,0][:,0] == -wrt_mars90s.pos.vals[...,1][:,1])
+    assert np.all(wrt_mars.pos.vals[...,1][:,0] ==  wrt_mars90s.pos.vals[...,0][:,1])
+    assert np.all(wrt_mars.pos.vals[...,2][:,0] ==  wrt_mars90s.pos.vals[...,2][:,1])
+    assert np.all(wrt_mars.vel.vals[...,0][:,0] == -wrt_mars90s.vel.vals[...,1][:,1])
+    assert np.all(wrt_mars.vel.vals[...,1][:,0] ==  wrt_mars90s.vel.vals[...,0][:,1])
+    assert np.all(wrt_mars.vel.vals[...,2][:,0] ==  wrt_mars90s.vel.vals[...,2][:,1])
 
-        self.assertEqual(wrt_mars.shape, (100,1))
-        self.assertEqual(wrt_mars90s.shape, (100,4))
-
-        # Confirm that the components are related as expected
-        self.assertTrue(wrt_mars.pos[:,0] == wrt_mars90s.pos[:,0])
-        self.assertTrue(wrt_mars.vel[:,0] == wrt_mars90s.vel[:,0])
-
-        self.assertTrue(np.all(wrt_mars.pos.vals[...,0][:,0] == -wrt_mars90s.pos.vals[...,0][:,2]))
-        self.assertTrue(np.all(wrt_mars.pos.vals[...,1][:,0] == -wrt_mars90s.pos.vals[...,1][:,2]))
-        self.assertTrue(np.all(wrt_mars.pos.vals[...,2][:,0] ==  wrt_mars90s.pos.vals[...,2][:,2]))
-        self.assertTrue(np.all(wrt_mars.vel.vals[...,0][:,0] == -wrt_mars90s.vel.vals[...,0][:,2]))
-        self.assertTrue(np.all(wrt_mars.vel.vals[...,1][:,0] == -wrt_mars90s.vel.vals[...,1][:,2]))
-        self.assertTrue(np.all(wrt_mars.vel.vals[...,2][:,0] ==  wrt_mars90s.vel.vals[...,2][:,2]))
-
-        self.assertTrue(np.all(wrt_mars.pos.vals[...,0][:,0] == -wrt_mars90s.pos.vals[...,1][:,1]))
-        self.assertTrue(np.all(wrt_mars.pos.vals[...,1][:,0] ==  wrt_mars90s.pos.vals[...,0][:,1]))
-        self.assertTrue(np.all(wrt_mars.pos.vals[...,2][:,0] ==  wrt_mars90s.pos.vals[...,2][:,1]))
-        self.assertTrue(np.all(wrt_mars.vel.vals[...,0][:,0] == -wrt_mars90s.vel.vals[...,1][:,1]))
-        self.assertTrue(np.all(wrt_mars.vel.vals[...,1][:,0] ==  wrt_mars90s.vel.vals[...,0][:,1]))
-        self.assertTrue(np.all(wrt_mars.vel.vals[...,2][:,0] ==  wrt_mars90s.vel.vals[...,2][:,1]))
-
-        self.assertTrue(np.all(wrt_mars.pos.vals[...,0][:,0] ==  wrt_mars90s.pos.vals[...,1][:,3]))
-        self.assertTrue(np.all(wrt_mars.pos.vals[...,1][:,0] == -wrt_mars90s.pos.vals[...,0][:,3]))
-        self.assertTrue(np.all(wrt_mars.pos.vals[...,2][:,0] ==  wrt_mars90s.pos.vals[...,2][:,3]))
-        self.assertTrue(np.all(wrt_mars.vel.vals[...,0][:,0] ==  wrt_mars90s.vel.vals[...,1][:,3]))
-        self.assertTrue(np.all(wrt_mars.vel.vals[...,1][:,0] == -wrt_mars90s.vel.vals[...,0][:,3]))
-        self.assertTrue(np.all(wrt_mars.vel.vals[...,2][:,0] ==  wrt_mars90s.vel.vals[...,2][:,3]))
+    assert np.all(wrt_mars.pos.vals[...,0][:,0] ==  wrt_mars90s.pos.vals[...,1][:,3])
+    assert np.all(wrt_mars.pos.vals[...,1][:,0] == -wrt_mars90s.pos.vals[...,0][:,3])
+    assert np.all(wrt_mars.pos.vals[...,2][:,0] ==  wrt_mars90s.pos.vals[...,2][:,3])
+    assert np.all(wrt_mars.vel.vals[...,0][:,0] ==  wrt_mars90s.vel.vals[...,1][:,3])
+    assert np.all(wrt_mars.vel.vals[...,1][:,0] == -wrt_mars90s.vel.vals[...,0][:,3])
+    assert np.all(wrt_mars.vel.vals[...,2][:,0] ==  wrt_mars90s.vel.vals[...,2][:,3])
 
 ################################################################################
 # Notes from the PDS Data Dictionary

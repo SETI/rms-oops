@@ -47,11 +47,11 @@ class QuickFrame(Frame):
         quickdict = QUICK.dictionary.copy()
         if quick:
             quickdict.update(quick)
-        self._quickdict = quickdict
 
-        if not quickdict['use_quickframes']:
-            return frame
-
+        # `use_quickframes` is not consulted here. It governs whether for_frame()
+        # substitutes a QuickFrame automatically, and for_frame() checks it before
+        # reaching this constructor; a caller who names QuickFrame directly has asked
+        # for one. QuickPath draws the same line.
         tstep = quickdict['frame_time_step']
         extend = quickdict['frame_time_extension']
         extras = int(quickdict['frame_extra_steps'])

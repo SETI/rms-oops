@@ -2,7 +2,7 @@
 # tests/test_fittable.py
 ##########################################################################################
 
-import unittest
+import pytest
 
 from oops.fittable import Fittable
 import oops.mutable as mutable
@@ -61,121 +61,118 @@ class D:
         self.x = x
 
 
-class Test_Fittable(unittest.TestCase):
+def test_fittable():
+    x = ()
+    assert not mutable.is_fittable(x)
+    assert mutable.mutable_names(x) == []
+    assert mutable.version(x) == 0
 
-    def runTest(self):
+    a = A(7)
+    assert a.x_squared == 49
+    assert a.params == (7,)
+    assert a.version == 0
+    assert isinstance(a.params, tuple)
+    assert mutable.is_fittable(a)
+    assert mutable.is_mutable(a)
+    assert mutable.mutable_names(a) == []
+    assert mutable.version(a) == 0
 
-        x = ()
-        self.assertFalse(mutable.is_fittable(x))
-        self.assertEqual(mutable.mutable_names(x), [])
-        self.assertEqual(mutable.version(x), 0)
+    a.set_params([5])
+    assert a.params == (5,)
+    assert a.x_squared == 25
+    assert a.version > 0
+    assert mutable.mutable_names(a) == []
+    assert mutable.is_fittable(a)
 
-        a = A(7)
-        self.assertEqual(a.x_squared, 49)
-        self.assertEqual(a.params, (7,))
-        self.assertEqual(a.version, 0)
-        self.assertIsInstance(a.params, tuple)
-        self.assertTrue(mutable.is_fittable(a))
-        self.assertTrue(mutable.is_mutable(a))
-        self.assertEqual(mutable.mutable_names(a), [])
-        self.assertEqual(mutable.version(a), 0)
+    b = B(1, a)
+    mutable.set_param_order(b, 'a')
+    assert b.x_plus_a2 == 26
+    assert mutable.get_params(b) == (5.,)
+    assert isinstance(mutable.get_params(b)[0], float)
+    assert not mutable.is_fittable(b)
+    assert mutable.is_mutable(b)
 
-        a.set_params([5])
-        self.assertEqual(a.params, (5,))
-        self.assertEqual(a.x_squared, 25)
-        self.assertGreater(a.version, 0)
-        self.assertEqual(mutable.mutable_names(a), [])
-        self.assertTrue(mutable.is_fittable(a))
+    mutable.set_params(b, 7)
+    assert b.x_plus_a2 == 50
+    assert mutable.mutable_names(b) == ['a']
+    assert mutable.unfrozen_names(b) == ['a']
 
-        b = B(1, a)
-        mutable.set_param_order(b, 'a')
-        self.assertEqual(b.x_plus_a2, 26)
-        self.assertEqual(mutable.get_params(b), (5.,))
-        self.assertIsInstance(mutable.get_params(b)[0], float)
-        self.assertFalse(mutable.is_fittable(b))
-        self.assertTrue(mutable.is_mutable(b))
+    mutable.freeze(a)
+    assert mutable.mutable_names(b) == ['a']
+    assert mutable.unfrozen_names(b) == []
 
-        mutable.set_params(b, 7)
-        self.assertEqual(b.x_plus_a2, 50)
-        self.assertEqual(mutable.mutable_names(b), ['a'])
-        self.assertEqual(mutable.unfrozen_names(b), ['a'])
+    a = A(5)
+    c = C(1, a)
+    assert mutable.mutable_names(c) == ['a']
+    assert mutable.is_fittable(c)
+    assert c.x_plus_a2_plus_cx_plus_ccx == 28
 
-        mutable.freeze(a)
-        self.assertEqual(mutable.mutable_names(b), ['a'])
-        self.assertEqual(mutable.unfrozen_names(b), [])
+    a.set_params([6])
+    assert c.refresh()
+    assert c.x_plus_a2_plus_cx_plus_ccx == 39
+    assert not c.refresh()
+    assert not c.refresh()
 
-        a = A(5)
-        c = C(1, a)
-        self.assertEqual(mutable.mutable_names(c), ['a'])
-        self.assertTrue(mutable.is_fittable(c))
-        self.assertEqual(c.x_plus_a2_plus_cx_plus_ccx, 28)
+    a = A(5)
+    c = C(1, a)
+    assert c.x_plus_a2_plus_cx_plus_ccx == 28
 
-        a.set_params([6])
-        self.assertTrue(c.refresh())
-        self.assertEqual(c.x_plus_a2_plus_cx_plus_ccx, 39)
-        self.assertFalse(c.refresh())
-        self.assertFalse(c.refresh())
+    mutable.set_param_order(c, ['', 'a'])
+    assert mutable.get_param_order(c) == ['', 'a']
+    assert mutable.get_nparams(c) == 2
+    assert mutable.get_params(c) == (1,5)
 
-        a = A(5)
-        c = C(1, a)
-        self.assertEqual(c.x_plus_a2_plus_cx_plus_ccx, 28)
+    mutable.set_params(c, [1, 6])
+    assert c.x_plus_a2_plus_cx_plus_ccx == 39
+    assert not c.refresh()
+    assert mutable.get_params(a) == (6,)
+    assert mutable.get_params(c) == (1,6)
 
-        mutable.set_param_order(c, ['', 'a'])
-        self.assertEqual(mutable.get_param_order(c), ['', 'a'])
-        self.assertEqual(mutable.get_nparams(c), 2)
-        self.assertEqual(mutable.get_params(c), (1,5))
+    assert not mutable.is_frozen(a)
+    assert not mutable.is_frozen(c)
+    assert not a.is_frozen
+    assert not c.is_frozen
 
-        mutable.set_params(c, [1, 6])
-        self.assertEqual(c.x_plus_a2_plus_cx_plus_ccx, 39)
-        self.assertFalse(c.refresh())
-        self.assertEqual(mutable.get_params(a), (6,))
-        self.assertEqual(mutable.get_params(c), (1,6))
+    mutable.freeze(a)
+    assert mutable.is_frozen(a)
+    assert not mutable.is_frozen(c)
+    with pytest.raises(ValueError):
+        mutable.set_params(a, 2)
 
-        self.assertFalse(mutable.is_frozen(a))
-        self.assertFalse(mutable.is_frozen(c))
-        self.assertFalse(a.is_frozen)
-        self.assertFalse(c.is_frozen)
+    assert mutable.mutable_names(c) == ['a']
+    assert mutable.unfrozen_names(c) == []
+    assert mutable.is_fittable(a)
+    assert mutable.is_fittable(c)
+    assert mutable.get_params(c) == (1,6)
+    assert c.params == (1,)
 
-        mutable.freeze(a)
-        self.assertTrue(mutable.is_frozen(a))
-        self.assertFalse(mutable.is_frozen(c))
-        self.assertRaises(ValueError, mutable.set_params, a, 2)
+    a = A(5)
+    c = C(1, a)
+    mutable.freeze(c)
+    assert mutable.is_frozen(a)
+    assert mutable.is_frozen(c)
+    assert a.is_frozen
+    assert c.is_frozen
+    with pytest.raises(ValueError):
+        mutable.set_params(a, 2)
+    with pytest.raises(ValueError):
+        mutable.set_params(c, 2)
 
-        self.assertEqual(mutable.mutable_names(c), ['a'])
-        self.assertEqual(mutable.unfrozen_names(c), [])
-        self.assertTrue(mutable.is_fittable(a))
-        self.assertTrue(mutable.is_fittable(c))
-        self.assertEqual(mutable.get_params(c), (1,6))
-        self.assertEqual(c.params, (1,))
+    assert mutable.unfrozen_names(c) == []
+    assert mutable.mutable_names(c) == ['a']
+    assert mutable.is_fittable(a)
+    assert mutable.is_fittable(c)
 
-        a = A(5)
-        c = C(1, a)
-        mutable.freeze(c)
-        self.assertTrue(mutable.is_frozen(a))
-        self.assertTrue(mutable.is_frozen(c))
-        self.assertTrue(a.is_frozen)
-        self.assertTrue(c.is_frozen)
-        self.assertRaises(ValueError, mutable.set_params, a, 2)
-        self.assertRaises(ValueError, mutable.set_params, c, 2)
+    # type `class` has __data__ but is immutable
+    d = D(int)
+    assert len(mutable._IMMUTABLE_OBJECTS) == 0
+    assert mutable.get_params(d) == ()
+    assert mutable.is_frozen(d)
+    assert len(mutable._IMMUTABLE_OBJECTS) == 1
+    assert not mutable.set_params(d, ())
+    with pytest.raises(ValueError):
+        mutable.set_params(d, (1.,))
 
-        self.assertEqual(mutable.unfrozen_names(c), [])
-        self.assertEqual(mutable.mutable_names(c), ['a'])
-        self.assertTrue(mutable.is_fittable(a))
-        self.assertTrue(mutable.is_fittable(c))
-
-        # type `class` has __data__ but is immutable
-        d = D(int)
-        self.assertEqual(len(mutable._IMMUTABLE_OBJECTS), 0)
-        self.assertEqual(mutable.get_params(d), ())
-        self.assertTrue(mutable.is_frozen(d))
-        self.assertEqual(len(mutable._IMMUTABLE_OBJECTS), 1)
-        self.assertFalse(mutable.set_params(d, ()))
-        self.assertRaises(ValueError, mutable.set_params, d, (1.,))
-
-        d = D(float)
-        self.assertIs(mutable.freeze(d), False)  # tests TypeError check in freeze()
-
-#########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    d = D(float)
+    assert mutable.freeze(d) is False  # tests TypeError check in freeze()
 ##########################################################################################

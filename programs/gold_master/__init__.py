@@ -3,67 +3,63 @@
 ################################################################################
 """\
 ########################################################################
-# How to use with the Python unittest module for a host or instrument...
+# How to use with pytest for a host or instrument...
 ########################################################################
 # Case 1: A single test
 ####################################
 
-import unittest
 import programs.gold_master as gm
 
-class Test_<your test name>(unittest.TestCase):
+def test_<your test name>():
 
-    def runTest(self):
+    # Define the default observation
+    gm.define_default_obs(
+            obspath = 'file path inside the test_data directory',
+            index   = (index to apply to result of from_file, or None),
+            planets = ['SATURN'],               # for example
+            moons   = ['ENCELADUS'],            # for example
+            rings   = ['SATURN_MAIN_RINGS'],    # for example, optional
+            kwargs  = {})                       # other from_file inputs
 
-        # Define the default observation
-        gm.define_default_obs(
-                obspath = 'file path inside the test_data directory',
-                index   = (index to apply to result of from_file, or None),
-                planets = ['SATURN'],               # for example
-                moons   = ['ENCELADUS'],            # for example
-                rings   = ['SATURN_MAIN_RINGS'],    # for example, optional
-                kwargs  = {})                       # other from_file inputs
+    # Change any other default parameters, at least this one...
+    gm.set_default_args(module='oops.hosts.xxx.yyy', ...)
 
-        # Change any other default parameters, at least this one...
-        gm.set_default_args(module='oops.hosts.xxx.yyy', ...)
-
-        gm.execute_as_unittest(self)
+    gm.execute_as_pytest()
 
 ####################################
 # Case 2: Multiple tests
 ####################################
 
-import unittest
+import pytest
 import programs.gold_master as gm
 
-class Test_<your test name>(unittest.TestCase):
+@pytest.fixture(autouse=True)
+def _standard_obs():
 
-    def setUp():
+    # Define the standard observations
+    gm.define_standard_obs('obs1',
+            obspath = 'file path inside the test_data directory',
+            index   = (index to apply to result of from_file, or None),
+            planets = ['SATURN'],               # for example
+            moons   = ['ENCELADUS'],            # for example
+            rings   = ['SATURN_MAIN_RINGS'],    # for example, optional
+            kwargs  = {})                       # other from_file inputs
 
-        # Define the standard observations
-        gm.define_standard_obs('obs1',
-                obspath = 'file path inside the test_data directory',
-                index   = (index to apply to result of from_file, or None),
-                planets = ['SATURN'],               # for example
-                moons   = ['ENCELADUS'],            # for example
-                rings   = ]'SATURN_MAIN_RINGS'],    # for example, optional
-                kwargs  = {})                       # other from_file inputs
+    gm.define_standard_obs('obs2', ...)
 
-        gm.define_standard_obs('obs2', ...)
+    gm.define_standard_obs('obs3', ...)
 
-        gm.define_standard_obs('obs3', ...)
+    # Change any other default parameters, at least this one...
+    gm.set_default_args(module='oops.hosts.xxx.yyy', ...)
 
-        # Change any other default parameters, at least this one...
-        gm.set_default_args(module='oops.hosts.xxx.yyy', ...)
+def test_1():
+    gm.execute_as_pytest('obs1')
 
-    def run_test1(self):
-        gm.execute_as_unittest(self, 'obs1')
+def test_2():
+    gm.execute_as_pytest('obs2')
 
-    def run_test2(self):
-        gm.execute_as_unittest(self, 'obs2')
-
-    def run_test3(self):
-        gm.execute_as_unittest(self, 'obs3')
+def test_3():
+    gm.execute_as_pytest('obs3')
 
 ########################################################################
 # How to have a gold master tester program dedicated to an instrument...
@@ -164,7 +160,7 @@ from programs.gold_master.test_support import (BACKPLANE_OUTPUT_PREFIX,
                                            TEST_DATA_PREFIX)
 
 __all__ = ['set_default_obs', 'define_standard_obs', 'set_default_args',
-           'override', 'execute_as_command', 'execute_as_unittest', 'run_tests',
+           'override', 'execute_as_command', 'execute_as_pytest', 'run_tests',
            'register_test_suite', 'get_test_suite', 'BackplaneTest']
 
 ################################################################################
@@ -595,7 +591,7 @@ def execute_as_command():
                             master files always use Linux names.''')
 
     args = parser.parse_args()
-    args.testcase = None
+    args.pytest = False
     args = _clean_up_args(args)
 
     if args.output != OOPS_BACKPLANE_OUTPUT_PATH:
@@ -605,12 +601,19 @@ def execute_as_command():
     run_tests(args)
 
 ################################################################################
-# unittest module support
+# pytest support
 ################################################################################
 
-def execute_as_unittest(testcase, obsname='default'):
+def execute_as_pytest(obsname='default'):
     """Run the gold master test suites for all of the defined standard
     observations.
+
+    Parameters:
+        obsname (str, optional): Name of the standard observation to test.
+
+    Raises:
+        AssertionError: If any backplane differs from its gold master, or if the
+            arguments cannot be assembled.
     """
 
     import traceback
@@ -647,7 +650,7 @@ def execute_as_unittest(testcase, obsname='default'):
         args.debug = False
 
         # These options are mandatory
-        args.testcase = testcase
+        args.pytest = True
         args.task = 'compare'
         args.level = 'error'
         args.verbose = True
@@ -661,7 +664,7 @@ def execute_as_unittest(testcase, obsname='default'):
 
     except Exception as e:
         print(traceback.format_exc())
-        testcase.assertTrue(False, str(e))
+        raise AssertionError(str(e)) from e
 
     run_tests(args)
 
@@ -835,8 +838,8 @@ def run_tests(args):
             LOGGING.info('Total elapsed time: %.3f s' % seconds)
 
     if errors or had_exception > 0:
-        if args.testcase is not None:
-            args.testcase.assertTrue(False, 'gold_master tests FAILED')
+        if args.pytest:
+            raise AssertionError('gold_master tests FAILED')
         else:
             sys.exit(-1)
 

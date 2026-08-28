@@ -3,7 +3,7 @@
 ################################################################################
 
 import os
-import unittest
+import pytest
 
 import cspyce
 
@@ -16,29 +16,23 @@ from oops.unittester_support  import TEST_SPICE_PREFIX
 import oops.spice_support as spice
 
 
-class Test_spice_shape(unittest.TestCase):
+@pytest.fixture(autouse=True)
+def _spice_shape_kernels():
+    spice.initialize()
+    # A custom path_id only takes effect when a new SpicePath is constructed, so the
+    # registry must be clear of any VENUS path left behind by an earlier test
+    Path._reset_caches()
+    Frame._reset_caches()
+    paths = TEST_SPICE_PREFIX.retrieve(["pck00010.tpc",
+                                        "de421.bsp"])
+    for path in paths:
+        cspyce.furnsh(path)
 
-    def setUp(self):
-        spice.initialize()
-        # A custom path_id only takes effect when a new SpicePath is constructed, so the
-        # registry must be clear of any VENUS path left behind by an earlier test
-        Path._reset_caches()
-        Frame._reset_caches()
-        paths = TEST_SPICE_PREFIX.retrieve(["pck00010.tpc",
-                                            "de421.bsp"])
-        for path in paths:
-            cspyce.furnsh(path)
+def test_spice_shape():
+    _ = SpicePath("VENUS", "SSB", "J2000", path_id="APHRODITE")
 
-    def tearDown(self):
-        pass
-
-    def runTest(self):
-
-        _ = SpicePath("VENUS", "SSB", "J2000", path_id="APHRODITE")
-
-        body = spice_shape("VENUS")
-        self.assertEqual(Path.as_path(body.origin).path_id, "APHRODITE")
-        self.assertEqual(body.req, 6051.8)
-        self.assertEqual(body.squash_z, 1.)
-
+    body = spice_shape("VENUS")
+    assert Path.as_path(body.origin).path_id == "APHRODITE"
+    assert body.req == 6051.8
+    assert body.squash_z == 1.
 ################################################################################

@@ -1,5 +1,4 @@
 import sqlite3
-import unittest
 
 ################################################################################
 # Low-level database IO using SQLite 3
@@ -74,46 +73,5 @@ def query(sql_string):
         table.append(columns)
 
     return table
-
-################################################################################
-# UNIT TESTS
-################################################################################
-
-class test_sqlite_db(unittest.TestCase):
-
-    def runTest(self):
-
-        self.assertTrue(CONNECTION is None)
-        self.assertTrue(CURSOR is None)
-
-        open("test_data/SPICE.db")
-
-        self.assertTrue(CONNECTION is not None)
-        self.assertTrue(CURSOR is not None)
-
-        result = query("select name from sqlite_master")
-        self.assertEqual(result, [["SPICEDB"]])
-
-        string = query("select sql from sqlite_master")[0][0]
-        self.assertTrue("KERNEL_NAME text NOT NULL" in string)
-        self.assertTrue("KERNEL_TYPE text NOT NULL" in string)
-        self.assertTrue("FILESPEC text" in string)
-        self.assertTrue("START_TIME text" in string)
-        self.assertTrue("STOP_TIME text" in string)
-        self.assertTrue("RELEASE_DATE text" in string)
-        self.assertTrue("SPICE_ID integer" in string)
-        self.assertTrue("LOAD_PRIORITY integer" in string)
-
-        close()
-
-        self.assertTrue(CONNECTION is None)
-        self.assertTrue(CURSOR is None)
-
-################################################################################
-# Perform unit testing if executed from the command line
-################################################################################
-
-if __name__ == '__main__':
-    unittest.main()
 
 ################################################################################

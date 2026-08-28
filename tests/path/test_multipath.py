@@ -2,87 +2,65 @@
 # tests/path/test_multipath.py
 ################################################################################
 
-import unittest
-
-import cspyce
-
-from oops      import Frame
-from oops.path import Path, MultiPath, SpicePath
-from oops.unittester_support import TEST_SPICE_PREFIX
+from oops.path import MultiPath, SpicePath
 
 
-class Test_MultiPath(unittest.TestCase):
+def test_multipath(core_kernels):
+    sun   = SpicePath("SUN", "SSB")
+    earth = SpicePath("EARTH", "SSB")
+    moon  = SpicePath("MOON", "EARTH")
 
-    def setUp(self):
-        paths = TEST_SPICE_PREFIX.retrieve(["naif0009.tls",
-                                            "pck00010.tpc",
-                                            "de421.bsp"])
-        for path in paths:
-            cspyce.furnsh(path)
-        Path._reset_caches()
-        Frame._reset_caches()
+    test = MultiPath([sun,earth,moon], "SSB", path_id='+')
 
-    def tearDown(self):
-        pass
+    # behavior changed
+    # self.assertEqual(test.path_id, "SUN+EARTH+MOON")
+    assert test.shape == (3,)
 
-    def runTest(self):
+    # Single time
+    event0 = test.event_at_time(0.)
+    assert event0.shape == (3,)
 
-        sun   = SpicePath("SUN", "SSB")
-        earth = SpicePath("EARTH", "SSB")
-        moon  = SpicePath("MOON", "EARTH")
+    # Triple of times, shape = [3]
+    event012 = test.event_at_time((0., 1.e5, 2.e5))
+    assert event012.shape == (3,)
 
-        test = MultiPath([sun,earth,moon], "SSB", path_id='+')
+    assert event012.pos[0] == event0.pos[0]
+    assert event012.vel[0] == event0.vel[0]
+    assert event012.pos[1] != event0.pos[1]
+    assert event012.vel[1] != event0.vel[1]
+    assert event012.pos[2] != event0.pos[2]
+    assert event012.vel[2] != event0.vel[2]
 
-        # behavior changed
-        # self.assertEqual(test.path_id, "SUN+EARTH+MOON")
-        self.assertEqual(test.shape, (3,))
+    # Times shaped [2,1]
+    event01x = test.event_at_time([[0.], [1.e5]])
+    assert event01x.shape == (2,3)
 
-        # Single time
-        event0 = test.event_at_time(0.)
-        self.assertEqual(event0.shape, (3,))
+    assert event01x.pos[0,0] == event0.pos[0]
+    assert event01x.vel[0,0] == event0.vel[0]
+    assert event01x.pos[0,1] == event0.pos[1]
+    assert event01x.vel[0,1] == event0.vel[1]
+    assert event01x.pos[0,2] == event0.pos[2]
+    assert event01x.vel[0,2] == event0.vel[2]
 
-        # Triple of times, shape = [3]
-        event012 = test.event_at_time((0., 1.e5, 2.e5))
-        self.assertEqual(event012.shape, (3,))
+    assert event01x.pos[1,1] == event012.pos[1]
+    assert event01x.vel[1,1] == event012.vel[1]
+    assert event01x.pos[1,2] != event012.pos[2]
+    assert event01x.vel[1,2] != event012.pos[2]
 
-        self.assertTrue(event012.pos[0] == event0.pos[0])
-        self.assertTrue(event012.vel[0] == event0.vel[0])
-        self.assertTrue(event012.pos[1] != event0.pos[1])
-        self.assertTrue(event012.vel[1] != event0.vel[1])
-        self.assertTrue(event012.pos[2] != event0.pos[2])
-        self.assertTrue(event012.vel[2] != event0.vel[2])
+    # Triple of times, at all times, shape [3,1]
+    event012a = test.event_at_time([[0.], [1.e5], [2.e5]])
+    assert event012a.shape == (3,3)
 
-        # Times shaped [2,1]
-        event01x = test.event_at_time([[0.], [1.e5]])
-        self.assertEqual(event01x.shape, (2,3))
+    assert event012a.pos[0,:] == event0.pos
+    assert event012a.vel[0,:] == event0.vel
 
-        self.assertTrue(event01x.pos[0,0] == event0.pos[0])
-        self.assertTrue(event01x.vel[0,0] == event0.vel[0])
-        self.assertTrue(event01x.pos[0,1] == event0.pos[1])
-        self.assertTrue(event01x.vel[0,1] == event0.vel[1])
-        self.assertTrue(event01x.pos[0,2] == event0.pos[2])
-        self.assertTrue(event01x.vel[0,2] == event0.vel[2])
+    assert event012a.pos[0,0] == event012.pos[0]
+    assert event012a.vel[0,0] == event012.vel[0]
+    assert event012a.pos[1,1] == event012.pos[1]
+    assert event012a.vel[1,1] == event012.vel[1]
+    assert event012a.pos[2,2] == event012.pos[2]
+    assert event012a.vel[2,2] == event012.vel[2]
 
-        self.assertTrue(event01x.pos[1,1] == event012.pos[1])
-        self.assertTrue(event01x.vel[1,1] == event012.vel[1])
-        self.assertTrue(event01x.pos[1,2] != event012.pos[2])
-        self.assertTrue(event01x.vel[1,2] != event012.pos[2])
-
-        # Triple of times, at all times, shape [3,1]
-        event012a = test.event_at_time([[0.], [1.e5], [2.e5]])
-        self.assertEqual(event012a.shape, (3,3))
-
-        self.assertTrue(event012a.pos[0,:] == event0.pos)
-        self.assertTrue(event012a.vel[0,:] == event0.vel)
-
-        self.assertTrue(event012a.pos[0,0] == event012.pos[0])
-        self.assertTrue(event012a.vel[0,0] == event012.vel[0])
-        self.assertTrue(event012a.pos[1,1] == event012.pos[1])
-        self.assertTrue(event012a.vel[1,1] == event012.vel[1])
-        self.assertTrue(event012a.pos[2,2] == event012.pos[2])
-        self.assertTrue(event012a.vel[2,2] == event012.vel[2])
-
-        self.assertTrue(event012a.pos[0:2] == event01x.pos)
-        self.assertTrue(event012a.vel[0:2] == event01x.vel)
-
+    assert event012a.pos[0:2] == event01x.pos
+    assert event012a.vel[0:2] == event01x.vel
 ################################################################################
