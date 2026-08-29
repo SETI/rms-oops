@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/cadence/tdicadence.py: TDICadence subclass of class Cadence
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -9,30 +9,30 @@ import oops
 
 
 def test_tdicadence():
-    ########################################
+    ######################################################################################
     # 10 lines, 2 stages, TDI downward, 100-120
-    ########################################
+    ######################################################################################
 
     cad = oops.cadence.TDICadence(10, 100., 10., 2)
     case_tdicadence_10_100_10_2_down(cad)
 
-    ########################################
+    ######################################################################################
     # 10 lines, 2 stages, TDI upward
-    ########################################
+    ######################################################################################
 
     cad = oops.cadence.TDICadence(10, 100., 10., 2, tdi_sign=1)
     case_tdicadence_10_100_10_2_up(cad)
 
-    ########################################
+    ######################################################################################
     # 100 lines, 100 stages, TDI downward
-    ########################################
+    ######################################################################################
 
     cad = oops.cadence.TDICadence(100, 1000., 10., 100)
     case_tdicadence_100_1000_10_100_down(cad)
 
-    ########################################
+    ######################################################################################
     # 10 lines, one stage
-    ########################################
+    ######################################################################################
 
     cad = oops.cadence.TDICadence(10, 100., 10., 1)
 #         print(cad.time_at_tstep(10))
@@ -63,22 +63,28 @@ def case_tdicadence_10_100_10_2_down(cad):
     assert np.all(cad.time_range_at_tstep(tstep)[1].mask == tstep.mask)
 
     tstep = Scalar(([0,1],[2,10]),([False,False],[True,False]))
-    assert np.all(cad.time_range_at_tstep(tstep, inclusive=True)[0].vals == [[100,100],[100,110]])
+    assert np.all(cad.time_range_at_tstep(tstep, inclusive=True)[0].vals
+                  == [[100,100],[100,110]])
     assert np.all(cad.time_range_at_tstep(tstep, inclusive=True)[1].vals == 120)
     assert np.all(cad.time_range_at_tstep(tstep, inclusive=True)[0].mask == tstep.mask)
     assert np.all(cad.time_range_at_tstep(tstep, inclusive=True)[1].mask == tstep.mask)
 
     tstep = Scalar(([0,1],[2,10]),([False,False],[True,False]))
-    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False)[0].vals == [[100,100],[100,110]])
+    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False)[0].vals
+                  == [[100,100],[100,110]])
     assert np.all(cad.time_range_at_tstep(tstep, inclusive=False)[1].vals == 120)
     assert np.all(cad.time_range_at_tstep(tstep, inclusive=False)[0].mask == tstep.mask)
     assert np.all(cad.time_range_at_tstep(tstep, inclusive=False)[1].mask == tstep.mask)
 
     tstep = Scalar(([0,1],[2,10]),([False,False],[True,False]))
-    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False, remask=True)[0].vals == [[100,100],[100,110]])
-    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False, remask=True)[1].vals == 120)
-    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False, remask=True)[0].mask == [[0,0],[1,1]])
-    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False, remask=True)[1].mask == [[0,0],[1,1]])
+    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False, remask=True)[0].vals
+                  == [[100,100],[100,110]])
+    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False, remask=True)[1].vals
+                  == 120)
+    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False, remask=True)[0].mask
+                  == [[0,0],[1,1]])
+    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False, remask=True)[1].mask
+                  == [[0,0],[1,1]])
 
     # time_at_tstep
     assert cad.time_at_tstep(-1.) == 100.
@@ -98,7 +104,8 @@ def case_tdicadence_10_100_10_2_down(cad):
     tstep = Scalar(([0,1],[9,10]),([False,True],[False,False]))
     assert np.all(cad.time_at_tstep(tstep).vals == [[100,100],[110,120]])
     assert np.all(cad.time_at_tstep(tstep).mask == tstep.mask)
-    assert np.all(cad.time_at_tstep(tstep, remask=True, inclusive=False).mask == [[0,1],[0,1]])
+    assert np.all(cad.time_at_tstep(tstep, remask=True, inclusive=False).mask
+                  == [[0,1],[0,1]])
 
     # time_at_tstep, derivs
     tstep = Scalar([-1, 0, 0.5, 0.9, 1.,1.5, 1.9, 9, 9.5, 10])
@@ -133,44 +140,54 @@ def case_tdicadence_10_100_10_2_down(cad):
     assert np.all(cad.tstep_range_at_time(time)[0].vals == (0,0,0))
     assert np.all(cad.tstep_range_at_time(time)[1].vals == (9,10,10))
 
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time, inclusive=False)[0].vals == (0,0,0)))
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time, inclusive=False)[1].vals == (9,10,0)))
+    # assert np.all(cad.tstep_range_at_time(time, inclusive=False)[0].vals == (0,0,0))
+    # assert np.all(cad.tstep_range_at_time(time, inclusive=False)[1].vals == (9,10,0))
     (test0, test1) = cad.tstep_range_at_time(time, inclusive=False)
     assert np.all(test0.vals[:2] == (0,0))
     assert np.all(test1.vals[:2] == (9,10))
-    assert test0.vals[2] == test1.vals[2]  # zero range is required, specific values are not
+    assert test0.vals[2] == test1.vals[2]  # zero range required, not specific values
 
     assert not np.any(cad.tstep_range_at_time(time, inclusive=False)[0].mask)
     assert not np.any(cad.tstep_range_at_time(time, inclusive=False)[1].mask)
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].vals == (0,0,0)))
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].vals == (9,10,0)))
-    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].vals == test0.vals)
-    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].vals == test1.vals)
-    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].mask == (0,0,1))
-    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].mask == (0,0,1))
+    # assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].vals
+    #               == (0,0,0))
+    # assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].vals
+    #               == (9,10,0))
+    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].vals
+                  == test0.vals)
+    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].vals
+                  == test1.vals)
+    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].mask
+                  == (0,0,1))
+    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].mask
+                  == (0,0,1))
 
     time = Scalar([100,110,120],[True,False,False])
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time)[0].vals == (0,0,0)))
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time)[1].vals == (0,10,10)))
+    # assert np.all(cad.tstep_range_at_time(time)[0].vals == (0,0,0))
+    # assert np.all(cad.tstep_range_at_time(time)[1].vals == (0,10,10))
     (test0, test1) = cad.tstep_range_at_time(time)
-    assert test0.vals[0] == test1.vals[0]  # zero range is required, specific values are not
+    assert test0.vals[0] == test1.vals[0]  # zero range required, not specific values
     assert np.all(test0.vals[1:] == (0,0))
     assert np.all(test1.vals[1:] == (10,10))
 
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time, inclusive=False)[0].vals == (0,0,0)))
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time, inclusive=False)[1].vals == (0,10,0)))
+    # assert np.all(cad.tstep_range_at_time(time, inclusive=False)[0].vals == (0,0,0))
+    # assert np.all(cad.tstep_range_at_time(time, inclusive=False)[1].vals == (0,10,0))
     (test0, test1) = cad.tstep_range_at_time(time, inclusive=False)
-    assert test0.vals[0] == test1.vals[0]  # zero range is required, specific values are not
+    assert test0.vals[0] == test1.vals[0]  # zero range required, not specific values
     assert test0.vals[1] == 0
     assert test1.vals[1] == 10
-    assert test0.vals[2] == test1.vals[2]  # zero range is required, specific values are not
+    assert test0.vals[2] == test1.vals[2]  # zero range required, not specific values
 
     assert np.all(cad.tstep_range_at_time(time, inclusive=False)[0].mask == (1,0,0))
     assert np.all(cad.tstep_range_at_time(time, inclusive=False)[1].mask == (1,0,0))
-    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].vals == test0.vals)
-    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].vals == test1.vals)
-    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].mask == (1,0,1))
-    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].mask == (1,0,1))
+    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].vals
+                  == test0.vals)
+    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].vals
+                  == test1.vals)
+    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].mask
+                  == (1,0,1))
+    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].mask
+                  == (1,0,1))
 
     # tstride_at_tstep
     assert cad.tstride_at_tstep(0) == 0
@@ -205,22 +222,28 @@ def case_tdicadence_10_100_10_2_up(cad):
     assert np.all(cad.time_range_at_tstep(tstep)[1].mask == tstep.mask)
 
     tstep = Scalar(([0,1],[2,10]),([False,False],[True,False]))
-    assert np.all(cad.time_range_at_tstep(tstep, inclusive=True)[0].vals == [[110,100],[100,100]])
+    assert np.all(cad.time_range_at_tstep(tstep, inclusive=True)[0].vals
+                  == [[110,100],[100,100]])
     assert np.all(cad.time_range_at_tstep(tstep, inclusive=True)[1].vals == 120)
     assert np.all(cad.time_range_at_tstep(tstep, inclusive=True)[0].mask == tstep.mask)
     assert np.all(cad.time_range_at_tstep(tstep, inclusive=True)[1].mask == tstep.mask)
 
     tstep = Scalar(([0,1],[2,10]),([False,False],[True,False]))
-    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False)[0].vals == [[110,100],[100,100]])
+    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False)[0].vals
+                  == [[110,100],[100,100]])
     assert np.all(cad.time_range_at_tstep(tstep, inclusive=False)[1].vals == 120)
     assert np.all(cad.time_range_at_tstep(tstep, inclusive=False)[0].mask == tstep.mask)
     assert np.all(cad.time_range_at_tstep(tstep, inclusive=False)[1].mask == tstep.mask)
 
     tstep = Scalar(([0,1],[2,10]),([False,False],[True,False]))
-    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False, remask=True)[0].vals == [[110,100],[100,100]])
-    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False, remask=True)[1].vals == 120)
-    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False, remask=True)[0].mask == [[0,0],[1,1]])
-    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False, remask=True)[1].mask == [[0,0],[1,1]])
+    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False, remask=True)[0].vals
+                  == [[110,100],[100,100]])
+    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False, remask=True)[1].vals
+                  == 120)
+    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False, remask=True)[0].mask
+                  == [[0,0],[1,1]])
+    assert np.all(cad.time_range_at_tstep(tstep, inclusive=False, remask=True)[1].mask
+                  == [[0,0],[1,1]])
 
     # time_at_tstep
     assert cad.time_at_tstep(-1.) == 110.
@@ -244,7 +267,7 @@ def case_tdicadence_10_100_10_2_up(cad):
 
     # self.assertEqual(cad.tstep_range_at_time(120., inclusive=False), (0, 0))
     (test0, test1) = cad.tstep_range_at_time(120., inclusive=False)
-    assert test0 == test1  # zero range is required; specific values are not
+    assert test0 == test1  # zero range required, not specific values
 
     assert cad.tstep_range_at_time(120., remask=True, inclusive=True) == (0, 10)
     assert (cad.tstep_range_at_time(120., remask=True, inclusive=False)
@@ -275,7 +298,7 @@ def case_tdicadence_10_100_10_2_up(cad):
 
     # self.assertEqual(cad.tstep_range_at_time(120., inclusive=False), (0, 0))
     (test0, test1) = cad.tstep_range_at_time(120., inclusive=False)
-    assert test0 == test1  # zero range is required; specific values are not
+    assert test0 == test1  # zero range required, not specific values
 
     assert cad.tstep_range_at_time(120., remask=True, inclusive=True) == (0, 10)
     assert (cad.tstep_range_at_time(120., remask=True, inclusive=False)
@@ -285,46 +308,58 @@ def case_tdicadence_10_100_10_2_up(cad):
     assert np.all(cad.tstep_range_at_time(time)[0].vals == (1,0,0))
     assert np.all(cad.tstep_range_at_time(time)[1].vals == (10,10,10))
 
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time, inclusive=False)[0].vals == (1,0,0)))
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time, inclusive=False)[1].vals == (10,10,0)))
+    # assert np.all(cad.tstep_range_at_time(time, inclusive=False)[0].vals == (1,0,0))
+    # assert np.all(cad.tstep_range_at_time(time, inclusive=False)[1].vals == (10,10,0))
     (test0, test1) = cad.tstep_range_at_time(time, inclusive=False)
     assert np.all(test0.vals[:2] == (1,0))
     assert np.all(test1.vals[:2] == (10,10))
-    assert test0.vals[2] == test1.vals[2]  # zero range is required, specific values are not
+    assert test0.vals[2] == test1.vals[2]  # zero range required, not specific values
 
     assert not np.any(cad.tstep_range_at_time(time, inclusive=False)[0].mask)
     assert not np.any(cad.tstep_range_at_time(time, inclusive=False)[1].mask)
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].vals == (1,0,0)))
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].vals == (10,10,0)))
-    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].vals == test0.vals)
-    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].vals == test1.vals)
-    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].mask == (0,0,1))
-    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].mask == (0,0,1))
+    # assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].vals
+    #               == (1,0,0))
+    # assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].vals
+    #               == (10,10,0))
+    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].vals
+                  == test0.vals)
+    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].vals
+                  == test1.vals)
+    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].mask
+                  == (0,0,1))
+    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].mask
+                  == (0,0,1))
 
     time = Scalar([100,110,120],[False,True,False])
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time)[0].vals == (1,0,0)))
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time)[1].vals == (10,0,10)))
+    # assert np.all(cad.tstep_range_at_time(time)[0].vals == (1,0,0))
+    # assert np.all(cad.tstep_range_at_time(time)[1].vals == (10,0,10))
     (test0, test1) = cad.tstep_range_at_time(time)
-    assert test0.vals[1] == test1.vals[1]  # zero range is required, specific values are not
+    assert test0.vals[1] == test1.vals[1]  # zero range required, not specific values
     assert np.all(test0.vals[0::2] == (1,0))
     assert np.all(test1.vals[0::2] == (10,10))
 
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time, inclusive=False)[0].vals == (1,0,0)))
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time, inclusive=False)[1].vals == (10,0,0)))
+    # assert np.all(cad.tstep_range_at_time(time, inclusive=False)[0].vals == (1,0,0))
+    # assert np.all(cad.tstep_range_at_time(time, inclusive=False)[1].vals == (10,0,0))
     (test0, test1) = cad.tstep_range_at_time(time, inclusive=False)
     assert test0.vals[0] == 1
     assert test1.vals[0] == 10
-    assert test0.vals[1] == test1.vals[1]  # zero range is required, specific values are not
+    assert test0.vals[1] == test1.vals[1]  # zero range required, not specific values
     assert test0.vals[2] == test1.vals[2]
 
     assert np.all(cad.tstep_range_at_time(time, inclusive=False)[0].mask == (0,1,0))
     assert np.all(cad.tstep_range_at_time(time, inclusive=False)[1].mask == (0,1,0))
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].vals == (1,0,0)))
-    # self.assertTrue(np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].vals == (10,0,0)))
-    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].vals == test0.vals)
-    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].vals == test1.vals)
-    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].mask == (0,1,1))
-    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].mask == (0,1,1))
+    # assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].vals
+    #               == (1,0,0))
+    # assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].vals
+    #               == (10,0,0))
+    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].vals
+                  == test0.vals)
+    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].vals
+                  == test1.vals)
+    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[0].mask
+                  == (0,1,1))
+    assert np.all(cad.tstep_range_at_time(time, inclusive=False, remask=True)[1].mask
+                  == (0,1,1))
 
 def case_tdicadence_100_1000_10_100_down(cad):
 
@@ -434,4 +469,4 @@ def case_tdicadence_10_100_10_1(cad):
     assert cad.tstride_at_tstep(9) == 10
     assert cad.tstride_at_tstep(9, sign=-1) == 0
     assert cad.tstride_at_tstep(10) == 10
-################################################################################
+##########################################################################################

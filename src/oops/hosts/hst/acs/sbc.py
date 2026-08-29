@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/hosts/hst/acs/sbc.py
-################################################################################
+##########################################################################################
 
 import astropy.io.fits as pyfits
 
@@ -8,9 +8,9 @@ from . import ACS
 
 from filecache import FCPath
 
-################################################################################
+##########################################################################################
 # Standard class methods
-################################################################################
+##########################################################################################
 
 def from_file(filespec, **parameters):
     """A general, static method to return an Observation object based on a given
@@ -47,11 +47,9 @@ GENERAL_SYN_FILES = ['OTA/hst_ota_???_syn.fits',
 
 FILTER_SYN_FILE = ['ACS/acs_', '_???_syn.fits']
 
-#===============================================================================
-#===============================================================================
 class SBC(ACS):
-    """This class defines functions and properties unique to the NIC1 detector.
-    Everything else is inherited from higher levels in the class hierarchy.
+    """This class defines functions and properties unique to the NIC1 detector. Everything
+    else is inherited from higher levels in the class hierarchy.
 
     Objects of this class are empty; they only exist to support inheritance.
     """
@@ -72,13 +70,11 @@ class SBC(ACS):
         # definition of the FOV
         return self.construct_fov(IDC_DICT[idc_key], hdulist)
 
-    #===========================================================================
     def filter_name(self, hdulist, layer=None):
         """The name of the filter for this particular ACS detector."""
 
         return hdulist[0].header['FILTER1']
 
-    #===========================================================================
     def select_syn_files(self, hdulist, **parameters):
         """The list of SYN files containing profiles that are to be multiplied
         together to obtain the throughput of the given instrument, detector, and
@@ -97,7 +93,6 @@ class SBC(ACS):
 
         return syn_filenames
 
-    #===========================================================================
     @staticmethod
     def from_hdulist(hdulist, **parameters):
         """A general class method to return an Observation object based on an
@@ -106,4 +101,4 @@ class SBC(ACS):
 
         return SBC().construct_snapshot(hdulist, **parameters)
 
-################################################################################
+##########################################################################################

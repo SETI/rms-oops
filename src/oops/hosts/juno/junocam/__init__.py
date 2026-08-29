@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/inst/juno/junocam/__init__.py
-################################################################################
+##########################################################################################
 
 import re
 import numpy as np
@@ -17,11 +17,10 @@ from oops.hosts.juno import Juno
 __all__ = ['from_file', 'JUNOCAM']
 
 RATIONALE_RE = re.compile(r' *INS-61504_DISTORTION_Y = ([\d\.]+)')
-################################################################################
+##########################################################################################
 # Standard class methods
-################################################################################
+##########################################################################################
 
-#===============================================================================
 def from_file(filespec, fast_distortion=True,
               return_all_planets=False, snap=False, method='strict', **parameters):
     """A general, static method to return a Pushframe object based on a given
@@ -104,19 +103,20 @@ def from_file(filespec, fast_distortion=True,
 
     return obs
 
-#===============================================================================
 def _load_data(filespec, label, meta):
     """Load the data array from the file and splits into individual framelets.
 
-    Input:
-        filespec        Full path to the data file.
-        label           Label for composite image.
-        meta            Image _Metadata object.
+    Parameters:
+        filespec (str or FCPath): Full path to the data file.
+        label (str): Label for composite image.
+        meta (object): Image _Metadata object.
 
-    Return:             (framelets, framelet_labels)
-        framelets       A Numpy array containing the individual frames in
-                        axis order (line, sample, framelet #).
-        framelet_labels List of labels for each framelet.
+    Returns:
+        (tuple): (framelets, framelet_labels), where:
+
+        * `framelets` (array-like): A Numpy array containing the individual frames in axis
+          order (line, sample, framelet #). framelet_labels List of labels for each
+          framelet.
     """
 
     # Read data
@@ -151,21 +151,16 @@ def _load_data(filespec, label, meta):
 #*******************************************************************************
 class _Metadata(object):
 
-    #===========================================================================
     def __init__(self, label):
         """Use the label to assemble the image metadata.
 
-        Input:
-            label           The label dictionary.
+        Parameters:
+            label (dict): The label dictionary.
 
         Attributes:
-            nlines          A Numpy array containing the data in axis order
-                            (line, sample).
-            nsamples        The time sampling array in (line, sample) axis
-                            order, or None if no time backplane is found in
-                            the file.
-            nframelets
-
+            nlines          A Numpy array containing the data in axis order (line,
+            sample). nsamples        The time sampling array in (line, sample) axis order,
+            or None if no time backplane is found in the file. nframelets
         """
 
         # image dimensions
@@ -258,18 +253,18 @@ class _Metadata(object):
 
         return
 
-    #===========================================================================
     def update_cy(self, label, cy):
-        """Look at label RATIONALE_DESC for a correction to DISTORTION_Y for
-        some methane images.
+        """Look at label RATIONALE_DESC for a correction to DISTORTION_Y for some methane
+        images.
 
-        Input:
-            label           The label dictionary.
-            cy              Uncorrected cy value.
+        Parameters:
+            label (dict): The label dictionary.
+            cy: Uncorrected cy value.
 
-        Output:
-            cy              Corrected cy value.
+        Returns:
+            (tuple): A tuple, where:
 
+            * `cy`: Corrected cy value.
         """
         match = RATIONALE_RE.match(label['RATIONALE_DESC'])
         if match:
@@ -284,20 +279,18 @@ class JUNOCAM(object):
     fovs = {}
     initialized = False
 
-    #===========================================================================
     @staticmethod
     def initialize(asof=None, **kwargs):
-        """
-        Initialize key information about the JUNOCAM instrument; fill in key
+        """Initialize key information about the JUNOCAM instrument; fill in key
         information about the WAC and NAC.
 
-        Must be called first. After the first call, later calls to this function
-        are ignored.
+        Must be called first. After the first call, later calls to this function are
+        ignored.
 
-        Input:
-            asof        Only use SPICE kernels that existed before this date;
-                        None to ignore.
-            kwargs:     Arguments for juno.initialize() and Body.define_solar_system()
+        Parameters:
+            asof (str, optional): Only use SPICE kernels that existed before this date;
+                None to ignore. kwargs:     Arguments for juno.initialize() and
+                Body.define_solar_system()
         """
 
         # Quick exit after first call
@@ -313,7 +306,6 @@ class JUNOCAM(object):
 
         JUNOCAM.initialized = True
 
-    #===========================================================================
     @staticmethod
     def reset():
         """Reset the internal JUNOCAM parameters.
@@ -327,4 +319,4 @@ class JUNOCAM(object):
 
         Juno.reset()
 
-################################################################################
+##########################################################################################

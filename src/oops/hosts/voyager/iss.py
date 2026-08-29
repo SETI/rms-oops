@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/hosts/voyager/iss.py
-################################################################################
+##########################################################################################
 
 import cspyce
 import spicedb
@@ -14,21 +14,21 @@ import warnings
 
 from filecache import FCPath
 
-################################################################################
+##########################################################################################
 # Standard class methods
-################################################################################
-def from_file(filespec, astrometry=False, action='error', method='strict', parameters=None):
-    """A general, static method to return a Snapshot object based on a given
-    Voyager ISS image file or its label.
+##########################################################################################
+def from_file(filespec, astrometry=False, action='error', method='strict',
+              parameters=None):
+    """A general, static method to return a Snapshot object based on a given Voyager ISS
+    image file or its label.
 
-    Input:
-        filespec        name of the image file or its PDS3 label.
-        astrometry      True to omit loading the image data.
-        action          What to do for a missing C kernel entry, via the Python
-                        warnings interface: 'error', 'ignore', 'always',
-                        'default', 'module', 'once'.
-        parameters      Dictionary of VGR-ISS-specific parameters.
-        method          Label reading method to be passed to Pds3Label.
+    Parameters:
+        filespec (str or FCPath): Name of the image file or its PDS3 label.
+        astrometry (bool, optional): True to omit loading the image data.
+        action (optional): What to do for a missing C kernel entry, via the Python
+            warnings interface: 'error', 'ignore', 'always', 'default', 'module', 'once'.
+        parameters (dict, optional): Dictionary of VGR-ISS-specific parameters.
+        method (str, optional): Label reading method to be passed to Pds3Label.
     """
     if parameters is None:
         parameters={}
@@ -174,8 +174,8 @@ def from_file(filespec, astrometry=False, action='error', method='strict', param
     result = oops.obs.Snapshot(('v','u'), tstart, texp, fovs[camera],
                                path = spacecraft,
                                frame = image_frame,
-                               dict = vicar_dict,                            # Add the VICAR dict
-                               data = (None if astrometry else vic.data_2d), # Add the data array
+                               dict = vicar_dict,              # the VICAR dict
+                               data = (None if astrometry else vic.data_2d),   # the data
                                instrument = 'ISS',
                                detector = camera,
                                filter = filter,
@@ -196,21 +196,20 @@ def from_file(filespec, astrometry=False, action='error', method='strict', param
 
     return result
 
-#===============================================================================
 def from_index(filespec, geomed=False, action='ignore', omit=True,
                parameters={}):
-    """A static method to return a list of Snapshot objects, one for each row
-    in an ISS index file. The filespec refers to the label of the index file.
+    """A static method to return a list of Snapshot objects, one for each row in an ISS
+    index file. The filespec refers to the label of the index file.
 
-    Input:
-        filespec        name of the index file or its PDS3 label.
-        geomed          assume the image is geomed (1000x1000).
-        action          What to do for a missing C kernel entry or a missing
-                        time, via the Python warnings interface: 'error',
-                        'ignore', 'always', 'default', 'module', 'once'.
-        omit            True to remove any images with missing C kernels or
-                        missing times from the returned list; False to include
-                        them. If time is missing, tstart = 0.
+    Parameters:
+        filespec (str or FCPath): Name of the index file or its PDS3 label.
+        geomed (optional): Assume the image is geomed (1000x1000).
+        action (optional): What to do for a missing C kernel entry or a missing time,
+            via the Python warnings interface: 'error', 'ignore', 'always', 'default',
+            'module', 'once'.
+        omit (bool, optional): True to remove any images with missing C kernels or missing
+            times from the returned list; False to include them. If time is missing,
+            tstart = 0.
     """
     ISS.initialize()    # Define everything the first time through
 
@@ -322,7 +321,7 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
 
     return snapshots
 
-################################################################################
+##########################################################################################
 
 class ISS(object):
     """An instance-free class to hold Voyager ISS instrument parameters."""
@@ -432,10 +431,10 @@ class ISS(object):
 
         ISS.initialized = True
 
-################################################################################
+##########################################################################################
 # Initialize at load time
-################################################################################
+##########################################################################################
 
 ISS.initialize()
 
-################################################################################
+##########################################################################################

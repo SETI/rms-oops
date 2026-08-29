@@ -65,15 +65,18 @@ imports fail because these are unset, say so; do not report it as a code defect.
 deliberate: column-aligned assignments, imports, and trailing comments are the
 house style. Do not "fix" alignment or blank-line counts that flake8 passes.
 
-- Line length is **90 columns in refactored modules** (`oops/frame/`, `oops/path/`,
-  `cache.py`, `fittable.py`, `mutable.py`) and **80 in legacy modules**. Match the
-  file you are editing.
-- Every file opens with a banner of `#` characters at the file's line width, then
+- Line length is **90 columns everywhere**. One line exceeds it,
+  `src/oops/hosts/jwst/__init__.py:33`, which is a bare URL that cannot be
+  wrapped without breaking it.
+- Every file opens with a banner of exactly 90 `#` characters, then
   `# oops/path/to/file.py: description`, then the banner again; the file's last
-  line is a closing banner of the same width. Legacy files also put a
-  `#===...` separator above each `def`. Preserve all of these. The banner names
-  the path from the import root, so a module under `src/oops` says `oops/...`
-  with no `src/` prefix, and one under `programs` says `programs/...`.
+  line is a closing banner of the same width. Every horizontal rule made of `#`
+  is 90 columns wide, indent included. A lone `#` on its own line is a blank
+  line inside a comment paragraph, not a rule, and stays as it is. The banner
+  names the path from the import root, so a module under `src/oops` says
+  `oops/...` with no `src/` prefix, and one under `programs` says `programs/...`.
+- There are no `#===...` or `#---...` separator rules. They used to sit above
+  each `def` in the legacy modules; do not reintroduce them.
 - Docstrings come in two coexisting styles. Modern: Google-ish, using
   `Parameters:` (never `Args:`), with class-level `Properties:` bullets and
   noun-phrase summary lines. Legacy: two-column `Input:` / `Return:` blocks

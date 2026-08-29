@@ -1,30 +1,29 @@
-################################################################################
+##########################################################################################
 # oops/cadence/tdicadence.py: TDICadence subclass of class Cadence
-################################################################################
+##########################################################################################
 
 from polymath     import Scalar
 from oops.cadence import Cadence
 
 class TDICadence(Cadence):
-    """A Cadence subclass defining the integration intervals of lines in a TDI
-    ("Time Delay and Integration") camera. The tstep index matches the line
-    index in the TDI detector.
+    """A Cadence subclass defining the integration intervals of lines in a TDI ("Time
+    Delay and Integration") camera. The tstep index matches the line index in the TDI
+    detector.
     """
 
     def __init__(self, lines, tstart, tdi_texp, tdi_stages, tdi_sign=-1):
         """Constructor for a TDICadence.
 
-        Input:
-            lines       the number of lines in the detector. This corresponds to
-                        the number of time steps in the cadence.
-            tstart      the start time of the observation in seconds TDB.
-            tdi_texp    the interval in seconds from the start of one TDI step
-                        to the start of the next.
-            tdi_stages  the number of TDI time steps, 1 to number of lines.
-            tdi_sign    +1 if pixel DNs are shifted in the positive direction
-                        along the 'ut' or 'vt' axis; -1 if DNs are shifted in
-                        the negative direction. Default is -1, suitable for
-                        JunoCam.
+        Parameters:
+            lines (float): Lines in the detector. This corresponds to the number of time
+                steps in the cadence.
+            tstart (float): The start time of the observation in seconds TDB.
+            tdi_texp: The interval in seconds from the start of one TDI step to the
+                start of the next.
+            tdi_stages (float): TDI time steps, 1 to number of lines.
+            tdi_sign (int, optional): +1 if pixel DNs are shifted in the positive
+                direction along the 'ut' or 'vt' axis; -1 if DNs are shifted in the
+                negative direction. Default is -1, suitable for JunoCam.
         """
 
         # Save the input parameters
@@ -66,22 +65,22 @@ class TDICadence(Cadence):
         self.__init__(*state)
         self.freeze()
 
-    ############################################################################
+    ######################################################################################
     # Methods unique to this class
-    ############################################################################
+    ######################################################################################
 
     def tdi_shifts_at_line(self, line, remask=False, inclusive=True):
         """The number of TDI shifts at the given image line (or tstep).
 
-        Input:
-            line        a Scalar line number.
-            remask      True to mask values outside the time limits.
-            inclusive   True to treat the end time of the cadence as inside the
-                        cadence. If inclusive is False and remask is True, the
-                        end time will be masked.
+        Parameters:
+            line (Scalar): Line number.
+            remask (bool, optional): True to mask values outside the time limits.
+            inclusive (bool, optional): True to treat the end time of the cadence as
+                inside the cadence. If inclusive is False and remask is True, the end time
+                will be masked.
 
-        Return:         an integer Scalar defining the number of TDI shifts at
-                        this line number.
+        Returns:
+            (int): Scalar defining the number of TDI shifts at this line number.
         """
 
         line = Scalar.as_scalar(line, recursive=False)
@@ -94,19 +93,19 @@ class TDICadence(Cadence):
 
         return shifts.clip(0, self._max_shifts, remask=False)
 
-    #===========================================================================
     def tdi_shifts_after_time(self, time, remask=False, inclusive=True):
         """The number of TDI shifts at the given time.
 
-        Input:
-            time        Scalar of optional absolute time in seconds.
-            remask      True to mask values outside the time limits.
-            inclusive   True to treat the end time of the cadence as inside the
-                        cadence. If inclusive is False and remask is True, the
-                        end time will be masked.
+        Parameters:
+            time (Scalar): Scalar of optional absolute time in seconds.
+            remask (bool, optional): True to mask values outside the time limits.
+            inclusive (bool, optional): True to treat the end time of the cadence as
+                inside the cadence. If inclusive is False and remask is True, the end time
+                will be masked.
 
-        Return:         an integer Scalar defining the number of TDI shifts that
-                        will occur after this time in the exposure.
+        Returns:
+            (int): Scalar defining the number of TDI shifts that will occur after this
+                time in the exposure.
         """
 
         time = Scalar.as_scalar(time, recursive=False)
@@ -116,24 +115,25 @@ class TDICadence(Cadence):
         return (self._max_shifts - tstep_int).clip(0, self.tdi_stages,
                                                       remask=remask)
 
-    ############################################################################
+    ######################################################################################
     # Standard Cadence methods
-    ############################################################################
+    ######################################################################################
 
     def time_at_tstep(self, tstep, remask=False, derivs=False, inclusive=True):
         """The time associated with the given time step.
 
         This method supports non-integer time step values.
 
-        Input:
-            tstep       a Scalar of time step index values.
-            remask      True to mask values outside the time limits.
-            derivs      True to include derivatives of tstep in the returned
-                        time.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            tstep (Scalar): Time step index values.
+            remask (bool, optional): True to mask values outside the time limits.
+            derivs (bool, optional): True to include derivatives of tstep in the returned
+                time.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         a Scalar of times in seconds TDB.
+        Returns:
+            (Scalar): Times in seconds TDB.
         """
 
         tstep = Scalar.as_scalar(tstep, recursive=derivs)
@@ -147,20 +147,21 @@ class TDICadence(Cadence):
 
         return time_min + tstep_frac * (time_max - time_min)
 
-    #===========================================================================
     def time_range_at_tstep(self, tstep, remask=False, inclusive=True):
         """The range of times for the given time step.
 
-        Input:
-            tstep       a Scalar of time step index values.
-            remask      True to mask values outside the time limits.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            tstep (Scalar): Time step index values.
+            remask (bool, optional): True to mask values outside the time limits.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         (time_min, time_max)
-            time_min    a Scalar defining the minimum time associated with the
-                        index. It is given in seconds TDB.
-            time_max    a Scalar defining the maximum time value.
+        Returns:
+            (tuple): (time_min, time_max), where:
+
+            * `time_min` (Scalar): Defining the minimum time associated with the index. It
+              is given in seconds TDB.
+            * `time_max` (Scalar): Defining the maximum time value.
         """
 
         stages = self.tdi_shifts_at_line(tstep, remask=remask,
@@ -170,22 +171,23 @@ class TDICadence(Cadence):
         time1 = Scalar.filled(time0.shape, self.time[1], mask=time0.mask)
         return (time0, time1)
 
-    #===========================================================================
     def tstep_at_time(self, time, remask=False, derivs=False, inclusive=True):
         """Time step for the given time.
 
         This method returns non-integer time steps.
 
-        Input:
-            time        a Scalar of times in seconds TDB.
-            remask      True to mask time values not sampled within the cadence.
-            derivs      True to include derivatives of tstep in the returned
-                        time.
-            inclusive   True to treat the end time of an interval as inside the
-                        cadence; False to treat it as outside. The start time of
-                        an interval is always treated as inside.
+        Parameters:
+            time (Scalar): Times in seconds TDB.
+            remask (bool, optional): True to mask time values not sampled within the
+                cadence.
+            derivs (bool, optional): True to include derivatives of tstep in the returned
+                time.
+            inclusive (bool, optional): True to treat the end time of an interval as
+                inside the cadence; False to treat it as outside. The start time of an
+                interval is always treated as inside.
 
-        Return:         a Scalar of time step index values.
+        Returns:
+            (Scalar): Time step index values.
         """
 
         if self.tdi_stages > 1:
@@ -196,23 +198,22 @@ class TDICadence(Cadence):
         tstep = (time - self.time[0]) / self.tdi_texp
         return tstep.clip(0, 1, inclusive=inclusive, remask=remask)
 
-    #===========================================================================
     def tstep_range_at_time(self, time, remask=False, inclusive=True):
         """Integer range of time steps active at the given time.
 
-        Input:
-            time        a Scalar of times in seconds TDB.
-            remask      True to mask time values not sampled within the cadence.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            time (Scalar): Times in seconds TDB.
+            remask (bool, optional): True to mask time values not sampled within the
+                cadence.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         (tstep_min, tstep_max)
-            tstep_min   minimum Scalar time step containing the given time.
-            tstep_max   minimum Scalar time step after the given time.
-
-        Returned tstep_min will always be in the allowed range for the cadence,
-        inclusive, regardless of masking. If the time is not inside the cadence,
-        tstep_max == tstep_min.
+        Returns:
+            (tuple): (tstep_min, tstep_max) tstep_min   minimum Scalar time step
+                containing the given time. tstep_max   minimum Scalar time step after the
+                given time. Returned tstep_min will always be in the allowed range for the
+                cadence, inclusive, regardless of masking. If the time is not inside the
+                cadence, tstep_max == tstep_min.
         """
 
         time = Scalar.as_scalar(time, recursive=False)
@@ -240,38 +241,34 @@ class TDICadence(Cadence):
 
         return (line_min, line_max)
 
-    #===========================================================================
     def time_is_outside(self, time, inclusive=True):
         """A Boolean mask of time(s) that fall outside the cadence.
 
-        Input:
-            time        a Scalar of times in seconds TDB.
-            inclusive   True to treat the end time of an interval as inside;
-                        False to treat it as outside. The start time of an
-                        interval is always treated as inside.
+        Parameters:
+            time (Scalar): Times in seconds TDB.
+            inclusive (bool, optional): True to treat the end time of an interval as
+                inside; False to treat it as outside. The start time of an interval is
+                always treated as inside.
 
-        Return:         a Boolean array indicating which time values are not
-                        sampled by the cadence.
+        Returns:
+            (bool): Array indicating which time values are not sampled by the cadence.
         """
 
         return Cadence.time_is_outside(self, time, inclusive)
 
-    #===========================================================================
     def time_shift(self, secs):
-        """Construct a duplicate of this Cadence with all times shifted by given
-        amount.
+        """Construct a duplicate of this Cadence with all times shifted by given amount.
 
-        Input:
-            secs        the number of seconds to shift the time later.
+        Parameters:
+            secs (float): Seconds to shift the time later.
         """
 
         return TDICadence(self.tstart + secs, self.tdi_texp, self.tdi_stages,
                           self.tdi_sign, self.lines)
 
-    #===========================================================================
     def as_continuous(self):
         """A shallow copy of this cadence, forced to be continuous."""
 
         return self
 
-################################################################################
+##########################################################################################

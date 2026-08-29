@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/path/fixedpath.py: Subclass FixedPath of class Path
+# oops/path/fixedpath.py
 ##########################################################################################
 
 from polymath          import Qube, Vector3
@@ -14,7 +14,7 @@ class FixedPath(Path):
     _WAYPOINTS = {}
 
     def __init__(self, pos, origin, frame=None, *, path_id=None):
-        """Constructor for an FixedPath.
+        """Constructor for a FixedPath.
 
         Parameters:
             pos (Vector3 or array-like): The position vectors within the frame and
@@ -27,6 +27,7 @@ class FixedPath(Path):
                 leave this Path unregistered.
 
         Raises:
+            KeyError: If `origin` or `frame` is an ID string that has not been registered.
             ValueError: If the shapes of `pos`, `origin`, and `frame` cannot be
                 broadcasted.
         """
@@ -69,14 +70,14 @@ class FixedPath(Path):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Event): The Event object containing (at least) the time, position, and
-                velocity on the Path.
+            Event: The Event object containing (at least) the time, position, and velocity
+            on this Path.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.

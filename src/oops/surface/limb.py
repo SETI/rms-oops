@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/surface/limb.py: Limb subclass of class Surface
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -9,37 +9,37 @@ from oops.config           import SURFACE_PHOTONS, LOGGING
 from oops.surface.surface_ import Surface
 
 class Limb(Surface):
-    """This surface is defined as the locus of points where a surface normal
-    from a spheroid or ellipsoid is perpendicular to the line of sight. This
-    provides a convenient coordinate system for describing cloud features on the
-    limb of a body.
+    """The locus of points where a surface normal from a spheroid or ellipsoid is
+    perpendicular to the line of sight.
 
-    The coordinates of Limb are (lon, lat, z), much the same as for the
-    surface of the associated spheroid or ellipsoid. The key difference is in
-    how the intercept point is derived.
-        lon     longitude at the ground point beneath the limb point, using the
-                same definition as that of the associated spheroid or ellipsoid.
-        lat     latitude at the ground point beneath the limb point, using the
-                same definition as that of the associated spheroid or ellipsoid.
-        z       the elevation above the surface, as an actual distance measured
-                normal to the surface.
+    This provides a convenient coordinate system for describing cloud features on the limb
+    of a body.
+
+    The coordinates of Limb are (lon, lat, z), much the same as for the surface of the
+    associated spheroid or ellipsoid; the difference is in how the intercept point is
+    derived.
+
+    * lon (Scalar): Longitude at the ground point beneath the limb point, using the same
+      definition as that of the associated spheroid or ellipsoid.
+    * lat (Scalar): Latitude at the ground point beneath the limb point, using the same
+      definition as that of the associated spheroid or ellipsoid.
+    * z (Scalar): The elevation above the surface, as an actual distance measured normal
+      to the surface.
     """
 
     COORDINATE_TYPE = 'limb'
     IS_VIRTUAL = True
     DEBUG = False           # True for convergence testing
 
-    #===========================================================================
     def __init__(self, ground, limits=None):
         """Constructor for a Limb surface.
 
-        Input:
-            ground      the Surface object relative to which limb points are to
-                        be defined. It should be a Spheroid or Ellipsoid,
-                        optically using Centric or Graphic coordinates.
-            limits      an optional single value or tuple defining the absolute
-                        numerical limit(s) placed on z; values outside this
-                        range are masked.
+        Parameters:
+            ground (Surface): Object relative to which limb points are to be defined. It
+                should be a Spheroid or Ellipsoid, optically using Centric or Graphic
+                coordinates.
+            limits (optional): An optional single value or tuple defining the absolute
+                numerical limit(s) placed on z; values outside this range are masked.
         """
 
         if ground.COORDINATE_TYPE != 'spherical':
@@ -71,37 +71,36 @@ class Limb(Surface):
         self.__init__(*state)
         self.freeze()
 
-    #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
                                   derivs=False, hints=None, groundtrack=False):
         """Surface coordinates associated with a position vector.
 
-        Input:
-            pos         a Vector3 of positions at or near the surface, relative
-                        to this surface's origin and frame.
-            obs         a Vector3 of observer position relative to this
-                        surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        for this Surface subclass.
-            axes        2 or 3, indicating whether to return the first two
-                        coordinates (lon, lat) or all three (lon, lat, z) as
-                        Scalars.
-            derivs      True to propagate any derivatives inside pos and obs
-                        into the returned coordinates.
-            hints       optionally, the value of the coefficient p such that:
-                            ground + p * normal(ground) = pos;
-                        for the ground point associate with the position.
-                        Ignored if the value is None (the default) or True.
-            groundtrack True to return the intercept on the surface along with
-                        the coordinates.
+        Parameters:
+            pos (Vector3): Positions at or near the surface, relative to this surface's
+                origin and frame.
+            obs (Vector3, optional): Observer position relative to this surface's origin
+                and frame.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+                this Surface subclass.
+            axes (int, optional): 2 or 3, indicating whether to return the first two
+                coordinates (lon, lat) or all three (lon, lat, z) as Scalars.
+            derivs (bool, optional): True to propagate any derivatives inside pos and obs
+                into the returned coordinates.
+            hints (Scalar, optional): Optionally, the value of the coefficient p such
+                that: ground + p * normal(ground) = pos; for the ground point associate
+                with the position. Ignored if the value is None (the default) or True.
+                groundtrack True to return the intercept on the surface along with the
+                coordinates.
 
-        Return:         a tuple containing two to four values.
-            lon         longitude in radians.
-            lat         latitude in radians.
-            z           vertical altitude in km normal to the body surface;
-                        included if axes == 3.
-            track       associated point on the body surface; included if the
-                        input groundtrack is True.
+        Returns:
+            (tuple): Two to four values, where:
+
+            * `lon` (Scalar): Longitude in radians.
+            * `lat` (Scalar): Latitude in radians.
+            * `z` (Scalar): Vertical altitude in km normal to the body surface; included
+              if axes == 3.
+            * `track`: Associated point on the body surface; included if the input
+              groundtrack is True.
         """
 
         # Validate inputs
@@ -141,33 +140,32 @@ class Limb(Surface):
 
         return results
 
-    #===========================================================================
     def vector3_from_coords(self, coords, obs=None, time=None, derivs=False,
                                           groundtrack=False):
-        """The position where a point with the given coordinates falls relative
-        to this surface's origin and frame.
+        """The position where a point with the given coordinates falls relative to this
+        surface's origin and frame.
 
-        Input:
-            coords      a tuple of two or three Scalars defining coordinates at
-                        or near this surface. These can have different shapes,
-                        but must be broadcastable to a common shape.
-                lon     longitude in radians.
-                lat     latitude in radians.
-                z       the perpendicular distance in km from the limb surface.
-            obs         a Vector3 of observer positions relative to this
-                        surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        for this Surface subclass.
-            derivs      True to include the partial derivatives of the intercept
-                        point with respect to observer and to the coordinates.
-            groundtrack True to include the associated groundtrack points on the
-                        body surface in the returned result.
+        Parameters:
+            coords (tuple): Two or three Scalars defining coordinates at or near this
+                surface. These can have different shapes, but must be broadcastable to a
+                common shape. lon     longitude in radians. lat     latitude in radians. z
+                the perpendicular distance in km from the limb surface.
+            obs (Vector3, optional): Observer positions relative to this surface's origin
+                and frame.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+                this Surface subclass.
+            derivs (bool, optional): True to include the partial derivatives of the
+                intercept point with respect to observer and to the coordinates.
+                groundtrack True to include the associated groundtrack points on the body
+                surface in the returned result.
 
-        Return:         pos or (pos, track), where:
-            pos         a Vector3 of points defined by the coordinates, relative
-                        to this surface's origin and frame.
-            track       a Vector3 of associated points on the body surface;
-                        included if input groundtrack is True.
+        Returns:
+            Pos or (pos, track), where:
+
+            * `pos` (Vector3): Points defined by the coordinates, relative to this
+              surface's origin and frame.
+            * `track` (Vector3): Associated points on the body surface; included if input
+              groundtrack is True.
         """
 
         pos = self.ground.vector3_from_coords(coords, derivs=derivs)
@@ -178,42 +176,39 @@ class Limb(Surface):
         track = self.ground.vector3_from_coords(coords[:2], derivs=derivs)
         return (pos, track)
 
-    #===========================================================================
     def intercept(self, obs, los, time=None, direction='dep', derivs=False,
                                   guess=None, hints=None, groundtrack=False):
         """The position where a specified line of sight intercepts the surface.
 
-        Input:
-            obs         observer position as a Vector3 relative to this
-                        surface's origin and frame.
-            los         line of sight as a Vector3 in this surface's frame.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        for this Surface subclass.
-            direction   'arr' for a photon arriving at the surface; 'dep' for a
-                        photon departing from the surface; ignored here.
-            derivs      True to propagate any derivatives inside obs and los
-                        into the returned intercept point.
-            guess       unused.
-            hints       optional initial guess a coefficient p such that:
-                            ground + p * normal(ground) = limb_intercept
-                        for the ground point on the body surface associated with
-                        the limb intercept point being sought. The converged
-                        value will be included in the tuple returned. Use
-                        hints=True if you do not have an initial guess but still
-                        would like the converged value of p to be returned.
-            groundtrack True to include the associated body surface points in
-                        the returned results.
+        Parameters:
+            obs (Vector3): Observer position as a Vector3 relative to this surface's
+                origin and frame.
+            los (Vector3): Line of sight as a Vector3 in this surface's frame.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+                this Surface subclass.
+            direction (str, optional): 'arr' for a photon arriving at the surface; 'dep'
+                for a photon departing from the surface; ignored here.
+            derivs (bool, optional): True to propagate any derivatives inside obs and los
+                into the returned intercept point.
+            guess (object, optional): Unused.
+            hints (optional): Optional initial guess a coefficient p such that: ground
+                + p * normal(ground) = limb_intercept for the ground point on the body
+                surface associated with the limb intercept point being sought. The
+                converged value will be included in the tuple returned. Use hints=True if
+                you do not have an initial guess but still would like the converged value
+                of p to be returned. groundtrack True to include the associated body
+                surface points in the returned results.
 
-        Return:         a tuple of two to four values.
-            pos         a Vector3 of intercept points on the surface relative
-                        to this surface's origin and frame, in km.
-            t           a Scalar such that:
-                            intercept = obs + t * los
-            p           the converged solution such that
-                            ground + p * normal(ground) = limb_intercept;
-                        included if the input value of hints is not None.
-            track       the Vector3 of groundtrack points on the body surface;
-                        included if the input value of groundtrack is True.
+        Returns:
+            (tuple): Two to four values, where:
+
+            * `pos` (Vector3): Intercept points on the surface relative to this surface's
+              origin and frame, in km.
+            * `t` (Scalar): Such that: intercept = obs + t * los.
+            * `p` (Scalar): The converged solution such that ground + p * normal(ground) =
+              limb_intercept; included if the input value of hints is not None.
+            * `track` (Vector3): Groundtrack points on the body surface; included if the
+              input value of groundtrack is True.
         """
 
         obs = Vector3.as_vector3(obs, recursive=derivs)
@@ -307,39 +302,39 @@ class Limb(Surface):
 
         return results
 
-    #===========================================================================
     def normal(self, pos, time=None, derivs=False):
         """The normal vector at a position at or near a surface.
 
-        Input:
-            pos         a Vector3 of positions at or near the surface relative
-                        to this surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        for this Surface subclass.
-            derivs      True to propagate any derivatives of pos into the
-                        returned normal vectors.
+        Parameters:
+            pos (Vector3): Positions at or near the surface relative to this surface's
+                origin and frame.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+                this Surface subclass.
+            derivs (bool, optional): True to propagate any derivatives of pos into the
+                returned normal vectors.
 
-        Return:         a Vector3 containing directions normal to the surface
-                        that pass through the position. Lengths are arbitrary.
+        Returns:
+            (Vector3): Directions normal to the surface that pass through the position.
+                Lengths are arbitrary.
         """
 
         return self.ground.normal(pos, derivs=derivs)
 
-    ############################################################################
+    ######################################################################################
     # (z,clock) conversions
-    ############################################################################
+    ######################################################################################
 
     def clock_from_groundtrack(self, track, obs, derivs=False):
-        """The angle measured clockwise from the projected pole to the
-        groundtrack's surface normal.
+        """The angle measured clockwise from the projected pole to the groundtrack's
+        surface normal.
 
-        Input:
-            track       a Vector3 of positions at or near the ellipsoid's
-                        surface relative to the ellipsoid's origin and frame.
-            obs         a Vector3 of observer positions relative to the
-                        ellipsoid's origin and frame.
-            derivs      True to propagate derivatives of track and obs into the
-                        returned clock angle.
+        Parameters:
+            track (Vector3): Positions at or near the ellipsoid's surface relative to the
+                ellipsoid's origin and frame.
+            obs (Vector3): Observer positions relative to the ellipsoid's origin and
+                frame.
+            derivs (bool, optional): True to propagate derivatives of track and obs into
+                the returned clock angle.
         """
 
         track = Vector3.as_vector3(track, recursive=derivs)
@@ -359,17 +354,16 @@ class Limb(Surface):
         clock = normal_y.arctan2(normal_x) % Scalar.TWOPI
         return clock
 
-    #===========================================================================
     def groundtrack_from_clock(self, clock, obs, derivs=False):
         """The ground point defined by the clock angle and observation point.
 
-        Input:
-            clock       angle of the ellipsoid's normal vector, measured
-                        clockwise from the projected pole.
-            obs         a Vector3 of observer positions relative to the
-                        ellipsoid's origin and frame.
-            derivs      True to propagate derivatives of clock and obs into the
-                        returned ellipsoid surface point.
+        Parameters:
+            clock (Scalar): Angle of the ellipsoid's normal vector, measured clockwise
+                from the projected pole.
+            obs (Vector3): Observer positions relative to the ellipsoid's origin and
+                frame.
+            derivs (bool, optional): True to propagate derivatives of clock and obs into
+                the returned ellipsoid surface point.
         """
 
         clock = Scalar.as_scalar(clock, recursive=derivs)
@@ -382,31 +376,16 @@ class Limb(Surface):
 
         return self.ground.intercept_with_normal(normal, derivs=derivs)
 
-    #===========================================================================
     def z_clock_from_intercept(self, pos, obs, derivs=False, hints=None,
                                                groundtrack=False):
         """The z and clock values at a limb intercept point.
 
-        Input:
-            pos         a Vector3 of positions at the limb intercept point,
-                        relative to this surface's origin and frame.
-            obs         a Vector3 of observer positions relative to the
-                        ellipsoid's origin and frame.
-            derivs      True to propagate derivatives of clock and obs into the
-                        returned ellipsoid surface point.
-            hints       optionally, the value of the coefficient p such that
-                            ground + p * normal(ground) = pos
-                        for the ground point on the body surface.
-            groundtrack True to include the surface intercept points of the body
-                        associated with each limb intercept.
-
-        Return          (z, clock) or (z, clock, track), where
-            z           the perpendicular distance from the ellipsoidal surface,
-                        in km.
-            clock       angle of the ellipsoid's normal vector, measured
-                        clockwise from the projected pole.
-            track       the Vector3 of groundtrack points on the body surface;
-                        included if the input value of groundtrack is True.
+        Parameters:
+            Return (tuple): (z, clock) or (z, clock, track), where z           the
+                perpendicular distance from the ellipsoidal surface, in km. clock
+                angle of the ellipsoid's normal vector, measured clockwise from the
+                projected pole. track       the Vector3 of groundtrack points on the body
+                surface; included if the input value of groundtrack is True.
         """
 
         pos = Vector3.as_vector3(pos, recursive=derivs)
@@ -435,26 +414,27 @@ class Limb(Surface):
 
         return (z, clock)
 
-    #===========================================================================
     def intercept_from_z_clock(self, z, clock, obs, derivs=False,
                                      groundtrack=False):
         """The limb intercept point as defined by z and clock.
 
-        Input:
-            z           the perpendicular distance in km from the body surface.
-            clock       angle of the ellipsoid's normal vector, measured
-                        clockwise from the projected pole.
-            obs         a Vector3 of observer positions relative to the
-                        ellipsoid's origin and frame.
-            derivs      True to propagate derivatives of z, clock, and obs into
-                        the returned limb intercept points.
-            groundtrack if True, the tuple (limb intercept, ground track) is
-                        returned rather than just the limb intercept.
+        Parameters:
+            z (Scalar): The perpendicular distance in km from the body surface.
+            clock (Scalar): Angle of the ellipsoid's normal vector, measured clockwise
+                from the projected pole.
+            obs (Vector3): Observer positions relative to the ellipsoid's origin and
+                frame.
+            derivs (bool, optional): True to propagate derivatives of z, clock, and obs
+                into the returned limb intercept points. groundtrack if True, the tuple
+                (limb intercept, ground track) is returned rather than just the limb
+                intercept.
 
-        Return:         intercept or (intercept, track), where
-            intercept   Vector3 of limb surface intercept points.
-            track       Vector3 of the associated points on the surface of the
-                        Ellipsoid; included if groundtrack is True.
+        Returns:
+            Intercept or (intercept, track), where, where:
+
+            * `intercept` (Vector3): Vector3 of limb surface intercept points.
+            * `track` (Vector3): Vector3 of the associated points on the surface of the
+              Ellipsoid; included if groundtrack is True.
         """
 
         z = Scalar.as_scalar(z, recursive=derivs)
@@ -543,123 +523,89 @@ class Limb(Surface):
         else:
             return pos
 
-    ############################################################################
+    ######################################################################################
     # Longitude conversions
-    ############################################################################
+    ######################################################################################
 
     def lon_to_centric(self, lon, derivs=False):
         """Convert longitude in internal coordinates to planetocentric.
 
-        Input:
-            lon         squashed longitude in radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          planetocentric longitude.
+        Parameters:
+            Return (Scalar): Planetocentric longitude.
         """
 
         return self.ground.lon_to_centric(lon, derivs)
 
-    #===========================================================================
     def lon_from_centric(self, lon, derivs=False):
         """Convert planetocentric longitude to internal coordinates.
 
-        Input:
-            lon         planetocentric longitude in radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          squashed longitude.
+        Parameters:
+            Return (Scalar): Squashed longitude.
         """
 
         return self.ground.lon_from_centric(lon, derivs)
 
-    #===========================================================================
     def lon_to_graphic(self, lon, derivs=False):
         """Convert longitude in internal coordinates to planetographic.
 
-        Input:
-            lon         squashed longitude in radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          planetographic longitude.
+        Parameters:
+            Return (Scalar): Planetographic longitude.
         """
 
         return self.ground.lon_to_graphic(lon, derivs)
 
-    #===========================================================================
     def lon_from_graphic(self, lon, derivs=False):
         """Convert planetographic longitude to internal coordinates.
 
-        Input:
-            lon         planetographic longitude in radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          squashed longitude.
+        Parameters:
+            Return (Scalar): Squashed longitude.
         """
 
         return self.ground.lon_from_graphic(lon, derivs)
 
-    ############################################################################
+    ######################################################################################
     # Latitude conversions
-    ############################################################################
+    ######################################################################################
 
     def lat_to_centric(self, lat, lon, derivs=False):
         """Convert latitude in internal ellipsoid coordinates to planetocentric.
 
-        Input:
-            lat         squashed latitide, radians.
-            lon         squashed longitude, radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          planetocentric latitude.
+        Parameters:
+            Return (Scalar): Planetocentric latitude.
         """
 
         return self.ground.lat_to_centric(lat, lon, derivs)
 
-    #===========================================================================
     def lat_from_centric(self, lat, lon, derivs=False):
         """Convert planetocentric latitude to internal ellipsoid latitude.
 
-        Input:
-            lat         planetocentric latitide, radians.
-            lon         planetocentric longitude, radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          squashed latitude.
+        Parameters:
+            Return (Scalar): Squashed latitude.
         """
 
         return self.ground.lat_from_centric(lat, lon, derivs)
 
-    #===========================================================================
     def lat_to_graphic(self, lat, lon, derivs=False):
         """Convert latitude in internal ellipsoid coordinates to planetographic.
 
-        Input:
-            lat         squashed latitide, radians.
-            lon         squashed longitude, radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          planetographic latitude.
+        Parameters:
+            Return (Scalar): Planetographic latitude.
         """
 
         return self.ground.lat_to_graphic(lat, lon, derivs)
 
-    #===========================================================================
     def lat_from_graphic(self, lat, lon, derivs=False):
         """Convert a planetographic latitude to internal ellipsoid latitude.
 
-        Input:
-            lat         planetographic latitide, radians.
-            lon         planetographic longitude, radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          squashed latitude.
+        Parameters:
+            Return (Scalar): Squashed latitude.
         """
 
         return self.ground.lat_from_graphic(lat, lon, derivs)
 
-    ############################################################################
+    ######################################################################################
     # (lon,lat) conversions
-    ############################################################################
+    ######################################################################################
 
     def lonlat_from_vector3(self, pos, derivs=False, groundtrack=True):
         """Longitude and latitude for a position near the surface."""
@@ -672,4 +618,4 @@ class Limb(Surface):
         else:
             return coords[:2]
 
-################################################################################
+##########################################################################################

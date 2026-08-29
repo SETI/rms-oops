@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # tests/frame/test_spiceframe.py
-################################################################################
+##########################################################################################
 
 import numpy as np
 import pytest
@@ -111,9 +111,9 @@ def test_spiceframe(core_kernels):
     Path._reset_caches()
     Frame._reset_caches()
 
-    ########################################
+    ######################################################################################
     # Test for a Cassini C kernel
-    ########################################
+    ######################################################################################
 
     # Load all the required kernels for Cassini ISS on 2007-312
     paths = TEST_SPICE_PREFIX.retrieve(['naif0009.tls',
@@ -155,9 +155,9 @@ def test_spiceframe(core_kernels):
     assert np.all(np.abs(test_ra - right_ascension) < 0.5)
     assert np.all(np.abs(test_dec - declination) < 0.5)
 
-    ########################################
+    ######################################################################################
     # Test of various omega methods
-    ########################################
+    ######################################################################################
 
     wac1 = SpiceFrame('CASSINI_ISS_WAC', omega_type='tabulated', frame_id='wac1')
     wac2 = SpiceFrame('CASSINI_ISS_WAC', omega_type='numerical', frame_id='wac2')
@@ -278,9 +278,9 @@ def test_spiceframe(core_kernels):
         mask = (angle.vals != 0.)
         assert abs(ratio[mask]).max() - 1. < 1.e-9
 
-    ########################################
+    ######################################################################################
     # Tests of QuickFrame interpolation
-    ########################################
+    ######################################################################################
 
     wac1 = SpiceFrame('CASSINI_ISS_WAC', omega_type='tabulated',)
     wac2 = SpiceFrame('CASSINI_ISS_WAC', omega_type='numerical',
@@ -350,4 +350,4 @@ def test_spiceframe(core_kernels):
 
     diff = (xform3.omega - xform2.omega).norm()
     assert diff.max() < 1.e-7
-################################################################################
+##########################################################################################

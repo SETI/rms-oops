@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # tests/path/test_keplerpath.py
-################################################################################
+##########################################################################################
 
 import numpy as np
 import pytest
@@ -60,7 +60,6 @@ def _xyz_planet_derivative_test(kep, t, delta=1.e-7):
 
     return errors
 
-#===============================================================================
 def _pos_derivative_test(kep, t, delta=1.e-5):
     """Calculates numerical derivatives of (x,y,z) in the observer/J2000 frame
     relative to the orbital elements, at time(s) t. It returns a tuple of
@@ -111,7 +110,6 @@ def _pos_derivative_test(kep, t, delta=1.e-5):
 
     return errors
 
-#===============================================================================
 @pytest.fixture(autouse=True)
 def _solar_system():
     Body.reset_registry()
@@ -151,7 +149,7 @@ def test_keplerpath():
     errors = _pos_derivative_test(kep, time)
     assert np.max(np.abs(errors)) < 1.e-8
 
-    ####################
+    ######################################################################################
 
     kep = KeplerPath(Body.lookup("SATURN"), 0.,
                    (a, 1., dmean_dt,
@@ -168,7 +166,7 @@ def test_keplerpath():
     errors = _pos_derivative_test(kep, time)
     assert np.max(np.abs(errors)) < 1.e-8
 
-    ####################
+    ######################################################################################
 
     kep = KeplerPath(Body.lookup("SATURN"), 0.,
                    (a, 1., dmean_dt,
@@ -183,7 +181,7 @@ def test_keplerpath():
     errors = _pos_derivative_test(kep, time)
     assert np.max(np.abs(errors)) < 1.e-5
 
-    ####################
+    ######################################################################################
 
     kep = KeplerPath(Body.lookup("SATURN"), 0.,
                    (a, 1., dmean_dt,
@@ -198,7 +196,7 @@ def test_keplerpath():
     errors = _pos_derivative_test(kep, time)
     assert np.max(np.abs(errors)) < 3.e-5
 
-    ####################
+    ######################################################################################
 
     kep = KeplerPath(Body.lookup("SATURN"), 0.,
                    (a, 1., dmean_dt,
@@ -213,7 +211,7 @@ def test_keplerpath():
     errors = _pos_derivative_test(kep, time)
     assert np.max(np.abs(errors)) < 1.e-5
 
-    ####################
+    ######################################################################################
 
     kep = KeplerPath(Body.lookup("SATURN"), 0.,
                    (a, 1., dmean_dt,
@@ -228,7 +226,7 @@ def test_keplerpath():
     errors = _pos_derivative_test(kep, time)
     assert np.max(np.abs(errors)) < 1.e-4
 
-    ####################
+    ######################################################################################
 
     kep = KeplerPath(Body.lookup("SATURN"), 0.,
                    (a, 1., dmean_dt,
@@ -243,7 +241,7 @@ def test_keplerpath():
     errors = _pos_derivative_test(kep, time)
     assert np.max(np.abs(errors)) < 1.e-5
 
-    ####################
+    ######################################################################################
 
     kep = KeplerPath(Body.lookup("SATURN"), 0.,
                    (a, 1., dmean_dt,
@@ -260,9 +258,9 @@ def test_keplerpath():
     errors = _pos_derivative_test(kep, time)
     assert np.max(np.abs(errors)) < 1.e-4
 
-    ####################
+    ######################################################################################
     # Photon solution without an observer, which returns events in the ring frame
-    ####################
+    ######################################################################################
 
     kep = KeplerPath(Body.lookup("SATURN"), 0.,
                    (a, 1., dmean_dt, 0.2, 3., dperi_dt, 0.1, 5., dnode_dt),
@@ -277,9 +275,9 @@ def test_keplerpath():
     ratio = (path_event.dep_j2000.norm() / (C * path_event.dep_lt)).vals
     assert np.max(np.abs(ratio - 1.)) < 1.e-12
 
-    ####################
+    ######################################################################################
     # Photon solution when an observer is defined
-    ####################
+    ######################################################################################
 
     kep = KeplerPath(Body.lookup("SATURN"), 0.,
                    (a, 1., dmean_dt, 0.2, 3., dperi_dt, 0.1, 5., dnode_dt),
@@ -311,4 +309,4 @@ def test_keplerpath():
     Frame._reset_caches()
     Path._reset_caches()
     Body.reset_registry()
-################################################################################
+##########################################################################################

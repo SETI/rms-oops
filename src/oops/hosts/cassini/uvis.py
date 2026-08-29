@@ -21,19 +21,18 @@ DEBUG = False       # True to assert that the data array must have null
 ##########################################################################################
 
 def from_file(filespec, data=True, enclose=False, method='strict', **parameters):
-    """A general, static method to return one or more Observation subclass
-    objects based on a label for a given Cassini UVIS file.
+    """A general, static method to return one or more Observation subclass objects based
+    on a label for a given Cassini UVIS file.
 
-    Input:
-        filespec        the full path to the PDS label of a UVIS data file.
-        data            True to include the data array.
-        enclose         True to return a single observation, regardless of how many
-                        windows are defined. If multiple windows are used, then the
-                        observation (and the optional data array) are are defined by the
-                        enclosing limits in line and band, and the binning is assumed to
-                        be 1. If False and multiple windows are used, the function returns
-                        a tuple of observations rather than a single observation.
-        method:         Label reading method to be passed to Pds3Label.
+    Parameters:
+        filespec (str or FCPath): The full path to the PDS label of a UVIS data file.
+        data (bool, optional): True to include the data array.
+        enclose (bool, optional): True to return a single observation, regardless of how
+            many windows are defined. If multiple windows are used, then the observation
+            (and the optional data array) are are defined by the enclosing limits in line
+            and band, and the binning is assumed to be 1. If False and multiple windows
+            are used, the function returns a tuple of observations rather than a single
+            observation. method:         Label reading method to be passed to Pds3Label.
     """
 
     UVIS.initialize()   # Define everything the first time through; use defaults unless
@@ -56,7 +55,6 @@ def from_file(filespec, data=True, enclose=False, method='strict', **parameters)
     else:
         return get_spectrum(filespec, tstart, label, data)
 
-#=========================================================================================
 def get_qube(filespec, tstart, label, data, enclose):
     """The observation object given that it is a QUBE."""
 
@@ -164,7 +162,6 @@ def get_qube(filespec, tstart, label, data, enclose):
 
         return tuple(obslist)
 
-#=========================================================================================
 def get_one_qube(label, detector, resolution,
                  fov, cadence, frame_id,
                  shape, array, samples,
@@ -247,7 +244,6 @@ def get_one_qube(label, detector, resolution,
 
     return obs
 
-#=========================================================================================
 def get_time_series(filespec, tstart, label, data):
     """The observation object given that it is a TIME_SERIES."""
 
@@ -306,7 +302,6 @@ def get_time_series(filespec, tstart, label, data):
 
     return obs
 
-#=========================================================================================
 def get_spectrum(filespec, tstart, label, data):
     """The observation object given that it is a SPECTRUM."""
 
@@ -371,7 +366,6 @@ def get_spectrum(filespec, tstart, label, data):
 
     return obs
 
-#=========================================================================================
 def load_data(filespec, body, dtype):
 
     data_filespec = FCPath(filespec).with_name(body)
@@ -384,7 +378,6 @@ def load_data(filespec, body, dtype):
 
     return np.fromfile(local_path, sep='', dtype=dtype)
 
-#=========================================================================================
 def initialize(ck='reconstructed', planets=None, asof=None,
                spk='reconstructed', gapfill=True,
                mst_pck=True, irregulars=True):
@@ -392,24 +385,20 @@ def initialize(ck='reconstructed', planets=None, asof=None,
 
     Must be called first. After the first call, later calls to this function are ignored.
 
-    Input:
-        ck,spk      'predicted', 'reconstructed', or 'none', depending on
-                    which kernels are to be used. Defaults are 'reconstructed'.
-                    Use 'none' if the kernels are to be managed manually.
-        planets     A list of planets to pass to define_solar_system. None or
-                    0 means all.
-        asof        Only use SPICE kernels that existed before this date;
-                    None to ignore.
-        gapfill     True to include gapfill CKs. False otherwise.
-        mst_pck     True to include MST PCKs, which update the rotation models
-                    for some of the small moons.
-        irregulars  True to include the irregular satellites;
-                    False otherwise.
+    Parameters:
+        planets (list, optional): A list of planets to pass to define_solar_system. None
+            or 0 means all.
+        asof (str, optional): Only use SPICE kernels that existed before this date; None
+            to ignore.
+        gapfill (bool, optional): True to include gapfill CKs. False otherwise.
+        mst_pck (bool, optional): True to include MST PCKs, which update the rotation
+            models for some of the small moons.
+        irregulars (bool, optional): True to include the irregular satellites; False
+            otherwise.
     """
     UVIS.initialize(ck=ck, planets=planets, asof=asof, spk=spk, gapfill=gapfill,
                     mst_pck=mst_pck, irregulars=irregulars)
 
-#=========================================================================================
 class UVIS(object):
     """An instance-free class to hold Cassini UVIS instrument parameters."""
 
@@ -437,7 +426,6 @@ class UVIS(object):
                  'HSP'    : 'CASSINI_UVIS_HSP',
                  'HDAC'   : 'CASSINI_UVIS_HDAC'}
 
-    #=====================================================================================
     @staticmethod
     def initialize(ck='reconstructed', planets=None, asof=None, spk='reconstructed',
                    gapfill=True, mst_pck=True, irregulars=True):
@@ -446,18 +434,16 @@ class UVIS(object):
         Must be called first. After the first call, later calls to this function are
         ignored.
 
-        Input:
-            ck,spk      'predicted', 'reconstructed', or 'none', depending on which
-                        kernels are to be used. Defaults are 'reconstructed'. Use 'none'
-                        if the kernels are to be managed manually.
-            planets     A list of planets to pass to define_solar_system. None or 0 means
-                        all.
-            asof        Only use SPICE kernels that existed before this date; None to
-                        ignore.
-            gapfill     True to include gapfill CKs. False otherwise.
-            mst_pck     True to include MST PCKs, which update the rotation models for
-                        some of the small moons.
-            irregulars  True to include the irregular satellites; False otherwise.
+        Parameters:
+            planets (list, optional): A list of planets to pass to define_solar_system.
+                None or 0 means all.
+            asof (str, optional): Only use SPICE kernels that existed before this date;
+                None to ignore.
+            gapfill (bool, optional): True to include gapfill CKs. False otherwise.
+            mst_pck (bool, optional): True to include MST PCKs, which update the rotation
+                models for some of the small moons.
+            irregulars (bool, optional): True to include the irregular satellites; False
+                otherwise.
         """
 
         # Quick exit after first call
@@ -511,7 +497,6 @@ class UVIS(object):
 
         UVIS.initialized = True
 
-    #=====================================================================================
     @staticmethod
     def reset():
         """Resets the internal Cassini UVIS parameters. Can be useful for

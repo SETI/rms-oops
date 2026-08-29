@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/cadence/snapcadence.py: SnapCadence subclass of class Metronome
-################################################################################
+##########################################################################################
 
 from oops.cadence import Metronome
 
@@ -10,11 +10,11 @@ class SnapCadence(Metronome):
     def __init__(self, tstart, texp, clip=True):
         """Constructor for a SnapCadence.
 
-        Input:
-            tstart      the start time of the observation in seconds TDB.
-            texp        the exposure time in seconds.
-            clip        if True (the default), times and index values are always
-                        clipped into the valid range.
+        Parameters:
+            tstart (float): The start time of the observation in seconds TDB.
+            texp (float): The exposure time in seconds.
+            clip (bool, optional): If True (the default), times and index values are
+                always clipped into the valid range.
         """
 
         Metronome.__init__(self, tstart, texp, texp, 1, clip=clip)
@@ -27,4 +27,4 @@ class SnapCadence(Metronome):
         self.__init__(*state)
         self.freeze()
 
-################################################################################
+##########################################################################################

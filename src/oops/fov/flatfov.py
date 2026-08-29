@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/fov/flatfov.py: FlatFOV subclass of class FOV
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -12,33 +12,27 @@ class FlatFOV(FOV):
     implementing an exact pinhole ("gnomonic") camera model.
     """
 
-    #===========================================================================
-    def __init__(self, uv_scale, uv_shape, uv_los=None, uv_area=None):
+    def __init__(self, uv_scale, uv_shape, *, uv_los=None, uv_area=None):
         """Constructor for a FlatFOV.
 
         The U-axis is assumed to align with X and the V-axis aligns with Y.
 
-        Input:
-            uv_scale    a single value, tuple or Pair defining the ratios dx/du
-                        and dy/dv. For example, if (u,v) are in units of
-                        arcseconds, then
-                            uv_scale = Pair((pi/180/3600.,pi/180/3600.))
-                        Use the sign of the second element to define the
-                        direction of increasing V: negative for up, positive for
-                        down.
+        Parameters:
+            uv_scale (float, tuple, or Pair): The ratios `dx/du` and `dy/dv`. For
+                example, if `(u,v)` are in units of arcseconds, then::
 
-            uv_shape    a single value, tuple or Pair defining size of the field
-                        of view in pixels. This number can be non-integral if
-                        the detector is not composed of a rectangular array of
-                        pixels.
+                    uv_scale = Pair((pi/180/3600.,pi/180/3600.))
 
-            uv_los      a single value, tuple or Pair defining the (u,v)
-                        coordinates of the nominal line of sight. By default,
-                        this is the midpoint of the rectangle, i.e, uv_shape/2.
-
-            uv_area     an optional parameter defining the nominal field of view
-                        of a pixel. If not provided, the area is calculated
-                        based on the area of the central pixel.
+                Use the sign of the second element to define the direction of increasing
+                `v`: negative for up, positive for down.
+            uv_shape (float, tuple, or Pair): The size of the field of view in pixels.
+                This number can be non-integral if the detector is not composed of a
+                rectangular array of pixels.
+            uv_los (float, tuple, or Pair, optional): The `(u,v)` coordinates of the
+                nominal line of sight. By default, this is the midpoint of the rectangle,
+                i.e., `uv_shape/2`.
+            uv_area (float, optional): The nominal area of a pixel in steradians. If not
+                provided, it is derived from `uv_scale`.
         """
 
         self.uv_scale = Pair.as_pair(uv_scale).as_float().as_readonly()
@@ -66,52 +60,56 @@ class FlatFOV(FOV):
         return (self.uv_scale, self.uv_shape, self.uv_los, self.uv_area)
 
     def __setstate__(self, state):
-        self.__init__(*state)
+        (uv_scale, uv_shape, uv_los, uv_area) = state
+        self.__init__(uv_scale, uv_shape, uv_los=uv_los, uv_area=uv_area)
         self.freeze()
 
-    #===========================================================================
-    def xy_from_uvt(self, uv_pair, time=None, derivs=False, remask=False):
-        """The (x,y) camera frame coordinates given FOV coordinates (u,v).
+    def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
+        """The `(x,y)` camera frame coordinates given the FOV coordinates `(u,v)` at the
+        specified time.
 
-        Input:
-            uv_pair     (u,v) coordinate Pair in the FOV.
-            time        Scalar of optional absolute times. Ignored by FlatFOV.
-            derivs      If True, any derivatives in (u,v) get propagated into
-                        the returned (x,y) Pair.
-            remask      True to mask (u,v) coordinates outside the field of
-                        view; False to leave them unmasked.
+        Parameters:
+            uv_pair (Pair): `(u,v)` coordinates in this FOV.
+            time (Scalar, optional): Absolute time in seconds TDB. Ignored by FlatFOV.
+            derivs (bool, optional): If True, any derivatives in `(u,v)` get propagated
+                into the returned `(x,y)` coordinates.
+            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+                view; False to leave them unmasked.
+            **kwargs: Additional parameters that might affect the transform can be
+                included as keyword arguments.
 
-        Return:         Pair of same shape as uv_pair, giving the transformed
-                        (x,y) coordinates in the camera's frame.
+        Returns:
+            Pair: The transformed `(x,y)` coordinates in the camera's frame.
         """
 
         uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
         if remask:
-            uv_pair = uv_pair.mask_or(self.is_outside(uv_pair).vals)
+            uv_pair = uv_pair.remask_or(self.uv_is_outside(uv_pair).vals)
 
         return (uv_pair - self.uv_los).element_mul(self.uv_scale)
 
-    #===========================================================================
-    def uv_from_xyt(self, xy_pair, time=None, derivs=False, remask=False):
-        """The (u,v) FOV coordinates given (x,y) camera frame coordinates.
+    def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
+        """The `(u,v)` FOV coordinates given `(x,y)` camera frame coordinates.
 
-        Input:
-            xy_pair     (x,y) Pair in FOV coordinates.
-            time        Scalar of optional absolute times. Ignored by FlatFOV.
-            derivs      If True, any derivatives in (x,y) get propagated into
-                        the returned (u,v) Pair.
-            remask      True to mask (u,v) coordinates outside the field of
-                        view; False to leave them unmasked.
+        Parameters:
+            xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.
+            time (Scalar, optional): Absolute time in seconds TDB. Ignored by FlatFOV.
+            derivs (bool, optional): If True, any derivatives in `(x,y)` get propagated
+                into the returned `(u,v)` coordinates.
+            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+                view; False to leave them unmasked.
+            **kwargs: Additional parameters that might affect the transform can be
+                included as keyword arguments.
 
-        Return:         Pair of same shape as xy_pair, giving the computed (u,v)
-                        FOV coordinates.
+        Returns:
+            Pair: The computed `(u,v)` FOV coordinates, with the same shape as xy_pair.
         """
 
         xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
         uv_pair = xy_pair.element_div(self.uv_scale) + self.uv_los
         if remask:
-            uv_pair = uv_pair.mask_or(self.is_outside(uv_pair).vals)
+            uv_pair = uv_pair.remask_or(self.uv_is_outside(uv_pair).vals)
 
         return uv_pair
 
-################################################################################
+##########################################################################################

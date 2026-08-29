@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/backplanes/spheroid.py: Spheroid/Ellipsoid backplanes
-################################################################################
+##########################################################################################
 
 from polymath       import Scalar
 from oops.backplane import Backplane
@@ -9,26 +9,21 @@ def longitude(self, event_key, reference='iau', direction='west',
                                minimum=0, lon_type='centric'):
     """Longitude at the surface intercept point in the image.
 
-    Input:
-        event_key       key defining the surface event.
-        reference       defines the location of zero longitude.
-                        'iau' for the IAU-defined prime meridian;
-                        'obs' for the sub-observer longitude;
-                        'sun' for the sub-solar longitude;
-                        'oha' for the anti-observer longitude;
-                        'sha' for the anti-solar longitude, returning the
-                              local time on the planet if direction is west.
-        direction       direction on the surface of increasing longitude,
-                        'east' or 'west'.
-        minimum         the smallest numeric value of longitude in degrees,
-                        either 0 or -180.
-        lon_type        defines the type of longitude measurement:
-                        'centric'   for planetocentric;
-                        'graphic'   for planetographic;
-                        'squashed'  for an intermediate longitude type used
-                                    internally.
-                        Note that lon_type is irrelevant to Spheroids but
-                        matters for Ellipsoids.
+    Parameters:
+        event_key (str or tuple): Key defining the surface event.
+        reference (str, optional): Defines the location of zero longitude. 'iau' for the
+            IAU-defined prime meridian; 'obs' for the sub-observer longitude; 'sun' for
+            the sub-solar longitude; 'oha' for the anti-observer longitude; 'sha' for the
+            anti-solar longitude, returning the local time on the planet if direction is
+            west.
+        direction (str, optional): Direction on the surface of increasing longitude,
+            'east' or 'west'.
+        minimum (float, optional): The smallest numeric value of longitude in degrees,
+            either 0 or -180.
+        lon_type (str, optional): Defines the type of longitude measurement: 'centric'
+            for planetocentric; 'graphic'   for planetographic; 'squashed'  for an
+            intermediate longitude type used internally. Note that lon_type is irrelevant
+            to Spheroids but matters for Ellipsoids.
     """
 
     if reference not in ('iau', 'sun', 'sha', 'obs', 'oha'):
@@ -96,17 +91,14 @@ def longitude(self, event_key, reference='iau', direction='west',
 
     return self.register_backplane(key, longitude)
 
-#===============================================================================
 def latitude(self, event_key, lat_type='centric'):
     """Latitude at the surface intercept point in the image.
 
-    Input:
-        event_key       key defining the surface event.
-        lat_type        defines the type of latitude measurement:
-                        'centric'   for planetocentric;
-                        'graphic'   for planetographic;
-                        'squashed'  for an intermediate latitude type used
-                                    internally.
+    Parameters:
+        event_key (str or tuple): Key defining the surface event.
+        lat_type (str, optional): Defines the type of latitude measurement: 'centric'
+            for planetocentric; 'graphic'   for planetographic; 'squashed'  for an
+            intermediate latitude type used internally.
     """
 
     if lat_type not in ('centric', 'graphic', 'squashed'):
@@ -145,7 +137,6 @@ def latitude(self, event_key, lat_type='centric'):
 
     return self.register_backplane(key, latitude)
 
-#===============================================================================
 def _fill_surface_intercepts(self, event_key):
     """Internal method to fill in the surface intercept geometry backplanes.
     """
@@ -170,7 +161,6 @@ def _fill_surface_intercepts(self, event_key):
     self.register_backplane(lon_key, event.coord1)
     self.register_backplane(lat_key, event.coord2)
 
-#===============================================================================
 def _sub_observer_longitude(self, event_key):
     """Gridless sub-observer longitude. Used internally."""
 
@@ -185,7 +175,6 @@ def _sub_observer_longitude(self, event_key):
         # Use the apparent departure direction seen at the body center
     return self.register_backplane(key, longitude)
 
-#===============================================================================
 def _sub_observer_latitude(self, event_key):
     """Gridless sub-observer latitude. Used internally."""
 
@@ -200,7 +189,6 @@ def _sub_observer_latitude(self, event_key):
         # Use the apparent departure direction seen at the body center
     return self.register_backplane(key, latitude)
 
-#===============================================================================
 def _sub_solar_longitude(self, event_key):
     """Gridless sub-solar longitude. Used internally."""
 
@@ -215,7 +203,6 @@ def _sub_solar_longitude(self, event_key):
         # Use the (negative) apparent arrival direction seen at the body center
     return self.register_backplane(key, longitude)
 
-#===============================================================================
 def _sub_solar_latitude(self, event_key):
     """Gridless sub-solar latitude. Used internally."""
 
@@ -230,31 +217,29 @@ def _sub_solar_latitude(self, event_key):
         # Use the (negative) apparent arrival direction seen at the body center
     return self.register_backplane(key, latitude)
 
-################################################################################
+##########################################################################################
 # Surface geometry, path intercept versions
 #   sub_observer_longitude()
 #   sub_solar_longitude()
 #   sub_observer_latitude()
 #   sub_solar_latitude()
-################################################################################
+##########################################################################################
 
 def sub_observer_longitude(self, event_key, reference='iau', direction='west',
                                             minimum=0):
     """Gridless sub-observer longitude.
 
-    Input:
-        event_key   key defining the surface event.
-        reference   defines the location of zero longitude.
-                    'iau' for the IAU-defined prime meridian;
-                    'obs' for the sub-observer longitude;
-                    'sun' for the sub-solar longitude;
-                    'oha' for the anti-observer longitude;
-                    'sha' for the anti-solar longitude, returning the
-                          local time on the planet if direction is west.
-        direction   direction on the surface of increasing longitude, 'east'
-                    or 'west'.
-        minimum     the smallest numeric value of longitude, either 0 or
-                    -180.
+    Parameters:
+        event_key (str or tuple): Key defining the surface event.
+        reference (str, optional): Defines the location of zero longitude. 'iau' for the
+            IAU-defined prime meridian; 'obs' for the sub-observer longitude; 'sun' for
+            the sub-solar longitude; 'oha' for the anti-observer longitude; 'sha' for the
+            anti-solar longitude, returning the local time on the planet if direction is
+            west.
+        direction (str, optional): Direction on the surface of increasing longitude,
+            'east' or 'west'.
+        minimum (float, optional): The smallest numeric value of longitude, either 0 or
+            -180.
     """
 
     self.refresh()
@@ -279,27 +264,24 @@ def sub_observer_longitude(self, event_key, reference='iau', direction='west',
                                     direction=direction, minimum=minimum)
     return self.register_backplane(key, longitude)
 
-#===============================================================================
 def sub_solar_longitude(self, event_key, reference='iau',
                                          direction='west', minimum=0):
     """Gridless sub-solar longitude.
 
-    Note that this longitude is essentially independent of the
-    longitude_type (centric, graphic or squashed).
+    Note that this longitude is essentially independent of the longitude_type (centric,
+    graphic or squashed).
 
-    Input:
-        event_key   key defining the surface event.
-        reference   defines the location of zero longitude.
-                    'iau' for the IAU-defined prime meridian;
-                    'obs' for the sub-observer longitude;
-                    'sun' for the sub-solar longitude;
-                    'oha' for the anti-observer longitude;
-                    'sha' for the anti-solar longitude, returning the
-                          local time on the planet if direction is west.
-        direction   direction on the surface of increasing longitude, 'east'
-                    or 'west'.
-        minimum     the smallest numeric value of longitude, either 0 or
-                    -180.
+    Parameters:
+        event_key (str or tuple): Key defining the surface event.
+        reference (str, optional): Defines the location of zero longitude. 'iau' for the
+            IAU-defined prime meridian; 'obs' for the sub-observer longitude; 'sun' for
+            the sub-solar longitude; 'oha' for the anti-observer longitude; 'sha' for the
+            anti-solar longitude, returning the local time on the planet if direction is
+            west.
+        direction (str, optional): Direction on the surface of increasing longitude,
+            'east' or 'west'.
+        minimum (float, optional): The smallest numeric value of longitude, either 0 or
+            -180.
     """
 
     self.refresh()
@@ -324,7 +306,6 @@ def sub_solar_longitude(self, event_key, reference='iau',
                                     direction=direction, minimum=minimum)
     return self.register_backplane(key, longitude)
 
-#===============================================================================
 def _sub_longitude(self, event_key, longitude, reference='iau',
                                     direction='west', minimum=0):
     """Sub-solar or sub-observer longitude."""
@@ -363,14 +344,13 @@ def _sub_longitude(self, event_key, longitude, reference='iau',
 
     return longitude
 
-#===============================================================================
 def sub_observer_latitude(self, event_key, lat_type='centric'):
     """Gridless sub-observer latitude at the center of the disk.
 
-    Input:
-        event_key       key defining the event on the body's path.
-        lat_type        "centric" for planetocentric latitude;
-                        "graphic" for planetographic latitude.
+    Parameters:
+        event_key (str or tuple): Key defining the event on the body's path.
+        lat_type (str, optional): "centric" for planetocentric latitude; "graphic" for
+            planetographic latitude.
     """
 
     if lat_type not in ('centric', 'graphic'):
@@ -392,14 +372,13 @@ def sub_observer_latitude(self, event_key, lat_type='centric'):
     latitude = dep_ap.latitude(recursive=self.ALL_DERIVS)
     return self.register_backplane(key, latitude)
 
-#===============================================================================
 def sub_solar_latitude(self, event_key, lat_type='centric'):
     """Gridless sub-solar latitude at the center of the disk.
 
-    Input:
-        event_key       key defining the event on the body's path.
-        lat_type        "centric" for planetocentric latitude;
-                        "graphic" for planetographic latitude.
+    Parameters:
+        event_key (str or tuple): Key defining the event on the body's path.
+        lat_type (str, optional): "centric" for planetocentric latitude; "graphic" for
+            planetographic latitude.
     """
 
     if lat_type not in ('centric', 'graphic'):
@@ -421,9 +400,9 @@ def sub_solar_latitude(self, event_key, lat_type='centric'):
     latitude = neg_arr_ap.latitude(recursive=self.ALL_DERIVS)
     return self.register_backplane(key, latitude)
 
-################################################################################
+##########################################################################################
 
 # Add these functions to the Backplane module
 Backplane._define_backplane_names(globals().copy())
 
-################################################################################
+##########################################################################################

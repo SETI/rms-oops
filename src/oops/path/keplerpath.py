@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/path/keplerpath.py: Subclass KeplerPath of class Path.
+# oops/path/keplerpath.py
 ##########################################################################################
 
 import numpy as np
@@ -37,6 +37,7 @@ class KeplerPath(Path, Fittable):
     nine orbital elements.
     """
 
+    _WAYPOINTS = {}
     _USE_QUICKPATHS = True      # orbital elements are costly to evaluate
 
     def __init__(self, body, epoch, elements=None, observer=None, *, wobbles=(),
@@ -47,7 +48,7 @@ class KeplerPath(Path, Fittable):
             body (Body or str): The Body object or name of the central planet, including
                 its gravity and its ring_frame.
             epoch (float): The time TDB relative to which all orbital elements are
-                 defined.
+                defined.
             elements (array-like or dict, optional): The orbital elements and wobble
                 terms. If an array-like object is provided, this is the order of the
                 elements:
@@ -57,7 +58,7 @@ class KeplerPath(Path, Fittable):
                 * [2]: `n`, mean motion, radians/sec.
                 * [3]: `e`, orbital eccentricity.
                 * [4]: `peri`, longitude of pericenter at epoch, radians.
-                * [5]: `prec`,pericenter precession rate, radians/sec.
+                * [5]: `prec`, pericenter precession rate, radians/sec.
                 * [6]: `i`, inclination, radians.
                 * [7]: `node`, longitude of ascending node at epoch, radians.
                 * [8]: `regr`, nodal regression rate, radians/sec, NEGATIVE!
@@ -95,6 +96,11 @@ class KeplerPath(Path, Fittable):
 
             path_id (str, optional): The ID under which to register this Path; None to
                 leave this Path unregistered.
+
+        Raises:
+            KeyError: If `observer` is an ID string that has not been registered.
+            ValueError: If `wobbles` contains an unrecognized name or if `observer` is not
+                shapeless.
         """
 
         self._wobbles = (wobbles,) if isinstance(wobbles, str) else wobbles
@@ -156,6 +162,10 @@ class KeplerPath(Path, Fittable):
         self._register(path_id)
         self.refresh()
 
+    def _waypoint_key(self):
+        return (self._planet, self._epoch, self._elements, self._observer,
+                self._wobbles)
+
     def set_elements(self, elements):
         """Re-define the path given new orbital elements.
 
@@ -167,12 +177,12 @@ class KeplerPath(Path, Fittable):
                 * [2]: `n`, mean motion, radians/sec.
                 * [3]: `e`, orbital eccentricity.
                 * [4]: `peri`, longitude of pericenter at epoch, radians.
-                * [5]: `prec`,pericenter precession rate, radians/sec.
+                * [5]: `prec`, pericenter precession rate, radians/sec.
                 * [6]: `i`, inclination, radians.
                 * [7]: `node`, longitude of ascending node at epoch, radians.
                 * [8]: `regr`, nodal regression rate, radians/sec, NEGATIVE!
 
-                If the orbit has "wobble" terms, which can describe streamlines
+                The orbit may also have "wobble" terms, which can describe streamlines
                 of ring particles. Repeat these three elements for each wobble term:
 
                 * [9, 12, ...] `amp`: amplitude of the term, radians.
@@ -210,6 +220,7 @@ class KeplerPath(Path, Fittable):
             self._dphase_dt = 0.
 
     def get_elements(self):
+        """The orbital elements and wobble terms of this KeplerPath as an array."""
         return self._elements
 
     def _show(self, level, indent=0):
@@ -237,6 +248,7 @@ class KeplerPath(Path, Fittable):
 
     @property
     def params(self):
+        """The fittable parameters of this KeplerPath as a tuple of orbital elements."""
         return tuple(self._elements)
 
     def _refresh(self):
@@ -266,7 +278,7 @@ class KeplerPath(Path, Fittable):
         constructor. See Fittable.copy().
 
         Returns:
-            (KeplerPath): A new, unfrozen KeplerPath.
+            KeplerPath: A new, unfrozen KeplerPath.
         """
 
         (body, epoch, elements, observer, wobbles, _) = self.__getstate__()
@@ -281,8 +293,8 @@ class KeplerPath(Path, Fittable):
 
         Results are returned in an inertial frame where the Z-axis is aligned with the
         planet's rotation pole. Optionally, it also returns the partial derivatives of the
-        position vector with respect to the orbital elements, on the the assumption that
-        all orbital elements are independent. The The coordinates are only accurate to
+        position vector with respect to the orbital elements, on the assumption that
+        all orbital elements are independent. The coordinates are only accurate to
         first order in (e,i) and in the wobbles. The derivatives are precise relative to
         the definitions of these elements. However, partials are not provided for the
         wobbles.
@@ -293,7 +305,7 @@ class KeplerPath(Path, Fittable):
                 with respect to the elements.
 
         Returns:
-            (tuple): (position, velocity), each represented by a Vector3.
+            tuple[Vector3, Vector3]: (position, velocity), each represented by a Vector3.
         """
 
         # Convert to array if necessary
@@ -734,7 +746,7 @@ class KeplerPath(Path, Fittable):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
@@ -742,8 +754,8 @@ class KeplerPath(Path, Fittable):
                 respect to the orbital elements.
 
         Returns:
-            (Event): The Event object containing (at least) the time, position, and
-                velocity on the Path.
+            Event: The Event object containing (at least) the time, position, and velocity
+            on this Path.
         """
 
         # Without an observer, return event in the planet frame
@@ -788,6 +800,12 @@ class KeplerPath(Path, Fittable):
 
         Wobbles are ignored. The angle is a positive rotation about the planet's ring
         frame.
+
+        Parameters:
+            time (Scalar): The time in seconds TDB.
+
+        Returns:
+            Scalar: The longitude of ascending node at `time`.
         """
 
         time = Scalar.as_scalar(time)
@@ -797,6 +815,12 @@ class KeplerPath(Path, Fittable):
         """The J2000 vector pointing toward the orbit's pole at the specified time.
 
         Wobbles are ignored.
+
+        Parameters:
+            time (Scalar): The time in seconds TDB.
+
+        Returns:
+            Vector3: The pole vector at `time`.
         """
 
         xform = self._frame_wrt_j2000.transform_at_time(time)
@@ -817,12 +841,60 @@ class KeplerPath(Path, Fittable):
     # Override for the case where observer != None
     ######################################################################################
 
-    def photon_to_event(self, arrival, derivs=False, *, guess=None, antimask=None,
+    def photon_to_event(self, arrival, *, derivs=False, guess=None, antimask=None,
                         quick=None, converge=None, partials=False):
-        """The photon departure event from this path to match the arrival event.
+        """The photon departure event from this Path to match the arrival event.
 
         This is an override of the default method, provided to support the partial
         derivatives.
+
+        Parameters:
+            arrival (Event): The Event of a photon's arrival.
+            derivs (bool, optional): True to propagate derivatives of the `arrival`
+                position into the returned Events. The time derivative is always retained.
+            guess (Scalar, array-like, or float, optional): An initial guess to use as the
+                event time along this Path; otherwise None. Should be provided if the
+                event time was already returned from a similar calculation.
+            antimask (array-like or bool, optional): A boolean array to be applied to
+                event times and positions. Only the indices where antimask=True will be
+                used in the solution.
+            quick (dict or bool, optional): An optional dictionary of parameter values to
+                use as overrides to the configured default QuickPath and QuickFrame
+                parameters; use False to disable the use of QuickPaths and QuickFrames.
+                The default quick dictionary is defined in config.py.
+            converge (dict, optional): An optional dictionary of parameters to override
+                the configured default convergence parameters. The default configuration
+                is defined in config.py. Convergence parameters are as follows:
+
+                * `max_iterations` (int): The maximum number of iterations of Newton's
+                  method to perform. It should almost never need to be > 6.
+                * `dlt_precision` (float): Iteration stops when the largest change in
+                  light travel time between one iteration and the next falls below this
+                  threshold (in seconds).
+                * `dlt_limit` (float): The maximum allowed absolute value of the change in
+                  light travel time from the nominal range calculated initially. Changes
+                  in light travel with absolute values larger than this limit are clipped.
+                  This prevents the divergence of the solution in some cases.
+            partials (bool, optional): True to include the partial derivatives of the
+                returned Events relative to the orbital elements.
+
+        Returns:
+            tuple[Event, Event]: (`path_event`, `arrival_event`).
+
+            * `path_event`: The Event on this Path that matches the light travel time to
+              `arrival`. This Event always has position (0,0,0) on the Path, and it
+              holds the departing photon's line of sight and light travel time.
+            * `arrival_event`: A copy of the given `arrival` Event, with the photon's
+              arriving line of sight and light travel time filled in.
+
+        Notes:
+            These subfields are defined in the returned Events:
+
+            * In `path_event`, `dep` (Vector3) is the direction of the outgoing photon
+              from this Path and `dep_lt` (Scalar) is the positive light travel time to
+              `arrival_event`.
+            * In `arrival_event`: `arr` (Vector3) is the direction of the incoming photon
+              and `arr_lt` (Scalar) is the negative light travel time from `path_event`.
         """
 
         if self._observer is None:
@@ -841,11 +913,10 @@ class KeplerPath(Path, Fittable):
                                                antimask=antimask, quick=quick,
                                                converge=converge)
 
-        # event_at_time() takes the time at the observer and applies the light travel
-        # time itself, so it receives the arrival time here. The Event it returns is
-        # positioned where this path was when the photon departed, but is stamped with
-        # the observer's time, so the departure event is that state at the departure
-        # time.
+        # event_at_time() takes the time at the observer and applies the light travel time
+        # itself, so it receives the arrival time here. The Event it returns is positioned
+        # where this path was when the photon departed, but is stamped with the observer's
+        # time, so the departure event is that state at the departure time.
         apparent = self.event_at_time(obs_event.time, quick=quick, partials=partials)
         path_event = Event(planet_event.time, (apparent.pos, apparent.vel),
                            self._origin, Frame.J2000)

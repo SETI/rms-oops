@@ -144,14 +144,14 @@ class Frame(Mutable):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
 
         Notes:
             The time and the Frame object are not required to have the same shape;
@@ -177,19 +177,19 @@ class Frame(Mutable):
         can be tolerated as long as the QuickFrame can interpolate across them.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (tuple): The tuple (`newtimes`, `transform`), where:
+            tuple[Scalar, Transform]: (`newtimes`, `transform`):
 
-            * `newtimes` (Scalar): Times at which `transform` has been provided; this may
-              be a subset of the input times given because it omits times at which the
-              Transform could not be evaluated.
-            * `transform` (Transform): The Tranform applicable at `newtimmes`. It rotates
-              vectors from the reference frame to this frame.
+            * `newtimes` identifies the time(s) at which `transform` has been provided;
+              this may be a subset of the input times given because it omits times at
+              which the Transform could not be evaluated.
+            * `transform` is the Transform defined at `newtimes`. It rotates vectors from
+              the reference frame to this frame.
         """
 
         time = Scalar.as_scalar(time)
@@ -202,14 +202,14 @@ class Frame(Mutable):
         Values always fall between 0 and 2*pi.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Scalar): At the specified times, the angle from the reference Frame's X-axis,
-                along its X-Y plane, to the ascending node of this Frame's X-Y plane.
+            Scalar: At the specified times, the angle from the reference Frame's X-axis,
+            along its X-Y plane, to the ascending node of this Frame's X-Y plane.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.
@@ -352,10 +352,16 @@ class Frame(Mutable):
         """
 
         # Fill in the _key and the wayframe. A class without a _WAYFRAMES dictionary
-        # does not share wayframes; each of its instances is its own wayframe.
+        # does not share wayframes; each of its instances is its own wayframe. Neither
+        # does an object that is still unfrozen: its key is derived from parameters that
+        # can still be fitted, so two Frames that agree now might not agree later.
+        # _reregister() adds it to the pool once it has been frozen.
         if hasattr(type(self), '_WAYFRAMES'):
             self._key = Cache.clean_key(self._wayframe_key())
-            self._wayframe = self._WAYFRAMES.setdefault(self._key, self)
+            if self._is_frozen():
+                self._wayframe = self._WAYFRAMES.setdefault(self._key, self)
+            else:
+                self._wayframe = self
         else:
             self._wayframe = self
 
@@ -370,7 +376,7 @@ class Frame(Mutable):
                     # Otherwise, add a numeric suffix to make it unique
                     k = 2
                     while True:
-                        alt_frame_id = f'{frame_id}_{k}'
+                        alt_frame_id = f'{frame_id}-{k}'
                         if alt_frame_id not in Frame._FRAME_REGISTRY:
                             break
                         k += 1
@@ -407,7 +413,11 @@ class Frame(Mutable):
         self._primary = self
 
     def _reregister(self):
-        """Update this Frame's key in the cache if it has now been frozen."""
+        """Update this Frame's key in the cache now that it has been frozen.
+
+        A Frame that was left out of the pool by `_register` because it was unfrozen is
+        added to the pool here.
+        """
 
         # A Frame that is its own wayframe has no key to update
         if not hasattr(type(self), '_WAYFRAMES'):
@@ -429,7 +439,7 @@ class Frame(Mutable):
             frame (Frame or str): The Frame or the Frame's ID string.
 
         Returns:
-            (Frame): The Frame, converted from the ID if `frame` is a string.
+            Frame: The Frame, converted from the ID if `frame` is a string.
 
         Raises:
             KeyError: If `frame` is an ID that has not been registered.
@@ -448,7 +458,7 @@ class Frame(Mutable):
             frame (Frame or str): The Frame or the Frame's ID string.
 
         Returns:
-            (Frame): The Frame representing this Frame's primary definition.
+            Frame: The Frame representing this Frame's primary definition.
 
         Raises:
             KeyError: If `frame` is an ID string that has not been registered.
@@ -470,7 +480,7 @@ class Frame(Mutable):
             frame (Frame or str): The Frame or the Frame's ID string.
 
         Returns:
-            (Frame): The canonical Frame, converted from the ID if `frame` is a string.
+            Frame: The canonical Frame, converted from the ID if `frame` is a string.
 
         Raises:
             KeyError: If `frame` is an ID string that has not been registered.
@@ -489,7 +499,7 @@ class Frame(Mutable):
             frame_id (str): An ID string.
 
         Returns:
-            (bool): True if a Frame has been registered under this ID.
+            bool: True if a Frame has been registered under this ID.
         """
 
         return frame_id in Frame._FRAME_REGISTRY
@@ -511,6 +521,9 @@ class Frame(Mutable):
                 registered ID.
             use_shortcuts (bool, optional): False to prevent checking for a class-specific
                 shortcut.
+
+        Returns:
+            Frame: This Frame relative to the specified frame.
 
         Raises:
             KeyError: If `reference` is an ID string that has not been registered.
@@ -549,6 +562,9 @@ class Frame(Mutable):
 
         Parameters:
             reference (Frame or str): The reference Frame defined by a Frame or Frame ID.
+
+        Returns:
+            Frame: This Frame relative to the specified frame.
 
         Raises:
             KeyError: If `reference` is an ID string that has not been registered.
@@ -590,6 +606,10 @@ class Frame(Mutable):
                 is returned; if a dictionary, then the values provided override the values
                 in the default dictionary QUICK.dictionary, and the merged dictionary is
                 used.
+
+        Returns:
+            QuickFrame: A Frame that approximates this Frame for the given range of times,
+            but can be evaluated quickly via splines.
 
         Notes:
             Any QuickFrames generated by this function are saved as a list inside
@@ -651,7 +671,7 @@ class NullFrame(Frame):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
@@ -793,7 +813,7 @@ class LinkedFrame(Frame):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
@@ -827,7 +847,7 @@ class LinkedFrame(Frame):
         can be tolerated as long as a QuickFrame interpolates across them.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
@@ -889,7 +909,7 @@ class ReversedFrame(Frame):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
@@ -921,7 +941,7 @@ class ReversedFrame(Frame):
         can be tolerated as long as a QuickFrame interpolates across them.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.

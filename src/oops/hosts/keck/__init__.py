@@ -1,9 +1,9 @@
-################################################################################
+##########################################################################################
 # oops/hosts/keck/__init__.py: Class Keck
 #
 # This is an initial implementation of a Keck II FITS reader.  It does not
 # support distortion models or instruments other than NIRC2.
-################################################################################
+##########################################################################################
 
 import numpy as np
 try:
@@ -18,9 +18,9 @@ from filecache import FCPath
 
 __all__ = ['from_file', 'Keck']
 
-########################################
+##########################################################################################
 # Global Variables
-########################################
+##########################################################################################
 
 # A handy constant
 RADIANS_PER_ARCSEC = oops.RPD / 3600.
@@ -44,9 +44,9 @@ KECK_TARGET_DICT = {"MAR": "MARS",
 # Define some important paths and frames
 oops.Body.define_solar_system("1990-01-01", "2020-01-01")
 
-################################################################################
+##########################################################################################
 # Standard instrument methods
-################################################################################
+##########################################################################################
 
 def from_file(filespec, **parameters):
     """A general, static method to return an Observation object based on a given
@@ -58,13 +58,12 @@ def from_file(filespec, **parameters):
     keck_file = pyfits.open(local_path)
     return Keck.from_opened_fitsfile(keck_file, **parameters)
 
-################################################################################
+##########################################################################################
 # Class Keck
-################################################################################
+##########################################################################################
 
 class Keck(object):
-    """This class defines functions and properties unique to the Keck
-    Telescope.
+    """This class defines functions and properties unique to the Keck Telescope.
 
     Objects of this class are empty; they only exist to support inheritance.
     """
@@ -75,19 +74,16 @@ class Keck(object):
         # Found by poking around inside a pyfits object
         return keck_file._HDUList__file._File__file.name
 
-    #===========================================================================
     def telescope_name(self, keck_file):
         """The name of the telescope from which the observation was obtained."""
 
         return keck_file[0].header["TELESCOP"]
 
-    #===========================================================================
     def instrument_name(self, keck_file):
         """The name of the Keck instrument associated with the file."""
 
         return keck_file[0].header["CURRINST"]
 
-    #===========================================================================
     def detector_name(self, keck_file, **parameters):
         """The name of the detector on the Keck instrument that was used to
         obtain this file.
@@ -95,13 +91,11 @@ class Keck(object):
 
         return keck_file[0].header["CAMNAME"]
 
-    #===========================================================================
     def data_array(self, keck_file, **parameters):
         """Array containing the data."""
 
         return keck_file[0].data
 
-    #===========================================================================
     # This works for Snapshot observations. Others must override.
     def time_limits(self, hst_file, **parameters):
         """A tuple containing the overall start and end times of the
@@ -119,7 +113,6 @@ class Keck(object):
 
         return (tdb0, tdb1)
 
-    #===========================================================================
     def target_body(self, keck_file):
         """The body object defining the image target.
 
@@ -144,7 +137,6 @@ class Keck(object):
 
         return oops.Body.lookup(body_name)
 
-    #===========================================================================
     def construct_snapshot(self, keck_file, **parameters):
         """A Snapshot object for the data found in the specified image."""
 
@@ -200,7 +192,6 @@ class Keck(object):
                         filter = self.filter_name(keck_file),
                         headers = headers)
 
-    #===========================================================================
     @staticmethod
     def from_opened_fitsfile(keck_file, **parameters):
         """A general, static method to return an Observation object based on an
@@ -227,4 +218,4 @@ class Keck(object):
 
         return obs
 
-################################################################################
+##########################################################################################

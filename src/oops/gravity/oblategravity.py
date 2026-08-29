@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/gravity/oblategravity.py: OblateGravity subclass of class Gravity
-################################################################################
+##########################################################################################
 
 import numpy as np
 import warnings
@@ -11,18 +11,17 @@ from oops.gravity   import Gravity
 
 
 class OblateGravity(Gravity):
-    """A class describing the gravity field of an oblate planet using an
-    expansion in gravity moments J2, J4, etc.
+    """A class describing the gravity field of an oblate planet using an expansion in
+    gravity moments J2, J4, etc.
     """
 
-    #===========================================================================
     def __init__(self, gm, jlist=[], radius=1.):
         """The constructor for a OblateGravity object.
 
-        Input:
-            gm          The body's GM in units of km^3/s^2
-            jlist       optional list of even gravity harmonics: [jJ2, J4, ...].
-            radius      body radius for associated J-values.
+        Parameters:
+            gm: The body's GM in units of km^3/s^2.
+            jlist (optional): Optional list of even gravity harmonics: [jJ2, J4, ...].
+            radius (optional): Body radius for associated J-values.
         """
 
         self.gm = gm
@@ -69,7 +68,6 @@ class OblateGravity(Gravity):
     def __setstate__(self, state):
         self.__init__(*state)
 
-    #===========================================================================
     @staticmethod
     def _jseries(coefficients, ratio2):
         """Internal method to evaluate a series of the form:
@@ -78,14 +76,12 @@ class OblateGravity(Gravity):
 
         return ratio2 * np.polyval(coefficients[::-1], ratio2)
 
-    #===========================================================================
     def potential(self, a):
         """The potential energy at radius a, in the equatorial plane."""
 
         return -self.gm/a * (1. - OblateGravity._jseries(self.potential_jn,
                                                          self.r2/a**2))
 
-    #===========================================================================
     def omega(self, a, e=0., sin_i=0.):
         """The mean motion (radians/s) at semimajor axis a.
 
@@ -105,7 +101,6 @@ class OblateGravity(Gravity):
 
         return omega1
 
-    #===========================================================================
     def kappa2(self, a):
         """The square of the radial oscillation frequency (radians/s) at
         semimajor axis a.
@@ -116,7 +111,6 @@ class OblateGravity(Gravity):
                                                                self.r2/a2))
         return kappa2
 
-    #===========================================================================
     def kappa(self, a, e=0., sin_i=0.):
         """The radial oscillation frequency (radians/s) at semimajor axis a.
         axis a.
@@ -134,7 +128,6 @@ class OblateGravity(Gravity):
 
         return kappa1
 
-    #===========================================================================
     def nu(self, a, e=0., sin_i=0.):
         """The vertical oscillation frequency (radians/s) at semimajor axis a.
         """
@@ -152,7 +145,6 @@ class OblateGravity(Gravity):
 
         return nu1
 
-    #===========================================================================
     def domega_da(self, a, e=0., sin_i=0.):
         """The radial derivative of the mean motion (radians/s/km) at semimajor
         axis a.
@@ -171,7 +163,6 @@ class OblateGravity(Gravity):
 
         return domega1
 
-    #===========================================================================
     def dkappa_da(self, a, e=0., sin_i=0.):
         """The radial derivative of the radial oscillation frequency
         (radians/s/km) at semimajor axis a.
@@ -190,7 +181,6 @@ class OblateGravity(Gravity):
 
         return dkappa1
 
-    #===========================================================================
     def dnu_da(self, a, e=0., sin_i=0.):
         """The radial derivative of the vertical oscillation frequency
         (radians/s/km) at semimajor axis a.
@@ -209,7 +199,6 @@ class OblateGravity(Gravity):
 
         return dnu1
 
-    #===========================================================================
     def combo(self, a, factors, e=0., sin_i=0.):
         """A frequency combination, based on given coefficients for omega,
         kappa and nu. Full numeric precision is preserved in the limit of first-
@@ -324,7 +313,6 @@ class OblateGravity(Gravity):
 
         return sum_values
 
-    #===========================================================================
     def dcombo_da(self, a, factors, e=0., sin_i=0.):
         """The radial derivative of a frequency combination, based on given
         coefficients for omega, kappa and nu. Unlike method combo(), this one
@@ -343,7 +331,6 @@ class OblateGravity(Gravity):
 
         return sum_values
 
-    #===========================================================================
     def solve_a(self, freq, factors=(1,0,0), e=0., sin_i=0.):
         """Solve for the semimajor axis at which the frequency is equal to the
         given combination of factors on omega, kappa and nu. Solution is via
@@ -406,22 +393,20 @@ class OblateGravity(Gravity):
 
         return a
 
-    ############################################################################
+    ######################################################################################
     # Useful alternative names...
-    ############################################################################
+    ######################################################################################
 
     def n(self, a, e=0., sin_i=0.):
         """The mean motion at semimajor axis a. Identical to omega(a)."""
 
         return self.omega(a, e, sin_i)
 
-    #===========================================================================
     def dmean_dt(self, a, e=0., sin_i=0.):
         """The mean motion at semimajor axis a. Identical to omega(a)."""
 
         return self.omega(a, e, sin_i)
 
-    #===========================================================================
     def dperi_dt(self, a, e=0., sin_i=0.):
         """The pericenter precession rate at semimajor axis a. Identical to
         combo(a, (1,-1,0)).
@@ -429,7 +414,6 @@ class OblateGravity(Gravity):
 
         return self.combo(a, (1,-1,0), e, sin_i)
 
-    #===========================================================================
     def dnode_dt(self, a, e=0., sin_i=0.):
         """The nodal regression rate (negative) at semimajor axis a. Identical
         to combo(a, (1,0,-1)).
@@ -437,7 +421,6 @@ class OblateGravity(Gravity):
 
         return self.combo(a, (1,0,-1), e, sin_i)
 
-    #===========================================================================
     def d_dmean_dt_da(self, a, e=0., sin_i=0.):
         """The radial derivative of the mean motion at semimajor axis a.
         Identical to domega_da(a).
@@ -445,7 +428,6 @@ class OblateGravity(Gravity):
 
         return self.domega_da(a, e, sin_i)
 
-    #===========================================================================
     def d_dperi_dt_da(self, a, e=0., sin_i=0.):
         """The radial derivative of the pericenter precession rate at semimajor
         axis a. Identical to dcombo_da(a, (1,-1,0)).
@@ -453,7 +435,6 @@ class OblateGravity(Gravity):
 
         return self.dcombo_da(a, (1,-1,0), e, sin_i)
 
-    #===========================================================================
     def d_dnode_dt_da(self, a, e=0., sin_i=0.):
         """The radial derivative of the nodal regression rate (negative) at
         semimajor axis a. Identical to dcombo_da(a, (1,0,-1)).
@@ -461,7 +442,6 @@ class OblateGravity(Gravity):
 
         return self.dcombo_da(a, (1,0,-1), e, sin_i)
 
-    #===========================================================================
     def ilr_pattern(self, n, m, p=1):
         """The pattern speed of the m:m-p inner Lindblad resonance, given the
         mean motion n of the perturber.
@@ -470,7 +450,6 @@ class OblateGravity(Gravity):
         a = self.solve_a(n, (1,0,0))
         return (n + self.kappa(a) * p/m)
 
-    #===========================================================================
     def olr_pattern(self, n, m, p=1):
         """The pattern speed of the m:m+p outer Lindblad resonance, given the
         mean motion n of the perturber.
@@ -479,9 +458,9 @@ class OblateGravity(Gravity):
         a = self.solve_a(n, (1,0,0))
         return (n - self.kappa(a) * p/(m+p))
 
-    ############################################################################
+    ######################################################################################
     # Orbital elements
-    ############################################################################
+    ######################################################################################
 
     def state_from_osc(self, elements, body_gm=0.):
         """Position and velocity based on osculating orbital elements: (a, e, i,
@@ -560,9 +539,9 @@ class OblateGravity(Gravity):
 
         return (pos,vel)
 
-    ############################################################################
+    ######################################################################################
     # Orbital elements
-    ############################################################################
+    ######################################################################################
 
     def osc_from_state(self, pos, vel, body_gm=0.):
         """Osculating orbital elements based on position and velocity.
@@ -652,7 +631,6 @@ class OblateGravity(Gravity):
 
         return tuple(elements)
 
-    #===========================================================================
     def state_from_geom(self, elements, body_gm=0.):
         """Position and velocity based on geometric orbital elements: (a, e, i,
         mean longitude, longitude of pericenter, longitude of ascending node).
@@ -722,7 +700,6 @@ class OblateGravity(Gravity):
 
         return (pos, vel)
 
-    #===========================================================================
     def geom_from_state(self, pos, vel, body_gm=0., tol=1.e-6):
         """Geometric orbital elements based on position and velocity.
 
@@ -802,9 +779,9 @@ class OblateGravity(Gravity):
 
         return (a, e, inc, lam, long_peri, long_node)
 
-    ############################################################################
+    ######################################################################################
     # Internal methods
-    ############################################################################
+    ######################################################################################
 
     def _geom_to_freq(self, a, e, inc, body_gm=0.):
         """Take the geometric osculating elements and create frequencies
@@ -847,7 +824,6 @@ class OblateGravity(Gravity):
 
         return (n, kappa, nu, eta2, chi2, alpha1, alpha2, alphasq)
 
-    #===========================================================================
     @staticmethod
     def _freq_to_geom(r, L, z, rdot, Ldot, zdot, rc, Lc, zc, rdotc, Ldotc,
                       zdotc, n, kappa, nu, eta2, chi2, alpha1, alpha2, alphasq):
@@ -914,15 +890,14 @@ class OblateGravity(Gravity):
         return (a, e, inc, long_peri, long_node, lam,
                 rc, Lc, zc, rdotc, Ldotc, zdotc)
 
-    #===========================================================================
     # A nicer version of arctan2
     @staticmethod
     def _pos_arctan2(y, x):
         return np.arctan2(y, x) % TWOPI
 
-################################################################################
+##########################################################################################
 # Planetary gravity fields defined...
-################################################################################
+##########################################################################################
 
 # From http://ssd.jpl.nasa.gov/?planet_phys_par
 G_MKS = 6.67428e-11     # m^3 kg^-1 s^-2
@@ -943,7 +918,8 @@ MARS    = OblateGravity(0.641693e24 * G_PER_KG, [], 3396.19)
 # Earlier values from http://ssd.jpl.nasa.gov/?gravity_fields_op
 JUPITER_V1 = OblateGravity(126686535., [14696.43e-06, -587.14e-06, 34.25e-06], 71492.)
 #SATURN  = OblateGravity( 37931208.,  [16290.71e-06, -935.83e-06, 86.14e-06], 60330.)
-SATURN_V1  = OblateGravity( 37931207.7, [16290.71e-06, -936.83e-06, 86.14e-06, -10.e-06], 60330.)
+SATURN_V1  = OblateGravity( 37931207.7,
+                            [16290.71e-06, -936.83e-06, 86.14e-06, -10.e-06], 60330.)
 URANUS_V1  = OblateGravity(  5793964., [ 3341.29e-06,  -30.44e-06           ], 26200.)
 NEPTUNE_V1 = OblateGravity(  6835100., [ 3408.43e-06,  -33.40e-06           ], 25225.)
 
@@ -997,7 +973,7 @@ SATURN_TITAN = OblateGravity(SATURN.gm + TITAN.gm, SATURN.jn, SATURN.rp)
 
 PLUTO_CHARON_OLD = OblateGravity(PLUTO_ONLY.gm + CHARON.gm, [], PLUTO_ONLY.rp)
 
-################################################################################
+##########################################################################################
 # Revised Pluto-Charon gravity
 #
 # Outside a ring of radius R, the gravity moments are -P2n(0).
@@ -1019,7 +995,7 @@ PLUTO_CHARON_OLD = OblateGravity(PLUTO_ONLY.gm + CHARON.gm, [], PLUTO_ONLY.rp)
 #   J2' = J2 (GM1 (R1/R2)^2 + GM2) / (GM1 + GM2)
 #   J4' = J4 (GM1 (R1/R2)^4 + GM2) / (GM1 + GM2)
 # etc.
-################################################################################
+##########################################################################################
 PLUTO_A  = 19596. * CHARON.gm / (PLUTO.gm + CHARON.gm)
 CHARON_A = 19596. - PLUTO_A
 ratio2 = (PLUTO_A / CHARON_A)**2
@@ -1032,7 +1008,7 @@ PLUTO_CHARON_AS_RINGS = OblateGravity(gm1 + gm2,
          -35/128. * (gm1 * ratio2**4 + gm2) / (gm1 + gm2),
           63/256. * (gm1 * ratio2**5 + gm2) / (gm1 + gm2)], CHARON_A)
 PLUTO_CHARON = PLUTO_CHARON_AS_RINGS
-################################################################################
+##########################################################################################
 
 Gravity.GRAVITY_REGISTRY["SUN"       ] = SUN
 Gravity.GRAVITY_REGISTRY["MERCURY"   ] = MERCURY
@@ -1085,4 +1061,4 @@ for name, value in Gravity.GRAVITY_REGISTRY.items():
     name = name.replace('+', '_').replace(' ', '_')
     setattr(Gravity, name, value)
 
-################################################################################
+##########################################################################################

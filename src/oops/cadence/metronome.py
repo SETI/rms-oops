@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/cadence/metronome.py: Metronome subclass of class Cadence
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -14,16 +14,15 @@ class Metronome(Cadence):
     def __init__(self, tstart, tstride, texp, steps, clip=True):
         """Constructor for a Metronome.
 
-        Input:
-            tstart      the start time of the observation in seconds TDB.
-            tstride     the interval in seconds from the start of one time step
-                        to the start of the next.
-            texp        the exposure time in seconds associated with each step.
-                        This may be shorter than tstride due to readout times,
-                        etc. It may also be longer.
-            steps       the number of time steps.
-            clip        if True (the default), times and index values are always
-                        clipped into the valid range.
+        Parameters:
+            tstart (float): The start time of the observation in seconds TDB.
+            tstride: The interval in seconds from the start of one time step to the
+                start of the next.
+            texp (float): The exposure time in seconds associated with each step. This may
+                be shorter than tstride due to readout times, etc. It may also be longer.
+            steps (float): Time steps.
+            clip (bool, optional): If True (the default), times and index values are
+                always clipped into the valid range.
         """
 
         self.tstart = float(tstart)
@@ -59,21 +58,21 @@ class Metronome(Cadence):
         self.__init__(*state)
         self.freeze()
 
-    #===========================================================================
     def time_at_tstep(self, tstep, remask=False, derivs=False, inclusive=True):
         """The time associated with the given time step.
 
         This method supports non-integer time step values via interpolation.
 
-        Input:
-            tstep       a Scalar of time step index values.
-            remask      True to mask values outside the time limits.
-            derivs      True to include derivatives of tstep in the returned
-                        time.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            tstep (Scalar): Time step index values.
+            remask (bool, optional): True to mask values outside the time limits.
+            derivs (bool, optional): True to include derivatives of tstep in the returned
+                time.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         a Scalar of times in seconds TDB.
+        Returns:
+            (Scalar): Times in seconds TDB.
         """
 
         tstep = Scalar.as_scalar(tstep, recursive=derivs)
@@ -100,20 +99,21 @@ class Metronome(Cadence):
         return (self.time[0] + tstep_int * self.tstride
                              + tstep_frac * self.texp)
 
-    #===========================================================================
     def time_range_at_tstep(self, tstep, remask=False, inclusive=True):
         """The range of times for the given time step.
 
-        Input:
-            tstep       a Pair of time step index values.
-            remask      True to mask values outside the time limits.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            tstep (Pair): Time step index values.
+            remask (bool, optional): True to mask values outside the time limits.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         (time_min, time_max)
-            time_min    a Scalar defining the minimum time associated with the
-                        index. It is given in seconds TDB.
-            time_max    a Scalar defining the maximum time value.
+        Returns:
+            (tuple): (time_min, time_max), where:
+
+            * `time_min` (Scalar): Defining the minimum time associated with the index. It
+              is given in seconds TDB.
+            * `time_max` (Scalar): Defining the maximum time value.
         """
 
         tstep = Scalar.as_scalar(tstep, recursive=False)
@@ -123,21 +123,22 @@ class Metronome(Cadence):
 
         return (time_min, time_min + self.texp)
 
-    #===========================================================================
     def tstep_at_time(self, time, remask=False, derivs=False, inclusive=True):
         """Time step for the given time.
 
         This method returns non-integer time steps via interpolation.
 
-        Input:
-            time        a Scalar of times in seconds TDB.
-            remask      True to mask time values not sampled within the cadence.
-            derivs      True to include derivatives of time in the returned
-                        tstep.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            time (Scalar): Times in seconds TDB.
+            remask (bool, optional): True to mask time values not sampled within the
+                cadence.
+            derivs (bool, optional): True to include derivatives of time in the returned
+                tstep.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         a Scalar of time step indices.
+        Returns:
+            (Scalar): Time step indices.
         """
 
         time = Scalar.as_scalar(time, recursive=derivs)
@@ -204,23 +205,22 @@ class Metronome(Cadence):
 
         return tstep
 
-    #===========================================================================
     def tstep_range_at_time(self, time, remask=False, inclusive=True):
         """Integer range of time steps active at the given time.
 
-        Input:
-            time        a Scalar of times in seconds TDB.
-            remask      True to mask time values not sampled within the cadence.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            time (Scalar): Times in seconds TDB.
+            remask (bool, optional): True to mask time values not sampled within the
+                cadence.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         (tstep_min, tstep_max)
-            tstep_min   minimum Scalar time step containing the given time.
-            tstep_max   maximum Scalar time step after the given time.
-
-        Returned tstep_min will always be in the allowed range for the cadence,
-        inclusive, regardless of masking. If the time is not inside the cadence,
-        tstep_max == tstep_min.
+        Returns:
+            (tuple): (tstep_min, tstep_max) tstep_min   minimum Scalar time step
+                containing the given time. tstep_max   maximum Scalar time step after the
+                given time. Returned tstep_min will always be in the allowed range for the
+                cadence, inclusive, regardless of masking. If the time is not inside the
+                cadence, tstep_max == tstep_min.
         """
 
         time = Scalar.as_scalar(time, recursive=False)
@@ -275,19 +275,18 @@ class Metronome(Cadence):
 
         return (tstep_min, tstep_max)
 
-    #===========================================================================
     def time_is_outside(self, time, inclusive=True):
         """A Boolean mask of times that fall outside the cadence.
 
         Masked time values return masked results.
 
-        Input:
-            time        a Scalar of times in seconds TDB.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            time (Scalar): Times in seconds TDB.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         a Boolean array indicating which time values are not
-                        sampled by the cadence.
+        Returns:
+            (bool): Array indicating which time values are not sampled by the cadence.
         """
 
         if self.is_continuous:
@@ -304,19 +303,16 @@ class Metronome(Cadence):
             return (time_mod.tvl_gt(self.texp) | time.tvl_lt(self.time[0])
                                                | time.tvl_ge(self.time[1]))
 
-    #===========================================================================
     def time_shift(self, secs):
-        """Construct a duplicate of this Cadence with all times shifted by given
-        amount.
+        """Construct a duplicate of this Cadence with all times shifted by given amount.
 
-        Input:
-            secs        the number of seconds to shift the time later.
+        Parameters:
+            secs (float): Seconds to shift the time later.
         """
 
         return Metronome(self.tstart + secs,
                          self.tstride, self.texp, self.steps)
 
-    #===========================================================================
     def as_continuous(self):
         """Construct a shallow copy of this Cadence, forced to be continuous.
 
@@ -326,18 +322,17 @@ class Metronome(Cadence):
 
         return Metronome(self.tstart, self.tstride, self.tstride, self.steps)
 
-    #===========================================================================
     def tstride_at_tstep(self, tstep, sign=1, remask=False):
         """The time interval(s) between the times of adjacent time steps.
 
-        Input:
-            tstep       a Scalar or Pair time step index, which need not be
-                        integral.
-            sign        +1 for the time interval to the next time step;
-                        -1 for the time interval since the previous time step.
-            remask      True to mask time tsteps that are out of range.
+        Parameters:
+            tstep (Scalar or Pair): Time step index, which need not be integral.
+            sign (int, optional): +1 for the time interval to the next time step; -1 for
+                the time interval since the previous time step.
+            remask (bool, optional): True to mask time tsteps that are out of range.
 
-        Return:         a Scalar or Pair of strides in seconds.
+        Returns:
+            (Scalar or Pair): Strides in seconds.
         """
 
         tstep = Scalar.as_scalar(tstep, recursive=False)
@@ -352,20 +347,18 @@ class Metronome(Cadence):
 
         return Scalar(self.tstride)
 
-    #===========================================================================
     @staticmethod
     def for_array1d(steps, tstart, texp, interstep_delay=0.):
         """Alternative constructor.
 
-        Input:
-            steps               number of time steps.
-            tstart              start time in seconds TDB.
-            texp                exposure duration in second for each sample.
-            interstep_delay     time delay in seconds between the end of one
-                                integration and the beginning of the next, in
-                                seconds. Default is 0.
+        Parameters:
+            steps (float): Number of time steps.
+            tstart (float): Start time in seconds TDB.
+            texp (float): Exposure duration in second for each sample.
+            interstep_delay (optional): Time delay in seconds between the end of one
+                integration and the beginning of the next, in seconds. Default is 0.
         """
 
         return Metronome(tstart, texp + interstep_delay, texp, steps)
 
-################################################################################
+##########################################################################################

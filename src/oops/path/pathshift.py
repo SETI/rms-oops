@@ -1,6 +1,6 @@
-#########################################################################################
-# oops/path/pathshift.py: Subclass PathShift of class Path
-#########################################################################################
+##########################################################################################
+# oops/path/pathshift.py
+##########################################################################################
 
 from polymath        import Scalar
 from oops.fittable   import Fittable
@@ -9,8 +9,9 @@ import oops.mutable as mutable
 
 
 class PathShift(Path, Fittable):
-    """A path defined by a time-shift along another path.
-    """
+    """A path defined by a time-shift along another path."""
+
+    _WAYPOINTS = {}
 
     def __init__(self, arg, /, path, *, path_id=None, freeze=False):
         """Constructor for a PathShift.
@@ -37,6 +38,7 @@ class PathShift(Path, Fittable):
 
         if hasattr(arg, 'dt'):
             self._link = arg
+            self._dt = arg.dt       # _register() needs this before _refresh() runs
         else:
             self._dt = arg
             self._link = None
@@ -54,8 +56,12 @@ class PathShift(Path, Fittable):
         if freeze:
             self.freeze()
 
+    def _waypoint_key(self):
+        return (self._dt, self._path, self._link)
+
     @property
     def dt(self):
+        """The time shift in seconds applied to the Path."""
         return self._dt
 
     @property
@@ -104,6 +110,7 @@ class PathShift(Path, Fittable):
 
     @property
     def params(self):
+        """The fittable parameters of this PathShift as a tuple of one time shift."""
         return (self._dt,)
 
     def _refresh(self):
@@ -137,18 +144,17 @@ class PathShift(Path, Fittable):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Event): The Event object containing (at least) the time, position, and
-                velocity on the Path.
+            Event: The Event object containing (at least) the time, position, and velocity
+            on this Path.
 
         Raises:
-            ValueError: If the shape of `time` cannot be broadcasted to the shape of this
-                Path.
+            ValueError: If the shapes of `time` and this object cannot be broadcasted.
         """
 
         time = Scalar.as_scalar(time)
@@ -158,4 +164,4 @@ class PathShift(Path, Fittable):
 
 Path._PATH_SUBCLASSES.append(PathShift)
 
-#########################################################################################
+##########################################################################################

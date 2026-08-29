@@ -1,23 +1,21 @@
-################################################################################
+##########################################################################################
 # oops/backplanes/pixel.py: pixel coordinate backplanes
-################################################################################
+##########################################################################################
 
 from oops.constants import C
 from oops.backplane import Backplane
 from oops.body import Body
 
-#===============================================================================
 def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
     """Gridless approximate apparent diameter of the body in pixels.
 
-    Input:
-        event_key       key defining the event on the body's path.
-        radius          If nonzero, override the radius of the body referred to
-                        in the event key.
-        axis            "u"   : horizontal pixel direction.
-                        "v"   : vertical pixel direction.
-                        "min" : direction of largest diameter.
-                        "max" : direction of smallest diameter.
+    Parameters:
+        event_key (str or tuple): Key defining the event on the body's path.
+        radius (optional): If nonzero, override the radius of the body referred to in
+            the event key.
+        axis (str, optional): "u"   : horizontal pixel direction. "v"   : vertical pixel
+            direction. "min" : direction of largest diameter. "max" : direction of
+            smallest diameter.
     """
     if not self.obs.INVENTORY_IMPLEMENTED:
         raise NotImplementedError('body_diameter_in_pixels not defined for '
@@ -55,14 +53,13 @@ def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
 
     return self.register_backplane(key, 2*radius_in_pixels)
 
-#===============================================================================
 def center_coordinate(self, event_key, axis="u"):
     """Gridless coordinate of the center of the disk.
 
-    Input:
-        event_key       key defining the event on the body's path.
-        axis            "u" (horizontal pixel direction) or "v" (vertical
-                        pixel direction).
+    Parameters:
+        event_key (str or tuple): Key defining the event on the body's path.
+        axis (str, optional): "u" (horizontal pixel direction) or "v" (vertical pixel
+            direction).
     """
     if axis not in {'u', 'v'}:
         raise ValueError('invalid axis: ' + repr(axis))
@@ -80,9 +77,9 @@ def center_coordinate(self, event_key, axis="u"):
     index = 0 if axis == "u" else 1
     return self.register_backplane(key, uv.to_scalars()[index])
 
-################################################################################
+##########################################################################################
 
 # Add these functions to the Backplane module
 Backplane._define_backplane_names(globals().copy())
 
-################################################################################
+##########################################################################################

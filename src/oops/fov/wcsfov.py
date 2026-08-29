@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/fov/wcsfov.py: FOV subclass for WCS/SIP FOVs described by FITS headers.
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -13,47 +13,44 @@ from oops.constants         import RPD, DPR
 
 
 class WCSFOV(FOV):
-    """PolynomialFOV subclass represented by WCS SIP parameters in a FITS
-    header.
+    """FOV subclass represented by WCS SIP parameters in a FITS header.
 
-    The FITS WCS parameters define both the camera distortion and also image's
-    instantaneous (aberration-corrected) pointing. We need to decouple these two
-    for our purposes.
+    The FITS WCS parameters define both the camera distortion and the image's
+    instantaneous (aberration-corrected) pointing. These two must be decoupled for our
+    purposes.
 
-    In addition to the standard FOV attributes (uv_los, uv_scale, uv_shape, and
-    uv_area), a WCSFOV also has these:
+    Properties:
+        * header (dict): The given FITS header.
+        * ref_axis (str): The reference axis, "x" or "y". This is the image axis used to
+          define the FOV's frame. It is needed because the axes can be slightly skewed.
+        * ra (float): Apparent right ascension at the reference point in the image, in
+          radians.
+        * dec (float): Apparent declination at the reference point in the image, in
+          radians.
+        * clock (float): Clock angle for celestial north in the image, in radians.
+        * cmatrix (Cmatrix): A Cmatrix frame that rotates apparent J2000 coordinates into
+          the camera FOV, based on the WCS parameters provided. It is useful for
+          consistency testing and as a starting point for a Frame definition.
 
-        header      given FITS header.
-        ref_axis    reference axis, "x" or "y". This is the image axis used to
-                    define the FOV's frame. It is needed because the axes can
-                    be slightly skewed.
-        ra          apparent right ascension at reference point in image, in
-                    radians.
-        dec         apparent declination at references point in image, in
-                    radians.
-        clock       clock angle for celestial north in the image, in radians.
-        ref_uv      reference point in pixel coordinates, as a Pair object.
-        cmatrix     Cmatrix frame that rotates apparent J2000 coordinates into
-                    the camera FOV, based on the WCS parameters provided. It is
-                    useful for consistency testing and as a starting point for
-                    a Frame definition.
+    The standard FOV properties `uv_los`, `uv_scale`, `uv_shape` and `uv_area` are also
+    defined.
     """
 
-    #===========================================================================
     def __init__(self, header, ref_axis='y', fast=True):
-        """Constructor for a, FOV object that handles the WCS parameters from a
-        FITS header.
+        """Constructor for a WCSFOV based on the WCS parameters in a FITS header.
 
-        Inputs:
-            header      FITS header (or equivalent dictionary).
-            ref_axis    "x" or "y", the axis to align with the FOV frame if the
-                        axes are not exactly perpendicular.
-            fast        if True and the WCS model includes the coefficients for
-                        the reverse transform (xy to uv), then that reverse
-                        transform will be used as is. If False, it will instead
-                        be used as the starting point for an exact reverse
-                        transform using Newton's method.
+        Parameters:
+            header (dict): FITS header (or equivalent dictionary).
+            ref_axis (str, optional): "x" or "y", the axis to align with the FOV frame if
+                the axes are not exactly perpendicular.
+            fast (bool, optional): If True and the WCS model includes the coefficients for
+                the reverse transform (`(x,y)` to `(u,v)`), then that reverse transform
+                will be used as is. If False, it will instead be used as the starting
+                point for an exact reverse transform using Newton's method.
 
+        Raises:
+            ValueError: If `ref_axis` is not "x" or "y", if the header's CTYPE values are
+                not "RA---TAN" and "DEC--TAN", or if its CUNIT values are not "deg".
         """
 
         # Description of the WCS parameters is found here:
@@ -76,7 +73,7 @@ class WCSFOV(FOV):
             header['CTYPE2'][:8] != 'DEC--TAN'):
                 raise ValueError('only WCS CTYPEs "RA---TAN" and "DEC--TAN" '
                                  + 'are supported')
-        if header['CUNIT1'] != 'deg' and header['CUNIT2'] != 'deg':
+        if header['CUNIT1'] != 'deg' or header['CUNIT2'] != 'deg':
             raise ValueError('only CUNIT = "deg" is supported')
 
         # The FITS formula is:
@@ -101,7 +98,7 @@ class WCSFOV(FOV):
 
         # Now we need to handle the CD matrix, which contains scale, rotation,
         # and skew. We need to decouple the rotation component from the others,
-        # because the rotation is handled will be handled by the instrument
+        # because the rotation will be handled by the instrument
         # frame; it is not an aspect of the FOV.
         #
         # Let's define u' = u + f(u,v); v' = v + g(u,v), so we have:
@@ -228,7 +225,6 @@ class WCSFOV(FOV):
                                            self.dec * DPR,
                                            -self.clock * DPR)
 
-    #===========================================================================
     def __getstate__(self):
         self.refresh()
         return (self.header, self.ref_axis, self.fast)
@@ -237,10 +233,19 @@ class WCSFOV(FOV):
         self.__init__(*state)
         self.freeze()
 
-    #===========================================================================
     @staticmethod
     def _sips_coefficients(header, prefixes):
-        """Internal method to read SIPS coefficients from the header."""
+        """Read a set of SIP distortion coefficients from a FITS header.
+
+        Parameters:
+            header (dict): FITS header (or equivalent dictionary).
+            prefixes (list[str]): The two keyword prefixes identifying the coefficients,
+                e.g., `['A', 'B']` for the forward transform.
+
+        Returns:
+            ndarray: The coefficient array, with shape
+            `(order+1, order+1, len(prefixes))`.
+        """
 
         # Determine polynomial order
         order = 1
@@ -264,67 +269,66 @@ class WCSFOV(FOV):
 
         return coeffts
 
-    #===========================================================================
-    def xy_from_uvt(self, uv, time=None, derivs=False, remask=False):
-        """The (x,y) camera frame coordinates given the FOV coordinates (u,v) at
-        the specified time.
+    def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
+        """The `(x,y)` camera frame coordinates given the FOV coordinates `(u,v)` at the
+        specified time.
 
-        Input:
-            uv          (u,v) coordinate Pair in the FOV.
-            time        Scalar of optional absolute times. Ignored by WCSFOV.
-            derivs      If True, any derivatives in (u,v) get propagated into
-                        the returned (x,y) Pair.
-            remask      True to mask (u,v) coordinates outside the field of
-                        view; False to leave them unmasked.
+        Parameters:
+            uv_pair (Pair): `(u,v)` coordinates in this FOV.
+            time (Scalar, optional): Absolute time in seconds TDB. Ignored by WCSFOV.
+            derivs (bool, optional): If True, any derivatives in `(u,v)` get propagated
+                into the returned `(x,y)` coordinates.
+            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+                view; False to leave them unmasked.
+            **kwargs: Additional parameters that might affect the transform can be
+                included as keyword arguments.
 
-        Return:         Pair of same shape as uv_pair, giving the transformed
-                        (x,y) coordinates in the camera's frame.
+        Returns:
+            Pair: The transformed `(x,y)` coordinates in the camera's frame, with the same
+                shape as `uv_pair`.
         """
 
-        return self.neg_cdp * self.polyfov.xy_from_uvt(uv, derivs=derivs,
-                                                           remask=remask)
+        return self.neg_cdp * self.polyfov.xy_from_uvt(uv_pair, derivs=derivs,
+                                                       remask=remask)
 
-    #===========================================================================
-    def uv_from_xyt(self, xy, time=None, derivs=False, remask=False):
-        """The (u,v) FOV coordinates given the (x,y) camera frame coordinates at
-        the specified time.
+    def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
+        """The `(u,v)` FOV coordinates given the `(x,y)` camera frame coordinates at the
+        specified time.
 
-        Input:
-            xy          (x,y) Pair in FOV coordinates.
-            tfrac       Scalar of fractional times during the exposure. Ignored
-                        by WCSFOV.
-            time        Scalar of optional absolute times. Ignored by
-                        WCSFOV.
-            derivs      If True, any derivatives in (x,y) get propagated into
-                        the returned (u,v) Pair.
-            remask      True to mask (u,v) coordinates outside the field of
-                        view; False to leave them unmasked.
+        Parameters:
+            xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.
+            time (Scalar, optional): Absolute time in seconds TDB. Ignored by WCSFOV.
+            derivs (bool, optional): If True, any derivatives in `(x,y)` get propagated
+                into the returned `(u,v)` coordinates.
+            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+                view; False to leave them unmasked.
+            **kwargs: Additional parameters that might affect the transform can be
+                included as keyword arguments.
 
-        Return:         Pair of same shape as xy_pair, giving the computed (u,v)
-                        FOV coordinates.
+        Returns:
+            Pair: The computed `(u,v)` FOV coordinates, with the same shape as `xy_pair`.
         """
 
-        xy0 = self.neg_cdp_inv * Pair.as_pair(xy, recursive=derivs)
+        xy0 = self.neg_cdp_inv * Pair.as_pair(xy_pair, recursive=derivs)
         return self.polyfov.uv_from_xy(xy0, derivs=derivs, remask=remask)
 
-    #===========================================================================
     def wcs_from_uv(self, uv, derivs=False, remask=False):
-        """The WCS coordinates (apparent RA, dec) given the FOV coordinates
-        (u,v).
+        """The WCS coordinates (apparent RA, dec) given the FOV coordinates `(u,v)`.
 
-        This bypasses any coordinate frame to return the (RA,dec) offsets as
-        indicated in the FITS header. It should mimic
+        This bypasses any coordinate frame to return the `(RA,dec)` values as indicated in
+        the FITS header. It should mimic::
+
             astropy.wcs.WCS.pixel_to_world(u - 0.5, v - 0.5) * RPD
 
-        Input:
-            uv          (u,v) coordinate Pair in the FOV.
-            derivs      If True, any derivatives in (u,v) get propagated into
-                        the returned (x,y) Pair.
-            remask      True to mask (u,v) coordinates outside the field of
-                        view; False to leave them unmasked.
+        Parameters:
+            uv (Pair): `(u,v)` coordinates in this FOV.
+            derivs (bool, optional): If True, any derivatives in `(u,v)` get propagated
+                into the returned `(RA,dec)` coordinates.
+            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+                view; False to leave them unmasked.
 
-        Return:         Pair of same shape as uv_pair, giving the transformed
-                        (x,y) coordinates in the camera's frame.
+        Returns:
+            Pair: The apparent `(RA,dec)` in radians, with the same shape as `uv`.
         """
 
         radec = self.cd * self.polyfov.xy_from_uv(uv, derivs=derivs,
@@ -335,11 +339,11 @@ class WCSFOV(FOV):
         cos_dec = np.cos(radec.vals[...,1])
 
         radec.vals[...,0] /= cos_dec
-        for key, deriv in radec.derivs:
+        for key, deriv in radec.derivs.items():
             deriv.vals[...,0] /= cos_dec
 
         radec.vals[...,0] += self.ra
 
         return radec
 
-################################################################################
+##########################################################################################

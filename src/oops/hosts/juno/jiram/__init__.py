@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/inst/juno/jiram/__init__.py
-################################################################################
+##########################################################################################
 
 import julian
 import pdsparser
@@ -12,9 +12,9 @@ from filecache import FCPath
 
 __all__ = ['from_file', 'JIRAM']
 
-################################################################################
+##########################################################################################
 # Standard class methods
-################################################################################
+##########################################################################################
 def from_file(filespec, return_all_planets=False, method='strict', **parameters):
     """A general, static method to return a Snapshot object based on a given
     JIRAM image or spectrum file.
@@ -60,21 +60,16 @@ def from_file(filespec, return_all_planets=False, method='strict', **parameters)
 #*******************************************************************************
 class _Metadata(object):
 
-    #===========================================================================
     def __init__(self, label):
         """Use the label to assemble the image metadata.
 
-        Input:
-            label           The label dictionary.
+        Parameters:
+            label (dict): The label dictionary.
 
         Attributes:
-            nlines          A Numpy array containing the data in axis order
-                            (line, sample).
-            nsamples        The time sampling array in (line, sample) axis
-                            order, or None if no time backplane is found in
-                            the file.
-            nframelets
-
+            nlines          A Numpy array containing the data in axis order (line,
+            sample). nsamples        The time sampling array in (line, sample) axis order,
+            or None if no time backplane is found in the file. nframelets
         """
 
         # Default timing for unprocessed frame
@@ -94,20 +89,18 @@ class JIRAM(object):
     fovs = {}
     initialized = False
 
-    #===========================================================================
     @staticmethod
     def initialize(asof=None, **kwargs):
-        """
-        Initialize key information about the JIRAM instrument; fill in key
-        information about the WAC and NAC.
+        """Initialize key information about the JIRAM instrument; fill in key information
+        about the WAC and NAC.
 
-        Must be called first. After the first call, later calls to this function
-        are ignored.
+        Must be called first. After the first call, later calls to this function are
+        ignored.
 
-        Input:
-            asof        Only use SPICE kernels that existed before this date;
-                        None to ignore.
-            kwargs:     Arguments for juno.initialize() and Body.define_solar_system()
+        Parameters:
+            asof (str, optional): Only use SPICE kernels that existed before this date;
+                None to ignore. kwargs:     Arguments for juno.initialize() and
+                Body.define_solar_system()
         """
 
         # Quick exit after first call
@@ -120,16 +113,14 @@ class JIRAM(object):
 
         JIRAM.initialized = True
 
-    #===========================================================================
     @staticmethod
     def create_frame(time, name):
         """Create a frame for a JIRAM component.
 
-        Input:
-            time  time at which to define the inertialy fixed mirror-corrected
-                  frame.
-
-            name  name of the component.
+        Parameters:
+            time (Scalar): Time at which to define the inertialy fixed mirror-corrected
+                frame.
+            name (str): Name of the component.
         """
         spice_frame = 'JUNO_JIRAM_' + name
 
@@ -150,7 +141,6 @@ class JIRAM(object):
                                          jiram_raw_j2000,
                                          frame_id=spice_frame)
 
-    #===========================================================================
     @staticmethod
     def reset():
         """Reset the internal JIRAM parameters.
@@ -163,4 +153,4 @@ class JIRAM(object):
 
         Juno.reset()
 
-################################################################################
+##########################################################################################

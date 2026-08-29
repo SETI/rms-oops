@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # tests/surface/test_limb.py
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -46,8 +46,8 @@ def test_limb():
     assert (track2 - track).norm().median() < 1.e-10
     assert (abs(track.element_mul(limb.ground.unsquash).norm() - limb.ground.req).median()
             < 1.e-10)
-    assert (abs(track2.element_mul(limb.ground.unsquash).norm() - limb.ground.req).median()
-            < 1.e-10)
+    assert (abs(track2.element_mul(limb.ground.unsquash).norm()
+                - limb.ground.req).median() < 1.e-10)
 
     matrix = Matrix3.twovec(-obs, 2, Vector3.ZAXIS, 0)
     (x,y,_) = (matrix * ground.normal(track)).to_scalars()
@@ -226,7 +226,7 @@ def test_limb():
         scale = dtrack_dobs.norm().median()
         assert abs(dtrack_dobs - track.d_dobs.vals[...,i]).max() < scale * 1.e-9
 
-    ####################
+    ######################################################################################
 
     ground = Ellipsoid('SSB', 'J2000', (REQ, RMID, RPOL))
     limb = Limb(ground)
@@ -248,8 +248,8 @@ def test_limb():
     assert (track2 - track).norm().median() < 1.e-10
     assert (abs(track.element_mul(limb.ground.unsquash).norm() - limb.ground.req).median()
             < 1.e-10)
-    assert (abs(track2.element_mul(limb.ground.unsquash).norm() - limb.ground.req).median()
-            < 1.e-10)
+    assert (abs(track2.element_mul(limb.ground.unsquash).norm()
+                - limb.ground.req).median() < 1.e-10)
 
     matrix = Matrix3.twovec(-obs, 2, Vector3.ZAXIS, 0)
     (x,y,_) = (matrix * normal).to_scalars()
@@ -300,7 +300,7 @@ def test_limb():
     dclock = (clock2 - clock + Scalar.PI) % Scalar.TWOPI - Scalar.PI
     assert abs(dclock).max() < 1.e-12
 
-    ####################
+    ######################################################################################
 
     ground = CentricSpheroid('SSB', 'J2000', (REQ, RPOL))
     limb = Limb(ground)
@@ -331,7 +331,7 @@ def test_limb():
     assert abs(coords[1] - lat).max() < 1.e-12
     assert abs(coords[2] - z).max() < 1.e-6
 
-    ####################
+    ######################################################################################
 
     ground = GraphicSpheroid('SSB', 'J2000', (REQ, RPOL))
     limb = Limb(ground)
@@ -362,7 +362,7 @@ def test_limb():
     assert abs(coords[1] - lat).max() < 1.e-12
     assert abs(coords[2] - z).max() < 1.e-6
 
-    ####################
+    ######################################################################################
 
     ground = CentricEllipsoid('SSB', 'J2000', (REQ, RMID, RPOL))
     limb = Limb(ground)
@@ -393,7 +393,7 @@ def test_limb():
     assert abs(coords[1] - lat).max() < 1.e-12
     assert abs(coords[2] - z).max() < 1.e-6
 
-    ####################
+    ######################################################################################
 
     ground = GraphicEllipsoid('SSB', 'J2000', (REQ, RMID, RPOL))
     limb = Limb(ground)
@@ -424,5 +424,5 @@ def test_limb():
     assert abs(coords[1] - lat).max() < 1.e-12
     assert abs(coords[2] - z).max() < 1.e-6
 
-########################################
-################################################################################
+##########################################################################################
+##########################################################################################

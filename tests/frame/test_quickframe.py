@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/frame/quickframe.py: Subclass QuickFrame of class Frame
-################################################################################
+##########################################################################################
 
 import numpy as np
 import pytest
@@ -20,9 +20,9 @@ def test_quickframe(core_kernels):
     epoch = 1.e8
     time = Scalar(epoch + np.arange(0., 100., 0.01))
 
-    ########################################
+    ######################################################################################
     # Tabulating a Frame does not spawn a second, nested QuickFrame
-    ########################################
+    ######################################################################################
 
     # SpiceFrame quickens itself when handed an array of times, so the tabulation
     # inside QuickFrame must not re-enter that machinery. The span is short enough
@@ -42,9 +42,9 @@ def test_quickframe(core_kernels):
     assert isinstance(linked.quick_frame(linked_time, quick={}), QuickFrame)
     assert len(mars._quickframes) == 1
 
-    ########################################
+    ######################################################################################
     # A Frame whose transform is fixed in time is never tabulated
-    ########################################
+    ######################################################################################
 
     # These Frames return one Transform regardless of the times requested, so a
     # QuickFrame could not interpolate them and would gain nothing if it could
@@ -63,19 +63,19 @@ def test_quickframe(core_kernels):
         assert linked._USE_QUICKFRAMES
         assert isinstance(linked.quick_frame(time, quick={}), QuickFrame)
 
-    ########################################
+    ######################################################################################
     # Tabulating a fixed Frame raises a meaningful error
-    ########################################
+    ######################################################################################
 
     cmatrix = fixed[0]
     with pytest.raises(ValueError):
         QuickFrame(cmatrix, epoch, epoch + 100.)
 
-    ########################################
+    ######################################################################################
     # Quaternions q and -q describe the same rotation, so the tabulated values can
     # reverse sign where the rotation angle passes pi; the splines require them to
     # be continuous
-    ########################################
+    ######################################################################################
 
     # 110 seconds at 0.1 rad/s sweeps through pi more than three times
     spin = SpinFrame(0., 0.1, epoch, 2, mars, frame_id='fast_spin')
@@ -103,9 +103,9 @@ def test_quickframe(core_kernels):
     # A tabulation without sign reversals is returned unchanged
     assert QuickFrame._unwrap_quaternions(unwrapped) is unwrapped
 
-    ########################################
+    ######################################################################################
     # A tabulation of a fittable Frame is redone after that Frame is re-fit
-    ########################################
+    ######################################################################################
 
     # The Cmatrix contributes no time dependence, but the SpiceFrame underneath it
     # does, so the composite is worth tabulating
@@ -127,4 +127,4 @@ def test_quickframe(core_kernels):
     error = np.max(np.abs(reused.transform_at_time(time).matrix.vals
                           - exact.matrix.vals))
     assert error < 1.e-8
-################################################################################
+##########################################################################################

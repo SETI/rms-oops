@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/path/linearpath.py: Subclass LinearPath of class Path
+# oops/path/linearpath.py
 ##########################################################################################
 
 from polymath          import Qube, Scalar, Vector3
@@ -30,7 +30,8 @@ class LinearPath(Path):
                 leave this Path unregistered.
 
         Raises:
-            ValueError: If the shapes of `pos`, `epoch`, and `frame` cannot be
+            KeyError: If `origin` or `frame` is an ID string that has not been registered.
+            ValueError: If the shapes of `pos`, `epoch`, `origin`, and `frame` cannot be
                 broadcasted.
         """
 
@@ -93,14 +94,14 @@ class LinearPath(Path):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Event): The Event object containing (at least) the time, position, and
-                velocity on the Path.
+            Event: The Event object containing (at least) the time, position, and velocity
+            on this Path.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.

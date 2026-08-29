@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # tests/fov/test_wcsfov.py
-################################################################################
+##########################################################################################
 
 import numpy as np
 import time
@@ -100,7 +100,7 @@ def test_wcsfov():
         assert fov.polyfov.max_inversion_error() < 1.e-12
         assert fov_fast.polyfov.max_inversion_error() < 0.15
 
-        ############################################
+        ##################################################################################
         # Comparison to astropy.wcs.WCS
 
         uv = Pair.combos(np.arange(4,2048,8),np.arange(4,2048,8))
@@ -126,7 +126,7 @@ def test_wcsfov():
         assert abs(ra.vals  * DPR - wcs_ra ).max() < (4.e-14 if h == 0 else 3.e-5)
         assert abs(dec.vals * DPR - wcs_dec).max() < (4.e-14 if h == 0 else 3.e-5)
 
-        ############################################
+        ##################################################################################
         #### uv -> xy -> uv, with derivs
 
         uv = Pair.combos(np.arange(4,2048,8),np.arange(4,2048,8))
@@ -157,12 +157,12 @@ def test_wcsfov():
         assert abs(uv - uv_test).max() < 1.e-12
 
         EPS = 1.e-6
-        xy0 = fov.xy_from_uv(uv + (-EPS,0), False)
-        xy1 = fov.xy_from_uv(uv + ( EPS,0), False)
+        xy0 = fov.xy_from_uv(uv + (-EPS,0), derivs=False)
+        xy1 = fov.xy_from_uv(uv + ( EPS,0), derivs=False)
         dxy_du = (xy1 - xy0) / (2. * EPS)
 
-        xy0 = fov.xy_from_uv(uv + (0,-EPS), False)
-        xy1 = fov.xy_from_uv(uv + (0, EPS), False)
+        xy0 = fov.xy_from_uv(uv + (0,-EPS), derivs=False)
+        xy1 = fov.xy_from_uv(uv + (0, EPS), derivs=False)
         dxy_dv = (xy1 - xy0) / (2. * EPS)
 
         dxy_dt = dxy_du * uv.d_dt.vals[...,0] + dxy_dv * uv.d_dt.vals[...,1]
@@ -174,7 +174,7 @@ def test_wcsfov():
         assert abs(xy.d_drs.vals[...,0] - dxy_dr.vals).max() <= DEL
         assert abs(xy.d_drs.vals[...,1] - dxy_ds.vals).max() <= DEL
 
-        ############################################
+        ##################################################################################
         #### xy -> uv -> xy, with derivs
 
         xy = fov.xy_from_uv(uv, derivs=False)
@@ -188,12 +188,12 @@ def test_wcsfov():
         assert abs(xy - xy_test).max() < 1.e-14
 
         EPS = 1.e-6
-        xy0 = fov.xy_from_uv(uv + (-EPS,0), False)
-        xy1 = fov.xy_from_uv(uv + ( EPS,0), False)
+        xy0 = fov.xy_from_uv(uv + (-EPS,0), derivs=False)
+        xy1 = fov.xy_from_uv(uv + ( EPS,0), derivs=False)
         dxy_du = (xy1 - xy0) / (2. * EPS)
 
-        xy0 = fov.xy_from_uv(uv + (0,-EPS), False)
-        xy1 = fov.xy_from_uv(uv + (0, EPS), False)
+        xy0 = fov.xy_from_uv(uv + (0,-EPS), derivs=False)
+        xy1 = fov.xy_from_uv(uv + (0, EPS), derivs=False)
         dxy_dv = (xy1 - xy0) / (2. * EPS)
 
         dxy_dt = dxy_du * uv.d_dt.vals[...,0]    + dxy_dv * uv.d_dt.vals[...,1]
@@ -205,7 +205,7 @@ def test_wcsfov():
         assert abs(xy.d_drs.vals[...,0] - dxy_dr.vals).max() <= DEL
         assert abs(xy.d_drs.vals[...,1] - dxy_ds.vals).max() <= DEL
 
-        ############################################
+        ##################################################################################
         # Same tests, fast=True
 
         #### uv -> xy -> uv, with derivs
@@ -221,12 +221,12 @@ def test_wcsfov():
         assert abs(uv - uv_test).max() < 0.15
 
         EPS = 1.e-6
-        xy0 = fov_fast.xy_from_uv(uv + (-EPS,0), False)
-        xy1 = fov_fast.xy_from_uv(uv + ( EPS,0), False)
+        xy0 = fov_fast.xy_from_uv(uv + (-EPS,0), derivs=False)
+        xy1 = fov_fast.xy_from_uv(uv + ( EPS,0), derivs=False)
         dxy_du = (xy1 - xy0) / (2. * EPS)
 
-        xy0 = fov_fast.xy_from_uv(uv + (0,-EPS), False)
-        xy1 = fov_fast.xy_from_uv(uv + (0, EPS), False)
+        xy0 = fov_fast.xy_from_uv(uv + (0,-EPS), derivs=False)
+        xy1 = fov_fast.xy_from_uv(uv + (0, EPS), derivs=False)
         dxy_dv = (xy1 - xy0) / (2. * EPS)
 
         dxy_dt = dxy_du * uv.d_dt.vals[...,0] + dxy_dv * uv.d_dt.vals[...,1]
@@ -238,7 +238,7 @@ def test_wcsfov():
         assert abs(xy.d_drs.vals[...,0] - dxy_dr.vals).max() <= DEL
         assert abs(xy.d_drs.vals[...,1] - dxy_ds.vals).max() <= DEL
 
-        ############################################
+        ##################################################################################
         #### xy -> uv -> xy, with derivs
 
         xy = fov_fast.xy_from_uv(uv, derivs=False)
@@ -252,12 +252,12 @@ def test_wcsfov():
         assert abs(xy - xy_test).max() < 0.15
 
         EPS = 1.e-6
-        xy0 = fov_fast.xy_from_uv(uv + (-EPS,0), False)
-        xy1 = fov_fast.xy_from_uv(uv + ( EPS,0), False)
+        xy0 = fov_fast.xy_from_uv(uv + (-EPS,0), derivs=False)
+        xy1 = fov_fast.xy_from_uv(uv + ( EPS,0), derivs=False)
         dxy_du = (xy1 - xy0) / (2. * EPS)
 
-        xy0 = fov_fast.xy_from_uv(uv + (0,-EPS), False)
-        xy1 = fov_fast.xy_from_uv(uv + (0, EPS), False)
+        xy0 = fov_fast.xy_from_uv(uv + (0,-EPS), derivs=False)
+        xy1 = fov_fast.xy_from_uv(uv + (0, EPS), derivs=False)
         dxy_dv = (xy1 - xy0) / (2. * EPS)
 
         dxy_dt = dxy_du * uv.d_dt.vals[...,0]    + dxy_dv * uv.d_dt.vals[...,1]
@@ -269,7 +269,7 @@ def test_wcsfov():
         assert abs(xy.d_drs.vals[...,0] - dxy_dr.vals).max() <= DEL
         assert abs(xy.d_drs.vals[...,1] - dxy_ds.vals).max() <= DEL
 
-        ############################################
+        ##################################################################################
         # Half-resolution test, no derivs
 
         if h == 0 and SpeedTest:
@@ -289,4 +289,4 @@ def test_wcsfov():
                 uv_test = fov.uv_from_xy(xy, derivs=False)
             t1 = time.time()
             LOGGING.print('slow time = %.2f ms' % ((t1-t0)/iters*1000.))
-################################################################################
+##########################################################################################

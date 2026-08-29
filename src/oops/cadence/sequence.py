@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/cadence/sequence.py: Sequence subclass of class Cadence
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -13,22 +13,17 @@ class Sequence(Cadence):
     def __init__(self, tlist, texp):
         """Constructor for a Sequence.
 
-        Input:
-            tlist       a Scalar, list or 1-D array of times in seconds TDB.
-            texp        the exposure time in seconds associated with each step.
-                        This can be shorter than the time interval due to
-                        readout times, etc. It could also potentially be longer.
-                        The input value of texp can be:
-                        - a positive constant, indicating that exposure times
-                          are fixed.
-                        - a list or 1-D array, listing the exposure time
-                          associated with each time step.
-                        - zero, indicating that each exposure duration lasts up
-                          to the start of the next time step. In this case, the
-                          last tabulated time is assumed to be the end time of
-                          the previous exposure rather than the start of a final
-                          time step; the number of time steps is therefore
-                          len(tlist)-1 rather than len(tlist).
+        Parameters:
+            tlist (Scalar or list): Or 1-D array of times in seconds TDB.
+            texp (float): The exposure time in seconds associated with each step. This can
+                be shorter than the time interval due to readout times, etc. It could also
+                potentially be longer. The input value of texp can be: - a positive
+                constant, indicating that exposure times are fixed. - a list or 1-D array,
+                listing the exposure time associated with each time step. - zero,
+                indicating that each exposure duration lasts up to the start of the next
+                time step. In this case, the last tabulated time is assumed to be the end
+                time of the previous exposure rather than the start of a final time step;
+                the number of time steps is therefore len(tlist)-1 rather than len(tlist).
         """
 
         # Work with Numpy arrays initially
@@ -127,21 +122,21 @@ class Sequence(Cadence):
         self.__init__(*state)
         self.freeze()
 
-    #===========================================================================
     def time_at_tstep(self, tstep, remask=False, derivs=False, inclusive=True):
         """The time associated with the given time step.
 
         This method supports non-integer time step values.
 
-        Input:
-            tstep       a Pair of time step index values.
-            remask      True to mask values outside the time limits.
-            derivs      True to include derivatives of tstep in the returned
-                        time.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            tstep (Pair): Time step index values.
+            remask (bool, optional): True to mask values outside the time limits.
+            derivs (bool, optional): True to include derivatives of tstep in the returned
+                time.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         a Scalar of times in seconds TDB.
+        Returns:
+            (Scalar): Times in seconds TDB.
         """
 
         tstep = Scalar.as_scalar(tstep, recursive=derivs)
@@ -154,20 +149,21 @@ class Sequence(Cadence):
                                              self.texp[tstep_int.vals])
         return time
 
-    #===========================================================================
     def time_range_at_tstep(self, tstep, remask=False, inclusive=True):
         """The range of times for the given time step.
 
-        Input:
-            tstep       a Pair of time step index values.
-            remask      True to mask values outside the time limits.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            tstep (Pair): Time step index values.
+            remask (bool, optional): True to mask values outside the time limits.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         (time_min, time_max)
-            time_min    a Scalar defining the minimum time associated with the
-                        index. It is given in seconds TDB.
-            time_max    a Scalar defining the maximum time value.
+        Returns:
+            (tuple): (time_min, time_max), where:
+
+            * `time_min` (Scalar): Defining the minimum time associated with the index. It
+              is given in seconds TDB.
+            * `time_max` (Scalar): Defining the maximum time value.
         """
 
         tstep = Scalar.as_scalar(tstep, recursive=False)
@@ -178,21 +174,22 @@ class Sequence(Cadence):
 
         return (time_min, time_min + self.texp[tstep_int.vals])
 
-    #===========================================================================
     def tstep_at_time(self, time, remask=False, derivs=False, inclusive=True):
         """Time step for the given time.
 
         This method returns non-integer time steps.
 
-        Input:
-            time        a Scalar of times in seconds TDB.
-            remask      True to mask time values not sampled within the cadence.
-            derivs      True to include derivatives of time in the returned
-                        tstep.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            time (Scalar): Times in seconds TDB.
+            remask (bool, optional): True to mask time values not sampled within the
+                cadence.
+            derivs (bool, optional): True to include derivatives of time in the returned
+                tstep.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         a Scalar of time step indices.
+        Returns:
+            (Scalar): Time step indices.
         """
 
         time = Scalar.as_scalar(time, recursive=derivs)
@@ -234,25 +231,24 @@ class Sequence(Cadence):
 
         return tstep
 
-    #===========================================================================
     def tstep_range_at_time(self, time, remask=False, inclusive=True):
         """Integer range of time steps active at the given time.
 
-        Input:
-            time        a Scalar of times in seconds TDB.
-            remask      True to mask time values not sampled within the cadence.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it. If this is cadence is not
-                        continuous, this also defines whether the end moment of
-                        each individual interval is included in that interval.
+        Parameters:
+            time (Scalar): Times in seconds TDB.
+            remask (bool, optional): True to mask time values not sampled within the
+                cadence.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it. If this is cadence is not continuous,
+                this also defines whether the end moment of each individual interval is
+                included in that interval.
 
-        Return:         (tstep_min, tstep_max)
-            tstep_min   minimum Scalar time step containing the given time.
-            tstep_max   maximum Scalar time step after the given time.
-
-        Returned tstep_min will always be in the allowed range for the cadence,
-        inclusive, regardless of masking. If the time is not inside the cadence,
-        tstep_max == tstep_min.
+        Returns:
+            (tuple): (tstep_min, tstep_max) tstep_min   minimum Scalar time step
+                containing the given time. tstep_max   maximum Scalar time step after the
+                given time. Returned tstep_min will always be in the allowed range for the
+                cadence, inclusive, regardless of masking. If the time is not inside the
+                cadence, tstep_max == tstep_min.
         """
 
         if not self._tstop_is_ordered:
@@ -307,17 +303,16 @@ class Sequence(Cadence):
 
         return (tstep_min, tstep_max)
 
-    #===========================================================================
     def time_is_outside(self, time, inclusive=True):
         """A Boolean mask of times that fall outside the cadence.
 
-        Input:
-            time        a Scalar of times in seconds TDB.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            time (Scalar): Times in seconds TDB.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         a Boolean array indicating which time values are not
-                        sampled by the cadence.
+        Returns:
+            (bool): Array indicating which time values are not sampled by the cadence.
         """
 
         if self.is_continuous:
@@ -344,18 +339,15 @@ class Sequence(Cadence):
 
         return is_outside
 
-    #===========================================================================
     def time_shift(self, secs):
-        """Construct a duplicate of this Cadence with all times shifted by given
-        amount.
+        """Construct a duplicate of this Cadence with all times shifted by given amount.
 
-        Input:
-            secs        the number of seconds to shift the time later.
+        Parameters:
+            secs (float): Seconds to shift the time later.
         """
 
         return Sequence(self.tlist + secs, self.texp)
 
-    #===========================================================================
     def as_continuous(self):
         """A shallow copy of this cadence, forced to be continuous.
 
@@ -374,4 +366,4 @@ class Sequence(Cadence):
         result.is_continuous = True  # forced, in case of roundoff error in texp
         return result
 
-################################################################################
+##########################################################################################

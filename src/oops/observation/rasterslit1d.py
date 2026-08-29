@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/observation/rasterslit1d.py: Subclass RasterSlit1D of class Observation
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -13,47 +13,36 @@ from oops.path              import Path
 
 
 class RasterSlit1D(Observation):
-    """A subclass of Observation consisting of a 1-D observation in which the
-    one dimension is constructed by sweeping a single pixel along a slit.
+    """A subclass of Observation consisting of a 1-D observation in which the one
+    dimension is constructed by sweeping a single pixel along a slit.
 
     The FOV describes the 1-D slit.
     """
 
-    #===========================================================================
     def __init__(self, axes, cadence, fov, path, frame, **subfields):
         """Constructor for a RasterSlit observation.
 
-        Input:
-
-            axes        a list or tuple of strings, with one value for each axis
-                        in the associated data array. A value of 'ut' should
-                        appear at the location of the array's u-axis if any;
-                        'vt' should appear at the location of the array's v-axis
-                        if any. Only one of 'ut' or 'vt' can appear.
-
-            cadence     a 1-D Cadence object defining the start time and
-                        duration of each consecutive measurement. Alternatively,
-                        a tuple or dictionary providing the input arguments to
-                        the constructor Metronome.for_array1d() (except for the
-                        number of steps, which is defined by the FOV):
-                            (tstart, texp, [interstep_delay])
-
-            fov         a FOV (field-of-view) object, which describes the field
-                        of view including any spatial distortion. It maps
-                        between spatial coordinates (u,v) and instrument
-                        coordinates (x,y). For a RasterSlit object, one of the
-                        axes of the FOV must have length 1.
-
-            path        the path waypoint co-located with the instrument.
-
-            frame       the wayframe of a coordinate frame fixed to the optics
-                        of the instrument. This frame should have its Z-axis
-                        pointing outward near the center of the line of sight,
-                        with the X-axis pointing rightward and the y-axis
-                        pointing downward.
-
-            subfields   a dictionary containing all of the optional attributes.
-                        Additional subfields may be included as needed.
+        Parameters:
+            axes (list or tuple): Strings, with one value for each axis in the associated
+                data array. A value of 'ut' should appear at the location of the array's
+                u-axis if any; 'vt' should appear at the location of the array's v-axis if
+                any. Only one of 'ut' or 'vt' can appear.
+            cadence (Cadence): A 1-D Cadence object defining the start time and duration
+                of each consecutive measurement. Alternatively, a tuple or dictionary
+                providing the input arguments to the constructor Metronome.for_array1d()
+                (except for the number of steps, which is defined by the FOV): (tstart,
+                texp, [interstep_delay])
+            fov (FOV): (field-of-view) object, which describes the field of view including
+                any spatial distortion. It maps between spatial coordinates (u,v) and
+                instrument coordinates (x,y). For a RasterSlit object, one of the axes of
+                the FOV must have length 1.
+            path (Path): The path waypoint co-located with the instrument.
+            frame (Frame): The wayframe of a coordinate frame fixed to the optics of the
+                instrument. This frame should have its Z-axis pointing outward near the
+                center of the line of sight, with the X-axis pointing rightward and the
+                y-axis pointing downward.
+            subfields (dict): All of the optional attributes. Additional subfields may be
+                included as needed.
         """
 
         # Basic properties
@@ -127,22 +116,23 @@ class RasterSlit1D(Observation):
         self.__init__(*state[:-1], **state[-1])
         self.freeze()
 
-    #===========================================================================
     def uvt(self, indices, remask=False, derivs=True):
         """Coordinates (u,v) and time t for indices into the data array.
 
         This method supports non-integer index values.
 
-        Input:
-            indices     a Scalar or Vector of array indices.
-            remask      True to mask values outside the field of view.
-            derivs      True to include derivatives in the returned values.
+        Parameters:
+            indices (Scalar): Or Vector of array indices.
+            remask (bool, optional): True to mask values outside the field of view.
+            derivs (bool, optional): True to include derivatives in the returned values.
 
-        Return:         (uv, time)
-            uv          a Pair defining the values of (u,v) within the FOV that
-                        are associated with the array indices.
-            time        a Scalar defining the time in seconds TDB associated
-                        with the array indices.
+        Returns:
+            (tuple): (uv, time), where:
+
+            * `uv` (Pair): Defining the values of (u,v) within the FOV that are associated
+              with the array indices.
+            * `time` (Scalar): Defining the time in seconds TDB associated with the array
+              indices.
         """
 
         # Interpret a 1-D index or a multi-D index
@@ -161,23 +151,23 @@ class RasterSlit1D(Observation):
 
         return (uv, time)
 
-    #===========================================================================
     def uvt_range(self, indices, remask=False):
-        """Ranges of (u,v) spatial coordinates and time for integer array
-        indices.
+        """Ranges of (u,v) spatial coordinates and time for integer array indices.
 
-        Input:
-            indices     a Scalar or Vector of array indices.
-            remask      True to mask values outside the field of view.
+        Parameters:
+            indices (Scalar): Or Vector of array indices.
+            remask (bool, optional): True to mask values outside the field of view.
 
-        Return:         (uv_min, uv_max, time_min, time_max)
-            uv_min      a Pair defining the minimum values of FOV (u,v)
-                        associated the pixel.
-            uv_max      a Pair defining the maximum values of FOV (u,v)
-                        associated the pixel.
-            time_min    a Scalar defining the minimum time associated with the
-                        array indices. It is given in seconds TDB.
-            time_max    a Scalar defining the maximum time value.
+        Returns:
+            (tuple): (uv_min, uv_max, time_min, time_max), where:
+
+            * `uv_min` (Pair): Defining the minimum values of FOV (u,v) associated the
+              pixel.
+            * `uv_max` (Pair): Defining the maximum values of FOV (u,v) associated the
+              pixel.
+            * `time_min` (Scalar): Defining the minimum time associated with the array
+              indices. It is given in seconds TDB.
+            * `time_max` (Scalar): Defining the maximum time value.
         """
 
         # Works for a 1-D index or a multi-D index
@@ -198,17 +188,17 @@ class RasterSlit1D(Observation):
 
         return (uv_min, uv_min + Pair.INT11, time0, time1)
 
-    #===========================================================================
     def time_range_at_uv(self, uv_pair, remask=False):
         """The start and stop times of the specified spatial pixel (u,v).
 
-        Input:
-            uv_pair     a Pair of spatial (u,v) data array coordinates,
-                        truncated to integers if necessary.
-            remask      True to mask values outside the field of view.
+        Parameters:
+            uv_pair (Pair): Spatial (u,v) data array coordinates, truncated to integers if
+                necessary.
+            remask (bool, optional): True to mask values outside the field of view.
 
-        Return:         a tuple containing Scalars of the start time and stop
-                        time of each (u,v) pair, as seconds TDB.
+        Returns:
+            (tuple): Scalars of the start time and stop time of each (u,v) pair, as
+                seconds TDB.
         """
 
         # We can't use super.time_range_at_uv_1d because the self.uv_shape is
@@ -217,19 +207,20 @@ class RasterSlit1D(Observation):
         tstep = uv_pair.to_scalar(self._along_slit_uv_index)
         return self.cadence.time_range_at_tstep(tstep, remask=remask)
 
-    #===========================================================================
     def uv_range_at_time(self, time, remask=False):
         """The (u,v) range of spatial pixels observed at the specified time.
 
-        Input:
-            time        a Scalar of time values in seconds TDB.
-            remask      True to mask values outside the time limits.
+        Parameters:
+            time (Scalar): Time values in seconds TDB.
+            remask (bool, optional): True to mask values outside the time limits.
 
-        Return:         (uv_min, uv_max)
-            uv_min      the lower (u,v) corner Pair of the area observed at the
-                        specified time.
-            uv_max      the upper (u,v) corner Pair of the area observed at the
-                        specified time.
+        Returns:
+            (tuple): (uv_min, uv_max), where:
+
+            * `uv_min` (Pair): The lower (u,v) corner Pair of the area observed at the
+              specified time.
+            * `uv_max` (Pair): The upper (u,v) corner Pair of the area observed at the
+              specified time.
         """
 
         return Observation.uv_range_at_time_1d(self, time,
@@ -237,15 +228,15 @@ class RasterSlit1D(Observation):
                                                axis=self._along_slit_uv_index,
                                                remask=remask)
 
-    #===========================================================================
     def time_shift(self, dtime):
         """A copy of the observation object with a time-shift.
 
-        Input:
-            dtime       the time offset to apply to the observation, in units of
-                        seconds. A positive value shifts the observation later.
+        Parameters:
+            dtime (float): The time offset to apply to the observation, in units of
+                seconds. A positive value shifts the observation later.
 
-        Return:         a (shallow) copy of the object with a new time.
+        Returns:
+            A (shallow) copy of the object with a new time.
         """
 
         obs = RasterSlit1D(axes=self.axes,
@@ -257,4 +248,4 @@ class RasterSlit1D(Observation):
 
         return obs
 
-################################################################################
+##########################################################################################

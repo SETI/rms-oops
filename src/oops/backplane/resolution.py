@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/backplanes/resolution.py: Resolution-related backplanes
-################################################################################
+##########################################################################################
 
 from oops.backplane import Backplane
 from oops.surface   import Surface
@@ -10,12 +10,10 @@ def resolution(self, event_key, axis='u'):
 
     Defined perpendicular to the line of sight.
 
-    Input:
-        event_key       key defining the surface event.
-        axis            'u' for resolution along the horizontal axis of the
-                            observation;
-                        'v' for resolution along the vertical axis of the
-                            observation.
+    Parameters:
+        event_key (str or tuple): Key defining the surface event.
+        axis (str, optional): 'u' for resolution along the horizontal axis of the
+            observation; 'v' for resolution along the vertical axis of the observation.
     """
 
     if axis not in ('u', 'v'):
@@ -32,18 +30,15 @@ def resolution(self, event_key, axis='u'):
 
     return self.get_backplane(key)
 
-#===============================================================================
 def center_resolution(self, event_key, axis='u'):
     """Gridless, directionless projected spatial resolution in km/pixel.
 
     Measured at the central path of a body, based on range alone.
 
-    Input:
-        event_key       key defining the event at the body's path.
-        axis            'u' for resolution along the horizontal axis of the
-                            observation;
-                        'v' for resolution along the vertical axis of the
-                            observation.
+    Parameters:
+        event_key (str or tuple): Key defining the event at the body's path.
+        axis (str, optional): 'u' for resolution along the horizontal axis of the
+            observation; 'v' for resolution along the vertical axis of the observation.
     """
 
     if axis not in ('u', 'v'):
@@ -60,14 +55,13 @@ def center_resolution(self, event_key, axis='u'):
 
     return self.get_backplane(key)
 
-#===============================================================================
 def finest_resolution(self, event_key):
     """Projected resolution in km/pixel for the optimal direction
 
     Determined a the intercept point on the surface.
 
-    Input:
-        event_key       key defining the ring surface event.
+    Parameters:
+        event_key (str or tuple): Key defining the ring surface event.
     """
 
     self.refresh()
@@ -78,13 +72,12 @@ def finest_resolution(self, event_key):
 
     return self.get_backplane(key)
 
-#===============================================================================
 def coarsest_resolution(self, event_key):
-    """Projected spatial resolution in km/pixel in the worst direction at the
-    intercept point.
+    """Projected spatial resolution in km/pixel in the worst direction at the intercept
+    point.
 
-    Input:
-        event_key       key defining the ring surface event.
+    Parameters:
+        event_key (str or tuple): Key defining the ring surface event.
     """
 
     self.refresh()
@@ -95,7 +88,6 @@ def coarsest_resolution(self, event_key):
 
     return self.get_backplane(key)
 
-#===============================================================================
 def _fill_surface_resolution(self, event_key):
     """Internal method to fill in the surface resolution backplanes."""
 
@@ -107,9 +99,9 @@ def _fill_surface_resolution(self, event_key):
     self.register_backplane(('finest_resolution',   event_key), minres)
     self.register_backplane(('coarsest_resolution', event_key), maxres)
 
-################################################################################
+##########################################################################################
 
 # Add these functions to the Backplane module
 Backplane._define_backplane_names(globals().copy())
 
-################################################################################
+##########################################################################################

@@ -1,9 +1,9 @@
-################################################################################
+##########################################################################################
 # oops/utils.py
 #
 # Low-level operations on numpy arrays, mimicking SPICE routines but fully
 # supporting broadcasted shapes.
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -71,11 +71,13 @@ def xpose(m):
 
 def mxv(m,v):
     """mxv(m,v)= matrix m times 3-vector v"""
-    return np.sum(np.asarray(m, dtype=np.float64) * np.asarray(v, dtype=np.float64)[..., np.newaxis, :], axis=-1)
+    return np.sum(np.asarray(m, dtype=np.float64)
+                  * np.asarray(v, dtype=np.float64)[..., np.newaxis, :], axis=-1)
 
 def mtxv(m,v):
     """mtxv(m,v) = transpose (inverse) of matrix m times 3-vector v."""
-    return np.sum(np.asarray(m, dtype=np.float64) * np.asarray(v, dtype=np.float64)[..., np.newaxis], axis=-2)
+    return np.sum(np.asarray(m, dtype=np.float64)
+                  * np.asarray(v, dtype=np.float64)[..., np.newaxis], axis=-2)
 
 # The standard numpy method for multiplying matrices uses the dot() function,
 # but does not generalize to the case of multiplying arrays of 3x3 matrices,
@@ -230,4 +232,4 @@ def twovec(a,i,b,j):
 
     return result
 
-################################################################################
+##########################################################################################

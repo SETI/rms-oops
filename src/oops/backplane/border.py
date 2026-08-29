@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/backplanes/border.py: Boolean backplanes
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -82,7 +82,6 @@ def _border_above_or_below(self, sign, backplane_key, value):
 
     return self.register_backplane(key, Boolean(border & backplane.antimask))
 
-#===============================================================================
 def border_inside(self, backplane_key):
     """Defines the locus of True pixels adjacent to a region of False pixels."""
 
@@ -137,9 +136,9 @@ def _border_outside_or_inside(self, backplane_key, is_inside=True):
 
     return self.register_backplane(key, Boolean(border))
 
-################################################################################
+##########################################################################################
 
 # Add these functions to the Backplane module
 Backplane._define_backplane_names(globals().copy())
 
-################################################################################
+##########################################################################################

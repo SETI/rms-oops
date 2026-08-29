@@ -24,25 +24,10 @@ class SpinFrame(Frame):
     def __init__(self, offset, rate, epoch, axis, reference, *, frame_id=None):
         """Constructor for a Spin Frame.
 
-        Input:
-            offset (Scalar, array-like, or float): The angular offset of the frame at the
-                epoch, in radians.
-            rate (Scalar, array-like, or float): The rotation rate of the frame in
-                radians/second.
-            epoch (Scalar, array-like, or float): The time TDB at which the frame is
-                defined.
-            axis (int): The rotation axis: 0 for x, 1 for y, 2 for z.
-            reference (Frame or str): The Frame or the ID of the Frame relative to which
-                this Frame is defined.
-            frame_id (str, optional): The ID under which to register this Frame; None to
-                leave this Frame unregistered. As a special case, use "+" to automatically
-                generate a Frame ID by appending "_SPIN" to the ID of `reference` (if it
-                has an ID).
-
         Raises:
             ValueError: If `offset`, `rate`, `epoch`, and  and epoch can be Scalar values,
-                in which case the shape of the SpinFrame is defined by broadcasting the
-                shapes of these Scalars.
+            in which case the shape of the SpinFrame is defined by broadcasting the shapes
+            of these Scalars.
         """
 
         self._offset = Scalar.as_scalar(offset).wod.as_readonly()

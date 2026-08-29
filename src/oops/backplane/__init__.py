@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/backplane/__init__.py: Backplane class
-################################################################################
+##########################################################################################
 
 import datetime
 import functools
@@ -18,8 +18,8 @@ from oops.surface.ringplane import RingPlane
 __all__ = ['Backplane']
 
 class Backplane(Mutable):
-    """Class that supports the generation and manipulation of sets of backplanes
-    with a particular Observation.
+    """Class that supports the generation and manipulation of sets of backplanes with a
+    particular Observation.
 
     intermediate results are cached to speed up calculations.
     """
@@ -33,83 +33,16 @@ class Backplane(Mutable):
                             inventory_border=0):
         """The constructor.
 
-        Input:
-            obs         the Observation object with which this backplane is
-                        associated.
-
-            meshgrid    the optional meshgrid defining the sampling of the FOV.
-                        Default is to sample the center of every pixel.
-
-            time        an optional Scalar of times. The shape of this Scalar
-                        will be broadcasted with the shape of the meshgrid.
-                        Default is to sample the midtime of every pixel.
-
-            inventory   True to keep an inventory of bodies in the field of
-                        view and to keep track of their locations. This option
-                        can speed up backplane calculations for bodies that
-                        occupy a small fraction of the field of view. If a
-                        dictionary is provided, this dictionary is used.
-
-            inventory_border
-                        number of pixels to extend the box surrounding each body
-                        as determined by the inventory.
-
-        Notes about Backplane Arrays
-
-        Every backplane array method takes an "event_key" as its first input.
-        This is normally indicated by a tuple of two items:
-            (source_key, surface_key)
-        where the first item is the source of the lighting (usually the Sun) and
-        the second is the surface for which geometry is needed.
-
-        Each intercepted surface is defined by a surface key string, one of:
-            body_name           for the default surface of a body;
-            body_name:RING      for the ring surface associated with a body;
-            body_name:ANSA      for the ansa surface associated with a body;
-            body_name:LIMB      for the limb surface associated with a body.
-
-        The light source is defined by a source key string of the form:
-            body_name<          for dispersed illumination;
-            body_name>          for occultation illumination;
-            body_name-          for path-based illumination.
-
-        These strings are not case-sensitive.
-
-        As a shortcut, you can specify a surface_key string alone in place of an
-        event_key, in which case "SUN<" is assumed as the source.
-
-        In dispersed illumination, each backplane has spatial dimensions that
-        are defined by the Meshgrid. Photons leave the source in all directions,
-        and some of those that intercept the surface are reflected toward the
-        detector. The detector selects the photons it receives based on its. The
-        event is defined as the moment the photons hit the surface and are
-        reflected.
-
-        In occultation illumination, backplanes have no spatial dimensions.
-        Photons leave the source along a direct line of sight to the detector,
-        and the event is defined as the time and location where the photons
-        intercept the surface.
-
-        In path-based illumination, the photon follows one or more straight-
-        line paths between the origin points of the surfaces. The backplanes
-        have no spatial dimensions, but can be used to answer such questions as
-        "what is the sub-solar latitude on Saturn?" or "where is Enceladus in
-        this image?"
-
         Examples:
-        ('SUN<', 'SATURN:RING') could describe a 2-D image of Saturn's rings.
-        ('SUN>', 'SATURN:RING') could describe a solar occultation profile of
-                Saturn's rings.
-        ('SUN-', 'SATURN:RING') defines the direction of the center of Saturn's
-                rings (which is also the center of Saturn).
-
-        Most of the time, an event key only contains two items as in the
-        examples above. However, shadowing can be defined by inserting one
-        additional surface key after 'SUN<'. For example,
-            ('SUN<', 'MIMAS', 'SATURN:RING')
-        describes the surface event at Mimas, subject to the constraint that the
-        photons subsequently reflected off of Saturn and arrived at the
-        detector; it can be used to determine how Mimas shadows the rings.
+            ('SUN<', 'SATURN:RING') could describe a 2-D image of Saturn's rings. ('SUN>',
+            'SATURN:RING') could describe a solar occultation profile of Saturn's rings.
+            ('SUN-', 'SATURN:RING') defines the direction of the center of Saturn's rings
+            (which is also the center of Saturn). Most of the time, an event key only
+            contains two items as in the examples above. However, shadowing can be defined
+            by inserting one additional surface key after 'SUN<'. For example, ('SUN<',
+            'MIMAS', 'SATURN:RING') describes the surface event at Mimas, subject to the
+            constraint that the photons subsequently reflected off of Saturn and arrived
+            at the detector; it can be used to determine how Mimas shadows the rings.
         """
 
         self.obs = obs
@@ -204,11 +137,11 @@ class Backplane(Mutable):
             True : {},
         }
 
-    ############################################################################
+    ######################################################################################
     # Serialization support
     # For quicker backplane generation after unpickling, we save the various
     # internal buffers, but try to avoid any duplication
-    ############################################################################
+    ######################################################################################
 
     def __getstate__(self):
 
@@ -228,9 +161,9 @@ class Backplane(Mutable):
         self.antimasks = antimasks
         self.intercepts = intercepts
 
-    ############################################################################
+    ######################################################################################
     # Resolution properties
-    ############################################################################
+    ######################################################################################
 
     @property
     def dlos_duv(self):
@@ -293,9 +226,9 @@ class Backplane(Mutable):
 
         return self._center_duv_dlos
 
-    ############################################################################
+    ######################################################################################
     # Dictionary keys
-    ############################################################################
+    ######################################################################################
 
     @staticmethod
     @functools.lru_cache(maxsize=100)
@@ -387,7 +320,6 @@ class Backplane(Mutable):
 
         return (event_key[0][:-1] + '-',) + event_key[1:]
 
-    #===========================================================================
     def standardize_backplane_key(self, backplane_key):
         """Repair a backplane key to make it suitable for indexing a dictionary.
 
@@ -424,7 +356,6 @@ class Backplane(Mutable):
 
         return backplane_key
 
-    #===========================================================================
     def _event_and_backplane_keys(self, event_key, names=(), default=''):
         """Interpret the input as either a backplane_key or an event_key.
 
@@ -451,7 +382,6 @@ class Backplane(Mutable):
 
         return (event_key, None)
 
-    #===========================================================================
     @staticmethod
     @functools.lru_cache(maxsize=100)
     def get_body_and_modifier(surface_key):
@@ -483,7 +413,6 @@ class Backplane(Mutable):
 
         return (Body.lookup(body_id), modifier)
 
-    #===========================================================================
     @staticmethod
     @functools.lru_cache(maxsize=100)
     def unmasked_surface_key(surface_key):
@@ -536,7 +465,6 @@ class Backplane(Mutable):
 
         return ''
 
-    #===========================================================================
     @staticmethod
     @functools.lru_cache(maxsize=100)
     def unmasked_event_key(event_key):
@@ -551,7 +479,6 @@ class Backplane(Mutable):
 
         return tuple(new_key)
 
-    #===========================================================================
     @staticmethod
     @functools.lru_cache(maxsize=100)
     def intercept_dict_key(event_key):
@@ -567,9 +494,9 @@ class Backplane(Mutable):
 
         return tuple(new_key)
 
-    ############################################################################
+    ######################################################################################
     # Event solver
-    ############################################################################
+    ######################################################################################
 
     def get_obs_event(self, event_key, derivs=False):
         """The observation event of photons arriving at the detector."""
@@ -617,7 +544,6 @@ class Backplane(Mutable):
 
         return arrival
 
-    #===========================================================================
     @staticmethod
     @functools.lru_cache(maxsize=100)
     def get_surface(surface_key):
@@ -643,7 +569,6 @@ class Backplane(Mutable):
         if modifier == 'LIMB':
             return Limb(body.surface)
 
-    #===========================================================================
     def get_antimask(self, surface_key):
         """Prepare a rectangular antimask for a particular surface event.
 
@@ -693,7 +618,6 @@ class Backplane(Mutable):
         self.antimasks[body_name] = antimask
         return antimask
 
-    #===========================================================================
     def get_surface_event(self, event_key, derivs=False, arrivals=False):
         """The surface or path event surface based on an event key.
 
@@ -789,7 +713,6 @@ class Backplane(Mutable):
 
         return event
 
-    #===========================================================================
     def _get_los_event(self, event_key, detection, derivs):
         """The event defined by dispersed lighting over a surface."""
 
@@ -839,7 +762,6 @@ class Backplane(Mutable):
 
         return event
 
-    #===========================================================================
     def _save_event(self, event_key, event, surface, derivs):
 
         body = Backplane.get_body_and_modifier(event_key[1])[0]
@@ -862,7 +784,6 @@ class Backplane(Mutable):
         if derivs:
             self.surface_events[False][event_key] = event.wod
 
-    #===========================================================================
     def get_gridless_event(self, event_key, derivs=False, arrivals=False):
         """The gridless event associated with this event key, even if the event
         key refers to dispersed or occultation lighting.
@@ -874,9 +795,9 @@ class Backplane(Mutable):
         return self.get_surface_event(gridless_key, derivs=derivs,
                                                     arrivals=arrivals)
 
-    ############################################################################
+    ######################################################################################
     # Backplane support
-    ############################################################################
+    ######################################################################################
 
     def register_backplane(self, key, backplane, expand=False, derivs=False):
         """Insert this backplane into the dictionary.
@@ -922,7 +843,6 @@ class Backplane(Mutable):
         else:
             return backplane.wod
 
-    #===========================================================================
     def _remasked_backplane(self, key, backplane_key, derivs=False):
         """Apply the mask of one backplane to another."""
 
@@ -936,7 +856,6 @@ class Backplane(Mutable):
         self.register_backplane(new_key, array)
         return array
 
-    #===========================================================================
     def get_backplane(self, key, derivs=False):
         """Return the selected backplane from the cache."""
 
@@ -945,9 +864,9 @@ class Backplane(Mutable):
 
         return self.backplanes[key]
 
-    ############################################################################
+    ######################################################################################
     # Method to access a backplane or mask by key
-    ############################################################################
+    ######################################################################################
 
     # Here we use the class introspection capabilities of Python to provide a
     # general way to generate any backplane based on its key. This makes it
@@ -984,7 +903,6 @@ class Backplane(Mutable):
 
         return backplane
 
-    #===========================================================================
     @staticmethod
     def _define_backplane_names(globals_dict):
         """Call at the end of each set of Backplane definitions to load them
@@ -1001,4 +919,4 @@ class Backplane(Mutable):
                 if key[0] != '_':
                     Backplane.CALLABLES.add(key)
 
-################################################################################
+##########################################################################################

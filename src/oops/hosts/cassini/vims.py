@@ -193,16 +193,18 @@ def from_file(filespec, data=True, method='strict'):
     """A general, static method to return a pair of Observation objects based on a given
     Cassini VIMS data file or label file.
 
-    Input:
-        filespec        the full path to a VIMS cube file or its PDS label.
-        data            if True, data arrays are included in the returned observation
-                        objects. Use a tuple of two booleans to specify whether to include
-                        the VIS and IR data independently.
-        method          Label reading method to be passed to Pds3Label.
+    Parameters:
+        filespec (str or FCPath): The full path to a VIMS cube file or its PDS label.
+        data (bool, optional): If True, data arrays are included in the returned
+            observation objects. Use a tuple of two booleans to specify whether to include
+            the VIS and IR data independently.
+        method (str, optional): Label reading method to be passed to Pds3Label.
 
-    Return:             (vis, ir)
-        vis             the VIS observation, or None if the VIS channel was inactive.
-        ir              the IR observation, or None if the IR channel was inactive.
+    Returns:
+        (tuple): (vis, ir), where:
+
+        * `vis`: The VIS observation, or None if the VIS channel was inactive.
+        * `ir`: The IR observation, or None if the IR channel was inactive.
     """
 
     VIMS.initialize()   # Define everything the first time through; use defaults
@@ -263,9 +265,9 @@ def from_file(filespec, data=True, method='strict'):
     ir_is_off  = label['POWER_STATE_FLAG'][0] == 'OFF'
     vis_is_off = label['POWER_STATE_FLAG'][1] == 'OFF'
 
-    ########################################
+    ######################################################################################
     # Load the data arrays
-    ########################################
+    ######################################################################################
 
     (samples, bands, lines) = qube_dict['CORE_ITEMS']
     assert bands in (352, 256, 96)
@@ -289,9 +291,9 @@ def from_file(filespec, data=True, method='strict'):
             vis_data = array
             ir_data = None
 
-    ########################################
+    ######################################################################################
     # Define the FOVs
-    ########################################
+    ######################################################################################
 
     swath_width = label['SWATH_WIDTH']
     swath_length = label['SWATH_LENGTH']
@@ -319,47 +321,48 @@ def from_file(filespec, data=True, method='strict'):
     # VIS FOV
     if vis_sampling == 'HI-RES':
         vis_fov = oops.fov.FlatFOV(VIS_HIRES_SCALE, uv_shape,
-                                   (VIS_HIRES_FACTOR * uv_los[0] - uv_shape[0],
-                                    VIS_HIRES_FACTOR * uv_los[1] - uv_shape[1]))
+                                   uv_los=(VIS_HIRES_FACTOR * uv_los[0] - uv_shape[0],
+                                           VIS_HIRES_FACTOR * uv_los[1] - uv_shape[1]))
 
     elif uv_shape == (64,64):
         vis_fov = VIS_FULL_FOV
 
     else:
         vis_fov = oops.fov.FlatFOV(VIS_NORMAL_SCALE, uv_shape,
-                                   (IR_OVER_VIS * uv_los[0], IR_OVER_VIS * uv_los[1]))
+                                   uv_los=(IR_OVER_VIS * uv_los[0],
+                                           IR_OVER_VIS * uv_los[1]))
 
     # IR FOV
     if label['INSTRUMENT_MODE_ID'] == 'OCCULTATION':
         if ir_sampling == 'NORMAL':
-            ir_fov = oops.fov.FlatFOV(IR_NORMAL_SCALE, uv_shape, uv_los)
+            ir_fov = oops.fov.FlatFOV(IR_NORMAL_SCALE, uv_shape, uv_los=uv_los)
         else:
-            ir_fov = oops.fov.FlatFOV(IR_HIRES_SCALE, uv_shape, uv_los)
+            ir_fov = oops.fov.FlatFOV(IR_HIRES_SCALE, uv_shape, uv_los=uv_los)
 
     elif ir_sampling in ('HI-RES','UNDER'):
         ir_fov = oops.fov.FlatFOV(IR_HIRES_SCALE, uv_shape,
-                                  (IR_HIRES_FACTOR * uv_los[0] - uv_shape[0]/2.,
-                                   uv_los[1]))
+                                  uv_los=(IR_HIRES_FACTOR * uv_los[0] - uv_shape[0]/2.,
+                                          uv_los[1]))
 
     elif uv_shape == (64,64):
         ir_fov = IR_FULL_FOV
 
     else:
-        ir_fov = oops.fov.FlatFOV(IR_NORMAL_SCALE, uv_shape, uv_los)
+        ir_fov = oops.fov.FlatFOV(IR_NORMAL_SCALE, uv_shape, uv_los=uv_los)
 
     # Nyquist sampling
-    if ir_sampling == 'UNDER':
-        ### TBD: VIMS IR sampling mode UNDER is untested!!
-        # Use ir_det_size = 2 for RasterSlit1D and RasterSlit observations
-        # Use (1., ir_det_size) for RasterScan observations
-        ir_fov = oops.fov.GapFOV(IR_NORMAL_SCALE, uv_shape, uv_los)
+    ### TBD: VIMS IR sampling mode UNDER is untested!!
+    # In UNDER sampling the IR detector is twice the size of the sample spacing, so the
+    # pixels overlap. An FOV cannot represent overlapping pixels, so the boundary is
+    # slightly off, as noted at the top of this file. GapFOV models the opposite case,
+    # pixels smaller than the sample spacing, so it does not apply here.
+    #
+    # Note that this assignment also overrides every branch of the "IR FOV" logic above.
+    ir_fov = oops.fov.FlatFOV(IR_NORMAL_SCALE, uv_shape, uv_los=uv_los)
 
-    else:
-        ir_fov = oops.fov.FlatFOV(IR_NORMAL_SCALE, uv_shape, uv_los)
-
-    ########################################
+    ######################################################################################
     # Define the cadences
-    ########################################
+    ######################################################################################
 
     # Define cadences based on header parameters
     ir_texp  = label['EXPOSURE_DURATION'][0] * 0.001 * TIME_FACTOR
@@ -409,9 +412,9 @@ def from_file(filespec, data=True, method='strict'):
     #   ir_header_cadence   always defined, always 2-D.
     #   backplane_cadence   defined if timing was recorded, always 1-D.
 
-    ########################################
+    ######################################################################################
     # Define the coordinate frames
-    ########################################
+    ######################################################################################
 
     vis_frame_id = 'CASSINI_VIMS_V'
     ir_frame_id  = 'CASSINI_VIMS_IR'
@@ -419,9 +422,9 @@ def from_file(filespec, data=True, method='strict'):
     if (label['TARGET_NAME'] == 'SUN' or '_SOL' in label['OBSERVATION_ID']):
         ir_frame_id = 'CASSINI_VIMS_IR_SOL'
 
-    ########################################
+    ######################################################################################
     # Construct the Observation objects
-    ########################################
+    ######################################################################################
 
     vis_obs = None
     ir_obs  = None
@@ -601,25 +604,27 @@ def from_file(filespec, data=True, method='strict'):
 
     return (vis_obs, ir_obs)
 
-#=========================================================================================
 def _load_data_and_times(filespec, label):
     """Load the data array from the file.
 
     If time backplanes are present, also return an array of times in seconds TDB as
     derived from these backplanes.
 
-    Input:
-        filespec        full path to the data file.
-        label           the label dictionary.
+    Parameters:
+        filespec (str or FCPath): Full path to the data file.
+        label (dict): The label dictionary.
 
-    Return:             (data, times)
-        data            a Numpy array containing the data in axis order (line, sample,
-                        band).
-        times           the time sampling array in (line, sample) axis order, or None if
-                        no time backplane is found in the file.
+    Returns:
+        (tuple): (data, times), where:
 
-    Note: This procedure is absurdly complicated but it has been rather carefully
-    debugged. --MRS 7/4/12.
+        * `data` (array-like): A Numpy array containing the data in axis order (line,
+          sample, band).
+        * `times`: The time sampling array in (line, sample) axis order, or None if no
+          time backplane is found in the file.
+
+    Notes:
+        This procedure is absurdly complicated but it has been rather carefully debugged.
+        --MRS 7/4/12.
     """
 
     qube_dict = label['SPECTRAL_QUBE']
@@ -648,7 +653,7 @@ def _load_data_and_times(filespec, label):
     # Make sure we have byte-aligned values
     assert (core_samples * core_item_bytes) % suffix_item_bytes == 0, 'misaligned items'
 
-    ############################
+    ######################################################################################
 
     # Determine the dtype and strides for the core item array
     band_stride = (core_samples * core_item_bytes +
@@ -707,7 +712,7 @@ def _load_data_and_times(filespec, label):
     if 'SLICE_TIME_SECONDS' not in band_suffix_name:
         return (data, None)
 
-    ############################
+    ######################################################################################
 
     # Determine the dtype for the file core
     if 'SUN_' in core_item_type or 'MSB_' in suffix_item_type:
@@ -772,20 +777,20 @@ def _load_data_and_times(filespec, label):
 
     return (data, times)
 
-#=========================================================================================
 def meshgrid_and_times(obs, oversample=6, extend=1.5):
     """A meshgrid object and time array that oversamples and extends the dimensions of the
     field of view of a VIMS observation.
 
-    Input:
-        obs             the VIMS observation object to for which to generate a meshgrid
-                        and a time array.
-        oversample      the factor by which to oversample the field of view, in units of
-                        the full-resolution VIMS pixel size.
-        extend          the number of pixels by which to extend the field of view, in
-                        units of the oversampled pixel.
+    Parameters:
+        obs: The VIMS observation object to for which to generate a meshgrid and a
+            time array.
+        oversample (optional): The factor by which to oversample the field of view, in
+            units of the full-resolution VIMS pixel size.
+        extend (float, optional): Pixels by which to extend the field of view, in units of
+            the oversampled pixel.
 
-    Return:             (mesgrid, time)
+    Returns:
+        (tuple): (mesgrid, time)
     """
 
     shrinkage = {('IR',  'NORMAL'): (1,1),
@@ -816,25 +821,22 @@ def meshgrid_and_times(obs, oversample=6, extend=1.5):
 
     return (meshgrid, time)
 
-#=========================================================================================
 def initialize(ck='reconstructed', planets=None, asof=None, spk='reconstructed',
                gapfill=True, mst_pck=True, irregulars=True):
     """Initialize key information about the VIMS instrument.
 
-    Must be called first. After the first call, later calls to this function
-    are ignored.
+    Must be called first. After the first call, later calls to this function are ignored.
 
-    Input:
-        ck,spk      'predicted', 'reconstructed', or 'none', depending on which kernels
-                    are to be used. Defaults are 'reconstructed'. Use 'none' if the
-                    kernels are to be managed manually.
-        planets     A list of planets to pass to define_solar_system. None or 0 means all.
-        asof        Only use SPICE kernels that existed before this date;
-                    None to ignore.
-        gapfill     True to include gapfill CKs. False otherwise.
-        mst_pck     True to include MST PCKs, which update the rotation models for some of
-                    of the small moons.
-        irregulars  True to include the irregular satellites; False otherwise.
+    Parameters:
+        planets (list, optional): A list of planets to pass to define_solar_system. None
+            or 0 means all.
+        asof (str, optional): Only use SPICE kernels that existed before this date; None
+            to ignore.
+        gapfill (bool, optional): True to include gapfill CKs. False otherwise.
+        mst_pck (bool, optional): True to include MST PCKs, which update the rotation
+            models for some of of the small moons.
+        irregulars (bool, optional): True to include the irregular satellites; False
+            otherwise.
     """
 
     VIMS.initialize(ck=ck, planets=planets, asof=asof, spk=spk, gapfill=gapfill,
@@ -856,18 +858,16 @@ class VIMS(object):
         Must be called first. After the first call, later calls to this function are
         ignored.
 
-        Input:
-            ck,spk      'predicted', 'reconstructed', or 'none', depending on which
-                        kernels are to be used. Defaults are 'reconstructed'. Use 'none'
-                        if the kernels are to be managed manually.
-            planets     A list of planets to pass to define_solar_system. None or 0 means
-                        all.
-            asof        Only use SPICE kernels that existed before this date; None to
-                        ignore.
-            gapfill     True to include gapfill CKs. False otherwise.
-            mst_pck     True to include MST PCKs, which update the rotation models for
-                        some of the small moons.
-            irregulars  True to include the irregular satellites; False otherwise.
+        Parameters:
+            planets (list, optional): A list of planets to pass to define_solar_system.
+                None or 0 means all.
+            asof (str, optional): Only use SPICE kernels that existed before this date;
+                None to ignore.
+            gapfill (bool, optional): True to include gapfill CKs. False otherwise.
+            mst_pck (bool, optional): True to include MST PCKs, which update the rotation
+                models for some of the small moons.
+            irregulars (bool, optional): True to include the irregular satellites; False
+                otherwise.
         """
 
         # Quick exit after first call
@@ -888,7 +888,6 @@ class VIMS(object):
 
         VIMS.initialized = True
 
-    #=====================================================================================
     @staticmethod
     def reset():
         """Reset the internal Cassini VIMS parameters.

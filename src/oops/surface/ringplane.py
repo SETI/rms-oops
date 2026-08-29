@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/surface/ringplane.py: RingPlane subclass of class Surface
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -11,11 +11,10 @@ from oops.surface.surface_      import Surface
 from oops.gravity.oblategravity import OblateGravity
 
 class RingPlane(Surface):
-    """A subclass of Surface describing a flat surface in the (x,y) plane, in
-    which the optional velocity field is defined by circular Keplerian motion
-    about the center point. Coordinates are cylindrical (radius, longitude,
-    elevation), with an optional offset in elevation from the equatorial (z=0)
-    plane.
+    """A subclass of Surface describing a flat surface in the (x,y) plane, in which the
+    optional velocity field is defined by circular Keplerian motion about the center
+    point. Coordinates are cylindrical (radius, longitude, elevation), with an optional
+    offset in elevation from the equatorial (z=0) plane.
 
     Optional modes can be used to apply sinusoidal offset patterns in the radial
     coordinate.
@@ -24,39 +23,29 @@ class RingPlane(Surface):
     COORDINATE_TYPE = 'polar'
     IS_VIRTUAL = False
 
-    #===========================================================================
     def __init__(self, origin, frame, radii=None, gravity=None,
                        elevation=0., modes=[], epoch=0.):
         """Constructor for a RingPlane surface.
 
-        Input:
-            origin      a Path object or ID defining the motion of the center
-                        of the ring plane.
-
-            frame       a Frame object or ID in which the ring plane is the
-                        (x,y) plane (where z = 0).
-
-            radii       the nominal inner and outer radii of the ring, in km.
-                        None for a ring with no radial limits.
-
-            gravity     an optional Gravity object, used to define the orbital
-                        velocities within the plane.
-
-            elevation   an optional offset of the ring plane in the direction of
-                        positive rotation, in km.
-
-            modes       an optional list of zero or more radial modes in the
-                        ring. Each mode is described by a tuple of four
-                        parameters (cycles, amp, peri0, speed):
-                            cycles  the number of radial cycles around the ring.
-                            amp     radial amplitude in km.
-                            peri0   longitude of one radial minimum at epoch, in
-                                    radians.
-                            speed   the pattern speed in radians per second.
-
-            epoch       the epoch at which the radial mode parameters apply.
-                        Not used unless radial modes are present.
-         """
+        Parameters:
+            origin (Path): Object or ID defining the motion of the center of the ring
+                plane.
+            frame (Frame): Object or ID in which the ring plane is the (x,y) plane (where
+                z = 0).
+            radii (tuple, optional): The nominal inner and outer radii of the ring, in km.
+                None for a ring with no radial limits.
+            gravity (Gravity, optional): Object, used to define the orbital velocities
+                within the plane.
+            elevation (optional): An optional offset of the ring plane in the direction
+                of positive rotation, in km.
+            modes (list, optional): Zero or more radial modes in the ring. Each mode is
+                described by a tuple of four parameters (cycles, amp, peri0, speed):
+                cycles  the number of radial cycles around the ring. amp     radial
+                amplitude in km. peri0   longitude of one radial minimum at epoch, in
+                radians. speed   the pattern speed in radians per second.
+            epoch (float, optional): The epoch at which the radial mode parameters apply.
+                Not used unless radial modes are present.
+        """
 
         self.origin    = Path.as_waypoint(origin)
         self.frame     = Frame.as_wayframe(frame)
@@ -116,33 +105,32 @@ class RingPlane(Surface):
         self.__init__(*state)
         self.freeze()
 
-    #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
                                        derivs=False, hints=None):
         """Surface coordinates associated with a position vector.
 
-        Input:
-            pos         a Vector3 of positions at or near the surface, relative
-                        to this surface's origin and frame.
-            obs         a Vector3 of observer position relative to this
-                        surface's origin and frame; ignored for this Surface
-                        subclass.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        unless this RingPlane contains radial modes.
-            axes        2 or 3, indicating whether to return the first two
-                        coordinates (rad, theta) or all three (rad, theta, z) as
-                        Scalars.
-            derivs      True to propagate any derivatives inside pos and obs
-                        into the returned coordinates.
-            hints       ignored. Provided for compatibility with other Surface
-                        subclasses.
+        Parameters:
+            pos (Vector3): Positions at or near the surface, relative to this surface's
+                origin and frame.
+            obs (Vector3, optional): Observer position relative to this surface's origin
+                and frame; ignored for this Surface subclass.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored unless
+                this RingPlane contains radial modes.
+            axes (int, optional): 2 or 3, indicating whether to return the first two
+                coordinates (rad, theta) or all three (rad, theta, z) as Scalars.
+            derivs (bool, optional): True to propagate any derivatives inside pos and obs
+                into the returned coordinates.
+            hints (object, optional): Ignored. Provided for compatibility with other
+                Surface subclasses.
 
-        Return:         coordinate values packaged as a tuple containing two or
-                        three Scalars, one for each coordinate.
-            rad         mean orbital radius in the ring plane, in km.
-            theta       longitude in radians of the intercept point.
-            z           vertical distance in km above the ring plane; included
-                        if axes == 3.
+        Returns:
+            Coordinate values packaged as a tuple containing two or three Scalars,
+                one for each coordinate, where:
+
+            * `rad` (Scalar): Mean orbital radius in the ring plane, in km.
+            * `theta` (Scalar): Longitude in radians of the intercept point.
+            * `z` (Scalar): Vertical distance in km above the ring plane; included if axes
+              == 3.
         """
 
         # Validate inputs
@@ -174,28 +162,26 @@ class RingPlane(Surface):
         else:
             return (a, theta, z - self.elevation)
 
-    #===========================================================================
     def vector3_from_coords(self, coords, obs=None, time=0., derivs=False):
-        """The position where a point with the given coordinates falls relative
-        to this surface's origin and frame.
+        """The position where a point with the given coordinates falls relative to this
+        surface's origin and frame.
 
-        Input:
-            coords      a tuple of two or three Scalars defining coordinates at
-                        or near this surface. These can have different shapes,
-                        but must be broadcastable to a common shape.
-                rad     mean orbital radius in the ring plane, in km.
-                theta   longitude in radians of the intercept point.
-                z       vertical distance in km above the ring plane.
-            obs         a Vector3 of observer position relative to this
-                        surface's origin and frame; ignored for this Surface
-                        subclass.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        unless this RingPlane contains radial modes.
-            derivs      True to propagate any derivatives inside the coordinates
-                        and obs into the returned position vectors.
+        Parameters:
+            coords (tuple): Two or three Scalars defining coordinates at or near this
+                surface. These can have different shapes, but must be broadcastable to a
+                common shape. rad     mean orbital radius in the ring plane, in km. theta
+                longitude in radians of the intercept point. z       vertical distance in
+                km above the ring plane.
+            obs (Vector3, optional): Observer position relative to this surface's origin
+                and frame; ignored for this Surface subclass.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored unless
+                this RingPlane contains radial modes.
+            derivs (bool, optional): True to propagate any derivatives inside the
+                coordinates and obs into the returned position vectors.
 
-        Return:         a Vector3 of points defined by the coordinates, relative
-                        to this surface's origin and frame.
+        Returns:
+            (Vector3): Points defined by the coordinates, relative to this surface's
+                origin and frame.
         """
 
         # Validate inputs
@@ -219,31 +205,30 @@ class RingPlane(Surface):
 
         return Vector3.from_scalars(x, y, z)
 
-    #===========================================================================
     def intercept(self, obs, los, time=None, direction='dep', derivs=False,
                                   guess=None, hints=None):
         """The position where a specified line of sight intercepts the surface.
 
-        Input:
-            obs         observer position as a Vector3 relative to this
-                        surface's origin and frame.
-            los         line of sight as a Vector3 in this surface's frame.
-            time        a Scalar time at the surface; ignored here.
-            direction   'arr' for a photon arriving at the surface; 'dep' for a
-                        photon departing from the surface; ignored here.
-            derivs      True to propagate any derivatives inside obs and los
-                        into the returned intercept point.
-            guess       unused.
-            hints       if not None (the default), this value is appended to the
-                        returned tuple. Needed for compatibility with other
-                        Surface subclasses.
+        Parameters:
+            obs (Vector3): Observer position as a Vector3 relative to this surface's
+                origin and frame.
+            los (Vector3): Line of sight as a Vector3 in this surface's frame.
+            time (Scalar, optional): Time at the surface; ignored here.
+            direction (str, optional): 'arr' for a photon arriving at the surface; 'dep'
+                for a photon departing from the surface; ignored here.
+            derivs (bool, optional): True to propagate any derivatives inside obs and los
+                into the returned intercept point.
+            guess (object, optional): Unused.
+            hints (optional): If not None (the default), this value is appended to the
+                returned tuple. Needed for compatibility with other Surface subclasses.
 
-        Return:         a tuple (pos, t) or (pos, t, hints), where
-            pos         a Vector3 of intercept points on the surface relative
-                        to this surface's origin and frame, in km.
-            t           a Scalar such that:
-                            intercept = obs + t * los
-            hints       the input value of hints, included if hints is not None.
+        Returns:
+            (tuple): (pos, t) or (pos, t, hints), where, where:
+
+            * `pos` (Vector3): Intercept points on the surface relative to this surface's
+              origin and frame, in km.
+            * `t` (Scalar): Such that: intercept = obs + t * los.
+            * `hints` (object): The input value of hints, included if hints is not None.
         """
 
         # Solve for obs + factor * los for scalar t, such that the z-component
@@ -270,20 +255,19 @@ class RingPlane(Surface):
 
         return (pos, t)
 
-    #===========================================================================
     def normal(self, pos, time=0., derivs=False):
         """The normal vector at a position at or near a surface.
 
-        Input:
-            pos         a Vector3 of positions at or near the surface relative
-                        to this surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        here.
-            derivs      True to propagate any derivatives of pos into the
-                        returned normal vectors.
+        Parameters:
+            pos (Vector3): Positions at or near the surface relative to this surface's
+                origin and frame.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored here.
+            derivs (bool, optional): True to propagate any derivatives of pos into the
+                returned normal vectors.
 
-        Return:         a Vector3 containing directions normal to the surface
-                        that pass through the position. Lengths are arbitrary.
+        Returns:
+            (Vector3): Directions normal to the surface that pass through the position.
+                Lengths are arbitrary.
         """
 
         pos = Vector3.as_vector3(pos, recursive=derivs)
@@ -300,20 +284,20 @@ class RingPlane(Surface):
 
         return perp
 
-    #===========================================================================
     def velocity(self, pos, time=0.):
         """The local velocity vector at a point within the surface.
 
-        This can be used to describe the orbital motion of ring particles or
-        local wind speeds on a planet.
+        This can be used to describe the orbital motion of ring particles or local wind
+        speeds on a planet.
 
-        Input:
-            pos         a Vector3 of positions at or near the surface relative
-                        to this surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        unless this RingPlane contains radial modes.
+        Parameters:
+            pos (Vector3): Positions at or near the surface relative to this surface's
+                origin and frame.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored unless
+                this RingPlane contains radial modes.
 
-        Return:         a Vector3 of velocities, in units of km/s.
+        Returns:
+            (Vector3): Velocities, in units of km/s.
         """
 
         pos = Vector3.as_vector3(pos, recursive=False)
@@ -354,9 +338,9 @@ class RingPlane(Surface):
 
         return vflat
 
-    ############################################################################
+    ######################################################################################
     # Radius conversions
-    ############################################################################
+    ######################################################################################
 
     def _mode_offset(self, lon, time, derivs=False, rates=False):
         """Sum of the modes as a local radial offset from the mean epicyclic
@@ -383,4 +367,4 @@ class RingPlane(Surface):
 
         return offset
 
-################################################################################
+##########################################################################################

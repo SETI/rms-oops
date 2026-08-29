@@ -1,19 +1,18 @@
 import sqlite3
 
-################################################################################
+##########################################################################################
 # Low-level database IO using SQLite 3
-################################################################################
+##########################################################################################
 
 global CONNECTION, CURSOR
 CONNECTION = None
 CURSOR = None
 
-#===============================================================================
 def open(filepath):
     """Opens the database.
 
-    Input:
-        filepath        The file path and name of the database file.
+    Parameters:
+        filepath (str or FCPath): The file path and name of the database file.
     """
 
     global CONNECTION, CURSOR
@@ -21,7 +20,6 @@ def open(filepath):
     CONNECTION = sqlite3.connect(filepath)
     CURSOR = CONNECTION.cursor()
 
-#===============================================================================
 def close():
     """Closes the database."""
 
@@ -31,16 +29,17 @@ def close():
     CONNECTION = None
     CURSOR = None
 
-#===============================================================================
 def query(sql_string):
     """Executes a SQL query.
 
-    Input:
-        sql_string      A string containing the complete SQL query.
+    Parameters:
+        sql_string (str): A string containing the complete SQL query.
 
-    Output:
-        table           A list of lists containing the rows and columns of
-                        results returned by the query.
+    Returns:
+        (tuple): A tuple, where:
+
+        * `table` (list): A list of lists containing the rows and columns of results
+          returned by the query.
     """
 
     if CURSOR is None:
@@ -74,4 +73,4 @@ def query(sql_string):
 
     return table
 
-################################################################################
+##########################################################################################

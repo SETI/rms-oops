@@ -58,9 +58,8 @@ FILTER_SYN_FILE_PARTS = ['WFC3/wfc3_uvis_',    '_???_syn.fits']
 
 
 class UVIS(WFC3):
-    """This class defines functions and properties unique to the WFC3/UVIS
-    detector. Everything else is inherited from higher levels in the class
-    hierarchy.
+    """This class defines functions and properties unique to the WFC3/UVIS detector.
+    Everything else is inherited from higher levels in the class hierarchy.
 
     Objects of this class are empty; they only exist to support inheritance.
     """
@@ -121,10 +120,8 @@ class UVIS(WFC3):
     def dn_per_sec_factor(self, hdulist):
         """The factor that converts a pixel value to DN per second.
 
-        Input:
-            hdulist    the object returned by pyfits.open()
-
-        Return          the factor to multiply a pixel value by to get DN/sec
+        Parameters:
+            Return (float): The factor to multiply a pixel value by to get DN/sec.
         """
 
         return 1. / hdulist[0].header['EXPTIME']

@@ -1,13 +1,13 @@
-################################################################################
+##########################################################################################
 # oops/backplanes/where.py: Boolean backplanes
-################################################################################
+##########################################################################################
 
 from polymath       import Boolean, Scalar
 from oops.backplane import Backplane
 
-################################################################################
+##########################################################################################
 # Boolean Masks
-################################################################################
+##########################################################################################
 
 def where_intercepted(self, event_key):
     """A Boolean array that is True where the surface was intercepted."""
@@ -22,7 +22,6 @@ def where_intercepted(self, event_key):
     intercepted = Boolean(event.dep.expand_mask().antimask)
     return self.register_backplane(key, intercepted)
 
-#===============================================================================
 def where_inside_shadow(self, event_key, surface_key, tvl=False):
     """A mask where the surface is in the shadow of a second body.
 
@@ -86,7 +85,6 @@ def _where_inside_or_outside_shadow(self, event_key, surface_key, tvl, inside):
 
     return self.get_backplane(key)
 
-#===============================================================================
 def where_in_front(self, event_key, surface_key, tvl=False):
     """A mask where the first surface is in not obscured by the second
     surface.
@@ -150,7 +148,6 @@ def _where_in_front_or_in_back(self, event_key, surface_key, tvl, in_front):
 
     return self.get_backplane(key)
 
-#===============================================================================
 def where_sunward(self, event_key, tvl=False):
     """A mask where the surface of a body is facing toward the Sun.
 
@@ -205,7 +202,6 @@ def _where_sunward_or_antisunward(self, event_key, tvl, sunward):
 
     return self.get_backplane(key)
 
-#===============================================================================
 def where_inside(self, event_key, surface_key, tvl=False):
     """A mask where the first surface is interior to the second surface.
 
@@ -264,9 +260,9 @@ def _where_inside_or_outside(self, event_key, surface_key, tvl, inside):
 
     return self.get_backplane(key)
 
-################################################################################
+##########################################################################################
 # Masks derived from backplanes
-################################################################################
+##########################################################################################
 
 def where_below(self, backplane_key, value, tvl=False):
     """A mask where the backplane is <= the specified value.
@@ -294,7 +290,6 @@ def where_below(self, backplane_key, value, tvl=False):
 
     return self.get_backplane(key)
 
-#===============================================================================
 def where_above(self, backplane_key, value, tvl=False):
     """A mask where the backplane is >= the specified value.
 
@@ -321,7 +316,6 @@ def where_above(self, backplane_key, value, tvl=False):
 
     return self.get_backplane(key)
 
-#===============================================================================
 def where_between(self, backplane_key, low, high, tvl=False):
     """A mask where the backplane is between the given values, inclusive.
 
@@ -349,7 +343,6 @@ def where_between(self, backplane_key, low, high, tvl=False):
 
     return self.get_backplane(key)
 
-#===============================================================================
 def where_not(self, backplane_key, tvl=False):
     """A mask where the value of the given backplane is False, zero, or
     masked.
@@ -375,7 +368,6 @@ def where_not(self, backplane_key, tvl=False):
 
     return self.get_backplane(key)
 
-#===============================================================================
 def where_any(self, *backplane_keys, tvl=False):
     """A mask where any of the given backplanes is True or nonzero.
 
@@ -399,7 +391,6 @@ def where_any(self, *backplane_keys, tvl=False):
 
     return self.get_backplane(key)
 
-#===============================================================================
 def where_all(self, *backplane_keys, tvl=False):
     """A mask where all of the given backplanes are True or nonzero.
 
@@ -423,9 +414,9 @@ def where_all(self, *backplane_keys, tvl=False):
 
     return self.get_backplane(key)
 
-################################################################################
+##########################################################################################
 
 # Add these functions to the Backplane module
 Backplane._define_backplane_names(globals().copy())
 
-################################################################################
+##########################################################################################

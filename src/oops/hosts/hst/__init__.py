@@ -21,9 +21,9 @@ from filecache import FCPath
 
 __all__ = ['from_file', 'HST']
 
-########################################
+##########################################################################################
 # Global Variables
-########################################
+##########################################################################################
 
 # A handy constant
 RADIANS_PER_ARCSEC = oops.RPD / 3600.
@@ -364,7 +364,7 @@ class HST(object):
                 field-of-view distortion is ignored; False to provide a calibration object
                 for point sources, in which case the distortion of the field of view must
                 be taken into account.
-            **parameters (dict): a dictionary of arbitrary parameters.
+            **parameters: a dictionary of arbitrary parameters.
 
                 * `solar_range`: If present, this parameters defines the Sun-target
                   distance in AU. If not defined or None, the range is inferred from the
@@ -757,7 +757,7 @@ class HST(object):
         sizaxis = oops.Pair((header1['SIZAXIS1'], header1['SIZAXIS2']))
         binaxis = oops.Pair((header1['BINAXIS1'], header1['BINAXIS2']))
 
-        return oops.fov.FlatFOV(scale.element_mul(binaxis), sizaxis, crpix)
+        return oops.fov.FlatFOV(scale.element_mul(binaxis), sizaxis, uv_los=crpix)
 
     def construct_fov(self, fov_dict, hdulist, platescale=1.):
         """The FOV object associated with an HST instrument, allowing for drizzling, for

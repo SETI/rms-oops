@@ -149,18 +149,18 @@ class Uncal(NIRCam):
         this = Uncal()
         filespec = this.filespec(hdulist)
 
-        ############################################
+        ##################################################################################
         # Read header info
-        ############################################
+        ##################################################################################
 
         subfields = this.header_subfields(hdulist, **options)
 
         group_subfields = subfields.copy()  # only used if options['groups'] is True
         group_calibs = {}
 
-        ############################################
+        ##################################################################################
         # Interpret input options
-        ############################################
+        ##################################################################################
 
         options = this.check_options(options)
 
@@ -180,9 +180,9 @@ class Uncal(NIRCam):
             cal_hdulist = pyfits.open(cal_file)
             cal_image = cal_from_file(cal_file, **options)
 
-        ############################################
+        ##################################################################################
         # Load data
-        ############################################
+        ##################################################################################
 
         if options['data'] or options['calibration']:
             raw_data = hdulist['SCI'].data
@@ -197,9 +197,9 @@ class Uncal(NIRCam):
 
         # Handle the per_second option below...
 
-        ############################################
+        ##################################################################################
         # Define cadences and group exposure times
-        ############################################
+        ##################################################################################
 
         # Define the overall cadence
         cadence = this.row_cadence(hdulist, **options)
@@ -340,9 +340,9 @@ class Uncal(NIRCam):
 
                     group_cadences[i,g] = cadence
 
-        ############################################
+        ##################################################################################
         # Define the FOV
-        ############################################
+        ##################################################################################
 
         if options['cal_file']:
             fov = cal_image.fov
@@ -350,9 +350,9 @@ class Uncal(NIRCam):
             fast_fov = options.get('fast_fov', True)
             fov = oops.fov.WCSFOV(header1, ref_axis='y', fast=fast_fov)
 
-        ############################################
+        ##################################################################################
         # Handle the standard calibrations
-        ############################################
+        ##################################################################################
 
         if options['data'] and options['per_second']:
             data = data.astype('float32') / group_texp[..., np.newaxis, np.newaxis]
@@ -400,9 +400,9 @@ class Uncal(NIRCam):
                 group_calibs['dn_per_s'] = group_cal1
                 group_calibs['dn_per_s_arcsec_sq'] = group_cal2
 
-        ############################################
+        ##################################################################################
         # Handle the calibrated file...
-        ############################################
+        ##################################################################################
 
         if options['cal_file']:
 
@@ -414,9 +414,9 @@ class Uncal(NIRCam):
 
             path = cal_image.path
 
-            ############################################
+            ##############################################################################
             # Inherit calibrations from cal_file
-            ############################################
+            ##############################################################################
 
             if options['calibration'] or options['data']:
 
@@ -469,9 +469,9 @@ class Uncal(NIRCam):
                             calib[g] = subfield.prescale(cal_factors[g], cal_baselines[g])
                         group_calibs[key] = calib
 
-            ############################################
+            ##############################################################################
             # Inherit quality and error arrays
-            ############################################
+            ##############################################################################
 
             # NIRCam calibrated error is sqrt(VAR_POISSON + VAR_RNOISE + VAR_FLAT)
             # VAR_POISSON - scales with the total exposure time contributing to an image.
@@ -510,9 +510,9 @@ class Uncal(NIRCam):
         else:
             path = this.jwst_path(hdulist, **options)
 
-        ############################################
+        ##################################################################################
         # Return the TimedImage...
-        ############################################
+        ##################################################################################
 
         if cal_file:
             frame = cal_image.frame

@@ -43,7 +43,19 @@ class Cache:
 
     @staticmethod
     def clean_key(key):
-        """Convert the given key to immutable so it can be used as a dictionary key."""
+        """Convert the given key to immutable so it can be used as a dictionary key.
+
+        Lists and tuples are converted recursively, so that a key containing a nested
+        collection of Qubes is still hashable.
+
+        Parameters:
+            key (object): The key to convert. Qubes, NumPy arrays, Paths, Frames, and
+                lists and tuples of these are converted; anything else is returned
+                unchanged.
+
+        Returns:
+            object: An immutable version of `key`.
+        """
 
         def clean_item(item):
             match item:
@@ -52,6 +64,9 @@ class Cache:
                     mask = tuple(item.mask.ravel()) if np.shape(item.mask) else item.mask
                     return (type(item).__name__, item.shape, vals, mask)
                 case np.ndarray():
+                    if item.dtype == object:
+                        return (item.shape,
+                                tuple(clean_item(x) for x in item.ravel()))
                     return (item.shape, tuple(item.ravel()))
                 case Cache._Path():
                     return Cache._Path.as_primary_path(item)
@@ -59,13 +74,10 @@ class Cache:
                     return Cache._Frame.as_primary_frame(item)
                 case x if hasattr(x, '__data__'):
                     return id(item)
-                case list():
-                    return tuple(item)
+                case list() | tuple():
+                    return tuple(clean_item(subitem) for subitem in item)
                 case _:
                     return item
-
-        if isinstance(key, (list, tuple)):
-            return tuple(clean_item(item) for item in key)
 
         return clean_item(key)
 

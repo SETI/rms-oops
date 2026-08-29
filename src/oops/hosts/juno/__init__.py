@@ -1,9 +1,9 @@
-################################################################################
+##########################################################################################
 # oops/inst/juno/__init__.py
 #
 # Utility functions for managing SPICE kernels while working with juno data
 # sets.
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -16,9 +16,9 @@ from oops.body import Body
 
 __all__ = ['Juno']
 
-################################################################################
+##########################################################################################
 # Routines for managing the loading of C and SP kernels
-################################################################################
+##########################################################################################
 
 # Make sure the leap seconds have been loaded
 oops.spice.load_leap_seconds()
@@ -34,7 +34,7 @@ oops.spice.load_leap_seconds()
 # call to load_ck(time) or load_spk(time) will ensure that the information is
 # available.
 
-################################################################################
+##########################################################################################
 
 #*******************************************************************************
 class Juno(object):
@@ -62,20 +62,15 @@ class Juno(object):
 
     initialized = False
 
-    #===========================================================================
     @staticmethod
     def initialize(ck='reconstructed', spk='reconstructed', gapfill=True, **kwargs):
         """Intialize the Juno mission internals.
 
         After the first call, later calls to this function are ignored.
 
-        Input:
-            ck,spk      Used to specify which C and SPK kernels are used.:
-                        'reconstructed' for the reconstructed kernels (default);
-                        'predicted' for the predicted kernels;
-                        'none' to allow manual control of the C kernels.
-            gapfill     True to include gapfill CKs. False otherwise.
-            kwargs:     Arguments for juno.__init__() and Body.define_solar_system()
+        Parameters:
+            gapfill (bool, optional): True to include gapfill CKs. False otherwise.
+                kwargs:     Arguments for juno.__init__() and Body.define_solar_system()
         """
         if Juno.initialized: return
 
@@ -123,7 +118,6 @@ class Juno(object):
 
         Juno.initialized = True
 
-    #===========================================================================
     @staticmethod
     def reset():
         """Reset the internal parameters.
@@ -142,7 +136,6 @@ class Juno(object):
 
         Juno.initialized = False
 
-    #===========================================================================
     @staticmethod
     def load_ck(t):
         """Ensure that the C kernels applicable at or near the given time have
@@ -153,7 +146,6 @@ class Juno(object):
         Juno.load_kernels(t, t, Juno.CK_LOADED, Juno.CK_LIST,
                                    Juno.CK_DICT)
 
-    #===========================================================================
     @staticmethod
     def load_cks(t0, t1):
         """Ensure that all the C kernels applicable near or within the time
@@ -164,7 +156,6 @@ class Juno(object):
         Juno.load_kernels(t0, t1, Juno.CK_LOADED, Juno.CK_LIST,
                                      Juno.CK_DICT)
 
-    #===========================================================================
     @staticmethod
     def load_spk(t):
         """Ensure that the SPK kernels applicable at or near the given time have
@@ -175,7 +166,6 @@ class Juno(object):
         Juno.load_kernels(t, t, Juno.SPK_LOADED, Juno.SPK_LIST,
                                    Juno.SPK_DICT)
 
-    #===========================================================================
     @staticmethod
     def load_spks(t0, t1):
         """Ensure that all the SPK kernels applicable near or within the time
@@ -186,7 +176,6 @@ class Juno(object):
         Juno.load_kernels(t0, t1, Juno.SPK_LOADED, Juno.SPK_LIST,
                                      Juno.SPK_DICT)
 
-    #===========================================================================
     @staticmethod
     def load_kernels(t0, t1, loaded, lists, kernel_dict):
         """Load kernal pool."""
@@ -274,29 +263,29 @@ class Juno(object):
 ### locate a file within its own directory path. The kernels can live inside the
 ### OOPS-Resources/SPICE tree, so you can determine the value of "kdir" from the
 ### value of (unittester_support.OOPS_RESOURCES_ + 'SPICE/Juno/').
-###
+##########################################################################################
 ### Even better, adopt the Cassini module's method of just loading the CKs and SPKs
 ### as they are requested, because there are so many of them. It'll just furnish the
 ### CKs and SPKs when it needs them, in the background, silently.
-###
+##########################################################################################
 ### Other notes...
-###
+##########################################################################################
 ### There are a lot of duplicated files on Dropbox between
 ### OOPS-Resources/SPICE/Juno and test_data/juno/kernels. Better to keep a single
 ### set in the former. If kernels start to change out from underneath us in a way
 ### that breaks unit tests, that would be the time to start keeping a specific
 ### subset inside test_data/juno.
-###
+##########################################################################################
 ### The set of CKs and SPKs on Dropbox is currently incomplete. We need to start
 ### maintaining it, and continue to do so once we are generating metadata tables.
-###
+##########################################################################################
 ### I see on the NAIF ftp server that there are multiple versions of the CKs and
 ### SPKs, as there were for Cassini. We probably never need to worry about anything
 ### but the reconstructed. However, in order to allow for multiple future versions,
 ### I suggest you rename SPICE/Juno/CK to SPICE/Juno/CK-reconstructed and
 ### SPICE/Juno/SPK to SPICE/Juno/SPK-reconstructed. This will make for simpler file
 ### management going forward.
-###
+##########################################################################################
 ### The other day, you asked me to add a few kernels to SPICE.db. It's not clear to
 ### me why that was necessary. The kernel management method I described above should
 ### be sufficient for all Juno kernel management, and is the reason I've concluded
@@ -322,11 +311,10 @@ class Juno(object):
                     kernel_dict[filespec] = kernel
                 loaded[m] = True
 
-    ########################################
+    ######################################################################################
     # Initialize the kernel lists
-    ########################################
+    ######################################################################################
 
-    #===========================================================================
     @staticmethod
     def initialize_kernels(kernels, lists):
         """After initialization, lists[m] is a the KernelInfo objects needed
@@ -351,26 +339,21 @@ class Juno(object):
             for m in range(m1, m2+1):
                 lists[m] += [kernel]
 
-    ############################################################################
+    ######################################################################################
     # Routines for managing the loading other kernels
-    ############################################################################
+    ######################################################################################
 
-    #===========================================================================
     @staticmethod
     def load_instruments(instruments=[], asof=None):
-        """Load the SPICE kernels and defines the basic paths and frames for
-        the Juno mission.
+        """Load the SPICE kernels and defines the basic paths and frames for the Juno
+        mission.
 
         It is generally only be called once.
 
-        Input:
-            instruments an optional list of instrument names for which to load
-                        frames kernels. The frames for JUNOCAM are always loaded.
-
-            asof        if this specifies a date or date-time in ISO format,
-                        then only kernels that existed before the specified date
-                        are used. Otherwise, the most recent versions are always
-                        loaded.
+        Parameters:
+            asof (str, optional): If this specifies a date or date-time in ISO format,
+                then only kernels that existed before the specified date are used.
+                Otherwise, the most recent versions are always loaded.
         """
 
         # Load the default instruments on the first pass
@@ -390,29 +373,27 @@ class Juno(object):
         _ = spicedb.furnish_inst(-61, inst=instruments, asof=asof)
         spicedb.close_db()
 
-    ############################################################################
+    ######################################################################################
     # Routines for managing text kernel information
-    ############################################################################
+    ######################################################################################
 
 ### TODO: finish these routines...
 
-    #===========================================================================
     @staticmethod
     def spice_instrument_kernel(inst, asof=None):
         """Return a dictionary containing the Instrument Kernel information.
 
         Also furnishes it for use by the SPICE tools.
 
-        Input:
-            inst        one of "JUNOCAM", etc.
-            asof        an optional date in the past, in ISO date or date-time
-                        format. If provided, then the information provided will
-                        be applicable as of that date. Otherwise, the most
-                        recent information is always provided.
+        Parameters:
+            inst (str, list or tuple): One of "JUNOCAM", etc.
+            asof (str, optional): An optional date in the past, in ISO date or date-time
+                format. If provided, then the information provided will be applicable as
+                of that date. Otherwise, the most recent information is always provided.
 
-        Return:         a tuple containing:
-                            the dictionary generated by textkernel.from_file()
-                            the name of the kernel.
+        Returns:
+            (tuple): Containing: the dictionary generated by textkernel.from_file() the
+                name of the kernel.
         """
         if asof is not None:
             (day,sec) = julian.day_sec_from_iso(stop_time)
@@ -425,22 +406,20 @@ class Juno(object):
 
         return (spicedb.as_dict(kernel_info), spicedb.as_names(kernel_info)[0])
 
-    #===========================================================================
     @staticmethod
     def spice_frames_kernel(asof=None):
         """Return a dictionary containing the Juno Frames Kernel information.
 
         Also furnishes the kernels for use by the SPICE tools.
 
-        Input:
-            asof        an optional date in the past, in ISO date or date-time
-                        format. If provided, then the information provided will
-                        be applicable as of that date. Otherwise, the most
-                        recent information is always provided.
+        Parameters:
+            asof (str, optional): An optional date in the past, in ISO date or date-time
+                format. If provided, then the information provided will be applicable as
+                of that date. Otherwise, the most recent information is always provided.
 
-        Return:         a tuple containing:
-                            the dictionary generated by textkernel.from_file()
-                            an ordered list of the names of the kernels
+        Returns:
+            (tuple): Containing: the dictionary generated by textkernel.from_file() an
+                ordered list of the names of the kernels.
         """
         if asof is not None:
             (day,sec) = julian.day_sec_from_iso(stop_time)
@@ -453,7 +432,6 @@ class Juno(object):
 
         return (spicedb.as_dict(kernel_list), spicedb.as_names(kernel_list))
 
-    #===========================================================================
     @staticmethod
     def used_kernels(time, inst, return_all_planets=False):
         """Return the list of kernels associated with a Juno observation at

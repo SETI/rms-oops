@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/backplanes/sky.py: Sky plane (celestial coordinates) backplanes
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -13,14 +13,14 @@ def right_ascension(self, event_key=(), apparent=True, direction='arr'):
 
     Optionally, it allows for stellar aberration.
 
-    Input:
-        event_key       key defining the surface event, typically () to refer to
-                        the observation.
-        apparent        True to return the apparent direction of photons in the
-                        frame of the event; False to return the purely geometric
-                        directions of the photons.
-        direction       'arr' to return the direction of an arriving photon;
-                        'dep' to return the direction of a departing photon.
+    Parameters:
+        event_key (str or tuple, optional): Key defining the surface event, typically ()
+            to refer to the observation.
+        apparent (bool, optional): True to return the apparent direction of photons in the
+            frame of the event; False to return the purely geometric directions of the
+            photons.
+        direction (str, optional): 'arr' to return the direction of an arriving photon;
+            'dep' to return the direction of a departing photon.
     """
 
     self.refresh()
@@ -31,20 +31,19 @@ def right_ascension(self, event_key=(), apparent=True, direction='arr'):
 
     return self.get_backplane(key)
 
-#===============================================================================
 def declination(self, event_key=(), apparent=True, direction='arr'):
     """Declination of the arriving or departing photon.
 
     Optionally, it allows for stellar aberration.
 
-    Input:
-        event_key       key defining the surface event, typically () to refer to
-                        the observation.
-        apparent        True to return the apparent direction of photons in the
-                        frame of the event; False to return the purely geometric
-                        directions of the photons.
-        direction       'arr' to base the direction on an arriving photon;
-                        'dep' to base the direction on a departing photon.
+    Parameters:
+        event_key (str or tuple, optional): Key defining the surface event, typically ()
+            to refer to the observation.
+        apparent (bool, optional): True to return the apparent direction of photons in the
+            frame of the event; False to return the purely geometric directions of the
+            photons.
+        direction (str, optional): 'arr' to base the direction on an arriving photon;
+            'dep' to base the direction on a departing photon.
     """
 
     self.refresh()
@@ -55,7 +54,6 @@ def declination(self, event_key=(), apparent=True, direction='arr'):
 
     return self.get_backplane(key)
 
-#===============================================================================
 def _fill_ra_dec(self, event_key, apparent, direction):
     """Fill internal backplanes of RA and dec."""
 
@@ -73,17 +71,15 @@ def _fill_ra_dec(self, event_key, apparent, direction):
     self.register_backplane(('right_ascension',) + etc, ra)
     self.register_backplane(('declination',)     + etc, dec)
 
-#===============================================================================
 def celestial_north_angle(self, event_key=()):
     """Direction of celestial north at each pixel in the image.
 
-    The angle is measured from the U-axis toward the V-axis. This varies across
-    the field of view due to spherical distortion and also any distortion in the
-    FOV.
+    The angle is measured from the U-axis toward the V-axis. This varies across the field
+    of view due to spherical distortion and also any distortion in the FOV.
 
-    Input:
-        event_key       key defining the surface event, typically () to refer
-                        refer to the observation.
+    Parameters:
+        event_key (str or tuple, optional): Key defining the surface event, typically ()
+            to refer refer to the observation.
     """
 
     self.refresh()
@@ -100,17 +96,15 @@ def celestial_north_angle(self, event_key=()):
     duv_ddec = self.duv_dlos.chain(dlos_ddec)
     return self.register_backplane(key, duv_ddec.angle())
 
-#===============================================================================
 def celestial_east_angle(self, event_key=()):
     """Direction of celestial north at each pixel in the image.
 
-    The angle is measured from the U-axis toward the V-axis. This varies
-    across the field of view due to spherical distortion and also any
-    distortion in the FOV.
+    The angle is measured from the U-axis toward the V-axis. This varies across the field
+    of view due to spherical distortion and also any distortion in the FOV.
 
-    Input:
-        event_key       key defining the surface event, typically () to
-                        refer to the observation.
+    Parameters:
+        event_key (str or tuple, optional): Key defining the surface event, typically ()
+            to refer to the observation.
     """
 
     self.refresh()
@@ -127,7 +121,6 @@ def celestial_east_angle(self, event_key=()):
     duv_dra = self.duv_dlos.chain(dlos_dra)
     return self.register_backplane(key, duv_dra.angle())
 
-#===============================================================================
 def _fill_dlos_dradec(self, event_key):
     """Fill internal backplanes with derivatives with respect to RA and dec.
     """
@@ -166,18 +159,16 @@ def _fill_dlos_dradec(self, event_key):
     self.register_backplane(('_dlos_dra',  event_key), dlos_dra)
     self.register_backplane(('_dlos_ddec', event_key), dlos_ddec)
 
-#===============================================================================
 def center_right_ascension(self, event_key, apparent=True, direction='arr'):
-    """Gridless right ascension of a photon from the body center to the
-    detector.
+    """Gridless right ascension of a photon from the body center to the detector.
 
-    Input:
-        event_key       key defining the event at the body's path.
-        apparent        True to return the apparent direction of photons in the
-                        the frame of the event; False to return the purely
-                        geometric directions of the photons.
-        direction       'arr' to return the direction of an arriving photon;
-                        'dep' to return the direction of a departing photon.
+    Parameters:
+        event_key (str or tuple): Key defining the event at the body's path.
+        apparent (bool, optional): True to return the apparent direction of photons in the
+            the frame of the event; False to return the purely geometric directions of the
+            photons.
+        direction (str, optional): 'arr' to return the direction of an arriving photon;
+            'dep' to return the direction of a departing photon.
     """
 
     self.refresh()
@@ -188,17 +179,16 @@ def center_right_ascension(self, event_key, apparent=True, direction='arr'):
 
     return self.get_backplane(key)
 
-#===============================================================================
 def center_declination(self, event_key, apparent=True, direction='arr'):
     """Gridless declination of a photon from the body center to the detector.
 
-    Input:
-        event_key       key defining the event at the body's path.
-        apparent        True to return the apparent direction of photons in
-                        the frame of the event; False to return the purely
-                        geometric directions of the photons.
-        direction       'arr' to return the direction of an arriving photon;
-                        'dep' to return the direction of a departing photon.
+    Parameters:
+        event_key (str or tuple): Key defining the event at the body's path.
+        apparent (bool, optional): True to return the apparent direction of photons in the
+            frame of the event; False to return the purely geometric directions of the
+            photons.
+        direction (str, optional): 'arr' to return the direction of an arriving photon;
+            'dep' to return the direction of a departing photon.
     """
 
     self.refresh()
@@ -209,7 +199,6 @@ def center_declination(self, event_key, apparent=True, direction='arr'):
 
     return self.get_backplane(key)
 
-#===============================================================================
 def _fill_center_ra_dec(self, event_key, apparent, direction):
     """Internal method to fill in RA and dec for the center of a body."""
 
@@ -224,9 +213,9 @@ def _fill_center_ra_dec(self, event_key, apparent, direction):
     self.register_backplane(('center_right_ascension',) + etc, ra)
     self.register_backplane(('center_declination',)     + etc, dec)
 
-################################################################################
+##########################################################################################
 
 # Add these functions to the Backplane module
 Backplane._define_backplane_names(globals().copy())
 
-################################################################################
+##########################################################################################

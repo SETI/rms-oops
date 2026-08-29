@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/fov/offsetfov.py: OffsetFOV subclass of FOV
-################################################################################
+##########################################################################################
 
 from polymath      import Pair
 from oops.fittable import Fittable
@@ -8,28 +8,25 @@ from oops.fov      import FOV
 
 
 class OffsetFOV(FOV, Fittable):
-    """FOV subclass in which the line of sight has been shifted relative to
-    another FOV. This is typically used for image navigation and pointing
-    corrections.
+    """FOV subclass in which the line of sight has been shifted relative to another FOV.
+    This is typically used for image navigation and pointing corrections.
     """
 
-    #===========================================================================
     def __init__(self, fov, uv_offset=None, xy_offset=None):
         """Constructor for an OffsetFOV.
 
-        Inputs:
-            fov         the reference FOV from which this FOV has been offset.
+        Parameters:
+            fov (FOV): The FOV object relative to which this FOV is shifted.
+            uv_offset (Pair, optional): The offset in `(u,v)` coordinates; the line of
+                sight of this FOV falls at `fov.uv_los - uv_offset`. At most one of
+                `uv_offset` and `xy_offset` can be specified; if neither is given, the
+                offset is zero.
+            xy_offset (Pair, optional): The same offset expressed in `(x,y)` coordinates;
+                the `(x,y)` values returned by this FOV are those of `fov` minus
+                `xy_offset`.
 
-            uv_offset   a tuple or Pair defining the offset of the new FOV
-                        relative to the old. This can be understood as having
-                        the effect of shifting predicted image geometry relative
-                        to what the image actually shows.
-
-            xy_offset   an alternative input, in which the offset is given in
-                        (x,y) coordinates rather than (u,v) coordinates.
-
-        Note that the Fittable interface uses the uv_offset, not the alternative
-        xy_offset input parameters.
+        Raises:
+            ValueError: If both `uv_offset` and `xy_offset` are specified.
         """
 
         self.fov = fov
@@ -60,25 +57,27 @@ class OffsetFOV(FOV, Fittable):
         self.uv_area  = self.fov.uv_area
         self.uv_los   = self.fov.uv_los - self.uv_offset
 
-    ############################################################################
+    ######################################################################################
     # Fittable interface
-    ############################################################################
+    ######################################################################################
 
     nparams = 2
 
     def _set_params(self, params):
-        """Redefine the (u,v) offsets of this OffsetFOV."""
+        """Redefine the `(u,v)` offsets of this OffsetFOV."""
 
         self.uv_offset = Pair.as_pair(params)
         self.xy_offset = self.fov.xy_from_uv(self.uv_offset + self.fov.uv_los)
 
     @property
     def params(self):
+        """The fitted parameters, the `(u,v)` offset as a tuple of two floats."""
+
         return tuple(self.uv_offset.vals)
 
-    ############################################################################
+    ######################################################################################
     # Serialization support
-    ############################################################################
+    ######################################################################################
 
     def __getstate__(self):
         self.refresh()
@@ -92,56 +91,54 @@ class OffsetFOV(FOV, Fittable):
         self.__init__(*state)
         self.freeze()
 
-    ############################################################################
+    ######################################################################################
     # FOV API
-    ############################################################################
+    ######################################################################################
 
-    def xy_from_uvt(self, uv_pair, time=None, derivs=False, remask=False,
-                                                            **keywords):
-        """The (x,y) camera frame coordinates given the FOV coordinates (u,v) at
-        the specified time.
+    def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
+        """The `(x,y)` camera frame coordinates given the FOV coordinates `(u,v)` at the
+        specified time.
 
-        Input:
-            uv_pair     (u,v) coordinate Pair in the FOV.
-            time        Scalar of optional absolute time in seconds.
-            derivs      If True, any derivatives in (u,v) get propagated into
-                        the returned (x,y) Pair.
-            remask      True to mask (u,v) coordinates outside the field of
-                        view; False to leave them unmasked.
-            **keywords  Additional keywords arguments are passed directly to the
-                        reference FOV.
+        Parameters:
+            uv_pair (Pair): `(u,v)` coordinates in this FOV.
+            time (Scalar, optional): Absolute time in seconds TDB.
+            derivs (bool, optional): If True, any derivatives in `(u,v)` get propagated
+                into the returned `(x,y)` coordinates.
+            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+                view; False to leave them unmasked.
+            **kwargs: Additional parameters that might affect the transform can be
+                included as keyword arguments.
 
-        Return:         Pair of same shape as uv_pair, giving the transformed
-                        (x,y) coordinates in the camera's frame.
+        Returns:
+            Pair: The transformed `(x,y)` coordinates in the camera's frame, with the same
+                shape as uv_pair.
         """
 
         uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
         old_xy = self.fov.xy_from_uvt(uv_pair, time=time, derivs=derivs,
-                                      remask=remask, **keywords)
+                                      remask=remask, **kwargs)
         return old_xy - self.xy_offset
 
-    #===========================================================================
-    def uv_from_xyt(self, xy_pair, time=None, derivs=False, remask=False,
-                                                            **keywords):
-        """The (u,v) FOV coordinates given the (x,y) camera frame coordinates at
-        the specified time.
+    def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
+        """The `(u,v)` FOV coordinates given the `(x,y)` camera frame coordinates at the
+        specified time.
 
-        Input:
-            xy_pair     (x,y) Pair in FOV coordinates.
-            time        Scalar of optional absolute time in seconds.
-            derivs      If True, any derivatives in (x,y) get propagated into
-                        the returned (u,v) Pair.
-            remask      True to mask (u,v) coordinates outside the field of
-                        view; False to leave them unmasked.
-            **keywords  Additional keywords arguments are passed directly to the
-                        reference FOV.
+        Parameters:
+            xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.
+            time (Scalar, optional): Absolute time in seconds TDB.
+            derivs (bool, optional): If True, any derivatives in `(x,y)` get propagated
+                into the returned `(u,v)` coordinates.
+            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+                view; False to leave them unmasked.
+            **kwargs: Additional parameters that might affect the transform can be
+                included as keyword arguments.
 
-        Return:         Pair of same shape as xy_pair, giving the computed (u,v)
-                        FOV coordinates.
+        Returns:
+            Pair: The computed `(u,v)` FOV coordinates, with the same shape as xy_pair.
         """
 
         xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
         return self.fov.uv_from_xyt(xy_pair + self.xy_offset, time=time,
-                                    derivs=derivs, remask=remask, **keywords)
+                                    derivs=derivs, remask=remask, **kwargs)
 
-################################################################################
+##########################################################################################

@@ -1,9 +1,9 @@
-################################################################################
+##########################################################################################
 # oops/hosts/galileo/__init__.py: Galileo class
 #
 # Utility functions for managing SPICE kernels while working with Galileo data
 # sets.
-################################################################################
+##########################################################################################
 import numpy as np
 
 import julian
@@ -16,21 +16,23 @@ from oops.body import Body
 __all__ = ['Galileo']
 
 # Mission targets, rough time divisions
-TIMELINE = [ {'ET': 0, 'UTC': '1989-10-18T12:00:00.00', 'target': 'VENUS',   'moons': False},
-             {'ET': 0, 'UTC': '1990-07-08T12:00:00.00', 'target': 'EARTH',   'moons': True},
-             {'ET': 0, 'UTC': '1991-05-29T12:00:00.00', 'target': 'GASPRA',  'moons': False},
-             {'ET': 0, 'UTC': '1992-07-08T12:00:00.00', 'target': 'EARTH',   'moons': True},
-             {'ET': 0, 'UTC': '1993-04-28T12:00:00.00', 'target': 'IDA',     'moons': True},
-             {'ET': 0, 'UTC': '1994-07-16T12:00:00.00', 'target': 'SL9',     'moons': False},
-             {'ET': 0, 'UTC': '1994-07-22T12:00:00.00', 'target': 'JUPITER', 'moons': True}]
+TIMELINE = [
+    {'ET': 0, 'UTC': '1989-10-18T12:00:00.00', 'target': 'VENUS',   'moons': False},
+    {'ET': 0, 'UTC': '1990-07-08T12:00:00.00', 'target': 'EARTH',   'moons': True},
+    {'ET': 0, 'UTC': '1991-05-29T12:00:00.00', 'target': 'GASPRA',  'moons': False},
+    {'ET': 0, 'UTC': '1992-07-08T12:00:00.00', 'target': 'EARTH',   'moons': True},
+    {'ET': 0, 'UTC': '1993-04-28T12:00:00.00', 'target': 'IDA',     'moons': True},
+    {'ET': 0, 'UTC': '1994-07-16T12:00:00.00', 'target': 'SL9',     'moons': False},
+    {'ET': 0, 'UTC': '1994-07-22T12:00:00.00', 'target': 'JUPITER', 'moons': True}
+]
 
 for i in range(len(TIMELINE)):
     TIMELINE[i]['ET'] = \
         julian.tdb_from_tai(julian.tai_from_iso(TIMELINE[i]['UTC']))
 
-################################################################################
+##########################################################################################
 # Routines for managing the loading of C and SP kernels
-################################################################################
+##########################################################################################
 
 # Make sure the leap seconds have been loaded
 oops.spice.load_leap_seconds()
@@ -46,7 +48,7 @@ oops.spice.load_leap_seconds()
 # call to load_ck(time) or load_spk(time) will ensure that the information is
 # available.
 
-################################################################################
+##########################################################################################
 
 class Galileo(object):
     """An instance-free class to hold Galileo-specific parameters."""
@@ -73,7 +75,7 @@ class Galileo(object):
 
     initialized = False
 
-    ############################################################################
+    ######################################################################################
 
     @staticmethod
     def initialize(planets=None, asof=None,
@@ -82,15 +84,15 @@ class Galileo(object):
 
         After the first call, later calls to this function are ignored.
 
-        Input:
-            planets     A list of planets to pass to define_solar_system. None
-                        or 0 means all.
-            asof        Only use SPICE kernels that existed before this date;
-                        None to ignore.
-            mst_pck     True to include MST PCKs, which update the rotation
-                        models for some of the small moons.
-            irregulars  True to include the irregular satellites;
-                        False otherwise.
+        Parameters:
+            planets (list, optional): A list of planets to pass to define_solar_system.
+                None or 0 means all.
+            asof (str, optional): Only use SPICE kernels that existed before this date;
+                None to ignore.
+            mst_pck (bool, optional): True to include MST PCKs, which update the rotation
+                models for some of the small moons.
+            irregulars (bool, optional): True to include the irregular satellites; False
+                otherwise.
         """
 
         if Galileo.initialized:
@@ -119,7 +121,6 @@ class Galileo(object):
 
         Galileo.initialized = True
 
-    #===========================================================================
     @staticmethod
     def reset():
         """Reset the internal parameters.
@@ -138,7 +139,6 @@ class Galileo(object):
 
         Galileo.initialized = False
 
-    #===========================================================================
     @staticmethod
     def load_kernels():
         from spicedb import get_spice_filecache_prefix
@@ -220,9 +220,9 @@ class Galileo(object):
         for path in paths:
             cspyce.furnsh(path)
 
-    ############################################################################
+    ######################################################################################
     # Initialize the kernel lists
-    ############################################################################
+    ######################################################################################
 
     @staticmethod
     def initialize_kernels(kernels, lists):
@@ -248,26 +248,21 @@ class Galileo(object):
             for m in range(m1, m2+1):
                 lists[m] += [kernel]
 
-    ############################################################################
+    ######################################################################################
     # Routines for managing the loading of other kernels
-    ############################################################################
+    ######################################################################################
 
     @staticmethod
     def load_instruments(instruments=[], asof=None):
-        """Load the SPICE kernels and define the basic paths and frames for
-        the Galileo mission.
+        """Load the SPICE kernels and define the basic paths and frames for the Galileo
+        mission.
 
         It is generally only to be called once.
 
-        Input:
-            instruments an optional list of instrument names for which to load
-                        frames kernels. The frames for ISS, VIMS, UVIS, and CIRS
-                        are always loaded.
-
-            asof        if this specifies a date or date-time in ISO format,
-                        then only kernels that existed before the specified date
-                        are used. Otherwise, the most recent versions are always
-                        loaded.
+        Parameters:
+            asof (str, optional): If this specifies a date or date-time in ISO format,
+                then only kernels that existed before the specified date are used.
+                Otherwise, the most recent versions are always loaded.
         """
 
         # Load the default instruments on the first pass
@@ -288,9 +283,9 @@ class Galileo(object):
         _ = spicedb.furnish_inst(-77, inst=instruments, asof=asof)
         spicedb.close_db()
 
-    ############################################################################
+    ######################################################################################
     # Routines for managing text kernel information
-    ############################################################################
+    ######################################################################################
 
     @staticmethod
     def spice_instrument_kernel(inst, asof=None):
@@ -298,16 +293,15 @@ class Galileo(object):
 
         Also furnishes it for use by the SPICE tools.
 
-        Input:
-            inst        one of "SSI", etc.
-            asof        an optional date in the past, in ISO date or date-time
-                        format. If provided, then the information provided will
-                        be applicable as of that date. Otherwise, the most
-                        recent information is always provided.
+        Parameters:
+            inst (str, list or tuple): One of "SSI", etc.
+            asof (str, optional): An optional date in the past, in ISO date or date-time
+                format. If provided, then the information provided will be applicable as
+                of that date. Otherwise, the most recent information is always provided.
 
-        Return:         a tuple containing:
-                            the dictionary generated by textkernel.from_file()
-                            the name of the kernel.
+        Returns:
+            (tuple): Containing: the dictionary generated by textkernel.from_file() the
+                name of the kernel.
         """
         if asof is not None:
             (day,sec) = julian.day_sec_from_iso(stop_time)
@@ -320,7 +314,6 @@ class Galileo(object):
 
         return (spicedb.as_dict(kernel_info), spicedb.as_names(kernel_info)[0])
 
-    #===========================================================================
     @staticmethod
     def used_kernels(time, inst, return_all_planets=False):
         """The list of kernels associated with a Galileo observation at a
@@ -328,7 +321,8 @@ class Galileo(object):
         """
         # Determine targets based on mission phase, or return_all_planets
         if return_all_planets:
-            targets = ['MERCURY', 'VENUS', 'EARTH', 'MARS', 'JUPITER', 'SATURN', 'URANUS', 'NEPTUNE']
+            targets = ['MERCURY', 'VENUS', 'EARTH', 'MARS', 'JUPITER', 'SATURN',
+                       'URANUS', 'NEPTUNE']
             moons = [False, False, True, True, True, True, True, True]
         else:
             times = np.array([TIMELINE[i]['ET'] for i in range(len(TIMELINE))])
@@ -356,4 +350,4 @@ class Galileo(object):
         return spicedb.used_basenames(time=time, inst=inst, sc=-77,
                                       bodies=bodies)
 
-################################################################################
+##########################################################################################

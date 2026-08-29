@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # tests/spicedb/test_spicedb.py
-################################################################################
+##########################################################################################
 
 from pathlib import Path
 
@@ -132,14 +132,14 @@ def test_kernelinfo():
     spk = spicedb.KernelInfo(['VG1-JUP230', None, 'SPK', 'file', T0, T1, T2, 0, 1])
     assert spk.full_name == 'VG1-JUP230'
 
-################################################################################
+##########################################################################################
 # UNIT TESTS for queries
-################################################################################
+##########################################################################################
 
 def test_spicedb():
-    ############################################################################
+    ######################################################################################
     # _sort_kernels()
-    ############################################################################
+    ######################################################################################
 
     # Leapseconds should always come first
     lsk0 = spicedb.KernelInfo(['LEAPSECONDS', '1', 'LSK', 'File0.tls',
@@ -263,9 +263,9 @@ def test_spicedb():
     sorted = [lsk0, sclk0, sclk1, fk3, spk1, spk3b, spk2e, ck0, ck1, ck2]
     assert spicedb._sort_kernels(random) == sorted
 
-    ############################################################################
+    ######################################################################################
     # _remove_overlaps()
-    ############################################################################
+    ######################################################################################
 
     start_time = '2000-01-01T00:00:00'
     stop_time  = '2010-01-01T00:00:00'
@@ -329,11 +329,11 @@ def test_spicedb():
     spks = [info0]
     assert spicedb._remove_overlaps(spks, start_time, stop_time) == [info0]
 
-    ############################################################################
-    ############################################################################
+    ######################################################################################
+    ######################################################################################
     # SPICE.db tests
-    ############################################################################
-    ############################################################################
+    ######################################################################################
+    ######################################################################################
 
     try:
         spicedb.get_spice_path()    # Find SPICE.db in the usual place
@@ -342,9 +342,9 @@ def test_spicedb():
         spicedb.DEBUG = True        # Avoid attempting to load kernels
         spicedb.ABSPATH_LIST = []
 
-        ########################################################################
+        ##################################################################################
         # _query_kernels()
-        ########################################################################
+        ##################################################################################
 
         kernels = spicedb._query_kernels('LSK')
         assert len(kernels) == 1
@@ -411,9 +411,9 @@ def test_spicedb():
         assert kernels[ 0].filespec.endswith( '080327R_SCPSE_07365_08045.bsp')
         assert kernels[-1].filespec.endswith( '090225R_SCPSE_08350_09028.bsp')
 
-        ########################################################################
+        ##################################################################################
         # furnish_lsk(asof=None, after=None, redo=True)
-        ########################################################################
+        ##################################################################################
 
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_lsk(asof='2014')
@@ -428,7 +428,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         k1 = kernels
         kernels = spicedb.furnish_lsk(asof=(14*365.25*86400))
@@ -442,7 +442,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_lsk(asof='2010-01-01')
         assert kernels == ['NAIF-LSK-0009']
@@ -455,7 +455,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         with pytest.raises(ValueError):
             spicedb.furnish_lsk(asof='1950', redo=False)
 
@@ -470,9 +470,9 @@ def test_spicedb():
         kernels = spicedb.furnish_lsk(after='3000-01-01', redo=True)
         assert kernels == latest
 
-        ########################################################################
+        ##################################################################################
         # furnish_pck(bodies, asof=None, after=None, redo=True)
-        ########################################################################
+        ##################################################################################
 
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_pck()
@@ -494,7 +494,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_pck(bodies=spicedb.lrange(1,11) +
                                      spicedb.lrange(199,1000,100) + [301] +
@@ -505,7 +505,9 @@ def test_spicedb():
                               asof='2014-03-10')
 
         assert (kernels
-                == ['NAIF-PCK-MARS-IAU2000-V0', 'CAS-FK-ROCKS-V18', 'CAS-PCK-ROCKS-2011-01-21', 'CAS-PCK-2014-02-19', 'NAIF-PCK-00010-EDIT-V01'])
+                == ['NAIF-PCK-MARS-IAU2000-V0', 'CAS-FK-ROCKS-V18',
+                    'CAS-PCK-ROCKS-2011-01-21', 'CAS-PCK-2014-02-19',
+                    'NAIF-PCK-00010-EDIT-V01'])
 
         assert spicedb.ABSPATH_LIST[0].name == 'mars_iau2000_v0.tpc'
         assert spicedb.ABSPATH_LIST[1].name == 'cas_rocks_v18.tf'
@@ -513,9 +515,9 @@ def test_spicedb():
         assert spicedb.ABSPATH_LIST[3].name == 'cpck19Feb2014.tpc'
         assert spicedb.ABSPATH_LIST[4].name == 'pck00010_edit_v01.tpc'
 
-        ########################################################################
+        ##################################################################################
         # furnish_spk(bodies, time=None, asof=None, after=None, redo=True)
-        ########################################################################
+        ##################################################################################
 
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_spk([1,2,3,4,5,6,7,8,9], asof='2014-03-10')
@@ -530,7 +532,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_spk([699], asof='2014-03-10')
         assert kernels == ['SAT363', 'DE430'] #####
@@ -545,7 +547,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_spk(range(601,654), asof='2014-03-10')
         assert kernels == ['SAT357', 'SAT360', 'SAT362', 'SAT363', 'DE430']
@@ -560,11 +562,11 @@ def test_spicedb():
         for file in F1:
             assert file in spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         with pytest.raises(ValueError):
             spicedb.furnish_spk([601], after='3000-01-01', redo=False)
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_spk([601], after='3000-01-01', redo=True)
         assert kernels[0][:3] == 'SAT'
@@ -579,7 +581,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_spk([-82], asof='2013-12-13', time=None)
         assert kernels == ['CAS-SPK-RECONSTRUCTED-V01[1-133]']
@@ -594,7 +596,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_spk([-82], asof='2014-03-10',
                                      time=(12*365.25*86400., '2012-04-01'))
@@ -612,7 +614,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_spk([-82], asof='2012-04-01',
                                      time=(12*365.25*86400., '2012-04-01'))
@@ -630,7 +632,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_spk([-82], asof='2011-09-01',
                                      time=(12*365.25*86400., '2012-04-01'))
@@ -645,7 +647,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_spk([-82], asof='2011-08-01',
                                      time=(12*365.25*86400., '2012-04-01'))
@@ -663,7 +665,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_spk([-32,601,699], asof='2014-08-01',
                               time=('1981-08-14', '1981-08-24'))
@@ -683,7 +685,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         sl9 = spicedb.lrange(1000181,1000189) + [1000190,1000191] + \
               spicedb.lrange(1000193,1000204)
@@ -701,9 +703,9 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########################################################################
+        ##################################################################################
         # furnish_inst(ids, inst=None, asof=None, after=None, redo=True)
-        ########################################################################
+        ##################################################################################
 
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_inst(-82, inst=[], asof='2017-06-01')
@@ -720,7 +722,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_inst(-82, inst='ISS', asof='2017-06-01')
         assert kernels == ['CAS-SCLK-00171', 'CAS-FK-V04', 'CAS-IK-ISS-V10']
@@ -737,7 +739,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_inst(-82, inst=None, asof='2017-06-01')
         for file in spicedb.ABSPATH_LIST[3:]:      # skip over one .tsc and two .tf files
@@ -750,11 +752,12 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_inst(-31, inst='ISS', asof='2017-06-01')
         assert (kernels
-                == ['VG1-SCLK-00019', 'VG1-FK-V02', 'VG1-IK-ISSNA-V02', 'VG1-IK-ISSWA-V01'])
+                == ['VG1-SCLK-00019', 'VG1-FK-V02', 'VG1-IK-ISSNA-V02',
+                    'VG1-IK-ISSWA-V01'])
 
         F1 = spicedb.ABSPATH_LIST
         k1 = kernels
@@ -763,9 +766,9 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########################################################################
+        ##################################################################################
         # furnish_ck(ids, name=None, time=None, asof=None, after=None, redo=True)
-        ########################################################################
+        ##################################################################################
 
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_ck(-82, name="%PREDICTED%")
@@ -779,7 +782,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_ck(-82, name="%PREDICTED%",
                                   time=('2004-02-01','2018-01-01'))
@@ -792,7 +795,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_ck(-82, asof='2014-02-18', name="%PREDICTED%")
         assert kernels == ['CAS-CK-PREDICTED-V01[1-81]']
@@ -805,7 +808,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_ck(-82, time=('2005-01-01','2005-02-01'),
                                   asof='2014-01-01')
@@ -822,7 +825,7 @@ def test_spicedb():
         assert filenames[5].name == '05022_05027ra.bc'
         assert filenames[6].name == '05027_05032ra.bc'
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_ck(-82, time=('2005-01-01','2005-02-01'),
                                   asof='2014-01-01', name="%PREDICTED%")
@@ -841,7 +844,7 @@ def test_spicedb():
         assert spicedb.ABSPATH_LIST[0].name == '04351_05022ph_fsiv.bc'
         assert spicedb.ABSPATH_LIST[1].name == '05022_05058pj_fsiv.bc'
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_ck(-32, asof='2014-01-01')
         assert 'VG2-CK-ISS-JUP-V01' in kernels
@@ -856,7 +859,7 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########
+        ##################################################################################
         spicedb.ABSPATH_LIST = []
         kernels = spicedb.furnish_ck(-98, asof='2015-06-01')
         assert kernels == ['NH-CK-RECONSTRUCTED-V01[1-9]']
@@ -868,17 +871,17 @@ def test_spicedb():
         assert k1 == kernels
         assert F1 == spicedb.ABSPATH_LIST
 
-        ########################################################################
+        ##################################################################################
         # DEBUG mode off...
-        ########################################################################
+        ##################################################################################
 
         spicedb.DEBUG = False
 
-        ########################################################################
+        ##################################################################################
         # furnish_solar_system(start_time, stop_time, asof=None)
         # unload_by_name(names)
         # unload_by_type(types=None)
-        ########################################################################
+        ##################################################################################
 
         kernels = spicedb.furnish_solar_system('2000-01-01', '2020-01-01',
                                        asof='2014-03-10')
@@ -938,7 +941,7 @@ def test_spicedb():
         assert len(spicedb.FURNISHED_ABSPATHS['SPK']) == 0
         assert len(spicedb.FURNISHED_NAMES['SPK']) == 0
 
-        ########
+        ##################################################################################
         kernels1 = spicedb.furnish_solar_system(asof='2014-03-10')  # no time limits
         assert kernels[:6] == kernels1[:6]     # Non-SPKs are the same
         assert kernels[-1] == 'DE430'
@@ -953,13 +956,13 @@ def test_spicedb():
         assert kernels.index('NEP081') < kernels.index('NEP087')
         assert kernels.index('NEP087') < kernels.index('NEP086')
 
-        ########################################################################
+        ##################################################################################
         # furnish_cassini_kernels(start_time, stop_time, instrument=None,
         #                         asof=None)
         # unload_by_name(names)
         # unload_by_type(types=None)
         # furnished_names(types=None)
-        ########################################################################
+        ##################################################################################
 
 # Function disabled 2/22/2020
 #         unload_by_type()
@@ -1104,9 +1107,9 @@ def test_spicedb():
 #                          ['CAS-IK-ISS-V10', 'CAS-IK-VIMS-V06',
 #                           'CAS-FK-V04', 'NAIF-LSK-0010', 'CAS-SCLK-00171'])
 
-        ########################################################################
+        ##################################################################################
         # Test translator
-        ########################################################################
+        ##################################################################################
 
         spicedb.unload_by_type()
 
@@ -1196,13 +1199,13 @@ def test_spicedb():
             else:
                 assert abspath in abspaths1
 
-    ############################################################################
+    ######################################################################################
     # Clean up...
-    ############################################################################
+    ######################################################################################
 
     finally:
         spicedb.unload_by_type()
 
         spicedb.DEBUG = False
         spicedb.close_db()
-################################################################################
+##########################################################################################

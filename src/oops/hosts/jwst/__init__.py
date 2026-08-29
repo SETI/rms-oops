@@ -189,9 +189,9 @@ class JWST(object):
     Objects of this class are empty; they only exist to support inheritance.
     """
 
-    ############################################
+    ######################################################################################
     # General file info
-    ############################################
+    ######################################################################################
 
     def filespec(self, hdulist, **options):
         """The full directory path and name of the file."""
@@ -270,9 +270,9 @@ class JWST(object):
 
         return options
 
-    ############################################
+    ######################################################################################
     # Cadence support
-    ############################################
+    ######################################################################################
 
     def time_limits(self, hdulist, **options):
         """A tuple containing the overall start and end times of the observation as
@@ -304,9 +304,9 @@ class JWST(object):
 
         return cadence
 
-    ############################################
+    ######################################################################################
     # Path support
-    ############################################
+    ######################################################################################
 
     def jwst_path(self, hdulist, **options):
         """A LinearPath using the geometry info in the FITS header."""
@@ -332,9 +332,9 @@ class JWST(object):
                                     frame = oops.frame.Frame.J2000,
                                     path_id = path_id)
 
-    ############################################
+    ######################################################################################
     # Frame support
-    ############################################
+    ######################################################################################
 
     def target_name(self, hdulist, **options):
         """Name of the image target."""
@@ -434,9 +434,9 @@ class JWST(object):
         return oops.frame.Navigation(angles, frame, frame_id=frame.frame_id,
                                                     override=True)
 
-    ############################################
+    ######################################################################################
     # Calibration support
-    ############################################
+    ######################################################################################
 
     def iof_factor(self, hdulist, path, **options):
         """The factor(s) for converting DN per second to I/F."""

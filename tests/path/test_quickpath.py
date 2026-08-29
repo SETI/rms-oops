@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/path/quickpath.py: Subclass QuickPath of class Path
-################################################################################
+##########################################################################################
 
 import numpy as np
 import pytest
@@ -26,9 +26,9 @@ def test_quickpath():
     epoch = 1.e8
     time = Scalar(epoch + np.arange(0., 100., 0.01))
 
-    ########################################
+    ######################################################################################
     # Tabulating a Path does not spawn a second, nested QuickPath
-    ########################################
+    ######################################################################################
 
     # SpicePath quickens itself when handed an array of times, so the tabulation
     # inside QuickPath must not re-enter that machinery. The span is short enough
@@ -37,9 +37,9 @@ def test_quickpath():
     assert isinstance(mars.quick_path(short_time, quick={}), QuickPath)
     assert len(mars._quickpaths) == 1
 
-    ########################################
+    ######################################################################################
     # A Path whose state is fixed in time is never tabulated
-    ########################################
+    ######################################################################################
 
     # FixedPath returns one position and velocity regardless of the times requested,
     # so a QuickPath could not interpolate it and would gain nothing if it could
@@ -50,9 +50,9 @@ def test_quickpath():
     with pytest.raises(ValueError):
         QuickPath(fixed, epoch, epoch + 100., QUICK.dictionary)
 
-    ########################################
+    ######################################################################################
     # A composite Path inherits the opt-in of the paths it combines
-    ########################################
+    ######################################################################################
 
     # The fixed offset above contributes nothing, but the SpicePath it is measured
     # from does, so the composite is worth tabulating
@@ -65,9 +65,9 @@ def test_quickpath():
     interpolated = quick.event_at_time(time, quick=False)
     assert np.max(np.abs((interpolated.pos - exact.pos).norm().vals)) < 1.e-6
 
-    ########################################
+    ######################################################################################
     # A tabulation of a fittable Path is redone after that Path is re-fit
-    ########################################
+    ######################################################################################
 
     Body._undefine_solar_system()
     Body.define_solar_system('2000-01-01', '2010-01-01')
@@ -93,4 +93,4 @@ def test_quickpath():
     assert reused is quick
     error = (reused.event_at_time(time, quick=False).pos - exact.pos).norm()
     assert np.max(error.vals) < 1.e-3
-################################################################################
+##########################################################################################

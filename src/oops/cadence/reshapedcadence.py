@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/cadence/reshapedcadence.py: ReshapedCadence subclass of class Cadence
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -11,17 +11,16 @@ from oops.cadence import Cadence
 class ReshapedCadence(Cadence):
     """A Cadence that has been reshaped.
 
-    The time steps are defined by another cadence with a different shape.
-    This can be used, for example, to convert a 1-D cadence into an N-D cadence.
+    The time steps are defined by another cadence with a different shape. This can be
+    used, for example, to convert a 1-D cadence into an N-D cadence.
     """
 
-    #===========================================================================
     def __init__(self, cadence, shape):
         """Constructor for a ReshapedCadence.
 
-        Input:
-            cadence     the cadence to re-shape.
-            shape       a tuple defining the new shape of the cadence.
+        Parameters:
+            cadence (Cadence): The cadence to re-shape.
+            shape (tuple): Defining the new shape of the cadence.
         """
 
         self.cadence = cadence
@@ -64,7 +63,6 @@ class ReshapedCadence(Cadence):
         self.__init__(*state)
         self.freeze()
 
-    #===========================================================================
     @staticmethod
     def _reshape_tstep(tstep, old_shape, old_stride, old_rank,
                               new_shape, new_stride, new_rank, size,
@@ -163,7 +161,6 @@ class ReshapedCadence(Cadence):
 
         return new_tstep
 
-    #===========================================================================
     def _old_tstep_from_new(self, tstep, remask=False, derivs=False,
                                          inclusive=True):
         """Convert a tstep index for the old cadence to the new."""
@@ -175,7 +172,6 @@ class ReshapedCadence(Cadence):
                             self._size,
                             remask=remask, derivs=derivs, inclusive=inclusive)
 
-    #===========================================================================
     def _new_tstep_from_old(self, tstep, remask=False, derivs=False,
                                          inclusive=True):
         """Convert a tstep index for the new cadence to the old."""
@@ -186,24 +182,24 @@ class ReshapedCadence(Cadence):
                             self.shape, self._stride, self._rank, self._size,
                             remask=remask, derivs=derivs, inclusive=inclusive)
 
-    #===========================================================================
     def time_at_tstep(self, tstep, remask=False, derivs=False, inclusive=True):
         """The time associated with the given time step.
 
         This method supports non-integer time step values.
 
-        In multidimensional cadences, indexing beyond the dimensions of the
-        cadence returns the time at the nearest edge of the cadence's shape.
+        In multidimensional cadences, indexing beyond the dimensions of the cadence
+        returns the time at the nearest edge of the cadence's shape.
 
-        Input:
-            tstep       a Scalar or Pair of time step index values.
-            remask      True to mask values outside the time limits.
-            derivs      True to include derivatives of tstep in the returned
-                        time.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            tstep (Scalar or Pair): Time step index values.
+            remask (bool, optional): True to mask values outside the time limits.
+            derivs (bool, optional): True to include derivatives of tstep in the returned
+                time.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         a Scalar of times in seconds TDB.
+        Returns:
+            (Scalar): Times in seconds TDB.
         """
 
         tstep = self._old_tstep_from_new(tstep, remask=remask, derivs=derivs,
@@ -212,20 +208,21 @@ class ReshapedCadence(Cadence):
         return self.cadence.time_at_tstep(tstep, remask=remask, derivs=derivs,
                                                  inclusive=inclusive)
 
-    #===========================================================================
     def time_range_at_tstep(self, tstep, remask=False, inclusive=True):
         """The range of times for the given time step.
 
-        Input:
-            tstep       a Pair of time step index values.
-            remask      True to mask values outside the time limits.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            tstep (Pair): Time step index values.
+            remask (bool, optional): True to mask values outside the time limits.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         (time_min, time_max)
-            time_min    a Scalar defining the minimum time associated with the
-                        index. It is given in seconds TDB.
-            time_max    a Scalar defining the maximum time value.
+        Returns:
+            (tuple): (time_min, time_max), where:
+
+            * `time_min` (Scalar): Defining the minimum time associated with the index. It
+              is given in seconds TDB.
+            * `time_max` (Scalar): Defining the maximum time value.
         """
 
         tstep = self._old_tstep_from_new(tstep, derivs=False, remask=remask,
@@ -234,21 +231,22 @@ class ReshapedCadence(Cadence):
         return self.cadence.time_range_at_tstep(tstep, remask=remask,
                                                        inclusive=inclusive)
 
-    #===========================================================================
     def tstep_at_time(self, time, remask=False, derivs=False, inclusive=True):
         """Time step for the given time.
 
         This method returns non-integer time steps.
 
-        Input:
-            time        a Scalar of times in seconds TDB.
-            remask      True to mask time values not sampled within the cadence.
-            derivs      True to include derivatives of time in the returned
-                        tstep.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            time (Scalar): Times in seconds TDB.
+            remask (bool, optional): True to mask time values not sampled within the
+                cadence.
+            derivs (bool, optional): True to include derivatives of time in the returned
+                tstep.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         a Scalar or Pair of time step index values.
+        Returns:
+            (Scalar or Pair): Time step index values.
         """
 
         time = Scalar.as_scalar(time, recursive=derivs)
@@ -300,23 +298,22 @@ class ReshapedCadence(Cadence):
 
         return tstep
 
-    #===========================================================================
     def tstep_range_at_time(self, time, remask=False, inclusive=True):
         """Integer range of time steps active at the given time.
 
-        Input:
-            time        a Scalar of times in seconds TDB.
-            remask      True to mask time values not sampled within the cadence.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            time (Scalar): Times in seconds TDB.
+            remask (bool, optional): True to mask time values not sampled within the
+                cadence.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         (tstep_min, tstep_max)
-            tstep_min   minimum Scalar or Pair time step index for time range.
-            tstep_max   maximum Scalar or Pair time step index for time range.
-
-        All returned indices will be in the allowed range for the cadence,
-        inclusive, regardless of mask. If the time is not inside the cadence,
-        tstep_max < tstep_min.
+        Returns:
+            (tuple): (tstep_min, tstep_max) tstep_min   minimum Scalar or Pair time step
+                index for time range. tstep_max   maximum Scalar or Pair time step index
+                for time range. All returned indices will be in the allowed range for the
+                cadence, inclusive, regardless of mask. If the time is not inside the
+                cadence, tstep_max < tstep_min.
         """
 
         time = Scalar.as_scalar(time, recursive=False)
@@ -409,33 +406,29 @@ class ReshapedCadence(Cadence):
 
         return (new_tstep_min, new_tstep_max)
 
-    #===========================================================================
     def time_is_outside(self, time, inclusive=True):
         """A Boolean mask of times that fall outside the cadence.
 
-        Input:
-            time        a Scalar of times in seconds TDB.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            time (Scalar): Times in seconds TDB.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         a Boolean mask indicating which time values are not
-                        sampled by the cadence.
+        Returns:
+            (bool): Mask indicating which time values are not sampled by the cadence.
         """
 
         return self.cadence.time_is_outside(time, inclusive=inclusive)
 
-    #===========================================================================
     def time_shift(self, secs):
-        """Construct a duplicate of this Cadence with all times shifted by given
-        amount.
+        """Construct a duplicate of this Cadence with all times shifted by given amount.
 
-        Input:
-            secs        the number of seconds to shift the time later.
+        Parameters:
+            secs (float): Seconds to shift the time later.
         """
 
         return ReshapedCadence(self.cadence.time_shift(secs), self.shape)
 
-    #===========================================================================
     def as_continuous(self):
         """A shallow copy of this cadence, forced to be continuous.
 
@@ -445,4 +438,4 @@ class ReshapedCadence(Cadence):
 
         return ReshapedCadence(self.cadence.as_continuous(), self.shape)
 
-################################################################################
+##########################################################################################

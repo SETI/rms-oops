@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/surface/ansa.py: Ansa subclass of class Surface
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -12,41 +12,37 @@ from oops.surface.ringplane import RingPlane
 
 
 class Ansa(Surface):
-    """This surface is defined as the locus of points where a radius vector from
-    the pole of the Z-axis is perpendicular to the line of sight. This provides
-    a convenient coordinate system for describing rings when viewed nearly
-    edge-on. The coordinates are (r,z,theta) where
-        r       radial distance from the Z-axis, positive on the "right" side
-                (if Z is pointing "up"); negative on the left side.
-        z       vertical distance from the (x,y) plane.
-        theta   angular distance from the ansa, with positive values further
-                away from the observer and negative values closer.
+    """The locus of points where a radius vector from the pole of the Z-axis is
+    perpendicular to the line of sight.
+
+    This provides a convenient coordinate system for describing rings when viewed nearly
+    edge-on. The coordinates are (r, z, theta), where:
+
+    * r (Scalar): Radial distance from the Z-axis, positive on the "right" side if Z
+      points "up", negative on the left side.
+    * z (Scalar): Vertical distance from the (x,y) plane.
+    * theta (Scalar): Angular distance from the ansa, positive further away from the
+      observer and negative closer.
     """
 
     COORDINATE_TYPE = 'cylindrical'
     IS_VIRTUAL = True
 
-    #===========================================================================
     def __init__(self, origin, frame, gravity=None, ringplane=None, radii=None):
         """Constructor for an Ansa Surface.
 
-        Input:
-            origin      a Path object or ID defining the motion of the center
-                        of the ring system.
-
-            frame       a Frame object or ID in which the ring plane is the
-                        (x,y) plane (where z == 0).
-
-            gravity     an optional Gravity object, used to define the orbital
-                        velocities relative to the surface.
-
-            ringplane   an optional RingPlane object associated with this Ansa
-                        surface. If provided, this surface inherits the gravity
-                        field and radial limits of the RingPlane, unless they
-                        are given as input.
-
-            radii       the nominal inner and outer radii of the ring, in km.
-                        None for a ring with no radial limits.
+        Parameters:
+            origin (Path): Object or ID defining the motion of the center of the ring
+                system.
+            frame (Frame): Object or ID in which the ring plane is the (x,y) plane (where
+                z == 0).
+            gravity (Gravity, optional): Object, used to define the orbital velocities
+                relative to the surface.
+            ringplane (optional): An optional RingPlane object associated with this
+                Ansa surface. If provided, this surface inherits the gravity field and
+                radial limits of the RingPlane, unless they are given as input.
+            radii (tuple, optional): The nominal inner and outer radii of the ring, in km.
+                None for a ring with no radial limits.
         """
 
         self.origin  = Path.as_waypoint(origin)
@@ -92,28 +88,25 @@ class Ansa(Surface):
         self.__init__(*state)
         self.freeze()
 
-    #===========================================================================
     @staticmethod
     def for_ringplane(ringplane):
-        """Construct an Ansa Surface associated with a given RingPlane, ignoring
-        any modes.
+        """Construct an Ansa Surface associated with a given RingPlane, ignoring any
+        modes.
 
-        Input:
-            ringplane   a ringplane surface relative to which this ansa surface
-                        is to be defined.
+        Parameters:
+            ringplane: A ringplane surface relative to which this ansa surface is to
+                be defined.
         """
 
         return Ansa(ringplane.origin, ringplane.frame, gravity=ringplane.gravity,
                     ringplane=ringplane, radii=ringplane.radii)
 
-    #===========================================================================
     @staticmethod
     def for_body(body):
-        """Construct an Ansa Surface associated with a given body, ignoring any
-        modes.
+        """Construct an Ansa Surface associated with a given body, ignoring any modes.
 
-        Input:
-            body        a ring body to which this ansa surface is to be defined.
+        Parameters:
+            body: A ring body to which this ansa surface is to be defined.
         """
 
         # Identify the ring body
@@ -123,31 +116,31 @@ class Ansa(Surface):
         return Ansa(body.path, body.frame, gravity=body.gravity,
                     ringplane=body.surface, radii=body.surface.radii)
 
-    #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
                                   derivs=False, hints=None):
         """Surface coordinates associated with a position vector.
 
-        Input:
-            pos         a Vector3 of positions at or near the surface, relative
-                        to this surface's origin and frame.
-            obs         a Vector3 of observer position relative to this
-                        surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface.
-            axes        2 or 3, indicating whether to return the first two
-                        coordinates (rad, z) or all three (rad, z, theta) as
-                        Scalars.
-            derivs      True to propagate any derivatives inside pos and obs
-                        into the returned coordinates.
-            hints       ignored. Provided for compatibility with other Surface
-                        subclasses.
+        Parameters:
+            pos (Vector3): Positions at or near the surface, relative to this surface's
+                origin and frame.
+            obs (Vector3, optional): Observer position relative to this surface's origin
+                and frame.
+            time (Scalar, optional): Time at which to evaluate the surface.
+            axes (int, optional): 2 or 3, indicating whether to return the first two
+                coordinates (rad, z) or all three (rad, z, theta) as Scalars.
+            derivs (bool, optional): True to propagate any derivatives inside pos and obs
+                into the returned coordinates.
+            hints (object, optional): Ignored. Provided for compatibility with other
+                Surface subclasses.
 
-        Return:         coordinate values packaged as a tuple containing two or
-                        three Scalars, one for each coordinate.
-            rad         projected distance from the body pole, in km.
-            z           projected vertical distance above the ring plane, in km.
-            theta       longitude of the intercept point, in radians; included
-                        if axes == 3.
+        Returns:
+            Coordinate values packaged as a tuple containing two or three Scalars,
+                one for each coordinate, where:
+
+            * `rad` (Scalar): Projected distance from the body pole, in km.
+            * `z` (Scalar): Projected vertical distance above the ring plane, in km.
+            * `theta` (Scalar): Longitude of the intercept point, in radians; included if
+              axes == 3.
         """
 
         # Validate inputs
@@ -190,27 +183,25 @@ class Ansa(Surface):
 
         return (r, pos_z)
 
-    #===========================================================================
     def vector3_from_coords(self, coords, obs, time=None, derivs=False):
-        """The position where a point with the given coordinates falls relative
-        to this surface's origin and frame.
+        """The position where a point with the given coordinates falls relative to this
+        surface's origin and frame.
 
-        Input:
-            coords      a tuple of two or three Scalars defining coordinates at
-                        or near this surface. These can have different shapes,
-                        but must be broadcastable to a common shape.
-                rad     projected distance in km from the body pole.
-                z       projected vertical distance in km above the ring plane.
-                theta   longitude in radians of the intercept point.
-            obs         a Vector3 of observer position relative to this
-                        surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        by this Surface subclass.
-            derivs      True to propagate any derivatives inside the coordinates
-                        and obs into the returned position vectors.
+        Parameters:
+            coords (tuple): Two or three Scalars defining coordinates at or near this
+                surface. These can have different shapes, but must be broadcastable to a
+                common shape. rad     projected distance in km from the body pole. z
+                projected vertical distance in km above the ring plane. theta   longitude
+                in radians of the intercept point.
+            obs (Vector3): Observer position relative to this surface's origin and frame.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored by
+                this Surface subclass.
+            derivs (bool, optional): True to propagate any derivatives inside the
+                coordinates and obs into the returned position vectors.
 
-        Return:         a Vector3 of points defined by the coordinates, relative
-                        to this surface's origin and frame.
+        Returns:
+            (Vector3): Points defined by the coordinates, relative to this surface's
+                origin and frame.
         """
 
         # Validate inputs
@@ -272,32 +263,31 @@ class Ansa(Surface):
                                    rabs * pos_lon.sin(), z)
         return pos
 
-    #===========================================================================
     def intercept(self, obs, los, time=None, direction='dep', derivs=False,
                                   guess=None, hints=None):
         """The position where a specified line of sight intercepts the surface.
 
-        Input:
-            obs         observer position as a Vector3 relative to this
-                        surface's origin and frame.
-            los         line of sight as a Vector3 in this surface's frame.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        by this Surface subclass.
-            direction   'arr' for a photon arriving at the surface; 'dep' for a
-                        photon departing from the surface; ignored here.
-            derivs      True to propagate any derivatives inside obs and los
-                        into the returned intercept point.
-            guess       unused.
-            hints       if not None (the default), this value is appended to the
-                        returned tuple. Needed for compatibility with other
-                        Surface subclasses.
+        Parameters:
+            obs (Vector3): Observer position as a Vector3 relative to this surface's
+                origin and frame.
+            los (Vector3): Line of sight as a Vector3 in this surface's frame.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored by
+                this Surface subclass.
+            direction (str, optional): 'arr' for a photon arriving at the surface; 'dep'
+                for a photon departing from the surface; ignored here.
+            derivs (bool, optional): True to propagate any derivatives inside obs and los
+                into the returned intercept point.
+            guess (object, optional): Unused.
+            hints (optional): If not None (the default), this value is appended to the
+                returned tuple. Needed for compatibility with other Surface subclasses.
 
-        Return:         a tuple (pos, t) or (pos, t, hints), where
-            pos         a Vector3 of intercept points on the surface relative
-                        to this surface's origin and frame, in km.
-            t           a Scalar such that:
-                            intercept = obs + t * los
-            hints       the input value of hints, included if it is not None.
+        Returns:
+            (tuple): (pos, t) or (pos, t, hints), where, where:
+
+            * `pos` (Vector3): Intercept points on the surface relative to this surface's
+              origin and frame, in km.
+            * `t` (Scalar): Such that: intercept = obs + t * los.
+            * `hints` (object): The input value of hints, included if it is not None.
         """
 
         obs = Vector3.as_vector3(obs, recursive=derivs)
@@ -324,23 +314,21 @@ class Ansa(Surface):
 
         return (pos, t)
 
-    #===========================================================================
     def normal(self, pos, time=None, derivs=False):
         """The normal vector at a position at or near a surface.
 
-        Input:
-            pos         a Vector3 of positions at or near the surface relative
-                        to this surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface.
-            derivs      True to propagate any derivatives of pos into the
-                        returned normal vectors.
+        Parameters:
+            pos (Vector3): Positions at or near the surface relative to this surface's
+                origin and frame.
+            time (Scalar, optional): Time at which to evaluate the surface.
+            derivs (bool, optional): True to propagate any derivatives of pos into the
+                returned normal vectors.
 
-        Return:         a Vector3 containing directions normal to the surface
-                        that pass through the position. Lengths are arbitrary.
-
-        NOTE: We define this as the ansa normal as the ring plane normal so that
-        incidence and emission angles are the same as those for the associated
-        ring plane.
+        Returns:
+            (Vector3): Directions normal to the surface that pass through the position.
+                Lengths are arbitrary. NOTE: We define this as the ansa normal as the ring
+                plane normal so that incidence and emission angles are the same as those
+                for the associated ring plane.
         """
 
         pos = Vector3.as_vector3(pos, recursive=derivs)
@@ -348,4 +336,4 @@ class Ansa(Surface):
         # Always the Z-axis
         return pos.as_all_constant((0.,0.,1.))
 
-################################################################################
+##########################################################################################

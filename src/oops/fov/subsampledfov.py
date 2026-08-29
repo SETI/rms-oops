@@ -1,28 +1,23 @@
-################################################################################
+##########################################################################################
 # oops/fov/subsampledfov.py: SubsampledFOV subclass of FOV
-################################################################################
+##########################################################################################
 
 from polymath import Pair
 from oops.fov import FOV
 
 class SubsampledFOV(FOV):
-    """Subclass of FOV in which the pixels of a given base FOV class are
-    re-scaled.
-    """
+    """Subclass of FOV in which the pixels of a given FOV are re-scaled."""
 
-    #===========================================================================
     def __init__(self, fov, rescale):
         """Constructor for a SubsampledFOV.
 
-        Returns a new FOV object in which the pixel size has been modified.
-        The origin and the optic axis are unchanged.
+        In the new FOV object, the pixel size has been modified. The origin and the optic
+        axis are unchanged.
 
-        Inputs:
-            fov         the FOV object within which this subsampledFOV is
-                        defined.
-
-            rescale     a single value, tuple or Pair defining the sizes of the
-                        new pixels relative to the sizes of the originals.
+        Parameters:
+            fov (FOV): Object within which this SubsampledFOV is defined.
+            rescale (float, tuple, or Pair): The sizes of the new pixels relative to the
+                sizes of the originals.
         """
 
         self.fov = fov
@@ -44,56 +39,53 @@ class SubsampledFOV(FOV):
         self.__init__(*state)
         self.freeze()
 
-    #===========================================================================
-    def xy_from_uvt(self, uv_pair, time=None, derivs=False, remask=False,
-                                                            **keywords):
-        """The (x,y) camera frame coordinates given the FOV coordinates (u,v) at
-        the specified time.
+    def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
+        """The `(x,y)` camera frame coordinates given the FOV coordinates `(u,v)` at the
+        specified time.
 
-        Input:
-            uv_pair     (u,v) coordinate Pair in the FOV.
-            time        Scalar of optional absolute time in seconds.
-            derivs      If True, any derivatives in (u,v) get propagated into
-                        the returned (x,y) Pair.
-            remask      True to mask (u,v) coordinates outside the field of
-                        view; False to leave them unmasked.
-            **keywords  Additional keywords arguments are passed directly to the
-                        reference FOV.
+        Parameters:
+            uv_pair (Pair): `(u,v)` coordinates in this FOV.
+            time (Scalar, optional): Absolute time in seconds TDB.
+            derivs (bool, optional): If True, any derivatives in `(u,v)` get propagated
+                into the returned `(x,y)` coordinates.
+            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+                view; False to leave them unmasked.
+            **kwargs: Additional parameters that might affect the transform can be
+                included as keyword arguments.
 
-        Return:         Pair of same shape as uv_pair, giving the transformed
-                        (x,y) coordinates in the camera's frame.
+        Returns:
+            Pair: The transformed `(x,y)` coordinates in the camera's frame, with the same
+                shape as uv_pair.
         """
 
         uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
         return self.fov.xy_from_uvt(self.rescale.element_mul(uv_pair),
                                     time=time, derivs=derivs, remask=remask,
-                                    **keywords)
+                                    **kwargs)
 
-    #===========================================================================
-    def uv_from_xyt(self, xy_pair, time=None, derivs=False, remask=False,
-                                                            **keywords):
-        """The (u,v) FOV coordinates given the (x,y) camera frame coordinates at
-        the specified time.
+    def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
+        """The `(u,v)` FOV coordinates given the `(x,y)` camera frame coordinates at the
+        specified time.
 
-        Input:
-            xy_pair     (x,y) Pair in FOV coordinates.
-            time        Scalar of optional absolute time in seconds.
-            derivs      If True, any derivatives in (x,y) get propagated into
-                        the returned (u,v) Pair.
-            remask      True to mask (u,v) coordinates outside the field of
-                        view; False to leave them unmasked.
-            **keywords  Additional keywords arguments are passed directly to the
-                        reference FOV.
+        Parameters:
+            xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.
+            time (Scalar, optional): Absolute time in seconds TDB.
+            derivs (bool, optional): If True, any derivatives in `(x,y)` get propagated
+                into the returned `(u,v)` coordinates.
+            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+                view; False to leave them unmasked.
+            **kwargs: Additional parameters that might affect the transform can be
+                included as keyword arguments.
 
-        Return:         Pair of same shape as xy_pair, giving the computed (u,v)
-                        FOV coordinates.
+        Returns:
+            Pair: The computed `(u,v)` FOV coordinates, with the same shape as xy_pair.
         """
 
         xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
         uv_pair = self.fov.uv_from_xyt(xy_pair, time=time, derivs=derivs,
-                                                remask=remask, **keywords)
+                                                remask=remask, **kwargs)
         uv_new = uv_pair.element_div(self.rescale)
 
         return uv_new
 
-################################################################################
+##########################################################################################

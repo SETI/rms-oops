@@ -1,10 +1,11 @@
-################################################################################
+##########################################################################################
 # oops/fov/__init__.py
-################################################################################
+##########################################################################################
 
 from oops.fov.fov_          import FOV
 from oops.fov.barrelfov     import BarrelFOV
 from oops.fov.flatfov       import FlatFOV
+from oops.fov.gapfov        import GapFOV
 from oops.fov.nullfov       import NullFOV
 from oops.fov.offsetfov     import OffsetFOV
 from oops.fov.platescale    import Platescale
@@ -15,8 +16,8 @@ from oops.fov.subsampledfov import SubsampledFOV
 from oops.fov.tdifov        import TDIFOV
 from oops.fov.wcsfov        import WCSFOV
 
-__all__ = ['FOV', 'BarrelFOV', 'FlatFOV', 'NullFOV', 'OffsetFOV', 'Platescale',
-           'PolynomialFOV', 'SliceFOV', 'Subarray', 'SubsampledFOV', 'TDIFOV',
-           'WCSFOV']
+__all__ = ['FOV', 'BarrelFOV', 'FlatFOV', 'GapFOV', 'NullFOV', 'OffsetFOV',
+           'Platescale', 'PolynomialFOV', 'SliceFOV', 'Subarray', 'SubsampledFOV',
+           'TDIFOV', 'WCSFOV']
 
-################################################################################
+##########################################################################################

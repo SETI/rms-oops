@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/path/circlepath.py: Subclass CirclePath of class Path
+# oops/path/circlepath.py
 ##########################################################################################
 
 from polymath          import Qube, Scalar, Vector3
@@ -28,12 +28,13 @@ class CirclePath(Path):
                 orbital elements are defined.
             origin (Path or str): The path or ID of the center of the circle.
             frame (Frame or str, optional): The Frame or the ID of the Frame in which the
-                circular motion is defineed and in which coordinates are returned; None to
+                circular motion is defined and in which coordinates are returned; None to
                 use the frame of the `origin` path.
             path_id (str, optional): The ID under which to register this Path; None to
                 leave this Path unregistered.
 
         Raises:
+            KeyError: If `origin` or `frame` is an ID string that has not been registered.
             ValueError: If the shapes of `radius`, `lon`, `rate`, `epoch`, `origin`, and
                 `frame` cannot be broadcasted.
         """
@@ -96,14 +97,14 @@ class CirclePath(Path):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Event): The Event object containing (at least) the time, position, and
-                velocity on the Path.
+            Event: The Event object containing (at least) the time, position, and velocity
+            on this Path.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.

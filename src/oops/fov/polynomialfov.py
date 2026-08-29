@@ -1,6 +1,6 @@
-################################################################################
-# oops/fov/polynomialfov.py: PolynomialFOV subclass of FOV, and WCS FOV support.
-################################################################################
+##########################################################################################
+# oops/fov/polynomialfov.py: PolynomialFOV subclass of FOV
+##########################################################################################
 
 import numpy as np
 import sys
@@ -14,63 +14,50 @@ EPSILON = sys.float_info.epsilon/2.         # actual machine precision
 
 
 class PolynomialFOV(FOV):
-    """Subclass of FOV that describes a field of view in which the distortion is
-    described by a 2-D polynomial.
+    """Subclass of FOV that describes a field of view in which the distortion is described
+    by a 2-D polynomial.
 
-    This is the approached used by Space Telescope Science Institute to describe
-    the Hubble instrument fields of view. A PolynomialFOV has no dependence on
-    the optional extra indices that can be associated with time, wavelength
-    band, etc.
+    This is the approach used by the Space Telescope Science Institute to describe the
+    Hubble instrument fields of view. A PolynomialFOV has no dependence on the optional
+    extra indices that can be associated with time, wavelength band, etc.
     """
 
     DEBUG = False       # Set True to print convergence steps of Newton's Method
 
-    #===========================================================================
     def __init__(self, uv_shape, coefft_xy_from_uv=None,
                  coefft_uv_from_xy=None, uv_los=None, uv_area=None,
                  iters=8, fast=True):
         """Constructor for a PolynomialFOV.
 
-        Inputs:
-            uv_shape    a single value, tuple or Pair defining size of the field
-                        of view in pixels. This number can be non-integral if
-                        the detector is not composed of a rectangular array of
-                        pixels.
-
-            coefft_xy_from_uv
-                        the coefficient array of the polynomial to convert U,V
-                        to X,Y. The array has shape (order+1,order+1,2), where
-                        coefft[i,j,0] is the coefficient on (u**i * v**j)
-                        yielding x(u,v), and coefft[i,j,1] is the coefficient
-                        yielding y(u,v). If None, then the polynomial for
-                        uv_from_xy is inverted.
-
-            coefft_uv_from_xy
-                        the coefficient array of the polynomial to convert X,Y
-                        to U,V. The array has shape (order+1,order+1,2), where
-                        coefft[i,j,0] is the coefficient on (x**i * y**j)
-                        yielding u(x,y), and coefft[i,j,1] is the coefficient
-                        yielding v(x,y). If None, then the polynomial for
-                        xy_from_uv is inverted.
-
-            uv_los      a single value, tuple or Pair defining the (u,v)
-                        coordinates of the nominal line of sight. By default,
-                        this is the midpoint of the rectangle, i.e, uv_shape/2.
-
-            uv_area     an optional parameter defining the nominal area of a
-                        pixel in steradians after distortion has been removed.
-
-            iters       the number of iterations of Newton's method to use when
-                        inverting the polynomial; default is 8.
-
-            fast        if True and both sets of coefficients are provided, the
-                        polynomials will be used in both directions, meaning
-                        that the conversions xy_from_uv and uv_from_xy might be
-                        inconsistent, although probably at the sub-pixel level.
-                        If False, then uv_from_xy is refined further using one
-                        or two steps of Newton's method; which provides
-                        consistency at the level of machine precision, but
-                        uv_from_xy will be slightly slower.
+        Parameters:
+            uv_shape (float, tuple, or Pair): The size of the field of view in pixels.
+                This number can be non-integral if the detector is not composed of a
+                rectangular array of pixels.
+            coefft_xy_from_uv (array-like, optional): The coefficient array of the
+                polynomial to convert `(u,v)` to `(x,y)`. The array has shape
+                `(order+1, order+1, 2)`, where `coefft[i,j,0]` is the coefficient on
+                `u**i * v**j` yielding `x(u,v)`, and `coefft[i,j,1]` is the coefficient
+                yielding `y(u,v)`. If None, then the polynomial for `uv_from_xy` is
+                inverted.
+            coefft_uv_from_xy (array-like, optional): The coefficient array of the
+                polynomial to convert `(x,y)` to `(u,v)`. The array has shape
+                `(order+1, order+1, 2)`, where `coefft[i,j,0]` is the coefficient on
+                `x**i * y**j` yielding `u(x,y)`, and `coefft[i,j,1]` is the coefficient
+                yielding `v(x,y)`. If None, then the polynomial for `xy_from_uv` is
+                inverted.
+            uv_los (float, tuple, or Pair, optional): The `(u,v)` coordinates of the
+                nominal line of sight. By default, this is the midpoint of the rectangle,
+                i.e., `uv_shape/2`.
+            uv_area (float, optional): The nominal area of a pixel in steradians after
+                distortion has been removed.
+            iters (int, optional): The number of iterations of Newton's method to use when
+                inverting the polynomial.
+            fast (bool, optional): If True and both sets of coefficients are provided, the
+                polynomials will be used in both directions, meaning that the conversions
+                `xy_from_uv` and `uv_from_xy` might be inconsistent, although probably at
+                the sub-pixel level. If False, then `uv_from_xy` is refined further using
+                one or two steps of Newton's method, which provides consistency at the
+                level of machine precision, but `uv_from_xy` will be slightly slower.
         """
 
         # Prepare coefficients
@@ -120,7 +107,7 @@ class PolynomialFOV(FOV):
             uv_scale = Pair.as_pair((1./self.coefft_uv_from_xy[1,0,0],
                                      1./self.coefft_uv_from_xy[0,1,1]))
 
-        self.flat_fov = FlatFOV(uv_scale, self.uv_shape, self.uv_los)
+        self.flat_fov = FlatFOV(uv_scale, self.uv_shape, uv_los=self.uv_los)
         self.uv_precision = EPSILON
         self.xy_precision = EPSILON * min(abs(uv_scale.vals))
 
@@ -142,7 +129,7 @@ class PolynomialFOV(FOV):
         dy_dv = (y2 - y0) / (v2 - v0)
 
         self.uv_scale = Pair((dx_du, dy_dv))
-        self.flat_fov = FlatFOV(self.uv_scale, self.uv_shape, self.uv_los)
+        self.flat_fov = FlatFOV(self.uv_scale, self.uv_shape, uv_los=self.uv_los)
 
         if uv_area is None:
             self.uv_area = np.abs(self.uv_scale.vals[0] * self.uv_scale.vals[1])
@@ -157,37 +144,39 @@ class PolynomialFOV(FOV):
     def __getstate__(self):
         self.refresh()
         return (self.uv_shape, self.coefft_xy_from_uv, self.coefft_uv_from_xy,
-                self.uv_los, self.uv_area, self.iters)
+                self.uv_los, self.uv_area, self.iters, self.fast)
 
     def __setstate__(self, state):
         self.__init__(*state)
         self.freeze()
 
-    #===========================================================================
-    def xy_from_uvt(self, uv, time=None, derivs=False, remask=False):
-        """The (x,y) camera frame coordinates given the FOV coordinates (u,v) at
-        the specified time.
+    def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
+        """The `(x,y)` camera frame coordinates given the FOV coordinates `(u,v)` at the
+        specified time.
 
-        Input:
-            uv          (u,v) coordinate Pair in the FOV.
-            time        Scalar of optional absolute times. Ignored by
-                        PolynomialFOV.
-            derivs      if True, any derivatives in (u,v) get propagated into
-                        the returned (x,y) Pair.
-            remask      True to mask (u,v) coordinates outside the field of
-                        view; False to leave them unmasked.
+        Parameters:
+            uv_pair (Pair): `(u,v)` coordinates in this FOV.
+            time (Scalar, optional): Absolute time in seconds TDB. Ignored by
+                PolynomialFOV.
+            derivs (bool, optional): If True, any derivatives in `(u,v)` get propagated
+                into the returned `(x,y)` coordinates.
+            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+                view; False to leave them unmasked.
+            **kwargs: Additional parameters that might affect the transform can be
+                included as keyword arguments.
 
-        Return:         Pair of same shape as uv_pair, giving the transformed
-                        (x,y) coordinates in the camera's frame.
+        Returns:
+            Pair: The transformed `(x,y)` coordinates in the camera's frame, with the same
+                shape as `uv_pair`.
         """
 
         # Mask if necessary
-        uv = Pair.as_pair(uv, recursive=derivs)
+        uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
         if remask:
-            uv = uv.mask_or(self.uv_is_outside(uv).vals)
+            uv_pair = uv_pair.remask_or(self.uv_is_outside(uv_pair).vals)
 
         # Subtract off the center of the field of view
-        duv = uv - self.uv_los
+        duv = uv_pair - self.uv_los
 
         # Transform based on which types of coefficients are given
         if self.coefft_xy_from_uv is not None:
@@ -197,7 +186,7 @@ class PolynomialFOV(FOV):
                                                 self.coefft_dxy_dv,
                                                 derivs=derivs)
         else:
-            xy_guess = self.flat_fov.xy_from_uv(uv, derivs=False)
+            xy_guess = self.flat_fov.xy_from_uv(uv_pair, derivs=False)
             xy = PolynomialFOV._solve_polynomial(duv, xy_guess,
                                                  self.coefft_uv_from_xy,
                                                  self.coefft_duv_dx,
@@ -208,29 +197,30 @@ class PolynomialFOV(FOV):
 
         return xy
 
-    #===========================================================================
-    def uv_from_xyt(self, xy, time=None, derivs=False, remask=False):
-        """The (u,v) FOV coordinates given the (x,y) camera frame coordinates at
-        the specified time.
+    def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
+        """The `(u,v)` FOV coordinates given the `(x,y)` camera frame coordinates at the
+        specified time.
 
-        Input:
-            xy          (x,y) Pair in FOV coordinates.
-            time        Scalar of optional absolute times. Ignored by
-                        PolynomialFOV.
-            derivs      if True, any derivatives in (x,y) get propagated into
-                        the returned (u,v) Pair.
-            remask      True to mask (u,v) coordinates outside the field of
-                        view; False to leave them unmasked.
+        Parameters:
+            xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.
+            time (Scalar, optional): Absolute time in seconds TDB. Ignored by
+                PolynomialFOV.
+            derivs (bool, optional): If True, any derivatives in `(x,y)` get propagated
+                into the returned `(u,v)` coordinates.
+            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+                view; False to leave them unmasked.
+            **kwargs: Additional parameters that might affect the transform can be
+                included as keyword arguments.
 
-        Return:         Pair of same shape as xy_pair, giving the computed (u,v)
-                        FOV coordinates.
+        Returns:
+            Pair: The computed `(u,v)` FOV coordinates, with the same shape as `xy_pair`.
         """
 
-        xy = Pair.as_pair(xy, recursive=derivs)
+        xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
 
         # Transform based on which types of coeffs are given
         if self.fast and self.coefft_uv_from_xy is not None:
-            duv = PolynomialFOV._eval_polynomial(xy,
+            duv = PolynomialFOV._eval_polynomial(xy_pair,
                                                  self.coefft_uv_from_xy,
                                                  self.coefft_duv_dx,
                                                  self.coefft_duv_dy,
@@ -240,18 +230,18 @@ class PolynomialFOV(FOV):
             # If both sets of coefficients are available, use uv_from_xy as the
             # guess. Otherwise, use a flat FOV
             if self.coefft_uv_from_xy is not None:
-                duv_guess = PolynomialFOV._eval_polynomial(xy,
-                                                         self.coefft_uv_from_xy,
-                                                         self.coefft_duv_dx,
-                                                         self.coefft_duv_dy,
-                                                         derivs=False)
+                duv_guess = PolynomialFOV._eval_polynomial(xy_pair,
+                                                           self.coefft_uv_from_xy,
+                                                           self.coefft_duv_dx,
+                                                           self.coefft_duv_dy,
+                                                           derivs=False)
             else:
-                duv_guess = (self.flat_fov.uv_from_xy(xy, derivs=False)
+                duv_guess = (self.flat_fov.uv_from_xy(xy_pair, derivs=False)
                              - self.uv_los)
 
             # Use the xy_from_uv coefficients to ensure that the polynomial
             # inversion is exact.
-            duv = PolynomialFOV._solve_polynomial(xy, duv_guess,
+            duv = PolynomialFOV._solve_polynomial(xy_pair, duv_guess,
                                                   self.coefft_xy_from_uv,
                                                   self.coefft_dxy_du,
                                                   self.coefft_dxy_dv,
@@ -264,32 +254,32 @@ class PolynomialFOV(FOV):
 
         # Mask if necessary
         if remask:
-            uv = uv.mask_or(self.uv_is_outside(uv).vals)
+            uv = uv.remask_or(self.uv_is_outside(uv).vals)
 
         return uv
 
-    #===========================================================================
     @staticmethod
-    def _eval_polynomial(pq, coefft, dcoefft_p, dcoefft_q,
-                         derivs=False, d_dpq=False):
-        """Evaluate the polynomial at pair (p,q) to return (a,b).
+    def _eval_polynomial(pq, coefft, dcoefft_p, dcoefft_q, *, derivs=False, d_dpq=False):
+        """Evaluate the 2-D polynomial at `(p,q)` to return `(a,b)`.
 
-        Input:
-            pq          Pairs of arbitrary shape specifying the points at which
-                        to evaluate the polynomial.
-            coefft      coefficient array defining the polynomial.
-            dcoefft_p   coefficient array for the polynomial derivative with
-                        respect to p.
-            dcoefft_q   coefficient array for the polynomial derivative with
-                        respect to q.
-            derivs      if True, derivatives are computed and included in the
-                        result.
-            d_dpq       if True, the returned quantity is a tuple (f, df/dpq);
-                        otherwise, only f is returned.
+        Parameters:
+            pq (Pair): The points at which to evaluate the polynomial.
+            coefft (array-like): The coefficient array defining the polynomial.
+            dcoefft_p (array-like): The coefficient array for the polynomial derivative
+                with respect to `p`.
+            dcoefft_q (array-like): The coefficient array for the polynomial derivative
+                with respect to `q`.
+            derivs (bool, optional): If True, derivatives are computed and included in the
+                returned result.
+            d_dpq (bool, optional): If True, the returned quantity is a tuple
+                `(ab, dab/dpq)`; otherwise, only `(a,b)` is returned.
 
-        Return          ab or (ab, dab_dpq), depending on df_dpq input.
-            ab          value of the polynomial.
-            dab_dpq     optional derivative of f with respect to pq.
+        Returns:
+            Pair or tuple[Pair, Pair]: Either `(a,b)` or `((a,b), d(a,b)_d(p,q))`,
+            depending on the input value of `d_dpq`.
+
+            * `ab` (Pair): The value of the polynomial.
+            * `dab_dpq` (Pair): The derivative of `(a,b)` with respect to `(p,q)`.
         """
 
         pq = Pair.as_pair(pq, recursive=derivs)
@@ -342,29 +332,28 @@ class PolynomialFOV(FOV):
         else:
             return ab
 
-    #===========================================================================
     @staticmethod
-    def _solve_polynomial(ab, pq_guess, coefft, dcoefft_p, dcoefft_q,
-                          derivs=False, iters=8, precision=0.):
-        """Solve the polynomial for an (a,b) pair to return (p,q).
+    def _solve_polynomial(ab, pq_guess, coefft, dcoefft_p, dcoefft_q, *, derivs=False,
+                          iters=8, precision=0.):
+        """Invert the 2-D polynomial to find the `(p,q)` where it evaluates to `(a,b)`.
 
-        Input:
-            ab          Pair of arbitrary shape specifying the values of the
-                        polynomial.
-            pq_guess    initial guess at the values to return.
-            coefft      coefficient array defining the polynomial.
-            dcoefft_p   coefficient array for the polynomial derivative with
-                        respect to p.
-            dcoefft_q   coefficient array for the polynomial derivative with
-                        respect to q.
-            derivs      if True, derivatives are included in the output.
-            iters       maximum number of iterations of Newton's method.
-            precision   absolute precision desired. Approximate limit is OK, and
-                        the only down-side of zero (the default) is that the
-                        solution will require one extra iteration.
+        Parameters:
+            ab (Pair): The value of the polynomial.
+            pq_guess (Pair): An initial guess at the `(p,q)` value to return.
+            coefft (array-like): The coefficient array defining the polynomial.
+            dcoefft_p (array-like): The coefficient array for the polynomial derivative
+                with respect to `p`.
+            dcoefft_q (array-like): The coefficient array for the polynomial derivative
+                with respect to `q`.
+            derivs (bool, optional): If True, derivatives are computed and included in the
+                returned result.
+            iters (int, optional): Maximum number of iterations of Newton's method.
+            precision (float, optional): Absolute precision desired. An approximate limit
+                is acceptable, and the only down-side of zero (the default) is that the
+                solution will require one extra iteration.
 
-        Output:         Pair of the same shape as ab giving the values at which
-                        the polynomial evaluates to ab.
+        Returns:
+            Pair: The `(p,q)` coordinates where the polynomial equals `(a,b)`.
         """
 
         ab = Pair.as_pair(ab, recursive=derivs)
@@ -391,14 +380,13 @@ class PolynomialFOV(FOV):
 
             # Perform one step of Newton's Method
             dpq_dab = dab_dpq.reciprocal(nozeros=True)
-                # nozeros=True is safe because dab_dpq can't be zero-valued
+            # nozeros=True is safe because dab_dpq can't be zero-valued
             dpq = dpq_dab.chain(ab.wod - ab_test)
             new_max_dpq = dpq.norm().max(builtins=True, masked=-1.)
 
             if LOGGING.fov_iterations or PolynomialFOV.DEBUG:
                 LOGGING.convergence('PolynomialFOV._solve_polynomial:',
-                                    'iter=%d; change=%.6g' % (count+1,
-                                                              new_max_dpq))
+                                    'iter=%d; change=%.6g' % (count+1, new_max_dpq))
 
             # Quit when convergence stops
             if new_max_dpq <= eps:
@@ -426,4 +414,4 @@ class PolynomialFOV(FOV):
 
         return pq
 
-################################################################################
+##########################################################################################

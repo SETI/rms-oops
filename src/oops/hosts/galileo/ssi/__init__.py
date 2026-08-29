@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/hosts/galileo/ssi/__init__.py
-################################################################################
+##########################################################################################
 import sys
 import os
 import numpy as np
@@ -17,9 +17,9 @@ from filecache import FCPath
 
 __all__ = ['from_file', 'from_index', 'initialize', 'Metadata', 'SSI']
 
-################################################################################
+##########################################################################################
 # Standard class methods
-################################################################################
+##########################################################################################
 def from_file(filespec,
               return_all_planets=False, full_fov=False, method='strict', **parameters):
     """A general, static method to return a Snapshot object based on a given
@@ -81,7 +81,6 @@ def from_file(filespec,
 
     return result
 
-#===============================================================================
 def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameters):
     """A static method to return a list of Snapshot objects.
 
@@ -104,7 +103,8 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
         supplemental_row_dicts = table.dicts_by_row()
 
 #        # Sort supplemental rows to match index file
-#        specs = [os.path.splitext(row_dict['FILE_SPECIFICATION_NAME'])[0] for row_dict in row_dicts]
+#        specs = [os.path.splitext(row_dict['FILE_SPECIFICATION_NAME'])[0]
+#                 for row_dict in row_dicts]
 #        supplemental_specs = \
 #            [os.path.splitext(supplemental_row_dict['FILE_SPECIFICATION_NAME'])[0] \
 #             for supplemental_row_dict in supplemental_row_dicts]
@@ -118,7 +118,8 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
 #        supplemental_indices = np.argsort(supplemental_specs)
 #        supplemental_row_dicts_sorted = [None]*len(supplemental_row_dicts)
 #        for i in range(len(supplemental_row_dicts)):
-#            supplemental_row_dicts_sorted[i] = supplemental_row_dicts[supplemental_indices[i]]
+#            supplemental_row_dicts_sorted[i] = \
+#                supplemental_row_dicts[supplemental_indices[i]]
 
         # Append supplemental columns to index file
         for row_dict, supplemental_row_dict in zip(row_dicts, supplemental_row_dicts):
@@ -159,32 +160,28 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
 
     return snapshots
 
-#===============================================================================
 def initialize(planets=None, asof=None,
                mst_pck=True, irregulars=True):
     """Initialize key information about the SSI instrument.
 
-    Must be called first. After the first call, later calls to this function
-    are ignored.
+    Must be called first. After the first call, later calls to this function are ignored.
 
-    Input:
-        planets     A list of planets to pass to define_solar_system. None or
-                    0 means all.
-        asof        Only use SPICE kernels that existed before this date; None
-                    to ignore.
-        mst_pck     True to include MST PCKs, which update the rotation models
-                    for some of the small moons.
-        irregulars  True to include the irregular satellites;
-                    False otherwise.
+    Parameters:
+        planets (list, optional): A list of planets to pass to define_solar_system. None
+            or 0 means all.
+        asof (str, optional): Only use SPICE kernels that existed before this date; None
+            to ignore.
+        mst_pck (bool, optional): True to include MST PCKs, which update the rotation
+            models for some of the small moons.
+        irregulars (bool, optional): True to include the irregular satellites; False
+            otherwise.
     """
     SSI.initialize(planets=planets, asof=asof,
                    mst_pck=mst_pck, irregulars=irregulars)
 
 
-#===============================================================================
 class Metadata(object):
 
-    #===========================================================================
     def __init__(self, meta_dict):
         """Use the label or index dict to assemble the image metadata."""
 
@@ -231,16 +228,14 @@ class Metadata(object):
                 self.window_uv_origin = np.flip(self.window_origin)
                 self.window_uv_shape = np.flip(self.window_shape)
 
-    #===========================================================================
     def trim(self, data, full_fov=False):
         """Trim image to label window.
 
-        Input:
-            data            Numpy array containing the image data.
+        Parameters:
+            data: Numpy array containing the image data.
+            full_fov (bool, optional): If True, the image is not trimmed.
 
-            full_fov        If True, the image is not trimmed.
-
-        Output:
+        Returns:
             Data array trimmed to the data window.
         """
         if full_fov:
@@ -255,13 +250,12 @@ class Metadata(object):
         return data[origin[0]:origin[0]+shape[0],
                     origin[1]:origin[1]+shape[1]]
 
-    #===========================================================================
     def fov(self, full_fov=False):
         """Construct the field of view based on the metadata.
 
-        Input:
-            full_fov        If False, the FOV is cropped to the dimensions
-                            given by the cutout window.
+        Parameters:
+            full_fov (bool, optional): If False, the FOV is cropped to the dimensions
+                given by the cutout window.
 
         Attributes:
             FOV object.
@@ -279,7 +273,6 @@ class Metadata(object):
         return fov
 
 
-#===============================================================================
 class SSI(object):
     """An instance-free class to hold Galileo SSI instrument parameters."""
 
@@ -287,24 +280,23 @@ class SSI(object):
     fovs = {}
     initialized = False
 
-    #===========================================================================
     @staticmethod
     def initialize(planets=None, asof=None,
                    mst_pck=True, irregulars=True):
         """Initialize key information about the SSI instrument.
 
-        Fills in key information about the camera.  Must be called first.
-        After the first call, later calls to this function are ignored.
+        Fills in key information about the camera.  Must be called first. After the first
+        call, later calls to this function are ignored.
 
-        Input:
-            planets     A list of planets to pass to define_solar_system. None
-                        or 0 means all.
-            asof        Only use SPICE kernels that existed before this date;
-                        None to ignore.
-            mst_pck     True to include MST PCKs, which update the rotation
-                        models for some of the small moons.
-            irregulars  True to include the irregular satellites;
-                        False otherwise.
+        Parameters:
+            planets (list, optional): A list of planets to pass to define_solar_system.
+                None or 0 means all.
+            asof (str, optional): Only use SPICE kernels that existed before this date;
+                None to ignore.
+            mst_pck (bool, optional): True to include MST PCKs, which update the rotation
+                models for some of the small moons.
+            irregulars (bool, optional): True to include the irregular satellites; False
+                otherwise.
         """
 
         # Quick exit after first call
@@ -383,7 +375,6 @@ class SSI(object):
         SSI.initialized = True
         return
 
-    #===========================================================================
     @staticmethod
     def reset():
         """Reset the internal Galileo SSI parameters.
@@ -397,4 +388,4 @@ class SSI(object):
 
         Galileo.reset()
 
-################################################################################
+##########################################################################################

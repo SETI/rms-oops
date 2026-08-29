@@ -56,6 +56,7 @@ from typing import Any
 
 from polymath import Qube
 from oops.fittable import Fittable
+from oops.oops import Oops
 
 _Info = namedtuple('_Info', ['is_fittable', 'is_mutable', 'is_frozen', 'mutable_names',
                              'unfrozen_names', 'versions'])
@@ -695,7 +696,7 @@ def _invalidate(obj: Any, /) -> None:
 # Mutable class and API
 ##########################################################################################
 
-class Mutable:
+class Mutable(Oops):
 
     def refresh(self) -> bool:
         """Update any internally cached information if this object or any of its

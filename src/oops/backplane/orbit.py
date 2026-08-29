@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/backplanes/orbit.py: Orbit backplanes
-################################################################################
+##########################################################################################
 
 from polymath       import Scalar, Vector3, Matrix3
 from oops.backplane import Backplane
@@ -10,18 +10,15 @@ from oops.frame     import Frame
 def orbit_longitude(self, event_key, reference='obs', planet=None):
     """Gridless longitude on an orbit path relative to the central planet.
 
-    Input:
-        event_key       key defining the event on the orbit path.
-        reference       defines the location of zero longitude.
-                        'aries' for the First point of Aries;
-                        'node'  for the J2000 ascending node;
-                        'obs'   for the sub-observer longitude;
-                        'sun'   for the sub-solar longitude;
-                        'oha'   for the anti-observer longitude;
-                        'sha'   for the anti-solar longitude, returning the
-                                solar hour angle.
-        planet          ID of the body at the center of the orbit; None for the
-                        default, which is the parent of the targeted body.
+    Parameters:
+        event_key (str or tuple): Key defining the event on the orbit path.
+        reference (str, optional): Defines the location of zero longitude. 'aries' for the
+            First point of Aries; 'node'  for the J2000 ascending node; 'obs'   for the
+            sub-observer longitude; 'sun'   for the sub-solar longitude; 'oha'   for the
+            anti-observer longitude; 'sha'   for the anti-solar longitude, returning the
+            solar hour angle.
+        planet (optional): ID of the body at the center of the orbit; None for the
+            default, which is the parent of the targeted body.
     """
 
     if reference not in ('aries', 'node', 'obs', 'oha', 'sun', 'sha'):
@@ -78,9 +75,9 @@ def orbit_longitude(self, event_key, reference='obs', planet=None):
     orbit_lon_wrt_ref = (-ref_lon_wrt_orbit) % Scalar.TWOPI
     return self.register_backplane(key, orbit_lon_wrt_ref)
 
-################################################################################
+##########################################################################################
 
 # Add these functions to the Backplane module
 Backplane._define_backplane_names(globals().copy())
 
-################################################################################
+##########################################################################################

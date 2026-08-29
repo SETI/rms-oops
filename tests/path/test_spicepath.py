@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # tests/path/test_spicepath.py
-################################################################################
+##########################################################################################
 
 import numpy as np
 import pytest
@@ -109,7 +109,7 @@ def test_spicepath():
           assert np.all(np.abs(state[0:3] - moon_event.pos.vals[i]) < 1.e-6)
           assert np.all(np.abs(state[3:6] - moon_event.vel.vals[i]) < 1.e-6)
 
-      ####################################
+      ####################################################################################
       # Tests of combined paths but no frame rotation
 
       Path._reset_caches()
@@ -160,7 +160,7 @@ def test_spicepath():
           assert np.all(np.abs(dpos.vals) < 1.e-7)
           assert np.all(np.abs(dvel.vals) < 1.e-9)
 
-      ####################################
+      ####################################################################################
 
       Path._reset_caches()
       Frame._reset_caches()
@@ -211,7 +211,7 @@ def test_spicepath():
           assert np.all(np.abs(dpos.vals) < 1.e-6)
           assert np.all(np.abs(dvel.vals) < 1.e-9)
 
-      ####################################
+      ####################################################################################
 
       Path._reset_caches()
       Frame._reset_caches()
@@ -236,7 +236,7 @@ def test_spicepath():
           assert np.all(np.abs(dpos.vals) < 1.e-6)
           assert np.all(np.abs(dvel.vals) < 1.e-9)
 
-      ####################################
+      ####################################################################################
 
       Path._reset_caches()
       Frame._reset_caches()
@@ -321,9 +321,10 @@ def test_spicepath():
                   < 1.e-11)
 
           length = np.sqrt(np.sum(state[0:3]**2))
-          assert np.all(np.abs(state[0:3] / length + earth_event.arr_ap[i].unit().vals) < 1.e-8)
+          assert np.all(np.abs(state[0:3] / length + earth_event.arr_ap[i].unit().vals)
+                        < 1.e-8)
 
-      ####################################
+      ####################################################################################
       # Fixed and then rotating frames, forward calculation
 
       times = np.arange(0., 86401., 8640.)
@@ -379,9 +380,10 @@ def test_spicepath():
                       < 1.e-11)
 
               length = np.sqrt(np.sum(state[0:3]**2))
-              assert np.all(np.abs(state[0:3] / length + earth_event.arr_ap[i].unit().vals) < 1.e-8)
+              assert np.all(np.abs(state[0:3] / length
+                                   + earth_event.arr_ap[i].unit().vals) < 1.e-8)
 
-      ####################################
+      ####################################################################################
       # Fixed and then rotating frames, reverse calculation
 
       times = np.arange(0., 86401., 8640.)
@@ -430,9 +432,10 @@ def test_spicepath():
                       < 1.e-10)
 
               length = np.sqrt(np.sum(state[0:3]**2))
-              assert np.all(np.abs(state[0:3] / length - earth_event.dep_ap[i].unit().vals) < 1.e-8)
+              assert np.all(np.abs(state[0:3] / length
+                                   - earth_event.dep_ap[i].unit().vals) < 1.e-8)
 
-      ####################################
+      ####################################################################################
       # More linked frames...
 
       Path._reset_caches()
@@ -459,7 +462,7 @@ def test_spicepath():
           assert (mars_rel.pos[i] - state[0:3]).norm() < 1.e-5
           assert (mars_rel.vel[i] - state[3:6]).norm() < 1.e-3
 
-      ####################################
+      ####################################################################################
       # The IAU_EARTH frame works fine on Earth
 
       Path._reset_caches()
@@ -484,7 +487,7 @@ def test_spicepath():
           assert (pluto_rel.pos[i] - state[0:3]).norm() < 1.e-5
           assert (pluto_rel.vel[i] - state[3:6]).norm() < 1.e-3
 
-      ####################################
+      ####################################################################################
       # IAU_MARS on Mars
 
       Path._reset_caches()
@@ -508,7 +511,7 @@ def test_spicepath():
           assert (pluto_rel.pos[i] - state[0:3]).norm() < 1.e-5
           assert (pluto_rel.vel[i] - state[3:6]).norm() < 1.e-3
 
-      ####################################
+      ####################################################################################
       # Check stellar aberration calculation in J2000
 
       Path._reset_caches()
@@ -556,7 +559,7 @@ def test_spicepath():
           assert abs(ra[i]  - ra_test)  < 1.e-7
           assert abs(dec[i] - dec_test) < 1.e-7
 
-      ####################################
+      ####################################################################################
       # Check stellar aberration calculation in a rotating frame
 
       Path._reset_caches()
@@ -589,4 +592,4 @@ def test_spicepath():
 
       Path._reset_caches()
       Frame._reset_caches()
-################################################################################
+##########################################################################################

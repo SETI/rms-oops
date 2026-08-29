@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/hosts/cassini/iss.py
-################################################################################
+##########################################################################################
 
 import numpy as np
 import julian
@@ -25,9 +25,9 @@ from oops.hosts.cassini import Cassini
 # Snapshot.get_spice_cmatrix() uses this matrix as attribute `spice_to_frame`.
 CMATRIX_ROTATION = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
 
-################################################################################
+##########################################################################################
 # Standard class methods
-################################################################################
+##########################################################################################
 
 def from_file(filespec, *, fast_distortion=True,
               return_all_planets=False, frame=None, navigation=False, **kwargs):
@@ -131,7 +131,6 @@ def from_file(filespec, *, fast_distortion=True,
 
     return result
 
-#===============================================================================
 def from_index(filespec, fast_distortion=True, return_all_planets=False,
                navigation=False, **kwargs):
     """A static method to return a list of Snapshot objects.
@@ -203,34 +202,28 @@ def from_index(filespec, fast_distortion=True, return_all_planets=False,
 
     return snapshots
 
-#===============================================================================
 def initialize(ck='reconstructed', planets=None, asof=None,
                spk='reconstructed', gapfill=True,
                mst_pck=True, irregulars=True):
     """Initialize key information about the ISS instrument.
 
-    Must be called first. After the first call, later calls to this function
-    are ignored.
+    Must be called first. After the first call, later calls to this function are ignored.
 
-    Input:
-        ck,spk      'predicted', 'reconstructed', or 'none', depending on which
-                    kernels are to be used. Defaults are 'reconstructed'. Use
-                    'none' if the kernels are to be managed manually.
-        planets     A list of planets to pass to define_solar_system. None or
-                    0 means all.
-        asof        Only use SPICE kernels that existed before this date; None
-                    to ignore.
-        gapfill     True to include gapfill CKs. False otherwise.
-        mst_pck     True to include MST PCKs, which update the rotation models
-                    for some of the small moons.
-        irregulars  True to include the irregular satellites;
-                    False otherwise.
+    Parameters:
+        planets (list, optional): A list of planets to pass to define_solar_system. None
+            or 0 means all.
+        asof (str, optional): Only use SPICE kernels that existed before this date; None
+            to ignore.
+        gapfill (bool, optional): True to include gapfill CKs. False otherwise.
+        mst_pck (bool, optional): True to include MST PCKs, which update the rotation
+            models for some of the small moons.
+        irregulars (bool, optional): True to include the irregular satellites; False
+            otherwise.
     """
     ISS.initialize(ck=ck, planets=planets, asof=asof,
                    spk=spk, gapfill=gapfill,
                    mst_pck=mst_pck, irregulars=irregulars)
 
-#===============================================================================
 class ISS(object):
     """An instance-free class to hold Cassini ISS instrument parameters."""
 
@@ -311,62 +304,63 @@ class ISS(object):
     #   V DIFF MIN MAX -0.0182888189072 0.0187174796013
 
     NAC_INV_COEFF = np.zeros((4,4,2))
-    NAC_INV_COEFF[:,:,0] = [[ -1.14799845e-10,  7.80494024e-14,  1.73312704e-15, -5.95242349e-19],
-                            [  5.99190197e-06, -3.91823615e-13, -7.12054264e-15,  0.00000000e+00],
-                            [  1.42455664e-12, -2.15242793e-18,  0.00000000e+00,  0.00000000e+00],
-                            [ -7.11199158e-15,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
-    NAC_INV_COEFF[:,:,1] = [[ -4.86573092e-12,  5.99122009e-06, -3.91358768e-13, -7.12774967e-15],
-                            [  1.03832114e-13,  1.41728538e-12, -1.55778300e-18,  0.00000000e+00],
-                            [  2.03725690e-16, -7.11687723e-15,  0.00000000e+00,  0.00000000e+00],
-                            [  1.67086926e-21,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
+    NAC_INV_COEFF[:,:,0] = [
+        [ -1.14799845e-10,  7.80494024e-14,  1.73312704e-15, -5.95242349e-19],
+        [  5.99190197e-06, -3.91823615e-13, -7.12054264e-15,  0.00000000e+00],
+        [  1.42455664e-12, -2.15242793e-18,  0.00000000e+00,  0.00000000e+00],
+        [ -7.11199158e-15,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
+    NAC_INV_COEFF[:,:,1] = [
+        [ -4.86573092e-12,  5.99122009e-06, -3.91358768e-13, -7.12774967e-15],
+        [  1.03832114e-13,  1.41728538e-12, -1.55778300e-18,  0.00000000e+00],
+        [  2.03725690e-16, -7.11687723e-15,  0.00000000e+00,  0.00000000e+00],
+        [  1.67086926e-21,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
 
     WAC_INV_COEFF = np.zeros((4,4,2))
-    WAC_INV_COEFF[:,:,0] = [[ -5.42748411e-08,  5.06916433e-12,  8.16888725e-13, -3.85258837e-17],
-                            [  5.97679707e-05, -3.53472340e-12, -5.13400740e-13,  0.00000000e+00],
-                            [  5.66784001e-11, -1.27038656e-16,  0.00000000e+00,  0.00000000e+00],
-                            [ -5.09498280e-13,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
-    WAC_INV_COEFF[:,:,1] = [[ -3.31749330e-10,  5.97618831e-05, -3.50726141e-12, -5.17011679e-13],
-                            [  6.70738287e-12,  5.34696724e-11, -8.85892191e-17,  0.00000000e+00],
-                            [  1.35389219e-14, -5.11900149e-13,  0.00000000e+00,  0.00000000e+00],
-                            [  7.39668979e-19,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
+    WAC_INV_COEFF[:,:,0] = [
+        [ -5.42748411e-08,  5.06916433e-12,  8.16888725e-13, -3.85258837e-17],
+        [  5.97679707e-05, -3.53472340e-12, -5.13400740e-13,  0.00000000e+00],
+        [  5.66784001e-11, -1.27038656e-16,  0.00000000e+00,  0.00000000e+00],
+        [ -5.09498280e-13,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
+    WAC_INV_COEFF[:,:,1] = [
+        [ -3.31749330e-10,  5.97618831e-05, -3.50726141e-12, -5.17011679e-13],
+        [  6.70738287e-12,  5.34696724e-11, -8.85892191e-17,  0.00000000e+00],
+        [  1.35389219e-14, -5.11900149e-13,  0.00000000e+00,  0.00000000e+00],
+        [  7.39668979e-19,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
 
     # For testing the numerical inverse fitting
-#    WAC_INV_COEFF[:,:,0] = [[  1.14377216e-09,  5.71428571e-01, -5.17435487e-16,  1.39385624e-17],
-#                            [ -2.85714286e-01, -3.18326095e-14, -1.04402502e-17,  0.00000000e+00],
-#                            [ -6.02467295e-14, -1.36440914e-16,  0.00000000e+00,  0.00000000e+00],
-#                            [ -2.77233884e-17,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
-#    WAC_INV_COEFF[:,:,1] = [[ -2.86046684e-09, -1.90476190e-01,  1.72236899e-14, -3.66611741e-18],
-#                            [  7.61904762e-01,  4.33089979e-14,  1.25388484e-16,  0.00000000e+00],
-#                            [  7.96957986e-14,  1.53755115e-16,  0.00000000e+00,  0.00000000e+00],
-#                            [  4.82114213e-17,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
+#    WAC_INV_COEFF[:,:,0] = [
+#        [  1.14377216e-09,  5.71428571e-01, -5.17435487e-16,  1.39385624e-17],
+#        [ -2.85714286e-01, -3.18326095e-14, -1.04402502e-17,  0.00000000e+00],
+#        [ -6.02467295e-14, -1.36440914e-16,  0.00000000e+00,  0.00000000e+00],
+#        [ -2.77233884e-17,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
+#    WAC_INV_COEFF[:,:,1] = [
+#        [ -2.86046684e-09, -1.90476190e-01,  1.72236899e-14, -3.66611741e-18],
+#        [  7.61904762e-01,  4.33089979e-14,  1.25388484e-16,  0.00000000e+00],
+#        [  7.96957986e-14,  1.53755115e-16,  0.00000000e+00,  0.00000000e+00],
+#        [  4.82114213e-17,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
 
     DISTORTION_COEFF_UV_TO_XY = {'NAC': NAC_INV_COEFF,
                                  'WAC': WAC_INV_COEFF}
 
-    #===========================================================================
     @staticmethod
     def initialize(ck='reconstructed', planets=None, asof=None,
                    spk='reconstructed', gapfill=True,
                    mst_pck=True, irregulars=True):
         """Initialize key information about the ISS instrument.
 
-        Fills in key information about the WAC and NAC.  Must be called first.
-        After the first call, later calls to this function are ignored.
+        Fills in key information about the WAC and NAC.  Must be called first. After the
+        first call, later calls to this function are ignored.
 
-        Input:
-            ck,spk      'predicted', 'reconstructed', or 'none', depending on
-                        which kernels are to be used. Defaults are
-                        'reconstructed'. Use 'none' if the kernels are to be
-                        managed manually.
-            planets     A list of planets to pass to define_solar_system. None
-                        or 0 means all.
-            asof        Only use SPICE kernels that existed before this date;
-                        None to ignore.
-            gapfill     True to include gapfill CKs. False otherwise.
-            mst_pck     True to include MST PCKs, which update the rotation
-                        models for some of the small moons.
-            irregulars  True to include the irregular satellites;
-                        False otherwise.
+        Parameters:
+            planets (list, optional): A list of planets to pass to define_solar_system.
+                None or 0 means all.
+            asof (str, optional): Only use SPICE kernels that existed before this date;
+                None to ignore.
+            gapfill (bool, optional): True to include gapfill CKs. False otherwise.
+            mst_pck (bool, optional): True to include MST PCKs, which update the rotation
+                models for some of the small moons.
+            irregulars (bool, optional): True to include the irregular satellites; False
+                otherwise.
         """
 
         # Quick exit after first call
@@ -425,7 +419,6 @@ class ISS(object):
 
         ISS.initialized = True
 
-    #===========================================================================
     @staticmethod
     def define_camera_frames():
         """Register the SPICE-derived CASSINI_ISS_NAC and CASSINI_ISS_WAC frames.
@@ -450,7 +443,6 @@ class ISS(object):
                                                 frame_id=frame_id + '_FLIPPED')
             oops.frame.Cmatrix(CMATRIX_ROTATION, spice_frame, frame_id=frame_id)
 
-    #===========================================================================
     @staticmethod
     def reset():
         """Reset the internal Cassini ISS parameters.
@@ -464,4 +456,4 @@ class ISS(object):
 
         Cassini.reset()
 
-################################################################################
+##########################################################################################

@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/path_/spicepath.py: Subclass SpicePath of class Path
+# oops/path/spicepath.py
 ##########################################################################################
 
 import numbers
@@ -16,7 +16,7 @@ from oops.path.quickpath   import QuickPath
 
 
 class SpicePath(Path):
-    """A Path subclass that returns information based on an SPICE SP kernel."""
+    """A Path subclass that returns information based on a SPICE SP kernel."""
 
     _WAYPOINTS = {}
     _FOR_CODE = {}              # SPICE path code -> SpicePath
@@ -41,7 +41,8 @@ class SpicePath(Path):
         Raises:
             LookupError: If `spice_path` is not a recognized body name or code within the
                 SPICE Toolkit.
-            ValueError: If `path` is not a SpicePath or `frame` is not a SpiceFrame.
+            ValueError: If `origin` is not a SpicePath or `frame` is not a
+                SpiceFrame.
         """
 
         # Interpret the SPICE path
@@ -111,8 +112,20 @@ class SpicePath(Path):
 
     @staticmethod
     def _body_code_and_name(arg):
-        """The spice_code and spice_name of frame in the SPICE Toolkit given a code or
-        name.
+        """The spice_code and spice_name of a body in the SPICE Toolkit, given a code
+        or a name.
+
+        Parameters:
+            arg (str or int): The SPICE toolkit identification of the body as a name or
+                integer.
+
+        Returns:
+            tuple[int, str]: The body's SPICE code and its name as defined in the SPICE
+            Toolkit.
+
+        Raises:
+            LookupError: If `arg` is not a recognized body name or code within the SPICE
+                Toolkit.
         """
 
         # Interpret an integer input
@@ -153,15 +166,14 @@ class SpicePath(Path):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-        Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Event): The Event object containing (at least) the time, position, and
-                velocity on the Path.
+            Event: The Event object containing (at least) the time, position, and velocity
+            on this Path.
         """
 
         time = Scalar.as_scalar(time).as_float()
@@ -247,18 +259,18 @@ class SpicePath(Path):
             spice_path (str or int): The SPICE toolkit identification of the target body
                 as a name or integer.
             origin (SpicePath or str, optional): The Path or the ID of the path relative
-                to which this frame is defined. This must be a SpicePath or else, by
+                to which this path is defined. This must be a SpicePath or else, by
                 default, the Solar System Barycenter.
             frame (SpiceFrame or str, optional): The Frame or the ID of the Frame for the
                 returned Path coordinates. This must be a SpiceFrame or else, by default,
                 J2000.
             path_id (str, optional): The ID under which to register this Path. If not
                 specified, the name as defined in the SPICE Toolkit is used. Note that
-                SpicePaths are always registered This input is used only if a new
+                SpicePaths are always registered. This input is used only if a new
                 SpicePath is constructed; otherwise, the pre-existing ID is retained.
 
         Returns:
-            (SpicePath): The SpicePath, newly constructed if necessary.
+            SpicePath: The SpicePath, newly constructed if necessary.
 
         Raises:
             LookupError: If `spice_path` is not a recognized body name or code within the
@@ -305,18 +317,19 @@ class SpicePath(Path):
         return result
 
     def _get_shortcut(self, origin, frame):
-        """A Path that directly transforms from the given orign and frame to this
+        """A Path that directly transforms from the given origin and frame to this
         SpicePath.
 
         This is an override of the default method, needed because the SPICE Toolkit can
         handle the connections between SpicePaths and the SSB very efficiently.
 
         Parameters:
-            origin (SpicePath or str, optional): The Path or the ID of the path relative
-                to which this frame is defined. This must be a SpicePath or else, by
-                default, the Solar System Barycenter.
-            frame (SpiceFrame or str, optional): The Frame or the ID of the Frame for the
-                Path coordinates. This must be a SpiceFrame or else, by default, J2000.
+            origin (Path): The origin Path, which must be a valid waypoint.
+            frame (Frame): The Frame, which must be a valid wayframe.
+
+        Returns:
+            Path: A Path that directly transforms from the given origin and frame to this
+            SpicePath.
         """
 
         # Find the first SpicePath that's an ancestor of the origin

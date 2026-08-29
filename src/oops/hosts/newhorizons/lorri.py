@@ -1,8 +1,8 @@
-################################################################################
+##########################################################################################
 # oops/hosts/newhorizons/lorri.py
 #
 # 2/9/14 Created (RSF)
-################################################################################
+##########################################################################################
 
 import numpy as np
 import julian
@@ -24,13 +24,13 @@ SPICE_TO_FRAME = oops.Matrix3([[ 1, 0, 0],
                                [ 0,-1, 0],
                                [ 0, 0,-1]])
 
-################################################################################
+##########################################################################################
 # Standard routines for interpreting WCS parameters, adapted from STSCI source.
 #
 # Note: Here (u,v) = (1,1) refers to the center of the lower left pixel. This
 # differs from the oops definition in which (0,0) falls at the corner of an
 # image and pixel centers have half-integer values.
-################################################################################
+##########################################################################################
 
 def radec_from_uv(u, v, header):
     dx = u - header['CRPIX1']
@@ -55,7 +55,6 @@ def radec_from_uv(u, v, header):
 
     return (ra, dec)
 
-#===============================================================================
 def uv_from_radec(ra, dec, header):
     dra = ra - header['CRVAL1']
     ddec = dec - header['CRVAL2']
@@ -90,7 +89,6 @@ def uv_from_radec(ra, dec, header):
 
     return (u,v)
 
-#===============================================================================
 def to_xms(x):
     if x < 0.:
         x_sign = -1
@@ -107,9 +105,9 @@ def to_xms(x):
     x *= 60
     return (int(x_sign) * h, m, x)
 
-################################################################################
+##########################################################################################
 # Standard class methods
-################################################################################
+##########################################################################################
 
 def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
               asof=None, meta=None, **parameters):
@@ -353,7 +351,6 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
 
     return snapshot
 
-#===============================================================================
 def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
     """A list of Snapshot objects, one for each row in a supplemental index
     file.
@@ -407,11 +404,8 @@ def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
 
     return snapshots
 
-#===============================================================================
-#===============================================================================
 class LORRI(object):
-    """A instance-free class to hold NewHorizons LORRI instrument parameters.
-    """
+    """A instance-free class to hold NewHorizons LORRI instrument parameters."""
 
     instrument_kernel = None
     fovs = {}
@@ -465,7 +459,6 @@ class LORRI(object):
         [  2.51861242e-15,  2.24491504e-14,  0.00000000e+00,  0.00000000e+00],
         [  7.85425602e-21,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]
 
-    #===========================================================================
     @staticmethod
     def initialize(asof=None, time=None, meta=None):
         """Fill in key information about LORRI. Must be called first."""
@@ -521,7 +514,6 @@ class LORRI(object):
         LORRI.asof = asof
         LORRI.meta = meta
 
-    #===========================================================================
     @staticmethod
     def reset():
         """Reset the internal NewHorizons LORRI parameters.
@@ -535,10 +527,10 @@ class LORRI(object):
 
         NewHorizons.reset()
 
-################################################################################
+##########################################################################################
 # Initialize at load time
-################################################################################
+##########################################################################################
 
 LORRI.initialize()
 
-################################################################################
+##########################################################################################

@@ -1,21 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/__init__.py
-################################################################################
-
-# Examples of import statements and how they work:
-#
-# >>> import oops
-#   This imports the entire oops object tree (but not hosts), creating
-#   classes such as oops.Scalar, ops.Event, oops.path.SpicePath, plus other
-#   components such as oops.config. This is the recommended form of import.
-#
-# >>> import oops as abc
-#   Imports the ENTIRE oops object tree but with the prefix "abc" replacing
-#   "oops".
-#
-# >>> from oops import *
-#   This imports all the oops components without the "oops" prefix. It can fill
-#   up the default name space but there is nothing wrong with it.
+##########################################################################################
 
 import cspyce
 import cspyce.aliases
@@ -84,12 +69,12 @@ try:
 except ImportError as err:
     __version__ = 'Version unspecified'
 
-################################################################################
+##########################################################################################
 # The hierarchy of imports is:
 #   Body, Surface, Path, Gravity, Event, Frame, Transform
 # Each class can reference classes later in the list, but any reference to a
 # class earlier in the list requires this approach.
-################################################################################
+##########################################################################################
 
 Transform._Frame = frame.Frame
 Transform.IDENTITY = Transform(Matrix3.IDENTITY,
@@ -113,4 +98,4 @@ Surface._Body = Body
 
 Fittable._MUTABLE = mutable
 
-################################################################################
+##########################################################################################

@@ -15,6 +15,8 @@ class Navigation(Frame, Fittable):
     two or three rotation angles.
     """
 
+    _WAYFRAMES = {}
+
     def __init__(self, arg, /, reference, *, freeze=False, frame_id=None, _matrix=None):
         """Constructor for a Navigation Frame.
 
@@ -69,6 +71,9 @@ class Navigation(Frame, Fittable):
         self._refresh(matrix=self._matrix)
         if freeze:
             self.freeze()
+
+    def _wayframe_key(self):
+        return (self._angles, self._reference, self._link)
 
     @property
     def angles(self):

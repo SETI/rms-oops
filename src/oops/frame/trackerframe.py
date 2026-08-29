@@ -25,24 +25,9 @@ class TrackerFrame(Frame):
     def __init__(self, frame, target, observer, epoch, frame_id=None, cache_size=100):
         """Constructor for a Tracker Frame.
 
-        Input:
-            frame (Frame or str): The Frame or the ID of the Frame in which the target
-                will be tracked.
-            target (Path or str): The target's Path or the ID of this Path.
-            observer (Path or str): The observer's Path or the ID of this Path.
-            epoch (Scalar, array-like, or float): The epoch for which the given Frame is
-                defined.
-            frame_id (str, optional): The ID under which to register this Frame; None to
-                leave this Frame unregistered. As a special case, use "+" to automatically
-                generate a Frame ID by appending "_TRACKER" to the ID of `frame` (if it
-                has an ID).
-            cache_size (int, optional): Number of transforms to cache. This can be useful
-                because it avoids unnecessary SPICE calls when the Frame is being used
-                repeatedly at a finite set of times.
-
         Raises:
             ValueError: If `frame`, `target`, `observer`, and `epoch` cannot be
-                broadcasted to the same shape.
+            broadcasted to the same shape.
         """
 
         self._fixed_frame = Frame.as_frame(frame)

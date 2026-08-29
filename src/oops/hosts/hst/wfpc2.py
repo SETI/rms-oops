@@ -180,7 +180,6 @@ class WFPC2(HST):
                                                 suffix = '_' + CHIPS[ccd],
                                                 **parameters)
 
-    #===========================================================================
     # The IDC dictionaries for WFPC2 are keyed by (FILTNAM1, FILTNAM2, DETCHIP)
     def define_fov(self, hdulist, **parameters):
         """An FOV object defining the field of view of the given image file and ccd, where
@@ -245,10 +244,8 @@ class WFPC2(HST):
     def dn_per_sec_factor(self, hdulist):
         """The factor that converts a pixel value to DN per second.
 
-        Input:
-            hdulist    the object returned by pyfits.open()
-
-        Return          the factor to multiply a pixel value by to get DN/sec
+        Parameters:
+            Return (float): The factor to multiply a pixel value by to get DN/sec.
         """
 
         return 1. / hdulist[0].header['EXPTIME']

@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/surface/spheroid.py: Spheroid subclass of class Surface
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -9,40 +9,33 @@ from oops.config            import SURFACE_PHOTONS, LOGGING
 from oops.surface.ellipsoid import Ellipsoid
 
 class Spheroid(Ellipsoid):
-    """A spheroidal surface centered on the given path and fixed with respect to
-    the given frame. The short radius of the spheroid is oriented along the
-    Z-axis of the frame.
+    """A spheroidal surface centered on the given path and fixed with respect to the given
+    frame. The short radius of the spheroid is oriented along the Z-axis of the frame.
 
-    The coordinates defining the surface grid are (longitude, latitude), based
-    on the assumption that a spherical body has been "squashed" along the
-    Z-axis. The latitude defined in this manner is neither planetocentric nor
-    planetographic; functions are provided to perform the conversion to either
-    choice. Longitudes are measured in a right-handed manner, increasing toward
-    the east; values range from 0 to 2*pi.
+    The coordinates defining the surface grid are (longitude, latitude), based on the
+    assumption that a spherical body has been "squashed" along the Z-axis. The latitude
+    defined in this manner is neither planetocentric nor planetographic; functions are
+    provided to perform the conversion to either choice. Longitudes are measured in a
+    right-handed manner, increasing toward the east; values range from 0 to 2*pi.
 
-    Elevations are defined by "unsquashing" the radial vectors and then
-    subtracting off the equatorial radius of the body. Thus, the surface is
-    defined as the locus of points where elevation equals zero. However, note
-    that with this definition, the gradient of the elevation value is not
-    exactly normal to the surface.
+    Elevations are defined by "unsquashing" the radial vectors and then subtracting off
+    the equatorial radius of the body. Thus, the surface is defined as the locus of points
+    where elevation equals zero. However, note that with this definition, the gradient of
+    the elevation value is not exactly normal to the surface.
     """
 
-    #===========================================================================
     def __init__(self, origin, frame, radii, exclusion=0.95):
         """Constructor for a Spheroid surface.
 
-        Input:
-            origin      the Path object or ID defining the center of the
-                        spheroid.
-            frame       the Frame object or ID defining the coordinate frame in
-                        which the spheroid is fixed, with the short radius
-                        along the Z-axis.
-            radii       a tuple (a,c) or (a,a,c), defining the long and short
-                        radii of the spheroid.
-            exclusion   the fraction of the polar radius within which
-                        calculations of intercept_normal_to() are suppressed.
-                        Values of less than 0.9 are not recommended because
-                        the problem becomes numerically unstable.
+        Parameters:
+            origin (Path): Object or ID defining the center of the spheroid.
+            frame (Frame): Object or ID defining the coordinate frame in which the
+                spheroid is fixed, with the short radius along the Z-axis.
+            radii (tuple): (a,c) or (a,a,c), defining the long and short radii of the
+                spheroid.
+            exclusion (float, optional): The fraction of the polar radius within which
+                calculations of intercept_normal_to() are suppressed. Values of less than
+                0.9 are not recommended because the problem becomes numerically unstable.
         """
 
         # Allow either two or three radius values
@@ -52,36 +45,35 @@ class Spheroid(Ellipsoid):
         Ellipsoid.__init__(self, origin, frame, radii=radii,
                                                 exclusion=exclusion)
 
-    #===========================================================================
     def intercept_normal_to(self, pos, time=None, direction='dep', derivs=False,
                                        guess=None):
         """Intercept point whose normal vector passes through a given position.
 
-        This is a bit faster and more reliable than the default method for
-        Ellipsoids, because the polynomial is only fourth-order instead of
-        sixth-order.
+        This is a bit faster and more reliable than the default method for Ellipsoids,
+        because the polynomial is only fourth-order instead of sixth-order.
 
-        Input:
-            pos         a Vector3 of positions at or near the surface relative
-                        to this surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        for this Surface subclass.
-            direction   'arr' for a photon arriving at the surface; 'dep' for a
-                        photon departing from the surface; ignored here.
-            derivs      True to propagate derivatives in pos into the returned
-                        intercepts.
-            guess       optional initial guess at coefficient array p such that
-                            intercept + p * normal(intercept) = pos
-                        Use guess=True for the converged value of p to be
-                        returned even if an initial guess is unavailable.
+        Parameters:
+            pos (Vector3): Positions at or near the surface relative to this surface's
+                origin and frame.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+                this Surface subclass.
+            direction (str, optional): 'arr' for a photon arriving at the surface; 'dep'
+                for a photon departing from the surface; ignored here.
+            derivs (bool, optional): True to propagate derivatives in pos into the
+                returned intercepts.
+            guess (Scalar, optional): Optional initial guess at coefficient array p such
+                that intercept + p * normal(intercept) = pos Use guess=True for the
+                converged value of p to be returned even if an initial guess is
+                unavailable.
 
-        Return:         intercept or (intercept, p).
-            intercept   a vector3 of surface intercept points relative to this
-                        surface's origin and frame, in km. Where no intercept
-                        exists, the returned vector will be masked.
-            p           the converged solution such that
-                            intercept = pos + p * normal(intercept);
-                        included if guess is not None.
+        Returns:
+            Intercept or (intercept, p), where:
+
+            * `intercept` (Vector3): A vector3 of surface intercept points relative to
+              this surface's origin and frame, in km. Where no intercept exists, the
+              returned vector will be masked.
+            * `p` (Scalar): The converged solution such that intercept = pos + p *
+              normal(intercept); included if guess is not None.
         """
 
         pos = Vector3.as_vector3(pos, recursive=derivs)
@@ -230,134 +222,100 @@ class Spheroid(Ellipsoid):
         else:
             return (cept, p)
 
-    ############################################################################
+    ######################################################################################
     # Longitude conversions
-    ############################################################################
+    ######################################################################################
 
     def lon_to_centric(self, lon, derivs=False):
         """Convert longitude in internal coordinates to planetocentric.
 
-        This is a null operation for spheroids. The method is provided for
-        compatibility with Ellipsoids.
+        This is a null operation for spheroids. The method is provided for compatibility
+        with Ellipsoids.
 
-        Input:
-            lon         squashed longitude in radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          planetocentric longitude.
+        Parameters:
+            Return (Scalar): Planetocentric longitude.
         """
 
         return Scalar.as_scalar(lon, recursive=derivs)
 
-    #===========================================================================
     def lon_from_centric(self, lon, derivs=False):
         """Convert planetocentric longitude to internal coordinates.
 
-        This is a null operation for spheroids. The method is provided for
-        compatibility with Ellipsoids.
+        This is a null operation for spheroids. The method is provided for compatibility
+        with Ellipsoids.
 
-        Input:
-            lon         planetocentric longitude in radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          squashed longitude.
+        Parameters:
+            Return (Scalar): Squashed longitude.
         """
 
         return Scalar.as_scalar(lon, recursive=derivs)
 
-    #===========================================================================
     def lon_to_graphic(self, lon, derivs=False):
         """Convert longitude in internal coordinates to planetographic.
 
-        This is a null operation for spheroids. The method is provided for
-        compatibility with Ellipsoids.
+        This is a null operation for spheroids. The method is provided for compatibility
+        with Ellipsoids.
 
-        Input:
-            lon         squashed longitude in radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          planetographic longitude.
+        Parameters:
+            Return (Scalar): Planetographic longitude.
         """
 
         return Scalar.as_scalar(lon, recursive=derivs)
 
-    #===========================================================================
     def lon_from_graphic(self, lon, derivs=False):
         """Convert planetographic longitude to internal coordinates.
 
-        This is a null operation for spheroids. The method is provided for
-        compatibility with Ellipsoids.
+        This is a null operation for spheroids. The method is provided for compatibility
+        with Ellipsoids.
 
-        Input:
-            lon         planetographic longitude in radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          squashed longitude.
+        Parameters:
+            Return (Scalar): Squashed longitude.
         """
 
         return Scalar.as_scalar(lon, recursive=derivs)
 
-    ############################################################################
+    ######################################################################################
     # Latitude conversions
-    ############################################################################
+    ######################################################################################
 
     def lat_to_centric(self, lat, lon=None, derivs=False):
         """Convert latitude in internal coordinates to planetocentric.
 
-        Input:
-            lat         squashed latitide, radians.
-            lon         ignored, included for compatibility with Ellipsoids.
-            derivs      True to include derivatives in returned result.
-
-        Return          planetocentric latitude.
+        Parameters:
+            Return (Scalar): Planetocentric latitude.
         """
 
         lat = Scalar.as_scalar(lat, recursive=derivs)
         return (lat.tan(recursive=derivs) * self.squash_z).arctan()
 
-    #===========================================================================
     def lat_from_centric(self, lat, lon=None, derivs=False):
         """Convert planetocentric latitude to internal spheroid coordinates.
 
-        Input:
-            lat         planetocentric latitide, radians.
-            lon         ignored, included for compatibility with Ellipsoids.
-            derivs      True to include derivatives in returned result.
-
-        Return          squashed latitude.
+        Parameters:
+            Return (Scalar): Squashed latitude.
         """
 
         lat = Scalar.as_scalar(lat, recursive=derivs)
         return (lat.tan() * self.unsquash_z).arctan()
 
-    #===========================================================================
     def lat_to_graphic(self, lat, lon=None, derivs=False):
         """Convert latitude in internal coordinates to planetographic.
 
-        Input:
-            lat         squashed latitide, radians.
-            lon         ignored, included for compatibility with Ellipsoids.
-            derivs      True to include derivatives in returned result.
-
-        Return          planetographic latitude.
+        Parameters:
+            Return (Scalar): Planetographic latitude.
         """
 
         lat = Scalar.as_scalar(lat, recursive=derivs)
         return (lat.tan() * self.unsquash_z).arctan()
 
-    #===========================================================================
     def lat_from_graphic(self, lat, lon=None, derivs=False):
         """Convert a planetographic latitude to internal spheroid latitude.
 
-        Input:
-            lat         planetographic latitide, radians.
-            lon         ignored, included for compatibility with Ellipsoids.
-            derivs      True to include derivatives in returned result.
-
-        Return          squashed latitude.
+        Parameters:
+            Return (Scalar): Squashed latitude.
         """
 
         lat = Scalar.as_scalar(lat, recursive=derivs)
         return (lat.tan() * self.squash_z).arctan()
 
-################################################################################
+##########################################################################################

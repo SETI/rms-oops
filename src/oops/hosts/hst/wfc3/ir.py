@@ -112,10 +112,8 @@ class IR(WFC3):
     def dn_per_sec_factor(self, hdulist):
         """The factor that converts a pixel value to DN per second.
 
-        Input:
-            hdulist    the object returned by pyfits.open()
-
-        Return          the factor to multiply a pixel value by to get DN/sec
+        Parameters:
+            Return (float): The factor to multiply a pixel value by to get DN/sec.
         """
 
         return 1.

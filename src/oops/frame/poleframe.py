@@ -25,28 +25,6 @@ class PoleFrame(Frame):
                  cache_size=100):
         """Constructor for a PoleFrame.
 
-        Input:
-            frame (Frame or str): Frame or frame ID for a (possibly) rotating frame
-                describing the central planet relative to J2000. This is typically the
-                planet's rotating SpiceFrame.
-            pole (Vector3 or array-like): The pole of the invariable plane, about which
-                planet's pole precesses, in J2000 coordinates. This enables the reference
-                longitude to be defined properly.
-            retrograde (bool, optional): True to flip the sign of the Z-axis. This is
-                necessary for retrograde systems like Uranus.
-            aries (bool, optional): True to use the First Point of Aries as the longitude
-                reference; False to use the ascending node of the invariable plane. Note
-                that the former might be preferred in a situation where the invariable
-                pole is uncertain, because small changes in the invariable pole will have
-                only a limited effect on the absolute reference longitude.
-            frame_id (str, optional): The ID under which to register this Frame; None to
-                leave this Frame unregistered. As a special case, use "+" to automatically
-                generate an ID by appending "_POLE" to the ID of the `frame` (if it has an
-                ID).
-            cache_size (int, optional): The number of transforms to cache. This can be
-                useful because it avoids unnecessary SPICE calls when the Frame is being
-                used repeatedly at a finite set of times.
-
         Raises:
             ValueError: If `frame` and `pole` cannot be broadcasted to the same shape.
         """

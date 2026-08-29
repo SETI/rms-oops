@@ -1,9 +1,9 @@
-################################################################################
+##########################################################################################
 # oops/hosts/cassini/__init__.py: Cassini class
 #
 # Utility functions for managing SPICE kernels while working with Cassini data
 # sets.
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -18,9 +18,9 @@ __all__ = ['Cassini']
 
 TOUR = (2003 - 2000) * 365 * 86400      # Rough ET dividing Saturn from Jupiter
 
-################################################################################
+##########################################################################################
 # Routines for managing the loading of C and SP kernels
-################################################################################
+##########################################################################################
 
 # Make sure the leap seconds have been loaded
 oops.spice.load_leap_seconds()
@@ -36,7 +36,7 @@ oops.spice.load_leap_seconds()
 # call to load_ck(time) or load_spk(time) will ensure that the information is
 # available.
 
-################################################################################
+##########################################################################################
 
 class Cassini(object):
     """An instance-free class to hold Cassini-specific parameters."""
@@ -63,7 +63,7 @@ class Cassini(object):
 
     initialized = False
 
-    ############################################################################
+    ######################################################################################
 
     @staticmethod
     def initialize(ck='reconstructed', planets=None, asof=None,
@@ -73,20 +73,16 @@ class Cassini(object):
 
         After the first call, later calls to this function are ignored.
 
-        Input:
-            ck,spk      Used to specify which C and SPK kernels are used.:
-                        'reconstructed' for the reconstructed kernels (default);
-                        'predicted' for the predicted kernels;
-                        'none' to allow manual control of the C kernels.
-            planets     A list of planets to pass to define_solar_system. None
-                        or 0 means all.
-            asof        Only use SPICE kernels that existed before this date;
-                        None to ignore.
-            gapfill     True to include gapfill CKs. False otherwise.
-            mst_pck     True to include MST PCKs, which update the rotation
-                        models for some of the small moons.
-            irregulars  True to include the irregular satellites;
-                        False otherwise.
+        Parameters:
+            planets (list, optional): A list of planets to pass to define_solar_system.
+                None or 0 means all.
+            asof (str, optional): Only use SPICE kernels that existed before this date;
+                None to ignore.
+            gapfill (bool, optional): True to include gapfill CKs. False otherwise.
+            mst_pck (bool, optional): True to include MST PCKs, which update the rotation
+                models for some of the small moons.
+            irregulars (bool, optional): True to include the irregular satellites; False
+                otherwise.
         """
         if Cassini.initialized:
             return
@@ -136,7 +132,6 @@ class Cassini(object):
 
         Cassini.initialized = True
 
-    #===========================================================================
     @staticmethod
     def reset():
         """Reset the internal parameters.
@@ -155,7 +150,6 @@ class Cassini(object):
 
         Cassini.initialized = False
 
-    #===========================================================================
     @staticmethod
     def load_ck(t):
         """Ensure that the C kernels applicable at or near the given time have
@@ -166,7 +160,6 @@ class Cassini(object):
         Cassini.load_kernels(t, t, Cassini.CK_LOADED, Cassini.CK_LIST,
                                    Cassini.CK_DICT)
 
-    #===========================================================================
     @staticmethod
     def load_cks(t0, t1):
         """Ensure that all the C kernels applicable near or within the time
@@ -177,7 +170,6 @@ class Cassini(object):
         Cassini.load_kernels(t0, t1, Cassini.CK_LOADED, Cassini.CK_LIST,
                                      Cassini.CK_DICT)
 
-    #===========================================================================
     @staticmethod
     def load_spk(t):
         """Ensure that the SPK kernels applicable at or near the given time have
@@ -188,7 +180,6 @@ class Cassini(object):
         Cassini.load_kernels(t, t, Cassini.SPK_LOADED, Cassini.SPK_LIST,
                                    Cassini.SPK_DICT)
 
-    #===========================================================================
     @staticmethod
     def load_spks(t0, t1):
         """Ensure that all the SPK kernels applicable near or within the time
@@ -199,7 +190,6 @@ class Cassini(object):
         Cassini.load_kernels(t0, t1, Cassini.SPK_LOADED, Cassini.SPK_LIST,
                                      Cassini.SPK_DICT)
 
-    #===========================================================================
     @staticmethod
     def load_kernels(t0, t1, loaded, lists, kernel_dict):
 
@@ -220,9 +210,9 @@ class Cassini(object):
                     kernel_dict[filespec] = kernel
                 loaded[m] = True
 
-    ############################################################################
+    ######################################################################################
     # Initialize the kernel lists
-    ############################################################################
+    ######################################################################################
 
     @staticmethod
     def initialize_kernels(kernels, lists):
@@ -248,26 +238,21 @@ class Cassini(object):
             for m in range(m1, m2+1):
                 lists[m] += [kernel]
 
-    ############################################################################
+    ######################################################################################
     # Routines for managing the loading other kernels
-    ############################################################################
+    ######################################################################################
 
     @staticmethod
     def load_instruments(instruments=[], asof=None):
-        """Load the SPICE kernels and defines the basic paths and frames for
-        the Cassini mission.
+        """Load the SPICE kernels and defines the basic paths and frames for the Cassini
+        mission.
 
         It is generally only to be called once.
 
-        Input:
-            instruments an optional list of instrument names for which to load
-                        frames kernels. The frames for ISS, VIMS, UVIS, and CIRS
-                        are always loaded.
-
-            asof        if this specifies a date or date-time in ISO format,
-                        then only kernels that existed before the specified date
-                        are used. Otherwise, the most recent versions are always
-                        loaded.
+        Parameters:
+            asof (str, optional): If this specifies a date or date-time in ISO format,
+                then only kernels that existed before the specified date are used.
+                Otherwise, the most recent versions are always loaded.
         """
 
         # Load the default instruments on the first pass
@@ -288,9 +273,9 @@ class Cassini(object):
         _ = spicedb.furnish_inst(-82, inst=instruments, asof=asof)
         spicedb.close_db()
 
-    ############################################################################
+    ######################################################################################
     # Routines for managing text kernel information
-    ############################################################################
+    ######################################################################################
 
 ### TODO: finish these routines...
 
@@ -300,16 +285,15 @@ class Cassini(object):
 
         Also furnishes it for use by the SPICE tools.
 
-        Input:
-            inst        one of "ISS", "UVIS", "VIMS", "CIRS", etc.
-            asof        an optional date in the past, in ISO date or date-time
-                        format. If provided, then the information provided will
-                        be applicable as of that date. Otherwise, the most
-                        recent information is always provided.
+        Parameters:
+            inst (str, list or tuple): One of "ISS", "UVIS", "VIMS", "CIRS", etc.
+            asof (str, optional): An optional date in the past, in ISO date or date-time
+                format. If provided, then the information provided will be applicable as
+                of that date. Otherwise, the most recent information is always provided.
 
-        Return:         a tuple containing:
-                            the dictionary generated by textkernel.from_file()
-                            the name of the kernel.
+        Returns:
+            (tuple): Containing: the dictionary generated by textkernel.from_file() the
+                name of the kernel.
         """
         if asof is not None:
             (day,sec) = julian.day_sec_from_iso(stop_time)
@@ -322,22 +306,20 @@ class Cassini(object):
 
         return (spicedb.as_dict(kernel_info), spicedb.as_names(kernel_info)[0])
 
-    #===========================================================================
     @staticmethod
     def spice_frames_kernel(asof=None):
         """A dictionary containing the Cassini Frames Kernel information.
 
         Also furnishes the kernels for use by the SPICE tools.
 
-        Input:
-            asof        an optional date in the past, in ISO date or date-time
-                        format. If provided, then the information provided will
-                        be applicable as of that date. Otherwise, the most
-                        recent information is always provided.
+        Parameters:
+            asof (str, optional): An optional date in the past, in ISO date or date-time
+                format. If provided, then the information provided will be applicable as
+                of that date. Otherwise, the most recent information is always provided.
 
-        Return:         a tuple containing:
-                            the dictionary generated by textkernel.from_file()
-                            an ordered list of the names of the kernels
+        Returns:
+            (tuple): Containing: the dictionary generated by textkernel.from_file() an
+                ordered list of the names of the kernels.
         """
         if asof is not None:
             (day,sec) = julian.day_sec_from_iso(stop_time)
@@ -350,23 +332,20 @@ class Cassini(object):
 
         return (spicedb.as_dict(kernel_list), spicedb.as_names(kernel_list))
 
-    #===========================================================================
     @staticmethod
     def used_kernels(time, inst, return_all_planets=False, ck=True):
-        """The list of kernels associated with a Cassini observation at a
-        selected range of times.
+        """The list of kernels associated with a Cassini observation at a selected range
+        of times.
 
-        Input:
-            time                a (start, stop) tuple of times in seconds TDB.
-            inst                the instrument name, e.g., 'iss'.
-            return_all_planets  Include kernels for all planets not just
-                                Jupiter or Saturn.
-            ck                  True (default) to include CK (pointing)
-                                kernels; False to exclude them, e.g. for an
-                                observation whose pointing came from a custom
-                                cmatrix rather than SPICE, where any
-                                furnished CK is unrelated to how the
-                                observation was actually pointed.
+        Parameters:
+            time: A (start, stop) tuple of times in seconds TDB.
+            inst (str, list or tuple): The instrument name, e.g., 'iss'.
+            return_all_planets (optional): Include kernels for all planets not just
+                Jupiter or Saturn.
+            ck (bool, optional): True (default) to include CK (pointing) kernels; False to
+                exclude them, e.g. for an observation whose pointing came from a custom
+                cmatrix rather than SPICE, where any furnished CK is unrelated to how the
+                observation was actually pointed.
         """
         if return_all_planets:
             bodies = [1, 199, 2, 299, 3, 399, 4, 499, 5, 599, 6, 699,
@@ -388,4 +367,4 @@ class Cassini(object):
         return spicedb.used_basenames(types=types, time=time, inst=inst,
                                       sc=-82, bodies=bodies)
 
-################################################################################
+##########################################################################################

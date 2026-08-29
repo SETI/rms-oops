@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # tests/observation/test_timedimage.py
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -12,16 +12,16 @@ from oops.observation import TimedImage
 
 
 def test_timedimage():
-    ########################################################################
+    ######################################################################################
     # Old RasterScan unit tests
-    ########################################################################
+    ######################################################################################
 
     RasterScan = TimedImage
 
-    ####################################################
+    ######################################################################################
     # Continuous observation, shape (10,20)
     # Axes are (fast,slow)
-    ####################################################
+    ######################################################################################
 
     fov = FlatFOV((0.001,0.001), (10,20))
     slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
@@ -93,7 +93,8 @@ def test_timedimage():
     assert Boolean(uv.mask) == 2*[False] + 6*[True]
     assert Boolean(time.mask) == 2*[False] + 6*[True]
     assert (time[:2]
-            == (slow_cadence.tstride * non_ints.to_scalar(1).int() + fast_cadence.tstride * non_ints.to_scalar(0))[:2])
+            == (slow_cadence.tstride * non_ints.to_scalar(1).int()
+                + fast_cadence.tstride * non_ints.to_scalar(0))[:2])
     assert uv[:2] == Pair.as_pair(non_ints)[:2]
 
     # uvt_range() with remask == False, non-integer indices
@@ -122,7 +123,8 @@ def test_timedimage():
     assert uv_min[:2] == Pair.as_pair(indices)[:2]
     assert uv_max[:2] == Pair.as_pair(indices)[:2] + (1,1)
     assert (time_min[:2]
-            == (slow_cadence.tstride * non_ints.to_scalar(1).int() + fast_cadence.tstride * non_ints.to_scalar(0).int())[:2])
+            == (slow_cadence.tstride * non_ints.to_scalar(1).int()
+                + fast_cadence.tstride * non_ints.to_scalar(0).int())[:2])
     assert time_max[:2] == time_min[:2] + fast_cadence.texp
 
     # time_range_at_uv() with remask == False
@@ -141,7 +143,7 @@ def test_timedimage():
     assert time0[:4] == [0, 190, 9, 199]
     assert time1[:4] == time0[:4] + fast_cadence.texp
 
-    ####################################################
+    ######################################################################################
     # Fast cadence is discontinuous
     # Axes are (slow,fast)
     # Shape (10,20)
@@ -149,7 +151,7 @@ def test_timedimage():
     #  [1000-1001, 1010-1011, ..., 1190-1191],
     #  ...
     #  [9000-9001, 9010-9011, ..., 9190, 9191]]
-    ####################################################
+    ######################################################################################
 
     fov = FlatFOV((0.001,0.001), (10,20))
     slow_cadence = Metronome(tstart=0., tstride=1000., texp=1., steps=10)
@@ -182,17 +184,18 @@ def test_timedimage():
     assert time0 == cadence.time_range_at_tstep(indices_)[0]
     assert time1 == time0 + fast_cadence.texp
 
-    ####################################################
+    ######################################################################################
     # Fast cadence is discontinuous
     # Axes are (fast,slow)
     # Shape (10,20)
-    ####################################################
+    ######################################################################################
 
     fov = FlatFOV((0.001,0.001), (10,20))
     slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
     fast_cadence = Metronome(tstart=0., tstride=1., texp=0.8, steps=10)
     cadence = DualCadence(slow_cadence, fast_cadence)
-    obs = RasterScan(axes=('ufast','vslow'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+    obs = RasterScan(axes=('ufast','vslow'),
+                     cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
     assert obs.time[1] == 199.8
 
@@ -228,15 +231,16 @@ def test_timedimage():
     assert abs(obs.uvt((4, 3.8    ))[0] - (4.,3.8)) < delta
     assert abs(obs.uvt((5, 5.     ))[0] - (5.,5.0)) < delta
 
-    ############################################################
+    ######################################################################################
     # Alternative tstride for even more discontinuous indices
-    ############################################################
+    ######################################################################################
 
     fov = FlatFOV((0.001,0.001), (10,20))
     slow_cadence = Metronome(tstart=0., tstride=11., texp=10., steps=20)
     fast_cadence = Metronome(tstart=0., tstride=1., texp=0.8, steps=10)
     cadence = DualCadence(slow_cadence, fast_cadence)
-    obs = RasterScan(axes=('ufast','vslow'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+    obs = RasterScan(axes=('ufast','vslow'),
+                     cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
     assert obs.time[1] == 218.8
 
@@ -299,15 +303,16 @@ def test_timedimage():
     assert ((time[:4] - 218.8).abs() < delta).all()
     assert Boolean(time.mask) == test_uv.mask
 
-    ############################################################
+    ######################################################################################
     # Alternative texp and axes
-    ############################################################
+    ######################################################################################
 
     fov = FlatFOV((0.001,0.001), (10,20))
     slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
     fast_cadence = Metronome(tstart=0., tstride=1., texp=0.8, steps=10)
     cadence = DualCadence(slow_cadence, fast_cadence)
-    obs = RasterScan(axes=('a','vslow','b','ufast','c'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+    obs = RasterScan(axes=('a','vslow','b','ufast','c'),
+                     cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
     assert obs.time[1] == 199.8
 
@@ -341,16 +346,16 @@ def test_timedimage():
     assert abs(obs.uvt((1, 3.7    ,4,4,7))[0] - (4.,3.7)) < delta
     assert abs(obs.uvt((1, 5.     ,4,5,7))[0] - (5.,5.0)) < delta
 
-    ########################################################################
+    ######################################################################################
     # Old Pushbroom unit tests
-    ########################################################################
+    ######################################################################################
 
     Pushbroom = TimedImage
 
-    ########################################
+    ######################################################################################
     # Overall shape (10,20)
     # Time is second axis; time = v * 10.
-    ########################################
+    ######################################################################################
 
     flatfov = FlatFOV((0.001,0.001), (10,20))
     cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
@@ -441,11 +446,11 @@ def test_timedimage():
     assert time0[:4] == cadence.tstride * uv_.to_scalar(1)[:4]
     assert time1[:4] == time0[:4] + cadence.texp
 
-    ########################################
+    ######################################################################################
     # Alternative axis order ('ut','v')
     # Overall shape (10,20)
     # Time is first axis; time = v * 10.
-    ########################################
+    ######################################################################################
 
     cadence = Metronome(tstart=0., tstride=10., texp=10., steps=10)
     obs = Pushbroom(axes=('ut','v'), cadence=cadence, fov=flatfov,
@@ -477,11 +482,11 @@ def test_timedimage():
     assert time0 == cadence.tstride * uv_.to_scalar(0)
     assert time1 == time0 + cadence.texp
 
-    ########################################################
+    ######################################################################################
     # Alternative texp for discontinuous time index
     # Overall shape (10,20)
     # Time is first axis; time = [0-8, 10-18, ..., 90-98]
-    ########################################################
+    ######################################################################################
 
     cadence = Metronome(tstart=0., tstride=10., texp=8., steps=10)
     obs = Pushbroom(axes=('ut','v'), cadence=cadence, fov=flatfov,
@@ -538,15 +543,16 @@ def test_timedimage():
     assert uvt[0] == [a[0] for a in uvt_list]
     assert uvt[1] == [a[1] for a in uvt_list]
 
-    ########################################################################
+    ######################################################################################
     # Old Slit unit tests
-    ########################################################################
+    ######################################################################################
 
     Slit = TimedImage
 
     fov = FlatFOV((0.001,0.001), (10,1))
     cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
-    obs = Slit(axes=('u','vt'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+    obs = Slit(axes=('u','vt'),
+               cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
     indices = Vector([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
     tstep = indices.to_scalar(1)
@@ -623,13 +629,14 @@ def test_timedimage():
     assert time0[:6] == cadence.time_range_at_tstep(tstep)[0][:6]
     assert time1[:6] == time0[:6] + cadence.texp
 
-    ####################################
+    ######################################################################################
 
     # Alternative axis order ('ut','v')
 
     fov = FlatFOV((0.001,0.001), (1,20))
     cadence = Metronome(tstart=0., tstride=10., texp=10., steps=10)
-    obs = Slit(axes=('ut','v'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+    obs = Slit(axes=('ut','v'),
+               cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
     indices = Vector([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
     indices_ = indices.copy()
@@ -651,13 +658,14 @@ def test_timedimage():
     assert time_min == cadence.tstride * indices_.to_scalar(0)
     assert time_max == time_min + cadence.texp
 
-    ####################################
+    ######################################################################################
 
     # Alternative texp for discontinuous indices
 
     fov = FlatFOV((0.001,0.001), (1,20))
     cadence = Metronome(tstart=0., tstride=10., texp=8., steps=10)
-    obs = Slit(axes=('ut','v'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+    obs = Slit(axes=('ut','v'),
+               cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
     assert obs.time[1] == 98.
 
@@ -705,7 +713,8 @@ def test_timedimage():
 
     # Alternative texp and axes
     cadence = Metronome(tstart=0., tstride=10., texp=8., steps=10)
-    obs = Slit(axes=('a','v','b','ut','c'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+    obs = Slit(axes=('a','v','b','ut','c'),
+               cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
     assert obs.time[1] == 98.
 
@@ -734,9 +743,9 @@ def test_timedimage():
     assert abs(obs.uvt((1,5,4,7 - eps,7))[0] - (0.5,5.)) < delta
     assert abs(obs.uvt((1,6,4,7.     ,7))[0] - (0.5,6.)) < delta
 
-    ########################################################################
+    ######################################################################################
     # Old RasterSlit unit tests
-    ########################################################################
+    ######################################################################################
 
     RasterSlit = TimedImage
 
@@ -806,7 +815,8 @@ def test_timedimage():
     assert uv_max.to_scalar(0)[:2] == indices.to_scalar(0)[:2] + 1
     assert uv_max.to_scalar(1)[:2] == 1
     assert (time_min[:2]
-            == (slow_cadence.tstride * indices.to_scalar(1) + fast_cadence.tstride * indices.to_scalar(0))[:2])
+            == (slow_cadence.tstride * indices.to_scalar(1)
+                + fast_cadence.tstride * indices.to_scalar(0))[:2])
     assert time_max[:2] == time_min[:2] + fast_cadence.texp
 
     # time_range_at_uv() with remask == False
@@ -825,15 +835,16 @@ def test_timedimage():
     assert time0[:4] == [0, 190, 9, 199]
     assert time1[:4] == time0[:4] + fast_cadence.texp
 
-    ####################################
+    ######################################################################################
     # Alternative axis order ('uslow','vfast')
-    ####################################
+    ######################################################################################
 
     fov = FlatFOV((0.001,0.001), (1,20))
     slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=10)
     fast_cadence = Metronome(tstart=0., tstride=0.5, texp=0.5, steps=20)
     cadence = DualCadence(slow_cadence, fast_cadence)
-    obs = RasterSlit(axes=('uslow','vfast'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+    obs = RasterSlit(axes=('uslow','vfast'),
+                     cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
     indices = Pair([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
     indices_ = indices.copy()
@@ -860,9 +871,9 @@ def test_timedimage():
     assert time0 == time_min
     assert time1 == time0 + fast_cadence.texp
 
-    ################################################
+    ######################################################################################
     # Alternative texp for discontinuous indices
-    ################################################
+    ######################################################################################
 
     fov = FlatFOV((0.001,0.001), (10,1))
     slow_cadence = Metronome(tstart=0., tstride=10., texp=8., steps=20)
@@ -906,9 +917,9 @@ def test_timedimage():
     assert abs(obs.uvt((5, 5 - eps))[0] - (5.,0.5)) < delta
     assert abs(obs.uvt((5, 5.     ))[0] - (5.,0.5)) < delta
 
-    ################################################
+    ######################################################################################
     # Alternative tstride for even more discontinuous indices
-    ################################################
+    ######################################################################################
 
     fov = FlatFOV((0.001,0.001), (10,1))
     slow_cadence = Metronome(tstart=0., tstride=11., texp=10., steps=20)
@@ -980,15 +991,16 @@ def test_timedimage():
     pair = (10, 20+eps)
     assert obs.uvt(pair, True)[0].mask
 
-    ################################################
+    ######################################################################################
     # Alternative, discontinuous and weird axes
-    ################################################
+    ######################################################################################
 
     fov = FlatFOV((0.001,0.001), (10,1))
     slow_cadence = Metronome(tstart=0., tstride=10., texp=10., steps=20)
     fast_cadence = Metronome(tstart=0., tstride=1., texp=0.8, steps=10)
     cadence = DualCadence(slow_cadence, fast_cadence)
-    obs = RasterSlit(axes=('a','vslow','b','ufast','c'), cadence=cadence, fov=fov, path='SSB', frame='J2000')
+    obs = RasterSlit(axes=('a','vslow','b','ufast','c'),
+                     cadence=cadence, fov=fov, path='SSB', frame='J2000')
 
     assert obs.time[1] == 199.8
 
@@ -1023,9 +1035,9 @@ def test_timedimage():
     assert abs(obs.uvt((1, 5 - eps,4,5,7))[0] - (5.,0.5)) < delta
     assert abs(obs.uvt((1, 5.     ,4,5,7))[0] - (5.,0.5)) < delta
 
-    ########################################################################
+    ######################################################################################
     # Old Pushframe unit tests
-    ########################################################################
+    ######################################################################################
 
     Pushframe = TimedImage
 
@@ -1064,7 +1076,8 @@ def test_timedimage():
     assert not np.any(time_max.mask)
 
     assert (uv_min
-            == [(0,0),(0,1),(0,10),(0,18),(0,19),(0,19),(0,21), (9,0),(9,1),(9,10),(9,18),(9,19),(9,19),(9,21)])
+            == [(0,0),(0,1),(0,10),(0,18),(0,19),(0,19),(0,21),
+                (9,0),(9,1),(9,10),(9,18),(9,19),(9,19),(9,21)])
     assert uv_max == uv_min + (1,1)
     assert time_min == cadence.time_range_at_tstep(tstep)[0]
     assert time_max == cadence.time_range_at_tstep(tstep)[1]
@@ -1161,4 +1174,4 @@ def test_timedimage():
     assert obs.uvt(( 9,5))[1] == 100.
     assert obs.uvt((9.5,5))[1] == 150.
     assert obs.uvt((10,5))[1] == 200.
-################################################################################
+##########################################################################################

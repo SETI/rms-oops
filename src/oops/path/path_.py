@@ -1,24 +1,22 @@
 ##########################################################################################
-# oops/path/path_.py: Abstract class Path and its required subclasses
+# oops/path/path_.py
 ##########################################################################################
 
-import numpy as np
 import re
 
-from polymath              import Qube, Scalar, Vector3
+from polymath              import Qube, Vector3
 from oops.cache            import Cache
-from oops.config           import PATH_PHOTONS, LOGGING, PICKLE_CONFIG
+from oops.config           import PICKLE_CONFIG
 from oops.event            import Event
 from oops.frame.frame_     import Frame, J2000Frame
 from oops.frame.spiceframe import SpiceFrame
 from oops.mutable          import Mutable
-import oops.constants as constants
 
 
 class Path(Mutable):
     """Path is an abstract class that can return an Event (time, position and velocity)
-    given a time or Scalar times. The coordinates are specified in a particular frame and
-    relative to another path. The method `event_at_time` generates these Events.
+    given a time or a Scalar of times. The coordinates are specified in a particular
+    Frame and relative to another path. The method `event_at_time` generates these Events.
 
     Upon construction, each Path has a "primary definition" relative to its specified,
     pre-existing origin Path and reference Frame. For example, a `KeplerPath` describes an
@@ -26,28 +24,31 @@ class Path(Mutable):
 
     Once a Path is defined, you can calculate Events (defined by a time and state
     vector) relative to different Paths and transform those events between different Paths
-    and Frames. The method `wrt` (for "with respect to"), returns a Path object whose
+    and Frames. The method `wrt` (for "with respect to") returns a Path object whose
     `event_at_time` method converts Events between different origins and Frames.
 
-    For example, suppose `saturn` is a Path defining the center and rotating frame of the
-    planet Saturn. In addition, suppose 'cassini_wac' is a Path defining the position of
-    the Cassini spacecraft and the orientation of its wide-angle camera. Then the Frame
-    defined by::
+    For example, suppose `saturn` is a Path defining the center of Saturn, using Saturn's
+    rotating Frame. A lightning flash on the surface of Saturn might be described as an
+    Event relative to the center of Saturn and in Saturn's Frame. In addition, suppose
+    `cassini_wac` is a Path defining the position of the Cassini spacecraft, using the
+    Frame of its wide-angle camera. Then the Path defined by::
 
         saturn_wrt_wac = saturn.wrt(cassini_wac)
 
-    will return, for any given time(s), the position of a feature on the surface of Saturn
-    to that feature's position in the field of view of the Cassini camera.
+    can be used to express the location of the same lightning flash in an image taken by
+    the Cassini camera. In short, Path objects make it easy to convert Events between
+    different Paths and Frames.
 
     Furthermore, the Path methods `photon_to_event` and `photon_from_event` will perform
-    these calculations allowing for the light travel time, position, and stellar aberation
-    for when an Event on one Path is observed at another.
+    these calculations allowing for the light travel time, position, and stellar
+    aberration for when an Event relative to one Path object is observed relative to
+    another.
 
     Every Path also has a `waypoint` property, which provides a unique identifier for that
     Path without regard to its origin or Frame. In the example above, `saturn` and
-    `saturn_wrt_wac` will have the same `waypoint`, meaning that they define Events
-    relative to the same Path and in the same Frame. The waypoint can be used in almost
-    any place where the Path itself can be used, so this would also have worked::
+    `saturn_wrt_wac` will have the same `waypoint`, meaning that they define Events on the
+    same path, albeit relative to different Paths and Frames. The waypoint can be used in
+    almost any place where the Path itself can be used, so this would also have worked::
 
         saturn_wrt_wac = saturn.waypoint.wrt(cassini_wac.waypoint)
 
@@ -70,21 +71,27 @@ class Path(Mutable):
     In general, two Paths cannot be assigned the same ID. If you attempt to reuse an ID,
     that ID will have a new version number appended to make it unique. For example, if a
     Path named "SATURN" already exists, the new Path will actually have the ID "SATURN-2".
-    However, if the new Frame is functionally identical to the existing frame called
+    However, if the new Path is functionally identical to the existing path called
     "SATURN", then its ID will also be "SATURN".
 
     Properties:
         * path_id (str or None): The optional ID string for this Path. Once registered,
-          a Path can be referenced globally by this its Path ID.
+          a Path can be referenced globally by its Path ID.
+        * stripped_id (str or None): The Path ID with any numeric suffix stripped; None if
+          this Path is not registered.
+        * string_id (str): The Path ID if this Path is registered; otherwise, a unique
+          string derived from its Python id().
+        * is_registered (bool): True if this Path is registered.
         * origin (Path): The Path relative to which state vectors are defined.
         * frame (Frame): The Frame used by coordinates that are returned by this Path's
           `event_at_time` method.
         * primary (Path): The primary definition of this Path.
-        * wayframe (Path): A Path object that uniquely identifies this path, irrespective
+        * waypoint (Path): A Path object that uniquely identifies this path, irrespective
           of any particular origin and frame. Under most circumstances, this is the Path's
           primary definition.
         * shape (tuple): The shape of the Path object. This is the shape of the Event
           object returned by `event_at_time` when it is called with a single time value.
+        * wrt_ssb (Path): This Path relative to the Solar System Barycenter and J2000.
     """
 
     _Body = None                # Filled in by oops/__init__.py
@@ -110,8 +117,8 @@ class Path(Mutable):
 
     @property
     def pickle_quickpath_details(self):
-        """If True, the full tabulation of all QuickPaths is included when pickling this
-        Path.
+        """True if the full tabulation of all QuickPaths is to be included when pickling
+        this Path.
         """
         if not hasattr(self, '_pickle_quickpath_details'):
             return PICKLE_CONFIG.quickpath_details
@@ -139,17 +146,22 @@ class Path(Mutable):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Event): The Event object containing (at least) the time, position, and
-                velocity on the Path.
+            Event: The Event object containing (at least) the time, position, and velocity
+            on this Path.
 
         Raises:
+            NotImplementedError: If the subclass does not override this method.
             ValueError: If the shapes of `time` and this object cannot be broadcasted.
+
+        Notes:
+            The time and this Path object are not required to have the same shape;
+            standard rules of broadcasting apply.
         """
 
         raise NotImplementedError(f'{type(self).__name__}.event_at_time is not '
@@ -237,7 +249,8 @@ class Path(Mutable):
     @property
     def string_id(self):
         """The ID of this Path if it is registered; otherwise, a unique string derived
-        from its Python id()."""
+        from its Python id().
+        """
         return self._path_id if self._path_id else f'#{id(self)}'
 
     @property
@@ -259,7 +272,7 @@ class Path(Mutable):
 
     _PATH_REGISTRY = {}     # path ID -> waypoint
     _PATH_CACHE = {}        # waypoint or (waypoint, origin) or (waypoint, origin, frame)
-                            #       -> linked "wrt" frame
+                            #       -> linked "wrt" path
     _PATH_SUBCLASSES = []   # list of all subclasses of Path
 
     @staticmethod
@@ -282,15 +295,21 @@ class Path(Mutable):
         """Fill in this Path's waypoint and path_id; register if necessary.
 
         Parameters:
-            path_id (str, optional): Name under which to register this Path; omit to leave
-            this Path un-registered.
+            path_id (str, optional): Name under which to register this Path; omit to
+                leave this Path un-registered.
         """
 
         # Fill in the _key and the waypoint. A class without a _WAYPOINTS dictionary
-        # does not share waypoints; each of its instances is its own waypoint.
+        # does not share waypoints; each of its instances is its own waypoint. Neither
+        # does an object that is still unfrozen: its key is derived from parameters that
+        # can still be fitted, so two Paths that agree now might not agree later.
+        # _reregister() adds it to the pool once it has been frozen.
         if hasattr(type(self), '_WAYPOINTS'):
             self._key = Cache.clean_key(self._waypoint_key())
-            self._waypoint = self._WAYPOINTS.setdefault(self._key, self)
+            if self._is_frozen():
+                self._waypoint = self._WAYPOINTS.setdefault(self._key, self)
+            else:
+                self._waypoint = self
         else:
             self._waypoint = self
 
@@ -305,7 +324,7 @@ class Path(Mutable):
                     # Otherwise, add a numeric suffix to make it unique
                     k = 2
                     while True:
-                        alt_path_id = f'{path_id}_{k}'
+                        alt_path_id = f'{path_id}-{k}'
                         if alt_path_id not in Path._PATH_REGISTRY:
                             break
                         k += 1
@@ -344,7 +363,11 @@ class Path(Mutable):
         self._primary = self
 
     def _reregister(self):
-        """Update this Path's key in the cache if it has now been frozen."""
+        """Update this Path's key in the cache now that it has been frozen.
+
+        A Path that was left out of the pool by `_register` because it was unfrozen is
+        added to the pool here.
+        """
 
         # A Path that is its own waypoint has no key to update
         if not hasattr(type(self), '_WAYPOINTS'):
@@ -363,10 +386,10 @@ class Path(Mutable):
         """The Path object given a path or its registered ID.
 
         Parameters:
-            path (Path or str): The Path or the Path's ID string.
+            path (Path or str): The Path or the Path's ID.
 
         Returns:
-            (Path): The Path, converted from the ID if `path` is a string.
+            Path: The Path, converted from the ID if `path` is a string.
 
         Raises:
             KeyError: If `path` is an ID that has not been registered.
@@ -382,10 +405,10 @@ class Path(Mutable):
         """The primary definition of a Path object.
 
         Parameters:
-            path (Frame or str): The Path or the Path's ID string.
+            path (Path or str): The Path or the Path's ID.
 
         Returns:
-            (Frame): The Path representing this Path's primary definition.
+            Path: The Path representing this Path's primary definition.
 
         Raises:
             KeyError: If `path` is an ID string that has not been registered.
@@ -404,10 +427,10 @@ class Path(Mutable):
         was assigned this definition.
 
         Parameters:
-            path (Path or str): The Path or the Path's ID string.
+            path (Path or str): The Path or the Path's ID.
 
         Returns:
-            (Frame): The canonical Path, converted from the ID if `path` is a string.
+            Path: The canonical Path, converted from the ID if `path` is a string.
 
         Raises:
             KeyError: If `path` is an ID string that has not been registered.
@@ -426,7 +449,7 @@ class Path(Mutable):
             path_id (str): An ID string.
 
         Returns:
-            (bool): True if a Path has been registered under this ID.
+            bool: True if a Path has been registered under this ID.
         """
 
         return path_id in Path._PATH_REGISTRY
@@ -451,6 +474,13 @@ class Path(Mutable):
             quick (dict or bool, optional): An optional dictionary of parameter values to
                 use as overrides to the configured default QuickPath and QuickFrame
                 parameters; use False to disable the use of QuickPaths and QuickFrames.
+
+        Returns:
+            Event: The given `event` relative to this Path.
+
+        Raises:
+            ValueError: If the Event's origin does not match this Path's origin, or if the
+                two objects do not use the same frame.
         """
 
         # Check for compatibility
@@ -473,10 +503,11 @@ class Path(Mutable):
                      **event.subfields)
 
     def add_to_event(self, event, *, derivs=True, quick=None):
-        """An equivalent event, using the origin of this path as the origin.
+        """An equivalent Event, using the origin of this Path as the origin.
 
         Parameters:
-            event (Event): The Event object to which this path is to be added. This Path's
+            event (Event): The Event object to which this path is to be added. The Event's
+                origin must be this Path, and the two objects must use the same frame.
             derivs (bool, optional): True to include derivatives in the attributes of the
                 returned Event. The specific derivatives included will depend on the Path
                 subclass and those within the given Event. Time derivatives are always
@@ -484,6 +515,13 @@ class Path(Mutable):
             quick (dict or bool, optional): An optional dictionary of parameter values to
                 use as overrides to the configured default QuickPath and QuickFrame
                 parameters; use False to disable the use of QuickPaths and QuickFrames.
+
+        Returns:
+            Event: The given `event` relative to the origin of this Path.
+
+        Raises:
+            ValueError: If the Event's origin is not this Path, or if the two objects do
+                not use the same frame.
         """
 
         # Check for compatibility
@@ -505,390 +543,6 @@ class Path(Mutable):
                      **event.subfields)
 
     ######################################################################################
-    # Photon Solver
-    ######################################################################################
-
-    def photon_to_event(self, arrival, *, derivs=False, guess=None, antimask=None,
-                        quick=None, converge=None):
-        """The photon departure event from this Path to match the arrival event.
-
-        Parameters:
-            arrival (Event): The Event of a photon's arrival.
-            derivs (bool, optional): True to propagate derivatives of the `arrival`
-                position into the returned Events. The time derivative is always retained.
-            guess (Scalar, array-like, or float, optional): An initial guess to use as the
-                event time along this Path; otherwise None. Should be provided if the
-                event time was already returned from a similar calculation.
-            antimask (array-like, or bool, optional): A boolean array to be applied to
-                event times and positions. Only the indices where antimask=True will be
-                used in the solution.
-            quick (dict or bool, optional): An optional dictionary of parameter values to
-                use as overrides to the configured default QuickPath and QuickFrame
-                parameters; use False to disable the use of QuickPaths and QuickFrames.
-                The default quick dictionary is defined in config.py.
-            converge (dict, optional): An optional dictionary of parameters to override
-                the configured default convergence parameters. The default configuration
-                is defined in config.py. Convergence parameters are as follows:
-
-                * `max_iterations` (int): The maximum number of iterations of Newton's
-                  method to perform. It should almost never need to be > 6.
-                * `dlt_precision` (float): Iteration stops when the largest change in
-                  light travel time between one iteration and the next falls below this
-                  threshold (in seconds).
-                * `dlt_limit` (float): The maximum allowed absolute value of the change in
-                  light travel time from the nominal range calculated initially. Changes
-                  in light travel with absolute values larger than this limit are clipped.
-                  This prevents the divergence of the solution in some cases.
-
-        Returns:
-            (tuple): Two Events (`path_event`, `arrival_event`).
-
-            * `path_event` (Event): The Event on this Path that matches the light travel
-              time from `arrival`. This Event always has position (0,0,0) on the Path.
-            * `arrival_event` (Event): A copy of the given `arrival` with the photon's
-              line of sight and light travel time filled in.
-
-        Notes:
-            These subfields are defined in the returned Events:
-
-            * In `path_event`, `dep` (Vector3) is the direction of the departing photon
-              from this Path; `dep_lt` (Scalar) is the light travel time from this Path to
-              the `arrival_event`.
-            * In `arrival_event`: `arr` (Vector3) is the direction of the arriving photon
-              from this Path; `arr_lt` (Scalar) is the light travel time from this Path to
-              the `arrival_event`.
-        """
-
-        return self._solve_photon(arrival, -1, derivs=derivs, guess=guess,
-                                  antimask=antimask, quick=quick, converge=converge)
-
-    def photon_from_event(self, departure, *, derivs=False, guess=None, antimask=None,
-                          quick=None, converge=None):
-        """The photon arrival event at this Path to match the departure event.
-
-        Parameters:
-            departure (Event): The Event of a photon's departure.
-            derivs (bool, optional): True to propagate derivatives of the `departure`
-                position into the returned Events. The time derivative is always retained.
-            guess (Scalar, array-like, or float, optional): An initial guess to use as the
-                event time along this Path; otherwise None. Should be provided if the
-                event time was already returned from a similar calculation.
-            antimask (array-like, or bool, optional): A boolean array to be applied to
-                event times and positions. Only the indices where antimask=True will be
-                used in the solution.
-            quick (dict or bool, optional): An optional dictionary of parameter values to
-                use as overrides to the configured default QuickPath and QuickFrame
-                parameters; use False to disable the use of QuickPaths and QuickFrames.
-                The default quick dictionary is defined in config.py.
-            converge (dict, optional): An optional dictionary of parameters to override
-                the configured default convergence parameters. The default configuration
-                is defined in config.py. Convergence parameters are as follows:
-
-                * `max_iterations` (int): The maximum number of iterations of Newton's
-                  method to perform. It should almost never need to be > 6.
-                * `dlt_precision` (float): Iteration stops when the largest change in
-                  light travel time between one iteration and the next falls below this
-                  threshold (in seconds).
-                * `dlt_limit` (float): The maximum allowed absolute value of the change in
-                  light travel time from the nominal range calculated initially. Changes
-                  in light travel with absolute values larger than this limit are clipped.
-                  This prevents the divergence of the solution in some cases.
-
-        Returns:
-            (tuple): Two Events (`path_event`, `departure_event`).
-
-            * `path_event` (Event): The Event on this Path that matches the light travel
-              time from the link event. This Event always has position (0,0,0) on the
-              path.
-            * `departure_event` (Event): A copy of the given `link`, with the photon arrival or
-              departure line of sight and light travel time filled in.
-
-        Notes:
-            These subfields are defined in the returned Events:
-
-            * In `path_event`, `dep` (Vector3) is the direction of the departing photon
-              from this Path; `dep_lt` (Scalar) is the light travel time from this Path to
-              the `link_event`.
-            * In `departure_event`: `arr` (Vector3) is the direction of the arriving photon
-              from this Path; `arr_lt` (Scalar) is the light travel time from this Path to
-              the `departure_event`.
-        """
-
-        return self._solve_photon(departure, 1, derivs=derivs, guess=guess,
-                                  antimask=antimask, quick=quick, converge=converge)
-
-    def _solve_photon(self, link, sign, *, derivs=False, guess=None, antimask=None,
-                      quick=None, converge=None):
-
-        """Solve for a photon arrival or departure event on this path.
-
-        Parameters:
-            link (Event): The Event of a photon's arrival or departure.
-            sign (int): -1 to return earlier Events, corresponding to photons departing
-                from this Path and arriving at the Event; +1 to return later Events,
-                corresponding to photons arriving at this Path after departing from the
-                Event.
-            derivs (bool, optional): True to propagate derivatives of the link position
-                into the returned event. The time derivative is always retained.
-            guess (Scalar, array-like, or float, optional): An initial guess to use as the
-                event time along this Path; otherwise None. Should be provided if the
-                event time was already returned from a similar calculation.
-            antimask (array-like, or bool, optional): A boolean array to be applied to
-                event times and positions. Only the indices where antimask=True will be
-                used in the solution.
-            quick (dict or bool, optional): An optional dictionary of parameter values to
-                use as overrides to the configured default QuickPath and QuickFrame
-                parameters; use False to disable the use of QuickPaths and QuickFrames.
-                The default quick dictionary is defined in config.py.
-            converge (dict, optional): An optional dictionary of parameters to override
-                the configured default convergence parameters. The default configuration
-                is defined in config.py. Convergence parameters are as follows:
-
-                * `max_iterations` (int): The maximum number of iterations of Newton's
-                  method to perform. It should almost never need to be > 6.
-                * `dlt_precision` (float): Iteration stops when the largest change in
-                  light travel time between one iteration and the next falls below this
-                  threshold (in seconds).
-                * `dlt_limit` (float): The maximum allowed absolute value of the change in
-                  light travel time from the nominal range calculated initially. Changes
-                  in light travel with absolute values larger than this limit are clipped.
-                  This prevents the divergence of the solution in some cases.
-
-        Returns:
-            (tuple): Two Events (`path_event`, `link_event`).
-
-            * `path_event` (Event): The Event on this Path that matches the light travel
-              time from the link event. This Event always has position (0,0,0) on the
-              path.
-            * `link_event` (Event): A copy of the given `link`, with the photon arrival or
-              departure line of sight and light travel time filled in.
-        """
-
-        # Internal function to return an entirely masked result
-        def fully_masked_results():
-            vector3 = Vector3(np.ones(original_link.shape + (3,)), True)
-            scalar = Scalar(vector3.values[...,0], True)
-
-            if derivs:
-                scalar.insert_deriv('t', Scalar(1., True), override=True)
-                scalar.insert_deriv('los',
-                                    Scalar(np.ones((1,3)), True, drank=1),
-                                    override=True)
-
-                vector3.insert_deriv('t', Vector3((1,1,1), True), override=True)
-                vector3.insert_deriv('los',
-                                     Vector3(np.ones((3,3)), True, drank=1),
-                                     override=True)
-
-            new_link = original_link.replace(link_key, vector3,
-                                             link_key + '_lt', scalar)
-            new_link = new_link.as_all_masked()
-
-            path_event = new_link.as_all_masked(origin=self.origin,
-                                                frame=self.frame.wayframe)
-            path_event = path_event.replace(path_key, vector3,
-                                            path_key + '_lt', scalar)
-
-            return (path_event, new_link)
-
-        original_link = link
-
-        # Handle derivatives
-        if not derivs:
-            link = link.wod     # preserves time-derivatives; removes others
-
-        # Assemble convergence parameters
-        if converge:
-            defaults = PATH_PHOTONS.__dict__.copy()
-            defaults.update(converge)
-            converge = defaults
-        else:
-            converge = PATH_PHOTONS.__dict__
-
-        iters = converge['max_iterations']
-        precision = converge['dlt_precision']
-        limit = converge['dlt_limit']
-
-        # Interpret the quick parameters
-        if quick is None:
-            quick = {}
-        if isinstance(quick, dict):
-            quick = quick.copy()
-            quick['path_time_extension'] = limit
-            quick['frame_time_extension'] = limit
-
-        # Iterate to a solution for the light travel time "lt". Define
-        #   y = separation_distance(time + lt) - sign * c * lt
-        # where lt is negative for earlier linking events and positive for later linking
-        # events.
-        #
-        # Solve for the value of lt at which y = 0, using Newton's method.
-        #
-        # Approximate the function as linear around the solution:
-        #   y[n+1] - y[n] = (lt[n+1] - lt[n]) * dy_dlt
-        # Our goal is for the next value of y, y[n+1], to equal zero. Our most recent
-        # guess is (lt[n], y[n]).
-        #
-        # What should we use for lt[n+1]?
-        #   lt[n+1] = lt[n] - y[n] / dy_dlt
-        #
-        # The function y is shown above. Its derivative is
-        #   dy_dlt = outward_speed - sign * c
-
-        # Interpret the sign
-        signed_c = sign * constants.C
-        if sign < 0.:
-            path_key = 'dep'
-            link_key = 'arr'
-        else:
-            link_key = 'dep'
-            path_key = 'arr'
-
-        # Define the antimask
-        if antimask is None:
-            antimask = link.antimask
-        else:
-            antimask = antimask & link.antimask
-
-        # If the link is entirely masked...
-        if not np.any(antimask):
-            return fully_masked_results()
-
-        # Shrink the event
-        link = link.shrink(antimask)
-
-        # Define quantities with respect to SSB in J2000
-        link_wrt_ssb = link.wrt_ssb(derivs=derivs, quick=quick)
-        path_wrt_ssb = self.wrt(Path.SSB, Frame.J2000)
-
-        # Prepare for iteration, avoiding any derivatives for now
-        link_time = link.time.wod
-        link_pos_ssb = link_wrt_ssb.pos.wod
-        link_vel_ssb = link_wrt_ssb.vel.wod
-        link_shape = link.shape
-
-        # Make initial guesses at the path event time
-        if guess is not None:
-            path_time = Scalar.as_scalar(guess).wod.shrink(antimask)
-            lt = path_time - link_time
-        else:
-            lt = (path_wrt_ssb.event_at_time(link_time, quick=quick).pos.wod
-                  - link_pos_ssb).norm() / signed_c
-            path_time = link_time + lt
-
-        # Set light travel time limits to avoid a diverging solution
-        lt_min = (path_time - link_time).min() - limit
-        lt_max = (path_time - link_time).max() + limit
-
-        lt_min = lt_min.as_builtin()
-        lt_max = lt_max.as_builtin()
-
-        # Broadcast the path_time to encompass the shape of the path, if any
-        shape = Qube.broadcasted_shape(path_time, link_shape)
-        if path_time.shape != shape:
-            path_time = path_time.broadcast_to(shape)
-
-        # Iterate a fixed number of times or until the threshold of error
-        # tolerance is reached. Convergence takes just a few iterations.
-        max_dlt = np.inf
-        prev_lt = None
-        converged = False
-        for count in range(iters):
-
-            # Quicken the path as soon as the range of times indicates that this would
-            # be beneficial. `quick` is still passed below, because a Path that does not
-            # use QuickPaths itself might be built upon one that does.
-            path_wrt_ssb = path_wrt_ssb.quick_path(path_time, quick=quick)
-
-            # Evaluate the photon's current SSB position based on time
-            path_event_ssb = path_wrt_ssb.event_at_time(path_time, quick=quick)
-            delta_pos_ssb = path_event_ssb.pos.wod - link_pos_ssb
-            delta_vel_ssb = path_event_ssb.vel.wod - link_vel_ssb
-
-            dlt = ((delta_pos_ssb.norm() - lt * signed_c)
-                   / (delta_vel_ssb.proj(delta_pos_ssb).norm() - signed_c))
-            new_lt = (lt - dlt).clip(lt_min, lt_max, remask=False)
-            dlt = lt - new_lt
-
-            prev_lt = lt
-            lt = new_lt
-
-            # Re-evaluate the path time
-            path_time = link_time + lt
-
-            # Test for convergence
-            prev_max_dlt = max_dlt
-            max_dlt = abs(dlt).max(builtins=True, masked=-1.)
-
-            if LOGGING.surface_iterations:
-                LOGGING.performance(f'Path._solve_photon: iter={count+1}; '
-                                    f'change={max_dlt:.6g}')
-
-            if max_dlt <= precision:
-                converged = True
-                break
-
-            if max_dlt >= prev_max_dlt:
-                break
-
-        # END OF LOOP
-
-        if not converged:
-            LOGGING.warn(f'Path._solve_photon did not converge: iter={count+1}; '
-                         f'change={max_dlt:.6g}')
-
-        # If the link is entirely masked...
-        if max_dlt < 0.:
-            return fully_masked_results()
-
-        # Restore derivatives to path_time if necessary
-        # This is a repeat of the final iteration, but with derivatives included
-        if derivs:
-            delta_pos_ssb = path_event_ssb.state - link_wrt_ssb.state
-            delta_vel_ssb = path_event_ssb.vel - link_wrt_ssb.vel
-
-            dlt = ((delta_pos_ssb.norm() - prev_lt * signed_c)
-                   / (delta_vel_ssb.proj(delta_pos_ssb).norm() - signed_c))
-            new_lt = (prev_lt - dlt).clip(lt_min, lt_max, remask=False)
-            path_time = link.time + new_lt
-
-            # The path_time contains a time derivative due to the motion of the
-            # link. We rename this derivative from 't' to 'T' to avoid
-            # confusion.
-            path_time = path_time.rename_deriv('t', 'T', method='add')
-
-        # Construct the returned event
-        path_event_ssb = path_wrt_ssb.event_at_time(path_time, quick=quick)
-        link_event_ssb = link_wrt_ssb.copy()
-
-        # Fill in the key subfields
-        if sign > 0:
-            ray_vector_ssb = (path_event_ssb.state
-                              - link_event_ssb.state).as_readonly()
-        else:
-            ray_vector_ssb = (link_event_ssb.state
-                              - path_event_ssb.state).as_readonly()
-
-        lt = ray_vector_ssb.norm(recursive=derivs) / signed_c
-
-        path_event_ssb = path_event_ssb.replace(path_key, ray_vector_ssb,
-                                                path_key + '_lt', -lt)
-
-        # Transform the path event into its origin and frame
-        path_event = path_event_ssb.from_ssb(self, self.frame, derivs=derivs,
-                                             quick=quick)
-
-        # Transform the light ray into the link's frame
-        new_link = link.replace(link_key + '_j2000', ray_vector_ssb,
-                                link_key + '_lt', lt)
-
-        # Unshrink
-        path_event = path_event.unshrink(antimask)
-        new_link = new_link.unshrink(antimask)
-
-        return (path_event, new_link)
-
-    ######################################################################################
     # Path Generators
     ######################################################################################
 
@@ -906,6 +560,9 @@ class Path(Mutable):
                 the `origin`.
             use_shortcuts (bool, optional): False to prevent checking for a class-specific
                 shortcut.
+
+        Returns:
+            Path: This Path relative to the specified origin and frame.
 
         Raises:
             KeyError: If `origin` or `frame` is an ID string that has not been registered.
@@ -980,6 +637,9 @@ class Path(Mutable):
             frame (Frame or str, optional): A Frame object or its registered ID. The
                 default is to use the Frame of the `origin`.
 
+        Returns:
+            Path: This Path relative to the specified origin and frame.
+
         Raises:
             KeyError: If `origin` or `frame` is an ID string that has not been registered.
         """
@@ -998,7 +658,7 @@ class Path(Mutable):
             frame (Frame): The Frame, which must be a valid wayframe.
 
         Returns:
-            (Frame or None): The "shortcut" Path if it could be constructed.
+            Path or None: The "shortcut" Path if it could be constructed.
         """
 
         return None
@@ -1012,11 +672,15 @@ class Path(Mutable):
         of an image.
 
         Parameters:
-            time (Scalar or array-like): The times at which the frame is to be evaluated.
+            time (Scalar): The time(s) at which this path is to be evaluated.
             quick (dict or bool, optional): If False, no QuickPath is created and `self`
                 is returned; if a dictionary, then the values provided override the values
                 in the default dictionary QUICK.dictionary, and the merged dictionary is
                 used.
+
+        Returns:
+            QuickPath: A Path that approximates this Path for the given range of times,
+            but can be evaluated quickly via splines.
 
         Notes:
             Any QuickPaths generated by this function are saved as a list inside
@@ -1033,14 +697,14 @@ class Path(Mutable):
 ##########################################################################################
 
 class NullPath(Path):
-    """A Path subclass that transforms a Path to itself."""
+    """A Path subclass that defines a Path relative to itself."""
 
     def __init__(self, path, frame=None):
         """Constructor for a NullPath.
 
         Parameters:
-            path (Path or str): The waypoint or Path ID to use as the returned Path,
-                preserving its origin and frame.
+            path (Path or str): The waypoint or Path ID to use as the origin of the
+                returned Path, from which it will always have a zero-valued offset.
             frame (Frame or str, optional): The wayframe or Frame ID to use in the
                 returned Path; by default, this is the Path's `frame` attribute.
 
@@ -1077,18 +741,14 @@ class NullPath(Path):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Event): The Event object containing (at least) the time, position, and
-                velocity on the Path.
-
-        Notes:
-            The time and this Path object are not required to have the same shape;
-            standard rules of broadcasting apply.
+            Event: The Event object containing (at least) the time, position, and velocity
+            on this Path.
         """
 
         return Event(time, (Vector3.ZERO, Vector3.ZERO), self._origin, self._frame)
@@ -1145,8 +805,7 @@ class SSBPath(NullPath):
         return 'SSB'
 
     def _get_shortcut(self, origin, frame):
-        """A Path that directly transforms from the given orign and frame to this
-        SpicePath.
+        """A Path that directly transforms from the given origin and frame to this Path.
 
         This is an override of the default method, needed because the SPICE Toolkit can
         handle the connections between the SSB and SpicePaths very efficiently.
@@ -1156,7 +815,7 @@ class SSBPath(NullPath):
             frame (Frame): The Frame, which must be a valid wayframe.
 
         Returns:
-            (Frame or None): The "shortcut" Path if it could be constructed.
+            Path or None: The "shortcut" Path if it could be constructed.
         """
 
         if (isinstance(origin, Frame._SpicePath)
@@ -1176,9 +835,9 @@ class LinkedPath(Path):
         """Constructor for a LinkedPath.
 
         Parameters:
-            path (Path): A Path, which must be defined relative to the origin and frame
-                of the given `parent`.
-            parent (Path): The Path to which the above will be linked.
+            path (Path or str): The Path or ID defining a Path, which must be defined
+                relative to the origin and frame of the given `parent`.
+            parent (Path or str): The Path or ID to which `path` will be linked.
 
         Raises:
             KeyError: If `path` or `parent` is an ID string that has not been registered.
@@ -1221,18 +880,18 @@ class LinkedPath(Path):
     def __setstate__(self, state):
         self.__init__(*state)
 
-    def event_at_time(self, time, quick=None):
+    def event_at_time(self, time, *, quick=None):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Event): The Event object containing (at least) the time, position, and
-                velocity on the Path.
+            Event: The Event object containing (at least) the time, position, and velocity
+            on this Path.
         """
 
         event = self._path.event_at_time(time, quick=quick)
@@ -1252,10 +911,11 @@ class RelativePath(Path):
     def __init__(self, path, origin):
         """Constructor for a RelativePath.
 
-        Input:
-            path (Path or str): The Path or ID defining the endpoint of the Path returned.
-            origin (Path or str): The Path or ID defining the origin and frame of the Path
-                returned.
+        Parameters:
+            path (Path or str): The Path or ID defining the Path whose position is to be
+                measured relative to `origin`.
+            origin (Path or str): The Path or ID defining the new origin. It must have the
+                same origin as `path`.
 
         Raises:
             KeyError: If `path` or `origin` is an ID string that has not been registered.
@@ -1302,18 +962,18 @@ class RelativePath(Path):
     def __setstate__(self, state):
         self.__init__(*state)
 
-    def event_at_time(self, time, quick=None):
+    def event_at_time(self, time, *, quick=None):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Event): The Event object containing (at least) the time, position, and
-                velocity on the Path.
+            Event: The Event object containing (at least) the time, position, and velocity
+            on this Path.
         """
 
         event = self._path.event_at_time(time, quick=quick)
@@ -1327,7 +987,7 @@ class RelativePath(Path):
 class ReversedPath(Path):
     """ReversedPath generates the reversed Events from that of a given Path.
 
-    The frame is that of the orginal origin.
+    The frame is that of the original origin.
     """
 
     def __init__(self, path):
@@ -1337,7 +997,7 @@ class ReversedPath(Path):
             path (Path or str): The Path or ID defining the Path to reverse.
 
         Raises:
-            KeyError: If `path`is an ID string that has not been registered.
+            KeyError: If `path` is an ID string that has not been registered.
         """
 
         path = Path.as_path(path)
@@ -1362,18 +1022,18 @@ class ReversedPath(Path):
     def __setstate__(self, state):
         self.__init__(*state)
 
-    def event_at_time(self, time, quick=None):
+    def event_at_time(self, time, *, quick=None):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Event): The Event object containing (at least) the time, position, and
-                velocity on the Path.
+            Event: The Event object containing (at least) the time, position, and velocity
+            on this Path.
         """
 
         event = self._path.event_at_time(time, quick=quick)
@@ -1427,18 +1087,18 @@ class RotatedPath(Path):
     def __setstate__(self, state):
         self.__init__(*state)
 
-    def event_at_time(self, time, quick=None):
+    def event_at_time(self, time, *, quick=None):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Event): The Event object containing (at least) the time, position, and
-                velocity on the Path.
+            Event: The Event object containing (at least) the time, position, and velocity
+            on this Path.
         """
 
         event = self._path.event_at_time(time, quick=quick)
@@ -1450,5 +1110,10 @@ class RotatedPath(Path):
 
 # Initialize Path.SSB
 Path.SSB = SSBPath()
+
+from ._photon_solver import photon_to_event, photon_from_event, _solve_photon
+Path.photon_to_event   = photon_to_event
+Path.photon_from_event = photon_from_event
+Path._solve_photon     = _solve_photon
 
 ##########################################################################################

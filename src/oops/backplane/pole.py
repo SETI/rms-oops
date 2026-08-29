@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/backplanes/pole.py: Pole angle backplanes
-################################################################################
+##########################################################################################
 
 from polymath       import Scalar, Vector3, Matrix3
 from oops.backplane import Backplane
@@ -45,7 +45,6 @@ def pole_clock_angle(self, event_key):
 
     return self.register_backplane(key, clock_angle)
 
-#===============================================================================
 def pole_position_angle(self, event_key):
     """Projected angle of a body's pole vector on the sky, measured from
     celestial north toward celestial east (i.e., counterclockwise on the sky).
@@ -61,8 +60,8 @@ def pole_position_angle(self, event_key):
     clock = self.pole_clock_angle(event_key)
     return self.register_backplane(key, Scalar.TWOPI - clock)
 
-################################################################################
+##########################################################################################
 
 Backplane._define_backplane_names(globals().copy())
 
-################################################################################
+##########################################################################################

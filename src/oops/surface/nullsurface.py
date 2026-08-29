@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/surface/nullsurface.py: NullSurface subclass of class Surface
-################################################################################
+##########################################################################################
 
 from polymath              import Scalar, Vector3
 from oops.frame.frame_     import Frame
@@ -8,22 +8,20 @@ from oops.path.path_       import Path
 from oops.surface.surface_ import Surface
 
 class NullSurface(Surface):
-    """A subclass of Surface of describing an infinitesimal surface centered on
-    the specified path, and using the specified coordinate frame.
+    """A subclass of Surface of describing an infinitesimal surface centered on the
+    specified path, and using the specified coordinate frame.
     """
 
     COORDINATE_TYPE = 'rectangular'
 
-    #===========================================================================
     def __init__(self, origin, frame):
         """Constructor for a NullSurface surface.
 
-        Input:
-            origin      a Path object or ID defining the motion of the center
-                        of the ring plane.
-
-            frame       a Frame object or ID in which the surface's "normal" is
-                        defind by the z-axis.
+        Parameters:
+            origin (Path): Object or ID defining the motion of the center of the ring
+                plane.
+            frame (Frame): Object or ID in which the surface's "normal" is defind by the
+                z-axis.
         """
 
         self.origin = Path.as_waypoint(origin)
@@ -44,31 +42,29 @@ class NullSurface(Surface):
         self.__init__(*state)
         self.freeze()
 
-    #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
                                        derivs=False, guess=None):
         """Surface coordinates associated with a position vector.
 
-        For NullSurface, the coordinates are simply the (x,y,z) rectangular
-        coordinates relative to the surface's origin and frame.
+        For NullSurface, the coordinates are simply the (x,y,z) rectangular coordinates
+        relative to the surface's origin and frame.
 
-        Input:
-            pos         a Vector3 of positions at or near the surface, relative
-                        to this surface's origin and frame.
-            obs         a Vector3 of observer position relative to this
-                        surface's origin and frame; ignored for this Surface
-                        subclass.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        for this Surface subclass.
-            axes        2 or 3, indicating whether to return the first two
-                        coordinates (x, y) or all three (x, y, z) coordinates as
-                        Scalars.
-            derivs      True to propagate any derivatives inside pos and obs
-                        into the returned coordinates.
-            guess       ignored.
+        Parameters:
+            pos (Vector3): Positions at or near the surface, relative to this surface's
+                origin and frame.
+            obs (Vector3, optional): Observer position relative to this surface's origin
+                and frame; ignored for this Surface subclass.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+                this Surface subclass.
+            axes (int, optional): 2 or 3, indicating whether to return the first two
+                coordinates (x, y) or all three (x, y, z) coordinates as Scalars.
+            derivs (bool, optional): True to propagate any derivatives inside pos and obs
+                into the returned coordinates.
+            guess (object, optional): Ignored.
 
-        Return:         coordinate values packaged as a tuple containing two or
-                        three Scalars, one for each coordinate.
+        Returns:
+            Coordinate values packaged as a tuple containing two or three Scalars,
+                one for each coordinate.
         """
 
         # Validate inputs
@@ -78,27 +74,25 @@ class NullSurface(Surface):
         pos = Vector3.as_vector3(pos, recursive=derivs)
         return pos.to_scalars(derivs)[:axes]
 
-    #===========================================================================
     def vector3_from_coords(self, coords, obs=None, time=None, derivs=False):
-        """The position where a point with the given coordinates falls relative
-        to this surface's origin and frame.
+        """The position where a point with the given coordinates falls relative to this
+        surface's origin and frame.
 
-        Input:
-            coords      a tuple of two or three Scalars defining coordinates at
-                        or near this surface. These are the (x,y,z) rectangular
-                        coordinates relative to the surface's origin and frame.
-                        They can have different shapes, but must be
-                        broadcastable to a common shape.
-            obs         a Vector3 of observer position relative to this
-                        surface's origin and frame; ignored for this Surface
-                        subclass.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        for this Surface subclass.
-            derivs      True to propagate any derivatives inside the coordinates
-                        and obs into the returned position vectors.
+        Parameters:
+            coords (tuple): Two or three Scalars defining coordinates at or near this
+                surface. These are the (x,y,z) rectangular coordinates relative to the
+                surface's origin and frame. They can have different shapes, but must be
+                broadcastable to a common shape.
+            obs (Vector3, optional): Observer position relative to this surface's origin
+                and frame; ignored for this Surface subclass.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+                this Surface subclass.
+            derivs (bool, optional): True to propagate any derivatives inside the
+                coordinates and obs into the returned position vectors.
 
-        Return:         a Vector3 of points defined by the coordinates, relative
-                        to this surface's origin and frame.
+        Returns:
+            (Vector3): Points defined by the coordinates, relative to this surface's
+                origin and frame.
         """
 
         # Validate inputs
@@ -116,33 +110,32 @@ class NullSurface(Surface):
         # Convert to a Vector3 and return
         return Vector3.from_scalars(x, y, z)
 
-    #===========================================================================
     def intercept(self, obs, los, time=None, direction='dep', derivs=False,
                                   guess=None, hints=None):
         """The position where a specified line of sight intercepts the surface.
 
-        Input:
-            obs         observer position as a Vector3 relative to this
-                        surface's origin and frame.
-            los         line of sight as a Vector3 in this surface's frame.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        for this Surface subclass.
-            direction   'arr' for a photon arriving at the surface; 'dep' for a
-                        photon departing from the surface; ignored.
-            derivs      True to propagate any derivatives inside obs and los
-                        into the returned intercept point.
-            guess       unused.
-            hints       if not None (the default), this value is appended to the
-                        returned tuple. Needed for compatibility with other
-                        Surface subclasses.
+        Parameters:
+            obs (Vector3): Observer position as a Vector3 relative to this surface's
+                origin and frame.
+            los (Vector3): Line of sight as a Vector3 in this surface's frame.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+                this Surface subclass.
+            direction (str, optional): 'arr' for a photon arriving at the surface; 'dep'
+                for a photon departing from the surface; ignored.
+            derivs (bool, optional): True to propagate any derivatives inside obs and los
+                into the returned intercept point.
+            guess (object, optional): Unused.
+            hints (optional): If not None (the default), this value is appended to the
+                returned tuple. Needed for compatibility with other Surface subclasses.
 
-        Return:         a tuple (pos, t) or (pos, t, hints), where
-            pos         a Vector3 of intercept points on the surface relative
-                        to this surface's origin and frame, in km.
-            t           a Scalar such that:
-                            intercept = obs + t * los
-            hints       the input value of hints, included if this value is not
-                        None.
+        Returns:
+            (tuple): (pos, t) or (pos, t, hints), where, where:
+
+            * `pos` (Vector3): Intercept points on the surface relative to this surface's
+              origin and frame, in km.
+            * `t` (Scalar): Such that: intercept = obs + t * los.
+            * `hints` (object): The input value of hints, included if this value is not
+              None.
         """
 
         # This is a quick way to create a position vector of the correct shape,
@@ -160,42 +153,42 @@ class NullSurface(Surface):
 
         return (pos, t)
 
-    #===========================================================================
     def normal(self, pos, time=None, derivs=False):
         """The normal vector at a position at or near a surface.
 
-        Input:
-            pos         a Vector3 of positions at or near the surface relative
-                        to this surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        for this Surface subclass.
-            derivs      True to propagate any derivatives of pos into the
-                        returned normal vectors.
+        Parameters:
+            pos (Vector3): Positions at or near the surface relative to this surface's
+                origin and frame.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+                this Surface subclass.
+            derivs (bool, optional): True to propagate any derivatives of pos into the
+                returned normal vectors.
 
-        Return:         a Vector3 containing directions normal to the surface
-                        that pass through the position. Lengths are arbitrary.
+        Returns:
+            (Vector3): Directions normal to the surface that pass through the position.
+                Lengths are arbitrary.
         """
 
         # Always the Z-axis
         return Vector3.ZAXIS
 
-    #===========================================================================
     def velocity(self, pos, time=None):
         """The local velocity vector at a point within the surface.
 
-        This can be used to describe the orbital motion of ring particles or
-        local wind speeds on a planet.
+        This can be used to describe the orbital motion of ring particles or local wind
+        speeds on a planet.
 
-        Input:
-            pos         a Vector3 of positions at or near the surface relative
-                        to this surface's origin and frame.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        for this Surface subclass.
+        Parameters:
+            pos (Vector3): Positions at or near the surface relative to this surface's
+                origin and frame.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+                this Surface subclass.
 
-        Return:         a Vector3 of velocities, in units of km/s.
+        Returns:
+            (Vector3): Velocities, in units of km/s.
         """
 
         # Always zero
         return Vector3.ZERO
 
-################################################################################
+##########################################################################################

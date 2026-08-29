@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/config.py: General configuration parameters
-################################################################################
+##########################################################################################
 
 import datetime
 import logging
@@ -8,7 +8,7 @@ import sys
 import traceback
 import warnings
 
-################################################################################
+##########################################################################################
 # QuickPath and QuickFrame default parameters
 #
 # Disable the use of QuickPaths/Frames on an individual basis by calling the
@@ -16,7 +16,7 @@ import warnings
 # quick=True. If a function is called with quick as a dictionary, then any
 # values in the dictionary override these defaults and the merged dictionary of
 # parameters is used.
-################################################################################
+##########################################################################################
 
 class QUICK(object):
   flag = True                   # Defines the default behavior as quick=True or
@@ -58,9 +58,9 @@ class QUICK(object):
                                 # interpolation of the vector components.
 }
 
-################################################################################
+##########################################################################################
 # Photon solver parameters
-################################################################################
+##########################################################################################
 
 # For Path._solve_photon()
 
@@ -97,9 +97,9 @@ class SURFACE_PHOTONS(object):
     rel_precision = 1.e-10      # Between sqrt(machine precision) and machine
                                 # precision.
 
-################################################################################
+##########################################################################################
 # Event precision
-################################################################################
+##########################################################################################
 
 class EVENT_CONFIG(object):
     collapse_threshold = 3.     # When an event returned by a calculation spans
@@ -108,9 +108,9 @@ class EVENT_CONFIG(object):
                                 # This approximation can speed up some
                                 # calculations substantially.
 
-################################################################################
+##########################################################################################
 # Logging and Monitoring
-################################################################################
+##########################################################################################
 
 LOG_DATEFMT = '%Y-%m-%d %H:%M:%S.%f'
 LOG_FORMAT  = '%(mytime)s | %(name)s | %(mylevelname)-5s | %(message)s'
@@ -526,23 +526,23 @@ class LOGGING(object):
 
 LOGGING.push()      # At initialization, put the default settings onto the stack
 
-################################################################################
+##########################################################################################
 # Serialization parameters
-################################################################################
+##########################################################################################
 
 class PICKLE_CONFIG(object):
     quickpath_details = True    # Save the internals of a QuickPath
     quickframe_details = True   # Save the internals of a QuickFrame
     backplane_events = True     # Save the events dictionary inside backplanes
 
-################################################################################
+##########################################################################################
 # Support for the old FOV.area_factor(), for backward compatibility
-################################################################################
+##########################################################################################
 
 class AREA_FACTOR(object):
     old = False     # True to use old area factors, which have a small error due
                     # the fact that off-axis lines of sight in an FOV are not
                     # not quite unit length.
 
-################################################################################
+##########################################################################################
 

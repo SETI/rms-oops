@@ -82,6 +82,39 @@ def test_clean_key():
             == (1, ('Vector', (2,), (1, 2, 3, 4), False), path.waypoint, frame.wayframe))
     test = {clean_key(key)}     # TypeError if unhashable
 
+def test_clean_key_is_recursive():
+    clean_key = Cache.clean_key
+
+    scalars = (Scalar(2.718), Scalar(3.14))
+    cleaned = (('Scalar', (), 2.718, False), ('Scalar', (), 3.14, False))
+
+    # A tuple nested inside the key is cleaned, not passed through
+    key = ('coords', scalars)
+    assert clean_key(key) == ('coords', cleaned)
+    assert isinstance(hash(clean_key(key)), int)    # TypeError if unhashable
+
+    # A nested list becomes a tuple, and its contents are cleaned too
+    key = ('coords', list(scalars))
+    assert clean_key(key) == ('coords', cleaned)
+    assert isinstance(hash(clean_key(key)), int)    # TypeError if unhashable
+
+    # Nesting can be arbitrarily deep
+    key = (1, (2, (3, Scalar(3.14))))
+    assert clean_key(key) == (1, (2, (3, ('Scalar', (), 3.14, False))))
+    assert isinstance(hash(clean_key(key)), int)    # TypeError if unhashable
+
+    # An object array is cleaned element by element; a numeric array is not
+    key = np.empty((2,), dtype=object)
+    key[0] = scalars[0]
+    key[1] = scalars[1]
+    assert clean_key(key) == ((2,), cleaned)
+    assert isinstance(hash(clean_key(key)), int)    # TypeError if unhashable
+
+    # Paths and Frames are converted at depth exactly as they are at the top level
+    path = LinearPath((0,0,0), 0., 'SSB')
+    frame = Rotation(1., 2, 'J2000')
+    assert clean_key(((path,), (frame,))) == ((clean_key(path),), (clean_key(frame),))
+
 def test_Cache():
     cache = Cache()
     assert cache._maxsize == 100

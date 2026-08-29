@@ -1,9 +1,9 @@
-################################################################################
+##########################################################################################
 # oops/hosts/keck/nirc2.py: Keck subclass NIRC2
 #
 # This is an initial implementation of a Keck II FITS reader.  It does not
 # support distortion models or instruments other than NIRC2.
-################################################################################
+##########################################################################################
 
 try:
     import astropy.io.fits as pyfits
@@ -12,9 +12,9 @@ except ImportError:
 import oops
 from . import Keck
 
-################################################################################
+##########################################################################################
 # Standard class methods
-################################################################################
+##########################################################################################
 
 def from_file(filespec, **parameters):
     """A general, static method to return an Observation object based on a given
@@ -37,12 +37,9 @@ def from_file(filespec, **parameters):
 
     return NIRC2.from_opened_fitsfile(keck_file)
 
-#===============================================================================
-#===============================================================================
 class NIRC2(Keck):
-    """This class defines functions and properties unique to the NIRC2
-    instrument. Everything else is inherited from higher levels in the class
-    hierarchy.
+    """This class defines functions and properties unique to the NIRC2 instrument.
+    Everything else is inherited from higher levels in the class hierarchy.
 
     Objects of this class are empty; they only exist to support inheritance.
     """
@@ -54,7 +51,6 @@ class NIRC2(Keck):
 
         return keck_file[0].header["FILTER"]
 
-    #===========================================================================
     def define_fov(self, keck_file, **parameters):
         """An FOV object defining the field of view of the given image file."""
 
@@ -122,7 +118,6 @@ class NIRC2(Keck):
 
         return full_fov
 
-    #===========================================================================
     @staticmethod
     def from_opened_fitsfile(keck_file, **parameters):
         """A general class method to return an Observation object based on an
@@ -143,4 +138,4 @@ class NIRC2(Keck):
 
         return obs
 
-################################################################################
+##########################################################################################

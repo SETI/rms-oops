@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/inst/juno/jiram/img.py
-################################################################################
+##########################################################################################
 
 import numpy as np
 import julian
@@ -11,14 +11,13 @@ from oops.hosts.juno.jiram import JIRAM
 
 from filecache import FCPath
 
-################################################################################
+##########################################################################################
 # Standard class methods
-################################################################################
+##########################################################################################
 
 
 #### TODO: verify label input needed or whether it is covered by filespec, as
 ####       other host modules.
-#===============================================================================
 def from_file(filespec, label, fast_distortion=True,
                                return_all_planets=False, **parameters):
     """A general, static method to return a Snapshot object based on a given
@@ -67,19 +66,20 @@ def from_file(filespec, label, fast_distortion=True,
 
     return obs
 
-#===============================================================================
 def _load_data(filespec, label, meta):
     """Load the data array from the file and splits into individual framelets.
 
-    Input:
-        filespec        Full path to the data file.
-        label           Label for composite image.
-        meta            Image Metadata object.
+    Parameters:
+        filespec (str or FCPath): Full path to the data file.
+        label (str): Label for composite image.
+        meta (object): Image Metadata object.
 
-    Return:             (framelets, framelet_labels)
-        framelets       A Numpy array containing the individual frames in
-                        axis order (line, sample, framelet #).
-        framelet_labels List of labels for each framelet.
+    Returns:
+        (tuple): (framelets, framelet_labels), where:
+
+        * `framelets` (array-like): A Numpy array containing the individual frames in axis
+          order (line, sample, framelet #). framelet_labels List of labels for each
+          framelet.
     """
 
     # Read data
@@ -117,20 +117,16 @@ def _load_data(filespec, label, meta):
 #*******************************************************************************
 class _Metadata(object):
 
-    #===========================================================================
     def __init__(self, label):
         """Use the label to assemble the image metadata.
 
-        Input:
-            label           The label dictionary.
+        Parameters:
+            label (dict): The label dictionary.
 
         Attributes:
-            nlines          A Numpy array containing the data in axis order
-                            (line, sample).
-            nsamples        The time sampling array in (line, sample) axis
-                            order, or None if no time backplane is found in
-                            the file.
-            nframelets
+            nlines          A Numpy array containing the data in axis order (line,
+            sample). nsamples        The time sampling array in (line, sample) axis order,
+            or None if no time backplane is found in the file. nframelets
         """
 
         # image dimensions
@@ -193,7 +189,7 @@ class _Metadata(object):
             scale = px/1000/fo
 
             self.fov = oops.fov.FlatFOV(scale,
-                                        (self.nsamples, self.frlines), cxy)
+                                        (self.nsamples, self.frlines), uv_los=cxy)
 
         return
 
@@ -204,20 +200,19 @@ class IMG(object):
 
     initialized = False
 
-    #===========================================================================
     @staticmethod
     def initialize(time, asof=None, **kwargs):
         """Initialize key information about the IMG instrument.
 
-        Must be called first. After the first call, later calls to this function
-        are ignored.
+        Must be called first. After the first call, later calls to this function are
+        ignored.
 
-        Input:
-            time        time at which to define the inertialy fixed mirror-
-                        corrected frame.
-            asof        Only use SPICE kernels that existed before this date;
-                        None to ignore.
-            kwargs:     Arguments for juno.initialize() and Body.define_solar_system()
+        Parameters:
+            time (Scalar): Time at which to define the inertialy fixed mirror- corrected
+                frame.
+            asof (str, optional): Only use SPICE kernels that existed before this date;
+                None to ignore. kwargs:     Arguments for juno.initialize() and
+                Body.define_solar_system()
         """
 
         # Quick exit after first call
@@ -233,7 +228,6 @@ class IMG(object):
 
         IMG.initialized = True
 
-    #===========================================================================
     @staticmethod
     def reset():
         #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -246,4 +240,4 @@ class IMG(object):
 
         JIRAM.reset()
 
-################################################################################
+##########################################################################################

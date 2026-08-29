@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/lightsource.py: Classes LightSource and DiskSource
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -11,11 +11,10 @@ from oops.constants import C, RPD, RPS
 from oops.event     import Event
 
 class LightSource(object):
-    """Defines a source of illumination, such as the Sun, a star, or a radio
-    transmitter on the Earth or a spacecraft.
+    """Defines a source of illumination, such as the Sun, a star, or a radio transmitter
+    on the Earth or a spacecraft.
     """
 
-    #===========================================================================
     def __init__(self, name, source, weight=None):
         """Constructor for a LightSource. It can be specified as:
             - a path.
@@ -95,59 +94,43 @@ class LightSource(object):
     def __setstate__(self, state):
         self.__init__(*state)
 
-    #===========================================================================
     def photon_to_event(self, event, derivs=False, guess=None,
                               antimask=None, quick={}, converge={}):
         """Solve for a photon arrival event from this lightsource.
 
-        Input parameters are identical to the Path method of the same name, but
-        for LightSources not identified with paths, the departure event is None.
+        Input parameters are identical to the Path method of the same name, but for
+        LightSources not identified with paths, the departure event is None.
 
-        Input:
-            event       the event of the observation.
+        Parameters:
+            event (Event): The event of the observation.
+            derivs (bool, optional): True to propagate derivatives of the event position
+                into the returned event. The time derivative is always retained.
+            guess (Scalar, optional): An initial guess to use as the event time along the
+                path; otherwise None. Should only be used if the event time was already
+                returned from a similar calculation.
+            antimask (array-like or Boolean, optional): If not None, this is a boolean
+                array to be applied to event times and positions. Only the indices where
+                antimask=True will be used in the solution.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
+            converge (dict, optional): Parameters to override the configured default
+                convergence parameters. The default configuration is defined in config.py.
 
-            derivs      True to propagate derivatives of the event position into
-                        the returned event. The time derivative is always
-                        retained.
-
-            guess       an initial guess to use as the event time along the
-                        path; otherwise None. Should only be used if the event
-                        time was already returned from a similar calculation.
-
-            antimask    if not None, this is a boolean array to be applied to
-                        event times and positions. Only the indices where
-                        antimask=True will be used in the solution.
-
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
-
-            converge    an optional dictionary of parameters to override the
-                        configured default convergence parameters. The default
-                        configuration is defined in config.py.
-
-        Return:         arrival.
-
-            arrival     a copy of the given event, with the photon arrival or
-                        departure line of sight and light travel time filled in.
-
-            These subfields and derivatives are defined:
-                    arr         direction of the arriving photon at the path.
-                    arr_lt      (negative) light travel time from the link
-                                event.
-
-        Convergence parameters are as follows:
-            iters       the maximum number of iterations of Newton's method to
-                        perform. It should almost never need to be > 5.
-            precision   iteration stops when the largest change in light travel
-                        time between one iteration and the next falls below this
-                        threshold (in seconds).
-            limit       the maximum allowed absolute value of the change in
-                        light travel time from the nominal range calculated
-                        initially. Changes in light travel with absolute values
-                        larger than this limit are clipped. This prevents the
-                        divergence of the solution in some cases.
+        Returns:
+            Arrival. arrival     a copy of the given event, with the photon arrival
+                or departure line of sight and light travel time filled in. These
+                subfields and derivatives are defined: arr         direction of the
+                arriving photon at the path. arr_lt      (negative) light travel time from
+                the link event. Convergence parameters are as follows: iters       the
+                maximum number of iterations of Newton's method to perform. It should
+                almost never need to be > 5. precision   iteration stops when the largest
+                change in light travel time between one iteration and the next falls below
+                this threshold (in seconds). limit       the maximum allowed absolute
+                value of the change in light travel time from the nominal range calculated
+                initially. Changes in light travel with absolute values larger than this
+                limit are clipped. This prevents the divergence of the solution in some
+                cases.
         """
 
         if self.source_is_moving:
@@ -163,18 +146,17 @@ class LightSource(object):
         arrival.neg_arr_j2000 = self.source
         return (None, arrival)
 
-    #===========================================================================
     def as_path(self):
         """This LightSource's path object if it has one; otherwise, None."""
 
         return (self.source if self.source_is_moving else None)
 
-################################################################################
-################################################################################
+##########################################################################################
+##########################################################################################
 
 class DiskSource(LightSource):
-    """DiskSource is a subclass of LightSource that defines an extended,
-    circular disk with uniform illumination.
+    """DiskSource is a subclass of LightSource that defines an extended, circular disk
+    with uniform illumination.
     """
 
     def __init__(self, name, source, radius, size=11, compress=False):
@@ -244,59 +226,43 @@ class DiskSource(LightSource):
         # Re-register as a Body
         Body.BODY_REGISTRY[self.name] = self
 
-    #===========================================================================
     def photon_to_event(self, event, derivs=False, guess=None,
                               antimask=None, quick={}, converge={}):
         """Solve for a photon arrival event from this lightsource.
 
-        Input parameters are identical to the Path method of the same name, but
-        only the arrival event is returned.
+        Input parameters are identical to the Path method of the same name, but only the
+        arrival event is returned.
 
-        Input:
-            event       the event of the observation.
+        Parameters:
+            event (Event): The event of the observation.
+            derivs (bool, optional): True to propagate derivatives of the event position
+                into the returned event. The time derivative is always retained.
+            guess (Scalar, optional): An initial guess to use as the event time along the
+                path; otherwise None. Should only be used if the event time was already
+                returned from a similar calculation.
+            antimask (array-like or Boolean, optional): If not None, this is a boolean
+                array to be applied to event times and positions. Only the indices where
+                antimask=True will be used in the solution.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
+            converge (dict, optional): Parameters to override the configured default
+                convergence parameters. The default configuration is defined in config.py.
 
-            derivs      True to propagate derivatives of the event position into
-                        the returned event. The time derivative is always
-                        retained.
-
-            guess       an initial guess to use as the event time along the
-                        path; otherwise None. Should only be used if the event
-                        time was already returned from a similar calculation.
-
-            antimask    if not None, this is a boolean array to be applied to
-                        event times and positions. Only the indices where
-                        antimask=True will be used in the solution.
-
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
-
-            converge    an optional dictionary of parameters to override the
-                        configured default convergence parameters. The default
-                        configuration is defined in config.py.
-
-        Return:         arrival.
-
-            arrival     a copy of the given event, with the photon arrival or
-                        departure line of sight and light travel time filled in.
-
-            These subfields and derivatives are defined:
-                    arr         direction of the arriving photon at the path.
-                    arr_lt      (negative) light travel time from the link
-                                event.
-
-        Convergence parameters are as follows:
-            iters       the maximum number of iterations of Newton's method to
-                        perform. It should almost never need to be > 5.
-            precision   iteration stops when the largest change in light travel
-                        time between one iteration and the next falls below this
-                        threshold (in seconds).
-            limit       the maximum allowed absolute value of the change in
-                        light travel time from the nominal range calculated
-                        initially. Changes in light travel with absolute values
-                        larger than this limit are clipped. This prevents the
-                        divergence of the solution in some cases.
+        Returns:
+            Arrival. arrival     a copy of the given event, with the photon arrival
+                or departure line of sight and light travel time filled in. These
+                subfields and derivatives are defined: arr         direction of the
+                arriving photon at the path. arr_lt      (negative) light travel time from
+                the link event. Convergence parameters are as follows: iters       the
+                maximum number of iterations of Newton's method to perform. It should
+                almost never need to be > 5. precision   iteration stops when the largest
+                change in light travel time between one iteration and the next falls below
+                this threshold (in seconds). limit       the maximum allowed absolute
+                value of the change in light travel time from the nominal range calculated
+                initially. Changes in light travel with absolute values larger than this
+                limit are clipped. This prevents the divergence of the solution in some
+                cases.
         """
 
         if self.source_is_moving:
@@ -319,4 +285,4 @@ class DiskSource(LightSource):
         new_event.neg_arr_j2000 = self.source
         return arrival
 
-################################################################################
+##########################################################################################

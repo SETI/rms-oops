@@ -1,15 +1,15 @@
-################################################################################
+##########################################################################################
 # tests/hosts/galileo/ssi/standard_obs.py:
-################################################################################
+##########################################################################################
 
 import os
 import programs.gold_master as gm
 
 gm.set_default_args(module='oops.hosts.galileo.ssi', inventory=False, border=4)
 
-###################################################################
+##########################################################################################
 name = 'C0349632100R'
-###################################################################
+##########################################################################################
 # To preview and adopt gold masters:
 #  python gold_master.py --name C0349632100R --preview
 #  python gold_master.py --name C0349632100R --adopt
@@ -30,9 +30,9 @@ gm.override('GANYMEDE center declination (deg, apparent)', 2e-4, names=name)
 gm.override('GANYMEDE center distance to observer (km)', 3., names=name)
 gm.override('GANYMEDE center light time to observer (km)', 9e-6, names=name)
 
-###################################################################
+##########################################################################################
 name = 'C0368369200R'
-###################################################################
+##########################################################################################
 # To preview and adopt gold masters:
 #  python gold_master.py --name C0368369200R --preview
 #  python gold_master.py --name C0368369200R --adopt
@@ -57,9 +57,9 @@ gm.override('JUPITER center right ascension (deg, apparent)', 1.5e-4, names=name
 gm.override('JUPITER center declination (deg, actual)', 5e-4, names=name)
 gm.override('JUPITER center declination (deg, apparent)', 5e-4, names=name)
 
-###################################################################
+##########################################################################################
 name = 'C0061455700R'
-###################################################################
+##########################################################################################
 # To preview and adopt gold masters:
 #  python gold_master.py --name C0061455700R --preview
 #  python gold_master.py --name C0061455700R --adopt
@@ -68,9 +68,9 @@ gm.define_standard_obs(name,
         obspath=f'galileo/GO_0004/EARTH/{name}.img',
         planets='EARTH')
 
-###################################################################
+##########################################################################################
 name = 'C0374685140R'
-###################################################################
+##########################################################################################
 # To preview and adopt gold masters:
 #  python gold_master.py --name C0374685140R --preview
 #  python gold_master.py --name C0374685140R --adopt
@@ -101,4 +101,4 @@ gm.override('EUROPA sub-observer longitude, IAU (deg)', 0.0015, names=name)
 gm.override('EUROPA sub-observer longitude wrt Sun (deg)', 0.0015, names=name)
 gm.override('EUROPA sub-solar longitude wrt observer (deg)', 0.0015, names=name)
 
-################################################################################
+##########################################################################################

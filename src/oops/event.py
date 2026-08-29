@@ -1,6 +1,6 @@
-################################################################################
-# oops/event.py: Event class
-################################################################################
+##########################################################################################
+# oops/event.py
+##########################################################################################
 
 import numpy as np
 
@@ -12,96 +12,61 @@ from oops.transform    import Transform
 
 
 class Event(object):
-    """An Event is defined by a time, position and velocity. It always has these
-    attributes:
+    """An Event is defined by a time, position and velocity.
 
-        _time_      event time as a Scalar of arbitrary shape. Times are
-                    measured in seconds TDB relative to noon TDB on January 1,
-                    2000, consistent with the time system used by the SPICE
-                    toolkit.
+    Each property below is also accessible through a property of the same name without
+    the surrounding underscores.
 
-        _state_     position of the event as a Vector3 of arbitrary shape.
-                    Positions are measured in km relative to the specified path.
-                    Velocities are specified in km/s as the "t" derivative of
-                    the position.
+    Events are intended to be immutable. The exception is that the optional properties
+    can be set exactly once after the constructor is called. You can define the photon
+    directions with either apparent or actual values, but not both; whichever you define,
+    the other is generated as needed.
 
-        _origin_    a path object defining the location relative to which all
-                    positions and velocities are measured.
+    The properties of an Event need not have the same shape, but they must all be
+    broadcastable to the same shape.
 
-        _frame_     a frame object defining the coordinate system in which the
-                    components of the positions and velocities are defined.
-
-        _subfields_ an arbitrary dictionary of objects providing further
-                    information about the properties of the event.
-
-    It also has these optional attributes:
-
-        _arr_       an optional Vector3 defining the direction of a photon
-                    arriving at this event. It is defined in the coordinate
-                    frame of this event and not corrected for stellar
-                    aberration. Length is arbitrary.
-
-        _arr_ap_    same as above, but defined as the apparent direction of the
-                    arriving photons.
-
-        _arr_j2000_ same as _arr_, but in J2000 coordinates.
-
-        _arr_ap_j2000_
-                    same as _arr_ap_, but in J2000 coordinates.
-
-        _neg_arr_   negative of _arr_ (because it is used so often).
-
-        _neg_arr_ap_
-                    negative of _arr_ap_
-
-        _neg_arr_j2000_
-                    negative of _arr_j2000_.
-
-        _neg_arr_ap_j2000_
-                    negative of _arr_ap_j2000_.
-
-        _arr_lt_    an optional Scalar defining the (negative) light travel time
-                    for the arriving photon from its origin.
-
-        _dep_       an optional Vector3 defining the direction of a photon
-                    departing from this event. It is defined in the coordinate
-                    frame of this event and not corrected for stellar
-                    aberration. Length is arbitrary.
-
-        _dep_ap_    same as above, but defined as the apparent direction of the
-                    departing photons.
-
-        _dep_j2000_
-                    same as _dep_, but in J2000 coordinates.
-
-        _dep_j2000_ap_
-                    same as _dep_ap_, but in J2000 coordinates.
-
-        _dep_lt_    an optional Scalar defining the light travel time of a
-                    departing photon to its destination.
-
-        _perp_      the direction of a normal vector if this event falls on a
-                    surface.
-
-        _vflat_     a velocity component within the surface, which can be used
-                    to describe winds across a planet or orbital motion
-                    within a ring plane.
-
-        _ssb_       this event referenced to SSB/J2000.
-
-        _xform_to_j2000_
-                    transform that converts coordinates in this event to J2000.
-
-    Each of these attributes can also be accessed via a property with the same
-    name except for the surrounding undercores.
-
-    Events are intended to be immutable. The exception is that the optional
-    attributes can be set exactly once after the constructor is called. You can
-    define the photon directions with either apparent or actual values, but not
-    both; whichever you define, the other will be generated as needed.
-
-    Note that the attributes of an object need not have the same shape, but they
-    must all be broadcastable to the same shape.
+    Properties:
+        * _time_ (Scalar): Event time of arbitrary shape, in seconds TDB relative to noon
+          TDB on January 1, 2000, consistent with the time system used by the SPICE
+          toolkit.
+        * _state_ (Vector3): Position of the event, of arbitrary shape, in km relative to
+          `_origin_`. Velocities are carried in km/s as the "t" derivative of the
+          position.
+        * _origin_ (Path): The path defining the location relative to which all positions
+          and velocities are measured.
+        * _frame_ (Frame): The frame defining the coordinate system in which the
+          components of the positions and velocities are defined.
+        * _subfields_ (dict): An arbitrary dictionary of objects providing further
+          information about the properties of the event.
+        * _arr_ (Vector3): The direction of a photon arriving at this event, defined in
+          the frame of this event and not corrected for stellar aberration. Its length is
+          arbitrary.
+        * _arr_ap_ (Vector3): As `_arr_`, but the apparent direction of the arriving
+          photon.
+        * _arr_j2000_ (Vector3): As `_arr_`, but in J2000 coordinates.
+        * _arr_ap_j2000_ (Vector3): As `_arr_ap_`, but in J2000 coordinates.
+        * _neg_arr_ (Vector3): Negative of `_arr_`, because it is used so often.
+        * _neg_arr_ap_ (Vector3): Negative of `_arr_ap_`.
+        * _neg_arr_j2000_ (Vector3): Negative of `_arr_j2000_`.
+        * _neg_arr_ap_j2000_ (Vector3): Negative of `_arr_ap_j2000_`.
+        * _arr_lt_ (Scalar): The (negative) light travel time for the arriving photon from
+          its origin.
+        * _dep_ (Vector3): The direction of a photon departing from this event, defined in
+          the frame of this event and not corrected for stellar aberration. Its length is
+          arbitrary.
+        * _dep_ap_ (Vector3): As `_dep_`, but the apparent direction of the departing
+          photon.
+        * _dep_j2000_ (Vector3): As `_dep_`, but in J2000 coordinates.
+        * _dep_j2000_ap_ (Vector3): As `_dep_ap_`, but in J2000 coordinates.
+        * _dep_lt_ (Scalar): The light travel time of a departing photon to its
+          destination.
+        * _perp_ (Vector3 or None): The direction of a normal vector if this event falls
+          on a surface.
+        * _vflat_ (Vector3): A velocity component within the surface, which can be used to
+          describe winds across a planet or orbital motion within a ring plane.
+        * _ssb_ (Event): This event referenced to SSB/J2000.
+        * _xform_to_j2000_ (Transform): The transform that converts coordinates in this
+          event to J2000.
     """
 
     # To avoid circular imports; filled in by oops/__init__.py
@@ -109,8 +74,8 @@ class Event(object):
     SSB = None
 
     # Property names, categorized
-    ARR_VEC3_PROPERTIES = ['arr', 'arr_ap', 'arr_j2000', 'arr_ap_j2000',
-                   'neg_arr', 'neg_arr_ap', 'neg_arr_j2000', 'neg_arr_ap_j2000']
+    ARR_VEC3_PROPERTIES = ['arr', 'arr_ap', 'arr_j2000', 'arr_ap_j2000', 'neg_arr',
+                           'neg_arr_ap', 'neg_arr_j2000', 'neg_arr_ap_j2000']
 
     DEP_VEC3_PROPERTIES = ['dep', 'dep_ap', 'dep_j2000', 'dep_ap_j2000']
 
@@ -127,29 +92,26 @@ class Event(object):
     def set_prop(self, prop_name, value):
         Event.__dict__[prop_name].fset(self, value)
 
-    #===========================================================================
     def __init__(self, time, state, origin, frame=None, **more):
         """Constructor for the Event class
 
-        If a link is specified, then either the arriving or the departing
-        photons will be filled in automatically.
+        If a link is specified, then either the arriving or the departing photons will be
+        filled in automatically.
 
-        Input:
-            time        a Scalar of event times in seconds TDB.
-            state       position vectors as a Vector3 object. The velocity
-                        should be included as the time-derivative. However, if
-                        specified as a tuple of two objects, the first is
-                        interpreted as the position and the second as the
-                        velocity.
-            origin      the path or path ID identifying the origin of this
-                        event.
-            frame       the frame or frame ID identifying the coordinate frame
-                        of this event. By default, it matches the default frame
-                        of the origin.
-            **more      an arbitrary set of properties and subfields that are
-                        will also be accessible as attributes of the Event
-                        object. Properties have fixed names and purposes;
-                        subfields can be anything.
+        Parameters:
+            time (Scalar): Event times in seconds TDB.
+            state (Vector3): Position vectors as a Vector3 object. The velocity should be
+                included as the time-derivative. However, if specified as a tuple of two
+                objects, the first is interpreted as the position and the second as the
+                velocity.
+            origin (Path or str): The path or path ID identifying the origin of this
+                event.
+            frame (Frame, optional): The frame or frame ID identifying the coordinate
+                frame of this event. By default, it matches the default frame of the
+                origin.
+            **more: An arbitrary set of properties and subfields that are will
+                also be accessible as attributes of the Event object. Properties have
+                fixed names and purposes; subfields can be anything.
         """
 
         self._time_ = Scalar.as_scalar(time).as_readonly()
@@ -184,7 +146,6 @@ class Event(object):
         for (name, value) in more.items():
             self.insert_subfield(name, value)
 
-    #===========================================================================
     def __getstate__(self):
         """The minimum info necessary to preserve the entire state of the event.
         """
@@ -239,10 +200,9 @@ class Event(object):
         for (key, value) in self.subfields.items():
             more[key] = value
 
-        return (self._time_, self._state_, self._origin_, self._frame_,
-                more, arr_lt_attr, dep_lt_attr)
+        return (self._time_, self._state_, self._origin_, self._frame_,  more,
+               arr_lt_attr, dep_lt_attr)
 
-    #===========================================================================
     def __setstate__(self, state):
 
         (more, arr_lt_attr, dep_lt_attr) = state[-3:]
@@ -257,9 +217,9 @@ class Event(object):
             vec = getattr(self, dep_lt_attr)
             self.fset('dep_lt', vec.norm())
 
-    ############################################################################
+    ######################################################################################
     # Read-only properties
-    ############################################################################
+    ######################################################################################
 
     @property
     def time(self):
@@ -305,13 +265,9 @@ class Event(object):
     @property
     def shape(self):
         if self._shape_ is None:
-            self._shape_ = Qube.broadcasted_shape(self._time_,
-                                                  self._state_,
-                                                  self._origin_,
-                                                  self._frame_,
-                                                  self._arr_,
-                                                  self._arr_ap_,
-                                                  self._dep_,
+            self._shape_ = Qube.broadcasted_shape(self._time_, self._state_,
+                                                  self._origin_, self._frame_, self._arr_,
+                                                  self._arr_ap_, self._dep_,
                                                   self._dep_ap_)
         return self._shape_
 
@@ -322,9 +278,7 @@ class Event(object):
     @property
     def mask(self):
         if self._mask_ is None:
-            self._mask_ = Qube.or_(self._time_.mask,
-                                   self._state_.mask,
-                                   self.vel.mask)
+            self._mask_ = Qube.or_(self._time_.mask, self._state_.mask, self.vel.mask)
             if self._dep_ is not None:
                 self._mask_ = Qube.or_(self._mask_, self._dep_.mask)
             if self._dep_ap_ is not None:
@@ -365,9 +319,8 @@ class Event(object):
             if self._ssb_ is None:
                 _ = self.wrt_ssb(derivs=True)
             else:
-                self._xform_to_j2000_ = self.wrt(Event.SSB, Frame.J2000,
-                                                 derivs=True, quick={},
-                                                 include_xform=True)[1]
+                self._xform_to_j2000_ = self.wrt(Event.SSB, Frame.J2000, derivs=True,
+                                                 quick=None, include_xform=True)[1]
 
         return self._xform_to_j2000_
 
@@ -394,8 +347,8 @@ class Event(object):
             self._ssb_._shape_ = None
 
     def _refresh(self):
-        """Remove all internal information; needed for Events that involve
-        Fittable objects.
+        """Remove all internal information; needed for Events that involve Fittable
+        objects.
         """
 
         self._ssb_ = None
@@ -415,16 +368,16 @@ class Event(object):
 
         return self._dep_ is not None or self._dep_ap_ is not None
 
-    ############################################################################
+    ######################################################################################
     # Special properties: Photon arrival vectors
     #
     # These values are cached for repeated use.
     #
-    # Upon setting any of these parameters, the immediate value is saved and at
-    # least one of the attributes _arr_ap_ and _arr_ is filled in. All other
-    # attributes of arriving photons are derived from one of these. Each of
-    # these can be derived from the other using actual_arr() and apparent_arr().
-    ############################################################################
+    # Upon setting any of these parameters, the immediate value is saved and at least one
+    # of the attributes _arr_ap_ and _arr_ is filled in. All other attributes of arriving
+    # photons are derived from one of these. Each of these can be derived from the other
+    # using actual_arr() and apparent_arr().
+    ######################################################################################
 
     @property
     def arr(self):
@@ -432,13 +385,12 @@ class Event(object):
             if self._arr_ap_ is not None:
                 _ = self.actual_arr(derivs=True)    # fill internal attribute
 
-        return self._arr_                   # returns None if still undefined
+        return self._arr_   # returns None if still undefined
 
     @arr.setter
     def arr(self, value):
         if (self._arr_ is not None) or (self._arr_ap_ is not None):
-            raise ValueError('arriving photons were already defined in ' +
-                             str(self))
+            raise ValueError(f'arriving photons were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
         arr = Vector3.as_vector3(value).as_readonly()
@@ -457,13 +409,12 @@ class Event(object):
             if self._arr_ is not None:
                 _ = self.apparent_arr(derivs=True)  # fill internal attribute
 
-        return self._arr_ap_                # returns None if still undefined
+        return self._arr_ap_    # returns None if still undefined
 
     @arr_ap.setter
     def arr_ap(self, value):
         if (self._arr_ap_ is not None) or (self._arr_ is not None):
-            raise ValueError('arriving photons were already defined in ' +
-                             str(self))
+            raise ValueError(f'arriving photons were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
         arr_ap = Vector3.as_vector3(value).as_readonly()
@@ -510,13 +461,12 @@ class Event(object):
 
     @property
     def arr_lt(self):
-        return self._arr_lt_                # returns None if still undefined
+        return self._arr_lt_        # returns None if still undefined
 
     @arr_lt.setter
     def arr_lt(self, value):
         if self._arr_lt_ is not None:
-            raise ValueError('arriving photons were already defined in ' +
-                             str(self))
+            raise ValueError(f'arriving photons were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
         arr_lt = Scalar.as_scalar(value).as_readonly()
@@ -528,15 +478,15 @@ class Event(object):
 
         self.empty_cache()
 
-    ############################################################################
+    ######################################################################################
     # Special properties: Photon arrival vectors, reversed
     #
     # These values are cached for repeated use.
     #
-    # Upon setting any of these parameters, the immediate value is saved and at
-    # least one of the attributes _arr_ap_ and _arr_ is filled in. All other
-    # attributes of arriving photons are derived from one of these.
-    ############################################################################
+    # Upon setting any of these parameters, the immediate value is saved and at least one
+    # of the attributes _arr_ap_ and _arr_ is filled in. All other attributes of arriving
+    # photons are derived from one of these.
+    ######################################################################################
 
     @property
     def neg_arr(self):
@@ -598,16 +548,16 @@ class Event(object):
 
         self.empty_cache()
 
-    ############################################################################
+    ######################################################################################
     # Special properties: Photon departure vectors
     #
     # These values are cached for repeated use.
     #
-    # Upon setting any of these parameters, the immediate value is saved and at
-    # least one of the attributes _dep_ap_ and _dep_ is filled in. All other
-    # attributes of departing photons are derived from one of these. Each of
-    # these can be derived from the other using actual_dep() and apparent_dep().
-    ############################################################################
+    # Upon setting any of these parameters, the immediate value is saved and at least one
+    # of the attributes _dep_ap_ and _dep_ is filled in. All other attributes of departing
+    # photons are derived from one of these. Each of these can be derived from the other
+    # using actual_dep() and apparent_dep().
+    ######################################################################################
 
     @property
     def dep(self):
@@ -615,13 +565,12 @@ class Event(object):
             if self._dep_ap_ is not None:
                 _ = self.actual_dep(derivs=True)    # fill internal attribute
 
-        return self._dep_                   # returns None if still undefined
+        return self._dep_   # returns None if still undefined
 
     @dep.setter
     def dep(self, value):
         if (self._dep_ is not None) or (self._dep_ap_ is not None):
-            raise ValueError('departing photons were already defined in ' +
-                             str(self))
+            raise ValueError(f'departing photons were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
         dep = Vector3.as_vector3(value).as_readonly()
@@ -645,8 +594,7 @@ class Event(object):
     @dep_ap.setter
     def dep_ap(self, value):
         if (self._dep_ap_ is not None) or (self._dep_ is not None):
-            raise ValueError('departing photons were already defined in ' +
-                             str(self))
+            raise ValueError(f'departing photons were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
         dep_ap = Vector3.as_vector3(value).as_readonly()
@@ -700,8 +648,7 @@ class Event(object):
     @dep_lt.setter
     def dep_lt(self, value):
         if self._dep_lt_ is not None:
-            raise ValueError('departing photons were already defined in ' +
-                             str(self))
+            raise ValueError(f'departing photons were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
         dep_lt = Scalar.as_scalar(value).as_readonly()
@@ -714,9 +661,9 @@ class Event(object):
 
         self.empty_cache()
 
-    ############################################################################
+    ######################################################################################
     # Special properties: Additional surface properties
-    ############################################################################
+    ######################################################################################
 
     @property
     def perp(self):
@@ -725,8 +672,7 @@ class Event(object):
     @perp.setter
     def perp(self, value):
         if self._perp_ is not None:
-            raise ValueError('perpendiculars were already defined in ' +
-                             str(self))
+            raise ValueError(f'perpendiculars were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
         perp = Vector3.as_vector(value).as_readonly()
@@ -750,8 +696,7 @@ class Event(object):
     @vflat.setter
     def vflat(self, value):
         if self._vflat_ is not None:
-            raise ValueError('surface velocities were already defined in ' +
-                             str(self))
+            raise ValueError(f'surface velocities were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
         vflat = Vector3.as_vector(value).as_readonly()
@@ -765,9 +710,9 @@ class Event(object):
 
         self.empty_cache()
 
-    ############################################################################
+    ######################################################################################
     # Standard methods
-    ############################################################################
+    ######################################################################################
 
     def __str__(self):
         time = self.time.flatten()
@@ -816,9 +761,9 @@ class Event(object):
         str_list += [')']
         return ''.join(str_list)
 
-    ############################################################################
+    ######################################################################################
     # Subfield and property methods
-    ############################################################################
+    ######################################################################################
 
     def insert_subfield(self, name, value):
         """Insert a given subfield into this Event."""
@@ -840,7 +785,6 @@ class Event(object):
 
         self.empty_cache()
 
-    #===========================================================================
     def get_subfield(self, name):
         """The value of a given subfield or property."""
 
@@ -849,20 +793,16 @@ class Event(object):
 
         return self.subfields[name]
 
-    ############################################################################
+    ######################################################################################
     # Constructors for variant Event objects
-    ############################################################################
+    ######################################################################################
 
     def _apply_this_func(self, func, *args):
-        """Internal function to return a new event in which the given function
-        has been applied to every attribute. Sort of tricky but very helpful.
+        """Internal function to return a new event in which the given function has been
+        applied to every attribute. Sort of tricky but very helpful.
 
-        Input:
-            func        function to apply to each attribute that is a Qube
-                        subclass. Other attributes are not altered.
-            args        additional arguments to pass to the function.
-
-        Return          a new Event object after this function has been applied.
+        Parameters:
+            Return (Event): Object after this function has been applied.
         """
 
         # Create the new event
@@ -898,15 +838,13 @@ class Event(object):
 
         return result
 
-    #===========================================================================
     def copy(self, omit=()):
         """A shallow copy of the Event.
 
-        Inputs:
-            omit        A list of properties and subfields to omit. Use 'arr' to
-                        omit all arrival vectors and 'dep' to omit all departure
-                        vectors; other properties and subfields must be named
-                        explicitly.
+        Parameters:
+            omit (list): Names of properties and subfields to omit. Use 'arr' to omit all
+                arrival vectors and 'dep' to omit all departure vectors; other properties
+                and subfields must be named explicitly.
         """
 
         def clone_attr(arg):
@@ -962,10 +900,9 @@ class Event(object):
 
         return result
 
-    #===========================================================================
     def without_derivs(self):
-        """A shallow copy of this Event without any derivatives except time.
-        Unlike the .wod property, this version does not cache the result.
+        """A shallow copy of this Event without any derivatives except time. Unlike the
+        .wod property, this version does not cache the result.
         """
 
         def remove_derivs(arg):
@@ -973,17 +910,16 @@ class Event(object):
 
         return self._apply_this_func(remove_derivs)
 
-    #===========================================================================
-    def as_all_masked(self, origin=None, frame=None, broadcast=None):
+    def as_all_masked(self, origin=None, frame=None, *, broadcast=None):
         """A shallow copy of this event, entirely masked.
 
-        Inputs:
-            origin      the origin or origin_id of the Event returned; if None,
-                        use the origin of this Event.
-            frame       the frame or frame_id of the Event returned; if None,
-                        use the frame of this Event.
-            broadcast   new shape to broadcast the result into; None to leave
-                        the shape unchanged.
+        Parameters:
+            origin (Path or str, optional): The origin or origin_id of the Event returned;
+                if None, use the origin of this Event.
+            frame (Frame or str, optional): The frame or frame_id of the Event returned;
+                if None, use the frame of this Event.
+            broadcast (tuple, optional): The new shape to broadcast the result into; None
+                to leave the shape unchanged.
         """
 
         def fully_masked(arg):
@@ -1014,7 +950,6 @@ class Event(object):
 
         return result
 
-    #===========================================================================
     def mask_where(self, mask):
         """A shallow copy of this Event with a new mask, using mask_where."""
 
@@ -1027,7 +962,6 @@ class Event(object):
         result = self._apply_this_func(apply_mask_where)
         return result
 
-    #===========================================================================
     def remask(self, mask):
         """A shallow copy of this Event with a new mask, using remask."""
 
@@ -1040,12 +974,8 @@ class Event(object):
         result = self._apply_this_func(apply_remask)
         return result
 
-    #===========================================================================
     def replace(self, *args):
         """A shallow copy with a specific set of attributes replaced.
-
-        Input:      an even number of input arguments, interpreted as an
-                    attribute name followed by its replacement value.
         """
 
         pairs = []
@@ -1071,9 +1001,9 @@ class Event(object):
 
         return result
 
-    ############################################################################
+    ######################################################################################
     # Functions to insert self-derivatives
-    ############################################################################
+    ######################################################################################
 
     def with_time_derivs(self):
         """A clone of this event containing unit time derivatives d_dt in the
@@ -1095,7 +1025,6 @@ class Event(object):
 
         return event
 
-    #===========================================================================
     def with_los_derivs(self):
         """A clone of this event with unit photon arrival derivatives d_dlos."""
 
@@ -1110,7 +1039,6 @@ class Event(object):
 
         return event
 
-    #===========================================================================
 # TODO: These are unused; might not work exactly as intended. --Mark
 #
 #     def with_pos_derivs(self):
@@ -1184,9 +1112,9 @@ class Event(object):
 #
 #         return event
 #
-    ############################################################################
+    ######################################################################################
     # Shrink and unshrink operations
-    ############################################################################
+    ######################################################################################
 
     def shrink(self, antimask):
         """A shrunken version of this event.
@@ -1220,8 +1148,7 @@ class Event(object):
 
         return result
 
-    #===========================================================================
-    def unshrink(self, antimask, shape=None):
+    def unshrink(self, antimask, *, shape=None):
         """Expand a shrunken version of this event to its original state.
 
         Antimask is None to leave the Event unchanged; otherwise, it must be a
@@ -1231,7 +1158,7 @@ class Event(object):
         def unshrink1(arg, mask):
             if arg.shape:
                 arg = arg.remask(mask)
-            return arg.unshrink(antimask, shape)
+            return arg.unshrink(antimask, shape=shape)
 
         # Make sure the new mask applies everywhere
         if antimask is None or Qube.is_one_true(antimask):
@@ -1241,8 +1168,8 @@ class Event(object):
 
         if self._xform_to_j2000_ is not None:
             xform = self._xform_to_j2000_
-            new_xform = Transform(xform.matrix.unshrink(antimask, shape),
-                                  xform.omega.unshrink(antimask, shape),
+            new_xform = Transform(xform.matrix.unshrink(antimask, shape=shape),
+                                  xform.omega.unshrink(antimask, shape=shape),
                                   xform.frame, xform.reference, xform.origin)
             result._xform_to_j2000_ = new_xform
 
@@ -1252,24 +1179,22 @@ class Event(object):
 
         return result
 
-    ############################################################################
+    ######################################################################################
     # Event transformations
-    ############################################################################
+    ######################################################################################
 
-    def wrt_ssb(self, derivs=True, quick={}):
+    def wrt_ssb(self, *, derivs=True, quick=None):
         """This event relative to SSB coordinates in the J2000 frame.
 
-        This value is cached inside of the object so it can be quickly accessed
-        again at a later time.
+        This value is cached inside of the object so it can be quickly accessed again at a
+        later time.
 
-        Input:
-            derivs      True to include the derivatives in the returned Event;
-                        False to exclude them. Time derivatives are always
-                        retained.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
+        Parameters:
+            derivs (bool, optional): True to include the derivatives in the returned
+                Event; False to exclude them. Time derivatives are always retained.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
         """
 
         if self._ssb_ is not None:
@@ -1288,9 +1213,8 @@ class Event(object):
                     return self._ssb_.wod
 
         (self._ssb_,
-         self._xform_to_j2000_) = self.wrt(Event.SSB, Frame.J2000,
-                                           derivs=derivs, quick=quick,
-                                           include_xform=True)
+         self._xform_to_j2000_) = self.wrt(Event.SSB, Frame.J2000, derivs=derivs,
+                                           quick=quick, include_xform=True)
 
         if self._ssb_ is not self:
             self._ssb_._ssb_ = self._ssb_
@@ -1301,22 +1225,19 @@ class Event(object):
         else:
             return self._ssb_.wod
 
-    #===========================================================================
-    def from_ssb(self, path, frame, derivs=True, quick={}):
+    def from_ssb(self, path, frame, *, derivs=True, quick=None):
         """This SSB/J2000-relative event to a new path and frame.
 
-        Input:
-            path        the Path or path ID identifying the new origin;
-                        None to leave the origin unchanged.
-            frame       the Frame or frame ID of the new coordinate frame; None
-                        to leave the frame unchanged.
-            derivs      True to include the derivatives in the returned Event;
-                        False to exclude them. Time derivatives are always
-                        retained.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
+        Parameters:
+            path (Path): Or path ID identifying the new origin; None to leave the origin
+                unchanged.
+            frame (Frame): Or frame ID of the new coordinate frame; None to leave the
+                frame unchanged.
+            derivs (bool, optional): True to include the derivatives in the returned
+                Event; False to exclude them. Time derivatives are always retained.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
         """
 
         if self._frame_ != Frame.J2000 or self._origin_ != Event.SSB:
@@ -1331,29 +1252,8 @@ class Event(object):
         else:
             return event.wod
 
-    #===========================================================================
-    def wrt(self, path=None, frame=None, derivs=True, quick={},
-                  include_xform=False):
+    def wrt(self, path=None, frame=None, *, derivs=True, quick=None, include_xform=False):
         """This event relative to a new path and/or a new coordinate frame.
-
-        Input:
-            path        the Path or path ID identifying the new origin;
-                        None to leave the origin unchanged.
-            frame       the Frame or frame ID of the new coordinate frame; None
-                        to leave the frame unchanged.
-            derivs      True to include the derivatives in the returned Event;
-                        False to exclude them. Time derivatives are always
-                        retained.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
-            include_xform
-                        if True, the transform is returned in a tuple along with
-                        the new event.
-
-        The new derivatives will multiply the originals, yielding derivatives
-        with respect to the same event as those of this event.
         """
 
         # Interpret inputs
@@ -1413,22 +1313,19 @@ class Event(object):
         else:
             return event
 
-    #===========================================================================
-    def wrt_path(self, path, derivs=True, quick={}):
+    def wrt_path(self, path, *, derivs=True, quick=None):
         """This event defined relative to a different origin path.
 
         The frame is unchanged.
 
-        Input:
-            path        the Path object to be used as the new origin. If the
-                        value is None, the event is returned unchanged.
-            derivs      True to include the derivatives in the returned Event;
-                        False to exclude them. Time derivatives are always
-                        retained.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
+        Parameters:
+            path (Path): Object to be used as the new origin. If the value is None, the
+                event is returned unchanged.
+            derivs (bool, optional): True to include the derivatives in the returned
+                Event; False to exclude them. Time derivatives are always retained.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
         """
 
         if path is None:
@@ -1463,25 +1360,21 @@ class Event(object):
         else:
             return result.wod
 
-    #===========================================================================
-    def wrt_frame(self, frame, derivs=True, quick={}, include_xform=False):
+    def wrt_frame(self, frame, *, derivs=True, quick=None, include_xform=False):
         """This event defined relative to a different frame.
 
         The path is unchanged.
 
-        Input:
-            frame       the Frame object to be used as the new reference. If the
-                        value is None, the event is returned unchanged.
-            derivs      True to include the derivatives in the returned Event;
-                        False to exclude them. Time derivatives are always
-                        retained.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
-            include_xform
-                        if True, the transform is returned in a tuple along with
-                        the new event.
+        Parameters:
+            frame (Frame): Object to be used as the new reference. If the value is None,
+                the event is returned unchanged.
+            derivs (bool, optional): True to include the derivatives in the returned
+                Event; False to exclude them. Time derivatives are always retained.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
+            include_xform (bool, optional): If True, the transform is returned in a tuple
+                along with the new event.
         """
 
         if frame is None:
@@ -1504,26 +1397,21 @@ class Event(object):
         return self.rotate_by_frame(new_frame, derivs=derivs, quick=quick,
                                                include_xform=include_xform)
 
-    #===========================================================================
-    def rotate_by_frame(self, frame, derivs=True, quick={},
-                              include_xform=False):
+    def rotate_by_frame(self, frame, *, derivs=True, quick=None, include_xform=False):
         """This event rotated forward into a new frame.
 
         The origin is unchanged. Subfields are also rotated into the new frame.
 
-        Input:
-            frame       a Frame into which to transform the coordinates. Its
-                        reference frame must be the current frame of the event.
-            derivs      True to include the derivatives in the returned Event;
-                        False to exclude them. Time derivatives are always
-                        retained.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
-            include_xform
-                        if True, the transform is returned in a tuple along with
-                        the new event.
+        Parameters:
+            frame (Frame): Into which to transform the coordinates. Its reference frame
+                must be the current frame of the event.
+            derivs (bool, optional): True to include the derivatives in the returned
+                Event; False to exclude them. Time derivatives are always retained.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
+            include_xform (bool, optional): If True, the transform is returned in a tuple
+                along with the new event.
         """
 
         def xform_rotate(arg):
@@ -1539,7 +1427,7 @@ class Event(object):
 
         frame = Frame.as_frame(frame)
         xform = frame.transform_at_time(event._time_, quick=quick)
-                    # xform rotates from event frame to new frame
+        # xform rotates from event frame to new frame
 
         state = xform.rotate(event._state_, derivs=True)
 
@@ -1559,23 +1447,20 @@ class Event(object):
         else:
             return result
 
-    #===========================================================================
-    def unrotate_by_frame(self, frame, derivs=True, quick={}):
+    def unrotate_by_frame(self, frame, *, derivs=True, quick=None):
         """This Event unrotated back into the given frame.
 
         The origin is unchanged. Subfields are also urotated.
 
-        Input:
-            frame       a Frame object to inverse-transform the coordinates.
-                        Its target frame must be the current frame of the event.
-                        The returned event will use the reference frame instead.
-            derivs      True to include the derivatives in the returned Event;
-                        False to exclude them. Time derivatives are always
-                        retained.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
+        Parameters:
+            frame (Frame): Object to inverse-transform the coordinates. Its target frame
+                must be the current frame of the event. The returned event will use the
+                reference frame instead.
+            derivs (bool, optional): True to include the derivatives in the returned
+                Event; False to exclude them. Time derivatives are always retained.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
         """
 
         def xform_unrotate(arg):
@@ -1607,20 +1492,18 @@ class Event(object):
 
         return result
 
-    #===========================================================================
     def collapse_time(self, threshold=None):
         """If the time span is small, return a similar Event having fixed time.
 
-        If the difference between the earliest time and the latest time is
-        smaller than a specified threshold, a new Event object is returned in
-        which the time is replaced by a Scalar equal to the midtime.
+        If the difference between the earliest time and the latest time is smaller than a
+        specified threshold, a new Event object is returned in which the time is replaced
+        by a Scalar equal to the midtime.
 
         Otherwise, the object is returned unchanged.
 
-        Input:
-            threshold   the allowed difference in seconds between the earliest
-                        latest times. None to use the value specifed by the
-                        EVENT_CONFIG.
+        Parameters:
+            threshold (float, optional): The allowed difference in seconds between the
+                earliest latest times. None to use the value specifed by the EVENT_CONFIG.
         """
 
         def without_derivs(arg):
@@ -1660,23 +1543,22 @@ class Event(object):
 
         return result
 
-    ############################################################################
+    ######################################################################################
     # Event subtraction
-    ############################################################################
+    ######################################################################################
 
-    def sub(self, reference, quick={}):
+    def sub(self, reference, *, quick=None):
         """The result of subtracting the reference event from this event.
 
-        Used mainly for debugging. Note that the reference event could occur at
-        a different time. Subtracted events can only be used to examine
-        differences in properties; other methods will fail.
+        Used mainly for debugging. Note that the reference event could occur at a
+        different time. Subtracted events can only be used to examine differences in
+        properties; other methods will fail.
 
-        Vectors in the returned object are in the frame of the reference event;
-        times are relative. Photon events are unchanged except for the
-        coordinate transform.
+        Vectors in the returned object are in the frame of the reference event; times are
+        relative. Photon events are unchanged except for the coordinate transform.
 
-        The returned object has additional attributes 'event' and 'reference',
-        which point to the source events
+        The returned object has additional attributes 'event' and 'reference', which point
+        to the source events
         """
 
         def ref_unrotate(arg):
@@ -1711,40 +1593,38 @@ class Event(object):
 
         return diff
 
-    ############################################################################
+    ######################################################################################
     # Aberration procedures
-    ############################################################################
+    ######################################################################################
 
-    def apparent_ray_ssb(self, ray_ssb, derivs=False, quick={}):
+    def apparent_ray_ssb(self, ray_ssb, *, derivs=False, quick=None):
         """Apparent direction of a photon in the SSB/J2000 frame. Not cached.
 
-        Input:
-            ray_ssb     the true direction of a light ray in the SSB/J2000
-                        system (not reversed!).
-            derivs      True to include the derivatives of the light ray in the
-                        returned ray; False to exclude them.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
+        Parameters:
+            ray_ssb (Vector3): The true direction of a light ray in the SSB/J2000 system
+                (not reversed!).
+            derivs (bool, optional): True to include the derivatives of the light ray in
+                the returned ray; False to exclude them.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
         """
 
-        # This procedure is equivalent to a vector subtraction of the velocity
-        # of the observer from the ray, given that the ray has length C. However
-        # the length of the ray is adjusted to be accurate to higher order in
-        # (v/c)
+        # This procedure is equivalent to a vector subtraction of the velocity of the
+        # observer from the ray, given that the ray has length C. However the length of
+        # the ray is adjusted to be accurate to higher order in (v/c)
 
         ray_ssb = Vector3.as_vector3(ray_ssb, recursive=derivs).as_readonly()
-        wrt_ssb = self.wrt_ssb(derivs, quick=quick)
+        wrt_ssb = self.wrt_ssb(derivs=derivs, quick=quick)
         vel_ssb = wrt_ssb.vel + wrt_ssb.vflat.without_deriv('t')
 
-        # Below, factor = 1 is good to first order, matching the accuracy of the
-        # SPICE toolkit. The expansion in beta below was determined empirically
-        # to match the exact expression for the aberration, which is:
+        # Below, factor = 1 is good to first order, matching the accuracy of the SPICE
+        # toolkit. The expansion in beta below was determined empirically to match the
+        # exact expression for the aberration, which is:
         #   tan(alpha'/2) = sqrt((1+beta)/(1-beta)) tan(alpha/2)
         #
-        # alpha is the actual angle between the velocity vector and the photon's
-        # direction of motion (NOT reversed).
+        # alpha is the actual angle between the velocity vector and the photon's direction
+        # of motion (NOT reversed).
         #
         # alpha' is the apparent angle.
 
@@ -1756,26 +1636,24 @@ class Event(object):
 
         return ray_ssb - (factor * C_INVERSE) * ray_ssb_norm * vel_ssb
 
-    #===========================================================================
-    def actual_ray_ssb(self, ray_ap_ssb, derivs=False, quick={}):
+    def actual_ray_ssb(self, ray_ap_ssb, *, derivs=False, quick=None):
         """Actual direction of a photon in the SSB/J2000 frame. Not cached.
 
-        Input:
-            ray_ap_ssb  the apparent direction of a light ray in the SSB/J2000
-                        system.
-            derivs      True to include the derivatives of the light ray in the
-                        returned ray; False to exclude them.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
+        Parameters:
+            ray_ap_ssb (Vector3): The apparent direction of a light ray in the SSB/J2000
+                system.
+            derivs (bool, optional): True to include the derivatives of the light ray in
+                the returned ray; False to exclude them.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
         """
 
         # This procedure is equivalent to a vector subtraction of the velocity
         # of the observer from the ray, given that the ray has length C.
 
         ray_ap_ssb = Vector3.as_vector3(ray_ap_ssb, recursive=derivs).as_readonly()
-        wrt_ssb = self.wrt_ssb(derivs, quick=quick)
+        wrt_ssb = self.wrt_ssb(derivs=derivs, quick=quick)
         vel_ssb = wrt_ssb.vel + wrt_ssb.vflat.without_deriv('t')
 
         # Invert the function above
@@ -1796,17 +1674,15 @@ class Event(object):
 
         return ray_ssb
 
-    #===========================================================================
-    def apparent_arr(self, derivs=False, quick={}):
+    def apparent_arr(self, *, derivs=False, quick=None):
         """Apparent direction of an arriving ray in the event frame. Cached.
 
-        Input:
-            derivs      True to include the derivatives of the light ray in the
-                        returned ray; False to exclude them.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
+        Parameters:
+            derivs (bool, optional): True to include the derivatives of the light ray in
+                the returned ray; False to exclude them.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
         """
 
         # If the apparent vector is already cached, return it
@@ -1817,8 +1693,8 @@ class Event(object):
                 return self._arr_ap_.wod
 
         # Otherwise, calculate and cache the apparent vector in the SSB frame
-        wrt_ssb = self.wrt_ssb(derivs, quick=quick)
-        arr_ap_ssb = self.apparent_ray_ssb(wrt_ssb.arr, derivs, quick=quick)
+        wrt_ssb = self.wrt_ssb(derivs=derivs, quick=quick)
+        arr_ap_ssb = self.apparent_ray_ssb(wrt_ssb.arr, derivs=derivs, quick=quick)
         wrt_ssb._arr_ap_ = arr_ap_ssb
 
         # Convert to this event's frame
@@ -1834,17 +1710,15 @@ class Event(object):
         else:
             return self._arr_ap_.wod
 
-    #===========================================================================
-    def actual_arr(self, derivs=False, quick={}):
+    def actual_arr(self, *, derivs=False, quick=None):
         """Actual direction of an arriving ray in the event frame. Cached
 
-        Input:
-            derivs      True to include the derivatives of the light ray in the
-                        returned ray; False to exclude them.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
+        Parameters:
+            derivs (bool, optional): True to include the derivatives of the light ray in
+                the returned ray; False to exclude them.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
         """
 
         # If the apparent vector is already cached, return it
@@ -1855,8 +1729,8 @@ class Event(object):
                 return self._arr_.wod
 
         # Otherwise, calculate and cache the apparent vector in the SSB frame
-        wrt_ssb = self.wrt_ssb(derivs, quick=quick)
-        arr_ssb = self.actual_ray_ssb(wrt_ssb.arr_ap, derivs, quick=quick)
+        wrt_ssb = self.wrt_ssb(derivs=derivs, quick=quick)
+        arr_ssb = self.actual_ray_ssb(wrt_ssb.arr_ap, derivs=derivs, quick=quick)
         wrt_ssb._arr_ = arr_ssb
 
         # Convert to this event's frame
@@ -1871,17 +1745,15 @@ class Event(object):
         else:
             return self._arr_.wod
 
-    #===========================================================================
-    def apparent_dep(self, derivs=False, quick={}):
+    def apparent_dep(self, *, derivs=False, quick=None):
         """Apparent direction of a departing ray in the event frame. Cached.
 
-        Input:
-            derivs      True to include the derivatives of the light ray in the
-                        returned ray; False to exclude them.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
+        Parameters:
+            derivs (bool, optional): True to include the derivatives of the light ray in
+                the returned ray; False to exclude them.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
         """
 
         # If the apparent vector is already cached, return it
@@ -1892,8 +1764,8 @@ class Event(object):
                 return self._dep_ap_.wod
 
         # Otherwise, calculate and cache the apparent vector in the SSB frame
-        wrt_ssb = self.wrt_ssb(derivs, quick=quick)
-        dep_ap_ssb = self.apparent_ray_ssb(wrt_ssb._dep_, derivs, quick=quick)
+        wrt_ssb = self.wrt_ssb(derivs=derivs, quick=quick)
+        dep_ap_ssb = self.apparent_ray_ssb(wrt_ssb._dep_, derivs=derivs, quick=quick)
         wrt_ssb._dep_ap_ = dep_ap_ssb
 
         # Convert to this event's frame
@@ -1909,17 +1781,15 @@ class Event(object):
         else:
             return self._dep_ap_.wod
 
-    #===========================================================================
-    def actual_dep(self, derivs=False, quick={}):
+    def actual_dep(self, *, derivs=False, quick=None):
         """Actual direction of a departing ray in the event frame. Cached.
 
-        Input:
-            derivs      True to include the derivatives of the light ray in the
-                        returned ray; False to exclude them.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
+        Parameters:
+            derivs (bool, optional): True to include the derivatives of the light ray in
+                the returned ray; False to exclude them.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
         """
 
         # If the apparent vector is already cached, return it
@@ -1930,8 +1800,8 @@ class Event(object):
                 return self._dep_.wod
 
         # Otherwise, calculate and cache the apparent vector in the SSB frame
-        wrt_ssb = self.wrt_ssb(derivs, quick=quick)
-        dep_ssb = self.actual_ray_ssb(wrt_ssb._dep_ap_, derivs, quick=quick)
+        wrt_ssb = self.wrt_ssb(derivs=derivs, quick=quick)
+        dep_ssb = self.actual_ray_ssb(wrt_ssb._dep_ap_, derivs=derivs, quick=quick)
         wrt_ssb._dep_ = dep_ssb
 
         # Convert to this event's frame
@@ -1946,28 +1816,27 @@ class Event(object):
         else:
             return self._dep_.wod
 
-    #===========================================================================
-    def incidence_angle(self, apparent=False, derivs=False, quick={}):
+    def incidence_angle(self, apparent=False, *, derivs=False, quick=None):
         """The incidence angle.
 
-        The incidence angle is measured between the surface normal and the
-        reversed direction of the arriving photon.
+        The incidence angle is measured between the surface normal and the reversed
+        direction of the arriving photon.
 
-        Input:
-            apparent    True to account for the aberration in the Event frame.
-            derivs      True to include the derivatives of the light ray in the
-                        returned angle; False to exclude them.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
+        Parameters:
+            apparent (bool, optional): True to account for the aberration in the Event
+                frame.
+            derivs (bool, optional): True to include the derivatives of the light ray in
+                the returned angle; False to exclude them.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
         """
 
         if self._arr_ is None and self._arr_ap_ is None:
-            raise ValueError('Undefined arrival vector in ' + str(self))
+            raise ValueError(f'undefined arrival vector in {self}')
 
         if self._perp_ is None:
-            raise ValueError('Undefined perpendicular vector in ' + str(self))
+            raise ValueError(f'undefined perpendicular vector in {self}')
 
         shrunk = self.shrink(self.antimask)
         _ = shrunk.wrt_ssb(derivs=True, quick=quick)
@@ -1978,30 +1847,29 @@ class Event(object):
             arr = shrunk.arr
 
         result = Scalar.PI - shrunk.perp.sep(arr, recursive=derivs)
-        return result.unshrink(self.antimask, self.shape)
+        return result.unshrink(self.antimask, shape=self.shape)
 
-    #===========================================================================
-    def emission_angle(self, apparent=False, derivs=False, quick={}):
+    def emission_angle(self, apparent=False, *, derivs=False, quick=None):
         """The emission angle.
 
-        The emission angle is measured between the surface normal and the
-        direction of the departing photon.
+        The emission angle is measured between the surface normal and the direction of the
+        departing photon.
 
-        Input:
-            apparent    True to account for the aberration in the Event frame.
-            derivs      True to include any derivatives of the light ray in the
-                        returned angle; False to exclude them.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
+        Parameters:
+            apparent (bool, optional): True to account for the aberration in the Event
+                frame.
+            derivs (bool, optional): True to include any derivatives of the light ray in
+                the returned angle; False to exclude them.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
         """
 
         if self._dep_ is None and self._dep_ap_ is None:
-            raise ValueError('Undefined departure vector in ' + str(self))
+            raise ValueError(f'undefined departure vector in {self}')
 
         if self._perp_ is None:
-            raise ValueError('Undefined perpendicular vector in ' + str(self))
+            raise ValueError(f'undefined perpendicular vector in {self}')
 
         shrunk = self.shrink(self.antimask)
         _ = shrunk.wrt_ssb(derivs=True, quick=quick)
@@ -2012,30 +1880,29 @@ class Event(object):
             dep = shrunk.dep
 
         result = shrunk.perp.sep(dep, recursive=derivs)
-        return result.unshrink(self.antimask, self.shape)
+        return result.unshrink(self.antimask, shape=self.shape)
 
-    #===========================================================================
-    def phase_angle(self, apparent=False, derivs=False, quick={}):
+    def phase_angle(self, apparent=False, *, derivs=False, quick=None):
         """The phase angle.
 
-        The phase angle is measured between the apparent direction of the
-        arriving photon and the reversed direction of the departing photon.
+        The phase angle is measured between the apparent direction of the arriving photon
+        and the reversed direction of the departing photon.
 
-        Input:
-            apparent    True to account for the aberration in the Event frame.
-            derivs      True to include any derivatives of the light ray in the
-                        returned angle; False to exclude them.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
+        Parameters:
+            apparent (bool, optional): True to account for the aberration in the Event
+                frame.
+            derivs (bool, optional): True to include any derivatives of the light ray in
+                the returned angle; False to exclude them.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
         """
 
         if self._arr_ is None and self._arr_ap_ is None:
-            raise ValueError('Undefined arrival vector in ' + str(self))
+            raise ValueError(f'undefined arrival vector in {self}')
 
         if self._dep_ is None and self._dep_ap_ is None:
-            raise ValueError('Undefined departure vector in ' + str(self))
+            raise ValueError(f'undefined departure vector in {self}')
 
         shrunk = self.shrink(self.antimask)
         _ = shrunk.wrt_ssb(derivs=True, quick=quick)
@@ -2048,34 +1915,31 @@ class Event(object):
             arr = shrunk.arr
 
         result = Scalar.PI - dep.sep(arr, recursive=derivs)
-        return result.unshrink(self.antimask, self.shape)
+        return result.unshrink(self.antimask, shape=self.shape)
 
-    #===========================================================================
-    def ra_and_dec(self, apparent=False, derivs=False,
-                         subfield='arr', quick={}, frame='J2000'):
+    def ra_and_dec(self, apparent=False, *, derivs=False, subfield='arr', quick=None,
+                   frame='J2000'):
         """The right ascension and declination as a tuple of two Scalars.
 
-        Input:
-            apparent    True to include stellar aberration, thereby returning
-                        the apparent direction of the photon relative to the
-                        background stars; False to return the purely geometric
-                        values, neglecting the motion of the observer.
-            derivs      True to include any derivatives of the light ray in the
-                        returned quantities; False to exclude them.
-            subfield    The subfield to use for the calculation, either "arr"
-                        or "dep". Note that an arriving direction is reversed.
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
-            frame       coordinate frame for RA and dec. Default is J2000. Use
-                        None to use the frame of this event.
+        Parameters:
+            apparent (bool, optional): True to include stellar aberration, thereby
+                returning the apparent direction of the photon relative to the background
+                stars; False to return the purely geometric values, neglecting the motion
+                of the observer.
+            derivs (bool, optional): True to include any derivatives of the light ray in
+                the returned quantities; False to exclude them.
+            subfield (optional): The subfield to use for the calculation, either "arr"
+                or "dep". Note that an arriving direction is reversed.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
+            frame (Frame, optional): Coordinate frame for RA and dec. Default is J2000.
+                Use None to use the frame of this event.
         """
 
         # Validate the inputs
         if subfield not in ('arr', 'dep'):
-            raise ValueError('invalid input value for apparent: '
-                             + repr(apparent))
+            raise ValueError(f'invalid input value for apparent: {apparent!r}')
 
         # Identify the frame
         if frame == 'J2000' or frame == Frame.J2000:
@@ -2098,9 +1962,9 @@ class Event(object):
                 ray = event.dep_ap
 
         if ray is None:
-            raise ValueError('Undefined light ray vector in ' + str(self))
+            raise ValueError(f'undefined light ray vector in {self}')
 
         # Convert to RA and dec
         return ray.to_ra_dec_length(recursive=derivs)[:2]
 
-################################################################################
+##########################################################################################

@@ -6,8 +6,10 @@
 from collections.abc import Iterable
 from typing import Any
 
+from oops.oops import Oops
 
-class Fittable(object):
+
+class Fittable(Oops):
     """The Fittable interface enables any class to be used within a fitting procedure.
 
     Most OOPS objects are static, but objects that subclass Fittable can be modified

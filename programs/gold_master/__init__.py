@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # programs/gold_master/__init__.py: Backplane gold master tester and support.
-################################################################################
+##########################################################################################
 """\
 ########################################################################
 # How to use with pytest for a host or instrument...
@@ -163,10 +163,10 @@ __all__ = ['set_default_obs', 'define_standard_obs', 'set_default_args',
            'override', 'execute_as_command', 'execute_as_pytest', 'run_tests',
            'register_test_suite', 'get_test_suite', 'BackplaneTest']
 
-################################################################################
+##########################################################################################
 # Use set_default_obs() and set_standard_obs() to define the observation used
 # for unit tests and as the default for a run from the command line.
-################################################################################
+##########################################################################################
 
 # This is a dictionary test name -> key inputs for test
 STANDARD_OBS_INFO = {}
@@ -242,11 +242,11 @@ def define_standard_obs(obsname, obspath, index=None, *, planets=[], moons=[],
     STANDARD_OBS_INFO[obsname]['rings']   = rings
     STANDARD_OBS_INFO[obsname]['kwargs']  = kwargs
 
-################################################################################
+##########################################################################################
 # The "default defaults" are defined here. A call to set_default_args() can be
 # used to replace them for some specific test. These defaults are required to be
 # identical for all standard observations.
-################################################################################
+##########################################################################################
 
 DEFAULTS = {
     'planets'       : [],           # used only if no standard obs is named
@@ -320,25 +320,24 @@ def set_default_args(**options):
     for key, value in options.items():
         DEFAULTS[key] = value
 
-################################################################################
+##########################################################################################
 # Overrides of specific tests
 #
 # Sometimes we understand why certain comparison tests have values that exceed
 # the hard-wired limit.
-################################################################################
+##########################################################################################
 
 TEST_OVERRIDES = defaultdict(dict)
 
 def override(title, value, names=None):
     """Override the hard-wired comparison values for specific tests.
 
-    Input:
-        title       the exact title of a test, e.g.,
-                    "JUPITER:RING incidence angle, ring minus center (deg)".
-        value       the revised comparison value, or None to suppress the test
-                    entirely.
-        names       name(s) of one or more standard observations; None to
-                    apply to all standard observations.
+    Parameters:
+        title: The exact title of a test, e.g., "JUPITER:RING incidence angle, ring
+            minus center (deg)".
+        value: The revised comparison value, or None to suppress the test entirely.
+        names (optional): Name(s) of one or more standard observations; None to apply
+            to all standard observations.
     """
 
     global TEST_OVERRIDES
@@ -353,9 +352,9 @@ def override(title, value, names=None):
     for obsname in obsnames:
         TEST_OVERRIDES[obsname][title] = value
 
-################################################################################
+##########################################################################################
 # Command line execution
-################################################################################
+##########################################################################################
 
 def execute_as_command():
     """Parse command-line arguments for gold master testing of one or more
@@ -600,9 +599,9 @@ def execute_as_command():
 
     run_tests(args)
 
-################################################################################
+##########################################################################################
 # pytest support
-################################################################################
+##########################################################################################
 
 def execute_as_pytest(obsname='default'):
     """Run the gold master test suites for all of the defined standard
@@ -668,7 +667,6 @@ def execute_as_pytest(obsname='default'):
 
     run_tests(args)
 
-#===============================================================================
 def _clean_up_args(args):
     """Clean up arguments given in the command line."""
 
@@ -786,7 +784,6 @@ def _clean_up_args(args):
 
     return args
 
-#===============================================================================
 def run_tests(args):
     """Run all the gold master tests."""
 
@@ -843,7 +840,7 @@ def run_tests(args):
         else:
             sys.exit(-1)
 
-################################################################################
+##########################################################################################
 # Test suite management
 #
 # Each backplane module defines one or more functions that receive a
@@ -853,7 +850,7 @@ def run_tests(args):
 # Once defined, they call register_test_suite(name, func) to register each test
 # function within the Gold Master testing framework. Afterward, these tests will
 # be included during unit testing.
-################################################################################
+##########################################################################################
 
 TEST_SUITES = {}            # dictionary of all test suites
 
@@ -875,14 +872,12 @@ def get_test_suite(name):
 
     return TEST_SUITES[name]
 
-################################################################################
+##########################################################################################
 # Internal _BackplaneComparison class
-################################################################################
+##########################################################################################
 
 class _BackplaneComparison(object):
-    """Class for managing information about a single BackplaneTest
-    comparison.
-    """
+    """Class for managing information about a single BackplaneTest comparison."""
 
     STATUS_LEVEL = {
         'Success'            : 'INFO',
@@ -968,12 +963,12 @@ class _BackplaneComparison(object):
         level = 'WARNING' if is_ok else 'ERROR'
         _BackplaneComparison.STATUS_LEVEL['No gold master'] = level
 
-################################################################################
+##########################################################################################
 # BackplaneTest class
 #
 # This class manages information about the backplanes of a particular
 # observation.
-################################################################################
+##########################################################################################
 
 TEST_SUITE = ''         # the name of the current test suite
 LATEST_TITLE = ''       # used to track what was happening if an error occurs
@@ -998,17 +993,16 @@ class BackplaneTest(object):
     def __init__(self, obs, planets, moons, rings, overrides, args, suffix=''):
         """Construct a BackplaneTest for the given observation.
 
-        Input:
-            obs         Observation.
-            planets     list of one or more planet names to use in backplanes.
-            moons       list of one or more moon names to use in backplanes.
-            rings       list of one or more ring names to use in backplanes.
-            overrides   dictionary of test overrides for this observation.
-            args        A Namespace object containing the command line inputs.
-            suffix      a suffix string used to distinguish between multiple
-                        Observations all defined within the same data file; it
-                        is appended to the array and browse directory names to
-                        make them unique.
+        Parameters:
+            obs (Observation): Observation.
+            planets (list): List of one or more planet names to use in backplanes.
+            moons (list): List of one or more moon names to use in backplanes.
+            rings (list): List of one or more ring names to use in backplanes.
+            overrides (dict): Dictionary of test overrides for this observation.
+            args: A Namespace object containing the command line inputs.
+            suffix (optional): A suffix string used to distinguish between multiple
+                Observations all defined within the same data file; it is appended to the
+                array and browse directory names to make them unique.
         """
 
         self.obs = obs
@@ -1126,9 +1120,9 @@ class BackplaneTest(object):
             self.header.append(f'Suffix: {self.suffix}')
         self.print_header = self.args.level > logging.INFO
 
-    ############################################################################
+    ######################################################################################
     # Test runner for one BackplaneTest
-    ############################################################################
+    ######################################################################################
 
     def run_tests(self):
         """Run the complete suite of tests for this BackplaneTest."""
@@ -1345,7 +1339,6 @@ class BackplaneTest(object):
         'int'  : (-sys.maxsize - 1, sys.maxsize),
     }
 
-    #===========================================================================
     def compare(self, array, master, title, limit=0., method='', operator='=',
                                             radius=0., mask=False):
         """Compare two backplane arrays and log the results.
@@ -1399,7 +1392,6 @@ class BackplaneTest(object):
         self._compare(array, master, comparison)
         LATEST_TITLE = ''
 
-    #===========================================================================
     def gmtest(self, array, title, limit=0., method='', operator='=',
                                    radius=0., mask=False):
         """Compare a backplane array against its gold master. Save the array,
@@ -1530,7 +1522,6 @@ class BackplaneTest(object):
 
         LATEST_TITLE = ''
 
-    #===========================================================================
     def _compare(self, array, master, comparison):
         """Internal method that performs a comparison _after_ the inputs have
         been validated. Radians must already be converted to degrees.
@@ -1836,7 +1827,6 @@ class BackplaneTest(object):
         self._log_comparison(comparison)
         return
 
-    #===========================================================================
     def _validate_inputs(self, array, title, limit, method, operator, radius,
                                mask):
         """Initial steps for both compare() and gmtest()."""
@@ -1914,7 +1904,6 @@ class BackplaneTest(object):
 
         return (array, comparison)
 
-    #===========================================================================
     def _summarize(self, array, title, method):
         """Save the summary info for this backplane array.
 
@@ -1989,7 +1978,6 @@ class BackplaneTest(object):
 
         return _summary_text(minval, maxval, masked, total)
 
-    #===========================================================================
     def _log_comparison(self, comparison, status=''):
         """Log this comparison info.
 
@@ -2114,7 +2102,6 @@ class BackplaneTest(object):
 
             LOGGING.literal()
 
-    #===========================================================================
     @staticmethod
     def _valstr(value):
         """value formatter, avoiding "0.000" and "1.000e-12"."""
@@ -2131,7 +2118,6 @@ class BackplaneTest(object):
             parts = formatted.partition('e')
             return parts[0].rstrip('0') + parts[1] + parts[2]
 
-    #===========================================================================
     @functools.lru_cache(maxsize=10)
     def _footprint(radius):
         """Circular footprint of the given pixel radius, for scip.ndarray
@@ -2144,7 +2130,6 @@ class BackplaneTest(object):
         y = x[:, np.newaxis]
         return (x**2 + y**2) <= radius**2
 
-    #===========================================================================
     def _basename(self, title, gold=False):
         """Convert a title to a file basename.
 
@@ -2203,9 +2188,9 @@ class BackplaneTest(object):
 
             return filename
 
-    ############################################################################
+    ######################################################################################
     # Browse image support
-    ############################################################################
+    ######################################################################################
 
     def save_browse(self, array, browse_path):
         """Save a backplane as a PNG, JPG, or TIFF file."""
@@ -2267,7 +2252,6 @@ class BackplaneTest(object):
         im.save(filename)
         browse_path.upload()
 
-    #===========================================================================
     @staticmethod
     def read_browse(browse_path):
         """Read a PNG, JPG, or TIFF image file as a 2-D array of unsigned bytes.
@@ -2277,7 +2261,7 @@ class BackplaneTest(object):
         with PIL.Image.open(local_path, mode='r') as im:
             return np.array(im)
 
-    ############################################################################
+    ######################################################################################
     # Result summary support
     #
     # The summary file is a text file containing the definition of a Python
@@ -2285,7 +2269,7 @@ class BackplaneTest(object):
     # values are tuples (minimum value, maximum value, masked pixels, total
     # pixels). If the minimum and maximum are equal, only one value is listed;
     # if the object is fully masked, the value is None.
-    ############################################################################
+    ######################################################################################
 
     @property
     def gold_summary(self):
@@ -2312,7 +2296,6 @@ class BackplaneTest(object):
 
         return self.gold_summary_
 
-    #===========================================================================
     def write_summary(self, outdir):
         """Write the test summary as a Python dictionary; return its file path.
         """
@@ -2362,9 +2345,9 @@ class BackplaneTest(object):
 
         return filepath
 
-################################################################################
+##########################################################################################
 # To handle gold master testing from the command line...
-################################################################################
+##########################################################################################
 
 if __name__ == '__main__':
 
@@ -2394,4 +2377,4 @@ if __name__ == '__main__':
 
     gm.execute_as_command()
 
-################################################################################
+##########################################################################################

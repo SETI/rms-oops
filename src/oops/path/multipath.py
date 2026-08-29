@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/path/multipath.py: Subclass MultiPath of class Path
+# oops/path/multipath.py
 ##########################################################################################
 
 import numpy as np
@@ -26,6 +26,10 @@ class MultiPath(Path):
                 None to use the default frame of the `origin` path.
             path_id (str, optional): The ID under which to register this Path; None to
                 leave this Path unregistered.
+
+        Raises:
+            KeyError: If `paths`, `origin`, or `frame` contains an ID string that has not
+                been registered.
         """
 
         # Interpret the inputs
@@ -45,7 +49,7 @@ class MultiPath(Path):
 
     # Support indexing by integer or numeric range
     def __getitem__(self, i):
-        paths = self.paths[i]
+        paths = self._paths[i]
         if np.shape(paths) == ():
             return paths
         return MultiPath(paths, self._origin, self._frame, path_id=None)
@@ -90,14 +94,14 @@ class MultiPath(Path):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Event): The Event object containing (at least) the time, position, and
-                velocity on the Path.
+            Event: The Event object containing (at least) the time, position, and velocity
+            on this Path.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.
@@ -126,7 +130,7 @@ class MultiPath(Path):
         return Event(Scalar(time.vals, mask), (Vector3(pos, mask), Vector3(vel, mask)),
                      self._origin, self._frame)
 
-    def quick_path(self, time, *, quick=None):
+    def quick_path(self, time, quick=None):
         """Override of the default quick_path method to return a MultiPath of quick_paths.
 
         A QuickPath operates by sampling the given path and then setting up an
@@ -135,11 +139,14 @@ class MultiPath(Path):
         of an image.
 
         Parameters:
-            time (Scalar or array-like): The times at which the frame is to be evaluated.
-                Alternatively, a tuple (minimum time, maximum time, number of times)
+            time (Scalar): The time(s) at which this path is to be evaluated.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters;
                 use False to disable the use of QuickPaths and QuickFrames.
+
+        Returns:
+            MultiPath: A MultiPath of the QuickPaths that approximate the individual
+            paths for the given range of times.
         """
 
         # Broadcast everything to the same shape

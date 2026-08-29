@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/body.py: Body class
-################################################################################
+##########################################################################################
 
 import numbers
 import numpy as np
@@ -28,10 +28,10 @@ from oops.surface.spice_shape    import spice_shape
 import oops.constants     as constants
 import oops.spice_support as spice_support
 
-################################################################################
+##########################################################################################
 # A list of known changes in SPICE names and IDs
 # This also standardizes the SPICE names of provisionally-named bodies.
-################################################################################
+##########################################################################################
 
 JUPITER_ALIASES = [
     # Jupiter [new code, old code], [formal name, provisional name]
@@ -125,9 +125,9 @@ ALIASES = JUPITER_ALIASES + SATURN_ALIASES
 for (codes, names) in ALIASES:
     cspyce.define_body_aliases(*(names + codes))
 
-################################################################################
+##########################################################################################
 # Planetary constants
-################################################################################
+##########################################################################################
 
 # Sometimes you really just want a list, not an iterator
 def lrange(*args):
@@ -226,64 +226,54 @@ PLUTO_CHARON_DISTANCE = 19591.
 #### Standard inertial frames
 _INERTIALS = ['B1950', 'GALACTIC', 'ECLIPJ2000']
 
-################################################################################
+##########################################################################################
 
 class Body(object):
     """Defines the properties and relationships of solar system bodies.
 
-    Bodies include planets, dwarf planets, satellites and rings. Each body has
-    these attributes:
-        name            the name of this body.
-        spice_id        the ID from the SPICE toolkit, if the body found in
-                        SPICE; otherwise, None.
-        path            a Waypoint for the body's path.
-        frame           a Wayframe for the body's frame.
-        parent          the physical body (not necessarily the barycenter) about
-                        which this body orbits. If a string is given, the parent
-                        is found by looking it up in the BODY_REGISTRY
-                        dictionary.
-        barycenter      the body defining the barycenter of motion and the
-                        gravity field defining this body's motion. If a string
-                        is given, the barycenter is found by looking it up in
-                        the BODY_REGISTRY dictionary. If None, this is the
-                        parent body.
-        spice_name      name of the Body within the SPICE toolkit, if this is
-                        in SPICE.
+    Bodies include planets, dwarf planets, satellites and rings.
 
-        ring_frame      the Wayframe of a "despun" RingFrame relevant to a ring
-                        that might orbit this body. None if not (yet) defined.
-        ring_is_retrograde  True if the ring frame is retrograde relative to
-                            IAU-defined north.
-        ring_body       the Body object associated with an equatorial, unbounded
-                        ring; None if not defined.
-
-        surface         the Surface object defining the body's surface. None if
-                        the body is a point and has no surface.
-        radius          a single value in km, defining the radius of a sphere
-                        that encloses the entire body. Zero for bodies that have
-                        no surface.
-        inner_radius    a single value in km, defining the radius of a sphere
-                        that is entirely enclosed by the body. Zero for bodies
-                        that have no surface.
-        gravity         the gravity field of the body; None if the gravity field
-                        is undefined or negligible.
-        keywords        a list of keywords associated with the body. Typical
-                        values are "PLANET", "BARYCENTER", "SATELLITE",
-                        "SPACECRAFT", "RING", and for satellites, "REGULAR",
-                        "IRREGULAR", "CLASSICAL". The name of each body appears
-                        as a keyword in its own keyword list. In addition, every
-                        planet appears as a keyword for its system barycenter
-                        and for each of its satellites and rings.
-
-        children        a list of child bodies associated with this body. Every
-                        Body object should appear on the list of the children of
-                        its parent and also the children of its barycenter.
+    Properties:
+        * name (str): The name of this body.
+        * spice_id (int or None): The ID from the SPICE toolkit if the body is found in
+          SPICE; otherwise None.
+        * path (Path): A Waypoint for the body's path.
+        * frame (Frame): A Wayframe for the body's frame.
+        * parent (Body): The physical body, not necessarily the barycenter, about which
+          this body orbits. If a string is given, the parent is found by looking it up in
+          the BODY_REGISTRY dictionary.
+        * barycenter (Body): The body defining the barycenter of motion and the gravity
+          field defining this body's motion. If a string is given, the barycenter is found
+          by looking it up in the BODY_REGISTRY dictionary. If None, this is the parent
+          body.
+        * spice_name (str): Name of the Body within the SPICE toolkit, if it is in SPICE.
+        * ring_frame (Frame or None): The Wayframe of a "despun" RingFrame relevant to a
+          ring that might orbit this body; None if not (yet) defined.
+        * ring_is_retrograde (bool): True if the ring frame is retrograde relative to
+          IAU-defined north.
+        * ring_body (Body or None): The Body object associated with an equatorial,
+          unbounded ring; None if not defined.
+        * surface (Surface or None): The Surface object defining the body's surface; None
+          if the body is a point and has no surface.
+        * radius (float): A single value in km, defining the radius of a sphere that
+          encloses the entire body. Zero for bodies that have no surface.
+        * inner_radius (float): A single value in km, defining the radius of a sphere that
+          is entirely enclosed by the body. Zero for bodies that have no surface.
+        * gravity (Gravity or None): The gravity field of the body; None if the gravity
+          field is undefined or negligible.
+        * keywords (list): Keywords associated with the body. Typical values are "PLANET",
+          "BARYCENTER", "SATELLITE", "SPACECRAFT", "RING", and for satellites, "REGULAR",
+          "IRREGULAR", "CLASSICAL". The name of each body appears as a keyword in its own
+          keyword list. In addition, every planet appears as a keyword for its system
+          barycenter and for each of its satellites and rings.
+        * children (list): Child bodies associated with this body. Every Body object
+          appears on the list of the children of its parent and also the children of its
+          barycenter.
     """
 
     BODY_REGISTRY = {}          # global dictionary of body objects
     STANDARD_BODIES = set()     # Bodies that always have the same definition
 
-    #===========================================================================
     def __init__(self, name, path, frame, parent=None, barycenter=None,
                  spice_name=None):
         """Constructor for a Body object."""
@@ -352,17 +342,15 @@ class Body(object):
         else:
             self.is_registered = False
 
-    #===========================================================================
     def __str__(self):
         return 'Body(' + self.name + ')'
 
-    #===========================================================================
     def __repr__(self):
         return self.__str__()
 
-    ############################################################################
+    ######################################################################################
     # Serialization support
-    ############################################################################
+    ######################################################################################
 
     def __getstate__(self):
 
@@ -380,7 +368,6 @@ class Body(object):
 
         return body_dict
 
-    #===========================================================================
     def __setstate__(self, state):
 
         self.__dict__ = state
@@ -445,7 +432,7 @@ class Body(object):
             if self.spice_id not in Body.PLUTO_MOONS_LOADED:
                 Body.define_solar_system(planets=(9,))
 
-    ############################################################################
+    ######################################################################################
 
     def apply_surface(self, surface, radius, inner_radius=0.):
         """Add the surface attribute to a Body."""
@@ -456,7 +443,6 @@ class Body(object):
         # assert self.surface.origin == self.path
         # This assertion is not strictly necessary
 
-    #===========================================================================
     def apply_ring_frame(self, epoch=None, retrograde=False, pole=None):
         """Add the ring and ring_frame attributes to a Body."""
 
@@ -495,13 +481,11 @@ class Body(object):
             if self.invariable_frame is self.ring_frame:
                 self.invariable_pole = self.ring_pole
 
-    #===========================================================================
     def apply_gravity(self, gravity):
         """Add the gravity attribute to a Body."""
 
         self.gravity = gravity
 
-    #===========================================================================
     def add_keywords(self, keywords):
         """Add one or more keywords to the list associated with this Body."""
 
@@ -513,9 +497,9 @@ class Body(object):
             if keyword not in self.keywords:
                 self.keywords.append(keyword)
 
-    ############################################################################
+    ######################################################################################
     # Tools for selecting the children of a body
-    ############################################################################
+    ######################################################################################
 
     @property
     def children(self):
@@ -549,7 +533,6 @@ class Body(object):
 
         return bodies
 
-    #===========================================================================
     def _recursive_children(self, selection):
 
         for child in self.children:
@@ -558,7 +541,6 @@ class Body(object):
 
             child._recursive_children(selection)
 
-    #===========================================================================
     @staticmethod
     def name_in(bodies, names):
         """Retain bodies if their names ARE found in the list provided."""
@@ -573,7 +555,6 @@ class Body(object):
 
         return selection
 
-    #===========================================================================
     @staticmethod
     def name_not_in(bodies, names):
         """Retain bodies only if their names are NOT in the list provided."""
@@ -587,7 +568,6 @@ class Body(object):
                 selection.append(body)
         return selection
 
-    #===========================================================================
     @staticmethod
     def radius_in_range(bodies, min, max=np.inf):
         """Retain bodies if their radii fall INSIDE the range (min,max)."""
@@ -600,7 +580,6 @@ class Body(object):
 
         return selection
 
-    #===========================================================================
     @staticmethod
     def radius_not_in_range(bodies, min, max=np.inf):
         """Retain bodies if their radii fall OUTSIDE the range (min,max)."""
@@ -612,7 +591,6 @@ class Body(object):
 
         return selection
 
-    #===========================================================================
     @staticmethod
     def surface_class_in(bodies, class_names):
         """Retain bodies if the their surface class IS found in the list.
@@ -632,7 +610,6 @@ class Body(object):
 
         return selection
 
-    #===========================================================================
     @staticmethod
     def surface_class_not_in(bodies, class_names):
         """Retain bodies if their surface class is NOT found in the list.
@@ -652,7 +629,6 @@ class Body(object):
 
         return selection
 
-    #===========================================================================
     @staticmethod
     def has_gravity(bodies):
         """Retain bodies on the list if they HAVE a defined gravity."""
@@ -664,7 +640,6 @@ class Body(object):
 
         return selection
 
-    #===========================================================================
     @staticmethod
     def has_no_gravity(bodies):
         """Retain bodies on the list if they have NO gravity."""
@@ -676,7 +651,6 @@ class Body(object):
 
         return selection
 
-    #===========================================================================
     @staticmethod
     def has_children(bodies):
         """Retain bodies on the list if they HAVE children."""
@@ -688,7 +662,6 @@ class Body(object):
 
         return selection
 
-    #===========================================================================
     @staticmethod
     def has_no_children(bodies):
         """Retain bodies on the list if they have NO children."""
@@ -700,7 +673,6 @@ class Body(object):
 
         return selection
 
-    #===========================================================================
     @staticmethod
     def has_ring(bodies):
         """Retain bodies on the list if they HAVE a defined ring."""
@@ -712,7 +684,6 @@ class Body(object):
 
         return selection
 
-    #===========================================================================
     @staticmethod
     def has_no_ring(bodies):
         """Retain bodies on the list if they have NO defined ring."""
@@ -724,7 +695,6 @@ class Body(object):
 
         return selection
 
-    #===========================================================================
     @staticmethod
     def keywords_include_any(bodies, keywords):
         """Retain bodies that have at least one of the specified keywords."""
@@ -741,7 +711,6 @@ class Body(object):
 
         return selection
 
-    #===========================================================================
     @staticmethod
     def keywords_include_all(bodies, keywords):
         """Retain bodies if they have all of the specified keywords."""
@@ -762,7 +731,6 @@ class Body(object):
 
         return selection
 
-    #===========================================================================
     @staticmethod
     def keywords_do_not_include(bodies, keywords):
         """Retain bodies if they DO NOT have any of the specified keywords."""
@@ -783,7 +751,7 @@ class Body(object):
 
         return selection
 
-    ############################################################################
+    ######################################################################################
 
     @staticmethod
     def define_multipath(bodies, origin='SSB', frame='J2000', path_id=None):
@@ -799,9 +767,9 @@ class Body(object):
 
         return MultiPath(paths, origin, frame, path_id=path_id)
 
-    ############################################################################
+    ######################################################################################
     # Body registry
-    ############################################################################
+    ######################################################################################
 
     @staticmethod
     def lookup(key):
@@ -809,14 +777,12 @@ class Body(object):
 
         return Body.BODY_REGISTRY[key.upper()]
 
-    #===========================================================================
     @staticmethod
     def exists(key):
         """True if the body's name exists in the registry."""
 
         return key.upper() in Body.BODY_REGISTRY
 
-    #===========================================================================
     @staticmethod
     def as_body(body):
         """A body object given the registered name or the object itself.
@@ -834,7 +800,6 @@ class Body(object):
 
         return Body.lookup(body)
 
-    #===========================================================================
     @staticmethod
     def as_body_name(body):
         """A body name given the registered name or the object itself."""
@@ -844,7 +809,6 @@ class Body(object):
 
         return body
 
-    #===========================================================================
     @staticmethod
     def reset_registry():
         """Initialize the registry.
@@ -860,105 +824,68 @@ class Body(object):
         Path._reset_caches()
         Frame._reset_caches()
 
-    #===========================================================================
     def as_path(self):
         """Path object for this body."""
 
         return Path.as_primary_path(self.path)
 
-    #===========================================================================
     def photon_to_event(self, event, derivs=False, guess=None,
                               antimask=None, quick={}, converge={}):
         """Solve for a photon arrival event from the center of this body.
 
-        This is equivalent to self.path.photon_to_event. It is provided for
-        compatibility with the LightSource method of the same name.
+        This is equivalent to self.path.photon_to_event. It is provided for compatibility
+        with the LightSource method of the same name.
 
-        Input:
-            event       the event of the observation.
+        Parameters:
+            event (Event): The event of the observation.
+            derivs (bool, optional): True to propagate derivatives of the event position
+                into the returned event. The time derivative is always retained.
+            guess (Scalar, optional): An initial guess to use as the event time along the
+                path; otherwise None. Should only be used if the event time was already
+                returned from a similar calculation.
+            antimask (array-like or Boolean, optional): If not None, this is a boolean
+                array to be applied to event times and positions. Only the indices where
+                antimask=True will be used in the solution.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
+            converge (dict, optional): Parameters to override the configured default
+                convergence parameters. The default configuration is defined in config.py.
 
-            derivs      True to propagate derivatives of the event position into
-                        the returned event. The time derivative is always
-                        retained.
-
-            guess       an initial guess to use as the event time along the
-                        path; otherwise None. Should only be used if the event
-                        time was already returned from a similar calculation.
-
-            antimask    if not None, this is a boolean array to be applied to
-                        event times and positions. Only the indices where
-                        antimask=True will be used in the solution.
-
-            quick       an optional dictionary to override the configured
-                        default parameters for QuickPaths and QuickFrames; False
-                        to disable the use of QuickPaths and QuickFrames. The
-                        default configuration is defined in config.py.
-
-            converge    an optional dictionary of parameters to override the
-                        configured default convergence parameters. The default
-                        configuration is defined in config.py.
-
-        Return:         arrival.
-
-            arrival     a copy of the given event, with the photon arrival or
-                        departure line of sight and light travel time filled in.
-
-            These subfields and derivatives are defined:
-                    arr         direction of the arriving photon at the path.
-                    arr_lt      (negative) light travel time from the link
-                                event.
-
-        Convergence parameters are as follows:
-            iters       the maximum number of iterations of Newton's method to
-                        perform. It should almost never need to be > 5.
-            precision   iteration stops when the largest change in light travel
-                        time between one iteration and the next falls below this
-                        threshold (in seconds).
-            limit       the maximum allowed absolute value of the change in
-                        light travel time from the nominal range calculated
-                        initially. Changes in light travel with absolute values
-                        larger than this limit are clipped. This prevents the
-                        divergence of the solution in some cases.
+        Returns:
+            Arrival. arrival     a copy of the given event, with the photon arrival
+                or departure line of sight and light travel time filled in. These
+                subfields and derivatives are defined: arr         direction of the
+                arriving photon at the path. arr_lt      (negative) light travel time from
+                the link event. Convergence parameters are as follows: iters       the
+                maximum number of iterations of Newton's method to perform. It should
+                almost never need to be > 5. precision   iteration stops when the largest
+                change in light travel time between one iteration and the next falls below
+                this threshold (in seconds). limit       the maximum allowed absolute
+                value of the change in light travel time from the nominal range calculated
+                initially. Changes in light travel with absolute values larger than this
+                limit are clipped. This prevents the divergence of the solution in some
+                cases.
         """
 
         return self.path.photon_to_event(event, derivs=derivs,
                                          guess=guess, antimask=antimask,
                                          quick=quick, converge=converge)
 
-    ############################################################################
+    ######################################################################################
     # General function to load Solar System components
-    ############################################################################
+    ######################################################################################
 
     @staticmethod
     def define_solar_system(start_time=None, stop_time=None, asof=None, **args):
         """Construct bodies, paths and frames for planets and their moons.
 
-        Each planet is defined relative to the SSB. Each moon is defined
-        relative to its planet. Names are as defined within the SPICE toolkit.
-        Body associations are defined within the spicedb library.
+        Each planet is defined relative to the SSB. Each moon is defined relative to its
+        planet. Names are as defined within the SPICE toolkit. Body associations are
+        defined within the spicedb library.
 
-        Input:
-            start_time      start_time of the period to be convered, in ISO date
-                            or date-time format.
-            stop_time       stop_time of the period to be covered, in ISO date
-                            or date-time format.
-            asof            a UTC date such that only kernels released earlier
-                            than that date will be included, in ISO format.
-
-        Additional keyword-only parameters
-            planets         1-9 to load kernels for a particular planet and its
-                            moons. Omit to load the nine planets (including
-                            Pluto). Use a tuple to list more than one planet
-                            number.
-            irregulars      Omit this keyword or set to True to include the
-                            outer irregular satellites. Specify irregulars=False
-                            to omit these bodies.
-            mst_pck         Omit this keyword or set to True to include the
-                            MST PCKs, which define the rotation states of
-                            Saturn's small moons during the Cassini era. Specify
-                            mst_pck=False to omit these kernels.
-
-        Return              an ordered list of SPICE kernel names
+        Parameters:
+            Return: An ordered list of SPICE kernel names.
         """
 
         names = []
@@ -1036,9 +963,9 @@ class Body(object):
 
         return names
 
-    ############################################################################
+    ######################################################################################
     # Mars System
-    ############################################################################
+    ######################################################################################
 
     MARS_MOONS_LOADED = []
 
@@ -1071,9 +998,9 @@ class Body(object):
 
         return names
 
-    ############################################################################
+    ######################################################################################
     # Jupiter System
-    ############################################################################
+    ######################################################################################
 
     # See definition of JUPITER_ALIASES at the top of the file for the list of
     # additional, ambiguous irregular moons
@@ -1129,9 +1056,9 @@ class Body(object):
 
         return names
 
-    ############################################################################
+    ######################################################################################
     # Saturn System
-    ############################################################################
+    ######################################################################################
 
     SATURN_MOONS_LOADED = []
 
@@ -1226,9 +1153,9 @@ class Body(object):
 
         return names
 
-    ############################################################################
+    ######################################################################################
     # Uranus System
-    ############################################################################
+    ######################################################################################
 
     URANUS_MOONS_LOADED = []
 
@@ -1317,9 +1244,9 @@ class Body(object):
 
         return names
 
-    ############################################################################
+    ######################################################################################
     # Neptune System
-    ############################################################################
+    ######################################################################################
 
     NEPTUNE_MOONS_LOADED = []
 
@@ -1383,9 +1310,9 @@ class Body(object):
 
         return names
 
-    ############################################################################
+    ######################################################################################
     # Pluto System
-    ############################################################################
+    ######################################################################################
 
     PLUTO_MOONS_LOADED = []
 
@@ -1429,9 +1356,9 @@ class Body(object):
 
         return names
 
-    ############################################################################
+    ######################################################################################
     # Define bodies and rings...
-    ############################################################################
+    ######################################################################################
 
     @staticmethod
     def define_bodies(spice_ids, parent, barycenter, keywords,
@@ -1506,35 +1433,29 @@ class Body(object):
 
         body.is_standard = bool(is_standard)
 
-    #===========================================================================
     @staticmethod
     def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
                     barycenter_name=None, pole=None, is_standard=False):
-        """Define and return the body object associate with a ring around
-        another body.
+        """Define and return the body object associate with a ring around another body.
 
-        A single radius value is used to define the outer limit of rings. Note
-        that a ring has limits but a defined ring plane does not.
+        A single radius value is used to define the outer limit of rings. Note that a ring
+        has limits but a defined ring plane does not.
 
-        Input:
-            parent_name     the name of the central planet for the ring surface.
-            ring_name       the name of the surface.
-            radii           if this is a tuple with two values, these are the
-                            radial limits of the ring; if it is a scalar, then
-                            the ring plane has no defined radial limits, but the
-                            radius attribute of the body will be set to this
-                            value; if None, then the radius attribute of the
-                            body will be set to zero.
-            keywords        the list of keywords under which this surface is to
-                            be registered. Every ring is also registered under
-                            its own name and under the keyword 'RING'.
-            retrograde      True if the ring is retrograde relative to the
-                            central planet's IAU-defined pole.
-            barycenter_name the name of the ring's barycenter if this is not the
-                            same as the name of the central planet.
-            pole            if not None, this is the pole of the invariable
-                            plane. It will be used to define the ring_frame as a
-                            PoleFrame instead of a RingFrame.
+        Parameters:
+            parent_name: The name of the central planet for the ring surface.
+            ring_name: The name of the surface.
+            radii: If this is a tuple with two values, these are the radial limits of
+                the ring; if it is a scalar, then the ring plane has no defined radial
+                limits, but the radius attribute of the body will be set to this value; if
+                None, then the radius attribute of the body will be set to zero.
+            keywords (list): Keywords under which this surface is to be registered. Every
+                ring is also registered under its own name and under the keyword 'RING'.
+            retrograde (bool, optional): True if the ring is retrograde relative to the
+                central planet's IAU-defined pole. barycenter_name the name of the ring's
+                barycenter if this is not the same as the name of the central planet.
+            pole (optional): If not None, this is the pole of the invariable plane. It
+                will be used to define the ring_frame as a PoleFrame instead of a
+                RingFrame.
         """
 
         # If the ring body already exists, skip it
@@ -1582,7 +1503,6 @@ class Body(object):
         body.is_standard = bool(is_standard)
         return body
 
-    #===========================================================================
     @staticmethod
     def define_orbit(parent_name, ring_name, elements, epoch, reference,
                      keywords, is_standard=False):
@@ -1606,7 +1526,6 @@ class Body(object):
         body.add_keywords(keywords)
         body.is_standard = bool(is_standard)
 
-    #===========================================================================
     @staticmethod
     def define_small_body(spice_id, name=None, spk=None, keywords=[],
                           parent='SUN', barycenter='SSB', is_standard=False):
@@ -1664,9 +1583,9 @@ class Body(object):
         body.is_standard = bool(is_standard)
         body.spk = spk
 
-    ############################################################################
+    ######################################################################################
     # For debugging
-    ############################################################################
+    ######################################################################################
 
     @staticmethod
     def _undefine_solar_system():
@@ -1682,4 +1601,4 @@ class Body(object):
 
         spicedb.unload_all()
 
-################################################################################
+##########################################################################################

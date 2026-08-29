@@ -115,8 +115,7 @@ def from_file(filespec, **options):
 ##########################################################################################
 
 class NIRCam(JWST):
-    """This class defines functions and properties unique to the NIRCam
-    instrument.
+    """This class defines functions and properties unique to the NIRCam instrument.
 
     Everything else is inherited from higher levels in the class hierarchy.
 

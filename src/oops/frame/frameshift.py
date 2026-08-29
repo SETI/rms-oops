@@ -9,8 +9,9 @@ import oops.mutable as mutable
 
 
 class FrameShift(Frame, Fittable):
-    """A frame defined by a time-shift of another frame.
-    """
+    """A frame defined by a time-shift of another frame."""
+
+    _WAYFRAMES = {}
 
     def __init__(self, arg, /, frame, *, frame_id=None, freeze=False):
         """Constructor for a FrameShift.
@@ -38,6 +39,7 @@ class FrameShift(Frame, Fittable):
 
         if hasattr(arg, 'dt'):
             self._link = arg
+            self._dt = arg.dt       # _register() needs this before _refresh() runs
         else:
             self._dt = arg
             self._link = None
@@ -54,6 +56,9 @@ class FrameShift(Frame, Fittable):
         self.refresh()
         if freeze:
             self.freeze()
+
+    def _wayframe_key(self):
+        return (self._dt, self._frame, self._link)
 
     @property
     def dt(self):

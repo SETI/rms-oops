@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # tests/fov/test_flatfov.py
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -11,7 +11,7 @@ from oops.fov import FlatFOV
 def test_flatfov():
     from oops.config import AREA_FACTOR
 
-    test = FlatFOV((1/2048.,-1/2048.), (101,101), (50,75))
+    test = FlatFOV((1/2048.,-1/2048.), (101,101), uv_los=(50,75))
 
     buffer = np.empty((101,101,2))
     buffer[:,:,0] = np.arange(101).reshape(101,1)
@@ -32,7 +32,7 @@ def test_flatfov():
         AREA_FACTOR.old = True
         assert test.area_factor(buffer) == 1.
 
-        test2 = FlatFOV((1/2048.,-1/2048.), 101, (50,75),
+        test2 = FlatFOV((1/2048.,-1/2048.), 101, uv_los=(50,75),
                         uv_area=test.uv_area*2)
         assert test2.area_factor(buffer) == 0.5
 
@@ -40,7 +40,7 @@ def test_flatfov():
         AREA_FACTOR.old = False
 
     # Test offset_angles_from_duv and offset_duv_from_angles
-    fov = FlatFOV((1/2048.,-1/2048.), (101,101), (50,75))
+    fov = FlatFOV((1/2048.,-1/2048.), (101,101), uv_los=(50,75))
     uvlist = ([0,0], [0,101], [101,0], [50,75], fov.uv_shape/2., fov.uv_shape)
     uvlist = [Pair.as_pair(uv) for uv in uvlist]
 
@@ -50,4 +50,4 @@ def test_flatfov():
             angles = fov.offset_angles_from_duv(duv, origin=uv0)
             test = fov.offset_duv_from_angles(angles, origin=uv0)
             assert (test - duv).norm() < 1.e-13
-################################################################################
+##########################################################################################

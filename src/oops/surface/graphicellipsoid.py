@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/surface/graphicellipsoid.py: GraphicEllipsoid subclass of class Surface
-################################################################################
+##########################################################################################
 
 import numpy as np
 
@@ -8,9 +8,8 @@ from polymath               import Scalar, Vector3
 from oops.surface.ellipsoid import Ellipsoid
 
 class GraphicEllipsoid(Ellipsoid):
-    """A variant of Ellipsoid in which latitudes and longitudes are
-    planetographic, meaning that their direction is defined by the local
-    surface normal.
+    """A variant of Ellipsoid in which latitudes and longitudes are planetographic,
+    meaning that their direction is defined by the local surface normal.
 
     Note that planetographic longitude differs from conventional
     (planetocentric) longitude for triaxial ellipsoids, and is an unconventional
@@ -18,37 +17,35 @@ class GraphicEllipsoid(Ellipsoid):
     longitude.
     """
 
-    #===========================================================================
     def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
                                   derivs=False, hints=None, groundtrack=False):
         """Surface coordinates associated with a position vector.
 
-        Input:
-            pos         a Vector3 of positions at or near the surface, relative
-                        to this surface's origin and frame.
-            obs         a Vector3 of observer position relative to this
-                        surface's origin and frame; ignored for this Surface
-                        subclass.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        for this Surface subclass.
-            axes        2 or 3, indicating whether to return the first two
-                        coordinates (lon, lat) or all three (lon, lat, z) as
-                        Scalars.
-            derivs      True to propagate any derivatives inside pos and obs
-                        into the returned coordinates.
-            hints       optionally, the value of the coefficient p such that
-                            ground + p * normal(ground) = pos;
-                        ignored if the value is None (the default) or True.
-            groundtrack True to return the intercept on the surface along with
-                        the coordinates.
+        Parameters:
+            pos (Vector3): Positions at or near the surface, relative to this surface's
+                origin and frame.
+            obs (Vector3, optional): Observer position relative to this surface's origin
+                and frame; ignored for this Surface subclass.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+                this Surface subclass.
+            axes (int, optional): 2 or 3, indicating whether to return the first two
+                coordinates (lon, lat) or all three (lon, lat, z) as Scalars.
+            derivs (bool, optional): True to propagate any derivatives inside pos and obs
+                into the returned coordinates.
+            hints (Scalar, optional): Optionally, the value of the coefficient p such that
+                ground + p * normal(ground) = pos; ignored if the value is None (the
+                default) or True. groundtrack True to return the intercept on the surface
+                along with the coordinates.
 
-        Return:         a tuple of two to four items:
-            lon         longitude at the surface in radians.
-            lat         latitude at the surface in radians.
-            z           vertical altitude in km normal to the surface; included
-                        if axes == 3.
-            track       intercept point on the surface (where z == 0); included
-                        if input groundtrack is True.
+        Returns:
+            (tuple): Two to four items:
+
+            * `lon` (Scalar): Longitude at the surface in radians.
+            * `lat` (Scalar): Latitude at the surface in radians.
+            * `z` (Scalar): Vertical altitude in km normal to the surface; included if
+              axes == 3.
+            * `track` (Vector3): Intercept point on the surface (where z == 0); included
+              if input groundtrack is True.
         """
 
         # Validate inputs
@@ -81,34 +78,33 @@ class GraphicEllipsoid(Ellipsoid):
 
         return results
 
-    #===========================================================================
     def vector3_from_coords(self, coords, obs=None, time=None, derivs=False,
                                           groundtrack=False):
-        """The position where a point with the given coordinates falls relative
-        to this surface's origin and frame.
+        """The position where a point with the given coordinates falls relative to this
+        surface's origin and frame.
 
-        Input:
-            coords      a tuple of two or three Scalars defining coordinates at
-                        or near this surface. These can have different shapes,
-                        but must be broadcastable to a common shape.
-                lon     longitude at the surface in radians.
-                lat     latitude at the surface in radians.
-                z       vertical altitude in km normal to the body surface.
-            obs         a Vector3 of observer position relative to this
-                        surface's origin and frame; ignored for this Surface
-                        subclass.
-            time        a Scalar time at which to evaluate the surface; ignored
-                        for this Surface subclass.
-            derivs      True to propagate any derivatives inside the coordinates
-                        and obs into the returned position vectors.
-            groundtrack True to include the associated groundtrack points on the
-                        body surface in the returned result.
+        Parameters:
+            coords (tuple): Two or three Scalars defining coordinates at or near this
+                surface. These can have different shapes, but must be broadcastable to a
+                common shape. lon     longitude at the surface in radians. lat
+                latitude at the surface in radians. z       vertical altitude in km normal
+                to the body surface.
+            obs (Vector3, optional): Observer position relative to this surface's origin
+                and frame; ignored for this Surface subclass.
+            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+                this Surface subclass.
+            derivs (bool, optional): True to propagate any derivatives inside the
+                coordinates and obs into the returned position vectors. groundtrack True
+                to include the associated groundtrack points on the body surface in the
+                returned result.
 
-        Return:         pos or (pos, track), where
-            pos         a Vector3 of points defined by the coordinates, relative
-                        to this surface's origin and frame.
-            track       intercept point on the surface (where z == 0); included
-                        if input groundtrack is True.
+        Returns:
+            Pos or (pos, track), where, where:
+
+            * `pos` (Vector3): Points defined by the coordinates, relative to this
+              surface's origin and frame.
+            * `track` (Vector3): Intercept point on the surface (where z == 0); included
+              if input groundtrack is True.
         """
 
         # Validate inputs
@@ -124,76 +120,57 @@ class GraphicEllipsoid(Ellipsoid):
                                                    derivs=derivs,
                                                    groundtrack=groundtrack)
 
-    ############################################################################
+    ######################################################################################
     # Longitude conversions
-    ############################################################################
+    ######################################################################################
 
     def lon_to_centric(self, lon, derivs=False):
         """Convert longitude in internal coordinates to planetocentric.
 
-        Input:
-            lon         planetographic longitude in radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          planetocentric longitude.
+        Parameters:
+            Return (Scalar): Planetocentric longitude.
         """
 
         lon = Scalar.as_scalar(lon, recursive=derivs)
         return (lon.sin() * self.squash_y_sq).arctan2(lon.cos())
 
-    #===========================================================================
     def lon_from_centric(self, lon, derivs=False):
         """Convert planetocentric longitude to internal coordinates.
 
-        Input:
-            lon         planetocentric longitude in radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          planetographic longitude.
+        Parameters:
+            Return (Scalar): Planetographic longitude.
         """
 
         lon = Scalar.as_scalar(lon, recursive=derivs)
         return (lon.sin() * self.unsquash_y_sq).arctan2(lon.cos())
 
-    #===========================================================================
     def lon_to_graphic(self, lon, derivs=False):
         """Convert longitude in internal coordinates to planetographic.
 
-        Input:
-            lon         planetographic longitude in radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          planetographic longitude.
+        Parameters:
+            Return (Scalar): Planetographic longitude.
         """
 
         return Scalar.as_scalar(lon, recursive=derivs)
 
-    #===========================================================================
     def lon_from_graphic(self, lon, derivs=False):
         """Convert planetographic longitude to internal coordinates.
 
-        Input:
-            lon         planetographic longitude in radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          planetographic longitude.
+        Parameters:
+            Return (Scalar): Planetographic longitude.
         """
 
         return Scalar.as_scalar(lon, recursive=derivs)
 
-    ############################################################################
+    ######################################################################################
     # Latitude conversions
-    ############################################################################
+    ######################################################################################
 
     def lat_to_centric(self, lat, lon, derivs=False):
         """Convert latitude in internal coordinates to planetocentric.
 
-        Input:
-            lat         planetographic latitide, radians.
-            lon         planetographic longitude, radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          planetocentric latitude.
+        Parameters:
+            Return (Scalar): Planetocentric latitude.
         """
 
         # This could be done more efficiently I'm sure
@@ -204,16 +181,11 @@ class GraphicEllipsoid(Ellipsoid):
         return Ellipsoid.lat_to_centric(self, squashed_lat, squashed_lon,
                                               derivs=derivs)
 
-    #===========================================================================
     def lat_from_centric(self, lat, lon, derivs=False):
         """Convert planetocentric latitude to internal coordinates.
 
-        Input:
-            lat         planetocentric latitide, radians.
-            lon         planetographic longitude, radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          planetographic latitude.
+        Parameters:
+            Return (Scalar): Planetographic latitude.
         """
 
         squashed_lon = Ellipsoid.lon_from_graphic(self, lon, derivs=derivs)
@@ -223,32 +195,22 @@ class GraphicEllipsoid(Ellipsoid):
         return Ellipsoid.lat_to_graphic(self, squashed_lat, squashed_lon,
                                               derivs=derivs)
 
-    #===========================================================================
     def lat_to_graphic(self, lat, lon, derivs=False):
         """Convert latitude in internal coordinates to planetographic.
 
-        Input:
-            lat         planetographic latitide, radians.
-            lon         planetographic longitude, radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          planetographic latitude.
+        Parameters:
+            Return (Scalar): Planetographic latitude.
         """
 
         return Scalar.as_scalar(lat, recursive=derivs)
 
-    #===========================================================================
     def lat_from_graphic(self, lat, lon, derivs=False):
         """Convert a planetographic latitude to internal coordinates.
 
-        Input:
-            lat         planetographic latitide, radians.
-            lon         planetographic longitude, radians.
-            derivs      True to include derivatives in returned result.
-
-        Return          planetographic latitude.
+        Parameters:
+            Return (Scalar): Planetographic latitude.
         """
 
         return Scalar.as_scalar(lat, recursive=derivs)
 
-################################################################################
+##########################################################################################

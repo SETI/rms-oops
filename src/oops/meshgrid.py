@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/meshgrid.py: Class Meshgrid
-################################################################################
+##########################################################################################
 
 import numpy as np
 import numbers
@@ -8,40 +8,36 @@ import numbers
 from polymath import Scalar, Pair, Vector3
 
 class Meshgrid(object):
-    """A Meshgrid is an arbitrary array of coordinate pairs within a Field of
-    View. It caches information about the line of sight and various derivatives,
-    preventing the need for repeated calls to the FOV functions when the same
-    field of view describes multiple images.
+    """An arbitrary array of coordinate pairs within a Field of View.
 
-    It has these key attributes:
-        uv              the (u,v) meshgrid for indexing the spatial dimensions
-                        of an observation's data array, yielding (u,v)
-                        coordinates in the FOV.
-        duv_dxy         the partial derivatives d(u,v)/d(x,y), where (x,y) are
-                        two components of a unit line-of-sight vector (x,y,z).
-        uv_w_derivs     the (u,v) pairs with d_dxy, where (x,y) are two
-                        components of a unit line-of-sight vector (x,y,z).
+    A Meshgrid caches information about the line of sight and various derivatives,
+    preventing the need for repeated calls to the FOV functions when the same field of
+    view describes multiple images.
 
-        los             the unit line-of-sight vectors with no derivatives.
-        dlos_duv        the partial derivatives dlos/d(u,v).
-        los_w_derivs    the unit line-of-sight vectors with d_duv.
-
-        shape           the (u,v) shape of the observation's data array.
+    Properties:
+        * uv (Pair): The (u,v) meshgrid for indexing the spatial dimensions of an
+          observation's data array, yielding (u,v) coordinates in the FOV.
+        * duv_dxy (Pair): The partial derivatives d(u,v)/d(x,y), where (x,y) are two
+          components of a unit line-of-sight vector (x,y,z).
+        * uv_w_derivs (Pair): The (u,v) pairs with d_dxy, where (x,y) are two components
+          of a unit line-of-sight vector (x,y,z).
+        * los (Vector3): The unit line-of-sight vectors with no derivatives.
+        * dlos_duv (Vector3): The partial derivatives dlos/d(u,v).
+        * los_w_derivs (Vector3): The unit line-of-sight vectors with d_duv.
+        * shape (tuple): The (u,v) shape of the observation's data array.
     """
 
-    #===========================================================================
     def __init__(self, fov, uv_pair, center_uv=None, fov_keywords={}):
         """The Meshgrid constructor.
 
-        Input:
-            fov             a FOV object.
-            uv_pair         a Pair object of arbitrary shape, representing (u,v)
-                            coordinates within a field of view.
-            center_uv       (u,v) coordinates of the center of the meshgrid;
-                            default is the mean of all the uv_pair values.
-            fov_keywords    an optional dictionary of parameters passed to the
-                            FOV methods, containing parameters that might affect
-                            the properties of the FOV.
+        Parameters:
+            fov (FOV): Object.
+            uv_pair (Pair): Object of arbitrary shape, representing (u,v) coordinates
+                within a field of view.
+            center_uv (Pair, optional): (u,v) coordinates of the center of the meshgrid;
+                default is the mean of all the uv_pair values.
+            fov_keywords (dict, optional): Parameters passed to the FOV methods,
+                containing parameters that might affect the properties of the FOV.
         """
 
         self.fov = fov
@@ -74,39 +70,28 @@ class Meshgrid(object):
     def __setstate__(self, state):
         self.__init__(*state)
 
-    #===========================================================================
     @staticmethod
     def for_fov(fov, origin=None, undersample=1, oversample=1, limit=None,
                      swap=False, fov_keywords={}):
-        """A 2-D rectangular Meshgrid object for a specified sampling of the
-        FOV.
+        """A 2-D rectangular Meshgrid object for a specified sampling of the FOV.
 
-        Input:
-            fov         FOV object.
-
-            origin      A single value, tuple or Pair defining the origin of the
-                        grid. Default is to place the first sample in the middle
-                        of the first pixel, allowing for under- or oversampling.
-
-            limit       A single value, tuple or Pair defining the upper limits
-                        of the meshgrid. By default, this is the shape of the
-                        FOV.
-
-            undersample A single value, tuple or Pair defining the magnitude of
-                        under-sampling to be performed. For example, a value of
-                        2 would cause the meshgrid to sample every other pixel
-                        along each axis.
-
-            oversample  A single value, tuple or Pair defining the magnitude of
-                        over-sampling to be performed. For example, a value of
-                        2 would create a 2x2 array of samples inside each pixel.
-
-            swap        True to swap the order of the indices in the meshgrid,
-                        (v,u) instead of (u,v).
-
-            fov_keywords  an optional dictionary of parameters passed to the
-                        FOV methods, containing parameters that might affect
-                        the properties of the FOV.
+        Parameters:
+            fov (FOV): FOV object.
+            origin (Pair, optional): A single value, tuple or Pair defining the origin of
+                the grid. Default is to place the first sample in the middle of the first
+                pixel, allowing for under- or oversampling.
+            limit (Pair, optional): A single value, tuple or Pair defining the upper
+                limits of the meshgrid. By default, this is the shape of the FOV.
+                undersample A single value, tuple or Pair defining the magnitude of
+                under-sampling to be performed. For example, a value of 2 would cause the
+                meshgrid to sample every other pixel along each axis.
+            oversample (Pair, optional): A single value, tuple or Pair defining the
+                magnitude of over-sampling to be performed. For example, a value of 2
+                would create a 2x2 array of samples inside each pixel.
+            swap (bool, optional): True to swap the order of the indices in the meshgrid,
+                (v,u) instead of (u,v).
+            fov_keywords (dict, optional): Parameters passed to the FOV methods,
+                containing parameters that might affect the properties of the FOV.
         """
 
         u_axis, v_axis = (1,0) if swap else (0,1)
@@ -117,67 +102,48 @@ class Meshgrid(object):
                                   limit=limit,
                                   fov_keywords=fov_keywords)
 
-    #===========================================================================
     @staticmethod
     def for_fov_center(fov, origin=None, fov_keywords={}):
         """A 0-D Meshgrid object for a single line of sight within an FOV.
 
-        Input:
-            fov         FOV object.
-
-            origin      A single value, tuple, or Pair defining the line of
-                        sight of the "grid". Default is to use the center of the
-                        FOV.
-
-            fov_keywords  an optional dictionary of parameters passed to the
-                        FOV methods, containing parameters that might affect
-                        the properties of the FOV.
+        Parameters:
+            fov (FOV): FOV object.
+            origin (Pair, optional): A single value, tuple, or Pair defining the line of
+                sight of the "grid". Default is to use the center of the FOV.
+            fov_keywords (dict, optional): Parameters passed to the FOV methods,
+                containing parameters that might affect the properties of the FOV.
         """
 
         return Meshgrid(fov, fov.uv_shape/2., fov_keywords=fov_keywords)
 
-    #===========================================================================
     @staticmethod
     def for_shape(fov, shape, u_axis=-1, v_axis=-1, origin=None, undersample=1,
                   oversample=1, limit=None, center_uv=None, fov_keywords={}):
         """A 2-D rectangular Meshgrid object for a specified FOV and uv_shape.
 
-        Input:
-            fov         FOV object.
-
-            shape       overall shape to which this Meshgrid must broadcast.
-
-            u_axis      location of the u axis within the shape; -1 if there is
-                        no u-axis.
-
-            v_axis      location of the v axis within the shape; -1 if there is
-                        no v-axis.
-
-            origin      A single value, tuple or Pair defining the (u,v) origin
-                        of the grid. Default is to place the first sample in the
-                        middle of the first pixel (after allowing for the under-
-                        or oversampling).
-
-            undersample A single value, tuple or Pair defining the magnitude of
-                        under-sampling to be performed. For example, a value of
-                        2 would cause the meshgrid to sample every other pixel
-                        along each axis.
-
-            oversample  A single value, tuple or Pair defining the magnitude of
-                        over-sampling to be performed. For example, a value of
-                        2 would create a 2x2 array of samples inside each pixel.
-
-            limit       A single value, tuple or Pair defining the (u,v) upper
-                        limits of the meshgrid. By default, this is the shape of
-                        the FOV.
-
-            center_uv   A single value, tuple or Pair defining the (u,v) center
-                        of the FOV. Default is to place this point at the center
-                        of the specified grid of points.
-
-            fov_keywords  an optional dictionary of parameters passed to the
-                        FOV methods, containing parameters that might affect
-                        the properties of the FOV.
+        Parameters:
+            fov (FOV): FOV object.
+            shape (Meshgrid): Overall shape to which this Meshgrid must broadcast.
+            u_axis (optional): Location of the u axis within the shape; -1 if there is
+                no u-axis.
+            v_axis (optional): Location of the v axis within the shape; -1 if there is
+                no v-axis.
+            origin (Pair, optional): A single value, tuple or Pair defining the (u,v)
+                origin of the grid. Default is to place the first sample in the middle of
+                the first pixel (after allowing for the under- or oversampling).
+                undersample A single value, tuple or Pair defining the magnitude of
+                under-sampling to be performed. For example, a value of 2 would cause the
+                meshgrid to sample every other pixel along each axis.
+            oversample (Pair, optional): A single value, tuple or Pair defining the
+                magnitude of over-sampling to be performed. For example, a value of 2
+                would create a 2x2 array of samples inside each pixel.
+            limit (Pair, optional): A single value, tuple or Pair defining the (u,v) upper
+                limits of the meshgrid. By default, this is the shape of the FOV.
+            center_uv (optional): A single value, tuple or Pair defining the (u,v)
+                center of the FOV. Default is to place this point at the center of the
+                specified grid of points.
+            fov_keywords (dict, optional): Parameters passed to the FOV methods,
+                containing parameters that might affect the properties of the FOV.
         """
 
         u_size = 1 if u_axis < 0 else shape[u_axis]
@@ -261,7 +227,6 @@ class Meshgrid(object):
         return Meshgrid(fov, uv_pair, center_uv=center_uv,
                                       fov_keywords=fov_keywords)
 
-    #===========================================================================
     @staticmethod
     def _as_key(time):
         """Given time as a key to the internal dictionaries. False if not
@@ -279,7 +244,6 @@ class Meshgrid(object):
 
         return False
 
-    #===========================================================================
     def los_w_derivs(self, time=None):
 
         # Return from internal dictionary if present
@@ -299,7 +263,6 @@ class Meshgrid(object):
 
         return result
 
-    #===========================================================================
     def los(self, time=None):
 
         # Return from internal dictionary if present
@@ -328,11 +291,9 @@ class Meshgrid(object):
 
         return result
 
-    #===========================================================================
     def dlos_duv(self, time=None):
         return self.los_w_derivs(time).d_duv
 
-    #===========================================================================
     def uv_w_derivs(self, time=None):
 
         # Return from internal dictionary if present
@@ -353,13 +314,12 @@ class Meshgrid(object):
 
         return uv
 
-    #===========================================================================
     def duv_dlos(self, time=None):
         return self.uv_w_derivs(time).d_dlos
 
-    ############################################################################
+    ######################################################################################
     # Center methods
-    ############################################################################
+    ######################################################################################
 
     def center_los_w_derivs(self, time=None):
 
@@ -380,7 +340,6 @@ class Meshgrid(object):
 
         return los_
 
-    #===========================================================================
     def center_los(self, time=None):
 
         # Return from internal dictionary if present
@@ -409,11 +368,9 @@ class Meshgrid(object):
 
         return los_
 
-    #===========================================================================
     def center_dlos_duv(self, time=None):
         return self.center_los_w_derivs(time).d_duv
 
-    #===========================================================================
     def center_uv_w_derivs(self, time=None):
 
         # Return from internal dictionary if present
@@ -435,8 +392,7 @@ class Meshgrid(object):
 
         return uv
 
-    #===========================================================================
     def center_duv_dlos(self, time=None):
         return self.center_uv_w_derivs(time).d_dlos
 
-################################################################################
+##########################################################################################

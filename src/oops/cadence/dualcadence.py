@@ -1,6 +1,6 @@
-################################################################################
+##########################################################################################
 # oops/cadence/dualcadence.py: DualCadence subclass of class Cadence
-################################################################################
+##########################################################################################
 
 from polymath               import Scalar, Pair
 from oops.cadence           import Cadence
@@ -8,19 +8,16 @@ from oops.cadence.metronome import Metronome
 
 
 class DualCadence(Cadence):
-    """A Cadence subclass in which time steps are defined by a pair of cadences.
-    """
+    """A Cadence subclass in which time steps are defined by a pair of cadences."""
 
-    #===========================================================================
     def __init__(self, long, short):
         """Constructor for a DualCadence.
 
-        Input:
-            long        the long or outer cadence. It defines the larger steps
-                        of the cadence, including the overall start time.
-            short       the short or inner cadence. It defines the time steps
-                        that break up the outer cadence, including the exposure
-                        time.
+        Parameters:
+            long: The long or outer cadence. It defines the larger steps of the
+                cadence, including the overall start time.
+            short: The short or inner cadence. It defines the time steps that break up
+                the outer cadence, including the exposure time.
         """
 
         self.long = long
@@ -67,21 +64,21 @@ class DualCadence(Cadence):
         self.midtime = (self.time[0] + self.time[1]) * 0.5
         self.lasttime = self.long.lasttime + self.short.lasttime
 
-    #===========================================================================
     def time_at_tstep(self, tstep, remask=False, derivs=False, inclusive=True):
         """The time associated with the given time step.
 
         This method supports non-integer time step values.
 
-        Input:
-            tstep       a Pair of time step index values.
-            remask      True to mask values outside the time limits.
-            derivs      True to include derivatives of tstep in the returned
-                        time.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            tstep (Pair): Time step index values.
+            remask (bool, optional): True to mask values outside the time limits.
+            derivs (bool, optional): True to include derivatives of tstep in the returned
+                time.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         a Scalar of times in seconds TDB.
+        Returns:
+            (Scalar): Times in seconds TDB.
         """
 
         tstep = Pair.as_pair(tstep, recursive=derivs)
@@ -98,20 +95,21 @@ class DualCadence(Cadence):
 
         return long_time + short_time
 
-    #===========================================================================
     def time_range_at_tstep(self, tstep, remask=False, inclusive=True):
         """The range of times for the given time step.
 
-        Input:
-            tstep       a Pair of time step index values.
-            remask      True to mask values outside the time limits.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            tstep (Pair): Time step index values.
+            remask (bool, optional): True to mask values outside the time limits.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         (time_min, time_max)
-            time_min    a Scalar defining the minimum time associated with the
-                        index. It is given in seconds TDB.
-            time_max    a Scalar defining the maximum time value.
+        Returns:
+            (tuple): (time_min, time_max), where:
+
+            * `time_min` (Scalar): Defining the minimum time associated with the index. It
+              is given in seconds TDB.
+            * `time_max` (Scalar): Defining the maximum time value.
         """
 
         tstep = Pair.as_pair(tstep, recursive=False)
@@ -128,21 +126,22 @@ class DualCadence(Cadence):
 
         return (long_time0 + short_times[0], long_time0 + short_times[1])
 
-    #===========================================================================
     def tstep_at_time(self, time, remask=False, derivs=False, inclusive=True):
         """Time step for the given time.
 
         This method returns non-integer time steps.
 
-        Input:
-            time        a Scalar of times in seconds TDB.
-            remask      True to mask time values not sampled within the cadence.
-            derivs      True to include derivatives of tstep in the returned
-                        time.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            time (Scalar): Times in seconds TDB.
+            remask (bool, optional): True to mask time values not sampled within the
+                cadence.
+            derivs (bool, optional): True to include derivatives of tstep in the returned
+                time.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         a Pair of time step index values.
+        Returns:
+            (Pair): Time step index values.
         """
 
         time = Scalar.as_scalar(time, recursive=derivs)
@@ -168,24 +167,22 @@ class DualCadence(Cadence):
 
         return Pair.from_scalars(tstep0, tstep1)
 
-    #===========================================================================
     def tstep_range_at_time(self, time, remask=False, inclusive=True):
         """Integer range of time steps active at the given time.
 
-        Input:
-            time        a Scalar of times in seconds TDB.
-            remask      True to mask time values not sampled within the cadence.
-            inclusive   True to treat the end time of the cadence as part of the
-                        cadence; False to exclude it.
+        Parameters:
+            time (Scalar): Times in seconds TDB.
+            remask (bool, optional): True to mask time values not sampled within the
+                cadence.
+            inclusive (bool, optional): True to treat the end time of the cadence as part
+                of the cadence; False to exclude it.
 
-        Return:         (tstep_min, tstep_max)
-            tstep_min   minimum Pair time step containing the given time.
-            tstep_max   maximum Pair time step containing the given time
-                        (inclusive).
-
-        All returned indices will be in the allowed range for the cadence,
-        inclusive, regardless of mask. If the time is not inside the cadence,
-        tstep_max < tstep_min.
+        Returns:
+            (tuple): (tstep_min, tstep_max) tstep_min   minimum Pair time step containing
+                the given time. tstep_max   maximum Pair time step containing the given
+                time (inclusive). All returned indices will be in the allowed range for
+                the cadence, inclusive, regardless of mask. If the time is not inside the
+                cadence, tstep_max < tstep_min.
         """
 
         time = Scalar.as_scalar(time, recursive=False)
@@ -228,18 +225,17 @@ class DualCadence(Cadence):
         tstep_max = Pair.from_scalars(tstep0_max, tstep1_max)
         return (tstep_min, tstep_max)
 
-    #===========================================================================
     def time_is_outside(self, time, inclusive=True):
         """A Boolean mask of times that fall outside the cadence.
 
-        Input:
-            time        a Scalar of times in seconds TDB.
-            inclusive   True to treat the end time of an interval as inside the
-                        cadence; False to treat it as outside. The start time of
-                        an interval is always treated as inside.
+        Parameters:
+            time (Scalar): Times in seconds TDB.
+            inclusive (bool, optional): True to treat the end time of an interval as
+                inside the cadence; False to treat it as outside. The start time of an
+                interval is always treated as inside.
 
-        Return:         a Boolean array indicating which time values are not
-                        sampled by the cadence.
+        Returns:
+            (bool): Array indicating which time values are not sampled by the cadence.
         """
 
         time = Scalar.as_scalar(time, recursive=False)
@@ -258,18 +254,15 @@ class DualCadence(Cadence):
         time0 = self.long.time_at_tstep(tstep0, inclusive=inclusive)
         return self.short.time_is_outside(time - time0, inclusive=inclusive)
 
-    #===========================================================================
     def time_shift(self, secs):
-        """Construct a duplicate of this Cadence with all times shifted by given
-        amount.
+        """Construct a duplicate of this Cadence with all times shifted by given amount.
 
-        Input:
-            secs        the number of seconds to shift the time later.
+        Parameters:
+            secs (float): Seconds to shift the time later.
         """
 
         return DualCadence(self.long.time_shift(secs), self.short)
 
-    #===========================================================================
     def as_continuous(self):
         """Construct a shallow copy of this Cadence, forced to be continuous.
 
@@ -283,26 +276,23 @@ class DualCadence(Cadence):
         raise ValueError('short internal cadence cannot be extended to make ' +
                          'this DualCadence continuous')
 
-    #===========================================================================
     @staticmethod
     def for_array2d(samples, lines, tstart, texp, intersample_delay=0.,
                                                   interline_delay=None):
-        """Alternative constructor for a DualCadence involving two Metronome
-        classes, with streamlined input.
+        """Alternative constructor for a DualCadence involving two Metronome classes, with
+        streamlined input.
 
-        Input:
-            samples             number of samples (along fast axis).
-            lines               number of lines (along slow axis).
-            tstart              start time of observation in TDB seconds.
-            texp                single-sample integration time in seconds.
-            intersample_delay   deadtime in seconds between consecutive samples;
-                                default 0.
-            interline_delay     deadtime in seconds between consecutive lines,
-                                i.e., the delay between the end of the last
-                                sample integration on one line and the start of
-                                the first sample integration on the next line.
-                                If not specified, the interline_delay is assumed
-                                to match the intersample_delay.
+        Parameters:
+            samples (float): Number of samples (along fast axis).
+            lines (float): Number of lines (along slow axis).
+            tstart (float): Start time of observation in TDB seconds.
+            texp (float): Single-sample integration time in seconds.
+            intersample_delay (optional): Deadtime in seconds between consecutive
+                samples; default 0.
+            interline_delay (optional): Deadtime in seconds between consecutive lines,
+                i.e., the delay between the end of the last sample integration on one line
+                and the start of the first sample integration on the next line. If not
+                specified, the interline_delay is assumed to match the intersample_delay.
         """
 
         fast_cadence = Metronome(tstart, texp + intersample_delay, texp,
@@ -318,4 +308,4 @@ class DualCadence(Cadence):
 
         return DualCadence(slow_cadence, fast_cadence)
 
-################################################################################
+##########################################################################################
