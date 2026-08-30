@@ -64,11 +64,11 @@ class GraphicEllipsoid(Ellipsoid):
             (track, p) = self.intercept_normal_to(pos, guess=True)
         else:
             p = Scalar.as_scalar(hints, recursive=derivs)
-            denom = Vector3.ONES + p * self.unsquash_sq
+            denom = Vector3.ONES + p * self._unsquash_sq
             track = pos.element_div(denom)
 
         # Derive the coordinates
-        normal = track.element_mul(self.unsquash_sq)
+        normal = track.element_mul(self._unsquash_sq)
         (x,y,z) = normal.to_scalars()
         lat = (z/normal.norm()).arcsin()
         lon = y.arctan2(x) % Scalar.TWOPI
@@ -152,7 +152,7 @@ class GraphicEllipsoid(Ellipsoid):
         """
 
         lon = Scalar.as_scalar(lon, recursive=derivs)
-        return (lon.sin() * self.squash_y_sq).arctan2(lon.cos())
+        return (lon.sin() * self._squash_y_sq).arctan2(lon.cos())
 
     def lon_from_centric(self, lon, *, derivs=False):
         """Convert planetocentric longitude to internal coordinates.
@@ -167,7 +167,7 @@ class GraphicEllipsoid(Ellipsoid):
         """
 
         lon = Scalar.as_scalar(lon, recursive=derivs)
-        return (lon.sin() * self.unsquash_y_sq).arctan2(lon.cos())
+        return (lon.sin() * self._unsquash_y_sq).arctan2(lon.cos())
 
     def lon_to_graphic(self, lon, *, derivs=False):
         """Convert longitude in internal coordinates to planetographic.

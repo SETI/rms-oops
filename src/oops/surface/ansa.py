@@ -49,28 +49,28 @@ class Ansa(Surface):
         self.frame   = Frame.as_wayframe(frame)
 
         if radii is None:
-            self.radii = None
+            self._radii = None
         else:
-            self.radii = np.asarray(radii, dtype=np.float64)
+            self._radii = np.asarray(radii, dtype=np.float64)
 
         self._state_ringplane = ringplane
         if ringplane is None:
-            self.ringplane = RingPlane(self.origin, self.frame, radii=radii,
+            self._ringplane = RingPlane(self.origin, self.frame, radii=radii,
                                        gravity=gravity)
         else:
-            self.ringplane = ringplane
+            self._ringplane = ringplane
 
         if gravity is None:
-            self.gravity = self.ringplane.gravity
+            self._gravity = self._ringplane._gravity
         else:
-            self.gravity = gravity
+            self._gravity = gravity
 
         # Save the unmasked version of this surface
-        if self.radii is None:
+        if self._radii is None:
             self.unmasked = self
         else:
-            self.unmasked = Ansa(self.origin, self.frame, gravity=self.gravity,
-                                 ringplane=self.ringplane, radii=None)
+            self.unmasked = Ansa(self.origin, self.frame, gravity=self._gravity,
+                                 ringplane=self._ringplane, radii=None)
 
         # Unique key for intercept calculations
         self.intercept_key = ('ansa', self.origin.waypoint, self.frame.wayframe)
@@ -79,7 +79,7 @@ class Ansa(Surface):
         self.refresh()
         return (Path.as_primary_path(self.origin),
                 Frame.as_primary_frame(self.frame),
-                self.gravity, self._state_ringplane, tuple(self.radii))
+                self._gravity, self._state_ringplane, tuple(self._radii))
 
     def __setstate__(self, state):
         self.__init__(*state)
@@ -99,8 +99,8 @@ class Ansa(Surface):
             given RingPlane.
         """
 
-        return Ansa(ringplane.origin, ringplane.frame, gravity=ringplane.gravity,
-                    ringplane=ringplane, radii=ringplane.radii)
+        return Ansa(ringplane.origin, ringplane.frame, gravity=ringplane._gravity,
+                    ringplane=ringplane, radii=ringplane._radii)
 
     @staticmethod
     def for_body(body):
@@ -121,7 +121,7 @@ class Ansa(Surface):
             body = body.ring_body
 
         return Ansa(body.path, body.frame, gravity=body.gravity,
-                    ringplane=body.surface, radii=body.surface.radii)
+                    ringplane=body.surface, radii=body.surface._radii)
 
     def coords_from_vector3(self, pos, *, obs=None, time=None, axes=2, derivs=False,
                             hints=None):
@@ -172,8 +172,8 @@ class Ansa(Surface):
         r = rabs * sign
 
         # Apply mask as needed
-        if self.radii is not None:
-            mask = r.tvl_lt(self.radii[0]) | r.tvl_gt(self.radii[1])
+        if self._radii is not None:
+            mask = r.tvl_lt(self._radii[0]) | r.tvl_gt(self._radii[1])
             if mask.any():
                 r = r.remask_or(mask.vals)
                 pos_z = pos_z.remask(r.mask)
@@ -185,7 +185,7 @@ class Ansa(Surface):
 
             phi = (rabs / obs_xy).arccos()
             theta = sign*lon - phi
-            if self.radii is not None:
+            if self._radii is not None:
                 theta.remask(r.mask)
 
             return (r, pos_z, theta)

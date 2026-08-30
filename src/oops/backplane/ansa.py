@@ -171,7 +171,7 @@ def _fill_ansa_longitudes(self, event_key):
     event = self.get_surface_event(event_key)
 
     # Get the longitude in the associated ring plane
-    lon = event.surface.ringplane.coords_from_vector3(event.state, axes=2,
+    lon = event.surface._ringplane.coords_from_vector3(event.state, axes=2,
                                                       derivs=self.ALL_DERIVS)[1]
     self.register_backplane(('ansa_longitude', event_key, 'node'), lon)
 

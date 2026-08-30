@@ -51,27 +51,27 @@ class Limb(Surface):
         if ground.COORDINATE_TYPE != 'spherical':
             raise ValueError('Limb requires an ellipsoidal ground surface')
 
-        self.ground = ground
+        self._ground = ground
         self.origin = ground.origin
         self.frame  = ground.frame
 
         if limits is None:
-            self.limits = None
+            self._limits = None
         else:
-            self.limits = (limits[0], limits[1])
+            self._limits = (limits[0], limits[1])
 
         # Save the unmasked version of this surface
         if limits is None:
             self.unmasked = self
         else:
-            self.unmasked = Limb(self.ground, None)
+            self.unmasked = Limb(self._ground, None)
 
         # Unique key for intercept calculations
-        self.intercept_key = ('limb',) + self.ground.intercept_key
+        self.intercept_key = ('limb',) + self._ground.intercept_key
 
     def __getstate__(self):
         self.refresh()
-        return (self.ground, self.limits)
+        return (self._ground, self._limits)
 
     def __setstate__(self, state):
         (ground, limits) = state
@@ -119,21 +119,21 @@ class Limb(Surface):
 
         # There's a quick solution for the ground point if hints are provided
         if isinstance(hints, (type(None), bool, np.bool_)):
-            (track, p) = self.ground.intercept_normal_to(pos, derivs=derivs,
+            (track, p) = self._ground.intercept_normal_to(pos, derivs=derivs,
                                                          guess=True)
         else:
             p = Scalar.as_scalar(hints, recursive=derivs)
-            denom = Vector3.ONES + p * self.ground.unsquash_sq
+            denom = Vector3.ONES + p * self._ground._unsquash_sq
             track = pos.element_div(denom)
 
-        (lon, lat) = self.ground.coords_from_vector3(track, derivs=derivs)
+        (lon, lat) = self._ground.coords_from_vector3(track, derivs=derivs)
 
         # Derive z; mask if necessary
-        if axes == 3 or self.limits is not None:
+        if axes == 3 or self._limits is not None:
             z = (pos - track).norm() * p.sign()
 
-            if self.limits is not None:
-                zmask = z.tvl_lt(self.limits[0]) | z.tvl_gt(self.limits[1])
+            if self._limits is not None:
+                zmask = z.tvl_lt(self._limits[0]) | z.tvl_gt(self._limits[1])
                 if zmask.any():
                     z = z.remask_or(zmask)
                     lon = lon.remask(z.mask)
@@ -185,14 +185,14 @@ class Limb(Surface):
               `groundtrack` is True.
         """
 
-        pos = self.ground.vector3_from_coords(coords, derivs=derivs)
+        pos = self._ground.vector3_from_coords(coords, derivs=derivs)
 
         results = (pos,)
         if hints is not None:
             results += (hints,)
 
         if groundtrack:
-            results += (self.ground.vector3_from_coords(coords[:2], derivs=derivs),)
+            results += (self._ground.vector3_from_coords(coords[:2], derivs=derivs),)
 
         if len(results) == 1:
             return pos
@@ -281,9 +281,9 @@ class Limb(Surface):
             pos.insert_deriv('_pos_', Vector3.IDENTITY)
 
             (track,
-             ground_guess) = self.ground.intercept_normal_to(pos, derivs=True,
+             ground_guess) = self._ground.intercept_normal_to(pos, derivs=True,
                                                              guess=ground_guess)
-            normal = self.ground.normal(track, derivs=True)
+            normal = self._ground.normal(track, derivs=True)
 
             f = normal.dot(los)
             df_dt = normal.d_d_pos_.chain(los).dot(los)
@@ -314,7 +314,7 @@ class Limb(Surface):
 
         if hints is not None or groundtrack:
             (track,
-             ground_guess) = self.ground.intercept_normal_to(pos, derivs=True,
+             ground_guess) = self._ground.intercept_normal_to(pos, derivs=True,
                                                              guess=ground_guess)
 
             if hints is not None:
@@ -347,7 +347,7 @@ class Limb(Surface):
             arbitrary, and the input value of `hints` is returned if it is not None.
         """
 
-        return self.ground.normal(pos, obs=obs, time=time, derivs=derivs, hints=hints)
+        return self._ground.normal(pos, obs=obs, time=time, derivs=derivs, hints=hints)
 
     ######################################################################################
     # (z,clock) conversions
@@ -378,7 +378,7 @@ class Limb(Surface):
         obs = Vector3.as_vector3(obs, recursive=derivs)
 
         # Get groundtrack surface normal
-        normal = self.ground.normal(track, derivs=derivs)
+        normal = self._ground.normal(track, derivs=derivs)
 
         # Define the axes of the "clock"
         x_axis = Vector3.ZAXIS.perp(obs).unit()
@@ -422,7 +422,7 @@ class Limb(Surface):
         y_axis = Vector3.ZAXIS.ucross(obs)
         normal = clock.cos() * x_axis + clock.sin() * y_axis
 
-        return self.ground.intercept_with_normal(normal, derivs=derivs, hints=hints)
+        return self._ground.intercept_with_normal(normal, derivs=derivs, hints=hints)
 
     def z_clock_from_intercept(self, pos, obs, *, derivs=False, hints=None,
                                groundtrack=False):
@@ -461,17 +461,17 @@ class Limb(Surface):
         # There's a quick solution for the surface point if hints are provided
         if isinstance(hints, (type(None), bool, np.bool_)):
             if hints is None:
-                track = self.ground.intercept_normal_to(pos, derivs=derivs)
+                track = self._ground.intercept_normal_to(pos, derivs=derivs)
                 p = None
             else:
-                (track, p) = self.ground.intercept_normal_to(pos, derivs=derivs,
+                (track, p) = self._ground.intercept_normal_to(pos, derivs=derivs,
                                                              guess=True)
         else:
             p = Scalar.as_scalar(hints, recursive=derivs)
-            denom = Vector3.ONES + p * self.ground.unsquash_sq
+            denom = Vector3.ONES + p * self._ground._unsquash_sq
             track = pos.element_div(denom)
 
-        normal = self.ground.normal(track, derivs=derivs)
+        normal = self._ground.normal(track, derivs=derivs)
 
         z = pos.norm() - track.norm()
 
@@ -539,9 +539,9 @@ class Limb(Surface):
         #   normal dot (pos - obs) = 0
         #
         # where
-        #   surface(normal) = normal.element_mul(self.ground.squash)
-        #                           .with_norm(self.ground.req)
-        #                           .element_mul(self.ground.squash)
+        #   surface(normal) = normal.element_mul(self._ground._squash)
+        #                           .with_norm(self._ground._req)
+        #                           .element_mul(self._ground._squash)
         #
         # Substituting the first equation into the second,
         #   normal dot surface(normal) + z - normal dot obs = 0
@@ -550,8 +550,8 @@ class Limb(Surface):
         #   f(p) = normal dot (surface(normal) - obs) + z = 0
 
         # Make an initial guess at p
-        axis1_unsq = axis1.wod.element_mul(self.ground.unsquash)
-        req = self.ground.req / axis1_unsq.norm()
+        axis1_unsq = axis1.wod.element_mul(self._ground._unsquash)
+        req = self._ground._req / axis1_unsq.norm()
             # This is the approximate body radius on axis1
         p = ((req + z.wod) / obs.wod.norm()).arcsin()
 
@@ -564,9 +564,9 @@ class Limb(Surface):
 
             p.insert_deriv('_p_', Scalar.ONE)
             normal = p.cos() * axis1 + p.sin() * axis2
-            s1 = normal.element_mul(self.ground.squash)
-            s2 = s1.with_norm(self.ground.req)
-            surface = s2.element_mul(self.ground.squash)
+            s1 = normal.element_mul(self._ground._squash)
+            s2 = s1.with_norm(self._ground._req)
+            surface = s2.element_mul(self._ground._squash)
 
             # The solution is undefined if obs is closer than z!
             mask = ((obs - surface).norm() <= z).vals | surface.mask
@@ -595,9 +595,9 @@ class Limb(Surface):
 
         p = p.without_deriv('_p_')
         normal = p.cos() * axis1 + p.sin() * axis2
-        s1 = normal.element_mul(self.ground.squash)
-        s2 = s1.with_norm(self.ground.req)
-        surface = s2.element_mul(self.ground.squash)
+        s1 = normal.element_mul(self._ground._squash)
+        s2 = s1.with_norm(self._ground._req)
+        surface = s2.element_mul(self._ground._squash)
         pos = surface + z * normal
 
         results = (pos,)
@@ -629,7 +629,7 @@ class Limb(Surface):
             Scalar: Planetocentric longitude.
         """
 
-        return self.ground.lon_to_centric(lon, derivs=derivs)
+        return self._ground.lon_to_centric(lon, derivs=derivs)
 
     def lon_from_centric(self, lon, *, derivs=False):
         """Convert planetocentric longitude to internal coordinates.
@@ -643,7 +643,7 @@ class Limb(Surface):
             Scalar: Squashed longitude.
         """
 
-        return self.ground.lon_from_centric(lon, derivs=derivs)
+        return self._ground.lon_from_centric(lon, derivs=derivs)
 
     def lon_to_graphic(self, lon, *, derivs=False):
         """Convert longitude in internal coordinates to planetographic.
@@ -657,7 +657,7 @@ class Limb(Surface):
             Scalar: Planetographic longitude.
         """
 
-        return self.ground.lon_to_graphic(lon, derivs=derivs)
+        return self._ground.lon_to_graphic(lon, derivs=derivs)
 
     def lon_from_graphic(self, lon, *, derivs=False):
         """Convert planetographic longitude to internal coordinates.
@@ -671,7 +671,7 @@ class Limb(Surface):
             Scalar: Squashed longitude.
         """
 
-        return self.ground.lon_from_graphic(lon, derivs=derivs)
+        return self._ground.lon_from_graphic(lon, derivs=derivs)
 
     ######################################################################################
     # Latitude conversions
@@ -691,7 +691,7 @@ class Limb(Surface):
             Scalar: Planetocentric latitude.
         """
 
-        return self.ground.lat_to_centric(lat, lon, derivs=derivs)
+        return self._ground.lat_to_centric(lat, lon, derivs=derivs)
 
     def lat_from_centric(self, lat, lon, *, derivs=False):
         """Convert planetocentric latitude to internal ellipsoid latitude.
@@ -707,7 +707,7 @@ class Limb(Surface):
             Scalar: Squashed latitude.
         """
 
-        return self.ground.lat_from_centric(lat, lon, derivs=derivs)
+        return self._ground.lat_from_centric(lat, lon, derivs=derivs)
 
     def lat_to_graphic(self, lat, lon, *, derivs=False):
         """Convert latitude in internal ellipsoid coordinates to planetographic.
@@ -723,7 +723,7 @@ class Limb(Surface):
             Scalar: Planetographic latitude.
         """
 
-        return self.ground.lat_to_graphic(lat, lon, derivs=derivs)
+        return self._ground.lat_to_graphic(lat, lon, derivs=derivs)
 
     def lat_from_graphic(self, lat, lon, *, derivs=False):
         """Convert a planetographic latitude to internal ellipsoid latitude.
@@ -739,7 +739,7 @@ class Limb(Surface):
             Scalar: Squashed latitude.
         """
 
-        return self.ground.lat_from_graphic(lat, lon, derivs=derivs)
+        return self._ground.lat_from_graphic(lat, lon, derivs=derivs)
 
     ######################################################################################
     # (lon,lat) conversions
@@ -769,8 +769,8 @@ class Limb(Surface):
               `groundtrack` is True.
         """
 
-        track = self.ground.intercept_normal_to(pos, derivs=derivs)
-        coords = self.ground.coords_from_vector3(track, derivs=derivs)
+        track = self._ground.intercept_normal_to(pos, derivs=derivs)
+        coords = self._ground.coords_from_vector3(track, derivs=derivs)
 
         results = (coords[0], coords[1])
 

@@ -57,7 +57,7 @@ class CentricEllipsoid(Ellipsoid):
             (track, p) = self.intercept_normal_to(pos, guess=True)
         else:
             p = Scalar.as_scalar(hints, recursive=derivs)
-            denom = Vector3.ONES + p * self.unsquash_sq
+            denom = Vector3.ONES + p * self._unsquash_sq
             track = pos.element_div(denom)
 
         # Derive the coordinates
@@ -172,7 +172,7 @@ class CentricEllipsoid(Ellipsoid):
         """
 
         lon = Scalar.as_scalar(lon, recursive=derivs)
-        return (lon.sin() * self.unsquash_y_sq).arctan2(lon.cos())
+        return (lon.sin() * self._unsquash_y_sq).arctan2(lon.cos())
 
     def lon_from_graphic(self, lon, *, derivs=False):
         """Convert planetographic longitude to internal coordinates.
@@ -187,7 +187,7 @@ class CentricEllipsoid(Ellipsoid):
         """
 
         lon = Scalar.as_scalar(lon, recursive=derivs)
-        return (lon.sin() * self.squash_y_sq).arctan2(lon.cos())
+        return (lon.sin() * self._squash_y_sq).arctan2(lon.cos())
 
     ######################################################################################
     # Latitude conversions

@@ -366,7 +366,7 @@ def sub_observer_latitude(self, event_key, lat_type='centric'):
     dep_ap = event.dep_ap
 
     if lat_type == 'graphic':
-        dep_ap = dep_ap.element_mul(event.surface.unsquash_sq,
+        dep_ap = dep_ap.element_mul(event.surface._unsquash_sq,
                                     recursive=self.ALL_DERIVS)
 
     latitude = dep_ap.latitude(recursive=self.ALL_DERIVS)
@@ -394,7 +394,7 @@ def sub_solar_latitude(self, event_key, lat_type='centric'):
     neg_arr_ap = event.neg_arr_ap
 
     if lat_type == 'graphic':
-        neg_arr_ap = neg_arr_ap.element_mul(event.surface.unsquash_sq,
+        neg_arr_ap = neg_arr_ap.element_mul(event.surface._unsquash_sq,
                                             recursive=self.ALL_DERIVS)
 
     latitude = neg_arr_ap.latitude(recursive=self.ALL_DERIVS)

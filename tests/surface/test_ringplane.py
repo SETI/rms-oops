@@ -137,7 +137,7 @@ def test_ringplane():
     assert abs(sep - np.pi/2.).max() < 1.e-14
 
     speed1 = vels.norm()
-    rate = np.minimum(Gravity.SATURN.n(a.vals), plane.max_rate)
+    rate = np.minimum(Gravity.SATURN.n(a.vals), plane._max_rate)
     diff = (a * rate - speed1) / speed1
     assert abs(diff).max() < 1.e-15
 

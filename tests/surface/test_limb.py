@@ -44,10 +44,10 @@ def test_limb():
     (z, clock, track2) = limb.z_clock_from_intercept(cept, obs, groundtrack=True)
 
     assert (track2 - track).norm().median() < 1.e-10
-    assert (abs(track.element_mul(limb.ground.unsquash).norm() - limb.ground.req).median()
-            < 1.e-10)
-    assert (abs(track2.element_mul(limb.ground.unsquash).norm()
-                - limb.ground.req).median() < 1.e-10)
+    assert (abs(track.element_mul(limb._ground._unsquash).norm()
+                - limb._ground._req).median() < 1.e-10)
+    assert (abs(track2.element_mul(limb._ground._unsquash).norm()
+                - limb._ground._req).median() < 1.e-10)
 
     matrix = Matrix3.twovec(-obs, 2, Vector3.ZAXIS, 0)
     (x,y,_) = (matrix * ground.normal(track)).to_scalars()
@@ -58,8 +58,8 @@ def test_limb():
 
     assert abs((cept - track).sep(los)  - Scalar.HALFPI).median() < 1.e-12
     assert abs((cept - track2).sep(los) - Scalar.HALFPI).median() < 1.e-12
-    assert abs((cept - track).sep(limb.ground.normal(track))).median() < 1.e-12
-    assert abs((cept - track2).sep(limb.ground.normal(track2))).median() < 1.e-12
+    assert abs((cept - track).sep(limb._ground.normal(track))).median() < 1.e-12
+    assert abs((cept - track2).sep(limb._ground.normal(track2))).median() < 1.e-12
 
     cept2 = limb.intercept_from_z_clock(z, clock, obs)
     (z2, clock2) = limb.z_clock_from_intercept(cept2, obs)
@@ -246,10 +246,10 @@ def test_limb():
     (z, clock, track2) = limb.z_clock_from_intercept(cept, obs, groundtrack=True)
 
     assert (track2 - track).norm().median() < 1.e-10
-    assert (abs(track.element_mul(limb.ground.unsquash).norm() - limb.ground.req).median()
-            < 1.e-10)
-    assert (abs(track2.element_mul(limb.ground.unsquash).norm()
-                - limb.ground.req).median() < 1.e-10)
+    assert (abs(track.element_mul(limb._ground._unsquash).norm()
+                - limb._ground._req).median() < 1.e-10)
+    assert (abs(track2.element_mul(limb._ground._unsquash).norm()
+                - limb._ground._req).median() < 1.e-10)
 
     matrix = Matrix3.twovec(-obs, 2, Vector3.ZAXIS, 0)
     (x,y,_) = (matrix * normal).to_scalars()
@@ -260,8 +260,8 @@ def test_limb():
 
     assert abs((cept - track).sep(los)  - Scalar.HALFPI).median() < 1.e-12
     assert abs((cept - track2).sep(los) - Scalar.HALFPI).median() < 1.e-12
-    assert abs((cept - track).sep(limb.ground.normal(track))).median() < 1.e-12
-    assert abs((cept - track2).sep(limb.ground.normal(track2))).median() < 1.e-12
+    assert abs((cept - track).sep(limb._ground.normal(track))).median() < 1.e-12
+    assert abs((cept - track2).sep(limb._ground.normal(track2))).median() < 1.e-12
 
     cept2 = limb.intercept_from_z_clock(z, clock, obs)
     (z2, clock2) = limb.z_clock_from_intercept(cept2, obs)

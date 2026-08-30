@@ -28,7 +28,7 @@ def limb_altitude(self, event_key, zmin=None, zmax=None, scaled=False):
 
     if scaled:
         body = self.get_body_and_modifier(event_key[-1])[0]
-        radius = body.surface.radii.max()
+        radius = body.surface._radii.max()
         if zmin is not None:
             zmin = zmin * radius
         if zmax is not None:
@@ -176,7 +176,7 @@ def limb_clock_angle(self, event_key):
     surface = Backplane.get_surface(event_key[1])
     event = self.get_surface_event(event_key)
 
-    polar_surface = PolarLimb(surface.ground, limits=surface.limits)
+    polar_surface = PolarLimb(surface._ground, limits=surface._limits)
     event = polar_surface.apply_coords_to_event(event, obs=self.obs_event,
                                                        axes=2,
                                                        derivs=self.ALL_DERIVS)

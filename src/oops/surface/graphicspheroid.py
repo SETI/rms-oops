@@ -116,7 +116,7 @@ class GraphicSpheroid(Spheroid):
         """
 
         lat = Scalar.as_scalar(lat, recursive=derivs)
-        return (lat.tan() * self.squash_z_sq).arctan()
+        return (lat.tan() * self._squash_z_sq).arctan()
 
     def lat_from_centric(self, lat, lon=None, *, derivs=False):
         """Convert planetocentric latitude to internal coordinates.
@@ -133,7 +133,7 @@ class GraphicSpheroid(Spheroid):
         """
 
         lat = Scalar.as_scalar(lat, recursive=derivs)
-        return (lat.tan() * self.unsquash_z_sq).arctan()
+        return (lat.tan() * self._unsquash_z_sq).arctan()
 
     def lat_to_graphic(self, lat, lon=None, *, derivs=False):
         """Convert latitude in internal coordinates to planetographic.

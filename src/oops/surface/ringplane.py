@@ -59,17 +59,17 @@ class RingPlane(Surface):
 
         self.origin    = Path.as_waypoint(origin)
         self.frame     = Frame.as_wayframe(frame)
-        self.gravity   = gravity
-        self.elevation = float(elevation)
-        self.modes     = modes
-        self.epoch     = float(epoch)
+        self._gravity   = gravity
+        self._elevation = float(elevation)
+        self._modes     = modes
+        self._epoch     = float(epoch)
         self.IS_TIME_DEPENDENT = bool(modes)
 
         if radii is None:
-            self.radii = None
+            self._radii = None
         else:
-            self.radii    = np.asarray(radii, dtype=np.float64)
-            self.radii_sq = self.radii**2
+            self._radii    = np.asarray(radii, dtype=np.float64)
+            self._radii_sq = self._radii**2
 
         # Save the unmasked version of this surface
         if radii is None:
@@ -77,40 +77,40 @@ class RingPlane(Surface):
         else:
             self.unmasked = RingPlane(self.origin, self.frame,
                                       radii = None,
-                                      gravity = self.gravity,
-                                      elevation = self.elevation,
-                                      modes = self.modes,
-                                      epoch = self.epoch)
+                                      gravity = self._gravity,
+                                      elevation = self._elevation,
+                                      modes = self._modes,
+                                      epoch = self._epoch)
 
         # Identify the maximum orbital rate by any means necessary; without this
         # limit, speeds near the origin get ridiculous.
-        if self.radii is not None:
-            r = self.radii[0]
-            self.max_rate = self.gravity.n(r)
-        elif hasattr(self.gravity, 'rp'):
-            r = self.gravity.rp
-            self.max_rate = self.gravity.n(r)
+        if self._radii is not None:
+            r = self._radii[0]
+            self._max_rate = self._gravity.n(r)
+        elif hasattr(self._gravity, 'rp'):
+            r = self._gravity.rp
+            self._max_rate = self._gravity.n(r)
         else:
             # If we can't figure out the planet, clamp the rate at that for an orbit
             # skimming the surface of Neptune. (Note that this rate is faster than that
             # for Jupiter, Saturn, or Uranus.)
             neptune = OblateGravity.NEPTUNE
-            self.max_rate = neptune.n(neptune.rp)
+            self._max_rate = neptune.n(neptune.rp)
 
         # Unique key for intercept calculations:
         # ('ring', origin, frame, elevation, i, node, dnode_dt, epoch)
         # Extra elements are so OrbitPlane and RingPlane can share the same key in
         # situations where the orbit is not inclined.
         self.intercept_key = ('ring', self.origin.waypoint, self.frame.wayframe,
-                              self.elevation, 0., 0., 0., 0.)
+                              self._elevation, 0., 0., 0., 0.)
 
     def __getstate__(self):
         self.refresh()
-        kwargs = {'radii': None if self.radii is None else tuple(self.radii),
-                  'gravity': self.gravity,
-                  'elevation': self.elevation,
-                  'modes': self.modes,
-                  'epoch': self.epoch}
+        kwargs = {'radii': None if self._radii is None else tuple(self._radii),
+                  'gravity': self._gravity,
+                  'elevation': self._elevation,
+                  'modes': self._modes,
+                  'epoch': self._epoch}
         return (Path.as_primary_path(self.origin), Frame.as_primary_frame(self.frame),
                 kwargs)
 
@@ -156,14 +156,14 @@ class RingPlane(Surface):
         # Generate cylindrical coordinates
         (r, theta, z) = pos.to_cylindrical()
 
-        if self.modes:
+        if self._modes:
             a = r - self._mode_offset(theta, time, derivs=derivs)
         else:
             a = r
 
         # Apply mask as needed
-        if self.radii is not None:
-            mask = a.tvl_lt(self.radii[0]) | a.tvl_gt(self.radii[1])
+        if self._radii is not None:
+            mask = a.tvl_lt(self._radii[0]) | a.tvl_gt(self._radii[1])
             if mask.any_true_or_masked():       # this allows for fully masked results
                 a = a.remask_or(mask.vals)
                 theta = theta.remask(a.mask)
@@ -172,10 +172,10 @@ class RingPlane(Surface):
 
         if axes == 2:
             results = (a, theta)
-        elif self.elevation == 0:
+        elif self._elevation == 0:
             results = (a, theta, z)
         else:
-            results = (a, theta, z - self.elevation)
+            results = (a, theta, z - self._elevation)
 
         if hints is not None:
             results += (hints,)
@@ -217,15 +217,15 @@ class RingPlane(Surface):
         a = Scalar.as_scalar(coords[0], recursive=derivs)
         theta = Scalar.as_scalar(coords[1], recursive=derivs)
 
-        if self.modes:
+        if self._modes:
             r = a + self._mode_offset(theta, time, derivs=derivs)
         else:
             r = a
 
         if len(coords) > 2:
-            z = Scalar.as_scalar(coords[2] + self.elevation, recursive=derivs)
+            z = Scalar.as_scalar(coords[2] + self._elevation, recursive=derivs)
         else:
-            z = Scalar.as_scalar(self.elevation, recursive=derivs)
+            z = Scalar.as_scalar(self._elevation, recursive=derivs)
 
         x = r * theta.cos()
         y = r * theta.sin()
@@ -272,13 +272,13 @@ class RingPlane(Surface):
         obs_z = obs.to_scalar(2)
         los_z = los.to_scalar(2)
 
-        t = (self.elevation - obs_z)/los_z
+        t = (self._elevation - obs_z)/los_z
         pos = obs + t * los
 
         # Mask based on radial limits if necessary
-        if self.radii is not None:
+        if self._radii is not None:
             r_sq = pos.norm_sq(False)
-            mask = (r_sq < self.radii_sq[0]) | (r_sq > self.radii_sq[1])
+            mask = (r_sq < self._radii_sq[0]) | (r_sq > self._radii_sq[1])
             if np.any(mask):
                 pos = pos.remask_or(mask)
             t = t.remask(pos.mask)
@@ -315,9 +315,9 @@ class RingPlane(Surface):
         perp = pos.as_all_constant((0.,0.,1.))
 
         # The normal is undefined outside the ring's radial limits
-        if self.radii is not None:
+        if self._radii is not None:
             r_sq = pos.norm_sq(False)
-            mask = (r_sq < self.radii_sq[0]) | (r_sq > self.radii_sq[1])
+            mask = (r_sq < self._radii_sq[0]) | (r_sq > self._radii_sq[1])
             if np.any(mask):
                 perp = perp.remask_or(mask)
 
@@ -347,7 +347,7 @@ class RingPlane(Surface):
         pos = Vector3.as_vector3(pos, recursive=False)
 
         # Handle special case that's easy
-        if self.gravity is None and not self.modes:
+        if self._gravity is None and not self._modes:
             return Vector3.zeros(pos.shape, mask=pos.mask)
 
         # Generate info about intercept points
@@ -356,13 +356,13 @@ class RingPlane(Surface):
         r_vector = Vector3.from_scalars(x,y,0.)
 
         # Handle radial modes
-        if self.modes:
+        if self._modes:
             lon = y.arctan2(x)
             (offset, dr_dt, dlon_dt) = self._mode_offset(lon, time, rates=True)
             a = radius - offset
 
-            if self.gravity:
-                dlon_dt += Scalar.minimum(self.gravity.n(a.vals), self.max_rate)
+            if self._gravity:
+                dlon_dt += Scalar.minimum(self._gravity.n(a.vals), self._max_rate)
 
             v_radial = (dr_dt / radius) * r_vector
             v_angular = dlon_dt * Vector3.ZAXIS.cross(r_vector)
@@ -371,12 +371,12 @@ class RingPlane(Surface):
         # Handle simple gravity
         else:
             a = radius
-            n = Scalar.minimum(self.gravity.n(a.vals), self.max_rate)
+            n = Scalar.minimum(self._gravity.n(a.vals), self._max_rate)
             vflat = n * Vector3.ZAXIS.cross(r_vector)
 
         # The velocity is undefined outside the ring's radial limits
-        if self.radii is not None:
-            mask = (a < self.radii[0]) | (a > self.radii[1])
+        if self._radii is not None:
+            mask = (a < self._radii[0]) | (a > self._radii[1])
             if np.any(mask):
                 vflat = vflat.remask_or(mask)
 
@@ -406,9 +406,9 @@ class RingPlane(Surface):
         offset = 0.
         dr_dt = 0.
         dlon_dt = 0.
-        for mode in self.modes:
+        for mode in self._modes:
             (cycles, amp, peri0, speed) = mode
-            arg = cycles * (lon - peri0) + speed * (time - self.epoch)
+            arg = cycles * (lon - peri0) + speed * (time - self._epoch)
             amp_cos_arg = amp * arg.cos(recursive=derivs)
             offset = offset - amp_cos_arg
             if rates:

@@ -69,82 +69,82 @@ class OrbitPlane(Surface):
         """
 
         # Save the initial center path and frame. The frame should be inertial.
-        self.defined_origin = Path.as_waypoint(origin)
-        self.defined_frame  = Frame.as_wayframe(frame)
-        if self.defined_frame.origin is not None:
+        self._defined_origin = Path.as_waypoint(origin)
+        self._defined_frame  = Frame.as_wayframe(frame)
+        if self._defined_frame.origin is not None:
             raise ValueError('frame of an OrbitPlane must be inertial')
 
         # We will update the Surface's actual path and frame as needed
-        self.internal_origin = self.defined_origin
-        self.internal_frame  = self.defined_frame
+        self._internal_origin = self._defined_origin
+        self._internal_frame  = self._defined_frame
 
         # Save the orbital elements
-        self.elements = np.asarray(elements, dtype=np.float64)
-        self.a     = elements[0]
-        self.lon   = elements[1]
-        self.n     = elements[2]
-        self.epoch = float(epoch)
+        self._elements = np.asarray(elements, dtype=np.float64)
+        self._a     = elements[0]
+        self._lon   = elements[1]
+        self._n     = elements[2]
+        self._epoch = float(epoch)
 
         if radii is None:
-            self.radii = None
+            self._radii = None
         else:
-            self.radii = np.asarray(radii, dtype=np.float64)
-            self.radii_sq = self.radii**2
+            self._radii = np.asarray(radii, dtype=np.float64)
+            self._radii_sq = self._radii**2
 
         # Interpret the inclination
-        self.has_inclination = (len(elements) >= 9)
-        if self.has_inclination:
-            self.i = elements[6]
-            self.has_inclination = (self.i != 0)
+        self._has_inclination = (len(elements) >= 9)
+        if self._has_inclination:
+            self._i = elements[6]
+            self._has_inclination = (self._i != 0)
 
         # If the orbit is inclined, define a special-purpose inclined frame
-        if self.has_inclination:
+        if self._has_inclination:
             if path_id is None:
                 frame_id = None
             else:
                 frame_id = path_id + '_INCLINATION'
 
-            self.inclined_frame = InclinedFrame(inc = elements[6],
+            self._inclined_frame = InclinedFrame(inc = elements[6],
                                                 node = elements[7],
                                                 rate = elements[8],
-                                                epoch = self.epoch,
-                                                reference = self.internal_frame,
+                                                epoch = self._epoch,
+                                                reference = self._internal_frame,
                                                 despin = True,
                                                 frame_id = frame_id)
-            self.internal_frame = self.inclined_frame
+            self._internal_frame = self._inclined_frame
         else:
-            self.inclined_frame = None
+            self._inclined_frame = None
 
         # The inclined frame changes its tilt relative to the equatorial plane,
         # accounting for nodal regression, but does not change the reference
         # longitude from that used by the initial frame.
 
         # Interpret the eccentricity
-        self.has_eccentricity = (len(elements) >= 6)
-        if self.has_eccentricity:
-            self.e = elements[3]
-            self.has_eccentricity = (self.e != 0)
+        self._has_eccentricity = (len(elements) >= 6)
+        if self._has_eccentricity:
+            self._e = elements[3]
+            self._has_eccentricity = (self._e != 0)
 
         # If the orbit is eccentric, construct a special-purpose path defining
         # the center of the displaced ring
-        if self.has_eccentricity:
-            self.ae = self.a * self.e
-            self.lon_sub_peri = self.lon - elements[4]
-            self.n_sub_prec = self.n - elements[5]
+        if self._has_eccentricity:
+            self._ae = self._a * self._e
+            self._lon_sub_peri = self._lon - elements[4]
+            self._n_sub_prec = self._n - elements[5]
 
             if path_id is None:
                 new_path_id = None
             else:
                 new_path_id = path_id + '_ECCENTRICITY'
 
-            self.peri_path = CirclePath(radius = elements[0] * elements[3],# a*e
+            self._peri_path = CirclePath(radius = elements[0] * elements[3],# a*e
                                         lon = elements[4] + PI,     # apocenter
                                         rate = elements[5],         # precession
-                                        epoch = self.epoch,
-                                        origin = self.internal_origin,
-                                        frame = self.internal_frame,
+                                        epoch = self._epoch,
+                                        origin = self._internal_origin,
+                                        frame = self._internal_frame,
                                         path_id = new_path_id)
-            self.internal_origin = self.peri_path
+            self._internal_origin = self._peri_path
 
             # The peri_path circulates around the initial origin but does not
             # rotate.
@@ -154,53 +154,53 @@ class OrbitPlane(Surface):
             else:
                 frame_id = path_id + '_PERICENTER'
 
-            self.spin_frame = SpinFrame(offset = elements[4],       # pericenter
+            self._spin_frame = SpinFrame(offset = elements[4],       # pericenter
                                         rate = elements[5],         # precession
-                                        epoch = self.epoch,
+                                        epoch = self._epoch,
                                         axis = 2,
-                                        reference = self.internal_frame,
+                                        reference = self._internal_frame,
                                         frame_id = frame_id)
-            self.internal_frame = self.spin_frame
+            self._internal_frame = self._spin_frame
 
         else:
-            self.peri_path = None
-            self.spin_frame = None
+            self._peri_path = None
+            self._spin_frame = None
 
-        self.ringplane = RingPlane(origin = self.internal_origin,
-                                   frame = self.internal_frame,
-                                   radii = self.radii,
+        self._ringplane = RingPlane(origin = self._internal_origin,
+                                   frame = self._internal_frame,
+                                   radii = self._radii,
                                    gravity = None,
                                    elevation = 0.)
 
         # The primary origin and frame for the orbit
-        self.origin = self.internal_origin.waypoint
-        self.frame = self.internal_frame.wayframe
+        self.origin = self._internal_origin.waypoint
+        self.frame = self._internal_frame.wayframe
 
         # Unique key for intercept calculations
         # ('ring', origin, frame, elevation, i, node, dnode_dt, epoch)
-        if self.has_inclination:
-            extras = tuple(elements[6:9]) + (self.epoch,)
+        if self._has_inclination:
+            extras = tuple(elements[6:9]) + (self._epoch,)
         else:
             extras = (0., 0., 0., 0.)
 
-        self.intercept_key = ('ring', self.defined_origin.waypoint,
-                                      self.defined_frame.wayframe,
+        self.intercept_key = ('ring', self._defined_origin.waypoint,
+                                      self._defined_frame.wayframe,
                                       0.) + extras
 
         # Save the unmasked version of this Surface
-        if self.radii is None:
+        if self._radii is None:
             self.unmasked = self
         else:
             self.unmasked = OrbitPlane.__new__(type(OrbitPlane))
             self.unmasked.__dict__ = self.__dict__.copy()
-            self.unmasked.radii = None
+            self.unmasked._radii = None
 
     def __getstate__(self):
         self.refresh()
-        return (tuple(self.elements), self.epoch,
-                Path.as_primary_path(self.defined_origin),
-                Frame.as_primary_frame(self.defined_frame),
-                None, self.radii)
+        return (tuple(self._elements), self._epoch,
+                Path.as_primary_path(self._defined_origin),
+                Frame.as_primary_frame(self._defined_frame),
+                None, self._radii)
 
     def __setstate__(self, state):
         self.__init__(*state)
@@ -233,7 +233,7 @@ class OrbitPlane(Surface):
             * `z` (km): Vertical distance above the orbit plane.
         """
 
-        return self.ringplane.coords_from_vector3(pos, obs=obs, time=time, axes=axes,
+        return self._ringplane.coords_from_vector3(pos, obs=obs, time=time, axes=axes,
                                                   derivs=derivs, hints=hints)
 
     def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
@@ -265,7 +265,7 @@ class OrbitPlane(Surface):
             value of `hints` is returned if it is not None.
         """
 
-        return self.ringplane.vector3_from_coords(coords, obs=obs, time=time,
+        return self._ringplane.vector3_from_coords(coords, obs=obs, time=time,
                                                   derivs=derivs, hints=hints)
 
     def intercept(self, obs, los, *, time=None, direction='dep', derivs=False, guess=None,
@@ -295,7 +295,7 @@ class OrbitPlane(Surface):
             * `hints` (Any): The input value of `hints`, included if it is not None.
         """
 
-        return self.ringplane.intercept(obs, los, time=time, direction=direction,
+        return self._ringplane.intercept(obs, los, time=time, direction=direction,
                                         derivs=derivs, guess=guess, hints=hints)
 
     def normal(self, pos, *, obs=None, time=None, derivs=False, hints=None):
@@ -319,7 +319,7 @@ class OrbitPlane(Surface):
             arbitrary, and the input value of `hints` is returned if it is not None.
         """
 
-        return self.ringplane.normal(pos, obs=obs, time=time, derivs=derivs, hints=hints)
+        return self._ringplane.normal(pos, obs=obs, time=time, derivs=derivs, hints=hints)
 
     def velocity(self, pos, *, obs=None, time=None):
         """The local velocity vector at a point within this Surface.
@@ -338,7 +338,7 @@ class OrbitPlane(Surface):
             Vector3: Velocities, in units of km/s.
         """
 
-        if self.has_eccentricity:
+        if self._has_eccentricity:
             # For purposes of a first-order velocity calculation, we can assume that the
             # difference between mean longitude and true longitude, in a planet-centered
             # frame, is small.
@@ -363,14 +363,14 @@ class OrbitPlane(Surface):
             # dy/dy = dr/dt * sin(lon) + r cos(lon) dlon/dt
 
             (x,y,z) = pos.to_scalars()
-            x = x + self.ae         # shift origin to center of planet
+            x = x + self._ae         # shift origin to center of planet
 
             r = (x**2 + y**2).sqrt()
             cos_lon_sub_peri = x/r
             sin_lon_sub_peri = y/r
 
-            dr_dt = sin_lon_sub_peri * (self.ae * self.n_sub_prec)
-            r_dlon_dt = r * self.n_sub_prec * (cos_lon_sub_peri * 2*self.ae + 1)
+            dr_dt = sin_lon_sub_peri * (self._ae * self._n_sub_prec)
+            r_dlon_dt = r * self._n_sub_prec * (cos_lon_sub_peri * 2*self._ae + 1)
 
             dx_dt = dr_dt * cos_lon_sub_peri - r_dlon_dt * sin_lon_sub_peri
             dy_dt = dr_dt * sin_lon_sub_peri + r_dlon_dt * cos_lon_sub_peri
@@ -378,7 +378,7 @@ class OrbitPlane(Surface):
             return Vector3.from_scalars(dx_dt, dy_dt, 0.)
 
         else:
-            return self.n * Vector3.ZAXIS.cross(pos)
+            return self._n * Vector3.ZAXIS.cross(pos)
 
     ######################################################################################
     # Longitude-anomaly conversions
@@ -398,10 +398,10 @@ class OrbitPlane(Surface):
 
         anom = Scalar.as_scalar(anom)
 
-        if not self.has_eccentricity:
+        if not self._has_eccentricity:
             return anom
         else:
-            return anom + (2*self.ae) * anom.sin()
+            return anom + (2*self._ae) * anom.sin()
 
     def to_mean_anomaly(self, lon):
         """The mean anomaly given an orbital longitude.
@@ -417,7 +417,7 @@ class OrbitPlane(Surface):
         """
 
         lon = Scalar.as_scalar(lon)
-        if not self.has_eccentricity:
+        if not self._has_eccentricity:
             return lon
 
         # Solve lon = x + 2ae sin(x)
@@ -430,7 +430,7 @@ class OrbitPlane(Surface):
         # For x[n] as a guess at n,
         #   x[n+1] = x[n] - y(x[n]) / dy/dx
 
-        ae_x2 = 2 * self.ae
+        ae_x2 = 2 * self._ae
         x = lon - ae_x2 * lon.sin()
 
         # Iterate until all improvement ceases. Should not take long

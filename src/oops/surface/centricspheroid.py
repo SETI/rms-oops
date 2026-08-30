@@ -148,7 +148,7 @@ class CentricSpheroid(Spheroid):
         """
 
         lat = Scalar.as_scalar(lat, recursive=derivs)
-        return (lat.tan() * self.unsquash_z_sq).arctan()
+        return (lat.tan() * self._unsquash_z_sq).arctan()
 
     def lat_from_graphic(self, lat, lon=None, *, derivs=False):
         """Convert a planetographic latitude to internal coordinates.
@@ -165,6 +165,6 @@ class CentricSpheroid(Spheroid):
         """
 
         lat = Scalar.as_scalar(lat, recursive=derivs)
-        return (lat.tan() * self.squash_z_sq).arctan()
+        return (lat.tan() * self._squash_z_sq).arctan()
 
 ##########################################################################################

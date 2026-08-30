@@ -106,18 +106,18 @@ class Spheroid(Ellipsoid):
         # We need to solve for p such that:
         #   cept + p * normal(cept) = pos
         # where
-        #   normal(cept) = cept.element_mul(self.unsquash_sq)
+        #   normal(cept) = cept.element_mul(self._unsquash_sq)
         #
         # This is subject to the constraint that cept is the intercept point on
         # the surface, where
-        #   cept_unsquashed = cept.element_mul(self.unsquash)
+        #   cept_unsquashed = cept.element_mul(self._unsquash)
         # and
-        #   cept_unsquashed.dot(cept_unsquashed) = self.req_sq
+        #   cept_unsquashed.dot(cept_unsquashed) = self._req_sq
         #
         # Let:
 
-        C = self.unsquash_z_sq
-        R = self.req_sq
+        C = self._unsquash_z_sq
+        R = self._req_sq
 
         # Three equations with three unknowns:
         # cept_x + p * cept_x = pos_x
@@ -165,14 +165,14 @@ class Spheroid(Ellipsoid):
         if isinstance(guess, (type(None), bool, np.bool_)):
 
             # Unsquash into coordinates where the surface is a sphere
-            pos_unsq = pos.wod.element_mul(self.unsquash)   # without derivs!
+            pos_unsq = pos.wod.element_mul(self._unsquash)   # without derivs!
 
             # Estimate the intercept point as on a straight line to the origin
             # (Note that this estimate is exact for points at the surface.)
-            cept_guess_unsq = pos_unsq.with_norm(self.req)
+            cept_guess_unsq = pos_unsq.with_norm(self._req)
 
             # Make a guess at the normal vector in unsquashed coordinates
-            normal_guess_unsq = cept_guess_unsq.element_mul(self.unsquash_sq)
+            normal_guess_unsq = cept_guess_unsq.element_mul(self._unsquash_sq)
 
             # Estimate p
             p = ((pos_unsq.norm() - cept_guess_unsq.norm()) / normal_guess_unsq.norm())
@@ -183,7 +183,7 @@ class Spheroid(Ellipsoid):
         # The precision of p should match the default geometric accuracy defined
         # by SURFACE_PHOTONS.km_precision. Set our precision goal on p
         # accordingly.
-        km_scale = self.req
+        km_scale = self._req
         precision = SURFACE_PHOTONS.km_precision / km_scale
 
         # Iterate until convergence stops
@@ -314,7 +314,7 @@ class Spheroid(Ellipsoid):
         """
 
         lat = Scalar.as_scalar(lat, recursive=derivs)
-        return (lat.tan(recursive=derivs) * self.squash_z).arctan()
+        return (lat.tan(recursive=derivs) * self._squash_z).arctan()
 
     def lat_from_centric(self, lat, lon=None, *, derivs=False):
         """Convert planetocentric latitude to internal spheroid coordinates.
@@ -331,7 +331,7 @@ class Spheroid(Ellipsoid):
         """
 
         lat = Scalar.as_scalar(lat, recursive=derivs)
-        return (lat.tan() * self.unsquash_z).arctan()
+        return (lat.tan() * self._unsquash_z).arctan()
 
     def lat_to_graphic(self, lat, lon=None, *, derivs=False):
         """Convert latitude in internal coordinates to planetographic.
@@ -348,7 +348,7 @@ class Spheroid(Ellipsoid):
         """
 
         lat = Scalar.as_scalar(lat, recursive=derivs)
-        return (lat.tan() * self.unsquash_z).arctan()
+        return (lat.tan() * self._unsquash_z).arctan()
 
     def lat_from_graphic(self, lat, lon=None, *, derivs=False):
         """Convert a planetographic latitude to internal spheroid latitude.
@@ -365,6 +365,6 @@ class Spheroid(Ellipsoid):
         """
 
         lat = Scalar.as_scalar(lat, recursive=derivs)
-        return (lat.tan() * self.squash_z).arctan()
+        return (lat.tan() * self._squash_z).arctan()
 
 ##########################################################################################

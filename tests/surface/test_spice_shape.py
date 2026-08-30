@@ -33,6 +33,6 @@ def test_spice_shape():
 
     body = spice_shape("VENUS")
     assert Path.as_path(body.origin).path_id == "APHRODITE"
-    assert body.req == 6051.8
-    assert body.squash_z == 1.
+    assert body._req == 6051.8
+    assert body._squash_z == 1.
 ##########################################################################################

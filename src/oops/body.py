@@ -1421,7 +1421,7 @@ class Body(object):
             body.apply_surface(shape, 0., 0.)
             shape.body = body
         else:
-            body.apply_surface(shape, shape.req, shape.rpol)
+            body.apply_surface(shape, shape._req, shape._rpol)
             shape.body = body
 
         # Add a planet name to any satellite or barycenter
@@ -1517,7 +1517,7 @@ class Body(object):
         orbit = OrbitPlane(elements, epoch, parent.path, reference,
                            path_id=ring_name)
 
-        body = Body(ring_name, orbit.internal_origin, orbit.internal_frame,
+        body = Body(ring_name, orbit._internal_origin, orbit._internal_frame,
                     parent, parent)
         body.apply_surface(orbit, elements[9], 0.)
         orbit.body = body
@@ -1572,7 +1572,7 @@ class Body(object):
         # Add the surface object if shape information is available
         try:
             shape = spice_shape(spice_id, frame, (1.,1.,1.))
-            body.apply_surface(shape, shape.req, shape.rpol)
+            body.apply_surface(shape, shape._req, shape._rpol)
         except RuntimeError:
             shape = NullSurface(path, frame)
             body.apply_surface(shape, 0., 0.)

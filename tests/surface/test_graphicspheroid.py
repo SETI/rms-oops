@@ -182,10 +182,10 @@ def test_graphicspheroid():
         assert selected_error < 1.e-5
 
     # Test normal()
-    cept = Vector3(np.random.random((100,3))).unit().element_mul(planet.radii)
+    cept = Vector3(np.random.random((100,3))).unit().element_mul(planet._radii)
     perp = planet.normal(cept)
-    test1 = cept.element_mul(spheroid.unsquash).unit()
-    test2 = perp.element_mul(spheroid.squash).unit()
+    test1 = cept.element_mul(spheroid._unsquash).unit()
+    test2 = perp.element_mul(spheroid._squash).unit()
 
     assert abs(test1 - test2).max() < 1.e-12
 
@@ -213,11 +213,11 @@ def test_graphicspheroid():
     cept = planet.intercept_normal_to(pos)
     sep = (pos - cept).sep(planet.normal(cept))
     assert sep.max() < 3.e-12
-    assert (abs(cept.element_mul(spheroid.unsquash).norm() - spheroid.req).max()
+    assert (abs(cept.element_mul(spheroid._unsquash).norm() - spheroid._req).max()
             < 1.e-6)
 
     # Test normal() derivative
-    cept = Vector3(np.random.random((100,3))).unit().element_mul(planet.radii)
+    cept = Vector3(np.random.random((100,3))).unit().element_mul(planet._radii)
     cept.insert_deriv('pos', Vector3.IDENTITY, override=True)
     perp = planet.normal(cept, derivs=True)
     eps = 1.e-5
@@ -233,7 +233,7 @@ def test_graphicspheroid():
     pos = Vector3(np.random.random((3,3)) * 4.*REQ + REQ)
     pos.insert_deriv('pos', Vector3.IDENTITY, override=True)
     (cept,t) = planet.intercept_normal_to(pos, derivs=True, guess=True)
-    assert (abs(cept.element_mul(spheroid.unsquash).norm() - spheroid.req).max()
+    assert (abs(cept.element_mul(spheroid._unsquash).norm() - spheroid._req).max()
             < 1.e-6)
 
     eps = 1.

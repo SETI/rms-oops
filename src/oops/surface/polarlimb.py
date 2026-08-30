@@ -78,7 +78,7 @@ class PolarLimb(Limb):
                 # The returned value of p speeds up the next calculation
         else:
             p = Scalar.as_scalar(hints, recursive=derivs)
-            denom = Vector3.ONES + p * self.ground.unsquash_sq
+            denom = Vector3.ONES + p * self._ground._unsquash_sq
             track = pos.element_div(denom)
             cept = pos
 
