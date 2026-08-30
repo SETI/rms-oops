@@ -15,7 +15,7 @@ from oops.transform        import Transform
 
 
 class SpiceFrame(Frame):
-    """A Frame defined within the SPICE toolkit."""
+    """A Frame subclass defined within the SPICE toolkit."""
 
     _WAYFRAMES = {}         # frame_key -> wayframe
     _FOR_NAME = {}          # SPICE frame name -> first defined SpiceFrame
@@ -84,9 +84,20 @@ class SpiceFrame(Frame):
             self._frame_id = wrt_j2000._frame_id
 
     def _fill_spice_info(self, spice_frame, reference):
-        """Fill in this object's spice codes and names, plus the origin and reference.
+        """Fill in this object's SPICE codes and names, plus the origin and reference.
 
         Used by both SpiceFrame and SpiceType1Frame.
+
+        Parameters:
+            spice_frame (str or int): The name, frame code, body name, or body code as
+                used in the SPICE toolkit.
+            reference (SpiceFrame, str, or None): The Frame or the ID of the Frame
+                relative to which this Frame is defined; None for J2000.
+
+        Raises:
+            LookupError: If `spice_frame` is not a recognized frame name, frame code, body
+                name, or body code within the SPICE Toolkit.
+            ValueError: If `reference` is not a SpiceFrame or J2000.
         """
 
         # Interpret the SPICE frame
@@ -141,8 +152,19 @@ class SpiceFrame(Frame):
 
     @staticmethod
     def _frame_code_and_name(arg):
-        """The spice_code and spice_name of frame in the SPICE Toolkit given a code or
-        name.
+        """The SPICE frame code and frame name of a Frame, given either a code or a name.
+
+        Parameters:
+            arg (str or int): The frame name, frame code, body name, or body code as used
+                in the SPICE toolkit.
+
+        Returns:
+            tuple[int, str]: (`spice_code`, `spice_name`) as defined within the SPICE
+            Toolkit.
+
+        Raises:
+            LookupError: If `arg` is not a recognized frame name, frame code, body name,
+                or body code within the SPICE Toolkit.
         """
 
         # Interpret an integer input
@@ -209,20 +231,20 @@ class SpiceFrame(Frame):
     ######################################################################################
 
     def transform_at_time(self, time, *, quick=None):
-        """Transform that rotates coordinates from the reference frame to this frame.
+        """Transform that rotates coordinates from the reference to this frame.
 
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
         """
 
         time = Scalar.as_scalar(time).as_float()
@@ -328,7 +350,7 @@ class SpiceFrame(Frame):
         return Transform(matrix, omega, self, self._reference)
 
     def transform_at_time_if_possible(self, time, *, quick=None):
-        """Transform that rotates coordinates from the reference frame to this frame.
+        """Transform that rotates coordinates from the reference to this frame.
 
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
@@ -338,19 +360,19 @@ class SpiceFrame(Frame):
         objects skip over the times at which the transform could not be evaluated.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (tuple): The tuple (`newtimes`, `transform`), where:
+            tuple[Scalar, Transform]: (`newtimes`, `transform`):
 
-            * `newtimes` (Scalar): Times at which `transform` has been provided; this may
-              be a subset of the input times given because it omits times at which the
-              Transform could not be evaluated.
-            * `transform` (Transform): The Tranform applicable at `newtimmes`. It rotates
-              vectors from the reference frame to this frame.
+            * `newtimes` identifies the time(s) at which `transform` has been provided;
+              this may be a subset of the input times, because it omits the times at which
+              the Transform could not be evaluated.
+            * `transform` is the Transform defined at `newtimes`. It rotates vectors from
+              the reference frame to this frame.
         """
 
         time = Scalar.as_scalar(time).as_float()
@@ -502,7 +524,7 @@ class SpiceFrame(Frame):
                 SpiceFrame is constructed; otherwise, the pre-existing ID is retained.
 
         Returns:
-            (SpiceFrame): The SpiceFrame, newly constructed if necessary.
+            SpiceFrame: The SpiceFrame, newly constructed if necessary.
 
         Raises:
             LookupError: If `spice_frame` is not a recognized frame name, frame code, body
@@ -546,6 +568,10 @@ class SpiceFrame(Frame):
 
         Parameters:
             reference (Frame): The reference Frame, which must be a valid wayframe.
+
+        Returns:
+            Frame: This Frame relative to `reference`, connected through the nearest
+            SpiceFrame ancestor of `reference`.
         """
 
         # Find the first SpiceFrame (or J2000) that's an ancestor of the reference

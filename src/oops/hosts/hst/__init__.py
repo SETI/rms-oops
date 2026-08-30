@@ -290,7 +290,7 @@ class HST(object):
         # Applies for the duration of the observation
         time_limits = self.time_limits(hdulist)
         _ = oops.frame.TrackerFrame(cmatrix, target_body.path, 'EARTH', time_limits[0],
-                                    frame_id)
+                                    frame_id=frame_id)
 
         return frame_id
 

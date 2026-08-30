@@ -31,18 +31,20 @@ class LaplaceFrame(Frame):
         """Constructor for a LaplaceFrame.
 
         Parameters:
-            orbit (KeplerPath): The orbit of the body for which a Laplace Plane is needed.
+            orbit (KeplerPath or str): The KeplerPath, or the ID of the KeplerPath,
+                describing the orbit of the body for which a Laplace Plane is needed.
             tilt (Scalar, array-like, or float): The tilt of the Laplace Plane's pole from
                 the planet's pole toward or beyond the invariable pole.
             frame_id (str, optional): The ID under which to register this Frame; None to
                 leave this Frame unregistered. As a special case, use "+" to automatically
                 generate a Frame ID by appending "_LAPLACE" to the Path ID of `orbit` (if
                 it has an ID).
-            cache_size (int, optional): Number of transforms to cache. This can be useful
-                because it avoids unnecessary SPICE calls when the Frame is being used
-                repeatedly at a limited set of times.
+            cache_size (int, optional): The number of transforms to cache. This can be
+                useful because it avoids unnecessary SPICE calls when the Frame is being
+                used repeatedly at a finite set of times.
 
         Raises:
+            KeyError: If `orbit` is an ID string that has not been registered.
             ValueError: If `orbit` and `tilt` cannot be broadcasted to the same shape.
         """
 
@@ -86,7 +88,7 @@ class LaplaceFrame(Frame):
 
     def __getstate__(self):
         self.refresh()
-        return (self._orbit, self._tilt, self._stripped_id, self._cache_size)
+        return (self._orbit, self._tilt, self.stripped_id, self._cache_size)
 
     def __setstate__(self, state):
         (orbit, tilt, frame_id, cache_size) = state
@@ -98,20 +100,20 @@ class LaplaceFrame(Frame):
     ######################################################################################
 
     def transform_at_time(self, time, *, quick=None):
-        """Transform that rotates coordinates from the reference frame to this frame.
+        """Transform that rotates coordinates from the reference to this frame.
 
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.

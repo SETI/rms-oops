@@ -9,7 +9,7 @@ from oops.path.path_   import Path
 
 
 class LinearPath(Path):
-    """A path defining linear motion relative to another path and frame."""
+    """A Path subclass describing linear motion relative to another Path and Frame."""
 
     _WAYPOINTS = {}
 
@@ -22,10 +22,11 @@ class LinearPath(Path):
                 tuple of two Vector3 or array-like values.
             epoch (Scalar, array-like, or float): The time TDB relative to which all
                 orbital elements are defined.
-            origin (Path or str): The path or ID of the origin of the linear path.
-            frame (Frame or str, optional): The Frame or ID of the Frame in which the
+            origin (Path or str): The Path or the ID of the Path defining the origin of
+                the linear path.
+            frame (Frame or str, optional): The Frame or the ID of the Frame in which the
                 linear motion is expressed and coordinates are returned; by default, this
-                is the frame of the `origin` path.
+                is the Frame of the `origin` Path.
             path_id (str, optional): The ID under which to register this Path; None to
                 leave this Path unregistered.
 

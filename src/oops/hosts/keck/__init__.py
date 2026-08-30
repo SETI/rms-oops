@@ -169,12 +169,12 @@ class Keck(object):
         dec -= decoff
 
         cmatrix = oops.frame.Cmatrix.from_ra_dec(ra, dec, clock,
-                                                 frame_id + "_CMATRIX")
+                                                 frame_id=frame_id + "_CMATRIX")
 
         times = self.time_limits(keck_file)
         frame = oops.frame.TrackerFrame(cmatrix,
                                         self.target_body(keck_file).path_id,
-                                        "EARTH", times[0], frame_id)
+                                        "EARTH", times[0], frame_id=frame_id)
 
         return oops.obs.Snapshot(
                         axes = ("v","u"),

@@ -18,7 +18,7 @@ def test_surface():
 
     # Make sure the rotated resolution vectors are perpendicular
     dpos_duv = Vector3(np.random.randn(10000, 3, 2), drank=1)
-    (new_du, new_dv) = Surface.resolution(dpos_duv, _unittest=True)
+    (new_du, new_dv) = Surface._resolution(dpos_duv, _unittest=True)
     assert new_du.dot(new_dv).max() < 1.e-12
 
     # We also expect area to be conserved

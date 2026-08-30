@@ -10,11 +10,11 @@ from oops.transform import Transform
 
 
 class SpinFrame(Frame):
-    """A Frame subclass describing a frame in uniform rotation about one axis of another
-    frame.
+    """A Frame subclass describing a Frame in uniform rotation about one axis of another
+    Frame.
 
-    It can be created without a frame_id, reference_id or origin_id; in this case it is
-    not registered and can therefore be used as a component of another frame.
+    It can be created without a `frame_id`, in which case it is left unregistered and can
+    therefore be used as a component of another Frame.
     """
 
     _WAYFRAMES = {}
@@ -22,12 +22,31 @@ class SpinFrame(Frame):
     # already fairly quick.
 
     def __init__(self, offset, rate, epoch, axis, reference, *, frame_id=None):
-        """Constructor for a Spin Frame.
+        """Constructor for a SpinFrame.
+
+        Parameters:
+            offset (Scalar, array-like, or float): The rotation angle in radians at
+                `epoch`.
+            rate (Scalar, array-like, or float): The rotation rate in radians/second.
+            epoch (Scalar, array-like, or float): The time in seconds TDB at which
+                `offset` applies.
+            axis (int): The rotation axis: 0 for x, 1 for y, 2 for z.
+            reference (Frame or str): The Frame or the ID of the Frame relative to which
+                this rotation is defined.
+            frame_id (str, optional): The ID under which to register this Frame; None to
+                leave this Frame unregistered. As a special case, use "+" to automatically
+                generate a Frame ID by appending "_SPIN" to the ID of `reference` (if it
+                has an ID).
+
+        Notes:
+            `offset`, `rate`, and `epoch` can be Scalars, in which case the shape of the
+            SpinFrame is defined by broadcasting their shapes together with that of
+            `reference`.
 
         Raises:
-            ValueError: If `offset`, `rate`, `epoch`, and  and epoch can be Scalar values,
-            in which case the shape of the SpinFrame is defined by broadcasting the shapes
-            of these Scalars.
+            KeyError: If `reference` is an ID string that has not been registered.
+            ValueError: If `offset`, `rate`, `epoch`, and `reference` cannot be
+                broadcasted to the same shape.
         """
 
         self._offset = Scalar.as_scalar(offset).wod.as_readonly()
@@ -85,21 +104,21 @@ class SpinFrame(Frame):
     ######################################################################################
 
     def transform_at_time(self, time, *, quick=False):
-        """Transform that rotates coordinates from the reference frame to this frame.
+        """Transform that rotates coordinates from the reference to this frame.
 
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames. Ignored for
                 class SpinFrame.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.

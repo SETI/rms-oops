@@ -25,7 +25,26 @@ class PoleFrame(Frame):
                  cache_size=100):
         """Constructor for a PoleFrame.
 
+        Parameters:
+            frame (Frame or str): The Frame or the ID of the Frame describing the rotation
+                of the central planet.
+            pole (Vector3 or array-like): The invariable pole of the system, around which
+                the planet's pole precesses.
+            retrograde (bool, optional): True to flip the sign of the Z-axis. Necessary
+                for retrograde systems like Uranus.
+            aries (bool, optional): True to measure longitudes from the First Point of
+                Aries; False to measure them from the ascending node of the invariable
+                plane on the J2000 equator.
+            frame_id (str, optional): The ID under which to register this Frame; None to
+                leave this Frame unregistered. As a special case, use "+" to automatically
+                generate a Frame ID by appending "_POLE" to the ID of `frame` (if it has
+                an ID).
+            cache_size (int, optional): The number of transforms to cache. This can be
+                useful because it avoids unnecessary SPICE calls when the Frame is being
+                used repeatedly at a finite set of times.
+
         Raises:
+            KeyError: If `frame` is an ID string that has not been registered.
             ValueError: If `frame` and `pole` cannot be broadcasted to the same shape.
         """
 
@@ -99,20 +118,20 @@ class PoleFrame(Frame):
     ######################################################################################
 
     def transform_at_time(self, time, *, quick=None):
-        """Transform that rotates coordinates from the reference frame to this frame.
+        """Transform that rotates coordinates from the reference to this frame.
 
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.
@@ -167,21 +186,20 @@ class PoleFrame(Frame):
         return xform
 
     def node_at_time(self, time, *, quick=None):
-        """The vector defining the ascending node of this frame's XY plane relative to
-        the XY frame of its reference.
+        """Angle from the reference Frame's X-axis, along its X-Y plane, to the ascending
+        node of this Frame's X-Y plane.
+
+        Values always fall between 0 and 2*pi.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Vector3): The unit vector pointing in the direction of the ascending node.
-
-        Notes:
-            TwoVector is a fixed frame, so its node vector relative to the `reference`
-            frame is independent of time.
+            Scalar: At the specified times, the angle from the reference Frame's X-axis,
+            along its X-Y plane, to the ascending node of this Frame's X-Y plane.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.

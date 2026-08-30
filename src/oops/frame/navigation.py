@@ -18,7 +18,7 @@ class Navigation(Frame, Fittable):
     _WAYFRAMES = {}
 
     def __init__(self, arg, /, reference, *, freeze=False, frame_id=None, _matrix=None):
-        """Constructor for a Navigation Frame.
+        """Constructor for a Navigation.
 
         Parameters:
             arg (array-like or Navigation): Two or three angles of rotation in radians.
@@ -37,6 +37,10 @@ class Navigation(Frame, Fittable):
             _matrix (Matrix3, optional): A 3x3 matrix, used internally, to speed up the
                 copying of Navigation objects. If provided, it must contain the Matrix3
                 object that performs the defined rotation.
+
+        Raises:
+            KeyError: If `reference` is an ID string that has not been registered.
+            ValueError: If `arg` does not provide either two or three angles.
         """
 
         # Linking to a frozen object yields a frozen object
@@ -77,6 +81,7 @@ class Navigation(Frame, Fittable):
 
     @property
     def angles(self):
+        """The two or three rotation angles in radians, as a tuple."""
         self.refresh()
         return self._angles
 
@@ -86,7 +91,7 @@ class Navigation(Frame, Fittable):
         return self._link
 
     def _source(self):
-        """The original source of the time shift if this object is linked to another;
+        """The original source of the rotation angles if this object is linked to another;
         otherwise, self.
         """
         return self._link._source() if self._link else self
@@ -132,6 +137,7 @@ class Navigation(Frame, Fittable):
 
     @property
     def params(self):
+        """The fittable parameters of this Navigation, as a tuple of rotation angles."""
         return self._angles
 
     def _refresh(self, matrix=None):
@@ -156,8 +162,14 @@ class Navigation(Frame, Fittable):
 
     @staticmethod
     def _rotmat(angle, axis):
-        """Internal function to return a matrix that performs a rotation about a single
-        specified axis.
+        """A matrix that performs a rotation about a single specified axis.
+
+        Parameters:
+            angle (float): The angle of rotation in radians.
+            axis (int): The axis of rotation: 0 for x, 1 for y, 2 for z.
+
+        Returns:
+            Matrix3: The 3x3 matrix describing this rotation.
         """
 
         axis2 = axis
@@ -178,26 +190,26 @@ class Navigation(Frame, Fittable):
     ######################################################################################
 
     def transform_at_time(self, time, *, quick=False):
-        """Transform that rotates coordinates from the reference frame to this frame.
+        """Transform that rotates coordinates from the reference to this frame.
 
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames. Ignored by
                 class Navigation.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
 
         Notes:
-            Navigation is a fixed frame, so the transform relative to the `reference`
-            frame is independent of time. The returned Transform always has the shape of
-            this object, regardless of the shape of `time`.
+            A Navigation is a fixed Frame, so the Transform relative to the `reference`
+            Frame is independent of time. The returned Transform always has the shape of
+            this Frame, regardless of the shape of `time`.
         """
 
         return self._transform

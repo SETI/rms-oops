@@ -18,11 +18,11 @@ class RingFrame(Frame):
 
     def __init__(self, frame, epoch=None, *, aries=False, retrograde=False, frame_id=None,
                  cache_size=100):
-        """Constructor for a RingFrame Frame.
+        """Constructor for a RingFrame.
 
         Parameters:
-            frame (Frame or str): The frame or frame ID describing the central planet of
-                the ring plane relative to J2000.
+            frame (Frame or str): The Frame or the ID of the Frame describing the central
+                planet of the ring plane relative to J2000.
             epoch (Scalar or float, optional): The time TDB at which this Frame is to be
                 evaluated. If this is specified, then the Frame will be precisely
                 inertial, based on the orientation of the pole at the specified epoch. If
@@ -41,11 +41,12 @@ class RingFrame(Frame):
                 generate a Frame ID by appending "_DESPUN" (if `epoch` is None) or
                 "_INERTIAL" (if `epoch` is specified) to the ID of `frame` (if it has an
                 ID).
-            cache_size (int, optinal): The number of transforms to cache. This can be
+            cache_size (int, optional): The number of transforms to cache. This can be
                 useful because it avoids unnecessary SPICE calls when the Frame is being
                 used repeatedly at a finite set of times.
 
         Raises:
+            KeyError: If `frame` is an ID string that has not been registered.
             ValueError: If `frame` and `epoch` cannot be broadcasted to the same shape.
         """
 
@@ -125,28 +126,28 @@ class RingFrame(Frame):
     ######################################################################################
 
     def transform_at_time(self, time, *, quick=None):
-        """Transform that rotates coordinates from the reference frame to this frame.
+        """Transform that rotates coordinates from the reference to this frame.
 
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.
 
         Notes:
-            If the `epoch` defined for this Frame is None, then the returned Transform is
-            independent of time. In this case, the returned Transform always has the shape
-            of this object, regardless of the shape of `time`.
+            If an `epoch` was defined for this Frame, then the returned Transform is
+            independent of time. In this case, it always has the shape of this Frame,
+            regardless of the shape of `time`.
         """
 
         # For a fixed epoch, return the fixed transform
@@ -193,24 +194,27 @@ class RingFrame(Frame):
         return transform
 
     def node_at_time(self, time, *, quick=None):
-        """The vector defining the ascending node of this frame's XY plane relative to
-        the XY frame of its reference.
+        """Angle from the reference Frame's X-axis, along its X-Y plane, to the ascending
+        node of this Frame's X-Y plane.
+
+        Values always fall between 0 and 2*pi.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Vector3): The unit vector pointing in the direction of the ascending node.
+            Scalar: At the specified times, the angle from the reference Frame's X-axis,
+            along its X-Y plane, to the ascending node of this Frame's X-Y plane.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.
 
         Notes:
-            If the `epoch` defined for this Frame is None, then the returned node is
-            independent of time. In this case, it has the shape of this object, regardless
+            If an `epoch` was defined for this Frame, then the returned node is
+            independent of time. In this case, it has the shape of this Frame, regardless
             of the shape of `time`.
         """
 

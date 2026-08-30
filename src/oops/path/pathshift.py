@@ -9,7 +9,7 @@ import oops.mutable as mutable
 
 
 class PathShift(Path, Fittable):
-    """A path defined by a time-shift along another path."""
+    """A Path subclass defined by a time shift along another Path."""
 
     _WAYPOINTS = {}
 
@@ -20,13 +20,17 @@ class PathShift(Path, Fittable):
             arg (float, PathShift, FrameShift, or TimeShift): The initial time shift in
                 seconds. Alternatively, if another time-shifted object is given, this
                 object's time shift will always match that of the argument.
-            path (Path or str): The Path or ID to which the time shift applies.
+            path (Path or str): The Path or the ID of the Path to which the time shift
+                applies.
             path_id (str, optional): The ID under which to register this Path; None to
                 leave this Path unregistered. As a special case, use "+" to automatically
                 generate a Path ID by appending "_SHIFT" to the ID of `path` (if it has
                 an ID).
             freeze (bool, optional): True to return a frozen object; False to leave it
                 unfrozen.
+
+        Raises:
+            KeyError: If `path` is an ID string that has not been registered.
         """
 
         # Linking to a frozen object yields a frozen object

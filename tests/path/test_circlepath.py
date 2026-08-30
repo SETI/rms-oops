@@ -22,7 +22,7 @@ def test_circlepath():
     epoch = 10. * 365. * 86400. * np.random.randn()
     origin = Path.SSB
     frame = Frame.J2000
-    path = CirclePath(radius, lon, rate, epoch, origin, frame)
+    path = CirclePath(radius, lon, rate, epoch, origin, frame=frame)
     state = path.__getstate__()
 
     copied = Path.__new__(CirclePath)

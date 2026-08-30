@@ -9,7 +9,9 @@ from oops.path.path_   import Path
 
 
 class FixedPath(Path):
-    """A path described by fixed coordinates relative to another path and frame."""
+    """A Path subclass describing fixed coordinates relative to another Path and
+    Frame.
+    """
 
     _WAYPOINTS = {}
 
@@ -19,10 +21,10 @@ class FixedPath(Path):
         Parameters:
             pos (Vector3 or array-like): The position vectors within the frame and
                 relative to the specified origin.
-            origin (Path or str): The origin Path or ID of the origin.
-            frame (Frame or str, optional): The Frame or ID of the Frame in which the
+            origin (Path or str): The Path or the ID of the Path defining the origin.
+            frame (Frame or str, optional): The Frame or the ID of the Frame in which the
                 fixed coordinates are defined and in which they are returned; None to use
-                the frame of the `origin` path.
+                the Frame of the `origin` Path.
             path_id (str, optional): The ID under which to register this Path; None to
                 leave this Path unregistered.
 

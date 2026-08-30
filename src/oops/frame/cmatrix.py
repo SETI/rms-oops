@@ -11,7 +11,7 @@ from oops.constants import RPD
 
 
 class Cmatrix(Frame):
-    """Frame subclass in which the frame is defined by a fixed rotation matrix.
+    """A Frame subclass in which the Frame is defined by a fixed rotation matrix.
 
     Most commonly, it rotates J2000 coordinates into the frame of a camera, in which the
     Z-axis points along the optic axis, the X-axis points rightward, and the Y-axis points
@@ -21,16 +21,18 @@ class Cmatrix(Frame):
     _WAYFRAMES = {}
 
     def __init__(self, cmatrix, reference=None, *, frame_id=None):
-        """Constructor for a Cmatrix frame.
+        """Constructor for a Cmatrix.
 
         Parameters:
-            cmatrix (Matrix3): the C matrix.
-            reference (Frame or str): Frame or the ID of the Frame relative to which this
-                frame is defined; default is J2000.
+            cmatrix (Matrix3 or array-like): The 3x3 rotation matrix that rotates
+                coordinates from `reference` into this Frame.
+            reference (Frame or str, optional): The Frame or the ID of the Frame relative
+                to which this Frame is defined; None for J2000.
             frame_id (str, optional): The ID under which to register this Frame; None to
                 leave this Frame unregistered.
 
         Raises:
+            KeyError: If `reference` is an ID string that has not been registered.
             ValueError: If `cmatrix` and `reference` cannot be broadcasted to the same
                 shape.
         """
@@ -46,6 +48,7 @@ class Cmatrix(Frame):
 
     @property
     def transform(self):
+        """The fixed Transform from the reference Frame to this Frame."""
         return self._transform
 
     def _refresh(self):
@@ -86,7 +89,7 @@ class Cmatrix(Frame):
 
     @staticmethod
     def from_ra_dec(ra, dec, clock, reference=None, *, frame_id=None):
-        """Construct a Cmatrix from RA, dec and celestial north clock angles.
+        """Construct a Cmatrix from RA, dec, and celestial north clock angles.
 
         Parameters:
             ra (Scalar, array-like, or float): The right ascension of the optic axis in
@@ -95,12 +98,17 @@ class Cmatrix(Frame):
                 degrees.
             clock (Scalar, array-like, or float): The angle of celestial north in degrees,
                 measured clockwise from the "up" direction in the observation.
-            reference (Frame, optional): The reference frame or ID; None for J2000.
-            frame_id (str, optional): The ID to use when registering this frame; None to
-                leave it unregistered.
+            reference (Frame or str, optional): The Frame or the ID of the Frame
+                relative to which this Frame is defined; None for J2000.
+            frame_id (str, optional): The ID under which to register this Frame; None to
+                leave this Frame unregistered.
+
+        Returns:
+            Cmatrix: A Frame defined by the rotation matrix that these angles describe.
 
         Raises:
-            ValueError: If `ra`, `dec`, `twist`, and `reference` cannot all be broadcasted
+            KeyError: If `reference` is an ID string that has not been registered.
+            ValueError: If `ra`, `dec`, `clock`, and `reference` cannot all be broadcasted
                 to the same shape.
         """
 
@@ -123,8 +131,7 @@ class Cmatrix(Frame):
         (cosr, cosd, cost, sinr, sind, sint) = np.broadcast_arrays(cosr, cosd, cost,
                                                                    sinr, sind, sint)
 
-        # Extracted from the PDS Data Dictionary definition, which is appended
-        # below
+        # Extracted from the PDS Data Dictionary definition
         cmatrix_values = np.empty(cosr.shape + (3,3))
         cmatrix_values[..., 0, 0] = -sinr * cost - cosr * sind * sint
         cmatrix_values[..., 0, 1] =  cosr * cost - sinr * sind * sint
@@ -143,27 +150,27 @@ class Cmatrix(Frame):
     # Frame API
     ######################################################################################
 
-    def transform_at_time(self, time, quick=False):
-        """Transform that rotates coordinates from the reference frame to this frame.
+    def transform_at_time(self, time, *, quick=False):
+        """Transform that rotates coordinates from the reference to this frame.
 
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames. Ignored by
                 class Cmatrix.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
 
         Notes:
-            Cmatrix is a fixed frame, so the transform relative to the `reference` is
-            independent of time. The returned Transform always matches the shape of this
-            Frame, regardless of the shape of `time`.
+            A Cmatrix is a fixed Frame, so the Transform relative to the `reference`
+            Frame is independent of time. The returned Transform always has the shape of
+            this Frame, regardless of the shape of `time`.
         """
 
         return self._transform

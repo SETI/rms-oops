@@ -5,7 +5,9 @@
 import numpy as np
 
 from polymath          import Scalar, Vector3
+from oops.constants    import TWOPI
 from oops.surface.limb import Limb
+
 
 class PolarLimb(Limb):
     """The locus of points where a surface normal from a spheroid or ellipsoid is
@@ -21,28 +23,36 @@ class PolarLimb(Limb):
       sight; usually zero.
     """
 
-    def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
-                                  derivs=False, hints=None, groundtrack=False):
+    COORDINATE_TYPE = 'limb'
+    COORDINATE_NAMES = ('elevation', 'clock', 'distance')
+    COORDINATE_ABBREVS = ('z', 'clock', 'd')
+    COORDINATE_RANGES = ((None, None), (0, TWOPI), (None, None))
+
+    def coords_from_vector3(self, pos, *, obs=None, time=None, axes=2, derivs=False,
+                            hints=None, groundtrack=False):
         """Surface coordinates associated with a position vector.
 
         Parameters:
-            pos (Vector3): Positions at or near the surface, relative to this surface's
+            pos (Vector3): Positions at or near the Surface, relative to this Surface's
                 origin and frame.
-            obs (Vector3, optional): Observer position relative to this surface's origin
+            obs (Vector3, optional): Observer position relative to this Surface's origin
                 and frame.
-            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
                 this Surface subclass.
             axes (int, optional): 2 or 3, indicating whether to return the first two
                 coordinates (z, clock) or all three (z, clock, dist) as Scalars.
             derivs (bool, optional): True to propagate any derivatives inside pos and obs
                 into the returned coordinates.
-            hints (Scalar, optional): Optionally, the value of the coefficient p such that
-                ground + p * normal(ground) = pos; for the ground point on the body
-                surface. Ignored if the value is None (the default) or True. groundtrack
-                True to return the intercept on the surface along with the coordinates.
+            hints (Scalar, optional): Optionally, the value of the coefficient `p` such
+                that `ground + p * normal(ground) = pos`, for the ground point on the body
+                surface. If it is not None, the converged value of `p` is appended to the
+                returned tuple; use `hints=True` if you lack an initial value but require
+                the new value to be returned.
+            groundtrack (bool, optional): True to append the intercept point on the
+                surface to the returned tuple.
 
         Returns:
-            (tuple): Two to four values, where:
+            tuple: Two to five values, where:
 
             * `z` (Scalar): The vertical distance in km normal to the limb of the body
               surface.
@@ -51,7 +61,7 @@ class PolarLimb(Limb):
             * `dist`: Optional offset distance in km beyond the virtual limb plane
               along the line of sight, included if axes == 3.
             * `track` (Vector3): Intercept point on the surface (where z == 0); included
-              if input groundtrack is True.
+              if `groundtrack` is True.
         """
 
         # Validate inputs
@@ -72,41 +82,50 @@ class PolarLimb(Limb):
             track = pos.element_div(denom)
             cept = pos
 
-        results = self.z_clock_from_intercept(cept, obs, derivs=derivs, hints=p)
+        results = self.z_clock_from_intercept(cept, obs, derivs=derivs, hints=p)[:2]
 
         if axes == 3:
             d = los.dot(pos - cept) / los.norm()
             results += (d,)
+
+        if hints is not None:
+            results += (p,)
 
         if groundtrack:
             results += (track,)
 
         return results
 
-    def vector3_from_coords(self, coords, obs=None, time=None, derivs=False,
-                                  groundtrack=False):
+    def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
+                            hints=None, groundtrack=False):
         """The position where a point with the given coordinates falls relative to this
         surface's origin and frame.
 
         Parameters:
-            coords (tuple): Two or three Scalars defining coordinates at or near this
-                surface. These can have different shapes, but must be broadcastable to a
-                common shape. z       the vertical distance in km normal to the limb of
-                the body surface. clock   the angle in radians of the normal vector on the
-                sky, measured clockwise from the projected direction of the north pole.
-                dist    optional offset distance in km beyond the virtual limb plane along
-                the line of sight.
-            obs (Vector3, optional): Observer positions relative to this surface's origin
+            coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at
+                or near this surface. These can have different shapes, but must be
+                broadcastable to a common shape.
+
+                * `z` (km): Vertical distance normal to the limb of the body surface.
+                * `clock` (rad): Angle of the normal vector on the sky, measured
+                  clockwise from the projected direction of the north pole.
+                * `dist` (km, optional): Offset distance beyond the virtual limb plane
+                  along the line of sight.
+
+            obs (Vector3, optional): Observer positions relative to this Surface's origin
                 and frame.
-            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
                 this Surface subclass.
             derivs (bool, optional): True to include the partial derivatives of the
                 intercept point with respect to observer and to the coordinates.
-                groundtrack True to include the associated groundtrack points on the body
-                surface in the returned result.
+            hints (Any, optional): Any data that might be useful to carry over from one
+                call to the next; unused by this Surface subclass. If it is not None,
+                its value is appended to the returned tuple.
+            groundtrack (bool, optional): True to append the associated groundtrack points
+                on the body surface to the returned result.
 
         Returns:
-            Pos or (pos, track), where:
+            Vector3 or tuple: `pos` or `(pos[, hints][, track])`, where:
 
             * `pos` (Vector3): Points defined by the coordinates, relative to this
               surface's origin and frame.
@@ -118,8 +137,7 @@ class PolarLimb(Limb):
         self._vector3_from_coords_check(coords)
 
         (z, clock) = coords[:2]
-        (cept, track) = self.intercept_from_z_clock(z, clock, obs,
-                                                    derivs=derivs,
+        (cept, track) = self.intercept_from_z_clock(z, clock, obs, derivs=derivs,
                                                     groundtrack=True)
 
         if len(coords) > 2:

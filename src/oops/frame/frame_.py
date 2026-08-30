@@ -24,13 +24,13 @@ class Frame(Mutable):
     relative to that planet's center.
 
     Once a Frame is defined, you can calculate Transforms from any other Frame to this
-    one. The method `wrt` (for "with respect to"), lets you specify any reference Frame
+    one. The method `wrt` (for "with respect to") lets you specify any reference Frame
     and it returns a new Frame object whose `transform_at_time` method will return this
     alternative Transform. Internally, OOPS determines the sequence of steps that are
     required to connect any Frame to any other Frame.
 
     For example, suppose `enceladus_iau` is a SpinFrame defining the rotation of Enceladus
-    relative to its center. In addition, suppose 'cassini_wac' is a Frame defining the
+    relative to its center. In addition, suppose `cassini_wac` is a Frame defining the
     orientation of the Cassini Wide Angle Camera. Then the Frame defined by::
 
         wac_wrt_enceladus = cassini_wac.wrt(enceladus_iau)
@@ -50,9 +50,9 @@ class Frame(Mutable):
     Note that it is possible to construct multiple Frame objects that have the exact same
     primary definition. The first Frame to be constructed with a particular definition
     will have a wayframe that points to itself. Subsequent Frame objects that employ the
-    same definition will all share this wayframe. As a result, you can determine if two
-    Frame objects are functionally equivalent by comparing their wayframe attributes using
-    the `is` operator.
+    same definition will all share this wayframe. As a result, you can determine whether
+    two Frame objects are functionally equivalent by comparing their wayframe attributes
+    using the `is` operator.
 
     Optionally, a Frame can be registered under a Frame ID, which is a string that can be
     used globally to refer to that Frame. You can use the `as_frame` method to convert a
@@ -68,7 +68,7 @@ class Frame(Mutable):
     that ID will have a new version number appended to make it unique. For example, if a
     Frame named "ENCELADUS" already exists, the new Frame will actually have the ID
     "ENCELADUS-2". However, if the new Frame is functionally identical to the existing
-    frame called "ENCELADUS", then its ID will also be "ENCELADUS".
+    Frame called "ENCELADUS", then its ID will also be "ENCELADUS".
 
     Properties:
         * frame_id (str or None): The optional ID string for this Frame. Once registered,
@@ -112,8 +112,8 @@ class Frame(Mutable):
 
     @property
     def pickle_quickframe_details(self):
-        """If True, the full tabulation of all QuickFrames is included when pickling this
-        Frame.
+        """True if the full tabulation of all QuickFrames is to be included when pickling
+        this Frame.
         """
         if not hasattr(self, '_pickle_quickframe_details'):
             return PICKLE_CONFIG.quickframe_details
@@ -121,8 +121,8 @@ class Frame(Mutable):
 
     @pickle_quickframe_details.setter
     def pickle_quickframe_details(self, value):
-        """True to include the internal tabulations of all QuickFrames when pickling this
-        Frame.
+        """Set to True to include the internal tabulations of all QuickFrames when
+        pickling this Frame.
         """
         self._pickle_quickframe_details = bool(value)
 
@@ -167,14 +167,14 @@ class Frame(Mutable):
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
-        Unlike method transform_at_time(), this variant tolerates times that raise cspyce
+        Unlike method `transform_at_time`, this variant tolerates times that raise cspyce
         errors. It returns a new time Scalar along with the new Transform, where both
         objects skip over the times at which the transform could not be evaluated.
 
         The default behavior is to assume that all times are valid. As a result, this
-        function calls `transform_at_time`, but also returns the given time Scalar. This
+        method calls `transform_at_time` and also returns the given time Scalar. This
         behavior is overridden by SpiceFrame, where occasional short gaps in a C-kernel
-        can be tolerated as long as the QuickFrame can interpolate across them.
+        can be tolerated as long as a QuickFrame can interpolate across them.
 
         Parameters:
             time (Scalar): The time in seconds TDB.
@@ -186,8 +186,8 @@ class Frame(Mutable):
             tuple[Scalar, Transform]: (`newtimes`, `transform`):
 
             * `newtimes` identifies the time(s) at which `transform` has been provided;
-              this may be a subset of the input times given because it omits times at
-              which the Transform could not be evaluated.
+              this may be a subset of the input times, because it omits the times at which
+              the Transform could not be evaluated.
             * `transform` is the Transform defined at `newtimes`. It rotates vectors from
               the reference frame to this frame.
         """
@@ -234,6 +234,19 @@ class Frame(Mutable):
         return self.__str__()
 
     def show(self, level, indent=0):
+        """A string describing this Frame and, recursively, the Frames it is built from.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand. Use 0
+                for the Frame ID alone, 1 for a one-line summary, and larger values to
+                expand that many levels of the definition.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame.
+        """
+
         if level == 0 and self._frame_id and self._reference is Frame.J2000:
             return '"' + self._frame_id + '"'
 
@@ -268,7 +281,7 @@ class Frame(Mutable):
 
     @property
     def is_inertial(self):
-        """True if this frame is inertial."""
+        """True if this Frame is inertial."""
         if hasattr(self, '_is_inertial'):
             return self._is_inertial
 
@@ -303,7 +316,8 @@ class Frame(Mutable):
     @property
     def string_id(self):
         """The ID of this Frame if it is registered; otherwise, a unique string derived
-        from its Python id()."""
+        from its Python id().
+        """
         return self._frame_id if self._frame_id else f'#{id(self)}'
 
     @property
@@ -348,7 +362,7 @@ class Frame(Mutable):
 
         Parameters:
             frame_id (str, optional): Name under which to register this Frame; omit to
-                leave this Frame un-registered.
+                leave this Frame unregistered.
         """
 
         # Fill in the _key and the wayframe. A class without a _WAYFRAMES dictionary
@@ -458,7 +472,7 @@ class Frame(Mutable):
             frame (Frame or str): The Frame or the Frame's ID string.
 
         Returns:
-            Frame: The Frame representing this Frame's primary definition.
+            Frame: The Frame representing the given Frame's primary definition.
 
         Raises:
             KeyError: If `frame` is an ID string that has not been registered.
@@ -519,8 +533,8 @@ class Frame(Mutable):
         Parameters:
             reference (Frame or str): The reference Frame defined by a Frame object or its
                 registered ID.
-            use_shortcuts (bool, optional): False to prevent checking for a class-specific
-                shortcut.
+            use_shortcuts (bool, optional): True to check for a class-specific shortcut;
+                the default is False.
 
         Returns:
             Frame: This Frame relative to the specified frame.
@@ -583,7 +597,8 @@ class Frame(Mutable):
             reference (Frame): The reference Frame, which must be a valid wayframe.
 
         Returns:
-            (Frame or None): The "shortcut" Frame if it could be constructed.
+            Frame or None: The "shortcut" Frame if it could be constructed; None
+            otherwise.
         """
 
         return None
@@ -596,23 +611,25 @@ class Frame(Mutable):
         performance when the same frame must be evaluated repeatedly many times, e.g., for
         every pixel of an image.
 
-        This function evaluates the set of times and only constructs a QuickFrame only if
-        doing so is likely to speed up this and future evaluations. Otherwise, it returns
-        this Frame.
+        This method evaluates the set of times and constructs a QuickFrame only if doing
+        so is likely to speed up this and future evaluations. Otherwise, it returns this
+        Frame.
 
         Parameters:
-            time (Scalar or array-like): The times at which the frame is to be evaluated.
-            quick (dict or bool, optional): If False, no QuickPath is created and `self`
+            time (Scalar or tuple): The set of times at which the frame is to be
+                evaluated. This can simply be a tuple (`tmin`, `tmax`) defining the
+                beginning and end times.
+            quick (dict or bool, optional): If False, no QuickFrame is created and `self`
                 is returned; if a dictionary, then the values provided override the values
                 in the default dictionary QUICK.dictionary, and the merged dictionary is
                 used.
 
         Returns:
-            QuickFrame: A Frame that approximates this Frame for the given range of times,
-            but can be evaluated quickly via splines.
+            Frame: A QuickFrame that approximates this Frame for the given range of times
+            but can be evaluated quickly via splines; otherwise, this Frame.
 
         Notes:
-            Any QuickFrames generated by this function are saved as a list inside
+            Any QuickFrames generated by this method are saved as a list inside
             `self._quickframes`. If a pre-existing QuickFrame that covers the time range
             is found in this list, it is returned rather than constructing a new
             QuickFrame. If a QuickFrame is found in the list that partially covers the
@@ -626,14 +643,14 @@ class Frame(Mutable):
 ##########################################################################################
 
 class NullFrame(Frame):
-    """A frame subclass that transforms a frame to itself."""
+    """A Frame subclass that transforms a Frame to itself."""
 
     def __init__(self, frame):
         """Constructor for a NullFrame.
 
         Parameters:
-            frame (Frame or str): The wayframe or frame ID to use as the returned Frame
-                and its reference.
+            frame (Frame or str): The Frame or Frame ID to use as both this Frame and
+                its reference.
 
         Raises:
             KeyError: If `frame` is an ID string that has not been registered.
@@ -677,11 +694,11 @@ class NullFrame(Frame):
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
 
         Notes:
-            The time and this Frame object are not required to have the same shape;
+            The time and the Frame object are not required to have the same shape;
             standard rules of broadcasting apply.
         """
 
@@ -746,6 +763,10 @@ class J2000Frame(NullFrame):
 
         Parameters:
             reference (Frame): The reference Frame, which must be a valid wayframe.
+
+        Returns:
+            Frame or None: The "shortcut" SpiceFrame if `reference` is a SpiceFrame; None
+            otherwise.
         """
 
         if isinstance(reference, Frame._SpiceFrame):
@@ -755,9 +776,9 @@ class J2000Frame(NullFrame):
 
 
 class LinkedFrame(Frame):
-    """A LinkedFrame applies one frame's transform to another.
+    """A LinkedFrame applies one Frame's transform to another.
 
-    The new frame describes coordinates in one frame relative to the reference of the
+    The new Frame describes coordinates in one Frame relative to the reference of the
     second Frame.
     """
 
@@ -765,11 +786,15 @@ class LinkedFrame(Frame):
         """Constructor for a LinkedFrame.
 
         Parameters:
-            frame (Frame): A frame, which must be defined relative to the given `parent`.
-            parent (Frame): The frame to which the above will be linked.
+            frame (Frame or str): A Frame or Frame ID, which must be defined relative to
+                the given `parent`.
+            parent (Frame or str): The Frame or Frame ID to which the above will be
+                linked.
 
         Raises:
             KeyError: If `frame` or `parent` is an ID string that has not been registered.
+            ValueError: If `frame` is not defined relative to `parent`, or if the two
+                Frames have conflicting origins.
         """
 
         frame  = Frame.as_frame(frame)
@@ -819,8 +844,8 @@ class LinkedFrame(Frame):
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
 
         Notes:
             The time and the Frame object are not required to have the same shape;
@@ -837,14 +862,14 @@ class LinkedFrame(Frame):
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
-        Unlike method transform_at_time(), this variant tolerates times that raise cspyce
+        Unlike method `transform_at_time`, this variant tolerates times that raise cspyce
         errors. It returns a new time Scalar along with the new Transform, where both
         objects skip over the times at which the transform could not be evaluated.
 
         The default behavior is to assume that all times are valid. As a result, this
-        function calls transform_at_time, but also returns the given time Scalar. This
+        method calls `transform_at_time` and also returns the given time Scalar. This
         behavior is overridden by SpiceFrame, where occasional short gaps in a C-kernel
-        can be tolerated as long as a QuickFrame interpolates across them.
+        can be tolerated as long as a QuickFrame can interpolate across them.
 
         Parameters:
             time (Scalar): The time in seconds TDB.
@@ -853,12 +878,13 @@ class LinkedFrame(Frame):
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (tuple): The tuple (`newtimes`, `transform`), where:
+            tuple[Scalar, Transform]: (`newtimes`, `transform`):
 
-            * `newtimes` (Scalar): Times at which `transform` has been provided; this may
-              be a subset of the input times given.
-            * `transform` (Transform): The Tranform applicable at `newtimmes`. It rotates
-              vectors from the reference frame to this frame.
+            * `newtimes` identifies the time(s) at which `transform` has been provided;
+              this may be a subset of the input times, because it omits the times at which
+              the Transform could not be evaluated.
+            * `transform` is the Transform defined at `newtimes`. It rotates vectors from
+              the reference frame to this frame.
         """
 
         (time1, parent) = self._parent.transform_at_time_if_possible(time, quick=quick)
@@ -870,13 +896,13 @@ class LinkedFrame(Frame):
 
 
 class ReversedFrame(Frame):
-    """A Frame that generates the inverse Transform of a given Frame."""
+    """A Frame subclass that generates the inverse Transform of a given Frame."""
 
     def __init__(self, frame):
         """Constructor for a ReversedFrame.
 
         Parameters:
-            frame (Frame): Frame to be reversed.
+            frame (Frame or str): The Frame or Frame ID to be reversed.
 
         Raises:
             KeyError: If `frame` is an ID string that has not been registered.
@@ -915,8 +941,8 @@ class ReversedFrame(Frame):
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
 
         Notes:
             The time and the Frame object are not required to have the same shape;
@@ -931,14 +957,14 @@ class ReversedFrame(Frame):
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
-        Unlike method transform_at_time(), this variant tolerates times that raise cspyce
+        Unlike method `transform_at_time`, this variant tolerates times that raise cspyce
         errors. It returns a new time Scalar along with the new Transform, where both
         objects skip over the times at which the transform could not be evaluated.
 
         The default behavior is to assume that all times are valid. As a result, this
-        function calls transform_at_time, but also returns the given time Scalar. This
+        method calls `transform_at_time` and also returns the given time Scalar. This
         behavior is overridden by SpiceFrame, where occasional short gaps in a C-kernel
-        can be tolerated as long as a QuickFrame interpolates across them.
+        can be tolerated as long as a QuickFrame can interpolate across them.
 
         Parameters:
             time (Scalar): The time in seconds TDB.
@@ -947,12 +973,13 @@ class ReversedFrame(Frame):
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (tuple): The tuple (`newtimes`, `transform`), where:
+            tuple[Scalar, Transform]: (`newtimes`, `transform`):
 
-            * `newtimes` (Scalar): Times at which `transform` has been provided; this may
-              be a subset of the input times given.
-            * `transform` (Transform): The Tranform applicable at `newtimmes`. It rotates
-              vectors from the reference frame to this frame.
+            * `newtimes` identifies the time(s) at which `transform` has been provided;
+              this may be a subset of the input times, because it omits the times at which
+              the Transform could not be evaluated.
+            * `transform` is the Transform defined at `newtimes`. It rotates vectors from
+              the reference frame to this frame.
         """
 
         (time, xform) = self._frame.transform_at_time_if_possible(time, quick=quick)

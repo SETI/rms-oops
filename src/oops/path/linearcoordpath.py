@@ -8,7 +8,9 @@ from oops.path.path_ import Path
 
 
 class LinearCoordPath(Path):
-    """A path defined by coordinates changing linearly on a specified Surface."""
+    """A Path subclass defined by coordinates changing linearly on a specified
+    Surface.
+    """
 
     _WAYPOINTS = {}
 
@@ -20,8 +22,8 @@ class LinearCoordPath(Path):
             coords (tuple): 2 or 3 Scalars defining the coordinates on the surface.
             coords_dot (tuple): The time-derivatives of `coords`.
             epoch (Scalar or float): Reference time TDB for the linear motion.
-            obs (Path or str, optional): The Path or ID of the observer, required if
-                `surface` is "virtual".
+            obs (Path or str, optional): The Path or the ID of the Path of the observer,
+                required if `surface` is "virtual".
             path_id (str, optional): The ID under which to register this Path; None to
                 leave this Path unregistered.
 

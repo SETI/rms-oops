@@ -1,14 +1,14 @@
 ##########################################################################################
-# oops/path/_photon_solver.py
+# oops/path/_photon_solver.py: Photon solvers attached to class Path
 ##########################################################################################
 
 import numpy as np
 
 from polymath              import Qube, Scalar, Vector3
 from oops.config           import PATH_PHOTONS, LOGGING
+from oops.constants        import C
 from oops.frame.frame_     import Frame
 from oops.path.path_       import Path
-import oops.constants as constants
 
 
 def photon_to_event(self, arrival, *, derivs=False, guess=None, antimask=None, quick=None,
@@ -25,13 +25,13 @@ def photon_to_event(self, arrival, *, derivs=False, guess=None, antimask=None, q
         antimask (ndarray or bool, optional): A boolean array to be applied to event times
             and positions. Only the indices where antimask=True will be used in the
             solution.
-        quick (dict or bool, optional): An optional dictionary of parameter values to use
-            as overrides to the configured default QuickPath and QuickFrame parameters;
-            use False to disable the use of QuickPaths and QuickFrames. The default quick
+        quick (dict or bool, optional): A dictionary of parameter values to use as
+            overrides to the configured default QuickPath and QuickFrame parameters. Use
+            False to disable the use of QuickPaths and QuickFrames. The default quick
             dictionary is defined in config.py.
-        converge (dict, optional): An optional dictionary of parameters to override the
-            configured default convergence parameters. The default configuration is
-            defined in config.py. Convergence parameters are as follows:
+        converge (dict, optional): A dictionary of parameters to override the configured
+            default convergence parameters. The default configuration is defined in
+            config.py. Convergence parameters are as follows:
 
             * `max_iterations` (int): The maximum number of iterations of Newton's method
               to perform. It should almost never need to be > 6.
@@ -62,8 +62,8 @@ def photon_to_event(self, arrival, *, derivs=False, guess=None, antimask=None, q
           `arr_lt` (Scalar) is the negative light travel time from `path_event`.
     """
 
-    return self._solve_photon(arrival, -1, derivs=derivs, guess=guess, antimask=antimask,
-                              quick=quick, converge=converge)
+    return self._solve_photon(arrival, -1, derivs=derivs, guess=guess,
+                              antimask=antimask, quick=quick, converge=converge)
 
 
 def photon_from_event(self, departure, *, derivs=False, guess=None, antimask=None,
@@ -80,13 +80,13 @@ def photon_from_event(self, departure, *, derivs=False, guess=None, antimask=Non
         antimask (ndarray or bool, optional): A boolean array to be applied to event times
             and positions. Only the indices where antimask=True will be used in the
             solution.
-        quick (dict or bool, optional): An optional dictionary of parameter values to use
-            as overrides to the configured default QuickPath and QuickFrame parameters;
-            use False to disable the use of QuickPaths and QuickFrames. The default quick
+        quick (dict or bool, optional): A dictionary of parameter values to use as
+            overrides to the configured default QuickPath and QuickFrame parameters. Use
+            False to disable the use of QuickPaths and QuickFrames. The default quick
             dictionary is defined in config.py.
-        converge (dict, optional): An optional dictionary of parameters to override the
-            configured default convergence parameters. The default configuration is
-            defined in config.py. Convergence parameters are as follows:
+        converge (dict, optional): A dictionary of parameters to override the configured
+            default convergence parameters. The default configuration is defined in
+            config.py. Convergence parameters are as follows:
 
             * `max_iterations` (int): The maximum number of iterations of Newton's method
               to perform. It should almost never need to be > 6.
@@ -102,7 +102,7 @@ def photon_from_event(self, departure, *, derivs=False, guess=None, antimask=Non
         tuple[Event, Event]: (`path_event`, `departure_event`).
 
         * `path_event`: The Event on this Path that matches the light travel time from
-          `departure`. This Event always has position (0,0,0) on the path, and it holds
+          `departure`. This Event always has position (0,0,0) on the Path, and it holds
           the arriving photon's line of sight and light travel time.
         * `departure_event`: A copy of the given `departure` Event, with the photon's
           departing line of sight and light travel time filled in.
@@ -116,8 +116,8 @@ def photon_from_event(self, departure, *, derivs=False, guess=None, antimask=Non
           and `dep_lt` (Scalar) is the positive light travel time to `path_event`.
     """
 
-    return self._solve_photon(departure, 1, derivs=derivs, guess=guess, antimask=antimask,
-                              quick=quick, converge=converge)
+    return self._solve_photon(departure, 1, derivs=derivs, guess=guess,
+                              antimask=antimask, quick=quick, converge=converge)
 
 
 def _solve_photon(self, link, sign, *, derivs=False, guess=None, antimask=None,
@@ -137,13 +137,13 @@ def _solve_photon(self, link, sign, *, derivs=False, guess=None, antimask=None,
         antimask (ndarray or bool, optional): A boolean array to be applied to event times
             and positions. Only the indices where antimask=True will be used in the
             solution.
-        quick (dict or bool, optional): An optional dictionary of parameter values to use
-            as overrides to the configured default QuickPath and QuickFrame parameters;
-            use False to disable the use of QuickPaths and QuickFrames. The default quick
+        quick (dict or bool, optional): A dictionary of parameter values to use as
+            overrides to the configured default QuickPath and QuickFrame parameters. Use
+            False to disable the use of QuickPaths and QuickFrames. The default quick
             dictionary is defined in config.py.
-        converge (dict, optional): An optional dictionary of parameters to override the
-            configured default convergence parameters. The default configuration is
-            defined in config.py. Convergence parameters are as follows:
+        converge (dict, optional): A dictionary of parameters to override the configured
+            default convergence parameters. The default configuration is defined in
+            config.py. Convergence parameters are as follows:
 
             * `max_iterations` (int): The maximum number of iterations of Newton's method
               to perform. It should almost never need to be > 6.
@@ -159,9 +159,26 @@ def _solve_photon(self, link, sign, *, derivs=False, guess=None, antimask=None,
         tuple[Event, Event]: (`path_event`, `link_event`).
 
         * `path_event`: The Event on this Path that matches the light travel time from the
-          `link` event. This Event always has position (0,0,0) on the path.
+          `link` event. This Event always has position (0,0,0) on the Path.
         * `link_event`: A copy of the given `link` Event, with the photon arrival or
           departure line of sight and light travel time filled in.
+
+    Notes:
+        These subfields are defined in the returned Events:
+
+        * If `sign` is negative:
+            - In `path_event`, `dep` (Vector3) is the direction of the outgoing photon
+              from this Path and `dep_lt` (Scalar) is the positive light travel time to
+              `link_event`.
+            - In `link_event`, `arr` (Vector3) is the direction of the incoming photon and
+              `arr_lt` (Scalar) is the negative light travel time from `path_event`.
+
+        * If `sign` is positive:
+            - In `path_event`, `arr` (Vector3) is the direction of the incoming photon
+              from `link_event` and `arr_lt` (Scalar) is the negative light travel time
+              from `link_event`.
+            - In `link_event`, `dep` (Vector3) is the direction of the outgoing photon and
+              `dep_lt` (Scalar) is the positive light travel time to `path_event`.
     """
 
     # Internal function to return an entirely masked result
@@ -171,23 +188,18 @@ def _solve_photon(self, link, sign, *, derivs=False, guess=None, antimask=None,
 
         if derivs:
             scalar.insert_deriv('t', Scalar(1., True), override=True)
-            scalar.insert_deriv('los',
-                                Scalar(np.ones((1,3)), True, drank=1),
+            scalar.insert_deriv('los', Scalar(np.ones((1,3)), True, drank=1),
                                 override=True)
 
             vector3.insert_deriv('t', Vector3((1,1,1), True), override=True)
-            vector3.insert_deriv('los',
-                                 Vector3(np.ones((3,3)), True, drank=1),
+            vector3.insert_deriv('los', Vector3(np.ones((3,3)), True, drank=1),
                                  override=True)
 
-        new_link = original_link.replace(link_key, vector3,
-                                         link_key + '_lt', scalar)
+        new_link = original_link.replace(link_key, vector3, link_key + '_lt', scalar)
         new_link = new_link.as_all_masked()
 
-        path_event = new_link.as_all_masked(origin=self.origin,
-                                            frame=self.frame.wayframe)
-        path_event = path_event.replace(path_key, vector3,
-                                        path_key + '_lt', scalar)
+        path_event = new_link.as_all_masked(origin=self.origin, frame=self.frame.wayframe)
+        path_event = path_event.replace(path_key, vector3, path_key + '_lt', scalar)
 
         return (path_event, new_link)
 
@@ -205,7 +217,9 @@ def _solve_photon(self, link, sign, *, derivs=False, guess=None, antimask=None,
     else:
         converge = PATH_PHOTONS.__dict__
 
-    iters = converge['max_iterations']
+    # At least one iteration is required; the code below the loop uses values that only
+    # the loop body defines.
+    iters = max(1, converge['max_iterations'])
     precision = converge['dlt_precision']
     limit = converge['dlt_limit']
 
@@ -236,13 +250,13 @@ def _solve_photon(self, link, sign, *, derivs=False, guess=None, antimask=None,
     #   dy_dlt = outward_speed - sign * c
 
     # Interpret the sign
-    signed_c = sign * constants.C
+    signed_c = sign * C
     if sign < 0.:           # photon_to_event case
-        path_key = 'dep'    # departure event is on the path, sign < 0, dep_lt < 0
-        link_key = 'arr'    # link event holds the photon's arrival, arr_lt > 0
+        path_key = 'dep'    # departure event is on the path, sign < 0, dep_lt > 0
+        link_key = 'arr'    # link event holds the photon's arrival, arr_lt < 0
     else:                   # photon_from_event case
-        path_key = 'arr'    # arrival event is on the path, sign > 0, arr_lt > 0
-        link_key = 'dep'    # link event holds the photon's departure, dep_lt < 0
+        path_key = 'arr'    # arrival event is on the path, sign > 0, arr_lt < 0
+        link_key = 'dep'    # link event holds the photon's departure, dep_lt > 0
 
     # Define the antimask
     if antimask is None:
@@ -320,7 +334,7 @@ def _solve_photon(self, link, sign, *, derivs=False, guess=None, antimask=None,
         prev_max_dlt = max_dlt
         max_dlt = abs(dlt).max(builtins=True, masked=-1.)
 
-        if LOGGING.surface_iterations:
+        if LOGGING.path_iterations:
             LOGGING.performance(f'Path._solve_photon: iter={count+1}; '
                                 f'change={max_dlt:.6g}')
 

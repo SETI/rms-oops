@@ -12,10 +12,10 @@ from oops.frame            import Frame
 from oops.frame.cmatrix    import Cmatrix
 from oops.frame.navigation import Navigation
 from oops.meshgrid         import Meshgrid
-import oops.mutable as mutable
+from oops.mutable          import Mutable
 
 
-class Observation(mutable.Mutable):
+class Observation(Mutable):
     """An abstract class defining the timing and pointing of the samples that comprise a
     data array.
 
@@ -103,8 +103,7 @@ class Observation(mutable.Mutable):
               indices.
         """
 
-        raise NotImplementedError(type(self).__name__ + '.uvt ' +
-                                  'is not implemented')
+        raise NotImplementedError(f'{type(self).__name__}.uvt is not implemented')
 
     def uvt_range(self, indices, remask=False):
         """Ranges of (u,v) spatial coordinates and time for integer array indices.
@@ -123,8 +122,7 @@ class Observation(mutable.Mutable):
             * `time_max` (Scalar): Defining the maximum time value.
         """
 
-        raise NotImplementedError(type(self).__name__ + '.uvt_range ' +
-                                  'is not implemented')
+        raise NotImplementedError(f'{type(self).__name__}.uvt_range is not implemented')
 
     def time_range_at_uv(self, uv_pair, remask=False):
         """The start and stop times of the specified spatial pixel (u,v).
@@ -135,12 +133,12 @@ class Observation(mutable.Mutable):
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
-            (tuple): Scalars of the start time and stop time of each (u,v) pair, as
-                seconds TDB.
+            tuple[Scalar, Scalar]: Scalars of the start time and stop time of each `(u,v)`
+            pair, as seconds TDB.
         """
 
-        raise NotImplementedError(type(self).__name__ + '.time_range_at_uv ' +
-                                  'is not implemented')
+        raise NotImplementedError(f'{type(self).__name__}.time_range_at_uv is not '
+                                  'implemented')
 
     def time_range_at_uv_0d(self, uv_pair, remask=False):
         """time_range_at_uv() for some observations in which the spatial and time axes are
@@ -151,8 +149,8 @@ class Observation(mutable.Mutable):
                 necessary.
 
         Returns:
-            (tuple): Scalars of the start time and stop time of each (u,v) pair, as
-                seconds TDB.
+            tuple[Scalar, Scalar]: Scalars of the start time and stop time of each `(u,v)`
+            pair, as seconds TDB.
         """
 
         time_min = Scalar(self.time[0])     # shapeless scalars
@@ -163,10 +161,8 @@ class Observation(mutable.Mutable):
             new_mask = self.fov.uv_is_outside(uv_pair)
             if new_mask.any_true_or_masked():
                 new_mask = Qube.or_(new_mask.vals, new_mask.mask)
-                time_min = Scalar.filled(uv_pair.shape, self.time[0],
-                                                        mask=new_mask)
-                time_max = Scalar.filled(uv_pair.shape, self.time[1],
-                                                        mask=new_mask)
+                time_min = Scalar.filled(uv_pair.shape, self.time[0], mask=new_mask)
+                time_max = Scalar.filled(uv_pair.shape, self.time[1], mask=new_mask)
 
         return (time_min, time_max)
 
@@ -180,8 +176,8 @@ class Observation(mutable.Mutable):
                 cadence.
 
         Returns:
-            (tuple): Scalars of the start time and stop time of each (u,v) pair, as
-                seconds TDB.
+            tuple[Scalar, Scalar]: Scalars of the start time and stop time of each `(u,v)`
+            pair, as seconds TDB.
         """
 
         uv_pair = Pair.as_pair(uv_pair, recursive=False)
@@ -206,8 +202,8 @@ class Observation(mutable.Mutable):
                 index of the cadence. The slow index is always 1 - fast.
 
         Returns:
-            (tuple): Scalars of the start time and stop time of each (u,v) pair, as
-                seconds TDB.
+            tuple[Scalar, Scalar]: Scalars of the start time and stop time of each `(u,v)`
+            pair, as seconds TDB.
         """
 
         uv_pair = Pair.as_pair(uv_pair, recursive=False)
@@ -215,8 +211,7 @@ class Observation(mutable.Mutable):
         if fast == 1:
             return self.cadence.time_range_at_tstep(uv_pair, remask=remask)
         else:
-            return self.cadence.time_range_at_tstep(uv_pair.swapxy(),
-                                                    remask=remask)
+            return self.cadence.time_range_at_tstep(uv_pair.swapxy(), remask=remask)
 
     def uv_range_at_time(self, time, remask=False):
         """The (u,v) range of spatial pixels in the data array observed at the specified
@@ -235,8 +230,8 @@ class Observation(mutable.Mutable):
               specified time.
         """
 
-        raise NotImplementedError(type(self).__name__ + '.uv_range_at_time ' +
-                                  'is not implemented')
+        raise NotImplementedError(f'{type(self).__name__}.uv_range_at_time is not ' +
+                                  'implemented')
 
     def uv_range_at_time_0d(self, time, uv_shape, remask=False):
         """uv_range_at_time() for an observation in which any time-dependence is decoupled
@@ -337,30 +332,28 @@ class Observation(mutable.Mutable):
                 seconds. A positive value shifts the observation later.
 
         Returns:
-            A (shallow) copy of the object with a new time.
+            Observation: A (shallow) copy of the object with a new time.
         """
 
-        raise NotImplementedError(type(self).__name__ + '.time_shift ' +
-                                  'is not implemented')
+        raise NotImplementedError(f'{type(self).__name__}.time_shift is not implemented')
 
     def copy(self):
         """An independent copy of this observation.
 
-        The data array, if any, is shared with the original rather than
-        duplicated. The frame, path, FOV and cadence are shared as well; these
-        are canonical objects, registered and shared throughout OOPS, and
-        duplicating them would break the identities that the Frame and Path
-        registries rely on. What the copy does not share is its own state: it
-        gets a new subfield dictionary, so subfields can be inserted into or
-        deleted from either observation without disturbing the other, and it
-        carries none of the original's internal record of what has been
-        modified.
+        The data array, if any, is shared with the original rather than duplicated. The
+        frame, path, FOV and cadence are shared as well; these are canonical objects,
+        registered and shared throughout OOPS, and duplicating them would break the
+        identities that the Frame and Path registries rely on. What the copy does not
+        share is its own state: it gets a new subfield dictionary, so subfields can be
+        inserted into or deleted from either observation without disturbing the other, and
+        it carries none of the original's internal record of what has been modified.
 
-        A Fittable sub-object, such as a Navigation frame, is the exception: it
-        is duplicated, so that fitting one observation leaves the other
-        unchanged. The object to which it applies is still shared.
+        A Fittable sub-object, such as a Navigation frame, is the exception: it is
+        duplicated, so that fitting one observation leaves the other unchanged. The object
+        to which it applies is still shared.
 
-        Return:         A new Observation.
+        Returns:
+            Observation: A copy of the object.
         """
 
         fittables = [name for name in mutable.mutable_names(self)
@@ -370,17 +363,17 @@ class Observation(mutable.Mutable):
         obs.__dict__ = self.__dict__.copy()
         obs.subfields = self.subfields.copy()
 
-        # Anything that can be modified in place gets duplicated; a subfield is
-        # also an attribute, so both records have to be updated
+        # Anything that can be modified in place gets duplicated; a subfield is also an
+        # attribute, so both records have to be updated
         for name in fittables:
             subobj = self.__dict__[name].copy()
             obs.__dict__[name] = subobj
             if name in obs.subfields:
                 obs.subfields[name] = subobj
 
-        # The copy is a new object, so it must not inherit the bookkeeping that
-        # describes the original; otherwise the two would share one record of
-        # which sub-objects are mutable and when each was last refreshed
+        # The copy is a new object, so it must not inherit the bookkeeping that describes
+        # the original; otherwise the two would share one record of which sub-objects are
+        # mutable and when each was last refreshed
         for key in [k for k in obs.__dict__ if k.startswith('_MUTABLE')]:
             del obs.__dict__[key]
 
@@ -429,40 +422,36 @@ class Observation(mutable.Mutable):
             frame (Frame): The new frame.
         """
 
-        # An observation that is not mutable reports itself as frozen because it
-        # has nothing to freeze, so both tests are needed to single out an
-        # observation that was frozen deliberately
+        # An observation that is not mutable reports itself as frozen because it has
+        # nothing to freeze, so both tests are needed to single out an observation that
+        # was frozen deliberately
         if mutable.is_mutable(self) and mutable.is_frozen(self):
             raise ValueError(f'{type(self).__name__} object is frozen')
 
         self.frame = frame
 
-        # The new frame may be Fittable where the old one was not, or vice
-        # versa, so the record of which sub-objects are mutable is now stale
+        # The new frame may be Fittable where the old one was not, or vice versa, so the
+        # record of which sub-objects are mutable is now stale
         mutable._invalidate(self)
         mutable._increment(self)
 
     def get_spice_cmatrix(self, tstep=None, *, time=None):
-        """The C matrix of this observation, in the convention used by the
-        SPICE toolkit.
+        """The C matrix of this observation, in the convention used by the SPICE toolkit.
 
-        This observation must carry a "spice_to_frame" subfield, the rotation
-        from the SPICE frame convention of the instrument to the oops
-        convention. It is inserted by the host module that created the
-        observation.
+        This observation must carry a "spice_to_frame" subfield, the rotation from the
+        SPICE frame convention of the instrument to the oops convention. It is inserted by
+        the host module that created the observation.
 
         Parameters:
-            tstep (float or Scalar): The time step index or sequence of time
-                step index values, as interpreted by this Observation's
-                cadence.
-            time (float or Scalar): The time in seconds TDB during the
-                Observation. Note that at most one of `tstep` and `time` can be
-                specified; if neither is given, the midtime of this Observation
-                is used.
+            tstep (float or Scalar): The time step index or sequence of time step index
+                values, as interpreted by this Observation's cadence.
+            time (float or Scalar): The time in seconds TDB during the Observation. Note
+                that at most one of `tstep` and `time` can be specified; if neither is
+                given, the midtime of this Observation is used.
 
         Returns:
-            (Matrix3): The rotation from J2000 coordinates into the SPICE
-                frame of the instrument or host.
+            Matrix3: The rotation from J2000 coordinates into the SPICE frame of the
+            instrument or host.
         """
 
         if not hasattr(self, 'spice_to_frame'):
@@ -566,7 +555,7 @@ class Observation(mutable.Mutable):
         return tfrac * (time0 + time1)
 
     def meshgrid(self, origin=None, undersample=1, oversample=1, limit=None,
-                       center_uv=None, fov_keywords={}):
+                 center_uv=None, fov_keywords={}):
         """A Meshgrid shaped to broadcast to the observation's shape.
 
         This works like Meshgrid.for_fov() except that the (u,v) axes are assigned their
@@ -676,11 +665,9 @@ class Observation(mutable.Mutable):
         # Handle a 2-D observation
         if (self.t_axis[0] not in (self.u_axis, self.v_axis) or
             self.t_axis[1] not in (self.u_axis, self.v_axis)):
-                raise NotImplementedError('Observation.timegrid not ' +
-                                          'implemented for ' +
-                                          't axes (%d,%d), ' % self.t_axis,
-                                          'u axis %d, ' % self.u_axis,
-                                          'v axis %d'   % self.v_axis)
+                raise NotImplementedError(f'Observation.timegrid not implemented for '
+                                          f't axes {self.t_axis}, '
+                                          f'u axis {self.u_axis}, v axis {self.v_axis}')
 
         # Time aligns with u-axis AND v-axis
 
@@ -718,8 +705,7 @@ class Observation(mutable.Mutable):
 
         return event
 
-    def gridless_event(self, meshgrid=None, tfrac=0.5, time=None,
-                             shapeless=False):
+    def gridless_event(self, meshgrid=None, tfrac=0.5, time=None, shapeless=False):
         """A photon arrival event irrespective of the direction.
 
         Parameters:
@@ -750,8 +736,8 @@ class Observation(mutable.Mutable):
 
     @staticmethod
     def scalar_from_indices(indices, axis, derivs=True):
-        """Utility to return the selected Scalar from a Scalar or Vector of
-        indices, np.ndarray, or a number.
+        """Utility to return the selected Scalar from a Scalar or Vector of indices,
+        np.ndarray, or a number.
         """
 
         if axis < 0:
@@ -801,7 +787,7 @@ class Observation(mutable.Mutable):
                 QuickFrames. The default configuration is defined in config.py.
 
         Returns:
-            (Pair): (u,v) coordinates.
+            Pair: (u,v) coordinates.
 
         Notes:
             The only reasons for iteration are that the C-matrix and the velocity WRT the
@@ -883,8 +869,8 @@ class Observation(mutable.Mutable):
                 convergence parameters. The default configuration is defined in config.py.
 
         Returns:
-            The (u,v) indices of the pixel in which the point was found. The path is
-                evaluated at the mid-time of this pixel.
+            Pair: The `(u,v)` indices of the pixel in which the point was found. The path
+            is evaluated at the mid-time of this pixel.
         """
 
         # Assemble convergence parameters
@@ -912,13 +898,12 @@ class Observation(mutable.Mutable):
             # Locate the object in the field of view
             obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
             (path_event,
-             obs_event) = path.photon_to_event(obs_event,
-                                               derivs=False, guess=guess,
+             obs_event) = path.photon_to_event(obs_event, derivs=False, guess=guess,
                                                quick=quick, converge=converge)
 
             # Locate the object in the FOV frame
-            uv = self.fov.uv_from_los_t(obs_event.neg_arr_ap,
-                                        time=obs_event.time, derivs=derivs)
+            uv = self.fov.uv_from_los_t(obs_event.neg_arr_ap, time=obs_event.time,
+                                        derivs=derivs)
 
             # Update the observation time based on pixel midtime
             (t0, t1) = self.time_range_at_uv(uv)
@@ -932,8 +917,7 @@ class Observation(mutable.Mutable):
 
             if LOGGING.observation_iterations or Observation.DEBUG:
                 LOGGING.convergence('Observation.uv_from_path',
-                                    'iter=%d; change[s]=%.6g' % (count+1,
-                                                                 max_dt))
+                                    f'iter={count+1}; change[s]={max_dt:.6g}')
 
             if max_dt <= dlt_precision:
                 converged = True
@@ -943,22 +927,19 @@ class Observation(mutable.Mutable):
                 break
 
         if not converged:
-            LOGGING.warn('Observation.uv_from_path did not converge;',
-                         'iter=%d; change=%.6g' % (count+1, max_dt))
+            LOGGING.warn('Observation.uv_from_path did not converge: ',
+                         f'iter={count+1}; change[s]={max_dt:.6g}')
 
         # Return the results
         obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)
         (path_event,
-         obs_event) = path.photon_to_event(obs_event,
-                                           derivs=derivs, guess=guess,
+         obs_event) = path.photon_to_event(obs_event, derivs=derivs, guess=guess,
                                            quick=quick, converge=converge)
 
-        return self.fov.uv_from_los_t(obs_event.neg_arr_ap, time=obs_time,
-                                      derivs=derivs)
+        return self.fov.uv_from_los_t(obs_event.neg_arr_ap, time=obs_time, derivs=derivs)
 
-    def uv_from_coords(self, surface, coords, tfrac=0.5, time=None,
-                             underside=False, derivs=False,
-                             quick={}, converge={}):
+    def uv_from_coords(self, surface, coords, tfrac=0.5, time=None, underside=False,
+                       derivs=False, quick=None, converge=None):
         """The (u,v) indices of a surface point, given its coordinates.
 
         Parameters:
@@ -983,11 +964,11 @@ class Observation(mutable.Mutable):
             The (u,v) indices of the pixel in which the point was found.
         """
 
-        raise NotImplementedError(type(self).__name__ + '.uv_from_coords '
-                                  'is not implemented')
+        raise NotImplementedError(f'{type(self).__name__}.uv_from_coords is not '
+                                  'implemented')
 
-    def inventory(self, bodies, tfrac=0.5, time=None, expand=0.,
-                        return_type='list', fov=None, quick={}, converge={}):
+    def inventory(self, bodies, tfrac=0.5, time=None, expand=0., return_type='list',
+                  fov=None, quick=None, converge=None):
         """Info about the bodies that appear unobscured inside the FOV.
 
         Restrictions: All inventory calculations are performed at a single observation
@@ -1001,13 +982,17 @@ class Observation(mutable.Mutable):
             time (Scalar, optional): Scalar of optional absolute time in seconds.
             expand (float, optional): An optional angle in radians by which to extend the
                 limits of the field of view. This can be used to accommodate pointing
-                uncertainties. XXX NOT IMPLEMENTED XXX return_type 'list' returns the
-                inventory as a list of names. 'flags' returns the inventory as an array of
-                boolean flag values in the same order as bodies. 'full' returns the
-                inventory as a dictionary of dictionaries. The main dictionary is indexed
-                by body name. The subdictionaries contain attributes of the body in the
-                FOV.
-            fov (FOV, optional): Use this fov; if None, use self.fov.
+                uncertainties. **NOT YET IMPLEMENTED**
+            return_type (str, optional): One of "list", "flags", or "full":
+
+                * "list": Return the inventory as a list of names.
+                * "flags": Return the inventory as an array of boolean flag values in the
+                  same order as bodies.
+                * "full": Return the inventory as a dictionary of dictionaries. The main
+                  dictionary is indexed by body name. The subdictionaries contain
+                  attributes of the body in the FOV.
+
+            fov (FOV, optional): Use this fov; if None, use `self.fov`.
             quick (dict, optional): To override the configured default parameters for
                 QuickPaths and QuickFrames; False to disable the use of QuickPaths and
                 QuickFrames. The default configuration is defined in config.py.
@@ -1015,36 +1000,48 @@ class Observation(mutable.Mutable):
                 convergence parameters. The default configuration is defined in config.py.
 
         Returns:
-            (list): List, array, or dictionary If return_type is 'list', it returns a list
-                of the names of all the body objects that fall at least partially inside
-                the FOV and are not completely obscured by another object in the list. If
-                return_type is 'flags', it returns a boolean array containing True
-                everywhere that the body falls at least partially inside the FOV and is
-                not completely obscured. If return_type is 'full', it returns a dictionary
-                with one entry per body that falls at least partially inside the FOV and
-                is not completely obscured. Each dictionary entry is itself a dictionary
-                containing data about the body in the FOV: body_data['name']          The
-                body name body_data['center_uv']     The U,V coord of the center point
-                body_data['center']        The Vector3 direction of the center point
-                body_data['range']         The range in km body_data['outer_radius']  The
-                outer radius of the body in km body_data['inner_radius']  The inner radius
-                of the body in km body_data['resolution']    The resolution (km/pix) in
-                the (U,V) directions at the given range. body_data['u_min']         The
-                minimum U value covered by the body (clipped to the FOV size)
-                body_data['u_max']         The maximum U value covered by the body
-                (clipped to the FOV size) body_data['v_min']         The minimum V value
-                covered by the body (clipped to the FOV size) body_data['v_max']
-                The maximum V value covered by the body (clipped to the FOV size)
-                body_data['u_min_unclipped']  Same as above, but not clipped
-                body_data['u_max_unclipped']  to the FOV size.
-                body_data['v_min_unclipped'] body_data['v_max_unclipped']
-                body_data['u_pixel_size']  The number of pixels (non-integer)
-                body_data['v_pixel_size']  covered by the diameter of the body in each
-                direction.
+            (list, array, or dict).
+
+            * If return_type is "list", it returns a list of the names of all the body
+              objects that fall at least partially inside the FOV and are not completely
+              obscured by another object in the list.
+
+            * If return_type is "flags", it returns a boolean array containing True
+              everywhere that the body falls at least partially inside the FOV and is not
+              completely obscured.
+
+            * If return_type is "full", it returns a dictionary with one entry per body
+              that falls at least partially inside the FOV and is not completely obscured.
+              Each dictionary entry is itself a dictionary containing data about the body
+              in the FOV:
+
+                - "name" (str): The body name.
+                - "center_uv" (Pair): The `(u,v)` coordinates of the center point.
+                - "center" (Vector3): The direction of the center point.
+                - "range" (float): The distance in km.
+                - "outer_radius" (float): The outer radius of the body in km.
+                - "inner_radius" (float): The inner radius of the body in km.
+                - "resolution" (Pair): The resolution in the `(u,v)` directions at the
+                  given range.
+                - "u_min" (float): The minimum `u` value covered by the body, clipped to
+                  the FOV boundaries.
+                - "u_max" (float): The maximum `u` value covered by the body, clipped to
+                  the FOV boundaries.
+                - "v_min" (float): The minimum `v` value covered by the body, clipped to
+                  the FOV boundaries.
+                - "v_max" (float): The maximum `v` value covered by the body, clipped to
+                  the FOV boundaries.
+                - "u_min_unclipped" (float): Same is "u_min", but not clipped.
+                - "u_max_unclipped" (float): Same is "u_max", but not clipped.
+                - "v_min_unclipped" (float): Same is "v_min", but not clipped.
+                - "v_max_unclipped" (float): Same is "v_max", but not clipped.
+                - "u_pixel_size" (float): The diameter of the body in pixels in units of
+                  the `u` pixels.
+                - "v_pixel_size" (float): The diameter of the body in pixels in units of
+                  the `v` pixels.
         """
 
-        raise NotImplementedError(type(self).__name__ + '.inventory '
-                                  'is not implemented')
+        raise NotImplementedError(f'{type(self).__name__}.inventory is not implemented')
 
     ######################################################################################
     # Support for parallel observations
@@ -1080,7 +1077,7 @@ class Observation(mutable.Mutable):
         Parameters:
             parallel (FOV): A parallel observation (same origin and time, different frame
                 and FOV).
-            uv (Pair): (u,v) pixel coordinates in this observation.
+            uv (Pair): `(u,v)` pixel coordinates in this observation.
             time (Scalar, optional): Absolute time in seconds TDB; None to assume this
                 observation's midtime.
             derivs (bool, optional): True to include the derivatives of uv in the result.
@@ -1148,8 +1145,8 @@ class Observation(mutable.Mutable):
         Parameters:
             parallel (FOV): A parallel observation (same origin and time, different frame
                 and FOV).
-            duv: The (u,v) coordinate offset from the predicted location of a feature
-                to its actual location.
+            duv (Pair): The `(u,v)` coordinate offset from the predicted location of a
+                feature to its actual location.
             time (Scalar, optional): Absolute time in seconds TDB; None to assume this
                 observation's midtime.
             origin (FOV, optional): The (u,v) coordinates of the reference point in this

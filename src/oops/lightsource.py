@@ -108,7 +108,7 @@ class LightSource(object):
             guess (Scalar, optional): An initial guess to use as the event time along the
                 path; otherwise None. Should only be used if the event time was already
                 returned from a similar calculation.
-            antimask (array-like or Boolean, optional): If not None, this is a boolean
+            antimask (ndarray or bool, optional): If not None, this is a boolean
                 array to be applied to event times and positions. Only the indices where
                 antimask=True will be used in the solution.
             quick (dict, optional): To override the configured default parameters for
@@ -240,7 +240,7 @@ class DiskSource(LightSource):
             guess (Scalar, optional): An initial guess to use as the event time along the
                 path; otherwise None. Should only be used if the event time was already
                 returned from a similar calculation.
-            antimask (array-like or Boolean, optional): If not None, this is a boolean
+            antimask (ndarray or bool, optional): If not None, this is a boolean
                 array to be applied to event times and positions. Only the indices where
                 antimask=True will be used in the solution.
             quick (dict, optional): To override the configured default parameters for

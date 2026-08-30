@@ -1,13 +1,13 @@
 ##########################################################################################
-# oops/surface/surface_.py
+# oops/surface/surface_.py: Abstract class Surface
 ##########################################################################################
 
 import numbers
 import numpy as np
 
-from polymath          import Boolean, Scalar, Vector3
-from oops.event        import Event
-from oops.mutable      import Mutable
+from polymath     import Boolean, Scalar, Vector3
+from oops.event   import Event
+from oops.mutable import Mutable
 
 
 class Surface(Mutable):
@@ -25,32 +25,46 @@ class Surface(Mutable):
         intercept_key (tuple): A unique, immutable key that defines the surface. Some
             surface classes are identical except for a mask or coordinate definition;
             those classes return the same intercept key.
+
+    Attributes:
+        IS_VIRTUAL (bool): True if this surface is virtual. A virtual surface is one that
+            is only defined from the viewpoint of an observer, such as a Limb or Ansa
+            point. It has no physical presence.
+        IS_TIME_DEPENDENT (bool): True if the 3-D shape of the surface varies with time.
+            Use False if a surface is rigid. Note that time dependence in the Path and/or
+            Frame doesn't count.
+        HAS_INTERIOR (bool): True if this surface has an inside and an outside. A Spheroid
+            has an interior; a Ring does not.
+        COORDINATE_TYPE (str): One of "rectangular", "cylindrical", "spherical", "polar",
+            or "limb".
+        COORDINATE_NAMES (tuple[str, str, str]): Names of the three coordinates.
+        COORDINATE_ABBREVS (tuple[str, str, str]): Short abbreviations for the three
+            coordinates.
+        COORDINATE_RANGES (tuple[tuple[float or None, float or None], ...]): Numeric
+            ranges for the three components: `(None, None)` for no limits, `(0, None)` for
+            non-negative, `(0, 2*pi)` for a cyclic angle, or any other pair of floats to
+            define the specific limits of the range.
     """
+
+    # Default attributes; override as needed
+    IS_VIRTUAL = False
+    IS_TIME_DEPENDENT = False
+    HAS_INTERIOR = False
+    COORDINATE_TYPE = 'rectangular'
+    COORDINATE_NAMES = ('x', 'y', 'z')
+    COORDINATE_ABBREVS = ('x', 'y', 'z')
+    COORDINATE_RANGES = ((None, None), (None, None), (None, None))
 
     # Class constant to avoid circular references
     _Body = None            # filled in by body.py
 
     # Class constants to override where derivs are undefined
-    coords_from_vector3_DERIVS_ARE_IMPLEMENTED = True
-    vector3_from_coords_DERIVS_ARE_IMPLEMENTED = True
-    intercept_DERIVS_ARE_IMPLEMENTED = True
-    normal_DERIVS_ARE_IMPLEMENTED = True
-    intercept_with_normal_DERIVS_ARE_IMPLEMENTED = True
-    intercept_normal_to_DERIVS_ARE_IMPLEMENTED = True
-
-    # Default properties; override as needed
-
-    # A virtual path is one whose 3-D shape depends on the position of the
-    # observer. For example, the "ansa" surface is virtual, because it is
-    # defined as a locus of points where the line of sight to the observer are
-    # perpendicular to the direction to the ring's rotation pole.
-    IS_VIRTUAL = False
-
-    # A time-dependent path is one whose 3-D shape varies with time.
-    IS_TIME_DEPENDENT = False
-
-    # True for any surface that has an interior
-    HAS_INTERIOR = False
+    _coords_from_vector3_DERIVS_ARE_IMPLEMENTED = True
+    _vector3_from_coords_DERIVS_ARE_IMPLEMENTED = True
+    _intercept_DERIVS_ARE_IMPLEMENTED = True
+    _normal_DERIVS_ARE_IMPLEMENTED = True
+    _intercept_with_normal_DERIVS_ARE_IMPLEMENTED = True
+    _intercept_normal_to_DERIVS_ARE_IMPLEMENTED = True
 
     def _coords_from_vector3_check(self, axes):
         """Validate axes as equal to 2 or 3."""
@@ -62,12 +76,7 @@ class Surface(Mutable):
     def _vector3_from_coords_check(self, coords):
         """Validate coords as a tuple of 2 or 3 Scalars."""
 
-        if not isinstance(coords, (tuple, list)):
-            raise TypeError('invalid coords in %s.vector3_from_coords(): '
-                            'class %s given; list or tuple required'
-                            % (type(self).__name__, type(coords).__name__))
-
-        if len(coords) not in (2, 3):
+        if not isinstance(coords, (tuple, list)) or len(coords) not in (2, 3):
             raise ValueError(f'2 or 3 coords required in {type(self).__name__}'
                              '.vector3_from_coords()')
 
@@ -80,44 +89,53 @@ class Surface(Mutable):
         """Surface coordinates associated with a position vector.
 
         Parameters:
-            pos (Vector3): Positions at or near the surface, relative to this surface's
-                origin and frame.
-            obs (Vector3, optional): Observer position relative to this surface's origin
-                and frame. Ignored for solid surfaces but needed for virtual surfaces.
-            time (Scalar, optional): Time at which to evaluate the surface; ignored unless
-                the surface is time-variable.
+            pos (Vector3): Positions at or near the Surface, relative to its origin and
+                frame.
+            obs (Vector3, optional): Observer position relative to this Surface's origin
+                and frame. Ignored for solid Surfaces but needed for virtual Surfaces.
+            time (Scalar, optional): Time at which to evaluate the Surface; ignored unless
+                the Surface is time-variable.
             axes (int, optional): 2 or 3, indicating whether to return a tuple of two or
                 three Scalar objects.
-            derivs (bool, optional): True to propagate any derivatives inside pos and obs
-                into the returned coordinates.
-            hints (optional): Optional data used to expedite this calculation. The
-                specific meaning depends on the Surface subclass.
+            derivs (bool, optional): True to propagate any derivatives inside `pos` and
+                `obs` into the returned coordinates.
+            hints (Any, optional): Optional data that might be useful to carry over from
+                one call to the next. If not None, `hints` values are appended to the
+                returned tuple. Use `hints=True` if you lack an initial value but require
+                the new value to be returned.
 
         Returns:
-            tuple[Scalar, ...]: Two or three coordinate values, depending on the input
-                value of axes.
+            tuple: Two or three Scalar coordinate values depending on the input value of
+            `axes`, optionally followed by `hints`.
         """
 
-        raise NotImplementedError(f'{type(self).__name__}.coords_from_vector3() is not '
+        raise NotImplementedError(f'{type(self).__name__}.coords_from_vector3 is not '
                                   'implemented')
 
-    def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False):
+    def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
+                            hints=None):
         """The position where a point with the given coordinates falls relative to this
-        surface's origin and frame.
+        Surface's origin and frame.
 
         Parameters:
-            coords (tuple): Two or three Scalars defining coordinates at or near this
-                surface. These can have different shapes, but must be broadcastable to a
-                common shape.
-            obs (Vector3, optional): Observer position relative to this surface's origin
-                and frame. Ignored for solid surfaces but needed for virtual surfaces.
+            coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at or
+                near this Surface. These can have different shapes, but must be
+                broadcastable to a common shape.
+            obs (Vector3, optional): Observer position relative to this Surface's origin
+                and frame. Ignored for solid Surfaces but needed for virtual Surfaces.
             time (Scalar, optional): Time at which to evaluate the surface; ignored unless
                 the surface is time-variable.
-            derivs (bool, optional): True to propagate any derivatives inside the
-                coordinates and obs into the returned position vectors.
+            derivs (bool, optional): True to propagate any derivatives inside `coords`
+                and `obs` into the returned position vectors.
+            hints (Any, optional): Any data that might be useful to carry over from one
+                call to the next. If not None, `hints` values are appended to the returned
+                tuple. Use `hints=True` if you lack an initial value but require the new
+                value to be returned.
 
         Returns:
-            Vector3: Intercept points defined by the coordinates.
+            Vector3 or tuple[Vector3, Any]: Points defined by the coordinates, relative to
+            this Surface's origin and frame, optionally followed by `hints`. For Surface
+            subclasses that do not use hints, the input value of `hints` is returned.
         """
 
         raise NotImplementedError(f'{type(self).__name__}.vector3_from_coords() is not '
@@ -125,53 +143,61 @@ class Surface(Mutable):
 
     def intercept(self, obs, los, *, time=None, direction='dep', derivs=False, guess=None,
                   hints=None):
-        """The position where a specified line of sight intercepts the surface.
+        """The position where a specified line of sight intercepts the Surface.
 
         Parameters:
-            obs (Vector3): Observer position as a Vector3 relative to this surface's
+            obs (Vector3): Observer position as a Vector3 relative to this Surface's
                 origin and frame.
-            los (Vector3): Line of sight as a Vector3 in this surface's frame.
-            time (Scalar, optional): Time at the surface; ignored unless the surface is
-                time-variable.
-            direction (str, optional): 'arr' for a photon arriving at the surface; 'dep'
-                for a photon departing from the surface. Needed for closed surfaces that
-                have two intercept points; ignored otherwise.
-            derivs (bool, optional): True to propagate any derivatives inside obs and los
-                into the returned intercept point.
-            guess (Scalar, optional): Optional initial guess at the coefficient t such
-                that: intercept = obs + t * los.
-            hints (optional): Any data that might be useful to carry over from one call
-                to the next. If not None, hint values are appended to the returned tuple.
-                Use hints=True if you lack an initial value but require the new value to
-                be returned.
+            los (Vector3): Line of sight as a Vector3 in this Surface's frame.
+            time (Scalar, optional): Time at which to evaluate the Surface; ignored unless
+                the Surface is time-variable.
+            direction (str, optional): "arr" for a photon arriving at the Surface; "dep"
+                for a photon departing from the Surface. Needed for closed surfaces that
+                have two intercept points, one inward-facing and one outward-facing;
+                ignored otherwise.
+            derivs (bool, optional): True to propagate any derivatives inside `obs` and
+                `los` into the returned intercept point.
+            guess (Scalar, optional): Optional initial guess at the coefficient `t` such
+                that `intercept = obs + t * los`.
+            hints (Any, optional): Any data that might be useful to carry over from one
+                call to the next. If not None, `hints` values are appended to the returned
+                tuple. Use `hints=True` if you lack an initial value but require the new
+                value to be returned.
 
         Returns:
-            tuple[Vector3, Scalar[, hints]]: (pos, t) or (pos, t, hints), where:
+            tuple[Vector3, Scalar[, Any]]: `(pos, t)` or `(pos, t, hints)`, where:
 
-            * `pos` (Vector3): Intercept points on the surface, in km.
-            * `t` (Scalar): Such that: intercept = obs + t * los.
-            * `hints`: Latest version of any hint values; included if the input value
-              of hints is not None (the default). Note that some Surface subclasses do not
-              use hints; for these, the input value of the hints is itself returned if it
-              is not None.
+            * `pos` (Vector3): Intercept points on the Surface relative to its origin
+              and frame, in km.
+            * `t` (Scalar): Value such that `intercept = obs + t * los`.
+            * `hints` (Any): Latest version of the `hints` values to be fed into a
+              subsequent call. If the subclass does not use hints, the input value of
+              `hints` is included if it is not None.
         """
 
         raise NotImplementedError(f'{type(self).__name__}.intercept() is not implemented')
 
-    def normal(self, pos, *, time=None, derivs=False):
-        """The normal vector at a position at or near a surface.
+    def normal(self, pos, *, obs=None, time=None, derivs=False, hints=None):
+        """The normal vector at a position at or near this Surface.
 
         Parameters:
-            pos (Vector3): Positions at or near the surface relative to this surface's
-                origin and frame.
-            time (Scalar, optional): Time at the surface; ignored unless the surface is
-                time-variable.
-            derivs (bool, optional): True to propagate any derivatives of pos into the
+            pos (Vector3): Positions at or near the Surface, relative to its origin and
+                frame.
+            obs (Vector3, optional): Observer position relative to this Surface's origin
+                and frame. Ignored for solid Surfaces but needed for virtual Surfaces.
+            time (Scalar, optional): Time at which to evaluate the Surface; ignored unless
+                the Surface is time-variable.
+            derivs (bool, optional): True to propagate any derivatives of `pos` into the
                 returned normal vectors.
+            hints (Any, optional): Any data that might be useful to carry over from one
+                call to the next. If not None, `hints` values are appended to the returned
+                tuple. Use `hints=True` if you lack an initial value but require the new
+                value to be returned.
 
         Returns:
-            Vector3: Directions normal to the surface that pass through the position.
-                Lengths are arbitrary.
+            Vector3 or tuple[Vector3, Any]: Directions normal to the Surface that pass
+            through the position, optionally followed by `hints`. Vector lengths are
+            arbitrary.
         """
 
         raise NotImplementedError(f'{type(self).__name__}.normal() is not implemented')
@@ -180,71 +206,93 @@ class Surface(Mutable):
     # Optional Methods...
     ######################################################################################
 
-    def intercept_with_normal(self, normal, *, time=None, derivs=False):
+    def intercept_with_normal(self, normal, *, obs=None, time=None, derivs=False,
+                              hints=None):
         """Surface point where the outward normal vector parallels the given vector.
 
         Parameters:
-            normal (Vector3): Normal vectors in the surface's frame.
-            time (Scalar, optional): Time at the surface; ignored unless the surface is
+            normal (Vector3): Normal vector in the Surface's frame.
+            obs (Vector3, optional): Observer position relative to this Surface's origin
+                and frame. Ignored for solid Surfaces but needed for virtual Surfaces.
+            time (Scalar, optional): Time at the Surface; ignored unless the Surface is
                 time-variable.
             derivs (bool, optional): True to propagate derivatives in the normal vector
                 into the returned surface points.
+            hints (Any, optional): Any data that might be useful to carry over from one
+                call to the next. If not None, `hints` values are appended to the returned
+                tuple. Use `hints=True` if you lack an initial value but require the new
+                value to be returned.
 
         Returns:
-            Vector3: Surface intercept points, in km. Where no solution exists, the
-                returned Vector3 will be masked.
+            Vector3 or tuple[Vector3, Any]: Surface intercept points in km, optionally
+            followed by `hints`. Where no solution exists, values of the intercept point
+            are masked.
         """
 
         raise NotImplementedError(f'{type(self).__name__}.intercept_with_normal() is not '
                                   'implemented')
 
-    def intercept_normal_to(self, pos, *, time=None, direction='dep', derivs=False,
-                            guess=None):
+    def intercept_normal_to(self, pos, *, obs=None, time=None, direction='dep',
+                            derivs=False, guess=None, hints=None):
         """Surface point whose normal vector passes through a given position.
 
         This function can have multiple values, in which case the nearest of the surface
         points should be the one returned.
 
         Parameters:
-            pos (Vector3): Positions at or near the surface relative to this surface's
-                origin and frame.
-            time (Scalar, optional): Time at the surface; ignored unless the surface is
+            pos (Vector3): Positions at or near the Surface, relative to its origin and
+                frame.
+            obs (Vector3, optional): Observer position relative to this Surface's origin
+                and frame. Ignored for solid Surfaces but needed for virtual Surfaces.
+            time (Scalar, optional): Time at the Surface; ignored unless the Surface is
                 time-variable.
-            direction (str, optional): 'arr' for a photon arriving at the surface; 'dep'
-                for a photon departing from the surface. Needed for closed surfaces that
+            direction (str, optional): "arr" for a photon arriving at the Surface; "dep"
+                for a photon departing from the Surface. Needed for closed surfaces that
                 have two intercept points; ignored otherwise.
-            derivs (bool, optional): True to propagate derivatives in pos into the
-                returned intercepts.
-            guess (Scalar, optional): Optional initial guess a coefficient array p such
-                that: intercept = pos + p * normal(intercept) If provided, the converged
-                value of p is included in the returned results; use guess=True to include
-                this in the return even if an initial guess is not available.
+            derivs (bool, optional): True to propagate derivatives in `pos` and `obs` into
+                the returned intercept points.
+            guess (Scalar, optional): Optional initial guess at the coefficient `p` such
+                that `intercept = pos + p * normal(intercept)`. If provided, the converged
+                value of `p` is included in the returned results; use `guess=True` to
+                include this in the return even if an initial guess is not available.
+            hints (Any, optional): Any data that might be useful to carry over from one
+                call to the next. If not None, `hints` values are appended to the returned
+                tuple. Use `hints=True` if you lack an initial value but require the new
+                value to be returned.
 
         Returns:
-            Intercept or (intercept, p), where:
+            Vector3 or tuple[Vector3[, Scalar][, Any]]: `intercept` or tuple of up to
+            three values, depending on the input values of `guess` and `hints`.
 
-            * `intercept` (Vector3): A vector3 of surface intercept points, in km. Where
-              no solution exists, the returned vector will be masked.
-            * `p` (Scalar): The converged solution such that intercept = pos + p *
-              normal(intercept); included if guess is not None. Note that some Surface
-              subclasses do not use an initial guess; for these, the input value of the
-              guess is itself returned as p (if it is not None).
+            * `intercept` (Vector3): The Surface intercept points, in km. Where no
+              solution exists, values are masked.
+            * `p` (Scalar): The converged solution where::
+
+                 intercept = pos + p * normal(intercept)
+
+              This is included if `guess` is not None. For subclasses that do not use a
+              guess, the input value of `guess` is returned.
+            * `hints` (Any): Latest version of any hint values; included if the input
+              value of `hints` is not None. For Surface subclasses that do not use hints,
+              the input value of `hints` is returned.
         """
 
         raise NotImplementedError(f'{type(self).__name__}.intercept_normal_to() is not '
                                   'implemented')
 
-    def velocity(self, pos, *, time=None):
-        """The local velocity vector at a point within the surface.
+    def velocity(self, pos, *, obs=None, time=None):
+        """The local velocity vector at a point within this Surface.
 
         This can be used to describe the orbital motion of ring particles or local wind
         speeds on a planet.
 
         Parameters:
-            pos (Vector3): Positions at or near the surface relative to this surface's
-                origin and frame.
-            time (Scalar, optional): Time at the surface; ignored unless the surface is
-                time-variable.
+            pos (Vector3): Positions at or near the Surface, relative to its origin and
+                frame.
+            obs (Vector3, optional): Observer position relative to this Surface's origin
+                and frame. Ignored for solid Surfaces but needed for virtual Surfaces.
+            time (Scalar, optional): Time at which to evaluate the Surface; ignored unless
+                the Surface is time-variable.
 
         Returns:
             Vector3: Velocities, in units of km/s.
@@ -253,18 +301,20 @@ class Surface(Mutable):
         return Vector3.ZERO
 
     def position_is_inside(self, pos, *, obs=None, time=None):
-        """Where positions are inside the surface.
+        """True where positions are inside this Surface.
 
         Parameters:
-            pos (Vector3): Positions at or near the surface relative to this surface's
-                origin and frame.
-            obs (Vector3, optional): Observer positions. Ignored for solid surfaces but
-                needed for virtual surfaces.
-            time (Scalar, optional): Time at which to evaluate the surface; ignored unless
-                the surface is time-variable.
+            pos (Vector3): Positions at or near the Surface, relative to its origin and
+                frame.
+            obs (Vector3, optional): Observer position relative to this Surface's origin
+                and frame. Ignored for solid Surfaces but needed for virtual Surfaces.
+            time (Scalar, optional): Time at which to evaluate the Surface; ignored unless
+                the Surface is time-variable.
 
         Returns:
-            Boolean: Boolean True where positions are inside the surface.
+            Boolean: True where positions are inside the Surface. For subclasses
+            that have no interior, such as RingPlane, a single value of Boolean False is
+            always returned.
         """
 
         if self.HAS_INTERIOR:
@@ -279,7 +329,12 @@ class Surface(Mutable):
     ######################################################################################
 
     def reference(self):
-        """The reference surface for this one."""
+        """The reference Surface for this one.
+
+        Returns:
+            Surface: The Surface from which this one is derived. The default is to return
+            this Surface itself.
+        """
 
         return self     # default is to return self
 
@@ -288,10 +343,10 @@ class Surface(Mutable):
     ######################################################################################
 
     def coords_of_event(self, event, *, obs=None, axes=3, derivs=False):
-        """Coordinate values associated with an event near the surface.
+        """Coordinate values associated with an event near the Surface.
 
         Parameters:
-            event (Event): An event occurring at or near the surface.
+            event (Event): An event occurring at or near the Surface.
             obs (Event, optional): Observing event, which may occur at a different time.
             axes (int, optional): 2 or 3, indicating whether to return a tuple of two or
                 three Scalar objects.
@@ -299,17 +354,12 @@ class Surface(Mutable):
                 into the event; if False, only time derivatives are included.
 
         Returns:
-            Coordinate values packaged as a tuple containing two or three unitless
-                Scalars, one for each coordinate.
+            tuple[Scalar, ...]: Two or three unitless Scalars, one for each coordinate.
         """
 
         # Locate the events WRT the surface frame
         cept_in_frame = event.wrt(self.origin, self.frame, derivs=derivs).state
-
-        if obs is not None:
-            obs_in_frame = obs.wrt(self.origin, self.frame, derivs=derivs).state
-        else:
-            obs_in_frame = None
+        obs_in_frame = obs and obs.wrt(self.origin, self.frame, derivs=derivs).state
 
         # Evaluate the coords and optional derivatives
         hints = event.hints if hasattr(event, 'hints') else None
@@ -317,19 +367,19 @@ class Surface(Mutable):
                                         axes=axes, derivs=True, hints=hints)
 
     def apply_coords_to_event(self, event, *, obs=None, axes=3, derivs=True):
-        """A shallow copy of this event with attributes coord1, coord2, coord3 added,
-        along with any mask.
+        """A shallow copy of the given Event with subfields for the coordinates.
 
         Parameters:
-            event (Event): An event occurring at or near the surface.
+            event (Event): An event occurring at or near this Surface.
             obs (Event, optional): Observing event, which may occur at a different time.
-            axes (int, optional): 2 or 3, indicating whether to return a tuple of two or
-                three Scalar objects.
+            axes (int, optional): 2 or 3, indicating whether to add two or three Scalar
+                subfields.
             derivs (bool, optional): If True, then all derivatives are carried forward
                 into the event; if False, only time derivatives are included.
 
         Returns:
-            Clone of event with new attributes coord1, coord2, coord3.
+            Event: Clone of `event` with new attributes `coord1`, `coord2`, and
+            optionally `coord3`.
         """
 
         coords = self.coords_of_event(event, obs=obs, axes=axes, derivs=derivs)
@@ -346,19 +396,19 @@ class Surface(Mutable):
         return event
 
     def event_at_coords(self, time, coords, *, obs=None, derivs=False):
-        """Converts a time and coordinates in the surface's internal coordinate system
-        into an event object.
+        """An Event constructed from a time and coordinates in this Surface's internal
+        coordinate system.
 
         Parameters:
             time (Scalar): Time in seconds TDB.
             coords (tuple[Scalar, ...]): 2 or 3 coordinates.
-            obs (Vector3, optional): Observer position relative to this surface's origin
-                and frame. Ignored for solid surfaces but needed for virtual surfaces.
+            obs (Vector3, optional): Observer position relative to this Surface's origin
+                and frame. Ignored for solid Surfaces but needed for virtual Surfaces.
             derivs (bool, optional): If True, then all derivatives are carried forward
                 into the event; if False, only time derivatives are included.
 
         Returns:
-            Event: An event object relative to the origin and frame of the surface.
+            Event: An event object relative to the origin and frame of this Surface.
         """
 
         # Interpret coords
@@ -378,8 +428,8 @@ class Surface(Mutable):
                 obs = obs.without_derivs(preserve='t')
 
         # Determine position and velocity
-        state = self.vector3_from_coords((coord1, coord2, coord3), obs=obs,
-                                         time=time, derivs=True)
+        state = self.vector3_from_coords((coord1, coord2, coord3), obs=obs, time=time,
+                                         derivs=True)
 
         # Return the event
         return Event(time, state, self.origin, self.frame)
@@ -389,26 +439,45 @@ class Surface(Mutable):
     ######################################################################################
 
     @staticmethod
-    def resolution(dpos_duv, _unittest=False):
-        """Determine the spatial resolution on a surface.
+    def resolution(dpos_duv):
+        """The spatial resolution on a surface.
 
         Parameters:
             dpos_duv (Vector3): A Vector3 with denominator shape (2,), defining the
-                partial derivatives d(x,y,z)/d(u,v), where (x,y,z) are the 3-D coordinates
-                of a point on the surface, and (u,v) are pixel coordinates.
+                partial derivatives `d(x,y,z)/d(u,v)`, where `(x,y,z)` are the 3-D
+                coordinates of a point on the surface and `(u,v)` are pixel coordinates.
 
         Returns:
-            (tuple): A tuple (res_min, res_max) where:
-
-            * `res_min` (Scalar): A Scalar containing resolution values (km/pixel) in the
-              direction of finest spatial resolution.
-            * `res_max` (Scalar): A Scalar containing resolution values (km/pixel) in the
-              direction of coarsest spatial resolution.
+            tuple[Scalar, Scalar]: `(res_min, res_max)`, where `res_min` contains
+            resolution values (km/pixel) in the direction of finest spatial resolution
+            and `res_max` contains resolution values (km/pixel) in the direction of
+            coarsest spatial resolution.
 
         Notes:
             For the best solution, the derivatives should be adjusted such that the u-axis
             and the v-axis are locally perpendicular. See the source code of
             Backplane.dlos_duv1 in backplane/__init__.py for details.
+        """
+
+        return Surface._resolution(dpos_duv)
+
+    @staticmethod
+    def _resolution(dpos_duv, _unittest=False):
+        """The spatial resolution on a surface.
+
+        Parameters:
+            dpos_duv (Vector3): A Vector3 with denominator shape (2,), defining the
+                partial derivatives `d(x,y,z)/d(u,v)`, where `(x,y,z)` are the 3-D
+                coordinates of a point on the surface and `(u,v)` are pixel coordinates.
+            _unittest (bool, optional): True to return `(dpos_du_prime, dpos_dv_prime)`
+                instead of `(res_min, res_max)`. This supports unit tests to confirm that
+                the dot product of these two vectors is small.
+
+        Returns:
+            tuple[Scalar, Scalar]: `(res_min, res_max)`, where `res_min` contains
+            resolution values (km/pixel) in the direction of finest spatial resolution
+            and `res_max` contains resolution values (km/pixel) in the direction of
+            coarsest spatial resolution.
         """
 
         # Define vectors parallel to the surface, containing the derivatives
@@ -474,26 +543,17 @@ class Surface(Mutable):
 
 ##########################################################################################
 
-from ._photon_solver import (photon_from_event, photon_to_event,
-                             photon_from_event_by_coords, photon_to_event_by_coords,
-                             photon_normal_to_event, photon_event_to_normal,
-                             photon_normal_to_path, photon_path_to_normal,
-                             _fully_masked_result, _solve_photon_by_los,
-                             _solve_photon_by_coords, _solve_photon_normal_to_surface,
-                             _solve_normal_for_photon_event)
-Surface.photon_from_event           = photon_from_event
-Surface.photon_to_event             = photon_to_event
-Surface.photon_from_event_by_coords = photon_from_event_by_coords
-Surface.photon_to_event_by_coords   = photon_to_event_by_coords
-Surface.photon_normal_to_event      = photon_normal_to_event
-Surface.photon_event_to_normal      = photon_event_to_normal
-Surface.photon_normal_to_path       = photon_normal_to_path
-Surface.photon_path_to_normal       = photon_path_to_normal
+import oops.surface._photon_solver as _photon_solver
+Surface.photon_to_event        = _photon_solver.photon_to_event
+Surface.photon_from_event      = _photon_solver.photon_from_event
+Surface.photon_to_coords       = _photon_solver.photon_to_coords
+Surface.photon_from_coords     = _photon_solver.photon_from_coords
+Surface.photon_normal_to_event = _photon_solver.photon_normal_to_event
+Surface.photon_event_to_normal = _photon_solver.photon_event_to_normal
+Surface.photon_normal_to_path  = _photon_solver.photon_normal_to_path
+Surface.photon_path_to_normal  = _photon_solver.photon_path_to_normal
 
-Surface._fully_masked_result              = _fully_masked_result
-Surface._solve_photon_by_los              = _solve_photon_by_los
-Surface._solve_photon_by_coords           = _solve_photon_by_coords
-Surface._solve_photon_normal_to_surface   = _solve_photon_normal_to_surface
-Surface._solve_normal_for_photon_event    = _solve_normal_for_photon_event
+# CoordPath._solve_photon reaches this through the Surface instance
+Surface._solve_photon_by_coords = _photon_solver._solve_photon_by_coords
 
 ##########################################################################################

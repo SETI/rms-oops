@@ -9,13 +9,13 @@ from oops.frame.spinframe import SpinFrame
 
 
 class InclinedFrame(Frame):
-    """InclinedFrame is a Frame subclass describing a frame that is inclined to the
-    equator of another frame.
+    """A Frame subclass describing a Frame that is inclined to the equator of another
+    Frame.
 
     It is defined by an inclination, a node at epoch, and a nodal regression rate. This
-    frame is oriented to be "nearly inertial," meaning that a longitude in the new frame
-    is determined by measuring from the reference longitude in the reference frame, along
-    that frame's equator to the ascending node, and thence along the ascending node.
+    Frame is oriented to be "nearly inertial," meaning that a longitude in the new Frame
+    is determined by measuring from the reference longitude in the reference Frame, along
+    that Frame's equator to the ascending node, and thence along the ascending node.
     """
 
     _WAYFRAMES = {}
@@ -24,25 +24,28 @@ class InclinedFrame(Frame):
 
     def __init__(self, inc, node, rate, epoch, *, despin=True, reference=None,
                  frame_id=None):
-        """Constructor for a InclinedFrame.
+        """Constructor for an InclinedFrame.
 
         Parameters:
-            inc (Scalar, array-like, or float): Inclination angle in radians.
-            node (Scalar, array-like, or float): Longitude of None at epoch in radians.
-            rate (Scalar, array-like, or float): Rate of nodal presession in radians/s.
-            epoch Scalar, array-like, or float): Time in seconds TDB at which the `node`
+            inc (Scalar, array-like, or float): The inclination angle in radians.
+            node (Scalar, array-like, or float): The longitude of the ascending node at
+                `epoch`, in radians.
+            rate (Scalar, array-like, or float): The rate of nodal precession in
+                radians/second.
+            epoch (Scalar, array-like, or float): The time in seconds TDB at which `node`
                 applies.
-            reference (Frame or str): The Frame or the ID of the Frame describing the
-                central planet of the inclined plane.
-            despin (bool, optional): True for a nearly inertial frame, in which the x and
-                yaxes vary as little as possible while the zaxis rotates; False for a
-                frame in which the x axis is tied to the ascending node.
+            despin (bool, optional): True for a nearly inertial Frame, in which the x- and
+                y-axes vary as little as possible while the z-axis rotates; False for a
+                Frame in which the x-axis is tied to the ascending node.
+            reference (Frame or str, optional): The Frame or the ID of the Frame
+                describing the central planet of the inclined plane; None for J2000.
             frame_id (str, optional): The ID under which to register this Frame; None to
                 leave this Frame unregistered. As a special case, use "+" to automatically
-                generate a Frame ID by appending "_INCLINED" to the Path ID of `reference`
-                (if it has an ID).
+                generate a Frame ID by appending "_INCLINED" to the ID of `reference` (if
+                it has an ID).
 
         Raises:
+            KeyError: If `reference` is an ID string that has not been registered.
             ValueError: If `inc`, `node`, `rate`, `epoch`, and `reference` cannot be
                 broadcasted to the same shape.
         """
@@ -117,21 +120,21 @@ class InclinedFrame(Frame):
     ######################################################################################
 
     def transform_at_time(self, time, *, quick=False):
-        """Transform that rotates coordinates from the reference frame to this frame.
+        """Transform that rotates coordinates from the reference to this frame.
 
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames. Ignored by
                 class InclinedFrame.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.
@@ -146,18 +149,21 @@ class InclinedFrame(Frame):
         return xform
 
     def node_at_time(self, time, *, quick=False):
-        """The vector defining the ascending node of this frame's XY plane relative to
-        the XY frame of its reference.
+        """Angle from the reference Frame's X-axis, along its X-Y plane, to the ascending
+        node of this Frame's X-Y plane.
+
+        Values always fall between 0 and 2*pi.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames. Ignored by
                 class InclinedFrame.
 
         Returns:
-            (Vector3): The unit vector pointing in the direction of the ascending node.
+            Scalar: At the specified times, the angle from the reference Frame's X-axis,
+            along its X-Y plane, to the ascending node of this Frame's X-Y plane.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.

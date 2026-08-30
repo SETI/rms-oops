@@ -11,21 +11,22 @@ from oops.transform import Transform
 
 
 class Rotation(Frame, Fittable):
-    """A Frame describing a fixed rotation about one axis of another frame."""
+    """A Frame subclass describing a fixed rotation about one axis of another Frame."""
 
+    _WAYFRAMES = {}
     _XYZDICT = {'X': 0, 'Y': 1, 'Z': 2, 'x': 0, 'y': 1, 'z': 2, 0: 0, 1: 1, 2: 2}
 
     def __init__(self, arg, /, axis, reference, *, freeze=False, frame_id=None):
-        """Constructor for a Rotation Frame.
+        """Constructor for a Rotation.
 
         Parameters:
-            arg (Scalar, array-like, float or Rotation): The angle of rotation in radians,
-                which can be multidimensional. Alternatively, if another Rotation is
-                given, this object's rotation angle will always match that of the
+            arg (Scalar, array-like, float, or Rotation): The angle of rotation in
+                radians, which can be multidimensional. Alternatively, if another Rotation
+                is given, this object's rotation angle will always match that of the
                 argument.
-            axis (int): The rotation axis: 0, "x", or "X" for x; 1, "y", or "Y" for y; 2,
-                "z", or "Z" for z.
-            reference (frame or str): The Frame or the ID of the Frame relative to which
+            axis (int or str): The rotation axis: 0, "x", or "X" for x; 1, "y", or "Y"
+                for y; 2, "z", or "Z" for z.
+            reference (Frame or str): The Frame or the ID of the Frame relative to which
                 this rotation is defined.
             freeze (bool, optional): True to return a frozen object; False to leave it
                 fittable.
@@ -33,6 +34,10 @@ class Rotation(Frame, Fittable):
                 leave this Frame unregistered. As a special case, use "+" to automatically
                 generate a Frame ID by appending "_ROTATED" to the ID of `reference` (if
                 it has an ID).
+
+        Raises:
+            KeyError: If `axis` is not a recognized axis, or if `reference` is an ID
+                string that has not been registered.
         """
 
         # Linking to a frozen object yields a frozen object
@@ -44,6 +49,8 @@ class Rotation(Frame, Fittable):
 
         if isinstance(arg, Rotation):
             self._link = arg
+            self._link.refresh()
+            self._angle = self._link._angle
             self._angle_shape = self._link._angle_shape
             self._angle_mask = self._link._angle_mask
         else:
@@ -68,13 +75,17 @@ class Rotation(Frame, Fittable):
         if freeze:
             self.freeze()
 
+    def _wayframe_key(self):
+        return (self._angle, self._axis2, self._reference, self._link)
+
     @property
     def angle(self):
+        """The angle of rotation in radians, as a Scalar."""
         self.refresh()
         return self._angle
 
     def _source(self):
-        """The original source of the time shift if this object is linked to another;
+        """The original source of the rotation angle if this object is linked to another;
         otherwise, self.
         """
         return self._link._source() if self._link else self
@@ -115,6 +126,7 @@ class Rotation(Frame, Fittable):
 
     @property
     def params(self):
+        """The fittable parameters of this Rotation, as a tuple of rotation angles."""
         if self._angle_shape == ():
             return (self._angle,)
         else:
@@ -137,6 +149,9 @@ class Rotation(Frame, Fittable):
                                     self._origin)
 
     def _freeze(self):
+        if self._link:
+            self._angle = self._link._angle
+            self._link = None
         self._reregister()
 
     ######################################################################################
@@ -157,26 +172,26 @@ class Rotation(Frame, Fittable):
     ######################################################################################
 
     def transform_at_time(self, time, *, quick=False):
-        """Transform that rotates coordinates from the reference frame to this frame.
+        """Transform that rotates coordinates from the reference to this frame.
 
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames. Ignored by
                 class Rotation.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
 
         Notes:
-            Rotation is a fixed frame, so the transform relative to the `reference` frame
-            is independent of time. The returned Transform always has the shape of this
-            object, regardless of the shape of `time`.
+            A Rotation is a fixed Frame, so the Transform relative to the `reference`
+            Frame is independent of time. The returned Transform always has the shape of
+            this Frame, regardless of the shape of `time`.
         """
 
         return self._transform

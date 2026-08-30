@@ -11,19 +11,19 @@ from oops.path.path_   import Path
 
 
 class MultiPath(Path):
-    """Gathers a set of paths into a single 1-D Path object."""
+    """A Path subclass that gathers a set of Paths into a single 1-D Path."""
 
     _WAYPOINTS = {}
 
     def __init__(self, paths, origin=None, frame=None, *, path_id=None):
-        """Constructor for a MultiPath Path.
+        """Constructor for a MultiPath.
 
         Parameters:
-            paths (tuple or list): Paths or path IDs to include in this MultiPath.
-            origin (Path or str, optional): Path or ID identifying the common origin of
-                all paths. None to use the SSB.
-            frame (Frame or str, optional): Frame or ID identifying the reference frame.
-                None to use the default frame of the `origin` path.
+            paths (tuple or list): The Paths or Path IDs to include in this MultiPath.
+            origin (Path or str, optional): The Path or the ID of the Path defining the
+                common origin of all the Paths; None to use the SSB.
+            frame (Frame or str, optional): The Frame or the ID of the Frame in which
+                coordinates are returned; None to use the Frame of the `origin` Path.
             path_id (str, optional): The ID under which to register this Path; None to
                 leave this Path unregistered.
 
@@ -130,23 +130,23 @@ class MultiPath(Path):
         return Event(Scalar(time.vals, mask), (Vector3(pos, mask), Vector3(vel, mask)),
                      self._origin, self._frame)
 
-    def quick_path(self, time, quick=None):
-        """Override of the default quick_path method to return a MultiPath of quick_paths.
+    def quick_path(self, time, *, quick=None):
+        """A MultiPath of the QuickPaths that approximate this MultiPath's Paths.
 
-        A QuickPath operates by sampling the given path and then setting up an
+        A QuickPath operates by sampling the given Path and then setting up an
         interpolation grid to evaluate in its place. It can substantially speed up
-        performance when the same path must be evaluated many times, e.g., for every pixel
+        performance when the same Path must be evaluated many times, e.g., for every pixel
         of an image.
 
         Parameters:
             time (Scalar): The time(s) at which this path is to be evaluated.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters;
-                use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default QuickPath and QuickFrame parameters.
+                Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            MultiPath: A MultiPath of the QuickPaths that approximate the individual
-            paths for the given range of times.
+            MultiPath: A MultiPath of the QuickPaths that approximate the individual Paths
+            for the given range of times.
         """
 
         # Broadcast everything to the same shape

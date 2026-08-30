@@ -17,19 +17,22 @@ class PosTargFrame(Frame):
     _WAYFRAMES = {}
 
     def __init__(self, xpos, ypos, reference, *, frame_id=None):
-        """Constructor for a PosTarg Frame.
+        """Constructor for a PosTargFrame.
 
         Parameters:
-            xpos (float): The X-position of the reference Frame's Z-axis in the given
-                referece frame, in radians.
-            ypos (float): The Y-position of the reference Frame's Z-axis in the given
-                referece frame, in radians.
+            xpos (float): The X-position, in radians, at which the `reference` Frame's
+                Z-axis falls within this Frame.
+            ypos (float): The Y-position, in radians, at which the `reference` Frame's
+                Z-axis falls within this Frame.
             reference (Frame or str): The Frame or the ID of the Frame relative to which
                 this Frame is defined.
             frame_id (str, optional): The ID under which to register this Frame; None to
                 leave this Frame unregistered. As a special case, use "+" to automatically
                 generate a Frame ID by appending "_POSTARG" to the ID of `reference` (if
                 it has an ID).
+
+        Raises:
+            KeyError: If `reference` is an ID string that has not been registered.
         """
 
         self._xpos = float(xpos)
@@ -90,26 +93,26 @@ class PosTargFrame(Frame):
     ######################################################################################
 
     def transform_at_time(self, time, *, quick=False):
-        """Transform that rotates coordinates from the reference frame to this frame.
+        """Transform that rotates coordinates from the reference to this frame.
 
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames. Ignored by
                 class PosTargFrame.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
 
         Notes:
-            Navigation is a fixed frame, so the transform relative to the `reference`
-            frame is independent of time. The returned Transform always has the shape of
-            this object, regardless of the shape of `time`.
+            A PosTargFrame is a fixed Frame, so the Transform relative to the `reference`
+            Frame is independent of time. The returned Transform always has the shape of
+            this Frame, regardless of the shape of `time`.
         """
 
         return self._transform

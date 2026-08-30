@@ -22,12 +22,30 @@ class TrackerFrame(Frame):
     _WAYFRAMES = {}
     _USE_QUICKFRAMES = True     # always a slowly-changing frame
 
-    def __init__(self, frame, target, observer, epoch, frame_id=None, cache_size=100):
-        """Constructor for a Tracker Frame.
+    def __init__(self, frame, target, observer, epoch, *, frame_id=None,
+                 cache_size=100):
+        """Constructor for a TrackerFrame.
+
+        Parameters:
+            frame (Frame or str): The Frame or the ID of the Frame to be modified so that
+                `target` holds a fixed direction.
+            target (Path or str): The Path or the ID of the Path of the moving target.
+            observer (Path or str): The Path or the ID of the Path of the observer.
+            epoch (Scalar, array-like, or float): The time in seconds TDB at which the
+                direction to `target` is to be held fixed.
+            frame_id (str, optional): The ID under which to register this Frame; None to
+                leave this Frame unregistered. As a special case, use "+" to automatically
+                generate a Frame ID by appending "_TRACKER" to the ID of `frame` (if it
+                has an ID).
+            cache_size (int, optional): The number of transforms to cache. This can be
+                useful because it avoids unnecessary SPICE calls when the Frame is being
+                used repeatedly at a finite set of times.
 
         Raises:
+            KeyError: If `frame`, `target`, or `observer` is an ID string that has not
+                been registered.
             ValueError: If `frame`, `target`, `observer`, and `epoch` cannot be
-            broadcasted to the same shape.
+                broadcasted to the same shape.
         """
 
         self._fixed_frame = Frame.as_frame(frame)
@@ -99,20 +117,20 @@ class TrackerFrame(Frame):
     ######################################################################################
 
     def transform_at_time(self, time, *, quick=None):
-        """Transform that rotates coordinates from the reference frame to this frame.
+        """Transform that rotates coordinates from the reference to this frame.
 
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.

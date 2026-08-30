@@ -9,7 +9,7 @@ import oops.mutable as mutable
 
 
 class FrameShift(Frame, Fittable):
-    """A frame defined by a time-shift of another frame."""
+    """A Frame subclass defined by a time shift of another Frame."""
 
     _WAYFRAMES = {}
 
@@ -28,6 +28,9 @@ class FrameShift(Frame, Fittable):
                 an ID).
             freeze (bool, optional): True to return a frozen object; False to leave it
                 unfrozen.
+
+        Raises:
+            KeyError: If `frame` is an ID string that has not been registered.
         """
 
         # Linking to a frozen object yields a frozen object
@@ -62,6 +65,7 @@ class FrameShift(Frame, Fittable):
 
     @property
     def dt(self):
+        """The time shift in seconds applied to the Frame."""
         return self._dt
 
     @property
@@ -110,6 +114,7 @@ class FrameShift(Frame, Fittable):
 
     @property
     def params(self):
+        """The fittable parameters of this FrameShift as a tuple of one time shift."""
         return (self._dt,)
 
     def _refresh(self):
@@ -140,20 +145,20 @@ class FrameShift(Frame, Fittable):
     ######################################################################################
 
     def transform_at_time(self, time, *, quick=None):
-        """Transform that rotates coordinates from the reference frame to this frame.
+        """Transform that rotates coordinates from the reference to this frame.
 
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.

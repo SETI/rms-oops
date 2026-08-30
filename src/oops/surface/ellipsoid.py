@@ -4,43 +4,50 @@
 
 import numpy as np
 
-from polymath              import Matrix, Scalar, Vector3
+from polymath              import Boolean, Matrix, Scalar, Vector3
 from oops.config           import SURFACE_PHOTONS, LOGGING
+from oops.constants        import PI, TWOPI
 from oops.frame.frame_     import Frame
 from oops.path.path_       import Path
 from oops.surface.surface_ import Surface
+
 
 class Ellipsoid(Surface):
     """An ellipsoidal surface centered on the given path and fixed with respect to the
     given frame. The short radius of the ellipsoid is oriented along the Z-axis of the
     frame and the long radius is along the X-axis.
 
-    The coordinates defining the surface grid are (longitude, latitude).
-    Both are based on the assumption that a spherical body has been "squashed"
-    along the Y- and Z-axes. The latitudes and longitudes defined in this manner
-    are neither planetocentric nor planetographic; functions are provided to
-    perform conversions to either choice. Longitudes are measured in a right-
-    handed manner, increasing toward the east; values range from 0 to 2*pi.
+    The coordinates defining the surface grid are `(longitude, latitude)`. Both are based
+    on the assumption that a spherical body has been "squashed" along the Y- and Z-axes.
+    The latitudes and longitudes defined in this manner are neither planetocentric nor
+    planetographic; functions are provided to perform conversions to either choice.
+    Longitudes are measured in a right- handed manner, increasing toward the east; values
+    range from 0 to 2*pi.
 
-    The third coordinate is z, which measures vertical distance in km along the normal
+    The third coordinate is `z`, which measures vertical distance in km along the normal
     vector from the surface.
     """
 
     COORDINATE_TYPE = 'spherical'
+    COORDINATE_NAMES = ('longitude', 'latitude', 'elevation')
+    COORDINATE_ABBREVS = ('lon', 'lat', 'z')
+    COORDINATE_RANGES = ((0, TWOPI), (-PI, PI), (None, None))
     IS_VIRTUAL = False
     HAS_INTERIOR = True
 
-    DEBUG = False       # True for convergence testing in intercept_normal_to()
+    _DEBUG = False       # True for convergence testing in intercept_normal_to()
 
-    def __init__(self, origin, frame, radii, exclusion=0.9):
+    def __init__(self, origin, frame, radii, *, exclusion=0.9):
         """Constructor for an Ellipsoid object.
 
         Parameters:
-            origin (Path): Object or ID defining the center of the ellipsoid.
-            frame (Frame): Object or ID defining the coordinate frame in which the
+            origin (Path or str): The Path or the ID of the Path defining the center of
+                the ellipsoid.
+            frame (Frame or str): The Frame or the ID of the Frame in which the
                 ellipsoid is fixed, with the shortest radius of the ellipsoid along the
                 Z-axis and the longest radius along the X-axis.
-            radii (tuple): (a,b,c) containing the radii from longest to shortest, in km.
+            radii (tuple[float, float, float]): `(a, b, c)`, the radii from longest to
+                shortest, in km.
             exclusion (float, optional): The fraction of the polar radius within which
                 calculations of intercept_normal_to() are suppressed. Values of less than
                 0.95 are not recommended because the problem becomes numerically unstable.
@@ -83,50 +90,52 @@ class Ellipsoid(Surface):
         self.unmasked = self
 
         # Unique key for intercept calculations
-        self.intercept_key = ('ellipsoid', self.origin.waypoint,
-                                           self.frame.wayframe,
-                                           tuple(self.radii),
-                                           self.exclusion)
+        self.intercept_key = ('ellipsoid', self.origin.waypoint, self.frame.wayframe,
+                                           tuple(self.radii), self.exclusion)
 
     def __getstate__(self):
         self.refresh()
-        return (Path.as_primary_path(self.origin),
-                Frame.as_primary_frame(self.frame),
+        return (Path.as_primary_path(self.origin), Frame.as_primary_frame(self.frame),
                 tuple(self.radii), self.exclusion)
 
     def __setstate__(self, state):
-        self.__init__(*state)
+        (origin, frame, radii, exclusion) = state
+        self.__init__(origin, frame, radii, exclusion=exclusion)
         self.freeze()
 
-    def coords_from_vector3(self, pos, obs=None, time=None, axes=2,
-                                  derivs=False, hints=None, groundtrack=False):
+    def coords_from_vector3(self, pos, *, obs=None, time=None, axes=2, derivs=False,
+                            hints=None, groundtrack=False):
         """Surface coordinates associated with a position vector.
 
         Parameters:
-            pos (Vector3): Positions at or near the surface, relative to this surface's
+            pos (Vector3): Positions at or near the Surface, relative to this Surface's
                 origin and frame.
-            obs (Vector3, optional): Observer position relative to this surface's origin
+            obs (Vector3, optional): Observer position relative to this Surface's origin
                 and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
                 this Surface subclass.
             axes (int, optional): 2 or 3, indicating whether to return the first two
                 coordinates (lon, lat) or all three (lon, lat, z) as Scalars.
             derivs (bool, optional): True to propagate any derivatives inside pos and obs
                 into the returned coordinates.
-            hints (Scalar, optional): Optionally, the value of the coefficient p such that
-                ground + p * normal(ground) = pos; ignored if the value is None (the
-                default) or True. groundtrack True to return the intercept on the surface
-                along with the coordinates.
+            hints (Scalar, optional): Optionally, the value of the coefficient `p` such
+                that `ground + p * normal(ground) = pos`. If it is not None, the converged
+                value of `p` is appended to the returned tuple; use `hints=True` if you
+                lack an initial value but require the new value to be returned.
+            groundtrack (bool, optional): True to append the intercept point on the
+                surface to the returned tuple.
 
         Returns:
-            (tuple): Two to four items:
+            tuple[Scalar, ...]: Two to five items:
 
             * `lon` (Scalar): Longitude at the surface in radians.
             * `lat` (Scalar): Latitude at the surface in radians.
             * `z` (Scalar): Vertical altitude in km normal to the surface; included if
-              axes == 3.
+              `axes` == 3.
+            * `p` (Scalar): The converged coefficient; included if the input value of
+              `hints` is not None.
             * `track` (Vector3): Intercept point on the surface (where z == 0); included
-              if input groundtrack is True.
+              if `groundtrack` is True.
         """
 
         # Validate inputs
@@ -154,38 +163,48 @@ class Ellipsoid(Surface):
             r = (pos - track).norm() * p.sign()
             results += (r,)
 
+        if hints is not None:
+            results += (p,)
+
         if groundtrack:
             results += (track,)
 
         return results
 
-    def vector3_from_coords(self, coords, obs=None, time=None, derivs=False,
-                                          groundtrack=False):
+    def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
+                            hints=None, groundtrack=False):
         """The position where a point with the given coordinates falls relative to this
         surface's origin and frame.
 
         Parameters:
-            coords (tuple): Two or three Scalars defining coordinates at or near this
-                surface. These can have different shapes, but must be broadcastable to a
-                common shape. lon     longitude at the surface in radians. lat
-                latitude at the surface in radians. z       vertical altitude in km normal
-                to the body surface.
-            obs (Vector3, optional): Observer position relative to this surface's origin
+            coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at
+                or near this surface. These can have different shapes, but must be
+                broadcastable to a common shape.
+
+                * `lon` (rad): Longitude at the surface.
+                * `lat` (rad): Latitude at the surface.
+                * `z` (km, optional): Vertical altitude normal to the body surface.
+
+            obs (Vector3, optional): Observer position relative to this Surface's origin
                 and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
                 this Surface subclass.
             derivs (bool, optional): True to propagate any derivatives inside the
-                coordinates and obs into the returned position vectors. groundtrack True
-                to include the associated groundtrack points on the body surface in the
-                returned result.
+                coordinates and obs into the returned position vectors.
+            hints (Any, optional): Any data that might be useful to carry over from one
+                call to the next; unused by this Surface subclass. If it is not None,
+                its value is appended to the returned tuple.
+            groundtrack (bool, optional): True to append the associated groundtrack points
+                on the body surface to the returned result.
 
         Returns:
-            Pos or (pos, track), where, where:
+            Vector3 or tuple: `pos` or `(pos[, hints][, track])`, where:
 
             * `pos` (Vector3): Points defined by the coordinates, relative to this
               surface's origin and frame.
+            * `hints` (Any): The input value of `hints`, included if it is not None.
             * `track` (Vector3): Intercept point on the surface (where z == 0); included
-              if input groundtrack is True.
+              if `groundtrack` is True.
         """
 
         # Validate inputs
@@ -206,54 +225,62 @@ class Ellipsoid(Surface):
             normal = self.normal(track)
             results = (track + (coords[2] / normal.norm()) * normal, track)
 
+        extras = ()
+        if hints is not None:
+            extras += (hints,)
+
         if groundtrack:
-            return results
+            extras += (results[1],)
+
+        if extras:
+            return (results[0],) + extras
 
         return results[0]
 
-    def position_is_inside(self, pos, obs=None, time=None):
+    def position_is_inside(self, pos, *, obs=None, time=None):
         """Where positions are inside the surface.
 
         Parameters:
-            pos (Vector3): Positions at or near the surface relative to this surface's
+            pos (Vector3): Positions at or near the Surface relative to this Surface's
                 origin and frame.
-            obs (optional): Observer position as a Vector3 relative to this surface's
+            obs (Vector3, optional): Observer position relative to this Surface's
                 origin and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
                 this Surface subclass.
 
         Returns:
-            (Boolean): Boolean True where positions are inside the surface.
+            Boolean: True where positions are inside the Surface.
         """
 
         unsquashed = Vector3.as_vector3(pos).element_mul(self.unsquash)
         return unsquashed.norm() < self.radii[0]
 
-    def intercept(self, obs, los, time=None, direction='dep', derivs=False,
-                                  guess=None, hints=None):
-        """The position where a specified line of sight intercepts the surface.
+    def intercept(self, obs, los, *, time=None, direction='dep', derivs=False,
+                  guess=None, hints=None):
+        """The position where a specified line of sight intercepts the Surface.
 
         Parameters:
-            obs (Vector3): Observer position as a Vector3 relative to this surface's
+            obs (Vector3): Observer position as a Vector3 relative to this Surface's
                 origin and frame.
-            los (Vector3): Line of sight as a Vector3 in this surface's frame.
-            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+            los (Vector3): Line of sight as a Vector3 in this Surface's frame.
+            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
                 this Surface subclass.
             direction (str, optional): 'arr' for a photon arriving at the surface; 'dep'
                 for a photon departing from the surface.
             derivs (bool, optional): True to propagate any derivatives inside obs and los
                 into the returned intercept point.
-            guess (object, optional): Unused.
-            hints (optional): If not None (the default), this value is appended to the
-                returned tuple. Needed for compatibility with other Surface subclasses.
+            guess (Scalar, optional): Unused.
+            hints (Any, optional): Any data that might be useful to carry over from one
+                call to the next; unused by this Surface subclass. If it is not None,
+                its value is appended to the returned tuple.
 
         Returns:
-            (tuple): (pos, t) or (pos, t, hints), where, where:
+            tuple[Vector3, Scalar[, Any]]: `(pos, t)` or `(pos, t, hints)`, where:
 
-            * `pos` (Vector3): Intercept points on the surface relative to this surface's
+            * `pos` (Vector3): Intercept points on the Surface relative to this surface's
               origin and frame, in km.
-            * `t` (Scalar): Such that: intercept = obs + t * los.
-            * `hints` (object): The input value of hints, included if it is not None.
+            * `t` (Scalar): Such that `intercept = obs + t * los`.
+            * `hints` (Any): The input value of `hints`, included if it is not None.
         """
 
         # Convert to Vector3 and un-squash
@@ -322,71 +349,101 @@ class Ellipsoid(Surface):
 
         return (pos, t)
 
-    def normal(self, pos, time=None, derivs=False):
+    def normal(self, pos, *, obs=None, time=None, derivs=False, hints=None):
         """The normal vector at a position at or near a surface.
 
         Parameters:
-            pos (Vector3): Positions at or near the surface relative to this surface's
+            pos (Vector3): Positions at or near the Surface relative to this Surface's
                 origin and frame.
-            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+            obs (Vector3, optional): Observer position relative to this Surface's origin
+                and frame; ignored for this Surface subclass.
+            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
                 this Surface subclass.
             derivs (bool, optional): True to propagate any derivatives of pos into the
                 returned normal vectors.
+            hints (Any, optional): Any data that might be useful to carry over from one
+                call to the next; unused by this Surface subclass. If it is not None,
+                its value is appended to the returned tuple.
 
         Returns:
-            (Vector3): Directions normal to the surface that pass through the position.
-                Lengths are arbitrary.
+            Vector3 or tuple[Vector3, Any]: Directions normal to the Surface that pass
+            through the position, optionally followed by `hints`. Vector lengths are
+            arbitrary, and the input value of `hints` is returned if it is not None.
         """
 
         pos = Vector3.as_vector3(pos, recursive=derivs)
-        return pos.element_mul(self.unsquash_sq)
+        perp = pos.element_mul(self.unsquash_sq)
 
-    def intercept_with_normal(self, normal, time=None, derivs=False):
+        if hints is not None:
+            return (perp, hints)
+
+        return perp
+
+    def intercept_with_normal(self, normal, *, obs=None, time=None, derivs=False,
+                              hints=None):
         """Surface point where the normal vector parallels the given vector.
 
         Parameters:
-            normal (Vector3): Normal vectors in this surface's frame.
-            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+            normal (Vector3): Normal vectors in this Surface's frame.
+            obs (Vector3, optional): Observer position relative to this Surface's origin
+                and frame; ignored for this Surface subclass.
+            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
                 this Surface subclass.
             derivs (bool, optional): True to propagate derivatives in the normal vector
                 into the returned intercepts.
+            hints (Any, optional): Any data that might be useful to carry over from one
+                call to the next; unused by this Surface subclass. If it is not None,
+                its value is appended to the returned tuple.
 
         Returns:
-            (Vector3): Surface intercept points, in km. Where no solution exists, the
-                returned Vector3 will be masked.
+            Vector3 or tuple[Vector3, Any]: Surface intercept points in km, optionally
+            followed by `hints`. Where no solution exists, values are masked, and the
+            input value of `hints` is returned if it is not None.
         """
 
         normal = Vector3.as_vector3(normal, recursive=derivs)
-        return normal.element_mul(self.squash).unit().element_mul(self.radii)
+        cept = normal.element_mul(self.squash).unit().element_mul(self.radii)
 
-    def intercept_normal_to(self, pos, time=None, direction='dep', derivs=False,
-                                       guess=None):
+        if hints is not None:
+            return (cept, hints)
+
+        return cept
+
+    def intercept_normal_to(self, pos, *, obs=None, time=None, direction='dep',
+                            derivs=False, guess=None, hints=None):
         """Surface point whose normal vector passes through a given position.
 
         This function can have multiple values, in which case the nearest of the surface
         points should be the one returned.
 
         Parameters:
-            pos (Vector3): Positions at or near the surface relative to this surface's
+            pos (Vector3): Positions at or near the Surface relative to this Surface's
                 origin and frame.
-            time (Scalar, optional): Time at which to evaluate the surface; ignored for
+            obs (Vector3, optional): Observer position relative to this Surface's origin
+                and frame; ignored for this Surface subclass.
+            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
                 this Surface subclass.
             direction (str, optional): 'arr' for a photon arriving at the surface; 'dep'
                 for a photon departing from the surface; ignored here.
             derivs (bool, optional): True to propagate derivatives in pos into the
                 returned intercepts.
-            guess (Scalar, optional): Optional initial guess at coefficient p such that:
-                intercept + p * normal(intercept) = pos Use guess=True for the converged
-                value of p to be returned even if an initial guess is unavailable.
+            guess (Scalar, optional): Optional initial guess at coefficient `p` such that
+                `intercept + p * normal(intercept) = pos`. Use `guess=True` for the
+                converged value of `p` to be returned even if an initial guess is
+                unavailable.
+            hints (Any, optional): Any data that might be useful to carry over from one
+                call to the next; unused by this Surface subclass. If it is not None,
+                its value is appended to the returned tuple.
 
         Returns:
-            Intercept or (intercept, p), where, where:
+            Vector3 or tuple: `intercept` or `(intercept[, p][, hints])`, where:
 
             * `intercept` (Vector3): Surface intercept points relative to this surface's
-              origin and frame, in km. Where no intercept exists, the returned vector will
-              be masked.
-            * `p` (Scalar): The converged solution such that intercept = pos + p *
-              normal(intercept); included if the input guess is not None.
+              origin and frame, in km. Where no intercept exists, values are masked.
+            * `p` (Scalar): The converged solution such that
+              `intercept = pos + p * normal(intercept)`; included if the input value of
+              `guess` is not None.
+            * `hints` (Any): The input value of `hints`, included if it is not None.
         """
 
         pos = Vector3.as_vector3(pos, recursive=derivs)
@@ -516,7 +573,7 @@ class Ellipsoid(Surface):
             prev_max_dp = max_dp
             max_dp = dp.abs().max(builtins=True, masked=-1.)
 
-            if LOGGING.surface_iterations or Ellipsoid.DEBUG:
+            if LOGGING.surface_iterations or Ellipsoid._DEBUG:
                 LOGGING.convergence(
                             '%s.intercept_normal_to(): iter=%d; change[km]=%.6g'
                             % (type(self).__name__, count+1, max_dp * km_scale))
@@ -538,25 +595,38 @@ class Ellipsoid(Surface):
         cept_z = pos_z / (1 + C * p)
         cept = Vector3.from_scalars(cept_x, cept_y, cept_z)
 
-        if guess is None:
+        results = (cept,)
+        if guess is not None:
+            results += (p,)
+
+        if hints is not None:
+            results += (hints,)
+
+        if len(results) == 1:
             return cept
-        else:
-            return (cept, p)
+
+        return results
 
     def _apply_exclusion(self, pos):
-        """This internal method is used by intercept_normal_to() to exclude any
-        positions that fall too close to the center of the surface. The math
-        is poorly-behaved in this region.
+        """The given positions, with those too close to the center of the Surface
+        excluded.
 
-        (1) It sets the mask on any of these points to True.
-        (2) It sets the magnitude of any of these points to the edge of the
-            exclusion zone, in order to avoid runtime errors in the math
-            libraries.
+        Used by `intercept_normal_to`, where the math is poorly behaved close to the
+        center. Positions inside the exclusion zone are masked, and their magnitudes are
+        set to the edge of that zone so that the math libraries do not raise runtime
+        errors.
+
+        Parameters:
+            pos (Vector3): Positions relative to this Surface's origin and frame.
+
+        Returns:
+            Vector3: The given positions, masked and rescaled where they fall inside the
+            exclusion zone.
         """
 
         pos_unsquashed = pos.element_mul(self.unsquash)
         norm_sq = pos_unsquashed.wod.norm_sq()
-        mask = (norm_sq < self.r_exclusion**2)
+        mask = Boolean.as_boolean(norm_sq < self.r_exclusion**2)
         if not mask.any():
             return pos
 
@@ -567,41 +637,61 @@ class Ellipsoid(Surface):
     # Longitude conversions
     ######################################################################################
 
-    def lon_to_centric(self, lon, derivs=False):
+    def lon_to_centric(self, lon, *, derivs=False):
         """Convert longitude in internal coordinates to planetocentric.
 
         Parameters:
-            Return (Scalar): Planetocentric longitude.
+            lon (Scalar): The longitude in radians.
+            derivs (bool, optional): True to propagate any derivatives of `lon` into
+                the returned longitude.
+
+        Returns:
+            Scalar: Planetocentric longitude.
         """
 
         lon = Scalar.as_scalar(lon, recursive=derivs)
         return (lon.sin() * self.squash_y).arctan2(lon.cos())
 
-    def lon_from_centric(self, lon, derivs=False):
+    def lon_from_centric(self, lon, *, derivs=False):
         """Convert planetocentric longitude to internal coordinates.
 
         Parameters:
-            Return (Scalar): Squashed longitude.
+            lon (Scalar): The longitude in radians.
+            derivs (bool, optional): True to propagate any derivatives of `lon` into
+                the returned longitude.
+
+        Returns:
+            Scalar: Squashed longitude.
         """
 
         lon = Scalar.as_scalar(lon, recursive=derivs)
         return (lon.sin() * self.unsquash_y).arctan2(lon.cos())
 
-    def lon_to_graphic(self, lon, derivs=False):
+    def lon_to_graphic(self, lon, *, derivs=False):
         """Convert longitude in internal coordinates to planetographic.
 
         Parameters:
-            Return (Scalar): Planetographic longitude.
+            lon (Scalar): The longitude in radians.
+            derivs (bool, optional): True to propagate any derivatives of `lon` into
+                the returned longitude.
+
+        Returns:
+            Scalar: Planetographic longitude.
         """
 
         lon = Scalar.as_scalar(lon, recursive=derivs)
         return (lon.sin() * self.unsquash_y).arctan2(lon.cos())
 
-    def lon_from_graphic(self, lon, derivs=False):
+    def lon_from_graphic(self, lon, *, derivs=False):
         """Convert planetographic longitude to internal coordinates.
 
         Parameters:
-            Return (Scalar): Squashed longitude.
+            lon (Scalar): The longitude in radians.
+            derivs (bool, optional): True to propagate any derivatives of `lon` into
+                the returned longitude.
+
+        Returns:
+            Scalar: Squashed longitude.
         """
 
         lon = Scalar.as_scalar(lon, recursive=derivs)
@@ -611,11 +701,18 @@ class Ellipsoid(Surface):
     # Latitude conversions
     ######################################################################################
 
-    def lat_to_centric(self, lat, lon, derivs=False):
+    def lat_to_centric(self, lat, lon, *, derivs=False):
         """Convert latitude in internal ellipsoid coordinates to planetocentric.
 
         Parameters:
-            Return (Scalar): Planetocentric latitude.
+            lat (Scalar): The latitude in radians.
+            lon (Scalar): The longitude in radians, which this conversion requires
+                because the surface is triaxial.
+            derivs (bool, optional): True to propagate any derivatives of `lat` and
+                `lon` into the returned latitude.
+
+        Returns:
+            Scalar: Planetocentric latitude.
         """
 
         lon = Scalar.as_scalar(lon, recursive=derivs)
@@ -625,11 +722,18 @@ class Ellipsoid(Surface):
 
         return (lat.tan() * self.squash_z / denom).arctan()
 
-    def lat_from_centric(self, lat, lon, derivs=False):
+    def lat_from_centric(self, lat, lon, *, derivs=False):
         """Convert planetocentric latitude to internal ellipsoid latitude.
 
         Parameters:
-            Return (Scalar): Squashed latitude.
+            lat (Scalar): The latitude in radians.
+            lon (Scalar): The longitude in radians, which this conversion requires
+                because the surface is triaxial.
+            derivs (bool, optional): True to propagate any derivatives of `lat` and
+                `lon` into the returned latitude.
+
+        Returns:
+            Scalar: Squashed latitude.
         """
 
         lon = Scalar.as_scalar(lon, recursive=derivs)
@@ -639,11 +743,18 @@ class Ellipsoid(Surface):
 
         return (lat.tan() * self.unsquash_z * factor).arctan()
 
-    def lat_to_graphic(self, lat, lon, derivs=False):
+    def lat_to_graphic(self, lat, lon, *, derivs=False):
         """Convert latitude in internal ellipsoid coordinates to planetographic.
 
         Parameters:
-            Return (Scalar): Planetographic latitude.
+            lat (Scalar): The latitude in radians.
+            lon (Scalar): The longitude in radians, which this conversion requires
+                because the surface is triaxial.
+            derivs (bool, optional): True to propagate any derivatives of `lat` and
+                `lon` into the returned latitude.
+
+        Returns:
+            Scalar: Planetographic latitude.
         """
 
         lon = Scalar.as_scalar(lon, recursive=derivs)
@@ -653,11 +764,18 @@ class Ellipsoid(Surface):
 
         return (lat.tan() * self.unsquash_z / denom).arctan()
 
-    def lat_from_graphic(self, lat, lon, derivs=False):
+    def lat_from_graphic(self, lat, lon, *, derivs=False):
         """Convert a planetographic latitude to internal ellipsoid latitude.
 
         Parameters:
-            Return (Scalar): Squashed latitude.
+            lat (Scalar): The latitude in radians.
+            lon (Scalar): The longitude in radians, which this conversion requires
+                because the surface is triaxial.
+            derivs (bool, optional): True to propagate any derivatives of `lat` and
+                `lon` into the returned latitude.
+
+        Returns:
+            Scalar: Squashed latitude.
         """
 
         lon = Scalar.as_scalar(lon, recursive=derivs)

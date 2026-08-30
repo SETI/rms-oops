@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/surface_/spice_shape.py: For bodies with shapes defined in SPICE.
+# oops/surface/spice_shape.py: For bodies with shapes defined in SPICE.
 ##########################################################################################
 
 import cspyce
@@ -18,11 +18,11 @@ def spice_shape(spice_id, frame=None, default_radii=None):
         spice_id (str or int): The SPICE body name or integer code.
         frame (Frame, optional): The rotation Frame of the body. By default, this is
             inferred from the `spice_id`.
-        default_radii (tuple, optional): Three radius values to use if the PCK radius
-            values are not found.
+        default_radii (tuple[float, float, float], optional): Three radius values to
+            use if the PCK radius values are not found.
 
     Returns:
-        (Spheroid or Ellipsoid): The surface of the Body.
+        Spheroid or Ellipsoid: The surface of the body.
 
     Raises:
         KeyError: If the radius values are missing from the SPICE kernel pool and default

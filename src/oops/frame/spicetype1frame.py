@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/frame/spicetype1frame.py: Subclass SpiceType1Frame of Frame
+# oops/frame/spicetype1frame.py: Subclass SpiceType1Frame of class SpiceFrame
 ##########################################################################################
 
 import numpy as np
@@ -13,7 +13,8 @@ from oops.transform        import Transform
 
 
 class SpiceType1Frame(SpiceFrame):
-    """A Frame object defined within the SPICE toolkit as a Type 1 (discrete) C kernel."""
+    """A Frame subclass defined within the SPICE toolkit as a Type 1 (discrete) C kernel.
+    """
 
     _FRAME_LOOKUP = {}          # (code, reference, tick_tolerance) -> SpiceFrame
 
@@ -24,7 +25,7 @@ class SpiceType1Frame(SpiceFrame):
         Parameters:
             spice_frame (str or int): The name, frame code, or frame name as used in the
                 SPICE toolkit.
-            tick_tolerance (float, int or str): A number or string defining the time
+            tick_tolerance (float, int, or str): A number or string defining the time
                 tolerance in spacecraft clock ticks for the Frame returned.
             reference (SpiceFrame or str, optional): The Frame or ID of the Frame relative
                 to which this frame is defined. This must be a SpiceFrame or else, by
@@ -32,9 +33,9 @@ class SpiceType1Frame(SpiceFrame):
             frame_id (str, optional): The ID under which to register this Frame. If not
                 specified, the name as defined in the SPICE Toolkit is used. Note that
                 SpiceType1Frames are always registered.
-            cache_size (int, optional): Number of transforms to cache. This can be useful
-                because it avoids unnecessary SPICE calls when the Frame is being used
-                repeatedly at a finite set of times.
+            cache_size (int, optional): The number of transforms to cache. This can be
+                useful because it avoids unnecessary SPICE calls when the Frame is being
+                used repeatedly at a finite set of times.
 
         Raises:
             LookupError: If `spice_frame` is not a recognized frame name or frame code
@@ -105,18 +106,21 @@ class SpiceType1Frame(SpiceFrame):
     # Frame API
     ######################################################################################
 
-    def transform_at_time(self, time, quick=None):
-        """A Transform that rotates from the reference frame into this frame.
+    def transform_at_time(self, time, *, quick=None):
+        """Transform that rotates coordinates from the reference to this frame.
+
+        If the frame is rotating, then the coordinates being transformed must be given
+        relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
         """
 
         # Fill in the time tolerance in seconds
@@ -177,8 +181,8 @@ class SpiceType1Frame(SpiceFrame):
         self._cached_transform = Transform(matrix3, Vector3.ZERO, self, self._reference)
         return self._cached_transform
 
-    def transform_at_time_if_possible(self, time, quick=None):
-        """Transform that rotates coordinates from the reference frame to this frame.
+    def transform_at_time_if_possible(self, time, *, quick=None):
+        """Transform that rotates coordinates from the reference to this frame.
 
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
@@ -188,19 +192,19 @@ class SpiceType1Frame(SpiceFrame):
         objects skip over the times at which the transform could not be evaluated.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (tuple): The tuple (`newtimes`, `transform`), where:
+            tuple[Scalar, Transform]: (`newtimes`, `transform`):
 
-            * `newtimes` (Scalar): Times at which `transform` has been provided; this may
-              be a subset of the input times given because it omits times at which the
-              Transform could not be evaluated.
-            * `transform` (Transform): The Tranform applicable at `newtimmes`. It rotates
-              vectors from the reference frame to this frame.
+            * `newtimes` identifies the time(s) at which `transform` has been provided;
+              this may be a subset of the input times, because it omits the times at which
+              the Transform could not be evaluated.
+            * `transform` is the Transform defined at `newtimes`. It rotates vectors from
+              the reference frame to this frame.
         """
 
         # Fill in the time tolerance in seconds
@@ -277,20 +281,23 @@ class SpiceType1Frame(SpiceFrame):
             spice_frame (str or int): The name, frame code, or frame name as used in the
                 SPICE toolkit. Alternatively, an existing SpiceType1Frame (which might use
                 the wrong reference frame).
-            tick_tolerance (float, int or str, optional): A number or string defining the
-                time  tolerance in spacecraft clock ticks for the Frame returned.
+            tick_tolerance (float, int, or str, optional): A number or string defining
+                the time tolerance in spacecraft clock ticks for the Frame returned.
             reference (SpiceFrame or str, optional): The Frame or ID of the Frame relative
                 to which this frame is defined. This must be a SpiceFrame or else, by
                 default, J2000.
             frame_id (str, optional): The ID under which to register this Frame. If not
                 specified, the name as defined in the SPICE Toolkit is used. Note that
                 SpiceType1Frames are always registered. This input is used only if a new
-                SpiceType1Frames is constructed; otherwise, the pre-existing ID is
+                SpiceType1Frame is constructed; otherwise, the pre-existing ID is
                 retained.
-            cache_size (int, optional): Number of transforms to cache. This can be useful
-                because it avoids unnecessary SPICE calls when the Frame is being used
-                repeatedly at a finite set of times. If not specified, an existing
-                SpiceType1Frames with any `cache_size` is returned.
+            cache_size (int, optional): The number of transforms to cache. This can be
+                useful because it avoids unnecessary SPICE calls when the Frame is being
+                used repeatedly at a finite set of times. If not specified, an existing
+                SpiceType1Frame with any `cache_size` is returned.
+
+        Returns:
+            SpiceType1Frame: The SpiceType1Frame, newly constructed if necessary.
 
         Raises:
             LookupError: If `spice_frame` is not a recognized frame name or frame code
@@ -321,14 +328,17 @@ class SpiceType1Frame(SpiceFrame):
                                frame_id=frame_id, cache_size=cache_size)
 
     def _get_shortcut(self, reference):
-        """A Frame that directly transforms from the given reference to this
-        SpiceType1Frame.
+        """A Frame that directly transforms from the given reference to this Frame.
 
         This is an override of the default method, needed because the SPICE Toolkit can
         handle the connections between SpiceFrames very efficiently.
 
         Parameters:
             reference (Frame): The reference Frame, which must be a valid wayframe.
+
+        Returns:
+            Frame: This Frame relative to `reference`, connected through the nearest
+            SpiceFrame ancestor of `reference`.
         """
 
         # Find the first SpiceFrame (or J2000) that's an ancestor of the reference

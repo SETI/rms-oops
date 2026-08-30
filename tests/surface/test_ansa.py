@@ -32,14 +32,14 @@ def test_ansa():
     obs = Vector3(np.random.rand(100,3) * 1.e6)
     pos = Vector3(np.random.rand(100,3) * 1.e5)
 
-    (r,z) = surface.coords_from_vector3(pos, obs, axes=2)
+    (r,z) = surface.coords_from_vector3(pos, obs=obs, axes=2)
 
     pos_xy = pos.element_mul(Vector3((1,1,0)))
     pos_z  = pos.to_scalar(2)
     assert abs(pos_xy.norm() - abs(r)).max() < 1.e-8
     assert abs(pos_z - z).max() < 1.e-8
 
-    (r,z,theta) = surface.coords_from_vector3(pos, obs, axes=3)
+    (r,z,theta) = surface.coords_from_vector3(pos, obs=obs, axes=3)
 
     pos_xy = pos.element_mul(Vector3((1,1,0)))
     pos_z  = pos.to_scalar(2)
@@ -53,7 +53,7 @@ def test_ansa():
     z = Scalar((2 * np.random.rand(100) - 1) * 1.e5)
     theta = Scalar(np.random.rand(100))
 
-    pos = surface.vector3_from_coords((r,z), obs)
+    pos = surface.vector3_from_coords((r,z), obs=obs)
 
     pos_xy = pos.element_mul(Vector3((1,1,0)))
     pos_z  = pos.to_scalar(2)
@@ -63,22 +63,22 @@ def test_ansa():
     obs_xy = obs.element_mul(Vector3((1,1,0)))
     assert abs(pos_xy.sep(obs_xy - pos_xy) - HALFPI).max() < 1.e-5
 
-    pos1 = surface.vector3_from_coords((r,z,theta), obs)
+    pos1 = surface.vector3_from_coords((r,z,theta), obs=obs)
     pos1_xy = pos1.element_mul(Vector3((1,1,0)))
     assert abs(pos1_xy.sep(pos_xy) - theta).max() < 1.e-5
 
-    pos1 = surface.vector3_from_coords((r,z,-theta), obs)
+    pos1 = surface.vector3_from_coords((r,z,-theta), obs=obs)
     pos1_xy = pos1.element_mul(Vector3((1,1,0)))
     assert abs(pos1_xy.sep(pos_xy) - theta).max() < 1.e-5
 
-    pos = surface.vector3_from_coords((-r,z), obs)
+    pos = surface.vector3_from_coords((-r,z), obs=obs)
     pos_xy = pos.element_mul(Vector3((1,1,0)))
 
-    pos1 = surface.vector3_from_coords((-r,z,-theta), obs)
+    pos1 = surface.vector3_from_coords((-r,z,-theta), obs=obs)
     pos1_xy = pos1.element_mul(Vector3((1,1,0)))
     assert abs(pos1_xy.sep(pos_xy) - theta).max() < 1.e-5
 
-    pos1 = surface.vector3_from_coords((-r,z,theta), obs)
+    pos1 = surface.vector3_from_coords((-r,z,theta), obs=obs)
     pos1_xy = pos1.element_mul(Vector3((1,1,0)))
     assert abs(pos1_xy.sep(pos_xy) - theta).max() < 1.e-5
 
@@ -89,16 +89,16 @@ def test_ansa():
     z = Scalar((2 * np.random.rand(100) - 1) * 1.e5)
     theta = Scalar((2 * np.random.rand(100) - 1) * 1.)
 
-    pos = surface.vector3_from_coords((r,z,theta), obs)
-    coords = surface.coords_from_vector3(pos, obs, axes=3)
+    pos = surface.vector3_from_coords((r,z,theta), obs=obs)
+    coords = surface.coords_from_vector3(pos, obs=obs, axes=3)
     assert abs(r - coords[0]).max() < 1.e-5
     assert abs(z - coords[1]).max() < 1.e-5
     assert abs(theta - coords[2]).max() < 1.e-8
 
     obs = Vector3(np.random.rand(100,3) * 1.e6)
     pos = Vector3(np.random.rand(100,3) * 1.e5)
-    coords = surface.coords_from_vector3(pos, obs, axes=3)
-    test_pos = surface.vector3_from_coords(coords, obs)
+    coords = surface.coords_from_vector3(pos, obs=obs, axes=3)
+    test_pos = surface.vector3_from_coords(coords, obs=obs)
     assert abs(test_pos - pos).max() < 1.e-5
 
     # intercept() derivatives

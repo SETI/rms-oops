@@ -8,7 +8,7 @@ from oops.path.path_ import Path
 
 
 class CoordPath(Path):
-    """A path defined by fixed coordinates on a specified Surface."""
+    """A Path subclass defined by fixed coordinates on a specified Surface."""
 
     _WAYPOINTS = {}
 
@@ -18,8 +18,8 @@ class CoordPath(Path):
         Parameters:
             surface (Surface): The surface to which the coordinates refer.
             coords (tuple): 2 or 3 Scalars defining the coordinates on the surface.
-            obs (Path or str, optional): The Path or ID of the observer, required if
-                `surface` is "virtual".
+            obs (Path or str, optional): The Path or the ID of the Path of the observer,
+                required if `surface` is "virtual".
             path_id (str, optional): The ID under which to register this Path; None to
                 leave this Path unregistered.
 

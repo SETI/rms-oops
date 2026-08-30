@@ -9,14 +9,14 @@ from oops.path.path_   import Path
 
 
 class CirclePath(Path):
-    """A path describing uniform circular motion about another path.
+    """A Path subclass describing uniform circular motion about another Path.
 
-    The orientation of the circle is defined by the z-axis of the given frame.
+    The orientation of the circle is defined by the z-axis of the given Frame.
     """
 
     _WAYPOINTS = {}
 
-    def __init__(self, radius, lon, rate, epoch, origin, frame=None, *, path_id=None):
+    def __init__(self, radius, lon, rate, epoch, origin, *, frame=None, path_id=None):
         """Constructor for a CirclePath.
 
         Parameters:
@@ -26,10 +26,11 @@ class CirclePath(Path):
             rate (Scalar, array-like, or float): Rate of circular motion, radians/second.
             epoch (Scalar, array-like, or float): The time TDB relative to which all
                 orbital elements are defined.
-            origin (Path or str): The path or ID of the center of the circle.
+            origin (Path or str): The Path or the ID of the Path at the center of the
+                circle.
             frame (Frame or str, optional): The Frame or the ID of the Frame in which the
                 circular motion is defined and in which coordinates are returned; None to
-                use the frame of the `origin` path.
+                use the Frame of the `origin` Path.
             path_id (str, optional): The ID under which to register this Path; None to
                 leave this Path unregistered.
 

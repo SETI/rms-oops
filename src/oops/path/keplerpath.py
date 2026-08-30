@@ -68,21 +68,22 @@ class KeplerPath(Path, Fittable):
                 wobble term:
 
                 * [9, 12, ...] `amp`: amplitude of the term, radians.
-                * [10, 13, ...] `phase0`: initial phase of the first wobble term, radians.
-                * [11, 14, ...] `dphase_dt`: rate of change of the first wobble term,
+                * [10, 13, ...] `phase0`: initial phase of the wobble term, radians.
+                * [11, 14, ...] `dphase_dt`: rate of change of the wobble term,
                   radians/s.
 
                 Alternatively, provide a dictionary containing keys with these names (in
                 which case only one wobble term is allowed). If the elements are not
-                provided, the object remains un-initialized until `set_elements` is
+                provided, the object remains uninitialized until `set_elements` is
                 called.
-            observer (Path or str, optional): Identification of the Path of the observer.
+            observer (Path or str, optional): The Path or the ID of the Path of the
+                observer.
                 If provided, then `event_at_time` returns positions relative to this
                 observer in J2000 coordinates and with light travel time already accounted
                 for; this makes it easy to use this Path object for astrometry and orbit
                 fitting. If not provided, `event_at_time` returns positions relative to
                 the planet center and in the planet's `ring_frame`.
-            wobbles (str or tuple): The name(s) of each wobble element:
+            wobbles (str or tuple, optional): The name(s) of each wobble element:
 
                 * "a": semimajor axis.
                 * "e": eccentricity.
@@ -186,8 +187,8 @@ class KeplerPath(Path, Fittable):
                 of ring particles. Repeat these three elements for each wobble term:
 
                 * [9, 12, ...] `amp`: amplitude of the term, radians.
-                * [10, 13, ...] `phase0`: initial phase of the first wobble term, radians.
-                * [11, 14, ...] `dphase_dt`: rate of change of the first wobble term,
+                * [10, 13, ...] `phase0`: initial phase of the wobble term, radians.
+                * [11, 14, ...] `dphase_dt`: rate of change of the wobble term,
                   radians/s.
         """
 
@@ -855,15 +856,15 @@ class KeplerPath(Path, Fittable):
             guess (Scalar, array-like, or float, optional): An initial guess to use as the
                 event time along this Path; otherwise None. Should be provided if the
                 event time was already returned from a similar calculation.
-            antimask (array-like or bool, optional): A boolean array to be applied to
+            antimask (ndarray or bool, optional): A boolean array to be applied to
                 event times and positions. Only the indices where antimask=True will be
                 used in the solution.
-            quick (dict or bool, optional): An optional dictionary of parameter values to
-                use as overrides to the configured default QuickPath and QuickFrame
-                parameters; use False to disable the use of QuickPaths and QuickFrames.
-                The default quick dictionary is defined in config.py.
-            converge (dict, optional): An optional dictionary of parameters to override
-                the configured default convergence parameters. The default configuration
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default QuickPath and QuickFrame parameters.
+                Use False to disable the use of QuickPaths and QuickFrames. The default
+                quick dictionary is defined in config.py.
+            converge (dict, optional): A dictionary of parameters to override the
+                configured default convergence parameters. The default configuration
                 is defined in config.py. Convergence parameters are as follows:
 
                 * `max_iterations` (int): The maximum number of iterations of Newton's

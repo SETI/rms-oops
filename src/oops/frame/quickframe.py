@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/frame/quickframe_.py
+# oops/frame/quickframe.py: Subclass QuickFrame of class Frame
 ##########################################################################################
 
 import numpy as np
@@ -12,8 +12,8 @@ from oops.transform import Transform
 
 
 class QuickFrame(Frame):
-    """QuickFrame is a Frame subclass that returns Transform objects based on
-    interpolation of another Frame within a specified time window.
+    """A Frame subclass that returns Transform objects based on interpolation of another
+    Frame within a specified time window.
     """
 
     def __init__(self, frame, tmin, tmax, quick=None):
@@ -26,6 +26,9 @@ class QuickFrame(Frame):
             tmax (float): The latest time to tabulate in this QuickFrame.
             quick (dict, optional): A dictionary containing overrides of any of the
                 default values in the default dictionary QUICK.dictionary.
+
+        Raises:
+            KeyError: If `frame` is an ID string that has not been registered.
         """
 
         frame = Frame.as_frame(frame)
@@ -161,9 +164,9 @@ class QuickFrame(Frame):
             vals (array): The tabulated quaternion values, with shape (steps,4).
 
         Returns:
-            (array): Values of shape (steps,4) describing the same rotations, but without
-                sign reversals between successive samples. The input array is returned if
-                it contains no reversals.
+            array: Values of shape (steps,4) describing the same rotations, but without
+            sign reversals between successive samples. The input array is returned if it
+            contains no reversals.
         """
 
         signs = np.where(np.sum(vals[:-1] * vals[1:], axis=-1) < 0., -1., 1.)
@@ -211,14 +214,14 @@ class QuickFrame(Frame):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (Transform): The Tranform applicable at the specified time or _times. It
-                rotates vectors from the reference frame to this frame.
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
 
         Notes:
             The time and the Frame object are not required to have the same shape;
@@ -233,28 +236,29 @@ class QuickFrame(Frame):
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
-        Unlike method transform_at_time(), this variant tolerates _times that raise cspyce
+        Unlike method `transform_at_time`, this variant tolerates times that raise cspyce
         errors. It returns a new time Scalar along with the new Transform, where both
-        objects skip over the _times at which the transform could not be evaluated.
+        objects skip over the times at which the transform could not be evaluated.
 
-        The default behavior is to assume that all _times are valid. As a result, this
-        function calls transform_at_time, but also returns the given time Scalar. This
+        The default behavior is to assume that all times are valid. As a result, this
+        method calls `transform_at_time` and also returns the given time Scalar. This
         behavior is overridden by SpiceFrame, where occasional short gaps in a C-kernel
-        can be tolerated as long as a QuickFrame interpolates across them.
+        can be tolerated as long as a QuickFrame can interpolate across them.
 
         Parameters:
-            time (Scalar, array-like, or float): The time in seconds TDB.
+            time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            (tuple): The tuple (`newtimes`, `transform`), where:
+            tuple[Scalar, Transform]: (`newtimes`, `transform`):
 
-            * `newtimes` (Scalar): Times at which `transform` has been provided; this may
-              be a subset of the input _times given.
-            * `transform` (Transform): The Tranform applicable at `newtimmes`. It rotates
-              vectors from the reference frame to this frame.
+            * `newtimes` identifies the time(s) at which `transform` has been provided;
+              this may be a subset of the input times, because it omits the times at which
+              the Transform could not be evaluated.
+            * `transform` is the Transform defined at `newtimes`. It rotates vectors from
+              the reference frame to this frame.
         """
         xform = self.transform_at_time(time)
         return (time, xform)
@@ -263,14 +267,13 @@ class QuickFrame(Frame):
         """Use the tabulated splines for a quick evaluation of the transform.
 
         Parameters:
-            time (Scalar, array-like, or float): The time(s) at which to evaluate the
-                transform.
-            collapse_threshold (float, optional): Use linear interpolation between the
-                end points if the time interval is below this value.
+            time (Scalar): The time(s) at which to evaluate the transform.
+            collapse_threshold (float, optional): Use linear interpolation between the end
+                points if the time interval is below this value.
 
         Returns:
-            (tuple): (`matrix`, `omega`), where `matrix` is the 3x3 transform matrix and
-                `omega` is the rotation vector, if any.
+            tuple[Matrix3, Vector3]: (`matrix`, `omega`), where `matrix` is the 3x3
+            rotation matrix and `omega` is the rotation vector, if any.
         """
 
         if collapse_threshold is None:
@@ -507,7 +510,7 @@ class QuickFrame(Frame):
 
     @staticmethod
     def for_frame(frame, time, *, quick=None):
-        """A QuickFrame that approximates this Frame within the given time limits.
+        """A QuickFrame that approximates the given Frame within the given time limits.
 
         A QuickFrame operates by sampling the given frame and then setting up an
         interpolation grid to evaluate in its place. It can substantially speed up
@@ -519,13 +522,17 @@ class QuickFrame(Frame):
             time (Scalar or tuple): The set of times at which the frame is to be
                 evaluated. This can simply be a tuple (`tmin`, `tmax`) defining the
                 beginning and end times.
-            quick (dict or bool, optional): If False, no QuickFrame is created and self is
-                returned; if a dictionary, then the values provided override the values in
-                the default dictionary QUICK.dictionary, and the merged dictionary is
-                used.
+            quick (dict or bool, optional): If False, no QuickFrame is created and
+                `frame` is returned; if a dictionary, then the values provided override
+                the values in the default dictionary QUICK.dictionary, and the merged
+                dictionary is used.
+
+        Returns:
+            Frame: A QuickFrame that approximates `frame` for the given range of times but
+            can be evaluated quickly via splines; otherwise, `frame` itself.
 
         Notes:
-            QuickFrames generated by this function are saved as a list inside
+            QuickFrames generated by this method are saved as a list inside
             `frame._quickframes`. If a pre-existing QuickFrame that covers the time range
             is found in this list, it is returned rather than constructing a new
             QuickFrame. If a QuickFrame is found in the list that partially covers the

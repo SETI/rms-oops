@@ -16,10 +16,10 @@ def test_orbitplane():
     # Circular orbit, no derivatives, forward
     elements = (1, 0, 1)
     epoch = 0
-    orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000', 'TEST')
+    orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000', path_id='TEST')
 
     pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-    (r,l,z) = orbit.coords_from_vector3(pos, None, axes=3, derivs=False)
+    (r,l,z) = orbit.coords_from_vector3(pos, axes=3, derivs=False)
 
     r_true = Scalar([1,2,1,1])
     l_true = Scalar([0, 0, PI, HALFPI])
@@ -30,7 +30,7 @@ def test_orbitplane():
     assert abs(z - z_true).max() < 1.e-12
 
     # Circular orbit, no derivatives, reverse
-    pos2 = orbit.vector3_from_coords((r, l, z), None, derivs=False)
+    pos2 = orbit.vector3_from_coords((r, l, z), derivs=False)
 
     assert (pos - pos2).norm().max() < 1.e-10
 
@@ -42,7 +42,7 @@ def test_orbitplane():
 
     for step in ([eps,0,0], [0,eps,0], [0,0,eps]):
         dpos = Vector3(step)
-        (r,l,z) = orbit.coords_from_vector3(pos + dpos, None, axes=3,
+        (r,l,z) = orbit.coords_from_vector3(pos + dpos, axes=3,
                                             derivs=True)
 
         r_test = r + r.d_dpos.chain(dpos)
@@ -55,24 +55,24 @@ def test_orbitplane():
 
     # Circular orbit, with derivatives, reverse
     pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-    (r,l,z) = orbit.coords_from_vector3(pos, None, axes=3, derivs=False)
+    (r,l,z) = orbit.coords_from_vector3(pos, axes=3, derivs=False)
     eps = 1.e-6
     delta = 1.e-5
 
     r.insert_deriv('r', Scalar.ONE, override=True)
     l.insert_deriv('l', Scalar.ONE, override=True)
     z.insert_deriv('z', Scalar.ONE, override=True)
-    pos0 = orbit.vector3_from_coords((r, l, z), None, derivs=True)
+    pos0 = orbit.vector3_from_coords((r, l, z), derivs=True)
 
-    pos1 = orbit.vector3_from_coords((r + eps, l, z), None, derivs=False)
+    pos1 = orbit.vector3_from_coords((r + eps, l, z), derivs=False)
     pos1_test = pos0 + eps * pos0.d_dr
     assert (pos1_test - pos1).norm().max() < delta
 
-    pos1 = orbit.vector3_from_coords((r, l + eps, z), None, derivs=False)
+    pos1 = orbit.vector3_from_coords((r, l + eps, z), derivs=False)
     pos1_test = pos0 + eps * pos0.d_dl
     assert (pos1_test - pos1).norm().max() < delta
 
-    pos1 = orbit.vector3_from_coords((r, l, z + eps), None, derivs=False)
+    pos1 = orbit.vector3_from_coords((r, l, z + eps), derivs=False)
     pos1_test = pos0 + eps * pos0.d_dz
     assert (pos1_test - pos1).norm().max() < delta
 
@@ -83,7 +83,7 @@ def test_orbitplane():
     prec = 0.1
     elements = (1, 0, 1, ae, 0, prec)
     epoch = 0
-    orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000', 'TEST')
+    orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000', path_id='TEST')
     eps = 1.e-6
     delta = 1.e-5
 
@@ -245,7 +245,7 @@ def test_orbitplane():
     # From/to mean anomaly
     elements = (1, 0, 1, 0.1, 0, 0.1)
     epoch = 0
-    orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000', 'TEST')
+    orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000', path_id='TEST')
 
     l = np.arange(361) * RPD
     anoms = orbit.to_mean_anomaly(l)

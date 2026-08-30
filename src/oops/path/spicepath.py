@@ -23,13 +23,13 @@ class SpicePath(Path):
     _USE_QUICKPATHS = True      # Overrides default to enable QuickPaths
 
     def __init__(self, spice_path, origin=None, frame=None, *, path_id=None):
-        """Constructor for a SpicePath object.
+        """Constructor for a SpicePath.
 
         Parameters:
             spice_path (str or int): The SPICE toolkit identification of the target body
                 as a name or integer.
-            origin (SpicePath or str, optional): The Path or the ID of the path relative
-                to which this path is defined. This must be a SpicePath or else, by
+            origin (SpicePath or str, optional): The Path or the ID of the Path relative
+                to which this Path is defined. This must be a SpicePath or else, by
                 default, the Solar System Barycenter.
             frame (SpiceFrame or str, optional): The Frame or the ID of the Frame for the
                 returned Path coordinates. This must be a SpiceFrame or else, by default,
@@ -41,8 +41,7 @@ class SpicePath(Path):
         Raises:
             LookupError: If `spice_path` is not a recognized body name or code within the
                 SPICE Toolkit.
-            ValueError: If `origin` is not a SpicePath or `frame` is not a
-                SpiceFrame.
+            ValueError: If `origin` is not a SpicePath or `frame` is not a SpiceFrame.
         """
 
         # Interpret the SPICE path
@@ -112,8 +111,7 @@ class SpicePath(Path):
 
     @staticmethod
     def _body_code_and_name(arg):
-        """The spice_code and spice_name of a body in the SPICE Toolkit, given a code
-        or a name.
+        """The SPICE body code and body name of a body, given either a code or a name.
 
         Parameters:
             arg (str or int): The SPICE toolkit identification of the body as a name or
@@ -258,8 +256,8 @@ class SpicePath(Path):
         Parameters:
             spice_path (str or int): The SPICE toolkit identification of the target body
                 as a name or integer.
-            origin (SpicePath or str, optional): The Path or the ID of the path relative
-                to which this path is defined. This must be a SpicePath or else, by
+            origin (SpicePath or str, optional): The Path or the ID of the Path relative
+                to which this Path is defined. This must be a SpicePath or else, by
                 default, the Solar System Barycenter.
             frame (SpiceFrame or str, optional): The Frame or the ID of the Frame for the
                 returned Path coordinates. This must be a SpiceFrame or else, by default,
@@ -317,8 +315,7 @@ class SpicePath(Path):
         return result
 
     def _get_shortcut(self, origin, frame):
-        """A Path that directly transforms from the given origin and frame to this
-        SpicePath.
+        """A Path that directly transforms from the given origin and frame to this Path.
 
         This is an override of the default method, needed because the SPICE Toolkit can
         handle the connections between SpicePaths and the SSB very efficiently.
@@ -328,8 +325,8 @@ class SpicePath(Path):
             frame (Frame): The Frame, which must be a valid wayframe.
 
         Returns:
-            Path: A Path that directly transforms from the given origin and frame to this
-            SpicePath.
+            Path: This Path relative to `origin` and `frame`, connected through the
+            nearest SpicePath ancestor of `origin`.
         """
 
         # Find the first SpicePath that's an ancestor of the origin

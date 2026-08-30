@@ -367,8 +367,8 @@ class Snapshot(Observation):
 
         obs_event = Event(time, Vector3.ZERO, self.path, self.frame)
         (surface_event,
-         obs_event) = surface.photon_to_event_by_coords(obs_event, coords,
-                                derivs=derivs, quick=quick, converge=converge)
+         obs_event) = surface.photon_to_coords(obs_event, coords, derivs=derivs,
+                                               quick=quick, converge=converge)
 
         neg_arr_ap = obs_event.neg_arr_ap
         if not underside:

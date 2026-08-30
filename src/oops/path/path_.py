@@ -14,9 +14,9 @@ from oops.mutable          import Mutable
 
 
 class Path(Mutable):
-    """Path is an abstract class that can return an Event (time, position and velocity)
+    """A Path is an abstract class that can return an Event (time, position and velocity)
     given a time or a Scalar of times. The coordinates are specified in a particular
-    Frame and relative to another path. The method `event_at_time` generates these Events.
+    Frame and relative to another Path. The method `event_at_time` generates these Events.
 
     Upon construction, each Path has a "primary definition" relative to its specified,
     pre-existing origin Path and reference Frame. For example, a `KeplerPath` describes an
@@ -55,9 +55,9 @@ class Path(Mutable):
     Note that it is possible to construct multiple Path objects that have the exact same
     primary definition. The first Path to be constructed with a particular definition
     will have a waypoint that points to itself. Subsequent Path objects that employ the
-    same definition will all share this waypoint. As a result, you can determine if two
-    Path objects are functionally equivalent by comparing their waypoint attributes using
-    the `is` operator.
+    same definition will all share this waypoint. As a result, you can determine whether
+    two Path objects are functionally equivalent by comparing their waypoint attributes
+    using the `is` operator.
 
     Optionally, a Path can be registered under a path ID, which is a string that can be
     used globally to refer to that Path. You can use the `as_path` method to convert a
@@ -71,7 +71,7 @@ class Path(Mutable):
     In general, two Paths cannot be assigned the same ID. If you attempt to reuse an ID,
     that ID will have a new version number appended to make it unique. For example, if a
     Path named "SATURN" already exists, the new Path will actually have the ID "SATURN-2".
-    However, if the new Path is functionally identical to the existing path called
+    However, if the new Path is functionally identical to the existing Path called
     "SATURN", then its ID will also be "SATURN".
 
     Properties:
@@ -160,7 +160,7 @@ class Path(Mutable):
             ValueError: If the shapes of `time` and this object cannot be broadcasted.
 
         Notes:
-            The time and this Path object are not required to have the same shape;
+            The time and the Path object are not required to have the same shape;
             standard rules of broadcasting apply.
         """
 
@@ -191,6 +191,19 @@ class Path(Mutable):
         return self.__str__()
 
     def show(self, level, indent=0):
+        """A string describing this Path and, recursively, the Paths it is built from.
+
+        Parameters:
+            level (int): The number of levels of the Path's definition to expand. Use 0
+                for the Path ID alone, 1 for a one-line summary, and larger values to
+                expand that many levels of the definition.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Path.
+        """
+
         if (level == 0 and self._path_id and self._origin is Path.SSB
                 and self._frame is Frame.J2000):
             return '"' + self._path_id + '"'
@@ -296,7 +309,7 @@ class Path(Mutable):
 
         Parameters:
             path_id (str, optional): Name under which to register this Path; omit to
-                leave this Path un-registered.
+                leave this Path unregistered.
         """
 
         # Fill in the _key and the waypoint. A class without a _WAYPOINTS dictionary
@@ -408,7 +421,7 @@ class Path(Mutable):
             path (Path or str): The Path or the Path's ID.
 
         Returns:
-            Path: The Path representing this Path's primary definition.
+            Path: The Path representing the given Path's primary definition.
 
         Raises:
             KeyError: If `path` is an ID string that has not been registered.
@@ -471,9 +484,9 @@ class Path(Mutable):
             derivs (bool, optional): True to include derivatives in the attributes of the
                 returned Event. The specific derivatives included will depend on the Path
                 subclass and those within the given Event.
-            quick (dict or bool, optional): An optional dictionary of parameter values to
-                use as overrides to the configured default QuickPath and QuickFrame
-                parameters; use False to disable the use of QuickPaths and QuickFrames.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default QuickPath and QuickFrame parameters.
+                Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
             Event: The given `event` relative to this Path.
@@ -512,9 +525,9 @@ class Path(Mutable):
                 returned Event. The specific derivatives included will depend on the Path
                 subclass and those within the given Event. Time derivatives are always
                 retained.
-            quick (dict or bool, optional): An optional dictionary of parameter values to
-                use as overrides to the configured default QuickPath and QuickFrame
-                parameters; use False to disable the use of QuickPaths and QuickFrames.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default QuickPath and QuickFrame parameters.
+                Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
             Event: The given `event` relative to the origin of this Path.
@@ -558,8 +571,8 @@ class Path(Mutable):
             frame (Frame or str, optional): A Frame object or its registered ID. Event
                 coordinates are returned in this Frame. The default is to use the Frame of
                 the `origin`.
-            use_shortcuts (bool, optional): False to prevent checking for a class-specific
-                shortcut.
+            use_shortcuts (bool, optional): True to check for a class-specific shortcut;
+                the default is False.
 
         Returns:
             Path: This Path relative to the specified origin and frame.
@@ -612,20 +625,11 @@ class Path(Mutable):
                                             use_shortcuts=use_shortcuts)
             new_path = LinkedPath(self, origin_path)
 
-# TBD
-#         # Fix the frames
-#         if origin._frame != Frame.J2000:
-#             if (test_key := (origin._waypoint, origin._waypoint, Frame.J2000
-#             new_path = LinkedPath(new_path, RotatedPath(origin, frame))
-#
-#         if self._frame != Frame.J2000:
-#             new_path = RotatedPath(new_path, self._frame)
         # If the frame is correct, we're done
         if new_path._frame == frame:
             return new_path
 
         # Otherwise, rotate and return
-#         return RotatedPath(new_path, frame, )
         return RotatedPath(new_path, frame)
 
     def wrt(self, origin, frame=None):
@@ -658,18 +662,22 @@ class Path(Mutable):
             frame (Frame): The Frame, which must be a valid wayframe.
 
         Returns:
-            Path or None: The "shortcut" Path if it could be constructed.
+            Path or None: The "shortcut" Path if it could be constructed; None otherwise.
         """
 
         return None
 
-    def quick_path(self, time, quick=None):
+    def quick_path(self, time, *, quick=None):
         """A QuickPath that approximates this Path for the given range of times.
 
         A QuickPath operates by sampling the given Path and then setting up an
         interpolation grid to evaluate in its place. It can substantially speed up
         performance when the same Path must be evaluated many times, e.g., for every pixel
         of an image.
+
+        This method evaluates the set of times and constructs a QuickPath only if doing so
+        is likely to speed up this and future evaluations. Otherwise, it returns this
+        Path.
 
         Parameters:
             time (Scalar): The time(s) at which this path is to be evaluated.
@@ -679,11 +687,11 @@ class Path(Mutable):
                 used.
 
         Returns:
-            QuickPath: A Path that approximates this Path for the given range of times,
-            but can be evaluated quickly via splines.
+            Path: A QuickPath that approximates this Path for the given range of times but
+            can be evaluated quickly via splines; otherwise, this Path.
 
         Notes:
-            Any QuickPaths generated by this function are saved as a list inside
+            Any QuickPaths generated by this method are saved as a list inside
             `self._quickpaths`. If a pre-existing QuickPath that covers the time range is
             found in this list, it is returned rather than constructing a new QuickPath.
             If a QuickPath is found in the list that partially covers the time range, that
@@ -703,10 +711,10 @@ class NullPath(Path):
         """Constructor for a NullPath.
 
         Parameters:
-            path (Path or str): The waypoint or Path ID to use as the origin of the
-                returned Path, from which it will always have a zero-valued offset.
-            frame (Frame or str, optional): The wayframe or Frame ID to use in the
-                returned Path; by default, this is the Path's `frame` attribute.
+            path (Path or str): The Path or Path ID to use as the origin of this Path,
+                from which it will always have a zero-valued offset.
+            frame (Frame or str, optional): The Frame or Frame ID to use in this Path; by
+                default, this is the Path's `frame` attribute.
 
         Raises:
             KeyError: If `path` is an ID string that has not been registered.
@@ -828,7 +836,7 @@ class SSBPath(NullPath):
 class LinkedPath(Path):
     """A LinkedPath applies one Path to another.
 
-    The new path returns events relative to the origin and frame of a second Path.
+    The new Path returns Events relative to the origin and Frame of a second Path.
     """
 
     def __init__(self, path, parent):
@@ -903,9 +911,9 @@ class LinkedPath(Path):
 
 
 class RelativePath(Path):
-    """RelativePath defines the separation between paths with a common origin.
+    """A Path subclass defining the separation between two Paths with a common origin.
 
-    The new path uses the coordinate frame of the origin path.
+    The new Path uses the coordinate Frame of the origin Path.
     """
 
     def __init__(self, path, origin):
@@ -985,9 +993,9 @@ class RelativePath(Path):
 
 
 class ReversedPath(Path):
-    """ReversedPath generates the reversed Events from that of a given Path.
+    """A Path subclass that generates the reversed Events of a given Path.
 
-    The frame is that of the original origin.
+    The Frame is that of the original origin.
     """
 
     def __init__(self, path):
@@ -1041,7 +1049,7 @@ class ReversedPath(Path):
 
 
 class RotatedPath(Path):
-    """RotatedPath returns event objects rotated to another coordinate frame."""
+    """A Path subclass that returns Events rotated into another coordinate Frame."""
 
     def __init__(self, path, frame):
         """Constructor for a RotatedPath.
