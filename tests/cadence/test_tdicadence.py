@@ -469,4 +469,20 @@ def case_tdicadence_10_100_10_1(cad):
     assert cad.tstride_at_tstep(9) == 10
     assert cad.tstride_at_tstep(9, sign=-1) == 0
     assert cad.tstride_at_tstep(10) == 10
+
+
+def test_tdicadence_time_shift() -> None:
+    """A shifted TDICadence keeps every parameter and offsets all of its times."""
+
+    cad = oops.cadence.TDICadence(10, 100., 10., 2, tdi_sign=1)
+    shifted = cad.time_shift(5.)
+
+    assert shifted._lines == cad._lines
+    assert shifted._tstart == cad._tstart + 5.
+    assert shifted._tdi_texp == cad._tdi_texp
+    assert shifted._tdi_stages == cad._tdi_stages
+    assert shifted._tdi_sign == cad._tdi_sign
+    assert shifted.time[0] == cad.time[0] + 5.
+    assert shifted.time[1] == cad.time[1] + 5.
+
 ##########################################################################################

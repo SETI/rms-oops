@@ -18,13 +18,15 @@ def test_timeshift():
     assert shifted.link is None
 
     # The shift is held privately and published as a property, as in PathShift and
-    # FrameShift; everything the Cadence contract requires stays a public attribute,
-    # as in the other Cadence subclasses
+    # FrameShift. The wrapped cadence is an implementation detail, like the internals of
+    # the other Cadence subclasses; only the attributes the Cadence contract documents
+    # stay public.
     assert isinstance(type(shifted).dt, property)
     assert isinstance(type(shifted).link, property)
-    assert sorted(a for a in vars(shifted) if a.startswith('_')) == ['_dt', '_link']
-    for name in ('cadence', 'time', 'midtime', 'lasttime', 'shape',
-                 'is_continuous', 'is_unique', 'min_tstride', 'max_tstride'):
+    assert sorted(a for a in vars(shifted)
+                  if a.startswith('_')) == ['_cadence', '_dt', '_link']
+    for name in ('time', 'midtime', 'lasttime', 'shape', 'is_continuous', 'is_unique',
+                 'min_tstride', 'max_tstride'):
         assert name in vars(shifted)
 
     # Every time is offset by dt, and the shape is unchanged

@@ -40,18 +40,18 @@ class FOV(Mutable):
     through these methods and into the subclass methods.
 
     Properties:
-        * uv_los (Pair): The `(u,v)` coordinates of the nominal line of sight.
-        * uv_scale (Pair): The approximate ratios `dx/du` and `dy/dv`. For example, if
-          `(u,v)` are in units of arcseconds, then `uv_scale` is::
+        uv_los (Pair): The `(u,v)` coordinates of the nominal line of sight.
+        uv_scale (Pair): The approximate ratios `dx/du` and `dy/dv`. For example, if
+            `(u,v)` are in units of arcseconds, then `uv_scale` is::
 
                 Pair((pi/180/3600., pi/180/3600.)).
 
-          Use the sign of the second element to define the direction of increasing `v`:
-          negative for up, positive for down.
-        * uv_shape (Pair): The size of the field of view in pixels. This number can be
-          non-integral if the detector is not composed of a rectangular array of pixels.
-        * uv_area (float): The nominal area of a region defined by unit steps in `(u,v)`,
-          e.g., the size of a pixel in steradians.
+            Use the sign of the second element to define the direction of increasing `v`:
+            negative for up, positive for down.
+        uv_shape (Pair): The size of the field of view in pixels. This number can be
+            non-integral if the detector is not composed of a rectangular array of pixels.
+        uv_area (float): The nominal area of a region defined by unit steps in `(u,v)`,
+            e.g., the size of a pixel in steradians.
     """
 
     # Override this class attribute to False for FOV subclasses that have time-dependence

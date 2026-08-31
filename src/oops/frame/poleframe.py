@@ -177,7 +177,7 @@ class PoleFrame(Frame):
 
         # Create the transform
         xform = Transform(Matrix3(matrix, xform.matrix.mask), Vector3.ZERO,
-                          self._wayframe, self._reference, self._origin)
+                          self._wayframe, self._reference, origin=self._origin)
 
         # Cache the transform if necessary
         if time.shape == ():

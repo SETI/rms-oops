@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/backplane/__init__.py: Backplane class
+# oops/backplane/__init__.py
 ##########################################################################################
 
 import datetime
@@ -17,6 +17,7 @@ from oops.surface.ringplane import RingPlane
 
 __all__ = ['Backplane']
 
+
 class Backplane(Mutable):
     """Class that supports the generation and manipulation of sets of backplanes with a
     particular Observation.
@@ -26,23 +27,85 @@ class Backplane(Mutable):
 
     DIAGNOSTICS = False     # set True to log diagnostics
     PERFORMANCE = False     # set True to log timings of surface calculations
-
     ALL_DERIVS = False
 
-    def __init__(self, obs, meshgrid=None, time=None, inventory=None,
-                            inventory_border=0):
+    def __init__(self, obs, meshgrid=None, time=None, *, inventory=None,
+                 inventory_border=0):
         """The constructor.
 
-        Examples:
-            ('SUN<', 'SATURN:RING') could describe a 2-D image of Saturn's rings. ('SUN>',
-            'SATURN:RING') could describe a solar occultation profile of Saturn's rings.
-            ('SUN-', 'SATURN:RING') defines the direction of the center of Saturn's rings
-            (which is also the center of Saturn). Most of the time, an event key only
-            contains two items as in the examples above. However, shadowing can be defined
-            by inserting one additional surface key after 'SUN<'. For example, ('SUN<',
-            'MIMAS', 'SATURN:RING') describes the surface event at Mimas, subject to the
-            constraint that the photons subsequently reflected off of Saturn and arrived
-            at the detector; it can be used to determine how Mimas shadows the rings.
+        Parameters:
+            obs (Observation): The  object with which this Backplane is associated.
+            meshgrid (Meshgrid, optional): Defines the sampling of the FOV; default is to
+                sample the center of every pixel.
+            time (Scalar, optional): Time in seconds TDB during the Observation. The shape
+                of this Scalar will be broadcasted with the shape of the meshgrid. Default
+                is to sample the midtime of every pixel.
+            inventory (bool or dict, optional): True to keep an inventory of bodies in the
+                field of view and to keep track of their locations. This option can speed
+                up backplane calculations for bodies that occupy a small fraction of the
+                field of view. If a dictionary is provided, this dictionary is used.
+            inventory_border (int, optional): The  number of pixels to extend the box
+                surrounding each body as determined by the inventory.
+
+        Notes:
+            Every backplane array method takes an "event_key" as its first input. This is
+            normally indicated by a tuple of two items::
+
+                (source_key, surface_key)
+
+            where the first item is the source of the lighting (usually the Sun) and the
+            second is the surface for which geometry is needed.
+
+            Each intercepted surface is defined by a surface key string, one of:
+
+                * body_name      for the default surface of a body;
+                * body_name:RING for the ring surface associated with a body;
+                * body_name:ANSA for the ansa surface associated with a body;
+                * body_name:LIMB for the limb surface associated with a body.
+
+            The light source is defined by a source key string of the form:
+
+                * body_name< for dispersed illumination;
+                * body_name> for occultation illumination;
+                * body_name- for path-based illumination.
+
+            These strings are not case-sensitive.
+
+            As a shortcut, you can specify a surface_key string alone in place of an
+            `event_key`, in which case "SUN<" is assumed as the source.
+
+            In dispersed illumination, each backplane has spatial dimensions that are
+            defined by the Meshgrid. Photons leave the source in all directions, and some
+            of those that intercept the surface are reflected toward the detector. The
+            detector selects the photons it receives based on its. The event is defined as
+            the moment the photons hit the surface and are reflected.
+
+            In occultation illumination, backplanes have no spatial dimensions. Photons
+            leave the source along a direct line of sight to the detector, and the event
+            is defined as the time and location where the photons intercept the surface.
+
+            In path-based illumination, the photon follows one or more straight- line
+            paths between the origin points of the surfaces. The backplanes have no
+            spatial dimensions, but can be used to answer such questions as "what is the
+            sub-solar latitude on Saturn?" or "where is Enceladus in this image?"
+
+            Examples:
+
+                * `('SUN<', 'SATURN:RING')` could describe a 2-D image of Saturn's rings.
+                * `('SUN>', 'SATURN:RING')` could describe a solar occultation profile of
+                  Saturn's rings.
+                * `('SUN-', 'SATURN:RING')` defines the direction of the center of
+                  Saturn's rings (which is also the center of Saturn).
+
+                Most of the time, an event key only contains two items as in the examples
+                above. However, shadowing can be defined by inserting one additional
+                surface key after 'SUN<'. For example,::
+
+                    ('SUN<', 'MIMAS', 'SATURN:RING')
+
+                describes the surface event at Mimas, subject to the constraint that the
+                photons subsequently reflected off of Saturn and arrived at the detector;
+                it can be used to determine how Mimas shadows the rings.
         """
 
         self.obs = obs
@@ -91,12 +154,10 @@ class Backplane(Mutable):
             True : self.obs_event.with_los_derivs()
         }
 
-        self.obs_gridless_event = self.obs.gridless_event(self.meshgrid,
-                                                          time=self.time)
+        self.obs_gridless_event = self.obs.gridless_event(self.meshgrid, time=self.time)
 
         # The surface_events dictionary comes in two versions, with and without
         # derivatives with respect to los and time.
-
         self.surface_events = {
             False: {},
             True : {}
@@ -105,19 +166,17 @@ class Backplane(Mutable):
         # Gridless/occultation events of photon paths arriving at the detector
         self.gridless_arrivals = {}
 
-        # The backplanes dictionary holds every backplane that has been
-        # calculated. This includes boolean backplanes, aka masks. A backplane
-        # is keyed by (name of backplane, event_key, optional additional
-        # parameters). The name of the backplane is always the name of the
-        # backplane method that generates this backplane. For example,
-        # ('phase_angle', ('SATURN',)) is the key for a backplane of phase angle
+        # The backplanes dictionary holds every backplane that has been calculated. This
+        # includes boolean backplanes, aka masks. A backplane is keyed by (name of
+        # backplane, event_key, optional additional parameters). The name of the backplane
+        # is always the name of the backplane method that generates this backplane. For
+        # example, ('phase_angle', ('SATURN',)) is the key for a backplane of phase angle
         # values at the Saturn intercept points.
         #
-        # If the function that returns a backplane requires additional
-        # parameters, those appear in the tuple after the event key in the same
-        # order that they appear in the calling function. For example,
-        # ('latitude', ('SATURN',), 'graphic') is the key for the backplane of
-        # planetographic latitudes at Saturn.
+        # If the function that returns a backplane requires additional parameters, those
+        # appear in the tuple after the event key in the same order that they appear in
+        # the calling function. For example, ('latitude', ('SATURN',), 'graphic') is the
+        # key for the backplane of planetographic latitudes at Saturn.
 
         self.backplanes = {}
         self.backplanes_with_derivs = {}    # used by ALL_DERIVS option
@@ -125,12 +184,11 @@ class Backplane(Mutable):
         # Antimasks of surfaces, keyed by surface key.
         self.antimasks = {}
 
-        # We save unmasked surface intercept events based on the intercept_key
-        # of the surface. This avoids the re-calculating of intercept events
-        # when the only change is to their coordinates or mask. The dictionary
-        # key is an event_key in which each surface_key (after the first item,
-        # which is the light source name) is replaced by the unmasked surface
-        # intercept key.
+        # We save unmasked surface intercept events based on the intercept_key of the
+        # surface. This avoids the re-calculating of intercept events when the only change
+        # is to their coordinates or mask. The dictionary key is an event_key in which
+        # each surface_key (after the first item, which is the light source name) is
+        # replaced by the unmasked surface intercept key.
 
         self.intercepts = {
             False: {},
@@ -145,17 +203,17 @@ class Backplane(Mutable):
 
     def __getstate__(self):
 
-        return (self.obs, self._input_meshgrid, self.time,
-                self._input_inventory, self.inventory_border,
-                self.surface_events, self.gridless_arrivals, self.antimasks,
-                self.intercepts)
+        return (self.obs, self._input_meshgrid, self.time, self._input_inventory,
+                self.inventory_border, self.surface_events, self.gridless_arrivals,
+                self.antimasks, self.intercepts)
 
     def __setstate__(self, state):
 
         (obs, meshgrid, time, inventory, inventory_border,
          surface_events, gridless_arrivals, antimasks, intercepts) = state
 
-        self.__init__(obs, meshgrid, time, inventory, inventory_border)
+        self.__init__(obs, meshgrid, time, inventory=inventory,
+                      inventory_border=inventory_border)
         self.surface_events = surface_events
         self.gridless_arrivals = gridless_arrivals
         self.antimasks = antimasks
@@ -174,11 +232,11 @@ class Backplane(Mutable):
 
     @property
     def dlos_duv1(self):
-        """The derivative of the line of sight with respect to (u1,v1), where
-        (u1,v1) match (u,v) but have been forced to be orthogonal. This is done
-        by leaving the lesser pixel size alone, and shifting the greater pixel
-        edge to be orthogonal while conserving the pixel area. This is a
-        better pair to use for determining spatial resolution.
+        """The derivative of the line of sight with respect to (u1,v1), where (u1,v1)
+        match (u,v) but have been forced to be orthogonal. This is done by leaving the
+        lesser pixel size alone, and shifting the greater pixel edge to be orthogonal
+        while conserving the pixel area. This is a better pair to use for determining
+        spatial resolution.
         """
 
         if hasattr(self, '_dlos_duv1'):
@@ -235,11 +293,11 @@ class Backplane(Mutable):
     def standardize_event_key(event_key, default=''):
         """Repair an event key to make it suitable for indexing a dictionary.
 
-        The photons originate from the Sun unless otherwise indicated. An empty
-        event_key is returned as an empty tuple.
+        The photons originate from the Sun unless otherwise indicated. An empty event_key
+        is returned as an empty tuple.
 
-        Use default = 'ANSA', 'RING', or 'LIMB' to add this suffix to the body
-        name if no suffix is specified.
+        Use default = 'ANSA', 'RING', or 'LIMB' to add this suffix to the body name if no
+        suffix is specified.
         """
 
         if not event_key:
@@ -323,8 +381,8 @@ class Backplane(Mutable):
     def standardize_backplane_key(self, backplane_key):
         """Repair a backplane key to make it suitable for indexing a dictionary.
 
-        A string is turned into a tuple. Strings are converted to upper case. If
-        the argument is a backplane already, the key is extracted from it.
+        A string is turned into a tuple. Strings are converted to upper case. If the
+        argument is a backplane already, the key is extracted from it.
         """
 
         if isinstance(backplane_key, Qube):
@@ -336,7 +394,7 @@ class Backplane(Mutable):
                     return key
 
             raise ValueError('illegal backplane key type: ' +
-                              type(backplane_key).__name__)
+                             type(backplane_key).__name__)
 
         return Backplane._standardize_backplane_key_if_not_qube(backplane_key)
 
@@ -359,11 +417,11 @@ class Backplane(Mutable):
     def _event_and_backplane_keys(self, event_key, names=(), default=''):
         """Interpret the input as either a backplane_key or an event_key.
 
-        names is the set of possible backplane names to seek; if not specified,
-        the complete set of defined Backplane names is used.
+        names is the set of possible backplane names to seek; if not specified, the
+        complete set of defined Backplane names is used.
 
-        Use default = 'ANSA', 'RING', or 'LIMB' to add this suffix to the body
-        name if no suffix is specified.
+        Use default = 'ANSA', 'RING', or 'LIMB' to add this suffix to the body name if no
+        suffix is specified.
         """
 
         if not names:
@@ -387,9 +445,8 @@ class Backplane(Mutable):
     def get_body_and_modifier(surface_key):
         """A body object and modifier based on the given surface key.
 
-        The string is normally a registered body ID (case insensitive), but it
-        can be modified with ':ANSA', ':RING' or ':LIMB' to indicate an
-        associated surface.
+        The string is normally a registered body ID (case insensitive), but it can be
+        modified with ':ANSA', ':RING' or ':LIMB' to indicate an associated surface.
         """
 
         surface_id = surface_key.upper()
@@ -419,8 +476,8 @@ class Backplane(Mutable):
         """The unmasked surface key associated with a given surface key.
         Example: SATURN_MAIN_RINGS -> SATURN:RING.
 
-        If the surface has no associated unmasked surface, the same surface key
-        is returned.
+        If the surface has no associated unmasked surface, the same surface key is
+        returned.
         """
 
         (body, modifier) = Backplane.get_body_and_modifier(surface_key)
@@ -445,9 +502,9 @@ class Backplane(Mutable):
 
         parent = body.parent
 
-        # If it's a ring or orbit, we must confirm that it has zero inclination
-        # or elevation, and uses the parent body's ring_frame. Format is:
-        # ('ring', origin, frame, elevation, i, node, dnode_dt, epoch)
+        # If it's a ring or orbit, we must confirm that it has zero inclination or
+        # elevation, and uses the parent body's ring_frame. Format is: ('ring', origin,
+        # frame, elevation, i, node, dnode_dt, epoch)
         if surface_type == 'ring':
             if intercept_key[3:] != (0., 0., 0., 0., 0.):
                 return surface_key
@@ -468,8 +525,7 @@ class Backplane(Mutable):
     @staticmethod
     @functools.lru_cache(maxsize=100)
     def unmasked_event_key(event_key):
-        """Return the unmasked event key based on an event key.
-        """
+        """Return the unmasked event key based on an event key."""
 
         event_key = Backplane.standardize_event_key(event_key)
 
@@ -482,8 +538,7 @@ class Backplane(Mutable):
     @staticmethod
     @functools.lru_cache(maxsize=100)
     def intercept_dict_key(event_key):
-        """Return the key for the intercepts dictionary based on an event key.
-        """
+        """Return the key for the intercepts dictionary based on an event key."""
 
         event_key = Backplane.standardize_event_key(event_key)
 
@@ -547,7 +602,18 @@ class Backplane(Mutable):
     @staticmethod
     @functools.lru_cache(maxsize=100)
     def get_surface(surface_key):
-        """A surface based on its surface key."""
+        """A surface based on its surface key.
+
+        Parameters:
+            surface_key (str): A registered body ID, optionally modified with ":ANSA",
+                ":RING" or ":LIMB" to select an associated surface.
+
+        Returns:
+            Surface: The surface that the key identifies.
+
+        Raises:
+            ValueError: If the key carries a modifier that is not recognized.
+        """
 
         (body, modifier) = Backplane.get_body_and_modifier(surface_key)
 
@@ -569,11 +635,13 @@ class Backplane(Mutable):
         if modifier == 'LIMB':
             return Limb(body.surface)
 
+        raise ValueError(f'unrecognized surface modifier: {surface_key}')
+
     def get_antimask(self, surface_key):
         """Prepare a rectangular antimask for a particular surface event.
 
-        The antimask defines the bounding box of the meshgrid that intercepts
-        the given surface.
+        The antimask defines the bounding box of the meshgrid that intercepts the given
+        surface.
         """
 
         # Return from the antimask cache if present
@@ -643,13 +711,11 @@ class Backplane(Mutable):
             # Fill in the arrivals if needed
             if arrivals and not event.has_arrivals():
                 source = Body.lookup(event_key[0][:-1])
-                event = source.photon_to_event(event,
-                                               antimask=event.antimask,
+                event = source.photon_to_event(event, antimask=event.antimask,
                                                derivs=derivs)[1]
                 surface = Backplane.get_surface(event_key[1])
                 event = event.wrt(surface.origin, surface.frame)
-                self._save_event(event_key, event, surface=surface,
-                                                   derivs=derivs)
+                self._save_event(event_key, event, surface=surface, derivs=derivs)
 
             # Fill in the perpendicular if needed
             if event.perp is None:
@@ -659,14 +725,12 @@ class Backplane(Mutable):
             return event
 
         # Always include derivatives by default, except for shadowing events
-        is_shadowing   = Backplane._is_shadowing(event_key)
-        is_occultation = Backplane._is_occultation(event_key)
-        is_gridless    = Backplane._is_gridless(event_key)
+        is_shadowing = Backplane._is_shadowing(event_key)
+        is_gridless  = Backplane._is_gridless(event_key)
 
         if not is_shadowing and not derivs:
             try:
-                event = self.get_surface_event(event_key, derivs=True,
-                                                          arrivals=arrivals)
+                event = self.get_surface_event(event_key, derivs=True, arrivals=arrivals)
                 return event.wod
             except NotImplementedError:
                 pass
@@ -676,21 +740,10 @@ class Backplane(Mutable):
         # key.
         if is_shadowing:
             two_item_key = event_key[::2]       # skip over middle item
-            detection = self.get_surface_event(two_item_key, derivs=derivs,
-                                                             arrivals=True)
+            detection = self.get_surface_event(two_item_key, derivs=derivs, arrivals=True)
 
-        # For occultation events, the line of sight from the detector is
-        # defined by the source.
-        elif is_occultation:
-            source = Body.lookup(event_key[0][:-1])
-            if source in self.obs_occultation_events:
-                detection = self.obs_occultation_events[source]
-            else:
-                detection = source.photon_to_event(self.obs_gridless_event,
-                                                   derivs=True)
-                detection = event.wrt_frame(self.obs.frame)
-                self.obs_occultation_events[source] = detection
-
+        # For occultation events, the line of sight from the detector is defined by
+        # the source; get_obs_event() resolves that case.
         else:
             detection = self.get_obs_event(event_key, derivs=derivs)
 
@@ -708,8 +761,7 @@ class Backplane(Mutable):
 
         # Fill in the arrivals recursively if needed
         if arrivals and not event.has_arrivals():
-            event = self.get_surface_event(event_key, derivs=derivs,
-                                                      arrivals=arrivals)
+            event = self.get_surface_event(event_key, derivs=derivs, arrivals=arrivals)
 
         return event
 
@@ -736,8 +788,7 @@ class Backplane(Mutable):
 
         else:
             now = datetime.datetime.now()
-            event = surface.unmasked.photon_to_event(detection,
-                                                     antimask=antimask,
+            event = surface.unmasked.photon_to_event(detection, antimask=antimask,
                                                      derivs=derivs)[0]
             if self.PERFORMANCE:
                 elapsed = (datetime.datetime.now() - now).total_seconds()
@@ -750,14 +801,12 @@ class Backplane(Mutable):
                 self.intercepts[False][intercept_key] = event.wod
 
             # Also save the unmasked event in the surface dictionary
-            self._save_event(unmasked_event_key, event, surface=surface,
-                                                        derivs=derivs)
+            self._save_event(unmasked_event_key, event, surface=surface, derivs=derivs)
 
         # Apply the coordinates and mask
         if event_key != unmasked_event_key:
-            event = surface.apply_coords_to_event(
-                                    event,
-                                    obs=self.get_obs_event(event_key, derivs))
+            event = surface.apply_coords_to_event(event,
+                                                obs=self.get_obs_event(event_key, derivs))
             self._save_event(event_key, event, surface=surface, derivs=derivs)
 
         return event
@@ -774,8 +823,7 @@ class Backplane(Mutable):
         self.surface_events[derivs][event_key] = event
 
         # Save the antimask
-        if (Backplane._is_dispersed(event_key)
-                and not Backplane._is_shadowing(event_key)):
+        if Backplane._is_dispersed(event_key) and not Backplane._is_shadowing(event_key):
             surface_key = event_key[-1]
             if surface_key not in self.antimasks:
                 self.antimasks[surface_key] = event.antimask
@@ -792,8 +840,7 @@ class Backplane(Mutable):
         derivs = derivs or self.ALL_DERIVS
 
         gridless_key = self.gridless_event_key(event_key)
-        return self.get_surface_event(gridless_key, derivs=derivs,
-                                                    arrivals=arrivals)
+        return self.get_surface_event(gridless_key, derivs=derivs, arrivals=arrivals)
 
     ######################################################################################
     # Backplane support
@@ -826,12 +873,8 @@ class Backplane(Mutable):
                 vals[...] = backplane.vals
                 backplane = Scalar(vals, backplane.mask)
 
-        # For reference, we add the key as an attribute of each backplane
-        # object
-        if hasattr(backplane, 'add_attr'):      # temporary!
-            backplane.add_attr('key', key)
-        else:
-            backplane.key = key                 # needed for old polymath
+        # For reference, we add the key as an attribute of each backplane object
+        backplane.add_attr('key', key)
         backplane = backplane.as_readonly(recursive=True)
         self.backplanes[key] = backplane.wod
 
@@ -868,23 +911,25 @@ class Backplane(Mutable):
     # Method to access a backplane or mask by key
     ######################################################################################
 
-    # Here we use the class introspection capabilities of Python to provide a
-    # general way to generate any backplane based on its key. This makes it
-    # possible to access any backplane via its key rather than by making an
-    # explicit call to the function that generates the key.
+    # Here we use the class introspection capabilities of Python to provide a general way
+    # to generate any backplane based on its key. This makes it possible to access any
+    # backplane via its key rather than by making an explicit call to the function that
+    # generates the key.
 
-    # Here we keep track of all the function names that generate backplanes. For
-    # security, we disallow evaluate() to access any function not in this list.
+    # Here we keep track of all the function names that generate backplanes. For security,
+    # we disallow evaluate() to access any function not in this list.
 
     CALLABLES = set()
 
     def evaluate(self, backplane_key, derivs=False):
         """Evaluate the backplane array based on the given "backplane_key". A
-        backplane_key takes the form of a tuple:
+        `backplane_key` takes the form of a tuple::
+
             (function_name, event_key, ...)
-        where function_name is the name of any Backplane array method, and
-        the remaining items in the tuple are the input arguments to that method,
-        starting with the event_key.
+
+        where `function_name` is the name of any Backplane array method and the remaining
+        items in the tuple are the input arguments to that method, starting with the
+        `event_key`.
         """
 
         if isinstance(backplane_key, str):
@@ -905,8 +950,8 @@ class Backplane(Mutable):
 
     @staticmethod
     def _define_backplane_names(globals_dict):
-        """Call at the end of each set of Backplane definitions to load them
-        into the registry. Input is globals().copy().
+        """Call at the end of each set of Backplane definitions to load them into the
+        registry. Input is globals().copy().
         """
 
         for key, value in globals_dict.items():

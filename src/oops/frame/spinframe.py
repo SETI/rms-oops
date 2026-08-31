@@ -135,7 +135,7 @@ class SpinFrame(Frame):
         mat[..., self._axis1, self._axis0] = -mat[..., self._axis0, self._axis1]
 
         matrix = Matrix3(mat, angle.mask)
-        return Transform(matrix, self._omega, self, self._reference, self._origin)
+        return Transform(matrix, self._omega, self, self._reference, origin=self._origin)
 
 ##########################################################################################
 

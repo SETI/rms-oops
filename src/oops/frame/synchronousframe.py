@@ -112,7 +112,7 @@ class SynchronousFrame(Frame):
         matrix = Matrix3.twovec(event.pos, 0, event.vel, 1)
         omega = event.pos.cross(event.vel) / event.pos.dot(event.pos)
 
-        return Transform(matrix, omega, self, self._reference, self._orbit_path)
+        return Transform(matrix, omega, self, self._reference, origin=self._orbit_path)
 
 ##########################################################################################
 

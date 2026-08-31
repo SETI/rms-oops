@@ -6,9 +6,9 @@ from oops.cadence import Metronome
 
 
 class SnapCadence(Metronome):
-    """A shapeless Cadence subclass with a single start and stop."""
+    """A Cadence subclass with a single time step."""
 
-    def __init__(self, tstart, texp, clip=True):
+    def __init__(self, tstart, texp, *, clip=True):
         """Constructor for a SnapCadence.
 
         Parameters:
@@ -22,10 +22,11 @@ class SnapCadence(Metronome):
 
     def __getstate__(self):
         self.refresh()
-        return (self.tstart, self.texp, self.clip)
+        return (self._tstart, self._texp, self._clip)
 
     def __setstate__(self, state):
-        self.__init__(*state)
+        (tstart, texp, clip) = state
+        self.__init__(tstart, texp, clip=clip)
         self.freeze()
 
 ##########################################################################################

@@ -81,7 +81,7 @@ Transform.IDENTITY = Transform(Matrix3.IDENTITY,
                                Vector3.ZERO,
                                frame.Frame.J2000,
                                frame.Frame.J2000,
-                               path.Path.SSB)
+                               origin=path.Path.SSB)
 
 Cache._Frame = Frame
 Cache._Path = Path

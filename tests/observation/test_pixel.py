@@ -34,7 +34,7 @@ def test_pixel():
 
     assert np.all(uv.mask == np.array([3*[[False]] + [[True]]]))
     assert np.all(time.mask == uv.mask)
-    assert time[:3] == cadence.tstride * indices[:3]
+    assert time[:3] == cadence._tstride * indices[:3]
     assert uv[:3] == (0.5,0.5)
 
     # uvt_range() with remask == False
@@ -49,7 +49,7 @@ def test_pixel():
     assert uv_max == (1,1)
 
     assert time_min == cadence.time_range_at_tstep(indices_)[0]
-    assert time_max == time_min + cadence.texp
+    assert time_max == time_min + cadence._texp
 
     # uvt_range() with remask == False, new indices
     non_ints = indices + 0.2
@@ -64,7 +64,7 @@ def test_pixel():
     assert uv_max == (1,1)
 
     assert time_min == cadence.time_range_at_tstep(non_ints)[0]
-    assert time_max == time_min + cadence.texp
+    assert time_max == time_min + cadence._texp
 
     # uvt_range() with remask == True, new indices
     non_ints = indices + 0.2
@@ -77,8 +77,8 @@ def test_pixel():
 
     assert uv_min[:2] == (0,0)
     assert uv_max[:2] == (1,1)
-    assert time_min[:2] == indices[:2] * cadence.tstride
-    assert time_max[:2] == time_min[:2] + cadence.texp
+    assert time_min[:2] == indices[:2] * cadence._tstride
+    assert time_max[:2] == time_min[:2] + cadence._texp
 
     # time_range_at_uv() with remask == False
     uv = Pair([(0,0),(0,1),(1,0),(1,1),(1,2)])
@@ -122,7 +122,7 @@ def test_pixel():
 
     assert np.all(uv.mask == np.array(3*[False] + [True]))
     assert np.all(time.mask == uv.mask)
-    assert time[:3] == cadence.tstride * indices[:3].to_scalar(1)
+    assert time[:3] == cadence._tstride * indices[:3].to_scalar(1)
     assert uv[:3] == (0.5,0.5)
 
     # uvt_range() with remask == False
@@ -137,7 +137,7 @@ def test_pixel():
     assert uv_max == (1,1)
 
     assert time_min == cadence.time_range_at_tstep(indices.to_scalar(1))[0]
-    assert time_max == time_min + cadence.texp
+    assert time_max == time_min + cadence._texp
 
     # uvt_range() with remask == False, new indices
     non_ints = indices + (0.2,0.9)
@@ -152,7 +152,7 @@ def test_pixel():
     assert uv_max == (1,1)
 
     assert time_min == cadence.time_range_at_tstep(indices.to_scalar(1))[0]
-    assert time_max == time_min + cadence.texp
+    assert time_max == time_min + cadence._texp
 
     # uvt_range() with remask == True, new indices
     non_ints = indices + (0.2,0.2)
@@ -169,8 +169,8 @@ def test_pixel():
     assert uv_min[2:] == Pair.MASKED
     assert uv_max[2:] == Pair.MASKED
 
-    assert time_min[:2] == indices.to_scalar(1)[:2] * cadence.tstride
-    assert time_max[:2] == time_min[:2] + cadence.texp
+    assert time_min[:2] == indices.to_scalar(1)[:2] * cadence._tstride
+    assert time_max[:2] == time_min[:2] + cadence._texp
 
     # time_range_at_uv() with remask == False
     uv = Pair([(0,0),(0,1),(1,0),(1,1),(1,2)])

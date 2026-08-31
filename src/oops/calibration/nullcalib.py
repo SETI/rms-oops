@@ -26,7 +26,7 @@ class NullCalib(Calibration):
         self.shape = ()
 
     def __getstate__(self):
-        return (self.name)
+        return (self.name,)
 
     def __setstate__(self, state):
         self.__init__(*state)
@@ -35,12 +35,12 @@ class NullCalib(Calibration):
         """Extended-source calibrated values for image DN and pixel coordinates.
 
         Parameters:
-            dn (Scalar or array-like): Un-calibrated image array values at the given pixel
-                coordinates.
-            uv_pair (Pair): Associated (u,v) pixel coordinates in the image.
+            dn (Scalar): Un-calibrated image array values at the given pixel coordinates.
+            uv_pair (Pair): Associated `(u,v)` pixel coordinates in the image. Note that
+                `dn` and `uv_pair` will be casted to the same shape.
 
         Returns:
-            (Scalar): Calibrated values.
+            Scalar: Calibrated values for an extended source.
         """
 
         return dn
@@ -49,13 +49,12 @@ class NullCalib(Calibration):
         """Un-calibrated image DN from extended-source calibrated values.
 
         Parameters:
-            value (Scalar or array-like): Calibrated values at the given pixel
-                coordinates.
-            uv_pair (Pair): Associated (u,v) pixel coordinates in the image.
+            value (Scalar): Calibrated values at the given pixel coordinates.
+            uv_pair (Pair): Associated `(u,v)` pixel coordinates in the image. Note that
+                `value` and `uv_pair` will be casted to the same shape.
 
         Returns:
-            An object of the same class and shape as value, but containing the
-                uncalibrated DN values.
+            Scalar: Un-calibrated values for an extended source.
         """
 
         return value
@@ -64,12 +63,12 @@ class NullCalib(Calibration):
         """Point-source calibrated values for image DN and pixel coordinates.
 
         Parameters:
-            dn (Scalar or array-like): Un-calibrated values at the given pixel
-                coordinates.
-            uv_pair (Pair): Associated (u,v) pixel coordinates in the image.
+            dn (Scalar): Un-calibrated image array values at the given pixel coordinates.
+            uv_pair (Pair): Associated `(u,v)` pixel coordinates in the image. Note that
+                `dn` and `uv_pair` will be casted to the same shape.
 
         Returns:
-            (Scalar): Calibrated values.
+            Scalar: Calibrated values for a point source.
         """
 
         return dn
@@ -78,18 +77,17 @@ class NullCalib(Calibration):
         """Un-calibrated image DN from point-source calibrated values.
 
         Parameters:
-            value (Scalar or array-like): Calibrated values at the given pixel
-                coordinates.
-            uv_pair (Pair): Associated (u,v) pixel coordinates in the image.
+            value (Scalar): Calibrated values at the given pixel coordinates.
+            uv_pair (Pair): Associated `(u,v)` pixel coordinates in the image. Note that
+                `value` and `uv_pair` will be casted to the same shape.
 
         Returns:
-            An object of the same class and shape as value, but containing the
-                uncalibrated DN values.
+            Scalar: Un-calibrated values for a point source.
         """
 
         return value
 
-    def prescale(self, factor, baseline=0., name=''):
+    def prescale(self, factor, baseline=0., *, name=''):
         """A version of this Calibration in which image DNs are re-scaled before the
         calibration is applied.
 
@@ -101,7 +99,7 @@ class NullCalib(Calibration):
                 preserved.
 
         Returns:
-            A new object with the given scale factor and baseline incorporated.
+            Calibration: A new object with the given `factor` and `baseline` incorporated.
         """
 
         # Pre-scaling requires a FlatCalib instead

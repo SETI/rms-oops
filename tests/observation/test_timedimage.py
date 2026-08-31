@@ -75,7 +75,7 @@ def test_timedimage():
     assert uv_min[:6] == Pair.as_pair(indices_)[:6]
     assert uv_max[:6] == Pair.as_pair(indices_)[:6] + (1,1)
     assert time_min[:6] == [0, 100, 190,  9, 109, 199]
-    assert time_max[:6] == time_min[:6] + fast_cadence.texp
+    assert time_max[:6] == time_min[:6] + fast_cadence._texp
 
     # uvt() with remask == False, non-integer indices
     non_ints = indices + (0.2, 0.9)
@@ -93,8 +93,8 @@ def test_timedimage():
     assert Boolean(uv.mask) == 2*[False] + 6*[True]
     assert Boolean(time.mask) == 2*[False] + 6*[True]
     assert (time[:2]
-            == (slow_cadence.tstride * non_ints.to_scalar(1).int()
-                + fast_cadence.tstride * non_ints.to_scalar(0))[:2])
+            == (slow_cadence._tstride * non_ints.to_scalar(1).int()
+                + fast_cadence._tstride * non_ints.to_scalar(0))[:2])
     assert uv[:2] == Pair.as_pair(non_ints)[:2]
 
     # uvt_range() with remask == False, non-integer indices
@@ -109,7 +109,7 @@ def test_timedimage():
     assert uv_min == Pair.as_pair(indices)
     assert uv_max == Pair.as_pair(indices) + (1,1)
     assert time_min == cadence.time_range_at_tstep(Pair.as_pair(non_ints).swapxy())[0]
-    assert time_max == time_min + fast_cadence.texp
+    assert time_max == time_min + fast_cadence._texp
 
     # uvt_range() with remask == True, non-integer indices
     non_ints = indices + (0.2, 0.9)
@@ -123,9 +123,9 @@ def test_timedimage():
     assert uv_min[:2] == Pair.as_pair(indices)[:2]
     assert uv_max[:2] == Pair.as_pair(indices)[:2] + (1,1)
     assert (time_min[:2]
-            == (slow_cadence.tstride * non_ints.to_scalar(1).int()
-                + fast_cadence.tstride * non_ints.to_scalar(0).int())[:2])
-    assert time_max[:2] == time_min[:2] + fast_cadence.texp
+            == (slow_cadence._tstride * non_ints.to_scalar(1).int()
+                + fast_cadence._tstride * non_ints.to_scalar(0).int())[:2])
+    assert time_max[:2] == time_min[:2] + fast_cadence._texp
 
     # time_range_at_uv() with remask == False
     uv = Pair([(0,0),(0,20),(10,0),(10,20),(10,21)])
@@ -133,7 +133,7 @@ def test_timedimage():
     (time0, time1) = obs.time_range_at_uv(uv)
 
     assert time0 == [0, 190, 9, 199, 199]
-    assert time1 == time0 + fast_cadence.texp
+    assert time1 == time0 + fast_cadence._texp
 
     # time_range_at_uv() with remask == True
     (time0, time1) = obs.time_range_at_uv(uv, remask=True)
@@ -141,7 +141,7 @@ def test_timedimage():
     assert np.all(time0.mask == 4*[False] + [True])
     assert np.all(time1.mask == 4*[False] + [True])
     assert time0[:4] == [0, 190, 9, 199]
-    assert time1[:4] == time0[:4] + fast_cadence.texp
+    assert time1[:4] == time0[:4] + fast_cadence._texp
 
     ######################################################################################
     # Fast cadence is discontinuous
@@ -177,12 +177,12 @@ def test_timedimage():
     assert uv_min == Pair.as_pair(indices_)
     assert uv_max == Pair.as_pair(indices_) + (1,1)
     assert time_min == cadence.time_range_at_tstep(indices_)[0]
-    assert time_max == time_min + fast_cadence.texp
+    assert time_max == time_min + fast_cadence._texp
 
     (time0,time1) = obs.time_range_at_uv(indices)
 
     assert time0 == cadence.time_range_at_tstep(indices_)[0]
-    assert time1 == time0 + fast_cadence.texp
+    assert time1 == time0 + fast_cadence._texp
 
     ######################################################################################
     # Fast cadence is discontinuous
@@ -382,7 +382,7 @@ def test_timedimage():
 
     assert np.all(uv.mask == np.array(6*[False] + [True]))
     assert np.all(time.mask == uv.mask)
-    assert time[:6] == cadence.tstride * indices.to_scalar(1)[:6]
+    assert time[:6] == cadence._tstride * indices.to_scalar(1)[:6]
     assert uv[:6] == Pair.as_pair(indices)[:6]
 
     # uvt_range() with remask == False
@@ -396,7 +396,7 @@ def test_timedimage():
     assert uv_min == Pair.as_pair(indices_)
     assert uv_max == Pair.as_pair(indices_) + (1,1)
     assert time_min == cadence.time_range_at_tstep(tstep)[0]
-    assert time_max == time_min + cadence.texp
+    assert time_max == time_min + cadence._texp
 
     # uvt_range() with remask == False, new indices
     non_ints = indices + (0.2,0.9)
@@ -410,7 +410,7 @@ def test_timedimage():
     assert uv_min == Pair.as_pair(indices)
     assert uv_max == Pair.as_pair(indices) + (1,1)
     assert time_min == cadence.time_range_at_tstep(tstep)[0]
-    assert time_max == time_min + cadence.texp
+    assert time_max == time_min + cadence._texp
 
     # uvt_range() with remask == True, new indices
     non_ints = indices + (0.2,0.9)
@@ -425,7 +425,7 @@ def test_timedimage():
     assert uv_min[:2] == Pair.as_pair(indices)[:2]
     assert uv_max[:2] == Pair.as_pair(indices)[:2] + (1,1)
     assert time_min[:2] == cadence.time_range_at_tstep(tstep)[0][:2]
-    assert time_max[:2] == time_min[:2] + cadence.texp
+    assert time_max[:2] == time_min[:2] + cadence._texp
 
     # time_range_at_uv() with remask == False
     uv = Pair([(0,0),(0,20),(10,0),(10,20),(10,21)])
@@ -437,14 +437,14 @@ def test_timedimage():
 
     (time0, time1) = obs.time_range_at_uv(uv)
     assert time0 == cadence.time_range_at_tstep(tstep)[0]
-    assert time1 == time0 + cadence.texp
+    assert time1 == time0 + cadence._texp
 
     # time_range_at_uv() with remask == True
     (time0, time1) = obs.time_range_at_uv(uv, remask=True)
     assert np.all(time0.mask == 4*[False] + [True])
     assert np.all(time1.mask == 4*[False] + [True])
-    assert time0[:4] == cadence.tstride * uv_.to_scalar(1)[:4]
-    assert time1[:4] == time0[:4] + cadence.texp
+    assert time0[:4] == cadence._tstride * uv_.to_scalar(1)[:4]
+    assert time1[:4] == time0[:4] + cadence._texp
 
     ######################################################################################
     # Alternative axis order ('ut','v')
@@ -468,19 +468,19 @@ def test_timedimage():
     uv_.vals[:,1][uv_.vals[:,1] == 20] -= 1
 
     assert uv == Pair.as_pair(indices)
-    assert time == cadence.tstride * indices.to_scalar(0)
+    assert time == cadence._tstride * indices.to_scalar(0)
 
     (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices)
 
     assert uv_min == Pair.as_pair(indices_)
     assert uv_max == Pair.as_pair(indices_) + (1,1)
-    assert time_min == cadence.tstride * indices_.to_scalar(0)
-    assert time_max == time_min + cadence.texp
+    assert time_min == cadence._tstride * indices_.to_scalar(0)
+    assert time_max == time_min + cadence._texp
 
     (time0, time1) = obs.time_range_at_uv(indices)
 
-    assert time0 == cadence.tstride * uv_.to_scalar(0)
-    assert time1 == time0 + cadence.texp
+    assert time0 == cadence._tstride * uv_.to_scalar(0)
+    assert time1 == time0 + cadence._texp
 
     ######################################################################################
     # Alternative texp for discontinuous time index
@@ -574,7 +574,7 @@ def test_timedimage():
 
     assert np.all(uv.mask == np.array(6*[False] + [True]))
     assert np.all(time.mask == uv.mask)
-    assert time[:6] == cadence.tstride * indices.to_scalar(1)[:6]
+    assert time[:6] == cadence._tstride * indices.to_scalar(1)[:6]
     assert uv[:6].to_scalar(0) == indices[:6].to_scalar(0)
     assert uv[:6].to_scalar(1) == 0.5
 
@@ -591,7 +591,7 @@ def test_timedimage():
     assert uv_max.to_scalar(0) == indices_.to_scalar(0) + 1
     assert uv_max.to_scalar(1) == 1
     assert time_min == cadence.time_range_at_tstep(tstep)[0]
-    assert time_max == time_min + cadence.texp
+    assert time_max == time_min + cadence._texp
 
     # uvt_range() with remask == True
     (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices,
@@ -606,8 +606,8 @@ def test_timedimage():
     assert uv_min.to_scalar(1)[:6] == 0
     assert uv_max.to_scalar(0)[:6] == indices_.to_scalar(0)[:6] + 1
     assert uv_max.to_scalar(1)[:6] == 1
-    assert time_min[:6] == cadence.tstride * indices_.to_scalar(1)[:6]
-    assert time_max[:6] == time_min[:6] + cadence.texp
+    assert time_min[:6] == cadence._tstride * indices_.to_scalar(1)[:6]
+    assert time_max[:6] == time_min[:6] + cadence._texp
 
     # time_range_at_uv() with remask == False
     uv = Pair([(0,0),(0,10),(0,20),(10,0),(10,10),(10,20),(10,21)])
@@ -619,7 +619,7 @@ def test_timedimage():
     uv_.vals[:,1][uv_.vals[:,1] == 20] -= 1
 
     assert time0 == cadence.time_range_at_tstep(tstep)[0]
-    assert time1 == time0 + cadence.texp
+    assert time1 == time0 + cadence._texp
 
     # time_range_at_uv() with remask == True
     (time0, time1) = obs.time_range_at_uv(uv, remask=True)
@@ -627,7 +627,7 @@ def test_timedimage():
     assert np.all(time0.mask == 6*[False] + [True])
     assert np.all(time1.mask == time0.mask)
     assert time0[:6] == cadence.time_range_at_tstep(tstep)[0][:6]
-    assert time1[:6] == time0[:6] + cadence.texp
+    assert time1[:6] == time0[:6] + cadence._texp
 
     ######################################################################################
 
@@ -647,7 +647,7 @@ def test_timedimage():
 
     assert uv.to_scalar(0) == 0.5
     assert uv.to_scalar(1) == indices.to_scalar(1)
-    assert time == cadence.tstride * indices.to_scalar(0)
+    assert time == cadence._tstride * indices.to_scalar(0)
 
     (uv_min, uv_max, time_min, time_max) = obs.uvt_range(indices)
 
@@ -655,8 +655,8 @@ def test_timedimage():
     assert uv_min.to_scalar(1) == indices_.to_scalar(1)
     assert uv_max.to_scalar(0) == 1
     assert uv_max.to_scalar(1) == indices_.to_scalar(1) + 1
-    assert time_min == cadence.tstride * indices_.to_scalar(0)
-    assert time_max == time_min + cadence.texp
+    assert time_min == cadence._tstride * indices_.to_scalar(0)
+    assert time_max == time_min + cadence._texp
 
     ######################################################################################
 
@@ -799,7 +799,7 @@ def test_timedimage():
     assert uv_max.to_scalar(0) == indices.to_scalar(0) + 1
     assert uv_max.to_scalar(1) == 1
     assert time_min == [0, 100, 190,  9, 109, 199, 199]
-    assert time_max == time_min + fast_cadence.texp
+    assert time_max == time_min + fast_cadence._texp
 
     # uvt_range() with remask == True
     (uv_min, uv_max, time_min, time_max) = obs.uvt_range(non_ints,
@@ -815,9 +815,9 @@ def test_timedimage():
     assert uv_max.to_scalar(0)[:2] == indices.to_scalar(0)[:2] + 1
     assert uv_max.to_scalar(1)[:2] == 1
     assert (time_min[:2]
-            == (slow_cadence.tstride * indices.to_scalar(1)
-                + fast_cadence.tstride * indices.to_scalar(0))[:2])
-    assert time_max[:2] == time_min[:2] + fast_cadence.texp
+            == (slow_cadence._tstride * indices.to_scalar(1)
+                + fast_cadence._tstride * indices.to_scalar(0))[:2])
+    assert time_max[:2] == time_min[:2] + fast_cadence._texp
 
     # time_range_at_uv() with remask == False
     uv = Pair([(0,0),(0,20),(10,0),(10,20),(10,21)])
@@ -825,7 +825,7 @@ def test_timedimage():
     (time0, time1) = obs.time_range_at_uv(uv)
 
     assert time0 == [0, 190, 9, 199, 199]
-    assert time1 == time0 + fast_cadence.texp
+    assert time1 == time0 + fast_cadence._texp
 
     # time_range_at_uv() with remask == True
     (time0, time1) = obs.time_range_at_uv(uv, remask=True)
@@ -833,7 +833,7 @@ def test_timedimage():
     assert np.all(time0.mask == 4*[False] + [True])
     assert np.all(time1.mask == 4*[False] + [True])
     assert time0[:4] == [0, 190, 9, 199]
-    assert time1[:4] == time0[:4] + fast_cadence.texp
+    assert time1[:4] == time0[:4] + fast_cadence._texp
 
     ######################################################################################
     # Alternative axis order ('uslow','vfast')
@@ -864,12 +864,12 @@ def test_timedimage():
     assert uv_max.to_scalar(0) == 1
     assert uv_max.to_scalar(1) == indices_.to_scalar(1) + 1
     assert time_min == [0, 5, 9.5, 90, 95, 99.5, 99.5]
-    assert time_max == time_min + fast_cadence.texp
+    assert time_max == time_min + fast_cadence._texp
 
     (time0, time1) = obs.time_range_at_uv(indices)
 
     assert time0 == time_min
-    assert time1 == time0 + fast_cadence.texp
+    assert time1 == time0 + fast_cadence._texp
 
     ######################################################################################
     # Alternative texp for discontinuous indices

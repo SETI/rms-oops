@@ -77,7 +77,8 @@ class TrackerFrame(Frame):
         # Determine the transform at epoch
         fixed_xform = self._fixed_frame.wrt_j2000.transform_at_time(self._epoch)
         self._reference_xform = Transform(fixed_xform.matrix, Vector3.ZERO,
-                                          self._wayframe, self._reference, self._origin)
+                                          self._wayframe, self._reference,
+                                          origin=self._origin)
 
         # Convert the matrix to three axis vectors
         self._reference_rows = Vector3(self._reference_xform.matrix.vals)
@@ -157,7 +158,7 @@ class TrackerFrame(Frame):
         new_rows = self._reference_rows.spin(rotation)
         xform = Transform(Matrix3(new_rows.vals),
                           Vector3.ZERO,     # neglect the slow frame rotation
-                          self._wayframe, self._reference, self._origin)
+                          self._wayframe, self._reference, origin=self._origin)
 
         # Cache the transform if necessary
         if time.shape == ():

@@ -4,6 +4,7 @@
 
 import numpy as np
 
+import pytest
 from polymath import Qube, Boolean, Scalar, Pair, Vector
 import oops
 
@@ -352,4 +353,55 @@ def case_dual_metronome(cad1d, cad2d):
     assert cad2d.tstep_range_at_time(199, remask=True) == ((9,4), (10,5))
     assert (cad2d.tstep_range_at_time(199, inclusive=False, remask=True)
             == (Pair.MASKED, Pair.MASKED))
+
+
+def test_dualcadence_is_continuous_requires_short_to_span_long_stride() -> None:
+    """A gap between consecutive long time steps makes the cadence discontinuous."""
+
+    short = oops.cadence.Metronome(0., 10., 10., 5)     # continuous, spans 0-50
+    assert short.is_continuous is True
+
+    # The short cadence fills the 50-second long stride exactly: no gaps anywhere.
+    filled = oops.cadence.DualCadence(oops.cadence.Metronome(1.e8, 50., 50., 3), short)
+    assert filled.is_continuous is True
+
+    # The same short cadence leaves a 50-second gap in a 100-second long stride.
+    gapped = oops.cadence.DualCadence(oops.cadence.Metronome(1.e8, 100., 100., 3), short)
+    assert gapped.is_continuous is False
+
+
+def test_dualcadence_is_unique_requires_no_overlap_between_long_steps() -> None:
+    """Long time steps that overlap in time make the cadence non-unique."""
+
+    short = oops.cadence.Metronome(0., 10., 10., 5)     # unique, spans 0-50
+    assert short.is_unique is True
+
+    # The short cadence fits inside the 50-second long stride: no time is shared.
+    disjoint = oops.cadence.DualCadence(oops.cadence.Metronome(1.e8, 50., 50., 3), short)
+    assert disjoint.is_unique is True
+
+    # The same short cadence overruns a 40-second long stride by 10 seconds.
+    overlapping = oops.cadence.DualCadence(oops.cadence.Metronome(1.e8, 40., 40., 3),
+                                           short)
+    assert overlapping.is_unique is False
+
+
+def test_dualcadence_as_continuous_is_epoch_independent() -> None:
+    """as_continuous() depends on the strides, not on the absolute start time."""
+
+    # The short cadence spans 48 of the long cadence's 50-second stride; making it
+    # continuous extends its span to the full 50 seconds.
+    short = oops.cadence.Metronome(0., 10., 8., 5)
+    early = oops.cadence.DualCadence(oops.cadence.Metronome(0., 50., 50., 3), short)
+    late = oops.cadence.DualCadence(oops.cadence.Metronome(1.e8, 50., 50., 3), short)
+
+    assert early.as_continuous().is_continuous is True
+    assert late.as_continuous().is_continuous is True
+
+    # A short cadence reaching only 50 seconds cannot fill a 100-second stride.
+    too_short = oops.cadence.DualCadence(oops.cadence.Metronome(1.e8, 100., 100., 3),
+                                         short)
+    with pytest.raises(ValueError, match='cannot be extended'):
+        too_short.as_continuous()
+
 ##########################################################################################

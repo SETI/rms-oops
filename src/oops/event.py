@@ -1139,7 +1139,7 @@ class Event(object):
             xform = self._xform_to_j2000_
             new_xform = Transform(xform.matrix.shrink(antimask),
                                   xform.omega.shrink(antimask),
-                                  xform.frame, xform.reference, xform.origin)
+                                  xform.frame, xform.reference, origin=xform.origin)
             result._xform_to_j2000_ = new_xform
 
         ssb = result._ssb_
@@ -1170,7 +1170,7 @@ class Event(object):
             xform = self._xform_to_j2000_
             new_xform = Transform(xform.matrix.unshrink(antimask, shape=shape),
                                   xform.omega.unshrink(antimask, shape=shape),
-                                  xform.frame, xform.reference, xform.origin)
+                                  xform.frame, xform.reference, origin=xform.origin)
             result._xform_to_j2000_ = new_xform
 
         ssb = result._ssb_

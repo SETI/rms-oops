@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/backplanes/ring.py: Ring backplanes
+# oops/backplanes/ring.py
 ##########################################################################################
 
 import numpy as np
@@ -13,15 +13,16 @@ from oops.frame     import Frame
 # forward to each new backplane array that refers to it.
 RING_BACKPLANES = ('ring_radius', 'radial_mode')
 
+
 def ring_radius(self, event_key, rmin=None, rmax=None):
     """Radius of the ring intercept point in the observation.
 
     Parameters:
         event_key (str or tuple): Key defining the ring surface event.
         rmin (optional): Minimum radius in km; None to allow it to be defined by the
-            event_key.
+            `event_key.`
         rmax (optional): Maximum radius in km; None to allow it to be defined by the
-            event_key.
+            `event_key`.
     """
 
     self.refresh()
@@ -49,6 +50,7 @@ def ring_radius(self, event_key, rmin=None, rmax=None):
 
     return self.register_backplane(key, radius)
 
+
 def ring_longitude(self, event_key, reference='node'):
     """Longitude of the ring intercept point in the image.
 
@@ -56,11 +58,14 @@ def ring_longitude(self, event_key, reference='node'):
         event_key (str or tuple): Key defining the ring surface event. Alternatively, a
             ring_radius or radial_mode backplane key, in which case this backplane
             inherits the mask of the given backplane array.
-        reference (str, optional): Defines the location of zero longitude. 'aries' for the
-            First point of Aries; 'node'  for the J2000 ascending node; 'obs'   for the
-            sub-observer longitude; 'sun'   for the sub-solar longitude; 'oha'   for the
-            anti-observer longitude; 'sha'   for the anti-solar longitude, returning the
-            solar hour angle.
+        reference (str, optional): Defines the location of zero longitude, one of:
+
+            * 'aries' for the First point of Aries;
+            * 'node'  for the J2000 ascending node;
+            * 'obs'   for the sub-observer longitude;
+            * 'sun'   for the sub-solar longitude;
+            * 'oha'   for the anti-observer longitude;
+            * 'sha'   for the anti-solar longitude, returning the solar hour angle.
     """
 
     self.refresh()
@@ -106,8 +111,9 @@ def ring_longitude(self, event_key, reference='node'):
     longitude = (longitude - ref_lon) % Scalar.TWOPI
     return self.register_backplane(key, longitude)
 
-def radial_mode(self, backplane_key, cycles, epoch, amp, peri0, speed,
-                      a0=0., dperi_da=0., reference='node'):
+
+def radial_mode(self, backplane_key, cycles, epoch, amp, peri0, speed, a0=0., dperi_da=0.,
+                reference='node'):
     """Radius shift based on a particular ring mode.
 
     Parameters:
@@ -131,8 +137,8 @@ def radial_mode(self, backplane_key, cycles, epoch, amp, peri0, speed,
 
     self.refresh()
     backplane_key = self.standardize_backplane_key(backplane_key)
-    key = ('radial_mode', backplane_key, cycles, epoch, amp, peri0, speed,
-                          a0, dperi_da, reference)
+    key = ('radial_mode', backplane_key, cycles, epoch, amp, peri0, speed, a0, dperi_da,
+                          reference)
 
     if key in self.backplanes:
         return self.get_backplane(key)
@@ -183,6 +189,7 @@ def radial_mode(self, backplane_key, cycles, epoch, amp, peri0, speed,
 
     return self.register_backplane(key, mode)
 
+
 def _aries_ring_longitude(self, event_key):
     """Gridless longitude of First Point of Aries from the ring ascending node.
 
@@ -201,6 +208,7 @@ def _aries_ring_longitude(self, event_key):
     longitude = (-frame.node_at_time(event.time)) % Scalar.TWOPI
 
     return self.register_backplane(key, longitude)
+
 
 def ring_azimuth(self, event_key, direction='obs', apparent=True):
     """Angle from a photon direction to the local radial direction.
@@ -250,8 +258,8 @@ def ring_azimuth(self, event_key, direction='obs', apparent=True):
 
     return self.register_backplane(key, azimuth)
 
-def ring_elevation(self, event_key, direction='obs', pole='prograde',
-                                    apparent=True):
+
+def ring_elevation(self, event_key, direction='obs', pole='prograde', apparent=True):
     """Angle from the ring plane to the photon direction, evaluated at the ring intercept
     point.
 
@@ -262,14 +270,21 @@ def ring_elevation(self, event_key, direction='obs', pole='prograde',
         event_key (str or tuple): Key defining the ring surface event. Alternatively, a
             ring_radius or radial_mode backplane key, in which case this backplane
             inherits the mask of the given backplane array.
-        direction (str, optional): 'obs'       for the apparent departing direction of the
-            photon to the observer; 'sun'       for the (negative) apparent direction of
-            the photon arriving from the Sun.
-        pole (str, optional): 'sunward'   positive elevations on the illuminated face;
-            'observed'  positive elevations on the observed face; 'north'     positive
-            elevations on the IAU north face; 'prograde'  positive elevations on the side
-            of the rings defined by positive angular momentum; 'unsigned'  for positive
-            elevations on both ring faces.
+        direction (str, optional): One of:
+
+            * 'obs' for the apparent departing direction of the photon to the observer;
+            * 'sun' for the (negative) apparent direction of the photon arriving from the
+              Sun.
+
+        pole (str, optional): One of:
+
+            * 'sunward'   positive elevations on the illuminated face;
+            * 'observed'  positive elevations on the observed face;
+            * 'north'     positive elevations on the IAU north face;
+            * 'prograde'  positive elevations on the side of the rings defined by positive
+              angular momentum;
+            * 'unsigned'  for positive elevations on both ring faces.
+
         apparent (bool, optional): True for the apparent elevation in the surface frame,
             allowing for the fact that ring particles are in orbital motion around the
             planet center; False for the actual elevation.
@@ -303,6 +318,7 @@ def ring_elevation(self, event_key, direction='obs', pole='prograde',
     pole_angle = self.evaluate(alt_key)
     return self.register_backplane(key, Scalar.HALFPI - pole_angle)
 
+
 def _fill_ring_intercepts(self, event_key):
     """Internal method to fill in the ring intercept geometry backplanes.
 
@@ -320,10 +336,9 @@ def _fill_ring_intercepts(self, event_key):
     event = self.get_surface_event(event_key)
 
     # Register the default ring_radius and ring_longitude backplanes
-    self.register_backplane(('ring_radius', event_key, None, None),
-                            event.coord1)
-    self.register_backplane(('ring_longitude', event_key, 'node'),
-                            event.coord2)
+    self.register_backplane(('ring_radius', event_key, None, None), event.coord1)
+    self.register_backplane(('ring_longitude', event_key, 'node'), event.coord2)
+
 
 def ring_incidence_angle(self, event_key, pole='sunward', apparent=True):
     """Incidence angle of the arriving photons at the local ring surface.
@@ -336,10 +351,14 @@ def ring_incidence_angle(self, event_key, pole='sunward', apparent=True):
         event_key (str or tuple): Key defining the ring surface event. Alternatively, a
             ring_radius or radial_mode backplane key, in which case this backplane
             inherits the mask of the given backplane array.
-        pole (str, optional): 'sunward'   for incidence < pi/2 on the illuminated face;
-            'observed'  for incidence < pi/2 on the observed face; 'north'     for
-            incidence < pi/2 on the IAU-defined north face; 'prograde'  for incidence <
-            pi/2 on the side of the ring plane defined by positive angular momentum.
+        pole (str, optional): One of:
+
+            * 'sunward'  for incidence < pi/2 on the illuminated face;
+            * 'observed' for incidence < pi/2 on the observed face;
+            * 'north'    for incidence < pi/2 on the IAU-defined north face;
+            * 'prograde' for incidence < pi/2 on the side of the ring plane defined by
+              positive angular momentum.
+
         apparent (bool, optional): True for the apparent angle in the surface frame; False
             for the actual.
     """
@@ -388,6 +407,7 @@ def ring_incidence_angle(self, event_key, pole='sunward', apparent=True):
 
     return self.register_backplane(key, incidence)
 
+
 def ring_emission_angle(self, event_key, pole='sunward', apparent=True):
     """Emission angle of the departing photons at the local ring surface.
 
@@ -400,11 +420,15 @@ def ring_emission_angle(self, event_key, pole='sunward', apparent=True):
         event_key (str or tuple): Key defining the ring surface event. Alternatively, a
             ring_radius or radial_mode backplane key, in which case this backplane
             inherits the mask of the given backplane array.
-        pole (str, optional): 'sunward'   for emission < pi/2 on the illuminated face;
-            'observed'  for emission < pi/2 on the observed face; 'north'     for emission
-            < pi/2 on the IAU-defined north face; 'prograde'  for emission < pi/2 on the
-            side of the ring plane defined by positive angular momentum.
-        apparent (bool, optional): True for the apparent angle in the surface frame; False
+        pole (str, optional): One of:
+
+            * 'sunward'  for incidence < pi/2 on the illuminated face;
+            * 'observed' for incidence < pi/2 on the observed face;
+            * 'north'    for incidence < pi/2 on the IAU-defined north face;
+            * 'prograde' for incidence < pi/2 on the side of the ring plane defined by
+              positive angular momentum.
+
+       apparent (bool, optional): True for the apparent angle in the surface frame; False
             for the actual.
     """
 
@@ -450,16 +474,20 @@ def ring_emission_angle(self, event_key, pole='sunward', apparent=True):
 
     return self.register_backplane(key, emission)
 
+
 def ring_sub_observer_longitude(self, event_key, reference='node'):
     """Gridless sub-observer longitude in the ring plane.
 
     Parameters:
         event_key (str or tuple): Key defining the event on the center of the ring's path.
-        reference (str, optional): Defines the location of zero longitude. 'aries' for the
-            First point of Aries; 'node'  for the J2000 ascending node; 'obs'   for the
-            sub-observer longitude; 'sun'   for the sub-solar longitude; 'oha'   for the
-            anti-observer longitude; 'sha'   for the anti-solar longitude, returning the
-            solar hour angle.
+        reference (str, optional): Defines the location of zero longitude:
+
+            * 'aries' for the First point of Aries;
+            * 'node'  for the J2000 ascending node;
+            * 'obs'   for the sub-observer longitude;
+            * 'sun'   for the sub-solar longitude;
+            * 'oha'   for the anti-observer longitude;
+            * 'sha'   for the anti-solar longitude, returning the solar hour angle.
     """
 
     if reference not in ('aries', 'node', 'obs', 'oha', 'sun', 'sha'):
@@ -499,16 +527,20 @@ def ring_sub_observer_longitude(self, event_key, reference='node'):
     longitude = (longitude - ref_lon) % Scalar.TWOPI
     return self.register_backplane(key, longitude)
 
+
 def ring_sub_solar_longitude(self, event_key, reference='node'):
     """Gridless sub-solar longitude in the ring plane.
 
     Parameters:
         event_key (str or tuple): Key defining the event on the center of the ring's path.
-        reference (str, optional): Defines the location of zero longitude. 'aries' for the
-            First point of Aries; 'node'  for the J2000 ascending node; 'obs'   for the
-            sub-observer longitude; 'sun'   for the sub-solar longitude; 'oha'   for the
-            anti-observer longitude; 'sha'   for the anti-solar longitude, returning the
-            solar hour angle.
+        reference (str, optional): Defines the location of zero longitude:
+
+            * 'aries' for the First point of Aries;
+            * 'node'  for the J2000 ascending node;
+            * 'obs'   for the sub-observer longitude;
+            * 'sun'   for the sub-solar longitude;
+            * 'oha'   for the anti-observer longitude;
+            * 'sha'   for the anti-solar longitude, returning the solar hour angle.
     """
 
     if reference not in ('aries', 'node', 'obs', 'oha', 'sun', 'sha'):
@@ -548,15 +580,20 @@ def ring_sub_solar_longitude(self, event_key, reference='node'):
     longitude = (longitude - ref_lon) % Scalar.TWOPI
     return self.register_backplane(key, longitude)
 
+
 def ring_center_incidence_angle(self, event_key, pole='sunward', apparent=True):
     """Incidence angle of the arriving photons at the ring system center.
 
     Parameters:
         event_key (str or tuple): Key defining the ring surface event.
-        pole (str, optional): 'sunward'   for incidence < pi/2 on the illuminated face;
-            'observed'  for incidence < pi/2 on the observed face; 'north'     for
-            incidence < pi/2 on the IAU-defined north face; 'prograde'  for incidence <
-            pi/2 on the side of the ring plane defined by positive angular momentum.
+        pole (str, optional): One of:
+
+            * 'sunward'  for incidence < pi/2 on the illuminated face;
+            * 'observed' for incidence < pi/2 on the observed face;
+            * 'north'    for incidence < pi/2 on the IAU-defined north face;
+            * 'prograde' for incidence < pi/2 on the side of the ring plane defined by
+              positive angular momentum.
+
         apparent (bool, optional): True for the apparent angle in the body frame; False
             for the actual.
     """
@@ -564,6 +601,7 @@ def ring_center_incidence_angle(self, event_key, pole='sunward', apparent=True):
     self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key, default='RING')
     return self.ring_incidence_angle(gridless_key, pole=pole, apparent=apparent)
+
 
 def ring_center_emission_angle(self, event_key, pole='sunward', apparent=True):
     """Emission angle of departing photons at the center of the ring system.
@@ -575,10 +613,14 @@ def ring_center_emission_angle(self, event_key, pole='sunward', apparent=True):
 
     Parameters:
         event_key (str or tuple): Key defining the ring surface event.
-        pole (str, optional): 'sunward'   for emission < pi/2 on the illuminated face;
-            'observed'  for emission < pi/2 on the observed face; 'north'     for emission
-            < pi/2 on the IAU-defined north face; 'prograde'  for emission < pi/2 on the
-            side of the ring plane defined by positive angular momentum.
+        pole (str, optional): One of:
+
+            * 'sunward'  for incidence < pi/2 on the illuminated face;
+            * 'observed' for incidence < pi/2 on the observed face;
+            * 'north'    for incidence < pi/2 on the IAU-defined north face;
+            * 'prograde' for incidence < pi/2 on the side of the ring plane defined by
+              positive angular momentum.
+
         apparent (bool, optional): True for the apparent angle in the body frame; False
             for the actual.
     """
@@ -586,6 +628,7 @@ def ring_center_emission_angle(self, event_key, pole='sunward', apparent=True):
     self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key, default='RING')
     return self.ring_emission_angle(gridless_key, pole=pole, apparent=apparent)
+
 
 def ring_radial_resolution(self, event_key):
     """Projected radial resolution in km/pixel at the ring intercept point.
@@ -618,6 +661,7 @@ def ring_radial_resolution(self, event_key):
     resolution = drad_duv.join_items(Pair).norm()
 
     return self.register_backplane(key, resolution)
+
 
 def ring_angular_resolution(self, event_key, units="rad"):
     """Projected angular resolution in radians/pixel at the ring intercept.
@@ -658,6 +702,7 @@ def ring_angular_resolution(self, event_key, units="rad"):
         resolution *= event.coord1
     return self.register_backplane(key, resolution)
 
+
 def ring_gradient_angle(self, event_key):
     """Direction of the radius gradient at each pixel in the image.
 
@@ -694,9 +739,9 @@ def ring_gradient_angle(self, event_key):
     clock = drad_dv.arctan2(drad_du)
     return self.register_backplane(key, clock)
 
+
 def ring_shadow_radius(self, event_key, ring_surface_key):
-    """Radius in the ring plane that casts a shadow at each point on this body.
-    """
+    """Radius in the ring plane that casts a shadow at each point on this body."""
 
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
@@ -716,9 +761,9 @@ def ring_shadow_radius(self, event_key, ring_surface_key):
 
     return self.register_backplane(key, radius)
 
+
 def ring_shadow_incidence(self, event_key, ring_surface_key):
-    """Incidence angle in the ring plane that casts a shadow at each point on
-    this body.
+    """Incidence angle in the ring plane that casts a shadow at each point on this body.
     """
 
     self.refresh()
@@ -742,6 +787,7 @@ def ring_shadow_incidence(self, event_key, ring_surface_key):
 
     return self.register_backplane(key, incidence)
 
+
 def ring_radius_in_front(self, event_key, ring_surface_key):
     """Radius in the ring plane that obscures each point on this body."""
 
@@ -759,6 +805,7 @@ def ring_radius_in_front(self, event_key, ring_surface_key):
     radius = radius.remask_or(intercepted.logical_not())
 
     return self.register_backplane(key, radius)
+
 
 def _ring_is_retrograde(self, event_key):
     """True if this ring is retrograde."""

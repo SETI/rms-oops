@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/backplanes/border.py: Boolean backplanes
+# oops/backplanes/border.py
 ##########################################################################################
 
 import numpy as np
@@ -81,6 +81,7 @@ def _border_above_or_below(self, sign, backplane_key, value):
                          (xbackplane[:-1] < 0))
 
     return self.register_backplane(key, Boolean(border & backplane.antimask))
+
 
 def border_inside(self, backplane_key):
     """Defines the locus of True pixels adjacent to a region of False pixels."""

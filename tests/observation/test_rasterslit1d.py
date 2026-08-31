@@ -40,7 +40,7 @@ def test_rasterslit1d():
 
     assert np.all(uv.mask == np.array(2*[False] + [True]))
     assert np.all(time.mask == uv.mask)
-    assert time[:2] == cadence.tstride * indices.to_scalar(0)[:2]
+    assert time[:2] == cadence._tstride * indices.to_scalar(0)[:2]
     assert uv[:2].to_scalar(0) == indices[:2].to_scalar(0)
     assert uv[:2].to_scalar(1) == 0.5
 
@@ -79,8 +79,8 @@ def test_rasterslit1d():
     assert uv_min.to_scalar(1)[:2] == 0
     assert uv_max.to_scalar(0)[:2] == indices_.to_scalar(0)[:2] + 1
     assert uv_max.to_scalar(1)[:2] == 1
-    assert time_min[:2] == cadence.tstride*indices_.to_scalar(0)[:2]
-    assert time_max[:2] == time_min[:2] + cadence.texp
+    assert time_min[:2] == cadence._tstride*indices_.to_scalar(0)[:2]
+    assert time_max[:2] == time_min[:2] + cadence._texp
 
     assert uv_min[2] == Pair.MASKED
     assert time_min[2] == Scalar.MASKED
@@ -94,15 +94,15 @@ def test_rasterslit1d():
     (time0, time1) = obs.time_range_at_uv(uv)
 
     assert time0 == cadence.time_range_at_tstep(uv_.to_scalar(0))[0]
-    assert time1 == time0 + cadence.texp
+    assert time1 == time0 + cadence._texp
 
     # time_range_at_uv() with remask == True
     (time0, time1) = obs.time_range_at_uv(uv, remask=True)
 
     assert np.all(time0.mask == 4*[False] + [True])
     assert np.all(time1.mask == 4*[False] + [True])
-    assert time0[:4] == cadence.tstride * uv_.to_scalar(0)[:4]
-    assert time1[:4] == time0[:4] + cadence.texp
+    assert time0[:4] == cadence._tstride * uv_.to_scalar(0)[:4]
+    assert time1[:4] == time0[:4] + cadence._texp
 
     ######################################################################################
     # Alternative axis order ('a', 'vt')
@@ -133,7 +133,7 @@ def test_rasterslit1d():
     assert uv_max.to_scalar(0) == 1
     assert uv_max.to_scalar(1) == indices_.to_scalar(1) + 1
     assert time_min == cadence.time_range_at_tstep(indices_.to_scalar(1))[0]
-    assert time_max == time_min + cadence.texp
+    assert time_max == time_min + cadence._texp
 
     uv = Pair([(11,0),(11,9),(11,10),(11,11)])
     uv_ = uv.copy()
@@ -142,7 +142,7 @@ def test_rasterslit1d():
     (time0, time1) = obs.time_range_at_uv(uv)
 
     assert time0 == cadence.time_range_at_tstep(uv_.to_scalar(1))[0]
-    assert time1 == time0 + cadence.texp
+    assert time1 == time0 + cadence._texp
 
     ######################################################################################
     # Similar to above but 1-D observation
@@ -172,7 +172,7 @@ def test_rasterslit1d():
     assert uv_max.to_scalar(0) == 1
     assert uv_max.to_scalar(1) == indices_ + 1
     assert time_min == cadence.time_range_at_tstep(indices_)[0]
-    assert time_max == time_min + cadence.texp
+    assert time_max == time_min + cadence._texp
 
     uv = Pair([(11,0),(11,9),(11,10),(11,11)])
     uv_ = uv.copy()
@@ -181,7 +181,7 @@ def test_rasterslit1d():
     (time0, time1) = obs.time_range_at_uv(uv)
 
     assert time0 == cadence.time_range_at_tstep(uv_.to_scalar(1))[0]
-    assert time1 == time0 + cadence.texp
+    assert time1 == time0 + cadence._texp
 
     ######################################################################################
     # Alternative axis order ('ut',), 1-D

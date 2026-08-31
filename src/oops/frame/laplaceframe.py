@@ -194,7 +194,8 @@ class LaplaceFrame(Frame):
         matrix = Matrix3.z_rotation(common_node_lon) * matrix
 
         # Create the transform
-        xform = Transform(matrix, Vector3.ZERO, self._wayframe, Frame.J2000, self._origin)
+        xform = Transform(matrix, Vector3.ZERO, self._wayframe, Frame.J2000,
+                          origin=self._origin)
 
         # Cache the transform if necessary
         if time.shape == ():

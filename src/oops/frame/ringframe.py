@@ -185,7 +185,8 @@ class RingFrame(Frame):
             matrix = Matrix3.z_rotation(node_lon) * matrix
 
         # Create transform
-        transform = Transform(matrix, Vector3.ZERO, self._wayframe, self._reference, None)
+        transform = Transform(matrix, Vector3.ZERO, self._wayframe, self._reference,
+                              origin=None)
 
         # Cache the transform if necessary
         if time.shape == ():

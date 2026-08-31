@@ -10,14 +10,18 @@ from oops.backplane import Backplane
 # forward to each new backplane array that refers to it.
 ANSA_BACKPLANES = ('ansa_radius',)
 
+
 def ansa_radius(self, event_key, radius_type='positive', rmax=None):
     """Radius of the ring ansa intercept point in the image.
 
     Parameters:
         event_key (str or tuple): Key defining the ring surface event.
-        radius_type (str, optional): 'right'    for radii increasing rightward when
-            prograde rotation pole is 'up'; 'left'     for the opposite of 'right';
-            'positive' for all radii using positive values.
+        radius_type (str, optional):
+
+            * 'right' for radii increasing rightward when prograde rotation pole is 'up';
+            * 'left' for the opposite of 'right';
+            * 'positive' for all radii using positive values.
+
         rmax (optional): Maximum absolute value of the radius in km, if any.
     """
 
@@ -54,6 +58,7 @@ def ansa_radius(self, event_key, radius_type='positive', rmax=None):
     radius = radius.remask_or(mask)
     return self.register_backplane(key, radius)
 
+
 def ansa_altitude(self, event_key):
     """Elevation of the ring ansa intercept point in the image.
 
@@ -79,6 +84,7 @@ def ansa_altitude(self, event_key):
     self._fill_ansa_intercepts(event_key)
     return self.get_backplane(key)
 
+
 def ansa_longitude(self, event_key, reference='node'):
     """Longitude of the ansa intercept point in the image.
 
@@ -86,11 +92,14 @@ def ansa_longitude(self, event_key, reference='node'):
         event_key (str or tuple): Key defining the limb surface event. Alternatively, a
             ansa_radius backplane key, in which case this backplane inherits the mask of
             the given backplane array.
-        reference (str, optional): Defines the location of zero longitude. 'aries' for the
-            First point of Aries; 'node'  for the J2000 ascending node; 'obs'   for the
-            sub-observer longitude; 'sun'   for the sub-solar longitude; 'oha'   for the
-            anti-observer longitude; 'sha'   for the anti-solar longitude, returning the
-            solar hour angle.
+        reference (str, optional): Defines the location of zero longitude:
+
+            * 'aries' for the First point of Aries;
+            * 'node'  for the J2000 ascending node;
+            * 'obs'   for the sub-observer longitude;
+            * 'sun'   for the sub-solar longitude;
+            * 'oha'   for the anti-observer longitude;
+            * 'sha'   for the anti-solar longitude, returning the solar hour angle.
     """
 
     if reference not in ('aries', 'node', 'obs', 'oha', 'sun', 'sha'):
@@ -132,6 +141,7 @@ def ansa_longitude(self, event_key, reference='node'):
     longitude = (self.get_backplane(key_node) - ref_lon) % Scalar.TWOPI
     return self.register_backplane(key, longitude)
 
+
 def _fill_ansa_intercepts(self, event_key):
     """Internal method to fill in the ansa intercept geometry backplanes.
 
@@ -158,6 +168,7 @@ def _fill_ansa_intercepts(self, event_key):
     self.register_backplane(('ansa_altitude', event_key),
                             event.coord2)
 
+
 def _fill_ansa_longitudes(self, event_key):
     """Internal method to fill in the ansa intercept longitude backplane."""
 
@@ -174,6 +185,7 @@ def _fill_ansa_longitudes(self, event_key):
     lon = event.surface._ringplane.coords_from_vector3(event.state, axes=2,
                                                       derivs=self.ALL_DERIVS)[1]
     self.register_backplane(('ansa_longitude', event_key, 'node'), lon)
+
 
 def ansa_radial_resolution(self, event_key):
     """Projected radial resolution in km/pixel at the ring ansa intercept.
@@ -207,6 +219,7 @@ def ansa_radial_resolution(self, event_key):
     resolution = dr_duv.join_items(Pair).norm()
 
     return self.register_backplane(key, resolution)
+
 
 def ansa_vertical_resolution(self, event_key):
     """Projected radial resolution in km/pixel at the ring ansa intercept.

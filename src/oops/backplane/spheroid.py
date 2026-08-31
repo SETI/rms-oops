@@ -1,9 +1,10 @@
 ##########################################################################################
-# oops/backplanes/spheroid.py: Spheroid/Ellipsoid backplanes
+# oops/backplanes/spheroid.py
 ##########################################################################################
 
 from polymath       import Scalar
 from oops.backplane import Backplane
+
 
 def longitude(self, event_key, reference='iau', direction='west',
                                minimum=0, lon_type='centric'):
@@ -59,12 +60,10 @@ def longitude(self, event_key, reference='iau', direction='west',
         surface = Backplane.get_surface(event_key[1])
 
         if lon_type == 'centric':
-            longitude = surface.lon_to_centric(lon_squashed,
-                                               derivs=self.ALL_DERIVS)
+            longitude = surface.lon_to_centric(lon_squashed, derivs=self.ALL_DERIVS)
             longitude = self.register_backplane(key_typed, longitude)
         else:
-            longitude = surface.lon_to_graphic(lon_squashed,
-                                               derivs=self.ALL_DERIVS)
+            longitude = surface.lon_to_graphic(lon_squashed, derivs=self.ALL_DERIVS)
             longitude = self.register_backplane(key_typed, longitude)
 
     # Define the longitude relative to the reference value
@@ -90,6 +89,7 @@ def longitude(self, event_key, reference='iau', direction='west',
         longitude = (longitude + Scalar.PI) % Scalar.TWOPI - Scalar.PI
 
     return self.register_backplane(key, longitude)
+
 
 def latitude(self, event_key, lat_type='centric'):
     """Latitude at the surface intercept point in the image.
@@ -129,13 +129,12 @@ def latitude(self, event_key, lat_type='centric'):
     longitude = self.get_backplane(lon_key)
 
     if lat_type == 'centric':
-        latitude = surface.lat_to_centric(latitude, longitude,
-                                          derivs=self.ALL_DERIVS)
+        latitude = surface.lat_to_centric(latitude, longitude, derivs=self.ALL_DERIVS)
     else:
-        latitude = surface.lat_to_graphic(latitude, longitude,
-                                          derivs=self.ALL_DERIVS)
+        latitude = surface.lat_to_graphic(latitude, longitude, derivs=self.ALL_DERIVS)
 
     return self.register_backplane(key, latitude)
+
 
 def _fill_surface_intercepts(self, event_key):
     """Internal method to fill in the surface intercept geometry backplanes.
@@ -161,6 +160,7 @@ def _fill_surface_intercepts(self, event_key):
     self.register_backplane(lon_key, event.coord1)
     self.register_backplane(lat_key, event.coord2)
 
+
 def _sub_observer_longitude(self, event_key):
     """Gridless sub-observer longitude. Used internally."""
 
@@ -174,6 +174,7 @@ def _sub_observer_longitude(self, event_key):
     longitude = event.dep_ap.longitude(recursive=self.ALL_DERIVS)
         # Use the apparent departure direction seen at the body center
     return self.register_backplane(key, longitude)
+
 
 def _sub_observer_latitude(self, event_key):
     """Gridless sub-observer latitude. Used internally."""
@@ -189,6 +190,7 @@ def _sub_observer_latitude(self, event_key):
         # Use the apparent departure direction seen at the body center
     return self.register_backplane(key, latitude)
 
+
 def _sub_solar_longitude(self, event_key):
     """Gridless sub-solar longitude. Used internally."""
 
@@ -202,6 +204,7 @@ def _sub_solar_longitude(self, event_key):
     longitude = event.neg_arr_ap.longitude(recursive=self.ALL_DERIVS)
         # Use the (negative) apparent arrival direction seen at the body center
     return self.register_backplane(key, longitude)
+
 
 def _sub_solar_latitude(self, event_key):
     """Gridless sub-solar latitude. Used internally."""
@@ -264,8 +267,8 @@ def sub_observer_longitude(self, event_key, reference='iau', direction='west',
                                     direction=direction, minimum=minimum)
     return self.register_backplane(key, longitude)
 
-def sub_solar_longitude(self, event_key, reference='iau',
-                                         direction='west', minimum=0):
+
+def sub_solar_longitude(self, event_key, reference='iau', direction='west', minimum=0):
     """Gridless sub-solar longitude.
 
     Note that this longitude is essentially independent of the longitude_type (centric,
@@ -306,8 +309,9 @@ def sub_solar_longitude(self, event_key, reference='iau',
                                     direction=direction, minimum=minimum)
     return self.register_backplane(key, longitude)
 
-def _sub_longitude(self, event_key, longitude, reference='iau',
-                                    direction='west', minimum=0):
+
+def _sub_longitude(self, event_key, longitude, reference='iau', direction='west',
+                   minimum=0):
     """Sub-solar or sub-observer longitude."""
 
     if reference not in ('iau', 'sun', 'sha', 'obs', 'oha'):
@@ -344,6 +348,7 @@ def _sub_longitude(self, event_key, longitude, reference='iau',
 
     return longitude
 
+
 def sub_observer_latitude(self, event_key, lat_type='centric'):
     """Gridless sub-observer latitude at the center of the disk.
 
@@ -366,11 +371,11 @@ def sub_observer_latitude(self, event_key, lat_type='centric'):
     dep_ap = event.dep_ap
 
     if lat_type == 'graphic':
-        dep_ap = dep_ap.element_mul(event.surface._unsquash_sq,
-                                    recursive=self.ALL_DERIVS)
+        dep_ap = dep_ap.element_mul(event.surface._unsquash_sq, recursive=self.ALL_DERIVS)
 
     latitude = dep_ap.latitude(recursive=self.ALL_DERIVS)
     return self.register_backplane(key, latitude)
+
 
 def sub_solar_latitude(self, event_key, lat_type='centric'):
     """Gridless sub-solar latitude at the center of the disk.

@@ -1,8 +1,11 @@
 ##########################################################################################
-# tests/cadence/reversedcadence.py: ReversedCadence subclass of class Cadence
+# tests/cadence/test_reversedcadence.py
 ##########################################################################################
 
+import pickle
+
 import numpy as np
+import pytest
 
 import oops
 from tests.cadence.test_tdicadence import (case_tdicadence_10_100_10_2_down,
@@ -76,4 +79,21 @@ def test_reversedcadence():
     cadence = oops.cadence.Metronome(100., 30., 40., 4)
     cadence = oops.cadence.ReversedCadence(oops.cadence.ReversedCadence(cadence))
     case_partial_overlap(cadence)
+
+
+def test_reversedcadence_requires_axis_zero() -> None:
+    """Only axis 0 can be reversed, and the axis carries into every derived cadence."""
+
+    cadence = oops.cadence.Metronome(100., 10., 8., 4)
+
+    with pytest.raises(ValueError, match='axis must be 0'):
+        oops.cadence.ReversedCadence(cadence, 1)
+
+    reversed_ = oops.cadence.ReversedCadence(cadence, 0)
+
+    assert reversed_._axis == 0
+    assert reversed_.time_shift(5.)._axis == 0
+    assert reversed_.as_continuous()._axis == 0
+    assert pickle.loads(pickle.dumps(reversed_))._axis == 0
+
 ##########################################################################################

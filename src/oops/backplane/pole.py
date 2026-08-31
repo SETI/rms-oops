@@ -1,14 +1,14 @@
 ##########################################################################################
-# oops/backplanes/pole.py: Pole angle backplanes
+# oops/backplanes/pole.py
 ##########################################################################################
 
 from polymath       import Scalar, Vector3, Matrix3
 from oops.backplane import Backplane
 from oops.frame     import Frame
 
+
 def pole_clock_angle(self, event_key):
-    """Gridless projected pole vector on the sky, measured from north through
-    west.
+    """Gridless projected pole vector on the sky, measured from north through west.
 
     In other words, measured clockwise on the sky.
     """
@@ -45,9 +45,10 @@ def pole_clock_angle(self, event_key):
 
     return self.register_backplane(key, clock_angle)
 
+
 def pole_position_angle(self, event_key):
-    """Projected angle of a body's pole vector on the sky, measured from
-    celestial north toward celestial east (i.e., counterclockwise on the sky).
+    """Projected angle of a body's pole vector on the sky, measured from celestial north
+    toward celestial east (i.e., counterclockwise on the sky).
     """
 
     self.refresh()

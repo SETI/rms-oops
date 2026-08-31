@@ -11,11 +11,10 @@ import warnings
 ##########################################################################################
 # QuickPath and QuickFrame default parameters
 #
-# Disable the use of QuickPaths/Frames on an individual basis by calling the
-# function with quick=False. The default set of parameters will be used whenever
-# quick=True. If a function is called with quick as a dictionary, then any
-# values in the dictionary override these defaults and the merged dictionary of
-# parameters is used.
+# Disable the use of QuickPaths/Frames on an individual basis by calling the function with
+# quick=False. The default set of parameters will be used whenever quick=True. If a
+# function is called with quick as a dictionary, then any values in the dictionary
+# override these defaults and the merged dictionary of parameters is used.
 ##########################################################################################
 
 class QUICK(object):

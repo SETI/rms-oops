@@ -274,8 +274,7 @@ class Body(object):
     BODY_REGISTRY = {}          # global dictionary of body objects
     STANDARD_BODIES = set()     # Bodies that always have the same definition
 
-    def __init__(self, name, path, frame, parent=None, barycenter=None,
-                 spice_name=None):
+    def __init__(self, name, path, frame, parent=None, barycenter=None, spice_name=None):
         """Constructor for a Body object."""
 
         if not isinstance(name, str):
@@ -450,14 +449,14 @@ class Body(object):
         if isinstance(self.ring_frame, RingFrame) and pole is None:
             if (self.ring_frame._epoch != epoch or
                 self.ring_frame._retrograde != retrograde):
-                    raise ValueError('re-definition of RingFrame is '
-                                     + 'incompatible with the original')
+                    raise ValueError('re-definition of RingFrame is incompatible with '
+                                     'the original')
 
         if isinstance(self.ring_frame, PoleFrame) and pole is not None:
             if (self.ring_frame._retrograde != retrograde or
                 self.ring_frame._invariable_pole != pole):
-                    raise ValueError('re-definition of PoleFrame is '
-                                     + 'incompatible with the original')
+                    raise ValueError('re-definition of PoleFrame is incompatible with '
+                                     'the original')
 
         if pole is not None:
             pole = Vector3.as_vector3(pole)
@@ -574,8 +573,7 @@ class Body(object):
 
         selection = []
         for body in bodies:
-            if (body.radius >= min and body.radius <= max
-                                   and body not in selection):
+            if (body.radius >= min and body.radius <= max and body not in selection):
                 selection.append(body)
 
         return selection
@@ -829,48 +827,43 @@ class Body(object):
 
         return Path.as_primary_path(self.path)
 
-    def photon_to_event(self, event, derivs=False, guess=None,
-                              antimask=None, quick={}, converge={}):
-        """Solve for a photon arrival event from the center of this body.
+    def photon_to_event(self, event, derivs=False, guess=None, antimask=None, quick=None,
+                        converge=None):
+        """The photon departure event from the center of this body, matching the given
+        arrival event.
 
-        This is equivalent to self.path.photon_to_event. It is provided for compatibility
-        with the LightSource method of the same name.
+        This delegates to `self.path.photon_to_event`. It lets a Body and a LightSource
+        serve interchangeably as a source of illumination.
 
         Parameters:
             event (Event): The event of the observation.
             derivs (bool, optional): True to propagate derivatives of the event position
-                into the returned event. The time derivative is always retained.
+                into the returned events. The time derivative is always retained.
             guess (Scalar, optional): An initial guess to use as the event time along the
                 path; otherwise None. Should only be used if the event time was already
                 returned from a similar calculation.
-            antimask (ndarray or bool, optional): If not None, this is a boolean
-                array to be applied to event times and positions. Only the indices where
+            antimask (ndarray or bool, optional): If not None, this is a boolean array to
+                be applied to event times and positions. Only the indices where
                 antimask=True will be used in the solution.
-            quick (dict, optional): To override the configured default parameters for
-                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
-                QuickFrames. The default configuration is defined in config.py.
+            quick (dict or bool, optional): To override the configured default parameters
+                for QuickPaths and QuickFrames; False to disable the use of QuickPaths
+                and QuickFrames. The default configuration is defined in config.py.
             converge (dict, optional): Parameters to override the configured default
                 convergence parameters. The default configuration is defined in config.py.
 
         Returns:
-            Arrival. arrival     a copy of the given event, with the photon arrival
-                or departure line of sight and light travel time filled in. These
-                subfields and derivatives are defined: arr         direction of the
-                arriving photon at the path. arr_lt      (negative) light travel time from
-                the link event. Convergence parameters are as follows: iters       the
-                maximum number of iterations of Newton's method to perform. It should
-                almost never need to be > 5. precision   iteration stops when the largest
-                change in light travel time between one iteration and the next falls below
-                this threshold (in seconds). limit       the maximum allowed absolute
-                value of the change in light travel time from the nominal range calculated
-                initially. Changes in light travel with absolute values larger than this
-                limit are clipped. This prevents the divergence of the solution in some
-                cases.
+            tuple[Event, Event]: (`path_event`, `arrival_event`).
+
+            * `path_event`: The Event at the center of this body that matches the light
+              travel time to `event`. It carries the departing photon's line of sight
+              `dep` and the positive light travel time `dep_lt`.
+            * `arrival_event`: A copy of the given `event`, carrying the arriving
+              photon's line of sight `arr` and the negative light travel time `arr_lt`.
         """
 
-        return self.path.photon_to_event(event, derivs=derivs,
-                                         guess=guess, antimask=antimask,
-                                         quick=quick, converge=converge)
+        return self.path.photon_to_event(event, derivs=derivs, guess=guess,
+                                         antimask=antimask, quick=quick,
+                                         converge=converge)
 
     ######################################################################################
     # General function to load Solar System components
@@ -955,9 +948,9 @@ class Body(object):
 
         spicedb.close_db()
 
-        # Also define the solar disk as a light source. The import of the
-        # LightSource class is local to this function because a file-level
-        # import would result in a recursive import.
+        # Also define the solar disk as a light source. The import of the LightSource
+        # class is local to this function because a file-level import would result in a
+        # recursive import.
         from oops.lightsource import DiskSource
         _ = DiskSource('SOLAR_DISK', SpicePath(10), 695990., 11)
 
@@ -974,8 +967,7 @@ class Body(object):
         """Define components of the Mars system."""
 
         Body.MARS_MOONS_LOADED += MARS_ALL_MOONS
-        names = spicedb.furnish_spk(Body.MARS_MOONS_LOADED,
-                                    time=(start_time, stop_time),
+        names = spicedb.furnish_spk(Body.MARS_MOONS_LOADED, time=(start_time, stop_time),
                                     asof=asof)
 
         # Mars and the Mars barycenter orbit the Sun
@@ -988,8 +980,7 @@ class Body(object):
                            is_standard=True)
 
         # Rings of Mars
-        ring = Body.define_ring('MARS', 'MARS_RING_PLANE', None, [],
-                                is_standard=True)
+        ring = Body.define_ring('MARS', 'MARS_RING_PLANE', None, [], is_standard=True)
         ring.backplane_id = 'MARS:RING'
         ring.backplane_limits = None
         ring.unbounded_surface = ring
@@ -1002,8 +993,8 @@ class Body(object):
     # Jupiter System
     ######################################################################################
 
-    # See definition of JUPITER_ALIASES at the top of the file for the list of
-    # additional, ambiguous irregular moons
+    # See definition of JUPITER_ALIASES at the top of the file for the list of additional,
+    # ambiguous irregular moons
 
     JUPITER_MOONS_LOADED = []
 
@@ -1017,8 +1008,7 @@ class Body(object):
             Body.JUPITER_MOONS_LOADED += JUPITER_IRREGULAR
 
         names = spicedb.furnish_spk(Body.JUPITER_MOONS_LOADED,
-                                    time=(start_time, stop_time),
-                                    asof=asof)
+                                    time=(start_time, stop_time), asof=asof)
 
         # Jupiter and the Jupiter barycenter orbit the Solar System barycenter
         Body.define_bodies([599], 'SUN', 'SSB', ['PLANET'], is_standard=True)
@@ -1026,14 +1016,12 @@ class Body(object):
 
         # Moons and rings of Jupiter
         Body.define_bodies(JUPITER_CLASSICAL, 'JUPITER', 'JUPITER',
-                           ['SATELLITE', 'CLASSICAL', 'REGULAR'],
-                           is_standard=True)
+                           ['SATELLITE', 'CLASSICAL', 'REGULAR'], is_standard=True)
         Body.define_bodies(JUPITER_REGULAR, 'JUPITER', 'JUPITER',
                            ['SATELLITE', 'REGULAR'], is_standard=True)
 
         if irregulars:
-            Body.define_bodies(JUPITER_IRREGULAR, 'JUPITER',
-                               'JUPITER_BARYCENTER',
+            Body.define_bodies(JUPITER_IRREGULAR, 'JUPITER', 'JUPITER_BARYCENTER',
                               ['SATELLITE', 'IRREGULAR'], is_standard=True)
 
             for (ids, names) in JUPITER_ALIASES:
@@ -1075,8 +1063,7 @@ class Body(object):
             Body.SATURN_MOONS_LOADED += SATURN_IRREGULAR
 
         names = spicedb.furnish_spk(Body.SATURN_MOONS_LOADED,
-                                    time=(start_time, stop_time),
-                                    asof=asof)
+                                    time=(start_time, stop_time), asof=asof)
 
         # Saturn and the Saturn barycenter orbit the SSB
         Body.define_bodies([699], 'SUN', 'SSB', ['PLANET'], is_standard=True)
@@ -1169,8 +1156,7 @@ class Body(object):
             Body.URANUS_MOONS_LOADED += URANUS_IRREGULAR
 
         names = spicedb.furnish_spk(Body.URANUS_MOONS_LOADED,
-                                    time=(start_time, stop_time),
-                                    asof=asof)
+                                    time=(start_time, stop_time), asof=asof)
 
         # Uranus and the Uranus barycenter orbit the SSB
         Body.define_bodies([799], 'SUN', 'SSB', ['PLANET'], is_standard=True)
@@ -1178,8 +1164,7 @@ class Body(object):
 
         # Moons and rings of Uranus
         Body.define_bodies(URANUS_CLASSICAL, 'URANUS', 'URANUS',
-                           ['SATELLITE', 'CLASSICAL', 'REGULAR'],
-                           is_standard=True)
+                           ['SATELLITE', 'CLASSICAL', 'REGULAR'], is_standard=True)
         Body.define_bodies(URANUS_INNER, 'URANUS', 'URANUS',
                            ['SATELLITE', 'REGULAR'], is_standard=True)
 
@@ -1187,29 +1172,28 @@ class Body(object):
             Body.define_bodies(URANUS_IRREGULAR, 'URANUS', 'URANUS',
                                ['SATELLITE', 'IRREGULAR'], is_standard=True)
 
-        ring = Body.define_ring('URANUS', 'URANUS_RING_PLANE', None,
-                                [], retrograde=True, is_standard=True)
+        ring = Body.define_ring('URANUS', 'URANUS_RING_PLANE', None, [], retrograde=True,
+                                is_standard=True)
         ring.backplane_id = 'URANUS:RING'
         ring.backplane_limits = None
         ring.unbounded_surface = ring
         unbounded_ring = ring
         Body.BODY_REGISTRY['URANUS'].ring_body = ring
 
-        ring = Body.define_ring('URANUS', 'URANUS_RING_SYSTEM',
-                                URANUS_EPSILON_LIMIT, [],
+        ring = Body.define_ring('URANUS', 'URANUS_RING_SYSTEM', URANUS_EPSILON_LIMIT, [],
                                 retrograde=True, is_standard=True)
         ring.backplane_id = 'URANUS:RING'
         ring.backplane_limits = (0., URANUS_EPSILON_LIMIT)
         ring.unbounded_surface = unbounded_ring
 
-        ring = Body.define_ring('URANUS', 'MU_RING', URANUS_MU_LIMIT,
-                                [], retrograde=True, is_standard=True)
+        ring = Body.define_ring('URANUS', 'MU_RING', URANUS_MU_LIMIT, [], retrograde=True,
+                                is_standard=True)
         ring.backplane_id = 'URANUS:RING'
         ring.backplane_limits = URANUS_MU_LIMIT
         ring.unbounded_surface = unbounded_ring
 
-        ring = Body.define_ring('URANUS', 'NU_RING', URANUS_NU_LIMIT,
-                                [], retrograde=True, is_standard=True)
+        ring = Body.define_ring('URANUS', 'NU_RING', URANUS_NU_LIMIT, [], retrograde=True,
+                                is_standard=True)
         ring.backplane_id = 'URANUS:RING'
         ring.backplane_limits = URANUS_NU_LIMIT
         ring.unbounded_surface = unbounded_ring
@@ -1262,8 +1246,7 @@ class Body(object):
             Body.NEPTUNE_MOONS_LOADED += NEPTUNE_IRREGULAR
 
         names = spicedb.furnish_spk(Body.NEPTUNE_MOONS_LOADED,
-                                    time=(start_time, stop_time),
-                                    asof=asof)
+                                    time=(start_time, stop_time), asof=asof)
 
         # Neptune and the Neptune barycenter orbit the SSB
         Body.define_bodies([899], 'SUN', 'SSB', ['PLANET'], is_standard=True)
@@ -1271,18 +1254,15 @@ class Body(object):
 
         # Moons and rings of Neptune
         Body.define_bodies(NEPTUNE_CLASSICAL_INNER, 'NEPTUNE', 'NEPTUNE',
-                           ['SATELLITE', 'CLASSICAL', 'REGULAR'],
-                           is_standard=True)
-        Body.define_bodies(NEPTUNE_CLASSICAL_OUTER, 'NEPTUNE',
-                           'NEPTUNE_BARYCENTER',
-                           ['SATELLITE', 'CLASSICAL', 'IRREGULAR'],
-                           is_standard=True)
+                           ['SATELLITE', 'CLASSICAL', 'REGULAR'], is_standard=True)
+        Body.define_bodies(NEPTUNE_CLASSICAL_OUTER, 'NEPTUNE', 'NEPTUNE_BARYCENTER',
+                           ['SATELLITE', 'CLASSICAL', 'IRREGULAR'], is_standard=True)
         Body.define_bodies(NEPTUNE_REGULAR, 'NEPTUNE', 'NEPTUNE',
                            ['SATELLITE', 'REGULAR'], is_standard=True)
 
         if irregulars:
-            _ = spicedb.furnish_spk(NEPTUNE_IRREGULAR,
-                                    time=(start_time, stop_time), asof=asof)
+            _ = spicedb.furnish_spk(NEPTUNE_IRREGULAR, time=(start_time, stop_time),
+                                    asof=asof)
 
         Body.define_bodies(NEPTUNE_IRREGULAR, 'NEPTUNE', 'NEPTUNE_BARYCENTER',
                            ['SATELLITE', 'IRREGULAR'], True)
@@ -1293,17 +1273,16 @@ class Body(object):
         dec = NEPTUNE_INVARIABLE_DEC
         pole = Vector3.from_ra_dec_length(ra,dec)
 
-        ring = Body.define_ring('NEPTUNE', 'NEPTUNE_RING_PLANE',  None, [],
-                                pole=pole, is_standard=True)
+        ring = Body.define_ring('NEPTUNE', 'NEPTUNE_RING_PLANE',  None, [], pole=pole,
+                                is_standard=True)
         ring.backplane_id = 'NEPTUNE:RING'
         ring.backplane_limits = None
         ring.unbounded_surface = ring
         unbounded_ring = ring
         Body.BODY_REGISTRY['NEPTUNE'].ring_body = ring
 
-        ring = Body.define_ring('NEPTUNE', 'NEPTUNE_RING_SYSTEM',
-                                NEPTUNE_ADAMS_LIMIT, [], pole=pole,
-                                is_standard=True)
+        ring = Body.define_ring('NEPTUNE', 'NEPTUNE_RING_SYSTEM', NEPTUNE_ADAMS_LIMIT,
+                                [], pole=pole, is_standard=True)
         ring.backplane_id = 'NEPTUNE:RING'
         ring.backplane_limits = (0., NEPTUNE_ADAMS_LIMIT)
         ring.unbounded_surface = unbounded_ring
@@ -1322,8 +1301,7 @@ class Body(object):
 
         Body.PLUTO_MOONS_LOADED += CHARON + PLUTO_REGULAR
 
-        names = spicedb.furnish_spk(Body.PLUTO_MOONS_LOADED,
-                                    time=(start_time, stop_time),
+        names = spicedb.furnish_spk(Body.PLUTO_MOONS_LOADED, time=(start_time, stop_time),
                                     asof=asof)
 
         # The Pluto barycenter orbits the SSB
@@ -1333,14 +1311,12 @@ class Body(object):
         Body.define_bodies([999], 'SUN', 'PLUTO_BARYCENTER', ['PLANET'],
                            is_standard=True)
         Body.define_bodies(CHARON, 'PLUTO', 'PLUTO_BARYCENTER',
-                           ['SATELLITE', 'CLASSICAL', 'REGULAR'],
-                           is_standard=True)
+                           ['SATELLITE', 'CLASSICAL', 'REGULAR'], is_standard=True)
         Body.define_bodies(PLUTO_REGULAR, 'PLUTO', 'PLUTO_BARYCENTER',
                            ['SATELLITE', 'REGULAR'], is_standard=True)
 
         ring = Body.define_ring('PLUTO', 'PLUTO_RING_PLANE', None, [],
-                                barycenter_name='PLUTO_BARYCENTER',
-                                is_standard=True)
+                                barycenter_name='PLUTO_BARYCENTER', is_standard=True)
         ring.backplane_id = 'PLUTO:RING'
         ring.backplane_limits = None
         Body.BODY_REGISTRY['PLUTO'].ring_body = ring
@@ -1506,8 +1482,7 @@ class Body(object):
     @staticmethod
     def define_orbit(parent_name, ring_name, elements, epoch, reference,
                      keywords, is_standard=False):
-        """Define the path, frame, surface and body for ring given orbital
-        elements.
+        """Define the path, frame, surface and body for ring given orbital elements.
 
         The ring can be inclined or eccentric.
         """
@@ -1517,8 +1492,8 @@ class Body(object):
         orbit = OrbitPlane(elements, epoch, parent.path, reference,
                            path_id=ring_name)
 
-        body = Body(ring_name, orbit._internal_origin, orbit._internal_frame,
-                    parent, parent)
+        body = Body(ring_name, orbit._internal_origin, orbit._internal_frame, parent,
+                    parent)
         body.apply_surface(orbit, elements[9], 0.)
         orbit.body = body
 
@@ -1527,12 +1502,14 @@ class Body(object):
         body.is_standard = bool(is_standard)
 
     @staticmethod
-    def define_small_body(spice_id, name=None, spk=None, keywords=[],
-                          parent='SUN', barycenter='SSB', is_standard=False):
+    def define_small_body(spice_id, name=None, spk=None, keywords=None, parent='SUN',
+                          barycenter='SSB', is_standard=False):
         """Define the path, frame, surface for a body by SPICE ID.
 
         This body treats the Sun as its parent body and barycenter.
         """
+
+        keywords = keywords or []
 
         # Load the SPK if necessary
         if spk:

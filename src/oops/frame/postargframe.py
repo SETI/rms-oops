@@ -62,7 +62,7 @@ class PosTargFrame(Frame):
 
     def _refresh(self):
         self._transform = Transform(self._matrix, Vector3.ZERO, self, self._reference,
-                                    self._origin)
+                                    origin=self._origin)
 
     def _wayframe_key(self):
         return (self._xpos, self._ypos, self._reference)

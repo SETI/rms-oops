@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/backplanes/limb_backplanes.py: Limb altitude backplanes.
+# oops/backplanes/limb.py
 ##########################################################################################
 
 import numpy as np
@@ -12,6 +12,7 @@ from oops.surface.polarlimb import PolarLimb
 # forward to each new backplane array that refers to it.
 LIMB_BACKPLANES = ('limb_altitude',)
 
+
 def limb_altitude(self, event_key, zmin=None, zmax=None, scaled=False):
     """Elevation of a limb point above the body's surface.
 
@@ -19,8 +20,8 @@ def limb_altitude(self, event_key, zmin=None, zmax=None, scaled=False):
         event_key (str or tuple): Key defining the limb surface event.
         zmin (optional): Lower limit on altitude; lower values are masked.
         zmax (optional): Upper limit on altitude.
-        scaled (bool, optional): If True, zmin and zmax are in units of the maximum body
-            radius.
+        scaled (bool, optional): If True, `zmin` and `zmax` are in units of the maximum
+            body radius.
     """
 
     self.refresh()
@@ -57,6 +58,7 @@ def limb_altitude(self, event_key, zmin=None, zmax=None, scaled=False):
 
     return self.register_backplane(key, altitude)
 
+
 def _fill_limb_intercepts(self, event_key):
     """Internal method to fill in the limb intercept geometry backplanes.
 
@@ -81,27 +83,34 @@ def _fill_limb_intercepts(self, event_key):
     self.register_backplane(('limb_altitude', event_key, None, None),
                              event.coord3)
 
-def limb_longitude(self, event_key, reference='iau', direction='west',
-                                    minimum=0, lon_type='centric'):
+
+def limb_longitude(self, event_key, reference='iau', direction='west',  minimum=0,
+                   lon_type='centric'):
     """Longitude at the limb surface intercept point in the image.
 
     Parameters:
         event_key (str or tuple): Key defining the limb surface event. Alternatively, a
             limb_altitude backplane key, in which case this backplane inherits the mask of
             the given backplane array.
-        reference (str, optional): Defines the location of zero longitude. 'iau' for the
-            IAU-defined prime meridian; 'obs' for the sub-observer longitude; 'sun' for
-            the sub-solar longitude; 'oha' for the anti-observer longitude; 'sha' for the
-            anti-solar longitude, returning the local time on the planet if direction is
-            west.
+        reference (str, optional): Defines the location of zero longitude.
+
+            * 'iau' for the IAU-defined prime meridian;
+            * 'obs' for the sub-observer longitude;
+            * 'sun' for the sub-solar longitude;
+            * 'oha' for the anti-observer longitude;
+            * 'sha' for the anti-solar longitude, returning the local time on the planet
+              if direction is west.
+
         direction (str, optional): Direction on the surface of increasing longitude,
             'east' or 'west'.
         minimum (float, optional): The smallest numeric value of longitude, either 0 or
             -180.
-        lon_type (str, optional): Defines the type of longitude measurement: 'centric'
-            for planetocentric; 'graphic'   for planetographic; 'squashed'  for an
-            intermediate longitude type used internally. Note that lon_type is irrelevant
-            to Spheroids but matters for Ellipsoids.
+        lon_type (str, optional): Defines the type of longitude measurement:
+
+            * 'centric' for planetocentric;
+            * 'graphic' for planetographic;
+            * 'squashed' for an intermediate longitude type used internally. Note that
+              `lon_type` is irrelevant to Spheroids but matters for Ellipsoids.
     """
 
     self.refresh()
@@ -121,6 +130,7 @@ def limb_longitude(self, event_key, reference='iau', direction='west',
     longitude = self.longitude(*key[1:])
     return self.register_backplane(key, longitude)
 
+
 def limb_latitude(self, event_key, lat_type='centric'):
     """Latitude at the surface intercept point in the image.
 
@@ -128,9 +138,11 @@ def limb_latitude(self, event_key, lat_type='centric'):
         event_key (str or tuple): Key defining the limb surface event. Alternatively, a
             limb_altitude backplane key, in which case this backplane inherits the mask of
             the given backplane array.
-        lat_type (str, optional): Defines the type of latitude measurement: 'centric'
-            for planetocentric; 'graphic'   for planetographic; 'squashed'  for an
-            intermediate latitude type used internally.
+        lat_type (str, optional): Defines the type of latitude measurement:
+
+            * 'centric' for planetocentric;
+            * 'graphic' for planetographic;
+            * 'squashed' for an intermediate latitude type used internally.
     """
 
     self.refresh()
@@ -149,6 +161,7 @@ def limb_latitude(self, event_key, lat_type='centric'):
     # Use the default latitude method
     latitude = self.latitude(event_key, lat_type)
     return self.register_backplane(key, latitude)
+
 
 def limb_clock_angle(self, event_key):
     """Angular location around the limb, measured clockwise from the projected north pole.

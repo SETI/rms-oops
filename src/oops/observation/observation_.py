@@ -32,41 +32,40 @@ class Observation(Mutable):
     of a spatial pixel. Half-integer indices fall at the midpoint of each sample.
 
     Properties:
-        * cadence (Cadence): Defines the timing of the observation.
-        * time (tuple or Pair): The start time and end time of the observation overall, in
-          seconds TDB. Inherited from `cadence`.
-        * midtime (float): The mid-time of the observation, in seconds TDB. Inherited from
-          `cadence`.
-        * fov (FOV): The field of view, which describes the field of view including any
-          spatial distortion. It maps between spatial coordinates (u,v) and instrument
-          coordinates (x,y).
-        * uv_shape (tuple): The 2-D shape of the spatial axes of the data array, in (u,v)
-          order. This differs from `fov.uv_shape` in cases where the time-dependence
-          introduces an extra dimension.
-        * u_axis (int): The axis of the data array associated with the u-axis; -1 if that
-          axis is not associated with an array index.
-        * v_axis (int): The axis of the data array associated with the v-axis; -1 if that
-          axis is not associated with an array index.
-        * swap_uv (bool): True if the v-axis comes before the u-axis; False otherwise.
-        * t_axis (int or list): The axes of the data array associated with time. When a
-          list has multiple values, this is the sequence of array indices that break down
-          time into finer and finer divisions, ordered from left to right. Use -1 if the
-          observation has no time-dependence.
-        * shape (list or tuple): The overall shape of the observation data. Where the size
-          of an axis is unknown, e.g., for a wavelength axis, the value can be zero.
-        * path (Path): The path waypoint co-located with the instrument.
-        * frame (Frame): The wayframe of a coordinate frame fixed to the optics of the
-          instrument. This frame has its Z-axis pointing outward near the center of the
-          line of sight, with the X-axis pointing rightward and the Y-axis pointing
-          downward.
-        * subfields (dict): All of the optional attributes. Additional subfields may be
-          included as needed. The subfield `data` is reserved to contain the NumPy array
-          of numbers associated with the observation.
+        cadence (Cadence): Defines the timing of the observation.
+        time (tuple or Pair): The start time and end time of the observation overall, in
+            seconds TDB. Inherited from `cadence`.
+        midtime (float): The mid-time of the observation, in seconds TDB. Inherited from
+            `cadence`.
+        fov (FOV): The field of view, which describes the field of view including any
+            spatial distortion. It maps between spatial coordinates (u,v) and instrument
+            coordinates (x,y).
+        uv_shape (tuple): The 2-D shape of the spatial axes of the data array, in (u,v)
+            order. This differs from `fov.uv_shape` in cases where the time-dependence
+            introduces an extra dimension.
+        u_axis (int): The axis of the data array associated with the u-axis; -1 if that
+            axis is not associated with an array index.
+        v_axis (int): The axis of the data array associated with the v-axis; -1 if that
+            axis is not associated with an array index.
+        swap_uv (bool): True if the v-axis comes before the u-axis; False otherwise.
+        t_axis (int or list): The axes of the data array associated with time. When a list
+            has multiple values, this is the sequence of array indices that break down
+            time into finer and finer divisions, ordered from left to right. Use -1 if the
+            observation has no time-dependence.
+        shape (list or tuple): The overall shape of the observation data. Where the size
+            of an axis is unknown, e.g., for a wavelength axis, the value can be zero.
+        path (Path): The path waypoint co-located with the instrument.
+        frame (Frame): The wayframe of a coordinate frame fixed to the optics of the
+            instrument. This frame has its Z-axis pointing outward near the center of the
+            line of sight, with the X-axis pointing rightward and the Y-axis pointing
+            downward.
+        subfields (dict): All of the optional attributes. Additional subfields may be
+            included as needed. The subfield `data` is reserved to contain the NumPy array
+            of numbers associated with the observation.
 
     Attributes:
-        * INVENTORY_IMPLEMENTED (bool): True if this subclass implements `inventory()`.
-        * DEBUG (bool): True to log the iterative convergence steps of the geometry
-          solvers.
+        INVENTORY_IMPLEMENTED (bool): True if this subclass implements `inventory()`.
+        DEBUG (bool): True to log the iterative convergence steps of the geometry solvers.
     """
 
     INVENTORY_IMPLEMENTED = False
@@ -592,7 +591,7 @@ class Observation(Mutable):
         return time0 + tfrac * (time1 - time0)
 
     def meshgrid(self, origin=None, *, undersample=1, oversample=1, limit=None,
-                 center_uv=None, fov_keywords={}):
+                 center_uv=None, fov_kwargs=None):
         """A Meshgrid shaped to broadcast to the observation's shape.
 
         This works like Meshgrid.for_fov() except that the (u,v) axes are assigned their
@@ -612,7 +611,7 @@ class Observation(Mutable):
                 limits of the meshgrid. By default, this is the shape of the FOV.
             center_uv (Pair, optional): Reference point at the center of the FOV; use None
                 for the default, which depends on the origin and limit.
-            fov_keywords (dict, optional): Parameters passed to the FOV methods,
+            fov_kwargs (dict, optional): Parameters passed to the FOV methods,
                 containing parameters that might affect the properties of the FOV.
 
         Returns:
@@ -626,7 +625,7 @@ class Observation(Mutable):
                                   oversample=oversample,
                                   limit=limit,
                                   center_uv=center_uv,
-                                  fov_keywords=fov_keywords)
+                                  fov_kwargs=fov_kwargs)
 
     def timegrid(self, meshgrid, *, oversample=1, tfrac_limits=(0,1)):
         """A Scalar of times broadcastable with the shape of the given meshgrid.

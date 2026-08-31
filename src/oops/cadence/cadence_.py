@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/cadence/cadence_
+# oops/cadence/cadence_.py
 ##########################################################################################
 
 from polymath import Scalar, Pair
@@ -10,19 +10,19 @@ class Cadence(Mutable):
     """Cadence is an abstract class that defines the timing of an observation.
 
     Properties:
-        * time (tuple): The start time and end time of the observation overall, in
-          seconds TDB.
-        * midtime (float): The mid-time of the observation, in seconds TDB.
-        * lasttime (float): The start time of the last time step, in seconds TDB.
-        * shape (tuple): Integers defining the shape of the indices.
-        * is_continuous (bool): True if the cadence contains no gaps in time between the
-          start and end.
-        * is_unique (bool): True if no times inside the cadence are associated with more
-          than one time step.
-        * min_tstride (float): Minimum absolute value of the time interval between one
-          tstep and the next.
-        * max_tstride (float): Maximum absolute value of the time interval between one
-          tstep and the next.
+        time (tuple): The start time and end time of the observation overall, in seconds
+            TDB.
+        midtime (float): The mid-time of the observation, in seconds TDB.
+        lasttime (float): The start time of the last time step, in seconds TDB.
+        shape (tuple): The shape of the array of time step indices.
+        is_continuous (bool): True if the cadence contains no gaps in time between the
+            start and end.
+        is_unique (bool): True if no times inside the cadence are associated with more
+            than one time step.
+        min_tstride (float): Minimum absolute value of the time interval between one
+            tstep and the next.
+        max_tstride (float): Maximum absolute value of the time interval between one
+            tstep and the next.
     """
 
     ######################################################################################
@@ -42,11 +42,11 @@ class Cadence(Mutable):
             remask (bool, optional): True to mask values outside the time limits.
             derivs (bool, optional): True to include derivatives of tstep in the returned
                 time.
-            inclusive (bool, optional): True to treat the end time of the cadence as part
-                of the cadence; False to exclude it.
+            inclusive (bool, optional): True to treat the end time as part of this
+                Cadence; False to exclude it.
 
         Returns:
-            (Scalar): Times in seconds TDB.
+            Scalar: Time in seconds TDB.
         """
 
         raise NotImplementedError(f'{type(self).__name__}.time_at_tstep is not '
@@ -59,19 +59,16 @@ class Cadence(Mutable):
         returns the time range at the nearest edge.
 
         Parameters:
-            tstep (Pair): Time step index values.
+            tstep (Scalar or Pair): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
-            inclusive (bool, optional): True to treat the end time of the cadence as part
-                of the cadence; False to exclude it.
+            inclusive (bool, optional): True to treat the end time as part of this
+                Cadence; False to exclude it.
             shift (bool, optional): True to shift the end of the last time step (with
-                index==shape) into the previous time step.
+                index == shape) into the previous time step.
 
         Returns:
-            (tuple): (time_min, time_max), where:
-
-            * `time_min` (Scalar): Defining the minimum time associated with the index. It
-              is given in seconds TDB.
-            * `time_max` (Scalar): Defining the maximum time value.
+            tuple[Scalar, Scalar]: The minimum and maximum times associated with the
+            index values, in seconds TDB.
         """
 
         raise NotImplementedError(f'{type(self).__name__}.time_range_at_tstep is not '
@@ -82,20 +79,17 @@ class Cadence(Mutable):
 
         This method returns non-integer time steps via interpolation.
 
-        In multidimensional cadences, times before first time step refer to the first;
-        times after the last time step refer to the last.
-
         Parameters:
             time (Scalar): Times in seconds TDB.
-            remask (bool, optional): True to mask time values not sampled within the
-                cadence.
+            remask (bool, optional): True to mask time values not sampled within this
+                Cadence.
             derivs (bool, optional): True to include derivatives of time in the returned
                 tstep.
-            inclusive (bool, optional): True to treat the end time of the cadence as part
-                of the cadence; False to exclude it.
+            inclusive (bool, optional): True to treat the end time as part of this
+                Cadence; False to exclude it.
 
         Returns:
-            (Scalar or Pair): Time step indices.
+            Scalar or Pair: Time step index values.
         """
 
         raise NotImplementedError(f'{type(self).__name__}.tstep_at_time is not '
@@ -106,17 +100,17 @@ class Cadence(Mutable):
 
         Parameters:
             time (Scalar): Times in seconds TDB.
-            remask (bool, optional): True to mask time values not sampled within the
-                cadence.
-            inclusive (bool, optional): True to treat the end time of the cadence as part
-                of the cadence; False to exclude it.
+            remask (bool, optional): True to mask time values not sampled within this
+                Cadence.
+            inclusive (bool, optional): True to treat the end time as part of this
+                Cadence; False to exclude it.
 
         Returns:
-            (tuple): (tstep_min, tstep_max) tstep_min   minimum Scalar or Pair time step
-                containing the given time. tstep_max   maximum Scalar or Pair time step
-                containing the given time (inclusive). All returned indices will be in the
-                allowed range for the cadence, inclusive, regardless of mask. If the time
-                is not inside the cadence, tstep_max < tstep_min.
+            tuple[Scalar or Pair, Scalar or Pair]: The range of time step indices active
+            at the given `time`, as (first, last+1); the upper limit is excluded. Values
+            are always within the allowed range for the cadence, regardless of any mask.
+            If `time` is not sampled by the cadence, the range is empty, meaning that the
+            second value equals the first.
         """
 
         raise NotImplementedError(f'{type(self).__name__}.tstep_range_at_time is not '
@@ -132,7 +126,7 @@ class Cadence(Mutable):
                 always treated as inside.
 
         Returns:
-            (bool): Array indicating which time values are not sampled by the cadence.
+            Boolean: True where `time` is not sampled by the cadence.
         """
 
         time = Scalar.as_scalar(time, recursive=False)
@@ -146,16 +140,23 @@ class Cadence(Mutable):
             return time.tvl_lt(self.time[0]) | time.tvl_ge(self.time[1])
 
     def time_shift(self, secs):
-        """Construct a duplicate of this Cadence with all times shifted by given amount.
+        """A duplicate of this Cadence with all times shifted by the given amount.
 
         Parameters:
             secs (float): Seconds to shift the time later.
+
+        Returns:
+            Cadence: The time-shifted cadence.
         """
 
         raise NotImplementedError(f'{type(self).__name__}.time_shift is not implemented')
 
     def as_continuous(self):
-        """Construct a shallow copy of this Cadence, forced to be continuous."""
+        """A shallow copy of this Cadence, forced to be continuous.
+
+        Returns:
+            Cadence: The continuous cadence.
+        """
 
         raise NotImplementedError(f'{type(self).__name__}.as_continuous is not '
                                   'implemented')
@@ -174,7 +175,7 @@ class Cadence(Mutable):
                 always treated as inside.
 
         Returns:
-            (bool): Array indicating which time values are sampled by the cadence.
+            Boolean: True where `time` is sampled by the cadence.
         """
 
         return self.time_is_outside(time, inclusive=inclusive).logical_not()
@@ -189,7 +190,10 @@ class Cadence(Mutable):
             remask (bool, optional): True to mask time tsteps that are out of range.
 
         Returns:
-            (Scalar or Pair): Strides in seconds.
+            Scalar or Pair: Strides in seconds.
+
+        Raises:
+            NotImplementedError: If the cadence has more than two dimensions.
         """
 
         if remask:
@@ -233,7 +237,7 @@ class Cadence(Mutable):
             time1u = self.time_at_tstep(tstep+(1,0), remask=False)
             time1v = self.time_at_tstep(tstep+(0,1), remask=False)
             tstride = Pair.from_scalars(time1u - time0, time1v - time0)
-            tstride = tstride.remask(tstep.mask)
+            tstride = tstride.remask_or(new_mask)
             return tstride
 
         raise NotImplementedError(f'{type(self).__name__}.tstride_at_tstep is not '

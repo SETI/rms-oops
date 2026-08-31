@@ -3,8 +3,10 @@
 ##########################################################################################
 
 from polymath import Qube, Vector3, Matrix3
+from oops.oops import Oops
 
-class Transform(object):
+
+class Transform(Oops):
     """An object describing a coordinate transformation.
 
     A Transform is defined by a rotation matrix plus an optional angular rotation vector
@@ -48,19 +50,19 @@ class Transform(object):
     # Class constants to avoid circular references
     _Frame = None           # class filled in by oops/__init__.py
 
-    def __init__(self, matrix, omega, frame, reference, origin=None):
+    def __init__(self, matrix, omega, frame, reference, *, origin=None):
         """Constructor for a Transform object.
 
         Parameters:
             matrix (Matrix3): Object that is used to rotate coordinates from the reference
                 frame into the new frame.
-            omega: The spin vector for the coordinate frame, given in coordinates of
-                the reference frame.
+            omega (Vector3)): The spin vector for the coordinate frame, given in
+                coordinates of the reference frame.
             frame (Transform): The frame or frame ID into which this Transform rotates.
             reference (Transform): The frame or frame ID from which this Transform
                 rotates.
             origin (Path or str, optional): The path or path ID of the center of rotation.
-                If None, it is derived from the reference frame.
+                If None, it is derived from the `reference` frame.
         """
 
         self.matrix = Matrix3.as_matrix3(matrix)
@@ -90,21 +92,19 @@ class Transform(object):
                 self.origin)
 
     def __setstate__(self, state):
-        self.__init__(*state)
+        self.__init__(*state[:-1], origin=state[-1])
 
     @property
     def shape(self):
         """The intrinsic shape of the Transform.
 
-        This is a bit expensive to generate and used rarely, so it is
-        implemented as a property rather than an attribute.
+        This is a bit expensive to generate and used rarely, so it is implemented as a
+        property rather than an attribute.
         """
 
         if self.filled_shape is None:
-            self.filled_shape =  Qube.broadcasted_shape(self.matrix,
-                                                        self.omega,
-                                                        self.frame,
-                                                        self.reference)
+            self.filled_shape =  Qube.broadcasted_shape(self.matrix, self.omega,
+                                                        self.frame, self.reference)
         return self.filled_shape
 
     @property
@@ -155,7 +155,7 @@ class Transform(object):
         """This Transform without any time-derivatives."""
         if self._filled_wod is None:
             self._filled_wod = Transform(self.matrix, Vector3.ZERO, self.frame,
-                                         self.reference, self.origin)
+                                         self.reference, origin=self.origin)
             self._filled_wod = self._filled_wod
 
         return self._filled_wod
@@ -190,8 +190,8 @@ class Transform(object):
             derivs (bool, optional): True to calculate the time-derivative as well.
 
         Returns:
-            (Vector3): An equivalent Vector3 position transformed into the target frame.
-                If derivs is True, then the returned position has a time derivative.
+            Vector3: An equivalent Vector3 position transformed into the target frame.
+            If `derivs` is True, then the returned position has a time derivative.
         """
 
         if pos is None:
@@ -216,8 +216,8 @@ class Transform(object):
             vel (Vector3): Velocity as a Vector3, in the reference frame.
 
         Returns:
-            (tuple): The same Vector3 position and velocity transformed into the target
-                frame.
+            tuple[Vector3, Vector3]: The same position and velocity transformed into the
+            target frame.
         """
 
         pos = Vector3.as_vector3(pos)
@@ -246,9 +246,9 @@ class Transform(object):
             derivs (bool, optional): True to calculate dpos/dpos and dpos/dt as well.
 
         Returns:
-            (Vector3): The same Vector3 position transformed back into the reference
-                frame. If derivs is True, then the returned position has a subfield
-                "d_dt", a Vector3 representing the derivatives with respect to time.
+            Vector3: The same Vector3 position transformed back into the reference frame.
+            If `derivs` is True, then the returned position has a subfield "d_dt", a
+            Vector3 representing the derivatives with respect to time.
         """
 
         if pos is None:
@@ -272,8 +272,8 @@ class Transform(object):
             vel (Vector3): Velocity as a Vector3, in the target frame.
 
         Returns:
-            (tuple): The same Vector3 position and velocity transformed back into the
-                reference frame.
+            tuple[Vector3, Vector3]: The same position and velocity transformed back into
+            the reference frame.
         """
 
         pos = Vector3.as_vector3(pos)
@@ -299,15 +299,14 @@ class Transform(object):
     def invert(self):
         """The inverse transformation."""
 
-        return Transform(self.matrix.reciprocal(), self.omega1,
-                         self.reference, self.frame, self.origin)
+        return Transform(self.matrix.reciprocal(), self.omega1, self.reference,
+                         self.frame, origin=self.origin)
 
     def rotate_transform(self, arg):
         """Apply this transform to another, as a left-multiply.
 
-        The result is a single transform that converts coordinates in the
-        reference frame of the argument transform into the frame of this
-        transform.
+        The result is a single transform that converts coordinates in the reference frame
+        of the argument transform into the frame of this transform.
         """
 
         # Two tranforms
@@ -338,15 +337,15 @@ class Transform(object):
 
         return Transform(self.matrix.rotate(arg.matrix),
                          arg.matrix.unrotate(self.omega) + arg.omega,
-                         self.frame, arg.reference, origin)
+                         self.frame, arg.reference, origin=origin)
 
     def unrotate_transform(self, arg):
         """Apply the inverse of this transform to another, as a left-multiply.
 
-        The result is a single transform that applies the convert coordinates
-        in the parent frame of the argument transform into the parent frame of
-        this transform. I.e., if arg rotates A to B and self rotates C to B,
-        then the result rotates A to C.
+        The result is a single transform that applies the convert coordinates in the
+        parent frame of the argument transform into the parent frame of this transform.
+        I.e., if arg rotates A to B and self rotates C to B, then the result rotates A to
+        C.
         """
 
         return self.invert().rotate_transform(arg)

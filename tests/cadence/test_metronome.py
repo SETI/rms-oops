@@ -24,11 +24,11 @@ def test_metronome():
     # tstride_at_tstep
     tstep = Scalar(7 * np.random.rand(100) - 1.)
     tstride = cadence.tstride_at_tstep(tstep, remask=False)
-    assert tstride == cadence.tstride
+    assert tstride == cadence._tstride
 
     tstride = cadence.tstride_at_tstep(tstep, remask=True)
     outside = (tstep < 0.) | (tstep > 4.)
-    assert tstride[~outside] == cadence.tstride
+    assert tstride[~outside] == cadence._tstride
     assert tstride[outside] == Scalar.MASKED
 
     # Unclipped Metronome tests
@@ -261,7 +261,7 @@ def case_continuous(cadence):
 
     assert (abs(time1 - time0 - 10.) < 1.e-14).all()
 
-    mask = (tstep < 0) | (tstep > cadence.steps)
+    mask = (tstep < 0) | (tstep > cadence._steps)
     unmasked = ~mask
     assert (time0[unmasked] >= cadence.time[0]).all()
     assert (time1[unmasked] >= cadence.time[0]).all()
@@ -427,7 +427,7 @@ def case_discontinuous(cadence):
     assert np.all(time[tstep.vals > 4] == 137.5)
     assert test.count_masked() == 0
 
-    mask = (tstep < 0) | (tstep > cadence.steps)
+    mask = (tstep < 0) | (tstep > cadence._steps)
     test = cadence.time_at_tstep(tstep, remask=True)
     assert (abs(time - test).mvals < 1.e-14).all()
     assert Boolean(test.mask) == mask
@@ -456,7 +456,7 @@ def case_discontinuous(cadence):
 
     assert (abs(time1 - time0 - 7.5) < 1.e-14).all()
 
-    mask = (tstep < 0) | (tstep > cadence.steps)
+    mask = (tstep < 0) | (tstep > cadence._steps)
     unmasked = ~mask
     assert (time0[unmasked] >= cadence.time[0]).all()
     assert (time1[unmasked] >= cadence.time[0]).all()
@@ -590,7 +590,7 @@ def case_non_unique(cadence):
         for tstep in range(0, tstep_min.vals):
             time0, time1 = cadence.time_range_at_tstep(tstep)
             assert not time0 < t < time1
-        for tstep in range(tstep_max.vals, cadence.steps):
+        for tstep in range(tstep_max.vals, cadence._steps):
             time0, time1 = cadence.time_range_at_tstep(tstep)
             assert not time0 < t < time1
 
@@ -608,7 +608,7 @@ def case_non_unique(cadence):
     assert (time1 - time >= 0.)[~time.mask].all()
     assert cadence.time_is_inside(time[~time.mask]).all()
 
-    mask = (tstep.vals < 0) | (tstep.vals > cadence.steps)
+    mask = (tstep.vals < 0) | (tstep.vals > cadence._steps)
     assert np.all(mask == time.mask)
 
     unmasked = ~mask
@@ -713,7 +713,7 @@ def case_partial_overlap(cadence):
         for tstep in range(0, tstep_min.vals):
             time0, time1 = cadence.time_range_at_tstep(tstep)
             assert not time0 < t < time1
-        for tstep in range(tstep_max.vals, cadence.steps):
+        for tstep in range(tstep_max.vals, cadence._steps):
             time0, time1 = cadence.time_range_at_tstep(tstep)
             assert not time0 < t < time1
 

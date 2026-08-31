@@ -75,23 +75,23 @@ class Path(Mutable):
     "SATURN", then its ID will also be "SATURN".
 
     Properties:
-        * path_id (str or None): The optional ID string for this Path. Once registered,
-          a Path can be referenced globally by its Path ID.
-        * stripped_id (str or None): The Path ID with any numeric suffix stripped; None if
-          this Path is not registered.
-        * string_id (str): The Path ID if this Path is registered; otherwise, a unique
-          string derived from its Python id().
-        * is_registered (bool): True if this Path is registered.
-        * origin (Path): The Path relative to which state vectors are defined.
-        * frame (Frame): The Frame used by coordinates that are returned by this Path's
-          `event_at_time` method.
-        * primary (Path): The primary definition of this Path.
-        * waypoint (Path): A Path object that uniquely identifies this path, irrespective
-          of any particular origin and frame. Under most circumstances, this is the Path's
-          primary definition.
-        * shape (tuple): The shape of the Path object. This is the shape of the Event
-          object returned by `event_at_time` when it is called with a single time value.
-        * wrt_ssb (Path): This Path relative to the Solar System Barycenter and J2000.
+        path_id (str or None): The optional ID string for this Path. Once registered, a
+            Path can be referenced globally by its Path ID.
+        stripped_id (str or None): The Path ID with any numeric suffix stripped; None if
+            this Path is not registered.
+        string_id (str): The Path ID if this Path is registered; otherwise, a unique
+            string derived from its Python id().
+        is_registered (bool): True if this Path is registered.
+        origin (Path): The Path relative to which state vectors are defined.
+        frame (Frame): The Frame used by coordinates that are returned by this Path's
+            `event_at_time` method.
+        primary (Path): The primary definition of this Path.
+        waypoint (Path): A Path object that uniquely identifies this path, irrespective of
+            any particular origin and frame. Under most circumstances, this is the Path's
+            primary definition.
+        shape (tuple): The shape of the Path object. This is the shape of the Event
+            object returned by `event_at_time` when it is called with a single time value.
+        wrt_ssb (Path): This Path relative to the Solar System Barycenter and J2000.
     """
 
     _Body = None                # Filled in by oops/__init__.py

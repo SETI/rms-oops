@@ -1,9 +1,10 @@
 ##########################################################################################
-# oops/backplanes/distance.py: Distance-related backplanes
+# oops/backplanes/distance.py
 ##########################################################################################
 
 from oops.backplane import Backplane
 from oops.constants import C
+
 
 def distance(self, event_key, direction='dep'):
     """Distance in km between a photon's departure and its arrival.
@@ -25,6 +26,7 @@ def distance(self, event_key, direction='dep'):
 
     lt = self.light_time(event_key, direction)
     return self.register_backplane(key, lt * C)
+
 
 def light_time(self, event_key, direction='dep'):
     """Time in seconds between a photon's departure and its arrival.
@@ -53,6 +55,7 @@ def light_time(self, event_key, direction='dep'):
 
     return self.register_backplane(key, lt.abs())
 
+
 def event_time(self, event_key):
     """Absolute time in seconds TDB when the photon intercepted the surface.
 
@@ -70,6 +73,7 @@ def event_time(self, event_key):
     event = self.get_surface_event(event_key)
     return self.register_backplane(key, event.time)
 
+
 def center_distance(self, event_key, direction='dep'):
     """Gridless distance traveled by a photon between paths.
 
@@ -84,6 +88,7 @@ def center_distance(self, event_key, direction='dep'):
     gridless_key = Backplane.gridless_event_key(event_key)
     return self.distance(gridless_key, direction=map[direction])
 
+
 def center_light_time(self, event_key, direction='dep'):
     """Gridless light travel time in seconds from a path.
 
@@ -96,6 +101,7 @@ def center_light_time(self, event_key, direction='dep'):
 
     gridless_key = Backplane.gridless_event_key(event_key)
     return self.light_time(gridless_key, direction=direction)
+
 
 def center_time(self, event_key):
     """Gridless absolute time when the photon intercepted the path.

@@ -1,9 +1,10 @@
 ##########################################################################################
-# oops/backplanes/lighting.py: Lighting geometry backplanes
+# oops/backplanes/lighting.py
 ##########################################################################################
 
 from polymath       import Boolean, Scalar
 from oops.backplane import Backplane
+
 
 def incidence_angle(self, event_key, apparent=True):
     """Incidence angle of the arriving photons at the local surface.
@@ -42,6 +43,7 @@ def incidence_angle(self, event_key, apparent=True):
 
     return self.register_backplane(key, incidence)
 
+
 def emission_angle(self, event_key, apparent=True):
     """Emission angle of the departing photons at the local surface.
 
@@ -78,6 +80,7 @@ def emission_angle(self, event_key, apparent=True):
 
     return self.register_backplane(key, emission)
 
+
 def phase_angle(self, event_key, apparent=True):
     """Phase angle between the arriving and departing photons.
 
@@ -97,6 +100,7 @@ def phase_angle(self, event_key, apparent=True):
     phase = event.phase_angle(apparent=apparent, derivs=self.ALL_DERIVS)
     return self.register_backplane(key, phase)
 
+
 def scattering_angle(self, event_key, apparent=True):
     """Scattering angle between the arriving and departing photons.
 
@@ -115,6 +119,7 @@ def scattering_angle(self, event_key, apparent=True):
     phase = self.phase_angle(event_key, apparent=apparent)
     return self.register_backplane(key, Scalar.PI - phase)
 
+
 def center_incidence_angle(self, event_key, apparent=True):
     """Gridless incidence angle of the arriving photons at the body's central path.
 
@@ -129,6 +134,7 @@ def center_incidence_angle(self, event_key, apparent=True):
     self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
     return self.incidence_angle(gridless_key, apparent=apparent)
+
 
 def center_emission_angle(self, event_key, apparent=True):
     """Gridless emission angle of the departing photons at the body's central path.
@@ -145,6 +151,7 @@ def center_emission_angle(self, event_key, apparent=True):
     gridless_key = Backplane.gridless_event_key(event_key)
     return self.emission_angle(gridless_key, apparent=apparent)
 
+
 def center_phase_angle(self, event_key, apparent=True):
     """Gridless phase angle as measured at the body's central path.
 
@@ -158,6 +165,7 @@ def center_phase_angle(self, event_key, apparent=True):
     gridless_key = Backplane.gridless_event_key(event_key)
     return self.phase_angle(gridless_key, apparent=apparent)
 
+
 def center_scattering_angle(self, event_key, apparent=True):
     """Gridless scattering angle as measured at the body's central path.
 
@@ -170,6 +178,7 @@ def center_scattering_angle(self, event_key, apparent=True):
     self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
     return self.scattering_angle(gridless_key, apparent=apparent)
+
 
 def mu0(self, event_key, apparent=True):
     """Cosine of the incidence angle of the arriving photons at the surface.
@@ -189,6 +198,7 @@ def mu0(self, event_key, apparent=True):
     incidence = self.incidence_angle(event_key, apparent=apparent)
     return self.register_backplane(key, incidence.cos())
 
+
 def mu(self, event_key, apparent=True):
     """Cosine of the emission angle of the photons departing from the surface.
 
@@ -207,6 +217,7 @@ def mu(self, event_key, apparent=True):
     emission = self.emission_angle(event_key, apparent=apparent)
     return self.register_backplane(key, emission.cos())
 
+
 def lambert_law(self, event_key):
     """Lambert law model cos(incidence_angle) for the surface.
 
@@ -223,6 +234,7 @@ def lambert_law(self, event_key):
     lambert_law = self.mu0(event_key, apparent=True)
     lambert_law = lambert_law.mask_where(lambert_law.vals <= 0., 0.)
     return self.register_backplane(key, lambert_law)
+
 
 def minnaert_law(self, event_key, k, k2=None, clip=0.2):
     """Minnaert law model for the surface.
@@ -250,6 +262,7 @@ def minnaert_law(self, event_key, k, k2=None, clip=0.2):
     mu = mu.clip(clip, None)
     minnaert_law = (mu0 ** k) * (mu ** k2)
     return self.register_backplane(key, minnaert_law)
+
 
 def lommel_seeliger_law(self, event_key):
     """Lommel-Seeliger law model for the surface.

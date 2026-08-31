@@ -18,63 +18,69 @@ class ReversedCadence(Cadence):
 
         Parameters:
             cadence (Cadence): The cadence to reverse.
-            axis (optional): Axis to reverse.
+            axis (int, optional): The axis to reverse. Only axis 0 is supported.
+
+        Raises:
+            ValueError: If the given cadence is not 1-D, or if `axis` is not 0.
         """
 
-        self.cadence = cadence
-        if len(self.cadence.shape) != 1:
+        self._cadence = cadence
+        if len(self._cadence.shape) != 1:
             raise ValueError('ReversedCadence must be based on a 1-D cadence')
 
+        self._axis = int(axis)
+        if self._axis != 0:
+            raise ValueError(f'ReversedCadence axis must be 0, not {axis}')
+
         # Required attributes
-        self.shape         = self.cadence.shape
-        self.lasttime      = self.cadence.lasttime
-        self.time          = self.cadence.time
-        self.midtime       = self.cadence.midtime
-        self.shape         = self.cadence.shape
-        self.is_continuous = self.cadence.is_continuous
-        self.is_unique     = self.cadence.is_unique
-        self.min_tstride   = self.cadence.min_tstride
-        self.max_tstride   = self.cadence.max_tstride
+        self.shape         = self._cadence.shape
+        self.lasttime      = self._cadence.lasttime
+        self.time          = self._cadence.time
+        self.midtime       = self._cadence.midtime
+        self.is_continuous = self._cadence.is_continuous
+        self.is_unique     = self._cadence.is_unique
+        self.min_tstride   = self._cadence.min_tstride
+        self.max_tstride   = self._cadence.max_tstride
 
         # Used internally
-        self.steps = self.cadence.shape[0]
-        self._max_step = self.steps - 1
+        self._steps = self._cadence.shape[0]
+        self._max_step = self._steps - 1
 
         # Beginning of new first time step; end of new last time step
-        self._first_time = self.cadence.time_range_at_tstep(self._max_step)[0]
-        self._last_time  = self.cadence.time_range_at_tstep(0)[1]
+        self._first_time = self._cadence.time_range_at_tstep(self._max_step)[0]
+        self._last_time  = self._cadence.time_range_at_tstep(0)[1]
 
     def _refresh(self):
-        """Update internals if self.cadence is Fittable."""
-        self.time = self.cadence.time
-        self.midtime = self.cadence.midtime
-        self.lasttime = self.cadence.lasttime
-        self._first_time = self.cadence.time_range_at_tstep(self._max_step)[0]
-        self._last_time  = self.cadence.time_range_at_tstep(0)[1]
+        """Update internals if self._cadence is Fittable."""
+        self.time = self._cadence.time
+        self.midtime = self._cadence.midtime
+        self.lasttime = self._cadence.lasttime
+        self._first_time = self._cadence.time_range_at_tstep(self._max_step)[0]
+        self._last_time  = self._cadence.time_range_at_tstep(0)[1]
 
     def __getstate__(self):
         self.refresh()
-        return (self.cadence,)
+        return (self._cadence, self._axis)
 
     def __setstate__(self, state):
         self.__init__(*state)
         self.freeze()
 
-    def time_at_tstep(self, tstep, remask=False, derivs=False, inclusive=True):
+    def time_at_tstep(self, tstep, *, remask=False, derivs=False, inclusive=True):
         """The time associated with the given time step.
 
-        This method supports non-integer time step values.
+        This method supports non-integer time step values via interpolation.
 
         Parameters:
-            tstep (Pair): Time step index values.
+            tstep (Scalar): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
             derivs (bool, optional): True to include derivatives of tstep in the returned
                 time.
-            inclusive (bool, optional): True to treat the end time of the cadence as part
-                of the cadence; False to exclude it.
+            inclusive (bool, optional): True to treat the end time as part of this
+                Cadence; False to exclude it.
 
         Returns:
-            (Scalar): Times in seconds TDB.
+            Scalar: Time in seconds TDB.
         """
 
         tstep = Scalar.as_scalar(tstep, recursive=derivs)
@@ -82,7 +88,7 @@ class ReversedCadence(Cadence):
         # Reverse the order of the indices, but allow the fractional part to
         # increase within each time step.
 
-        tstep_int = tstep.int(self.steps, remask=remask, inclusive=inclusive,
+        tstep_int = tstep.int(self._steps, remask=remask, inclusive=inclusive,
                                           shift=True)
             # Note: Because shift=True, the end of the last time step will map
             # into the first time step, yielding tstep_frac = 1 below,
@@ -90,9 +96,9 @@ class ReversedCadence(Cadence):
 
         reversed_tstep = self._max_step - tstep_int
         (time0,
-         time1) = self.cadence.time_range_at_tstep(reversed_tstep, remask=False,
+         time1) = self._cadence.time_range_at_tstep(reversed_tstep, remask=False,
                                                    inclusive=False)
-            # inclusive=False above because reversed_tstep == self.steps where
+            # inclusive=False above because reversed_tstep == self._steps where
             # tstep_int == -1, which must be excluded. remask=False because the
             # input is already properly masked.
 
@@ -101,118 +107,124 @@ class ReversedCadence(Cadence):
 
         # Force out-of range tsteps to the start or end time
         time[tstep_int.vals < 0] = Scalar(self._first_time.vals, remask)
-        time[tstep_int.vals >= self.steps] = Scalar(self._last_time.vals,remask)
+        time[tstep_int.vals >= self._steps] = Scalar(self._last_time.vals,remask)
         return time
 
-    def time_range_at_tstep(self, tstep, remask=False, inclusive=True):
+    def time_range_at_tstep(self, tstep, *, remask=False, inclusive=True, shift=True):
         """The range of times for the given time step.
 
         Parameters:
-            tstep (Pair): Time step index values.
+            tstep (Scalar): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
-            inclusive (bool, optional): True to treat the end time of the cadence as part
-                of the cadence; False to exclude it.
+            inclusive (bool, optional): True to treat the end time as part of this
+                Cadence; False to exclude it.
+            shift (bool, optional): True to shift the end of the last time step (with
+                index == shape) into the previous time step.
 
         Returns:
-            (tuple): (time_min, time_max), where:
-
-            * `time_min` (Scalar): Defining the minimum time associated with the index. It
-              is given in seconds TDB.
-            * `time_max` (Scalar): Defining the maximum time value.
+            tuple[Scalar, Scalar]: The minimum and maximum times associated with the index
+            values, in seconds TDB.
         """
 
         tstep = Scalar.as_scalar(tstep, recursive=False)
 
         # Reverse the order of the indices, but handle the top carefully
-        tstep_int = tstep.int(self.shape[0], remask=remask, inclusive=inclusive)
-            # Note: If inclusive is True, the end of the last time step will map
-            # into the first time step, as intended. If inclusive is False, the
-            # end of the last time step will map into a negative time step, also
-            # as intended.
+        tstep_int = tstep.int(self.shape[0], remask=remask, inclusive=inclusive,
+                                             shift=shift)
+            # Note: If shift is True, the end of the last time step will map into
+            # the first time step, as intended. If shift is False, the end of the
+            # last time step will map into a negative time step instead.
 
         reversed_tstep = self._max_step - tstep_int
 
-        return self.cadence.time_range_at_tstep(reversed_tstep,
+        return self._cadence.time_range_at_tstep(reversed_tstep,
                                                 remask=False, inclusive=False)
-            # inclusive=False above because reversed_tstep == self.steps where
+            # inclusive=False above because reversed_tstep == self._steps where
             # tstep_int == -1, which must be excluded. remask=False here because
             # the input has already been properly masked.
 
-    def tstep_at_time(self, time, remask=False, derivs=False, inclusive=True):
+    def tstep_at_time(self, time, *, remask=False, derivs=False, inclusive=True):
         """Time step for the given time.
 
-        This method returns non-integer time steps.
+        This method returns non-integer time steps via interpolation.
 
         Parameters:
             time (Scalar): Times in seconds TDB.
-            remask (bool, optional): True to mask time values not sampled within the
-                cadence.
-            derivs (bool, optional): True to include derivatives of tstep in the returned
-                time.
-            inclusive (bool, optional): True to treat the end time of the cadence as part
-                of the cadence; False to exclude it.
+            remask (bool, optional): True to mask time values not sampled within this
+                Cadence.
+            derivs (bool, optional): True to include derivatives of time in the returned
+                tstep.
+            inclusive (bool, optional): True to treat the end time as part of this
+                Cadence; False to exclude it.
 
         Returns:
-            (Pair): Time step index values.
+            Scalar: Time step index values.
         """
 
-        tstep = self.cadence.tstep_at_time(time, remask=remask, derivs=derivs,
+        tstep = self._cadence.tstep_at_time(time, remask=remask, derivs=derivs,
                                                  inclusive=inclusive)
         return self.shape[0] - tstep
 
-    def tstep_range_at_time(self, time, remask=False, inclusive=True):
+    def tstep_range_at_time(self, time, *, remask=False, inclusive=True):
         """Integer range of time steps active at the given time.
 
         Parameters:
             time (Scalar): Times in seconds TDB.
-            remask (bool, optional): True to mask time values not sampled within the
-                cadence.
-            inclusive (bool, optional): True to treat the end time of the cadence as part
-                of the cadence; False to exclude it.
+            remask (bool, optional): True to mask time values not sampled within this
+                Cadence.
+            inclusive (bool, optional): True to treat the end time as part of this
+                Cadence; False to exclude it.
 
         Returns:
-            (tuple): (tstep_min, tstep_max) tstep_min   minimum Pair time step containing
-                the given time. tstep_max   maximum Pair time step containing the given
-                time (inclusive). All returned indices will be in the allowed range for
-                the cadence, inclusive, regardless of mask. If the time is not inside the
-                cadence, tstep_max < tstep_min.
+            tuple[Scalar, Scalar]: The range of time step indices active at the given
+            `time`, as (first, last+1); the upper limit is excluded. Values are always
+            within the allowed range for the cadence, regardless of any mask. If `time` is
+            not sampled by the cadence, the range is empty, meaning that the second value
+            equals the first.
         """
 
         (tstep_min,
-         tstep_max) = self.cadence.tstep_range_at_time(time, remask=remask,
+         tstep_max) = self._cadence.tstep_range_at_time(time, remask=remask,
                                                        inclusive=inclusive)
         return (self.shape[0] - tstep_max, self.shape[0] - tstep_min)
 
-    def time_is_outside(self, time, inclusive=True):
+    def time_is_outside(self, time, *, inclusive=True):
         """A Boolean mask of times that fall outside the cadence.
 
         Parameters:
             time (Scalar): Times in seconds TDB.
-            inclusive (bool, optional): True to treat the end time of the cadence as part
-                of the cadence; False to exclude it.
+            inclusive (bool, optional): True to treat the end time of an interval as
+                inside; False to treat it as outside. The start time of an interval is
+                always treated as inside.
 
         Returns:
-            (bool): Array indicating which time values are not sampled by the cadence.
+            Boolean: True where `time` is not sampled by the cadence.
         """
 
-        return self.cadence.time_is_outside(time, inclusive=inclusive)
+        return self._cadence.time_is_outside(time, inclusive=inclusive)
 
     def time_shift(self, secs):
-        """Construct a duplicate of this Cadence with all times shifted by given amount.
+        """A duplicate of this Cadence with all times shifted by the given amount.
 
         Parameters:
             secs (float): Seconds to shift the time later.
+
+        Returns:
+            ReversedCadence: The time-shifted cadence.
         """
 
-        return ReversedCadence(self.cadence.time_shift(secs))
+        return ReversedCadence(self._cadence.time_shift(secs), self._axis)
 
     def as_continuous(self):
-        """Construct a shallow copy of this Cadence, forced to be continuous.
+        """A shallow copy of this Cadence, forced to be continuous.
 
-        For DualCadence, this is accomplished by forcing the stride of
-        the short cadence to be continuous.
+        For ReversedCadence, this is accomplished by making the underlying cadence
+        continuous.
+
+        Returns:
+            ReversedCadence: The continuous cadence.
         """
 
-        return ReversedCadence(self.cadence.as_continuous())
+        return ReversedCadence(self._cadence.as_continuous(), self._axis)
 
 ##########################################################################################

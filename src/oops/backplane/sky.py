@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/backplanes/sky.py: Sky plane (celestial coordinates) backplanes
+# oops/backplanes/sky.py
 ##########################################################################################
 
 import numpy as np
@@ -7,6 +7,7 @@ import numpy as np
 from polymath       import Vector3
 from oops.backplane import Backplane
 from oops.frame     import Frame
+
 
 def right_ascension(self, event_key=(), apparent=True, direction='arr'):
     """Right ascension of the arriving or departing photon
@@ -31,6 +32,7 @@ def right_ascension(self, event_key=(), apparent=True, direction='arr'):
 
     return self.get_backplane(key)
 
+
 def declination(self, event_key=(), apparent=True, direction='arr'):
     """Declination of the arriving or departing photon.
 
@@ -54,6 +56,7 @@ def declination(self, event_key=(), apparent=True, direction='arr'):
 
     return self.get_backplane(key)
 
+
 def _fill_ra_dec(self, event_key, apparent, direction):
     """Fill internal backplanes of RA and dec."""
 
@@ -70,6 +73,7 @@ def _fill_ra_dec(self, event_key, apparent, direction):
     etc = (event_key, apparent, direction)
     self.register_backplane(('right_ascension',) + etc, ra)
     self.register_backplane(('declination',)     + etc, dec)
+
 
 def celestial_north_angle(self, event_key=()):
     """Direction of celestial north at each pixel in the image.
@@ -96,6 +100,7 @@ def celestial_north_angle(self, event_key=()):
     duv_ddec = self.duv_dlos.chain(dlos_ddec)
     return self.register_backplane(key, duv_ddec.angle())
 
+
 def celestial_east_angle(self, event_key=()):
     """Direction of celestial north at each pixel in the image.
 
@@ -120,6 +125,7 @@ def celestial_east_angle(self, event_key=()):
     dlos_dra = self.get_backplane(temp_key)
     duv_dra = self.duv_dlos.chain(dlos_dra)
     return self.register_backplane(key, duv_dra.angle())
+
 
 def _fill_dlos_dradec(self, event_key):
     """Fill internal backplanes with derivatives with respect to RA and dec.
@@ -159,6 +165,7 @@ def _fill_dlos_dradec(self, event_key):
     self.register_backplane(('_dlos_dra',  event_key), dlos_dra)
     self.register_backplane(('_dlos_ddec', event_key), dlos_ddec)
 
+
 def center_right_ascension(self, event_key, apparent=True, direction='arr'):
     """Gridless right ascension of a photon from the body center to the detector.
 
@@ -179,6 +186,7 @@ def center_right_ascension(self, event_key, apparent=True, direction='arr'):
 
     return self.get_backplane(key)
 
+
 def center_declination(self, event_key, apparent=True, direction='arr'):
     """Gridless declination of a photon from the body center to the detector.
 
@@ -198,6 +206,7 @@ def center_declination(self, event_key, apparent=True, direction='arr'):
         self._fill_center_ra_dec(gridless_key, apparent, direction)
 
     return self.get_backplane(key)
+
 
 def _fill_center_ra_dec(self, event_key, apparent, direction):
     """Internal method to fill in RA and dec for the center of a body."""

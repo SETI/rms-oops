@@ -228,7 +228,7 @@ class QuickFrame(Frame):
             standard rules of broadcasting apply.
         """
         (matrix, omega) = self._interpolate_matrix_omega(time)
-        return Transform(matrix, omega, self, self._reference, self._origin)
+        return Transform(matrix, omega, self, self._reference, origin=self._origin)
 
     def transform_at_time_if_possible(self, time, *, quick=False):
         """Transform that rotates coordinates from the reference to this frame.

@@ -1,9 +1,10 @@
 ##########################################################################################
-# oops/backplanes/resolution.py: Resolution-related backplanes
+# oops/backplanes/resolution.py
 ##########################################################################################
 
 from oops.backplane import Backplane
 from oops.surface   import Surface
+
 
 def resolution(self, event_key, axis='u'):
     """Projected resolution in km/pixel at the surface intercept.
@@ -30,6 +31,7 @@ def resolution(self, event_key, axis='u'):
 
     return self.get_backplane(key)
 
+
 def center_resolution(self, event_key, axis='u'):
     """Gridless, directionless projected spatial resolution in km/pixel.
 
@@ -55,6 +57,7 @@ def center_resolution(self, event_key, axis='u'):
 
     return self.get_backplane(key)
 
+
 def finest_resolution(self, event_key):
     """Projected resolution in km/pixel for the optimal direction
 
@@ -72,6 +75,7 @@ def finest_resolution(self, event_key):
 
     return self.get_backplane(key)
 
+
 def coarsest_resolution(self, event_key):
     """Projected spatial resolution in km/pixel in the worst direction at the intercept
     point.
@@ -87,6 +91,7 @@ def coarsest_resolution(self, event_key):
         self._fill_surface_resolution(event_key)
 
     return self.get_backplane(key)
+
 
 def _fill_surface_resolution(self, event_key):
     """Internal method to fill in the surface resolution backplanes."""

@@ -71,20 +71,20 @@ class Frame(Mutable):
     Frame called "ENCELADUS", then its ID will also be "ENCELADUS".
 
     Properties:
-        * frame_id (str or None): The optional ID string for this Frame. Once registered,
-          a Frame can be referenced globally by its Frame ID.
-        * reference (Frame): The Frame from which this Frame transforms. The
-          `transform_at_time` method will always return a Transform that converts from the
-          reference Frame to this Frame.
-        * primary (Frame): The primary definition of this Frame.
-        * wayframe (Frame): A Frame object that uniquely identifies this frame,
-          irrespective of any particular reference. Under most circumstances, this is the
-          Frame's primary definition.
-        * origin (Path or None): A Path object that uniquely identifies the origin
-          relative to which this Frame is defined. For inertial Frames, this can be None.
-        * shape (tuple): The shape of the Frame object. This is the shape of the Transform
-          object returned by `transform_at_time` when it is called with a single time
-          value.
+        frame_id (str or None): The optional ID string for this Frame. Once registered, a
+            Frame can be referenced globally by its Frame ID.
+        reference (Frame): The Frame from which this Frame transforms. The
+            `transform_at_time` method will always return a Transform that converts from
+            the reference Frame to this Frame.
+        primary (Frame): The primary definition of this Frame.
+        wayframe (Frame): A Frame object that uniquely identifies this frame, irrespective
+            of any particular reference. Under most circumstances, this is the Frame's
+            primary definition.
+        origin (Path or None): A Path object that uniquely identifies the origin relative
+            to which this Frame is defined. For inertial Frames, this can be None.
+        shape (tuple): The shape of the Frame object. This is the shape of the Transform
+            object returned by `transform_at_time` when it is called with a single time
+            value.
     """
 
     _Event = None               # Filled in by oops/__init__.py
@@ -703,7 +703,7 @@ class NullFrame(Frame):
         """
 
         return Transform(Matrix3.IDENTITY, Vector3.ZERO, self._reference, self._reference,
-                         self._origin)
+                         origin=self._origin)
 
 
 # This must be a singleton!

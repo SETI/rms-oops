@@ -1,10 +1,11 @@
 ##########################################################################################
-# oops/backplanes/pixel.py: pixel coordinate backplanes
+# oops/backplanes/pixel.py
 ##########################################################################################
 
 from oops.constants import C
 from oops.backplane import Backplane
 from oops.body import Body
+
 
 def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
     """Gridless approximate apparent diameter of the body in pixels.
@@ -19,7 +20,7 @@ def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
     """
     if not self.obs.INVENTORY_IMPLEMENTED:
         raise NotImplementedError('body_diameter_in_pixels not defined for '
-                                    + type(self.obs).__name__)
+                                  + type(self.obs).__name__)
 
     if axis not in {'u', 'v', 'min', 'max'}:
         raise ValueError('invalid axis: ' + repr(axis))
@@ -52,6 +53,7 @@ def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
         radius_in_pixels = radii_in_pixels.min()
 
     return self.register_backplane(key, 2*radius_in_pixels)
+
 
 def center_coordinate(self, event_key, axis="u"):
     """Gridless coordinate of the center of the disk.

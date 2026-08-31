@@ -146,7 +146,7 @@ class Rotation(Frame, Fittable):
             self._matrix = Matrix3(mat, self._angle_mask)
 
         self._transform = Transform(self._matrix, Vector3.ZERO, self, self._reference,
-                                    self._origin)
+                                    origin=self._origin)
 
     def _freeze(self):
         if self._link:

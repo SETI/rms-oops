@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/backplanes/where.py: Boolean backplanes
+# oops/backplanes/where.py
 ##########################################################################################
 
 from polymath       import Boolean, Scalar
@@ -22,15 +22,16 @@ def where_intercepted(self, event_key):
     intercepted = Boolean(event.dep.expand_mask().antimask)
     return self.register_backplane(key, intercepted)
 
+
 def where_inside_shadow(self, event_key, surface_key, tvl=False):
     """A mask where the surface is in the shadow of a second body.
 
-    If tvl is True, this uses three-valued logic, where locations outside the
-    surface are masked; otherwise, they are False.
+    If tvl is True, this uses three-valued logic, where locations outside the surface are
+    masked; otherwise, they are False.
     """
 
-    return self._where_inside_or_outside_shadow(event_key, surface_key,
-                                                tvl=tvl, inside=True)
+    return self._where_inside_or_outside_shadow(event_key, surface_key, tvl=tvl,
+                                                inside=True)
 
 
 def where_outside_shadow(self, event_key, surface_key, tvl=False):
@@ -40,8 +41,8 @@ def where_outside_shadow(self, event_key, surface_key, tvl=False):
     surface are masked; otherwise, they are False.
     """
 
-    return self._where_inside_or_outside_shadow(event_key, surface_key,
-                                                tvl=tvl, inside=False)
+    return self._where_inside_or_outside_shadow(event_key, surface_key, tvl=tvl,
+                                                inside=False)
 
 
 def _where_inside_or_outside_shadow(self, event_key, surface_key, tvl, inside):
@@ -59,8 +60,8 @@ def _where_inside_or_outside_shadow(self, event_key, surface_key, tvl, inside):
 
     if key not in self.backplanes:
 
-        # First body is un-shadowed if its incoming photons do not intercept the
-        # shadow body. The shadow event will inherit the first event's mask.
+        # First body is un-shadowed if its incoming photons do not intercept the shadow
+        # body. The shadow event will inherit the first event's mask.
         shadow_event_key = event_key[:1] + (surface_key,) + event_key[1:]
         shadow_event = self.get_surface_event(shadow_event_key)
         event = self.get_surface_event(event_key)
@@ -85,27 +86,25 @@ def _where_inside_or_outside_shadow(self, event_key, surface_key, tvl, inside):
 
     return self.get_backplane(key)
 
+
 def where_in_front(self, event_key, surface_key, tvl=False):
-    """A mask where the first surface is in not obscured by the second
-    surface.
+    """A mask where the first surface is in not obscured by the second surface.
 
-    This is where the back_body is either further away than the front body
-    or not intercepted at all.
+    This is where the back_body is either further away than the front body or not
+    intercepted at all.
 
-    If tvl is True, this uses the mask uses three-valued logic, where locations
-    outside the first surface are masked; otherwise, they are False.
+    If tvl is True, this uses the mask uses three-valued logic, where locations outside
+    the first surface are masked; otherwise, they are False.
     """
 
-    return self._where_in_front_or_in_back(event_key, surface_key, tvl=tvl,
-                                           in_front=True)
+    return self._where_in_front_or_in_back(event_key, surface_key, tvl=tvl, in_front=True)
 
 
 def where_in_back(self, event_key, surface_key, tvl=False):
-    """A mask where the first surface is behind (obscured by) the second
-    surface.
+    """A mask where the first surface is behind (obscured by) the second surface.
 
-    If tvl is True, this uses the mask uses three-valued logic, where locations
-    outside the first surface are masked; otherwise, they are False.
+    If tvl is True, this uses the mask uses three-valued logic, where locations outside
+    the first surface are masked; otherwise, they are False.
     """
 
     return self._where_in_front_or_in_back(event_key, surface_key, tvl=tvl,
@@ -148,11 +147,12 @@ def _where_in_front_or_in_back(self, event_key, surface_key, tvl, in_front):
 
     return self.get_backplane(key)
 
+
 def where_sunward(self, event_key, tvl=False):
     """A mask where the surface of a body is facing toward the Sun.
 
-    If tvl is True, this uses the mask uses three-valued logic, where locations
-    outside the surface are masked; otherwise, they are False.
+    If tvl is True, this uses the mask uses three-valued logic, where locations outside
+    the surface are masked; otherwise, they are False.
     """
 
     return self._where_sunward_or_antisunward(event_key, tvl=tvl, sunward=True)
@@ -161,8 +161,8 @@ def where_sunward(self, event_key, tvl=False):
 def where_antisunward(self, event_key, tvl=False):
     """A mask where the surface of a body is facing away fron the Sun.
 
-    If tvl is True, this uses the mask uses three-valued logic, where locations
-    outside the surface are masked; otherwise, they are False.
+    If tvl is True, this uses the mask uses three-valued logic, where locations outside
+    the surface are masked; otherwise, they are False.
     """
 
     return self._where_sunward_or_antisunward(event_key, tvl=tvl, sunward=False)
@@ -202,11 +202,12 @@ def _where_sunward_or_antisunward(self, event_key, tvl, sunward):
 
     return self.get_backplane(key)
 
+
 def where_inside(self, event_key, surface_key, tvl=False):
     """A mask where the first surface is interior to the second surface.
 
-    If tvl is True, this uses the mask uses three-valued logic, where locations
-    outside the first surface are masked; otherwise, they are False.
+    If tvl is True, this uses the mask uses three-valued logic, where locations outside
+    the first surface are masked; otherwise, they are False.
     """
 
     return self._where_inside_or_outside(event_key, surface_key, tvl=tvl,
@@ -216,8 +217,8 @@ def where_inside(self, event_key, surface_key, tvl=False):
 def where_outside(self, event_key, surface_key, tvl=False):
     """A mask where the first surface is exterior to the second surface.
 
-    If tvl is True, this uses the mask uses three-valued logic, where locations
-    outside the surface are masked; otherwise, they are False.
+    If tvl is True, this uses the mask uses three-valued logic, where locations outside
+    the surface are masked; otherwise, they are False.
     """
 
     return self._where_inside_or_outside(event_key, surface_key, tvl=tvl,
@@ -267,8 +268,8 @@ def _where_inside_or_outside(self, event_key, surface_key, tvl, inside):
 def where_below(self, backplane_key, value, tvl=False):
     """A mask where the backplane is <= the specified value.
 
-    If tvl is True, this uses three-valued logic, where masked backplane values
-    remain masked; otherwise, they are False.
+    If tvl is True, this uses three-valued logic, where masked backplane values remain
+    masked; otherwise, they are False.
     """
 
     self.refresh()
@@ -290,11 +291,12 @@ def where_below(self, backplane_key, value, tvl=False):
 
     return self.get_backplane(key)
 
+
 def where_above(self, backplane_key, value, tvl=False):
     """A mask where the backplane is >= the specified value.
 
-    If tvl is True, this uses three-valued logic, where masked backplane values
-    remain masked; otherwise, they are False.
+    If tvl is True, this uses three-valued logic, where masked backplane values remain
+    masked; otherwise, they are False.
     """
 
     self.refresh()
@@ -316,11 +318,12 @@ def where_above(self, backplane_key, value, tvl=False):
 
     return self.get_backplane(key)
 
+
 def where_between(self, backplane_key, low, high, tvl=False):
     """A mask where the backplane is between the given values, inclusive.
 
-    If tvl is True, this uses three-valued logic, where masked backplane values
-    remain masked; otherwise, they are False.
+    If tvl is True, this uses three-valued logic, where masked backplane values remain
+    masked; otherwise, they are False.
     """
 
     self.refresh()
@@ -343,12 +346,12 @@ def where_between(self, backplane_key, low, high, tvl=False):
 
     return self.get_backplane(key)
 
-def where_not(self, backplane_key, tvl=False):
-    """A mask where the value of the given backplane is False, zero, or
-    masked.
 
-    If tvl is True, this uses three-valued logic, where masked backplane values
-    remain masked; otherwise, they are False.
+def where_not(self, backplane_key, tvl=False):
+    """A mask where the value of the given backplane is False, zero, or masked.
+
+    If tvl is True, this uses three-valued logic, where masked backplane values remain
+    masked; otherwise, they are False.
     """
 
     self.refresh()
@@ -368,11 +371,12 @@ def where_not(self, backplane_key, tvl=False):
 
     return self.get_backplane(key)
 
+
 def where_any(self, *backplane_keys, tvl=False):
     """A mask where any of the given backplanes is True or nonzero.
 
-    If tvl is True, this uses three-valued logic, where masked backplane values
-    remain masked; otherwise, they are False.
+    If tvl is True, this uses three-valued logic, where masked backplane values remain
+    masked; otherwise, they are False.
     """
 
     self.refresh()
@@ -391,11 +395,12 @@ def where_any(self, *backplane_keys, tvl=False):
 
     return self.get_backplane(key)
 
+
 def where_all(self, *backplane_keys, tvl=False):
     """A mask where all of the given backplanes are True or nonzero.
 
-    If tvl is True, this uses three-valued logic, where masked backplane values
-    remain masked; otherwise, they are False.
+    If tvl is True, this uses three-valued logic, where masked backplane values remain
+    masked; otherwise, they are False.
     """
 
     self.refresh()
