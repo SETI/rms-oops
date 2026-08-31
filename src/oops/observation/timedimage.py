@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/observation/timedimage.py: Subclass TimedImage of class Observation
+# oops/observation/timedimage.py
 ##########################################################################################
 
 import numpy as np
@@ -18,9 +18,9 @@ class TimedImage(Observation):
     """
 
     # NOTE:
-    # This class now encompasses the earlier subclasses Pushbroom, Pushframe,
-    # RasterScan, RasterSlit, and Slit. (In other words, every observation
-    # subclass with two spatial dimensions except Snapshot.)
+    # This class now encompasses the earlier subclasses Pushbroom, Pushframe, RasterScan,
+    # RasterSlit, and Slit. (In other words, every observation subclass with two spatial
+    # dimensions except Snapshot.)
 
     INVENTORY_IMPLEMENTED = True
 
@@ -43,9 +43,10 @@ class TimedImage(Observation):
             frame (Frame): The wayframe of a coordinate frame fixed to the optics of the
                 instrument. This frame should have its Z-axis pointing outward near the
                 center of the line of sight, with the X-axis pointing rightward and the
-                y-axis pointing downward.
+                Y-axis pointing downward.
             subfields (dict): All of the optional attributes. Additional subfields may be
-                included as needed.
+                included as needed. The subfield `shape` overrides the shape derived from
+                the FOV and the cadence.
         """
 
         # Basic properties
@@ -54,26 +55,22 @@ class TimedImage(Observation):
 
         # Static FOV
         self.fov = fov
-        self.fov_shape = tuple(self.fov.uv_shape.vals)
-        self._has_unit_fov_axis = (self.fov_shape[0] == 1 or
-                                   self.fov_shape[1] == 1)
+        self._fov_shape = tuple(self.fov.uv_shape.vals)
+        self._has_unit_fov_axis = self._fov_shape[0] == 1 or self._fov_shape[1] == 1
 
         # Axes
-        self.axes = tuple(axes)
+        self._axes = tuple(axes)
 
-        u_axes = [k for k in range(len(self.axes))
-                  if self.axes[k].startswith('u')]
-        v_axes = [k for k in range(len(self.axes))
-                  if self.axes[k].startswith('v')]
+        u_axes = [k for k in range(len(self._axes)) if self._axes[k].startswith('u')]
+        v_axes = [k for k in range(len(self._axes)) if self._axes[k].startswith('v')]
         if len(u_axes) != 1 or len(v_axes) != 1:
-            raise ValueError('invalid axis labels for TimedImage: %s'
-                             % str(self.axes))
+            raise ValueError(f'invalid axis labels for TimedImage: {self._axes}')
 
         self.u_axis = u_axes[0]
         self.v_axis = v_axes[0]
 
-        u_suffix = self.axes[self.u_axis][1:]
-        v_suffix = self.axes[self.v_axis][1:]
+        u_suffix = self._axes[self.u_axis][1:]
+        v_suffix = self._axes[self.v_axis][1:]
 
         if u_suffix == 't' and v_suffix == '':
             self.t_axis = self.u_axis
@@ -88,8 +85,9 @@ class TimedImage(Observation):
             self.t_axis = (self.u_axis, self.v_axis)
             self._fast_t_uv_axis = 1
         else:
-            raise ValueError('invalid axis labels for TimedImage: "%s", "%s"'
-                             % (self.axes[self.u_axis], self.axes[self.v_axis]))
+            raise ValueError('invalid axis labels for TimedImage: '
+                             f'"{self._axes[self.u_axis]}", '
+                             f'"{self._axes[self.v_axis]}"')
 
         self.swap_uv = (self.u_axis > self.v_axis)
         self._time_is_1d = not isinstance(self.t_axis, tuple)
@@ -105,32 +103,28 @@ class TimedImage(Observation):
 
         # Shape / Size
         self.shape = len(axes) * [0]
-        self.shape[self.u_axis] = self.fov_shape[0]
-        self.shape[self.v_axis] = self.fov_shape[1]
+        self.shape[self.u_axis] = self._fov_shape[0]
+        self.shape[self.v_axis] = self._fov_shape[1]
 
-        # This is the (u,v) shape of the observation, not necessarily that of
-        # the FOV.
-        self.uv_shape = [self.fov_shape[0], self.fov_shape[1]]
+        # This is the (u,v) shape of the observation, not necessarily that of the FOV
+        self.uv_shape = [self._fov_shape[0], self._fov_shape[1]]
 
         # Cadence overrides the shape as defined by the FOV
-        # However, the inventory method will require serious modification for
-        # observations in which the cadence defines one dimension, not the FOV.
+        # However, the inventory method will require serious modification for observations
+        # in which the cadence defines one dimension, not the FOV.
         if self._time_is_1d:
             t_size = self.cadence.shape[0]
             if t_size < self.shape[self.t_axis]:
-                raise ValueError('TimedImage FOV and cadence have incompatible '
-                                 + 'shapes')
+                raise ValueError('TimedImage FOV and cadence have incompatible shapes')
             self._extended_fov = (t_size > self.shape[self.t_axis])
             self.shape[self.t_axis] = t_size
             self.uv_shape[self._t_uv_axis] = t_size
         else:
             if self.shape[self.t_axis[0]] not in (self.cadence.shape[0], 1):
-                raise ValueError('TimedImage FOV and cadence have incompatible '
-                                 + 'shapes')
+                raise ValueError('TimedImage FOV and cadence have incompatible shapes')
             t_size = self.cadence.shape[1]
             if t_size < self.shape[self.t_axis[1]]:
-                raise ValueError('TimedImage FOV and cadence have incompatible '
-                                 + 'shapes')
+                raise ValueError('TimedImage FOV and cadence have incompatible shapes')
             self._extended_fov = (t_size > self.shape[self.t_axis[1]])
             self.shape[self.t_axis[1]] = t_size
             self.uv_shape[self._fast_t_uv_axis] = t_size
@@ -151,9 +145,9 @@ class TimedImage(Observation):
         # TODO: implement inventory and related methods for an extended FOV.
 
         if self._extended_fov:
-            self.snapshot = None
+            self._snapshot = None
         else:
-            snapshot_axes = list(self.axes)     # a copy
+            snapshot_axes = list(self._axes)    # a copy
             snapshot_axes[self.u_axis] = 'u'
             snapshot_axes[self.v_axis] = 'v'
             snapshot_tstart = self.cadence.time[0]
@@ -164,38 +158,33 @@ class TimedImage(Observation):
                 subfields['texp_'] = subfields['texp']
                 del subfields['texp']
 
-            self.snapshot = Snapshot(snapshot_axes, snapshot_tstart,
-                                     snapshot_texp, self.fov,
-                                     self.path, self.frame, **subfields)
+            self._snapshot = Snapshot(snapshot_axes, snapshot_tstart, snapshot_texp,
+                                      fov=self.fov, path=self.path, frame=self.frame,
+                                      **subfields)
 
     def __getstate__(self):
         self.refresh()
-        return (self.axes, self.cadence, self.fov,
-                Path.as_primary_path(self.path),
-                Frame.as_primary_frame(self.frame),
-                self.subfields)
+        return (self._axes, self.cadence, self.fov, Path.as_primary_path(self.path),
+                Frame.as_primary_frame(self.frame), self.subfields)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
         self.freeze()
 
-    def uvt(self, indices, remask=False, derivs=True):
-        """Coordinates (u,v) and time t for indices into the data array.
+    def uvt(self, indices, *, remask=False, derivs=True):
+        """Coordinates `(u,v)` and time `t` for indices into the data array.
 
         This method supports non-integer index values.
 
         Parameters:
-            indices (Scalar): Or Vector of array indices.
+            indices (Scalar or Vector): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
             derivs (bool, optional): True to include derivatives in the returned values.
 
         Returns:
-            (tuple): (uv, time), where:
-
-            * `uv` (Pair): Defining the values of (u,v) within the FOV that are associated
-              with the array indices.
-            * `time` (Scalar): Defining the time in seconds TDB associated with the array
-              indices.
+            tuple[Pair, Scalar]: `(uv, time)`, where `uv` defines the values of `(u,v)`
+            within the FOV that are associated with the array indices and `time` defines
+            the time in seconds TDB associated with the array indices.
         """
 
         indices = Vector.as_vector(indices, recursive=derivs)
@@ -208,9 +197,9 @@ class TimedImage(Observation):
             else:
                 uv = uv.as_float()
 
-            if self.fov_shape[0] == 1:
+            if self._fov_shape[0] == 1:
                 uv.vals[..., 0] = 0.5
-            if self.fov_shape[1] == 1:
+            if self._fov_shape[1] == 1:
                 uv.vals[..., 1] = 0.5
 
         new_mask = False
@@ -237,23 +226,21 @@ class TimedImage(Observation):
 
         return (uv, time)
 
-    def uvt_range(self, indices, remask=False):
-        """Ranges of (u,v) spatial coordinates and time for integer array indices.
+    def uvt_range(self, indices, *, remask=False):
+        """Ranges of `(u,v)` spatial coordinates and time for integer array indices.
 
         Parameters:
-            indices (Scalar): Or Vector of array indices.
+            indices (Scalar or Vector): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
-            (tuple): (uv_min, uv_max, time_min, time_max), where:
+            tuple[Pair, Pair, Scalar, Scalar]: `(uv_min, uv_max, time_min, time_max)`,
+            where:
 
-            * `uv_min` (Pair): Defining the minimum values of FOV (u,v) associated the
-              pixel.
-            * `uv_max` (Pair): Defining the maximum values of FOV (u,v) associated the
-              pixel.
-            * `time_min` (Scalar): Defining the minimum time associated with the array
-              indices. It is given in seconds TDB.
-            * `time_max` (Scalar): Defining the maximum time value.
+            * `uv_min`: The minimum values of (u,v) associated with the pixel.
+            * `uv_max`: The maximum values of (u,v).
+            * `time_min`: The minimum time associated with the pixel, in seconds TDB.
+            * `time_max`: The maximum time value.
         """
 
         indices = Vector.as_vector(indices, recursive=False)
@@ -263,9 +250,9 @@ class TimedImage(Observation):
         # If an FOV axis has unit length, we always land at range (0,1)
         if self._has_unit_fov_axis:
             uv_min = uv_min.copy()
-            if self.fov_shape[0] == 1:
+            if self._fov_shape[0] == 1:
                 uv_min.vals[..., 0] = 0
-            if self.fov_shape[1] == 1:
+            if self._fov_shape[1] == 1:
                 uv_min.vals[..., 1] = 0
 
         new_mask = False
@@ -280,8 +267,7 @@ class TimedImage(Observation):
         else:
             tstep = indices.to_pair(self.t_axis)
 
-        (time_min,
-         time_max) = self.cadence.time_range_at_tstep(tstep, remask=remask)
+        (time_min, time_max) = self.cadence.time_range_at_tstep(tstep, remask=remask)
 
         # Merge masks if necessary
         if remask:
@@ -295,8 +281,11 @@ class TimedImage(Observation):
 
         return (uv_min, uv_min + Pair.INT11, time_min, time_max)
 
-    def time_range_at_uv(self, uv_pair, remask=False):
-        """The start and stop times of the specified spatial pixel (u,v).
+    def time_range_at_uv(self, uv_pair, *, remask=False):
+        """The start and stop times of the specified spatial pixel `(u,v)`.
+
+        The times are those of the cadence, evaluated at the `(u,v)` index or indices that
+        carry the time-dependence.
 
         Parameters:
             uv_pair (Pair): Spatial (u,v) data array coordinates, truncated to integers if
@@ -304,42 +293,37 @@ class TimedImage(Observation):
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
-            (tuple): Scalars of the start time and stop time of each (u,v) pair, as
-                seconds TDB.
+            tuple[Scalar, Scalar]: Scalars of the start time and stop time of each `(u,v)`
+            pair, as seconds TDB.
         """
 
         if self._time_is_1d:
-            return self.time_range_at_uv_1d(uv_pair, axis=self._t_uv_axis,
-                                                     remask=remask)
+            return self.time_range_at_uv_1d(uv_pair, axis=self._t_uv_axis, remask=remask)
         else:
             return self.time_range_at_uv_2d(uv_pair, fast=self._fast_t_uv_axis,
-                                                     remask=remask)
+                                            remask=remask)
 
-    def uv_range_at_time(self, time, remask=False):
-        """The (u,v) range of spatial pixels observed at the specified time.
+    def uv_range_at_time(self, time, *, remask=False):
+        """The `(u,v)` range of spatial pixels in the data array observed at the specified
+        time.
 
         Parameters:
             time (Scalar): Time values in seconds TDB.
             remask (bool, optional): True to mask values outside the time limits.
 
         Returns:
-            (tuple): (uv_min, uv_max), where:
-
-            * `uv_min` (Pair): The lower (u,v) corner Pair of the area observed at the
-              specified time.
-            * `uv_max` (Pair): The upper (u,v) corner Pair of the area observed at the
-              specified time.
+            tuple[Pair, Pair]: `(uv_min, uv_max)`, where `uv_min` is the lower corner of
+            the `(u,v)` rectangle observed and `uv_max` is the upper corner.
         """
 
         if self._time_is_1d:
-            return self.uv_range_at_time_1d(time, shape=self.uv_shape,
-                                                  axis=self._t_uv_axis,
-                                                  remask=remask)
+            return self.uv_range_at_time_1d(time, self.uv_shape,
+                                            axis=self._t_uv_axis, remask=remask)
         else:
-            return self.uv_range_at_time_2d(time, shape=self.uv_shape,
-                                                  slow=(1-self._fast_t_uv_axis),
-                                                  fast=self._fast_t_uv_axis,
-                                                  remask=remask)
+            return self.uv_range_at_time_2d(time, self.uv_shape,
+                                            slow=(1-self._fast_t_uv_axis),
+                                            fast=self._fast_t_uv_axis,
+                                            remask=remask)
 
     def time_shift(self, dtime):
         """A copy of the observation object with a time-shift.
@@ -349,20 +333,29 @@ class TimedImage(Observation):
                 seconds. A positive value shifts the observation later.
 
         Returns:
-            A (shallow) copy of the object with a new time.
+            Observation: A (shallow) copy of the object with a new time.
         """
 
-        return TimedImage(self.axes, self.cadence.time_shift(dtime),
-                          self.fov, self.path, self.frame, **self.subfields)
+        return TimedImage(self._axes, self.cadence.time_shift(dtime), fov=self.fov,
+                          path=self.path, frame=self.frame, **self.subfields)
 
-    def inventory(self, *args, **kwargs):
-        """Info about the bodies that appear unobscured inside the FOV. See
-        Snapshot.inventory() for details.
+    def inventory(self, bodies, **kwargs):
+        """Info about the bodies that appear unobscured inside the FOV.
 
-        WARNING: Not properly updated for class PushFrame. Use at your own risk.
-        This operates by returning every body that would have been inside the
-        FOV of this observation if it were instead a Snapshot, evaluated at the
-        given tfrac.
+        This operates by returning every body that would have been inside the FOV of this
+        observation if it were instead a Snapshot, evaluated at the given `tfrac`. As a
+        result, the time-dependence of the pixels is ignored; use at your own risk.
+
+        Parameters:
+            bodies (list): The names of the body objects to be included in the inventory.
+            **kwargs: The remaining keyword options of Snapshot.inventory(), which see.
+
+        Returns:
+            (list, array, or dict): As described in Snapshot.inventory().
+
+        Raises:
+            NotImplementedError: If the cadence extends this observation beyond the shape
+                of its FOV.
         """
 
         # TODO
@@ -370,6 +363,6 @@ class TimedImage(Observation):
             raise NotImplementedError('inventory is not implemented for '
                                       'TimedImage with cadence-extended FOV')
 
-        return self.snapshot.inventory(*args, **kwargs)
+        return self._snapshot.inventory(bodies, **kwargs)
 
 ##########################################################################################

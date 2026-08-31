@@ -1,11 +1,12 @@
 ##########################################################################################
-# oops/observation/__init__.py: Abstract class Observation
+# oops/observation/observation_.py
 ##########################################################################################
 
 import numpy as np
 import numbers
 
 from polymath              import Matrix3, Scalar, Pair, Vector, Vector3, Qube
+from oops                  import mutable
 from oops.config           import LOGGING, PATH_PHOTONS
 from oops.event            import Event
 from oops.frame            import Frame
@@ -56,11 +57,16 @@ class Observation(Mutable):
         * path (Path): The path waypoint co-located with the instrument.
         * frame (Frame): The wayframe of a coordinate frame fixed to the optics of the
           instrument. This frame has its Z-axis pointing outward near the center of the
-          line of sight, with the X-axis pointing rightward and the y-axis pointing
+          line of sight, with the X-axis pointing rightward and the Y-axis pointing
           downward.
         * subfields (dict): All of the optional attributes. Additional subfields may be
           included as needed. The subfield `data` is reserved to contain the NumPy array
           of numbers associated with the observation.
+
+    Attributes:
+        * INVENTORY_IMPLEMENTED (bool): True if this subclass implements `inventory()`.
+        * DEBUG (bool): True to log the iterative convergence steps of the geometry
+          solvers.
     """
 
     INVENTORY_IMPLEMENTED = False
@@ -78,13 +84,17 @@ class Observation(Mutable):
 
     @property
     def time(self):
+        """The start and stop times of the observation overall, in seconds TDB."""
+
         return self.cadence.time
 
     @property
     def midtime(self):
+        """The mid-time of the observation, in seconds TDB."""
+
         return self.cadence.midtime
 
-    def uvt(self, indices, remask=False, derivs=True):
+    def uvt(self, indices, *, remask=False, derivs=True):
         """Coordinates `(u,v)` and time `t` for indices into the data array.
 
         This method supports non-integer index values.
@@ -102,7 +112,7 @@ class Observation(Mutable):
 
         raise NotImplementedError(f'{type(self).__name__}.uvt is not implemented')
 
-    def uvt_range(self, indices, remask=False):
+    def uvt_range(self, indices, *, remask=False):
         """Ranges of `(u,v)` spatial coordinates and time for integer array indices.
 
         Parameters:
@@ -113,7 +123,7 @@ class Observation(Mutable):
             tuple[Pair, Pair, Scalar, Scalar]: `(uv_min, uv_max, time_min, time_max)`,
             where:
 
-            * `uv_min`: The minimum values of (u,v) associated the pixel.
+            * `uv_min`: The minimum values of (u,v) associated with the pixel.
             * `uv_max`: The maximum values of (u,v).
             * `time_min`: The minimum time associated with the pixel, in seconds TDB.
             * `time_max`: The maximum time value.
@@ -121,8 +131,8 @@ class Observation(Mutable):
 
         raise NotImplementedError(f'{type(self).__name__}.uvt_range is not implemented')
 
-    def time_range_at_uv(self, uv_pair, remask=False):
-        """The start and stop times of the specified spatial pixel (u,v).
+    def time_range_at_uv(self, uv_pair, *, remask=False):
+        """The start and stop times of the specified spatial pixel `(u,v)`.
 
         Parameters:
             uv_pair (Pair): Spatial (u,v) data array coordinates, truncated to integers if
@@ -137,13 +147,14 @@ class Observation(Mutable):
         raise NotImplementedError(f'{type(self).__name__}.time_range_at_uv is not '
                                   'implemented')
 
-    def time_range_at_uv_0d(self, uv_pair, remask=False):
+    def time_range_at_uv_0d(self, uv_pair, *, remask=False):
         """time_range_at_uv() for some observations in which the spatial and time axes are
         independent.
 
         Parameters:
             uv_pair (Pair): Spatial (u,v) data array coordinates, truncated to integers if
                 necessary.
+            remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
             tuple[Scalar, Scalar]: Scalars of the start time and stop time of each `(u,v)`
@@ -163,7 +174,7 @@ class Observation(Mutable):
 
         return (time_min, time_max)
 
-    def time_range_at_uv_1d(self, uv_pair, axis=0, remask=False):
+    def time_range_at_uv_1d(self, uv_pair, *, axis=0, remask=False):
         """time_range_at_uv() for some observations with a 1-D cadence.
 
         Parameters:
@@ -171,6 +182,7 @@ class Observation(Mutable):
                 necessary.
             axis (int, optional): 0 or 1, indicating the uv axis associated with the
                 cadence.
+            remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
             tuple[Scalar, Scalar]: Scalars of the start time and stop time of each `(u,v)`
@@ -189,7 +201,7 @@ class Observation(Mutable):
 
         return self.cadence.time_range_at_tstep(tstep, remask=remask)
 
-    def time_range_at_uv_2d(self, uv_pair, fast=1, remask=False):
+    def time_range_at_uv_2d(self, uv_pair, *, fast=1, remask=False):
         """time_range_at_uv() for some observations with a 2-D cadence.
 
         Parameters:
@@ -197,6 +209,7 @@ class Observation(Mutable):
                 necessary.
             fast (int, optional): 0 or 1, indicating the uv axis associated with the fast
                 index of the cadence. The slow index is always 1 - fast.
+            remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
             tuple[Scalar, Scalar]: Scalars of the start time and stop time of each `(u,v)`
@@ -210,7 +223,7 @@ class Observation(Mutable):
         else:
             return self.cadence.time_range_at_tstep(uv_pair.swapxy(), remask=remask)
 
-    def uv_range_at_time(self, time, remask=False):
+    def uv_range_at_time(self, time, *, remask=False):
         """The `(u,v)` range of spatial pixels in the data array observed at the specified
         time.
 
@@ -226,13 +239,14 @@ class Observation(Mutable):
         raise NotImplementedError(f'{type(self).__name__}.uv_range_at_time is not ' +
                                   'implemented')
 
-    def uv_range_at_time_0d(self, time, uv_shape, remask=False):
+    def uv_range_at_time_0d(self, time, uv_shape, *, remask=False):
         """uv_range_at_time() for an observation in which any time-dependence is decoupled
         from the spatial axes.
 
         Parameters:
-            time (Scalar): Time Scalar.
-            uv_shape (FOV): Shape of the active detector(s) within the FOV.
+            time (Scalar): Time values in seconds TDB.
+            uv_shape (tuple or Pair): Shape of the active detector(s) within the FOV,
+                in (u,v) order.
             remask (bool, optional): True to mask times that are out of range.
 
         Returns:
@@ -256,15 +270,16 @@ class Observation(Mutable):
         uv_min = Pair.zeros(time.shape, dtype='int', mask=new_mask)
         return (uv_min, uv_min + Pair.as_pair(uv_shape))
 
-    def uv_range_at_time_1d(self, time, uv_shape, axis=0, remask=False):
+    def uv_range_at_time_1d(self, time, uv_shape, *, axis=0, remask=False):
         """uv_range_at_time() for some observations with a 1-D cadence.
 
         Parameters:
-            time (Scalar): Time Scalar.
-            uv_shape (FOV): Shape of the active detector(s) within the FOV.
+            time (Scalar): Time values in seconds TDB.
+            uv_shape (tuple): Shape of the active detector(s) within the FOV, in (u,v)
+                order.
             axis (int, optional): 0 or 1, indicating the uv axis associated with the
-                cadence. Alternatively, -1 indicates that time axis is not associated with
-                a spatial axis.
+                cadence. Alternatively, -1 indicates that the time axis is not associated
+                with a spatial axis.
             remask (bool, optional): True to mask times that are out of range.
 
         Returns:
@@ -289,15 +304,19 @@ class Observation(Mutable):
         uv_max = Pair(uv_max_vals, tstep_min.mask)
         return (uv_min, uv_max)
 
-    def uv_range_at_time_2d(self, time, uv_shape, slow=0, fast=1, remask=False):
+    def uv_range_at_time_2d(self, time, uv_shape, *, slow=0, fast=1, remask=False):
         """uv_range_at_time() for some observations with a 2-D cadence.
 
         Parameters:
-            time (Scalar): Time Scalar.
-            uv_shape (FOV): Shape of the active detector(s) within the FOV. slow, fast  0
-                or 1, indicating the uv axes associated with the slow and fast indices of
-                the cadence. Alternatively, -1 indicates that time axis is not associated
-                with a spatial axis.
+            time (Scalar): Time values in seconds TDB.
+            uv_shape (tuple): Shape of the active detector(s) within the FOV, in (u,v)
+                order.
+            slow (int, optional): 0 or 1, indicating the uv axis associated with the slow
+                index of the cadence. Alternatively, -1 indicates that this index is not
+                associated with a spatial axis.
+            fast (int, optional): 0 or 1, indicating the uv axis associated with the fast
+                index of the cadence. Alternatively, -1 indicates that this index is not
+                associated with a spatial axis.
             remask (bool, optional): True to mask times that are out of range.
 
         Returns:
@@ -393,9 +412,9 @@ class Observation(Mutable):
         observation unchanged.
 
         Parameters:
-            angles: Two or three angles of rotation in radians. The order of the
-                rotations is about the y, x, and (optionally) z axes. These angles rotate
-                a vector in the reference frame into this frame.
+            angles (tuple or list): Two or three angles of rotation in radians. The
+                order of the rotations is about the y, x, and (optionally) z axes. These
+                angles rotate a vector in the reference frame into this frame.
 
         Returns:
             Observation: A new Observation with the navigation applied.
@@ -500,20 +519,29 @@ class Observation(Mutable):
     ######################################################################################
 
     def insert_subfield(self, key, value):
-        """Add a given subfield to the Event."""
+        """Insert a subfield into this observation, also making it an attribute.
+
+        Parameters:
+            key (str): The name of the subfield.
+            value (Any): The value of the subfield.
+        """
 
         self.subfields[key] = value
         self.__dict__[key] = value      # This makes it an attribute as well
 
     def delete_subfield(self, key):
-        """Delete a subfield, but not arr or dep."""
+        """Delete a subfield of this observation, if it is present.
+
+        Parameters:
+            key (str): The name of the subfield.
+        """
 
         if key in self.subfields:
             del self.subfields[key]
             del self.__dict__[key]
 
     def delete_subfields(self):
-        """Delete all subfields."""
+        """Delete all the subfields of this observation."""
 
         for key in self.subfields:
             del self.subfields[key]
@@ -523,16 +551,16 @@ class Observation(Mutable):
     # Methods probably not requiring overrides
     ######################################################################################
 
-    def uv_is_outside(self, uv_pair, inclusive=True):
+    def uv_is_outside(self, uv_pair, *, inclusive=True):
         """A Boolean mask identifying coordinates outside the FOV.
 
         Parameters:
             uv_pair (Pair): (u,v) coordinates.
             inclusive (bool, optional): True to interpret coordinate values at the upper
-                end of each range as inside the FOV; False to interpet them as outside.
+                end of each range as inside the FOV; False to interpret them as outside.
 
         Returns:
-            bool: True if the point is outside the FOV.
+            Boolean: True where the `(u,v)` coordinate falls outside the FOV.
         """
 
         # Interpret the (u,v) coordinates
@@ -547,22 +575,23 @@ class Observation(Mutable):
             return (u.tvl_lt(0) | v.tvl_lt(0) | u.tvl_gt(self.uv_shape[0])
                                               | v.tvl_ge(self.uv_shape[1]))
 
-    def midtime_at_uv(self, uv, tfrac=0.5):
-        """The mid-time for the selected spatial pixel (u,v).
+    def midtime_at_uv(self, uv, *, tfrac=0.5):
+        """The time at a specified fraction of the exposure of spatial pixel `(u,v)`.
 
         Parameters:
             uv (Pair): `(u,v)` coordinates.
             tfrac (Scalar, optional): Scalar of fractional times during the exposure,
-                where `tfrac=0` at the beginning and 1 at the end. Default is 0.5.
+                where `tfrac=0` at the beginning and 1 at the end. Default is 0.5, the
+                mid-time.
 
         Returns:
-            Scalar: The mid-time of the integration at the specified `uv`.
+            Scalar: The time within the integration at the specified `uv`, in seconds TDB.
         """
 
         (time0, time1) = self.time_range_at_uv(uv)
-        return tfrac * (time0 + time1)
+        return time0 + tfrac * (time1 - time0)
 
-    def meshgrid(self, origin=None, undersample=1, oversample=1, limit=None,
+    def meshgrid(self, origin=None, *, undersample=1, oversample=1, limit=None,
                  center_uv=None, fov_keywords={}):
         """A Meshgrid shaped to broadcast to the observation's shape.
 
@@ -572,16 +601,16 @@ class Observation(Mutable):
         Parameters:
             origin (Pair, optional): A single value, tuple or Pair defining the origin of
                 the grid. Default is to place the first sample in the middle of the first
-                pixel, allowing for under- or oversampling. undersample A single value,
-                tuple or Pair defining the magnitude of under-sampling to be performed.
-                For example, a value of 2 would cause the meshgrid to sample every other
-                pixel along each axis.
+                pixel, allowing for under- or oversampling.
+            undersample (Pair, optional): A single value, tuple or Pair defining the
+                magnitude of under-sampling to be performed. For example, a value of 2
+                would cause the meshgrid to sample every other pixel along each axis.
             oversample (Pair, optional): A single value, tuple or Pair defining the
                 magnitude of over-sampling to be performed. For example, a value of 2
                 would create a 2x2 array of samples inside each pixel.
             limit (Pair, optional): A single value, tuple or Pair defining the upper
                 limits of the meshgrid. By default, this is the shape of the FOV.
-            center_uv (FOV, optional): Reference point at the center of the FOV; use None
+            center_uv (Pair, optional): Reference point at the center of the FOV; use None
                 for the default, which depends on the origin and limit.
             fov_keywords (dict, optional): Parameters passed to the FOV methods,
                 containing parameters that might affect the properties of the FOV.
@@ -599,26 +628,33 @@ class Observation(Mutable):
                                   center_uv=center_uv,
                                   fov_keywords=fov_keywords)
 
-    def timegrid(self, meshgrid, oversample=1, tfrac_limits=(0,1)):
+    def timegrid(self, meshgrid, *, oversample=1, tfrac_limits=(0,1)):
         """A Scalar of times broadcastable with the shape of the given meshgrid.
 
         Parameters:
             meshgrid (Meshgrid): The meshgrid defining spatial sampling.
             oversample (int, optional): 1 to obtain one time sample per pixel; > 1 for
                 finer sampling in time.
-            tfrac_limits (tuple, optional): Interpreted in different ways depending on the
-                observation's structure. - if this observation has no time-dependence, it
-                is the pair of fractional time limits within the overall exposure
-                duration. - if this observation has time-dependence that is entirely
-                coupled to spatial axes, then it is the fractional time limits within each
-                pixel's individual exposure duration. - if this observation has
-                time-dependence that is entirely decoupled from the spatial axes, then it
-                is the start and end time relative to the time limits of the defined
-                cadence. - the possible case of a 2-D time-dependence that has only one
-                axis coupled to a spatial axis is not supported.
+            tfrac_limits (tuple, optional): A pair of fractional time limits, interpreted
+                in different ways depending on the observation's structure:
+
+                * If this observation has no time-dependence, these are the fractional
+                  time limits within the overall exposure duration.
+                * If this observation has time-dependence that is entirely coupled to
+                  spatial axes, these are the fractional time limits within each pixel's
+                  individual exposure duration.
+                * If this observation has time-dependence that is entirely decoupled from
+                  the spatial axes, these are the start and end times relative to the time
+                  limits of the defined cadence.
+
+                A single number is interpreted as a pair of identical limits.
 
         Returns:
             Scalar: The desired times in seconds TDB.
+
+        Raises:
+            NotImplementedError: If this observation has a 2-D time-dependence with only
+                one axis coupled to a spatial axis.
         """
 
         if isinstance(tfrac_limits, numbers.Number):
@@ -694,7 +730,7 @@ class Observation(Mutable):
         fracs = fracs.reshape(fracs.shape + len(self.shape) * (1,))
         return Scalar(time0 + fracs * (time1 - time0))
 
-    def event_at_grid(self, meshgrid=None, tfrac=0.5, time=None):
+    def event_at_grid(self, meshgrid=None, *, tfrac=0.5, time=None):
         """A photon arrival event from directions defined by a meshgrid.
 
         Parameters:
@@ -719,7 +755,7 @@ class Observation(Mutable):
 
         return event
 
-    def gridless_event(self, meshgrid=None, tfrac=0.5, time=None, shapeless=False):
+    def gridless_event(self, meshgrid=None, *, tfrac=0.5, time=None, shapeless=False):
         """A photon arrival event irrespective of the direction.
 
         Parameters:
@@ -749,12 +785,21 @@ class Observation(Mutable):
         return Event(time, Vector3.ZERO, self.path, self.frame)
 
     @staticmethod
-    def scalar_from_indices(indices, axis, derivs=True):
+    def scalar_from_indices(indices, axis, *, derivs=True):
         """Utility to return the selected Scalar from a Scalar or Vector of indices,
         np.ndarray, or a number.
 
+        Parameters:
+            indices (Scalar, Vector, array, or number): Array indices.
+            axis (int): The array axis to select; -1 if this axis is not associated with
+                an array index.
+            derivs (bool, optional): True to include derivatives in the returned value.
+
         Returns:
-            Scalar: The selected Scalar.
+            Scalar: The selected Scalar; None if `axis` is negative.
+
+        Raises:
+            IndexError: If `indices` is a single number but `axis` is neither 0 nor -1.
         """
 
         if axis < 0:
@@ -780,7 +825,7 @@ class Observation(Mutable):
     # Geometry solvers
     ######################################################################################
 
-    def uv_from_ra_and_dec(self, ra, dec, tfrac=0.5, time=None, apparent=True,
+    def uv_from_ra_and_dec(self, ra, dec, *, tfrac=0.5, time=None, apparent=True,
                            derivs=False, iters=2, quick={}):
         """Convert arbitrary scalars of RA and dec to FOV `(u,v)` coordinates.
 
@@ -796,7 +841,7 @@ class Observation(Mutable):
                 True.
             derivs (bool, optional): True to propagate derivatives of ra and dec through
                 to derivatives of the returned (u,v) Pairs.
-            iters (float, optional): Iterations to perform until convergence is reached.
+            iters (int, optional): Iterations to perform until convergence is reached.
                 Two is the most that should ever be needed; Snapshot should override to
                 one.
             quick (dict, optional): To override the configured default parameters for
@@ -857,17 +902,10 @@ class Observation(Mutable):
 
         return uv
 
-    def uv_from_path(self, path, tfrac=0.5, time=None, derivs=False, guess=None,
-                           quick={}, converge={}):
-        """The (u,v) indices of an object in the FOV, given its path. **** NOT WELL
+    def uv_from_path(self, path, *, tfrac=0.5, time=None, derivs=False, guess=None,
+                     quick={}, converge={}):
+        """The `(u,v)` indices of an object in the FOV, given its path. **** NOT WELL
         TESTED! ****
-
-        Notes:
-            This procedure assumes that movement along a path is very limited during the
-            exposure time of an individual pixel. It could fail to converge if there is a
-            large gap in timing between adjacent pixels at a time when the object is
-            crossing that gap. However, even then, it should select roughly the correct
-            location. It could also fail to converge during a fast slew.
 
         Parameters:
             path (Path): Object.
@@ -888,6 +926,13 @@ class Observation(Mutable):
         Returns:
             Pair: The `(u,v)` indices of the pixel in which the point was found. The path
             is evaluated at the mid-time of this pixel.
+
+        Notes:
+            This procedure assumes that movement along a path is very limited during the
+            exposure time of an individual pixel. It could fail to converge if there is a
+            large gap in timing between adjacent pixels at a time when the object is
+            crossing that gap. However, even then, it should select roughly the correct
+            location. It could also fail to converge during a fast slew.
         """
 
         # Assemble convergence parameters
@@ -899,6 +944,7 @@ class Observation(Mutable):
             converge = PATH_PHOTONS.__dict__
 
         # Take a guess at the observation time
+        converged = False
         if time is None:
             obs_time = self.time[0] + tfrac * (self.time[1] - self.time[0])
             iters = converge['max_iterations']
@@ -955,9 +1001,9 @@ class Observation(Mutable):
 
         return self.fov.uv_from_los_t(obs_event.neg_arr_ap, time=obs_time, derivs=derivs)
 
-    def uv_from_coords(self, surface, coords, tfrac=0.5, time=None, underside=False,
+    def uv_from_coords(self, surface, coords, *, tfrac=0.5, time=None, underside=False,
                        derivs=False, quick=None, converge=None):
-        """The (u,v) indices of a surface point, given its coordinates.
+        """The `(u,v)` indices of a surface point, given its coordinates.
 
         Parameters:
             surface (Surface): The Surface object.
@@ -984,7 +1030,7 @@ class Observation(Mutable):
         raise NotImplementedError(f'{type(self).__name__}.uv_from_coords is not '
                                   'implemented')
 
-    def inventory(self, bodies, tfrac=0.5, time=None, expand=0., return_type='list',
+    def inventory(self, bodies, *, tfrac=0.5, time=None, expand=0., return_type='list',
                   fov=None, quick=None, converge=None):
         """Info about the bodies that appear unobscured inside the FOV.
 
@@ -999,7 +1045,7 @@ class Observation(Mutable):
             time (Scalar, optional): Scalar of optional absolute time in seconds.
             expand (float, optional): An optional angle in radians by which to extend the
                 limits of the field of view. This can be used to accommodate pointing
-                uncertainties. **NOT YET IMPLEMENTED**
+                uncertainties.
             return_type (str, optional): One of "list", "flags", or "full":
 
                 * "list": Return the inventory as a list of names.
@@ -1048,10 +1094,10 @@ class Observation(Mutable):
                   the FOV boundaries.
                 - "v_max" (float): The maximum `v` value covered by the body, clipped to
                   the FOV boundaries.
-                - "u_min_unclipped" (float): Same is "u_min", but not clipped.
-                - "u_max_unclipped" (float): Same is "u_max", but not clipped.
-                - "v_min_unclipped" (float): Same is "v_min", but not clipped.
-                - "v_max_unclipped" (float): Same is "v_max", but not clipped.
+                - "u_min_unclipped" (float): Same as "u_min", but not clipped.
+                - "u_max_unclipped" (float): Same as "u_max", but not clipped.
+                - "v_min_unclipped" (float): Same as "v_min", but not clipped.
+                - "v_max_unclipped" (float): Same as "v_max", but not clipped.
                 - "u_pixel_size" (float): The diameter of the body in pixels in units of
                   the `u` pixels.
                 - "v_pixel_size" (float): The diameter of the body in pixels in units of
@@ -1064,36 +1110,40 @@ class Observation(Mutable):
     # Support for parallel observations
     ######################################################################################
 
-    def parallel_los(self, parallel, los, time=None, derivs=False):
+    def parallel_los(self, parallel, los, *, time=None, derivs=False):
         """The line of sight in a parallel observation's FOV given a line of sight in this
         observation.
 
         Parameters:
-            parallel (FOV): A parallel observation (same origin and time, different frame
-                and FOV).
+            parallel (Observation): A parallel observation (same origin and time,
+                different frame and FOV).
             los (Vector3): A line of sight in this observation.
             time (Scalar, optional): Absolute time in seconds TDB; None to assume this
                 observation's midtime.
             derivs (bool, optional): True to include the derivatives of the los in the
                 result.
+
+        Returns:
+            Vector3: The same line of sight, expressed in the frame of the parallel
+            observation.
         """
 
         # Define the relative frame (assuming a common origin)
         # This frame rotates vectors from this frame to the parallel frame.
         frame = self.frame.wrt(parallel.frame)
 
-        # Convert the LOS to the frame of the this observation
+        # Convert the LOS to the frame of the parallel observation
         time = self.midtime if time is None else time
         xform = frame.transform_at_time(time)
         return xform.rotate(los, derivs=derivs)
 
-    def parallel_uv(self, parallel, uv, time=None, derivs=False):
+    def parallel_uv(self, parallel, uv, *, time=None, derivs=False):
         """The `(u,v)` pixel coordinates in a parallel observation's FOV given pixel
         coordinates in the FOV of this observation.
 
         Parameters:
-            parallel (FOV): A parallel observation (same origin and time, different frame
-                and FOV).
+            parallel (Observation): A parallel observation (same origin and time,
+                different frame and FOV).
             uv (Pair): `(u,v)` pixel coordinates in this observation.
             time (Scalar, optional): Absolute time in seconds TDB; None to assume this
                 observation's midtime.
@@ -1108,28 +1158,28 @@ class Observation(Mutable):
         los = self.fov.los_from_uvt(uv, time=time, derivs=derivs)
 
         # Transform to the parallel observation
-        los = self.parallel_los(los, parallel, time=time, derivs=derivs)
+        los = self.parallel_los(parallel, los, time=time, derivs=derivs)
 
         # Convert to coordinates in the new FOV
         return parallel.fov.uv_from_los_t(los, time=time, derivs=derivs)
 
-    def parallel_offset_angles(self, parallel, angles, time=None):
+    def parallel_offset_angles(self, parallel, angles, *, time=None):
         """The offset angles in a parallel observation's FOV and frame, given the pointing
         offset in this observation.
 
         Parameters:
-            parallel (FOV): A parallel observation (same origin and time, different frame
-                and FOV). Alternatively, a tuple of two values: (frame, fov).
+            parallel (Observation): A parallel observation (same origin and time,
+                different frame and FOV). Alternatively, a tuple of two values:
+                `(frame, fov)`.
             angles (tuple or list): Two offset angles in radians. The first rotation is
                 about the Y axis of this observation's frame and the second is about the X
                 axis.
             time (Scalar, optional): Absolute time in seconds TDB; None to assume this
                 observation's midtime.
-            derivs (bool): True to include the derivatives of uv in the result.
 
         Returns:
-            tuple[Scalar, Scalar]: The offset angles in radian in the `x` and `y`
-            directions.
+            tuple[Scalar, Scalar]: The offset angles in radians about the `y` and `x` axes
+            of the parallel observation's frame.
         """
 
         if isinstance(parallel, Observation):
@@ -1162,23 +1212,24 @@ class Observation(Mutable):
         # Return the new rotation angles
         return los0_parallel.offset_angles(los1_parallel)
 
-    def parallel_offset_duv(self, parallel, duv, time=None, origin=None):
-        """The (u,v) pixel coordinate offset from the center of a parallel observation's
+    def parallel_offset_duv(self, parallel, duv, *, time=None, origin=None):
+        """The `(u,v)` pixel coordinate offset from the center of a parallel observation's
         FOV, given a pointing offset for this observation.
 
         Parameters:
-            parallel (FOV): A parallel observation (same origin and time, different frame
-                and FOV).
+            parallel (Observation): A parallel observation (same origin and time,
+                different frame and FOV).
             duv (Pair): The `(u,v)` coordinate offset from the predicted location of a
                 feature to its actual location.
             time (Scalar, optional): Absolute time in seconds TDB; None to assume this
                 observation's midtime.
-            origin (FOV, optional): The (u,v) coordinates of the reference point in this
-                observation's FOV, from which the offset is measured. If unspecified, the
-                center of the FOV is assumed.
+            origin (Pair, optional): The `(u,v)` coordinates of the reference point in
+                this observation's FOV, from which the offset is measured. If unspecified,
+                the center of the FOV is assumed.
 
         Returns:
-            Pair: The offset angles as `(u,v)` pixel offsets.
+            Pair: The pointing offset as a `(u,v)` pixel offset in the parallel
+            observation's FOV.
         """
 
         angles = self.fov.offset_angles_from_duv(duv, time=time, origin=origin)

@@ -290,8 +290,8 @@ def test_timedimage():
     assert obs.uvt(pair)[0] == pair
     assert (obs.uvt(pair)[1] - 218.8).abs() < delta
 
-    assert obs.uvt((10+eps, 20), True)[0].mask
-    assert obs.uvt((10, 20+eps), True)[0].mask
+    assert obs.uvt((10+eps, 20), remask=True)[0].mask
+    assert obs.uvt((10, 20+eps), remask=True)[0].mask
 
     # Try all at once
     indices = Pair([(10-eps,20-eps), (10,20-eps), (10-eps,20), (10,20),
@@ -961,35 +961,35 @@ def test_timedimage():
 
     # Test the upper edge
     pair = (10-eps, 0)
-    assert (obs.uvt(pair, True)[0] - (10, 0.5)).rms() < delta
-    assert (obs.uvt(pair, True)[1] - 9.8).abs() < delta
-    assert not obs.uvt(pair, True)[0].mask
+    assert (obs.uvt(pair, remask=True)[0] - (10, 0.5)).rms() < delta
+    assert (obs.uvt(pair, remask=True)[1] - 9.8).abs() < delta
+    assert not obs.uvt(pair, remask=True)[0].mask
 
     pair = (10, 0)
-    assert (obs.uvt(pair, True)[0] - (10, 0.5)).rms() < delta
-    assert (obs.uvt(pair, True)[1] - 9.8).abs() < delta
-    assert not obs.uvt(pair, True)[0].mask
+    assert (obs.uvt(pair, remask=True)[0] - (10, 0.5)).rms() < delta
+    assert (obs.uvt(pair, remask=True)[1] - 9.8).abs() < delta
+    assert not obs.uvt(pair, remask=True)[0].mask
 
     pair = (10+eps, 0)
-    assert obs.uvt(pair, True)[0].mask
+    assert obs.uvt(pair, remask=True)[0].mask
 
     pair = (10-eps, 1-eps)
-    assert (obs.uvt(pair, True)[0] - (10, 0.5)).rms() < delta
-    assert (obs.uvt(pair, True)[1] - 9.8).abs() < delta
-    assert not obs.uvt(pair, True)[0].mask
+    assert (obs.uvt(pair, remask=True)[0] - (10, 0.5)).rms() < delta
+    assert (obs.uvt(pair, remask=True)[1] - 9.8).abs() < delta
+    assert not obs.uvt(pair, remask=True)[0].mask
 
     pair = (10, 1)
-    assert (obs.uvt(pair, True)[0] - (10, 0.5)).rms() < delta
-    assert (obs.uvt(pair, True)[1] - 20.8).abs() < delta
-    assert not obs.uvt(pair, True)[0].mask
+    assert (obs.uvt(pair, remask=True)[0] - (10, 0.5)).rms() < delta
+    assert (obs.uvt(pair, remask=True)[1] - 20.8).abs() < delta
+    assert not obs.uvt(pair, remask=True)[0].mask
 
     pair = (10, 20)
-    assert (obs.uvt(pair, True)[0] - (10, 0.5)).rms() < delta
-    assert (obs.uvt(pair, True)[1] - 218.8).abs() < delta
-    assert not obs.uvt(pair, True)[0].mask
+    assert (obs.uvt(pair, remask=True)[0] - (10, 0.5)).rms() < delta
+    assert (obs.uvt(pair, remask=True)[1] - 218.8).abs() < delta
+    assert not obs.uvt(pair, remask=True)[0].mask
 
     pair = (10, 20+eps)
-    assert obs.uvt(pair, True)[0].mask
+    assert obs.uvt(pair, remask=True)[0].mask
 
     ######################################################################################
     # Alternative, discontinuous and weird axes

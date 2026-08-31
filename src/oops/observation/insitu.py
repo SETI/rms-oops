@@ -1,8 +1,6 @@
 ##########################################################################################
-# oops/observation/insitu.py: Subclass InSitu of class Observation
+# oops/observation/insitu.py
 ##########################################################################################
-
-import numpy as np
 
 from polymath             import Scalar
 from oops.cadence         import Cadence
@@ -14,14 +12,13 @@ from oops.path            import Path
 
 
 class InSitu(Observation):
-    """NOTE: This is still a work in progress. Not yet tested. Do not use.
+    """A subclass of Observation that has timing and path information, but no attributes
+    related to pointing or incoming photon direction.
 
-    InSitu is a subclass of Observation that has timing and path information, but no
-    attributes related to pointing or incoming photon direction. It can be useful for
-    describing in situ measurements.
+    It can be useful for describing in situ measurements. InSitu observations can also be
+    used to evaluate gridless backplanes, which do not require directional information.
 
-    InSitu Observations can also be used to evaluate gridless backplanes, which do not
-    require directional information.
+    NOTE: This is still a work in progress. Not yet tested. Do not use.
     """
 
     def __init__(self, cadence, path, **subfields):
@@ -37,6 +34,9 @@ class InSitu(Observation):
             path (Path): The path waypoint co-located with the observer.
             subfields (dict): All of the optional attributes. Additional subfields may be
                 included as needed.
+
+        Raises:
+            TypeError: If `cadence` is neither a Cadence nor a Scalar.
         """
 
         # Basic properties
@@ -58,13 +58,9 @@ class InSitu(Observation):
         self.u_axis = -1
         self.v_axis = -1
         self.swap_uv = False
-        self.uv_shape = (1, 1)
-        self.shape = self.cadence.shape
-        self.t_axis = list(np.range(len(self.shape)))
-
-        # Shape / Size
-        self.shape = self.cadence.shape
         self.uv_shape = (1,1)
+        self.shape = self.cadence.shape
+        self.t_axis = list(range(len(self.shape)))
 
         # Optional subfields
         self.subfields = {}
@@ -87,7 +83,7 @@ class InSitu(Observation):
                 seconds. A positive value shifts the observation later.
 
         Returns:
-            A shallow copy of the object with a new time.
+            Observation: A (shallow) copy of the object with a new time.
         """
 
         return InSitu(self.cadence.time_shift(dtime), self.path,

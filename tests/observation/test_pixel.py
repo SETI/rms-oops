@@ -186,4 +186,58 @@ def test_pixel():
     assert np.all(time1.mask == time0.mask)
     assert time0[:4] == obs.time[0]
     assert time1[:4] == obs.time[1]
+
+
+def test_pixel_event_at_grid():
+    fov = FlatFOV((0.001,0.001), (1,1))
+    cadence = Metronome(tstart=0., tstride=10., texp=10., steps=4)
+    obs = Pixel(axes=('t'),
+                cadence=cadence, fov=fov, path='SSB', frame='J2000')
+    meshgrid = obs.meshgrid()
+
+    # One time per sample of the cadence, on a leading axis
+    event = obs.event_at_grid(meshgrid)
+
+    assert event.shape == (4, 1)
+    assert event.time.flatten() == Scalar([5., 15., 25., 35.])
+    assert event.neg_arr_ap.shape == (1,)
+
+    # tfrac selects the point within each sample's exposure
+    event = obs.event_at_grid(meshgrid, tfrac=0.)
+    assert event.time.flatten() == Scalar([0., 10., 20., 30.])
+
+    event = obs.event_at_grid(meshgrid, tfrac=1.)
+    assert event.time.flatten() == Scalar([10., 20., 30., 40.])
+
+    # An explicit time overrides the cadence and tfrac
+    event = obs.event_at_grid(meshgrid, time=Scalar(7.))
+    assert event.time == Scalar(7.)
+
+
+def test_pixel_gridless_event():
+    fov = FlatFOV((0.001,0.001), (1,1))
+    cadence = Metronome(tstart=0., tstride=10., texp=10., steps=4)
+    obs = Pixel(axes=('t'),
+                cadence=cadence, fov=fov, path='SSB', frame='J2000')
+    meshgrid = obs.meshgrid()
+
+    event = obs.gridless_event(meshgrid)
+
+    assert event.shape == (4, 1)
+    assert event.time.flatten() == Scalar([5., 15., 25., 35.])
+
+    # shapeless collapses to the mean of the times
+    event = obs.gridless_event(meshgrid, shapeless=True)
+
+    assert event.shape == ()
+    assert event.time == Scalar(20.)
+
+    # An explicit time overrides the cadence and tfrac
+    event = obs.gridless_event(meshgrid, time=Scalar(7.))
+    assert event.time == Scalar(7.)
+
+    # Passing tfrac=None alongside a time is also accepted
+    event = obs.gridless_event(meshgrid, tfrac=None, time=Scalar(7.))
+    assert event.time == Scalar(7.)
+
 ##########################################################################################

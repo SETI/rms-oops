@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/observation/snapshot.py: Subclass Snapshot of class Observation
+# oops/observation/snapshot.py
 ##########################################################################################
 
 import numpy as np
@@ -43,9 +43,13 @@ class Snapshot(Observation):
             frame (Frame): The wayframe of a coordinate frame fixed to the optics of the
                 instrument. This frame should have its Z-axis pointing outward near the
                 center of the line of sight, with the X-axis pointing rightward and the
-                y-axis pointing downward.
+                Y-axis pointing downward.
             subfields (dict): All of the optional attributes. Additional subfields may be
                 included as needed.
+
+        Raises:
+            ValueError: If `axes` does not contain both 'u' and 'v', or if `tstart` is a
+                Cadence whose shape is not (1,).
         """
 
         # Basic properties
@@ -57,9 +61,9 @@ class Snapshot(Observation):
         self.uv_shape = tuple(self.fov.uv_shape.vals)
 
         # Axes
-        self.axes = list(axes)
-        self.u_axis = self.axes.index('u')
-        self.v_axis = self.axes.index('v')
+        self._axes = list(axes)
+        self.u_axis = self._axes.index('u')
+        self.v_axis = self._axes.index('v')
         self.swap_uv = (self.u_axis > self.v_axis)
 
         self.t_axis = -1
@@ -74,10 +78,10 @@ class Snapshot(Observation):
             self.cadence = tstart
             if self.cadence.shape != (1,):
                 raise ValueError('Shape of Snapshot cadence must be (1,)')
-            self.texp = self.cadence.texp
+            self._texp = self.cadence.texp
         else:
             self.cadence = SnapCadence(tstart, texp)
-            self.texp = texp
+            self._texp = texp
 
         # Optional subfields
         self.subfields = {}
@@ -86,30 +90,27 @@ class Snapshot(Observation):
 
     def __getstate__(self):
         self.refresh()
-        return (self.axes, self.cadence, self.texp, self.fov, self.path,
+        return (self._axes, self.cadence, self._texp, self.fov, self.path,
                 self.frame, self.subfields)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
         self.freeze()
 
-    def uvt(self, indices, remask=False, derivs=True):
-        """Coordinates (u,v) and time t for indices into the data array.
+    def uvt(self, indices, *, remask=False, derivs=True):
+        """Coordinates `(u,v)` and time `t` for indices into the data array.
 
         This method supports non-integer index values.
 
         Parameters:
-            indices (Scalar): Or Vector of array indices.
+            indices (Scalar or Vector): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
             derivs (bool, optional): True to include derivatives in the returned values.
 
         Returns:
-            (tuple): (uv, time), where:
-
-            * `uv` (Pair): Defining the values of (u,v) within the FOV that are associated
-              with the array indices.
-            * `time` (Scalar): Defining the time in seconds TDB associated with the array
-              indices.
+            tuple[Pair, Scalar]: `(uv, time)`, where `uv` defines the values of `(u,v)`
+            within the FOV that are associated with the array indices and `time` defines
+            the time in seconds TDB associated with the array indices.
         """
 
         indices = Vector.as_vector(indices, recursive=derivs)
@@ -124,23 +125,21 @@ class Snapshot(Observation):
 
         return (uv, time)
 
-    def uvt_range(self, indices, remask=False):
-        """Ranges of (u,v) spatial coordinates and time for integer array indices.
+    def uvt_range(self, indices, *, remask=False):
+        """Ranges of `(u,v)` spatial coordinates and time for integer array indices.
 
         Parameters:
-            indices (Scalar): Or Vector of array indices.
+            indices (Scalar or Vector): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
-            (tuple): (uv_min, uv_max, time_min, time_max), where:
+            tuple[Pair, Pair, Scalar, Scalar]: `(uv_min, uv_max, time_min, time_max)`,
+            where:
 
-            * `uv_min` (Pair): Defining the minimum values of FOV (u,v) associated the
-              pixel.
-            * `uv_max` (Pair): Defining the maximum values of FOV (u,v) associated the
-              pixel.
-            * `time_min` (Scalar): Defining the minimum time associated with the array
-              indices. It is given in seconds TDB.
-            * `time_max` (Scalar): Defining the maximum time value.
+            * `uv_min`: The minimum values of (u,v) associated with the pixel.
+            * `uv_max`: The maximum values of (u,v).
+            * `time_min`: The minimum time associated with the pixel, in seconds TDB.
+            * `time_max`: The maximum time value.
         """
 
         indices = Vector.as_vector(indices, recursive=False)
@@ -153,21 +152,20 @@ class Snapshot(Observation):
 
         return (uv_min, uv_min + Pair.INT11, time_min, time_max)
 
-    def uv_range_at_tstep(self, tstep, remask=False):
-        """A tuple defining the range of spatial (u,v) pixels active at a particular time
-        step.
+    def uv_range_at_tstep(self, tstep, *, remask=False):
+        """The range of spatial `(u,v)` pixels active at a particular time step.
+
+        Every pixel of a Snapshot is exposed at the same time, so the range always covers
+        the whole FOV.
 
         Parameters:
             tstep (Scalar): Time step index.
             remask (bool, optional): True to mask values outside the time interval.
 
         Returns:
-            (tuple): (uv_min, uv_max), where:
-
-            * `uv_min` (Pair): Defining the minimum values of FOV (u,v) coordinates active
-              at this time step.
-            * `uv_min` (Pair): Defining the maximum values of FOV (u,v) coordinates active
-              at this time step (exclusive).
+            tuple[Pair, Pair]: `(uv_min, uv_max)`, where `uv_min` is the minimum value of
+            the FOV `(u,v)` coordinates active at this time step and `uv_max` is the
+            maximum value, exclusive.
         """
 
         uv_min = Pair.INT00     # without a mask, return shapeless pairs
@@ -182,8 +180,11 @@ class Snapshot(Observation):
 
         return (uv_min, uv_max)
 
-    def time_range_at_uv(self, uv_pair, remask=False):
-        """The start and stop times of the specified spatial pixel (u,v).
+    def time_range_at_uv(self, uv_pair, *, remask=False):
+        """The start and stop times of the specified spatial pixel `(u,v)`.
+
+        Every pixel of a Snapshot is exposed at the same time, so these are the start and
+        stop times of the observation overall.
 
         Parameters:
             uv_pair (Pair): Spatial (u,v) data array coordinates, truncated to integers if
@@ -191,8 +192,8 @@ class Snapshot(Observation):
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
-            (tuple): Scalars of the start time and stop time of each (u,v) pair, as
-                seconds TDB.
+            tuple[Scalar, Scalar]: Scalars of the start time and stop time of each `(u,v)`
+            pair, as seconds TDB.
         """
 
         uv_pair = Pair.as_pair(uv_pair)
@@ -210,30 +211,24 @@ class Snapshot(Observation):
         # Without a mask, it's OK to return shapeless values
         return (Scalar(self.cadence.time[0]), Scalar(self.cadence.time[1]))
 
-    def uv_range_at_time(self, time, remask=False):
-        """The (u,v) range of spatial pixels observed at the specified time.
+    def uv_range_at_time(self, time, *, remask=False):
+        """The `(u,v)` range of spatial pixels in the data array observed at the specified
+        time.
 
-        For the Snapshot observation subclass, the (u,v) range is always the same,
-        spanning the shape of the FOV. The input time is largely ignored, although it is
-        expected to fall within the time limits of the observation and will be masked if
-        remask == True.
+        Every pixel of a Snapshot is exposed at the same time, so this range always covers
+        the whole FOV.
 
         Parameters:
             time (Scalar): Time values in seconds TDB.
             remask (bool, optional): True to mask values outside the time limits.
 
         Returns:
-            (tuple): (uv_min, uv_max), where:
-
-            * `uv_min` (Pair): The lower (u,v) corner Pair of the area observed at the
-              specified time.
-            * `uv_max` (Pair): The upper (u,v) corner Pair of the area observed at the
-              specified time.
+            tuple[Pair, Pair]: `(uv_min, uv_max)`, where `uv_min` is the lower corner of
+            the `(u,v)` rectangle observed and `uv_max` is the upper corner.
         """
 
-        return Observation.uv_range_at_time_0d(self, time,
-                                                     uv_shape=self.fov.uv_shape,
-                                                     remask=remask)
+        return Observation.uv_range_at_time_0d(self, time, uv_shape=self.fov.uv_shape,
+                                               remask=remask)
 
     def time_shift(self, dtime):
         """A copy of the observation object with a time-shift.
@@ -243,11 +238,11 @@ class Snapshot(Observation):
                 seconds. A positive value shifts the observation later.
 
         Returns:
-            A (shallow) copy of the object with a new time.
+            Observation: A (shallow) copy of the object with a new time.
         """
 
         cadence = self.cadence.time_shift(dtime)
-        return Snapshot(axes=self.axes, tstart=cadence, texp=self.texp,
+        return Snapshot(axes=self._axes, tstart=cadence, texp=self._texp,
                         fov=self.fov, path=self.path, frame=self.frame,
                         **self.subfields)
 
@@ -255,31 +250,29 @@ class Snapshot(Observation):
     # Overrides of Observation methods
     ######################################################################################
 
-    def uv_from_ra_and_dec(self, ra, dec, tfrac=0.5, time=None, apparent=True,
+    def uv_from_ra_and_dec(self, ra, dec, *, tfrac=0.5, time=None, apparent=True,
                            derivs=False, iters=2, quick={}):
-        """Convert arbitrary scalars of RA and dec to FOV (u,v) coordinates.
+        """Convert arbitrary scalars of RA and dec to FOV `(u,v)` coordinates.
 
         Parameters:
             ra (Scalar): J2000 right ascensions.
             dec (Scalar): J2000 declinations.
             tfrac (Scalar, optional): Scalar of fractional times during the exposure,
-                where tfrac=0 at the beginning and 1 at the end. Default is 0.5.
-            time (Scalar, optional): Scalar of optional absolute time in seconds. Only one
-                of tfrac and time can be specified; the other must be None.
+                where tfrac=0 at the beginning and 1 at the end. Default is 0.5. Ignored
+                if `time` is specified.
+            time (Scalar, optional): Scalar of optional absolute time in seconds.
             apparent (bool, optional): True to interpret the (RA,dec) values as apparent
                 coordinates; False to interpret them as actual coordinates. Default is
                 True.
             derivs (bool, optional): True to propagate derivatives of ra and dec through
                 to derivatives of the returned (u,v) Pairs.
-            iters (float, optional): Iterations to perform until convergence is reached.
-                Two is the most that should ever be needed; Snapshot should override to
-                one.
+            iters (int, optional): Ignored; a Snapshot always converges in one iteration.
             quick (dict, optional): To override the configured default parameters for
                 QuickPaths and QuickFrames; False to disable the use of QuickPaths and
                 QuickFrames. The default configuration is defined in config.py.
 
         Returns:
-            (Pair): (u,v) coordinates.
+            Pair: `(u,v)` coordinates.
 
         Notes:
             The only reasons for iteration are that the C-matrix and the velocity WRT the
@@ -293,16 +286,19 @@ class Snapshot(Observation):
                                                         derivs=derivs,
                                                         iters=1, quick=quick)
 
-    def uv_from_path(self, path, tfrac=0.5, time=None, derivs=False, guess=None,
-                           quick={}, converge={}):
-        """The (u,v) indices of an object in the FOV, given its path.
+    def uv_from_path(self, path, *, tfrac=0.5, time=None, derivs=False, guess=None,
+                     quick={}, converge={}):
+        """The `(u,v)` indices of an object in the FOV, given its path.
+
+        Because every pixel of a Snapshot is exposed at the same time, `tfrac` is
+        converted to an absolute time and no iteration is required.
 
         Parameters:
             path (Path): Object.
             tfrac (Scalar, optional): Scalar of fractional times during the exposure,
                 where tfrac=0 at the beginning and 1 at the end. Default is 0.5.
-            time (Scalar, optional): Scalar of optional absolute time in seconds. Only one
-                of tfrac and time can be specified; the other must be None.
+            time (Scalar, optional): Scalar of optional absolute time in seconds. If
+                specified, `tfrac` is ignored.
             derivs (bool, optional): True to propagate derivatives of the link time and
                 position into the returned event.
             guess (Scalar, optional): An optional guess at the light travel time from the
@@ -314,36 +310,30 @@ class Snapshot(Observation):
                 convergence parameters. The default configuration is defined in config.py.
 
         Returns:
-            The (u,v) indices of the pixel in which the point was found. The path is
-                evaluated at the mid-time of this pixel.
+            Pair: The `(u,v)` indices of the pixel in which the point was found.
         """
 
         # Convert tfrac to time. That way, iteration is avoided
-        if tfrac is not None:
-            if time is not None:
-                raise ValueError('tfrac and time cannot both be defined')
-
+        if time is None:
             time = self.time[0] + tfrac * (self.time[1] - self.time[0])
 
         return super(Snapshot, self).uv_from_path(path, tfrac=tfrac, time=time,
-                                                  derivs=False, guess=None,
-                                                  quick={}, converge={})
+                                                  derivs=derivs, guess=guess,
+                                                  quick=quick, converge=converge)
 
-    def uv_from_coords(self, surface, coords, tfrac=0.5, time=None,
-                             underside=False, derivs=False,
-                             quick={}, converge={}):
-        """The (u,v) indices of a surface point, given its coordinates.
-
-        **** NOT WELL TESTED! ****
+    def uv_from_coords(self, surface, coords, *, tfrac=0.5, time=None, underside=False,
+                       derivs=False, quick={}, converge={}):
+        """The `(u,v)` indices of a surface point, given its coordinates. **** NOT WELL
+        TESTED! ****
 
         Parameters:
-            surface (Surface): Object.
-            coords (tuple): Two or three Scalars of surface coordinates. The Scalars need
-                not be the same shape, but must broadcast to the same shape.
+            surface (Surface): The Surface object.
+            coords (tuple[Scalar, ...]): Two or three surface coordinates. The Scalars
+                need not be the same shape, but must broadcast to the same shape.
             tfrac (Scalar, optional): Scalar of fractional times during the exposure,
                 where tfrac=0 at the beginning and 1 at the end. Default is 0.5.
-            time (Scalar, optional): Scalar of optional absolute time in seconds. Only one
-                of tfrac and time can be specified; the other must be None.
+            time (Scalar, optional): Scalar of optional absolute time in seconds. If
+                specified, `tfrac` is ignored.
             underside (bool, optional): True for the underside of the surface (emission >
                 90 degrees) to be unmasked.
             derivs (bool, optional): True to propagate derivatives of the link time and
@@ -355,14 +345,10 @@ class Snapshot(Observation):
                 convergence parameters. The default configuration is defined in config.py.
 
         Returns:
-            The (u,v) indices of the pixel in which the point was found. The path is
-                evaluated at the mid-time of this pixel.
+            Pair: The `(u,v)` indices of the pixel in which the point was found.
         """
 
-        if tfrac is not None:
-            if time is not None:
-                raise ValueError('tfrac and time cannot both be defined')
-
+        if time is None:
             time = self.time[0] + tfrac * (self.time[1] - self.time[0])
 
         obs_event = Event(time, Vector3.ZERO, self.path, self.frame)
@@ -378,8 +364,8 @@ class Snapshot(Observation):
 
         return self.fov.uv_from_los_t(neg_arr_ap, time=time, derivs=derivs)
 
-    def inventory(self, bodies, tfrac=0.5, time=None, expand=0., cache=True,
-                        return_type='list', fov=None, quick={}, converge={}):
+    def inventory(self, bodies, *, tfrac=0.5, time=None, expand=0., cache=True,
+                  return_type='list', fov=None, quick={}, converge={}):
         """Info about the bodies that appear unobscured inside the FOV.
 
         Restrictions: All inventory calculations are performed at a single observation
@@ -394,13 +380,18 @@ class Snapshot(Observation):
             expand (float, optional): An optional angle in radians by which to extend the
                 limits of the field of view. This can be used to accommodate pointing
                 uncertainties.
-            cache (bool, optional): If False, do not cache the body paths.  Default is
-                True. return_type 'list' returns the inventory as a list of names. 'flags'
-                returns the inventory as an array of boolean flag values in the same order
-                as bodies. 'full' returns the inventory as a dictionary of dictionaries.
-                The main dictionary is indexed by body name. The subdictionaries contain
-                attributes of the body in the FOV.
-            fov (FOV, optional): Use this fov; if None, use self.fov.
+            cache (bool, optional): If False, do not cache the body paths. Default is
+                True.
+            return_type (str, optional): One of "list", "flags", or "full":
+
+                * "list": Return the inventory as a list of names.
+                * "flags": Return the inventory as an array of boolean flag values in the
+                  same order as bodies.
+                * "full": Return the inventory as a dictionary of dictionaries. The main
+                  dictionary is indexed by body name. The subdictionaries contain
+                  attributes of the body in the FOV.
+
+            fov (FOV, optional): Use this fov; if None, use `self.fov`.
             quick (dict, optional): To override the configured default parameters for
                 QuickPaths and QuickFrames; False to disable the use of QuickPaths and
                 QuickFrames. The default configuration is defined in config.py.
@@ -408,32 +399,49 @@ class Snapshot(Observation):
                 convergence parameters. The default configuration is defined in config.py.
 
         Returns:
-            (list): List, array, or dictionary If return_type is 'list', it returns a list
-                of the names of all the body objects that fall at least partially inside
-                the FOV and are not completely obscured by another object in the list. If
-                return_type is 'flags', it returns a boolean array containing True
-                everywhere that the body falls at least partially inside the FOV and is
-                not completely obscured. If return_type is 'full', it returns a dictionary
-                with one entry per body that falls at least partially inside the FOV and
-                is not completely obscured. Each dictionary entry is itself a dictionary
-                containing data about the body in the FOV: body_data['name']          The
-                body name body_data['center_uv']     The U,V coord of the center point
-                body_data['center']        The Vector3 direction of the center point
-                body_data['range']         The range in km body_data['outer_radius']  The
-                outer radius of the body in km body_data['inner_radius']  The inner radius
-                of the body in km body_data['resolution']    The resolution (km/pix) in
-                the (U,V) directions at the given range. body_data['u_min']         The
-                minimum U value covered by the body (clipped to the FOV size)
-                body_data['u_max']         The maximum U value covered by the body
-                (clipped to the FOV size) body_data['v_min']         The minimum V value
-                covered by the body (clipped to the FOV size) body_data['v_max']
-                The maximum V value covered by the body (clipped to the FOV size)
-                body_data['u_min_unclipped']  Same as above, but not clipped
-                body_data['u_max_unclipped']  to the FOV size.
-                body_data['v_min_unclipped'] body_data['v_max_unclipped']
-                body_data['u_pixel_size']  The number of pixels (non-integer)
-                body_data['v_pixel_size']  covered by the diameter of the body in each
-                direction.
+            (list, array, or dict).
+
+            * If return_type is "list", it returns a list of the names of all the body
+              objects that fall at least partially inside the FOV and are not completely
+              obscured by another object in the list.
+
+            * If return_type is "flags", it returns a boolean array containing True
+              everywhere that the body falls at least partially inside the FOV and is not
+              completely obscured.
+
+            * If return_type is "full", it returns a dictionary with one entry per body
+              that falls at least partially inside the FOV and is not completely obscured.
+              Each dictionary entry is itself a dictionary containing data about the body
+              in the FOV:
+
+                - "name" (str): The body name.
+                - "inside" (bool): True if the body is unobscured inside the FOV.
+                - "center_uv" (Pair): The `(u,v)` coordinates of the center point.
+                - "center" (Vector3): The direction of the center point.
+                - "range" (float): The distance in km.
+                - "outer_radius" (float): The outer radius of the body in km.
+                - "inner_radius" (float): The inner radius of the body in km.
+                - "resolution" (Pair): The resolution in the `(u,v)` directions at the
+                  given range.
+                - "u_min" (float): The minimum `u` value covered by the body, clipped to
+                  the FOV boundaries.
+                - "u_max" (float): The maximum `u` value covered by the body, clipped to
+                  the FOV boundaries.
+                - "v_min" (float): The minimum `v` value covered by the body, clipped to
+                  the FOV boundaries.
+                - "v_max" (float): The maximum `v` value covered by the body, clipped to
+                  the FOV boundaries.
+                - "u_min_unclipped" (float): Same as "u_min", but not clipped.
+                - "u_max_unclipped" (float): Same as "u_max", but not clipped.
+                - "v_min_unclipped" (float): Same as "v_min", but not clipped.
+                - "v_max_unclipped" (float): Same as "v_max", but not clipped.
+                - "u_pixel_size" (float): The diameter of the body in pixels in units of
+                  the `u` pixels.
+                - "v_pixel_size" (float): The diameter of the body in pixels in units of
+                  the `v` pixels.
+
+        Raises:
+            ValueError: If `return_type` is not one of "list", "flags", or "full".
         """
 
         if return_type not in ('list', 'flags', 'full'):

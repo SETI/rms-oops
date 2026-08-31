@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/observation/pixel.py: Subclass Pixel of class Observation
+# oops/observation/pixel.py
 ##########################################################################################
 
 import numpy as np
@@ -20,6 +20,27 @@ class Pixel(Observation):
 
     def __init__(self, axes, cadence, fov, path, frame, **subfields):
         """Constructor for a Pixel observation.
+
+        Parameters:
+            axes (list or tuple): Strings, with one value for each axis in the associated
+                data array. A value of 't' should appear at the location of the array's
+                time axis, if any.
+            cadence (Cadence): A 1-D Cadence object defining the start time and duration
+                of each consecutive measurement.
+            fov (FOV): (field-of-view) object, which describes the field of view including
+                any spatial distortion. It maps between spatial coordinates (u,v) and
+                instrument coordinates (x,y). For a Pixel object, the FOV must have shape
+                (1,1).
+            path (Path): The path waypoint co-located with the instrument.
+            frame (Frame): The wayframe of a coordinate frame fixed to the optics of the
+                instrument. This frame should have its Z-axis pointing outward near the
+                center of the line of sight, with the X-axis pointing rightward and the
+                Y-axis pointing downward.
+            subfields (dict): All of the optional attributes. Additional subfields may be
+                included as needed.
+
+        Raises:
+            ValueError: If the FOV does not have shape (1,1) or if the cadence is not 1-D.
         """
 
         # Basic properties
@@ -29,17 +50,17 @@ class Pixel(Observation):
         # FOV
         self.fov = fov
         if self.fov.uv_shape != (1,1):
-          raise ValueError('Pixel observation FOV must have shape (1,1)')
+            raise ValueError('Pixel observation FOV must have shape (1,1)')
 
         self.uv_shape = (1,1)
 
         # Axes
-        self.axes = list(axes)
+        self._axes = list(axes)
         self.u_axis = -1
         self.v_axis = -1
         self.swap_uv = False
-        if 't' in self.axes:
-            self.t_axis = self.axes.index('t')
+        if 't' in self._axes:
+            self.t_axis = self._axes.index('t')
         else:
             self.t_axis = -1
 
@@ -63,30 +84,27 @@ class Pixel(Observation):
 
     def __getstate__(self):
         self.refresh()
-        return (self.axes, self.cadence, self.fov, self.path, self.frame,
+        return (self._axes, self.cadence, self.fov, self.path, self.frame,
                 self.subfields)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
         self.freeze()
 
-    def uvt(self, indices, remask=False, derivs=True):
-        """Coordinates (u,v) and time t for indices into the data array.
+    def uvt(self, indices, *, remask=False, derivs=True):
+        """Coordinates `(u,v)` and time `t` for indices into the data array.
 
         This method supports non-integer index values.
 
         Parameters:
-            indices (Scalar): Or Vector of array indices.
+            indices (Scalar or Vector): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
             derivs (bool, optional): True to include derivatives in the returned values.
 
         Returns:
-            (tuple): (uv, time), where:
-
-            * `uv` (Pair): Defining the values of (u,v) within the FOV that are associated
-              with the array indices.
-            * `time` (Scalar): Defining the time in seconds TDB associated with the array
-              indices.
+            tuple[Pair, Scalar]: `(uv, time)`, where `uv` defines the values of `(u,v)`
+            within the FOV that are associated with the array indices and `time` defines
+            the time in seconds TDB associated with the array indices.
         """
 
         # Works for a 1-D index or a multi-D index
@@ -101,21 +119,21 @@ class Pixel(Observation):
         uv = Pair.filled(time.shape, 0.5, mask=time.mask)
         return (uv, time)
 
-    def uvt_range(self, indices, remask=False):
-        """Ranges of (u,v) spatial coordinates and time for integer array indices.
+    def uvt_range(self, indices, *, remask=False):
+        """Ranges of `(u,v)` spatial coordinates and time for integer array indices.
 
         Parameters:
-            indices (Vector): A Vector of array indices.
+            indices (Scalar or Vector): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
-            (tuple): (uv_min, uv_max, time_min, time_max), where:
+            tuple[Pair, Pair, Scalar, Scalar]: `(uv_min, uv_max, time_min, time_max)`,
+            where:
 
-            * `uv_min` (Pair): Defining the minimum values of (u,v) associated the pixel.
-            * `uv_max` (Pair): Defining the maximum values of (u,v).
-            * `time_min` (Scalar): Defining the minimum time associated with the pixel. It
-              is given in seconds TDB.
-            * `time_max` (Scalar): Defining the maximum time value.
+            * `uv_min`: The minimum values of (u,v) associated with the pixel.
+            * `uv_max`: The maximum values of (u,v).
+            * `time_min`: The minimum time associated with the pixel, in seconds TDB.
+            * `time_max`: The maximum time value.
         """
 
         if self.t_axis < 0:
@@ -132,11 +150,11 @@ class Pixel(Observation):
 
         return (uv_min, uv_min + self.fov.uv_shape, time_min, time_max)
 
-    def time_range_at_uv(self, uv_pair, remask=False):
-        """The start and stop times of the specified spatial pixel (u,v).
+    def time_range_at_uv(self, uv_pair, *, remask=False):
+        """The start and stop times of the specified spatial pixel `(u,v)`.
 
-        The Pixel observation subclass has no spatial axes, so the inputs here are
-        generally ignored, although they are expected to fall between 0 and 1 inclusive.
+        A Pixel observation has no spatial axes, so the input is largely ignored, although
+        it is expected to fall between 0 and 1 inclusive.
 
         Parameters:
             uv_pair (Pair): Spatial (u,v) data array coordinates, truncated to integers if
@@ -144,34 +162,30 @@ class Pixel(Observation):
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
-            (tuple): Scalars of the start time and stop time of each (u,v) pair, as
-                seconds TDB.
+            tuple[Scalar, Scalar]: Scalars of the start time and stop time of each `(u,v)`
+            pair, as seconds TDB.
         """
 
         return self.time_range_at_uv_0d(uv_pair, remask=remask)
 
-    def uv_range_at_time(self, time, remask=False):
-        """The (u,v) range of spatial pixels observed at the specified time.
+    def uv_range_at_time(self, time, *, remask=False):
+        """The `(u,v)` range of spatial pixels in the data array observed at the specified
+        time.
 
-        For the Pixel observation subclass, the (u,v) ranges are always (0,1). The time is
+        For a Pixel observation, the `(u,v)` range is always (0,0) to (1,1). The time is
         largely ignored, although it is expected to fall within the time limits of the
-        observation and will be masked if remask == True.
+        observation and is masked if `remask` is True.
 
         Parameters:
             time (Scalar): Time values in seconds TDB.
             remask (bool, optional): True to mask values outside the time limits.
 
         Returns:
-            (tuple): (uv_min, uv_max), where:
-
-            * `uv_min` (Pair): The lower (u,v) corner Pair of the area observed at the
-              specified time.
-            * `uv_max` (Pair): The upper (u,v) corner Pair of the area observed at the
-              specified time.
+            tuple[Pair, Pair]: `(uv_min, uv_max)`, where `uv_min` is the lower corner of
+            the `(u,v)` rectangle observed and `uv_max` is the upper corner.
         """
 
-        return Observation.uv_range_at_time_0d(self, time,
-                                               uv_shape=self.uv_shape,
+        return Observation.uv_range_at_time_0d(self, time, uv_shape=self.uv_shape,
                                                remask=remask)
 
     def time_shift(self, dtime):
@@ -182,10 +196,10 @@ class Pixel(Observation):
                 seconds. A positive value shifts the observation later.
 
         Returns:
-            A (shallow) copy of the object with a new time.
+            Observation: A (shallow) copy of the object with a new time.
         """
 
-        obs = Pixel(axes=self.axes, cadence=self.cadence.time_shift(dtime),
+        obs = Pixel(axes=self._axes, cadence=self.cadence.time_shift(dtime),
                     fov=self.fov, path=self.path, frame=self.frame)
 
         for key in self.subfields.keys():
@@ -197,60 +211,60 @@ class Pixel(Observation):
     # Overrides of Observation class methods
     ######################################################################################
 
-    def event_at_grid(self, meshgrid, tfrac=0.5, time=None):
-        """An event object describing the arrival of a photon at a set of locations
-        defined by the given meshgrid. This version overrides the default definition to
-        apply the timing for each pixel of a time-sequence by default.
+    def event_at_grid(self, meshgrid=None, *, tfrac=0.5, time=None):
+        """A photon arrival event from directions defined by a meshgrid.
+
+        This overrides the default definition to apply the timing of each sample of the
+        time sequence by default.
 
         Parameters:
-            meshgrid (Meshgrid): Object describing the sampling of the field of view.
+            meshgrid (Meshgrid, optional): Object describing the sampling of the field of
+                view.
             tfrac (Scalar, optional): Scalar of fractional times during the exposure,
-                where tfrac=0 at the beginning and 1 at the end. Default is 0.5.
-            time (Scalar, optional): Optional Scalar of absolute time in seconds. Only one
-                of tfrac and time can be specified.
+                where tfrac=0 at the beginning and 1 at the end. Default is 0.5. Ignored
+                if `time` is specified.
+            time (Scalar, optional): Optional Scalar of absolute time in seconds.
 
         Returns:
-            The corresponding event.
+            Event: The corresponding Event.
         """
 
         if time is None:
             tstep = np.arange(self.cadence.shape[0]) + tfrac
             time = self.cadence.time_at_tstep(tstep)
-            time = time.append_axes(len(meshgrid.shape))
+            time = time.reshape(time.shape + len(meshgrid.shape) * (1,))
 
         event = Event(time, Vector3.ZERO, self.path, self.frame)
 
         # Insert the arrival directions
-        event.neg_arr_ap = meshgrid.los
+        event.neg_arr_ap = meshgrid.los(time)
 
         return event
 
-    def gridless_event(self, meshgrid, tfrac=0.5, time=None,
-                             shapeless=False):
-        """An event object describing the arrival of a photon at a set of locations
-        defined by the given meshgrid. This version overrides the default definition to
-        apply the timing for each pixel of a time-sequence by default.
+    def gridless_event(self, meshgrid=None, *, tfrac=0.5, time=None, shapeless=False):
+        """A photon arrival event irrespective of the direction.
+
+        This overrides the default definition to apply the timing of each sample of the
+        time sequence by default.
 
         Parameters:
-            meshgrid (Meshgrid): Object describing the sampling of the field of view.
+            meshgrid (Meshgrid, optional): Object describing the sampling of the field of
+                view. Here, it is only used to define the shape of the returned event.
             tfrac (Scalar, optional): Scalar of fractional times during the exposure,
                 where tfrac=0 at the beginning and 1 at the end. Default is 0.5.
-            time (Scalar, optional): Optional Scalar of absolute time in seconds. Only one
-                of tfrac and time can be specified; the other must be None.
+            time (Scalar, optional): Optional Scalar of absolute time in seconds. If
+                specified, `tfrac` is ignored.
             shapeless (bool, optional): True to return a shapeless event, referring to the
                 mean of all the times.
 
         Returns:
-            The corresponding event.
+            Event: The corresponding Event.
         """
 
-        if tfrac is not None:
-            if time is not None:
-                raise ValueError('tfrac and time cannot both be defined')
-
+        if time is None:
             tstep = np.arange(self.cadence.shape[0]) + tfrac
             time = self.cadence.time_at_tstep(tstep)
-            time = time.append_axes(len(meshgrid.shape))
+            time = time.reshape(time.shape + len(meshgrid.shape) * (1,))
 
         if shapeless:
             time = time.mean()

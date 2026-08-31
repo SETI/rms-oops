@@ -73,7 +73,7 @@ def test_Juno_SRU():
     assert obs.instrument == 'SRU1'
     assert obs.target == 'IO'
     assert obs.tdi_on
-    assert obs.texp == 0.01
+    assert obs._texp == 0.01
     tstart = julian.tdb_from_tai(julian.tai_from_iso('2024-04-09T04:53:33.955'))
     assert abs(obs.tstart - tstart) < 1.e-6
 

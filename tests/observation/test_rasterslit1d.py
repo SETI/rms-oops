@@ -196,23 +196,23 @@ def test_rasterslit1d():
 
     assert obs.time[1] == 98.
 
-    assert obs.uvt(0,True)[1] == 0.
-    assert obs.uvt(5,True)[1] == 50.
-    assert obs.uvt(5.5,True)[1] == 54.
-    assert obs.uvt(9.5,True)[1] == 94.
-    assert obs.uvt(10.,True)[1] == 98.
-    assert obs.uvt(10.001,True)[1].mask
+    assert obs.uvt(0, remask=True)[1] == 0.
+    assert obs.uvt(5, remask=True)[1] == 50.
+    assert obs.uvt(5.5, remask=True)[1] == 54.
+    assert obs.uvt(9.5, remask=True)[1] == 94.
+    assert obs.uvt(10., remask=True)[1] == 98.
+    assert obs.uvt(10.001, remask=True)[1].mask
 
     eps = 1.e-14
     delta = 1.e-13
-    assert abs(obs.uvt((6.     ),True)[0] - (6.0,0.5)) < delta
-    assert abs(obs.uvt((6.2    ),True)[0] - (6.2,0.5)) < delta
-    assert abs(obs.uvt((6.4    ),True)[0] - (6.4,0.5)) < delta
-    assert abs(obs.uvt((6.6    ),True)[0] - (6.6,0.5)) < delta
-    assert abs(obs.uvt((6.8    ),True)[0] - (6.8,0.5)) < delta
-    assert abs(obs.uvt((7.     ),True)[0] - (7.0,0.5)) < delta
-    assert abs(obs.uvt((10     ),True)[0] - (10.,0.5)) < delta
-    assert obs.uvt(10.+eps,True)[0].mask
+    assert abs(obs.uvt((6.     ), remask=True)[0] - (6.0,0.5)) < delta
+    assert abs(obs.uvt((6.2    ), remask=True)[0] - (6.2,0.5)) < delta
+    assert abs(obs.uvt((6.4    ), remask=True)[0] - (6.4,0.5)) < delta
+    assert abs(obs.uvt((6.6    ), remask=True)[0] - (6.6,0.5)) < delta
+    assert abs(obs.uvt((6.8    ), remask=True)[0] - (6.8,0.5)) < delta
+    assert abs(obs.uvt((7.     ), remask=True)[0] - (7.0,0.5)) < delta
+    assert abs(obs.uvt((10     ), remask=True)[0] - (10.,0.5)) < delta
+    assert obs.uvt(10.+eps, remask=True)[0].mask
 
     indices = Scalar([10-eps, 10, 10+eps])
 

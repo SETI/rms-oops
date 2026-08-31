@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/observation/slit1d.py: Subclass Slit1D of class Observation
+# oops/observation/slit1d.py
 ##########################################################################################
 
 import numpy as np
@@ -38,9 +38,14 @@ class Slit1D(Observation):
             frame (Frame): The wayframe of a coordinate frame fixed to the optics of the
                 instrument. This frame should have its Z-axis pointing outward near the
                 center of the line of sight, with the X-axis pointing rightward and the
-                y-axis pointing downward.
+                Y-axis pointing downward.
             subfields (dict): All of the optional attributes. Additional subfields may be
                 included as needed.
+
+        Raises:
+            ValueError: If `axes` does not contain exactly one of 'u' and 'v', if the
+                cross-slit axis of the FOV does not have length 1, or if `tstart` is a
+                Cadence whose shape is not (1,).
         """
 
         # Basic properties
@@ -52,14 +57,14 @@ class Slit1D(Observation):
         self.uv_shape = tuple(self.fov.uv_shape.vals)
 
         # Axes / Shape / Size
-        self.axes = list(axes)
-        if ('u' in self.axes) == ('v' in self.axes):
+        self._axes = list(axes)
+        if ('u' in self._axes) == ('v' in self._axes):
             raise ValueError('axes are incompatible with Slit1D: '
                              + repr(tuple(axes)))
         self.shape = len(axes) * [0]
 
-        if 'u' in self.axes:
-            self.u_axis = self.axes.index('u')
+        if 'u' in self._axes:
+            self.u_axis = self._axes.index('u')
             self.v_axis = -1
             self.shape[self.u_axis] = self.uv_shape[0]
             self._along_slit_index = self.u_axis
@@ -68,7 +73,7 @@ class Slit1D(Observation):
             self._along_slit_len = self.shape[self.u_axis]
         else:
             self.u_axis = -1
-            self.v_axis = self.axes.index('v')
+            self.v_axis = self._axes.index('v')
             self.shape[self.v_axis] = self.uv_shape[1]
             self._along_slit_index = self.v_axis
             self._along_slit_uv_axis = 1
@@ -86,11 +91,11 @@ class Slit1D(Observation):
         if isinstance(tstart, Cadence):
             self.cadence = tstart
             if self.cadence.shape != (1,):
-                raise ValueError("Shape of a Snapshot's cadence must be (1,)")
-            self.texp = self.cadence.texp
+                raise ValueError("Shape of a Slit1D's cadence must be (1,)")
+            self._texp = self.cadence.texp
         else:
             self.cadence = SnapCadence(tstart, texp)
-            self.texp = texp
+            self._texp = texp
 
         # Optional subfields
         self.subfields = {}
@@ -99,37 +104,33 @@ class Slit1D(Observation):
 
     def __getstate__(self):
         self.refresh()
-        return (self.axes, self.cadence, self.texp, self.fov, self.path,
+        return (self._axes, self.cadence, self._texp, self.fov, self.path,
                 self.frame, self.subfields)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
         self.freeze()
 
-    def uvt(self, indices, remask=False, derivs=True):
-        """Coordinates (u,v) and time t for indices into the data array.
+    def uvt(self, indices, *, remask=False, derivs=True):
+        """Coordinates `(u,v)` and time `t` for indices into the data array.
 
         This method supports non-integer index values.
 
         Parameters:
-            indices (Scalar): Or Vector of array indices.
+            indices (Scalar or Vector): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
             derivs (bool, optional): True to include derivatives in the returned values.
 
         Returns:
-            (tuple): (uv, time), where:
-
-            * `uv` (Pair): Defining the values of (u,v) within the FOV that are associated
-              with the array indices.
-            * `time` (Scalar): Defining the time in seconds TDB associated with the array
-              indices.
+            tuple[Pair, Scalar]: `(uv, time)`, where `uv` defines the values of `(u,v)`
+            within the FOV that are associated with the array indices and `time` defines
+            the time in seconds TDB associated with the array indices.
         """
 
         # Interpret a 1-D index or a multi-D index
         slit_coord = Observation.scalar_from_indices(indices,
                                                      self._along_slit_index,
                                                      derivs=derivs)
-        slit_coord = self.scalar_from_indices(indices, self._along_slit_index)
 
         if remask:
             is_outside = ((slit_coord.vals < 0) |
@@ -151,23 +152,21 @@ class Slit1D(Observation):
 
         return (uv, time)
 
-    def uvt_range(self, indices, remask=False):
-        """Ranges of (u,v) spatial coordinates and time for integer array indices.
+    def uvt_range(self, indices, *, remask=False):
+        """Ranges of `(u,v)` spatial coordinates and time for integer array indices.
 
         Parameters:
-            indices (Scalar): Or Vector of array indices.
+            indices (Scalar or Vector): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
-            (tuple): (uv_min, uv_max, time_min, time_max), where:
+            tuple[Pair, Pair, Scalar, Scalar]: `(uv_min, uv_max, time_min, time_max)`,
+            where:
 
-            * `uv_min` (Pair): Defining the minimum values of FOV (u,v) associated the
-              pixel.
-            * `uv_max` (Pair): Defining the maximum values of FOV (u,v) associated the
-              pixel.
-            * `time_min` (Scalar): Defining the minimum time associated with the array
-              indices. It is given in seconds TDB.
-            * `time_max` (Scalar): Defining the maximum time value.
+            * `uv_min`: The minimum values of (u,v) associated with the pixel.
+            * `uv_max`: The maximum values of (u,v).
+            * `time_min`: The minimum time associated with the pixel, in seconds TDB.
+            * `time_max`: The maximum time value.
         """
 
         # Interpret a 1-D index or a multi-D index
@@ -187,11 +186,12 @@ class Slit1D(Observation):
 
         return (uv_min, uv_min + Pair.INT11, time_min, time_max)
 
-    def time_range_at_uv(self, uv_pair, remask=False):
-        """The start and stop times of the specified spatial pixel (u,v).
+    def time_range_at_uv(self, uv_pair, *, remask=False):
+        """The start and stop times of the specified spatial pixel `(u,v)`.
 
-        For a 1-D slit, the index along the cross-slit axis is generally ignored, although
-        values outside the range 0-1 will be masked if remask == True.
+        A Slit1D observation has no time-dependence, so the times are those of the
+        observation overall. The index along the cross-slit axis is generally ignored,
+        although values outside the range 0 to 1 are masked if `remask` is True.
 
         Parameters:
             uv_pair (Pair): Spatial (u,v) data array coordinates, truncated to integers if
@@ -199,26 +199,26 @@ class Slit1D(Observation):
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
-            (tuple): Scalars of the start time and stop time of each (u,v) pair, as
-                seconds TDB.
+            tuple[Scalar, Scalar]: Scalars of the start time and stop time of each `(u,v)`
+            pair, as seconds TDB.
         """
 
         return self.time_range_at_uv_0d(uv_pair, remask=remask)
 
-    def uv_range_at_time(self, time, remask=False):
-        """The (u,v) range of spatial pixels observed at the specified time.
+    def uv_range_at_time(self, time, *, remask=False):
+        """The `(u,v)` range of spatial pixels in the data array observed at the specified
+        time.
+
+        A Slit1D observation has no time-dependence, so the entire slit is observed at
+        every time within the limits of the observation.
 
         Parameters:
             time (Scalar): Time values in seconds TDB.
             remask (bool, optional): True to mask values outside the time limits.
 
         Returns:
-            (tuple): (uv_min, uv_max), where:
-
-            * `uv_min` (Pair): The lower (u,v) corner Pair of the area observed at the
-              specified time.
-            * `uv_max` (Pair): The upper (u,v) corner Pair of the area observed at the
-              specified time.
+            tuple[Pair, Pair]: `(uv_min, uv_max)`, where `uv_min` is the lower corner of
+            the `(u,v)` rectangle observed and `uv_max` is the upper corner.
         """
 
         return Observation.uv_range_at_time_0d(self, time,
@@ -233,11 +233,11 @@ class Slit1D(Observation):
                 seconds. A positive value shifts the observation later.
 
         Returns:
-            A (shallow) copy of the object with a new time.
+            Observation: A (shallow) copy of the object with a new time.
         """
 
         cadence = self.cadence.time_shift(dtime)
-        return Slit1D(axes=self.axes, tstart=cadence, texp=self.texp,
+        return Slit1D(axes=self._axes, tstart=cadence, texp=self._texp,
                       fov=self.fov, path=self.path, frame=self.frame,
                       **self.subfields)
 

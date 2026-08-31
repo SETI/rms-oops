@@ -65,8 +65,8 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
         self.assertTrue(snapshot.error.shape == (1024,1024))
 
         self.assertAlmostEqual(snapshot.time[1]-snapshot.time[0],
-                               snapshot.texp)
-        self.assertAlmostEqual(snapshot.time[0]+snapshot.texp/2,
+                               snapshot._texp)
+        self.assertAlmostEqual(snapshot.time[0]+snapshot._texp/2,
                                cspyce.utc2et(snapshot.headers[0]["SPCUTCID"]),
                                places=3)
         self.assertEqual(snapshot.target, "EUROPA")
@@ -81,7 +81,7 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
                             geom=geom, pointing=pointing, fast_distortion=True)
 
             self.assertEqual(snapshot.time, snapshot_fits.time)
-            self.assertEqual(snapshot.texp, snapshot_fits.texp)
+            self.assertEqual(snapshot._texp, snapshot_fits._texp)
 
             meshgrid = oops.Meshgrid.for_fov(snapshot.fov, (0,0), limit=(0,0))
             bp = oops.Backplane(snapshot, meshgrid=meshgrid)
