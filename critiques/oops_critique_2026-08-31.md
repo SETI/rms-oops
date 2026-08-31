@@ -56,8 +56,8 @@ deviations), SUGGESTION (improvements needing an owner decision).
 ## Most important unfixed issues (owner decisions)
 
 - `Event.__init__`: the `or origin.frame` default-frame clause is unreachable — the
-  default frame is always J2000, not the origin's frame as documented. Docstring
-  corrected; deciding which behavior is intended is an API decision.
+  default frame is always J2000, not the origin's frame as documented. *Resolved by the
+  owner after this review: the default frame is now the frame of the origin path.*
 - `SpiceFrame._FRAME_LOOKUP` is a cache that is never populated, and neither SPICE
   lookup dict is cleared by `Frame._reset_caches`; `SpiceType1Frame.__init__`
   double-registers, clobbering its "don't register" branch.
@@ -113,13 +113,13 @@ Files reviewed: `__init__.py`, `oops.py`, `event.py`, `transform.py`, `constants
   venv), contradicting the documented types. Changed to `Vector3.as_vector3(...)`.
 - **[BUG] (fixed)** `event.py:1917` (`ra_and_dec`) — the invalid-`subfield` error message
   read `invalid input value for apparent: {apparent!r}`; now names and reports `subfield`.
-- **[BUG] (not fixed)** `event.py:134` — `self._frame_ = Frame.as_wayframe(frame) or
+- **[BUG] (fixed)** `event.py:134` — `self._frame_ = Frame.as_wayframe(frame) or
   origin.frame`: `Frame._FRAME_REGISTRY[None]` maps to J2000, so `as_wayframe(None)`
   returns the J2000 wayframe and the `or origin.frame` clause is unreachable dead code.
   The docstring claimed the default frame "matches the default frame of the origin",
-  which is false — the default is always J2000. The docstring was corrected to state the
-  actual behavior; whether the dead clause should be removed, or the origin's frame
-  honored instead, is an owner decision because the latter changes runtime behavior.
+  which was false — the default was always J2000. Resolved by the owner after this
+  review: when `frame` is None, the frame now defaults to the frame of the resolved
+  origin path, and the docstring says so.
 - **[DOC] (fixed)** `event.py:61` — class docstring listed property `_dep_j2000_ap_`; the
   actual property is `dep_ap_j2000`. Renamed the bullet.
 - **[DOC] (fixed)** `event.py:97-101` — `__init__` docstring referred to a `link`
@@ -1004,6 +1004,13 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
   and strip units, if any": units are implicit in oops and nothing here strips them.
 
 ### src/oops/surface/_photon_solver.py
+- **[BUG] (fixed)** `_photon_solver.py:1588` (`_solve_photon_path_normal`) — the
+  fully-masked-link branch called `Event(..., path=path, frame=Frame.J2000)`, but the
+  Event constructor's third parameter is `origin`, not `path`; `path=` was absorbed into
+  `**more` as a subfield, leaving `origin` unfilled and raising `TypeError:
+  Event.__init__() missing 1 required positional argument: 'origin'` (reproduced). The
+  branch only runs when every element is masked, which is why no test reached it. Fixed
+  by passing `path` positionally as the origin.
 - **[SUGGESTION] (not fixed)** `_photon_solver.py:1614,1635` — In
   `_solve_photon_path_normal`, the surface event gets only a `surface_key + '_ap'`
   subfield, but line 1635 reads `surface_key + '_j2000'` back via `get_subfield`;

@@ -1585,7 +1585,7 @@ def _solve_photon_path_normal(self, time, path, sign, *, derivs=False, guess=Non
     if max_dlt < 0. or np.all(path_time.mask):
         # This is a fake, fully masked link
         vec = Vector3.ZERO.broadcast_to(path_time.shape)
-        link = Event(path_time.remask(True), (vec, vec), path=path, frame=Frame.J2000)
+        link = Event(path_time.remask(True), (vec, vec), path, frame=Frame.J2000)
         return _fully_masked_result(self, link, remote_key, coords=False)
 
     # Create the surface event in its own frame

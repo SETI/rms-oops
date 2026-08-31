@@ -104,7 +104,7 @@ class Event(object):
             origin (Path or str): The path or path ID identifying the origin of this
                 event.
             frame (Frame, optional): The frame or frame ID identifying the coordinate
-                frame of this event. Default is J2000.
+                frame of this event. Default is the frame of the origin path.
             **more: An arbitrary set of properties and subfields that will also be
                 accessible as attributes of the Event object. Properties have fixed names
                 and purposes; subfields can be anything.
@@ -124,7 +124,9 @@ class Event(object):
         self._state_ = state.as_readonly()
         self._pos_ = self._state_.without_deriv('t')
         self._origin_ = Event._Path.as_waypoint(origin)
-        self._frame_ = Frame.as_wayframe(frame) or origin.frame
+        if frame is None:
+            frame = self._origin_.frame
+        self._frame_ = Frame.as_wayframe(frame)
 
         self._ssb_ = None
         self._xform_to_j2000_ = None
