@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/frame/inclinedframe.py: Subclass InclinedFrame of class Frame
+# oops/frame/inclinedframe.py
 ##########################################################################################
 
 from polymath             import Qube, Scalar

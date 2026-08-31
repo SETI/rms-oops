@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/frame/postargframe.py: Subclass PosTargFrame of class Frame
+# oops/frame/postargframe.py
 ##########################################################################################
 
 import numpy as np

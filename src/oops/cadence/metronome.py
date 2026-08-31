@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/cadence/metronome.py: Metronome subclass of class Cadence
+# oops/cadence/metronome.py
 ##########################################################################################
 
 import numpy as np

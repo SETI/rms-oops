@@ -1,9 +1,10 @@
 ##########################################################################################
-# oops/fov/tdifov.py: TDIFOV subclass of class FOV
+# oops/fov/tdifov.py
 ##########################################################################################
 
 from polymath import Scalar, Pair
 from oops.fov import FOV
+
 
 class TDIFOV(FOV):
     """FOV subclass to apply TDI timing to another FOV."""

@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/cadence/reversedcadence.py: ReversedCadence subclass of class Cadence
+# oops/cadence/reversedcadence.py
 ##########################################################################################
 
 from polymath     import Scalar

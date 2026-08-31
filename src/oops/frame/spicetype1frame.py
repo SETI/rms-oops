@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/frame/spicetype1frame.py: Subclass SpiceType1Frame of class SpiceFrame
+# oops/frame/spicetype1frame.py
 ##########################################################################################
 
 import numpy as np

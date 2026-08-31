@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/frame/navigation.py: Fittable subclass Navigation of class Frame
+# oops/frame/navigation.py
 ##########################################################################################
 
 import numpy as np

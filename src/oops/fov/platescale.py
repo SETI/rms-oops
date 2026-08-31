@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/fov/platescale.py: Platescale subclass of class FOV
+# oops/fov/platescale.py
 ##########################################################################################
 
 from oops.fittable import Fittable

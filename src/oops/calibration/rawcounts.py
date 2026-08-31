@@ -1,11 +1,12 @@
 ##########################################################################################
-# oops/calibration/rawcounts.py: RawCounts subclass of Calibration
+# oops/calibration/rawcounts.py
 ##########################################################################################
 
 import numpy as np
 
 from polymath                   import Scalar, Pair, Qube
 from oops.calibration.flatcalib import FlatCalib
+
 
 class RawCounts(FlatCalib):
     """A Calibration subclass for an image array of raw photon counts.

@@ -1,9 +1,10 @@
 ##########################################################################################
-# oops/fov/subsampledfov.py: SubsampledFOV subclass of FOV
+# oops/fov/subsampledfov.py
 ##########################################################################################
 
 from polymath import Pair
 from oops.fov import FOV
+
 
 class SubsampledFOV(FOV):
     """Subclass of FOV in which the pixels of a given FOV are re-scaled."""

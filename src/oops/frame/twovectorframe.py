@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/frame/twovectorframe.py: Subclass TwoVectorFrame of class Frame
+# oops/frame/twovectorframe.py
 ##########################################################################################
 
 from polymath       import Matrix3, Qube, Scalar, Vector3

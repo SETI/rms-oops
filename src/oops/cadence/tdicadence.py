@@ -1,9 +1,10 @@
 ##########################################################################################
-# oops/cadence/tdicadence.py: TDICadence subclass of class Cadence
+# oops/cadence/tdicadence.py
 ##########################################################################################
 
 from polymath     import Scalar
 from oops.cadence import Cadence
+
 
 class TDICadence(Cadence):
     """A Cadence subclass defining the integration intervals of lines in a TDI ("Time
@@ -254,7 +255,7 @@ class TDICadence(Cadence):
             (bool): Array indicating which time values are not sampled by the cadence.
         """
 
-        return Cadence.time_is_outside(self, time, inclusive)
+        return Cadence.time_is_outside(self, time, inclusive=inclusive)
 
     def time_shift(self, secs):
         """Construct a duplicate of this Cadence with all times shifted by given amount.

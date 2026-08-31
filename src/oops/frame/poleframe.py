@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/frame/poleframe.py: Subclass PoleFrame of class Frame
+# oops/frame/poleframe.py
 ##########################################################################################
 
 from polymath       import Matrix3, Qube, Scalar, Vector3

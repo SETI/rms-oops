@@ -1,9 +1,10 @@
 ##########################################################################################
-# oops/calibration/nullcalib.py: Subclass NullCalib of class Calibration
+# oops/calibration/nullcalib.py
 ##########################################################################################
 
 from oops.calibration           import Calibration
 from oops.calibration.flatcalib import FlatCalib
+
 
 class NullCalib(Calibration):
     """Calibration subclass that leaves data values unchanged."""

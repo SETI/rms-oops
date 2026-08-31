@@ -1,11 +1,12 @@
 ##########################################################################################
-# oops/fov/flatfov.py: FlatFOV subclass of class FOV
+# oops/fov/flatfov.py
 ##########################################################################################
 
 import numpy as np
 
 from polymath import Pair
 from oops.fov import FOV
+
 
 class FlatFOV(FOV):
     """FOV subclass that describes a field of view that is free of distortion,

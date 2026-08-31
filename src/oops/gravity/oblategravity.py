@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/gravity/oblategravity.py: OblateGravity subclass of class Gravity
+# oops/gravity/oblategravity.py
 ##########################################################################################
 
 import numpy as np

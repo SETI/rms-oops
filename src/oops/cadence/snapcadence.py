@@ -1,8 +1,9 @@
 ##########################################################################################
-# oops/cadence/snapcadence.py: SnapCadence subclass of class Metronome
+# oops/cadence/snapcadence.py
 ##########################################################################################
 
 from oops.cadence import Metronome
+
 
 class SnapCadence(Metronome):
     """A shapeless Cadence subclass with a single start and stop."""

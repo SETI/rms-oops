@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/frame/laplaceframe.py: Subclass LaplaceFrame of class Frame
+# oops/frame/laplaceframe.py
 ##########################################################################################
 
 import numpy as np

@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/frame/frameshift.py: Subclass FrameShift of class Frame
+# oops/frame/frameshift.py
 ##########################################################################################
 
 from polymath      import Scalar

@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/cadence/dualcadence.py: DualCadence subclass of class Cadence
+# oops/cadence/dualcadence.py
 ##########################################################################################
 
 from polymath               import Scalar, Pair

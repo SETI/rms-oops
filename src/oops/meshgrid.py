@@ -1,11 +1,12 @@
 ##########################################################################################
-# oops/meshgrid.py: Class Meshgrid
+# oops/meshgrid.py
 ##########################################################################################
 
 import numpy as np
 import numbers
 
 from polymath import Scalar, Pair, Vector3
+
 
 class Meshgrid(object):
     """An arbitrary array of coordinate pairs within a Field of View.

@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/path/_photon_solver.py: Photon solvers attached to class Path
+# oops/path/_photon_solver.py
 ##########################################################################################
 
 import numpy as np

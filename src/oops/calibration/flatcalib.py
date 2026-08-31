@@ -1,11 +1,12 @@
 ##########################################################################################
-# oops/calibration/flatcalib.py: Subclass FlatCalib of class Calibration
+# oops/calibration/flatcalib.py
 ##########################################################################################
 
 import numpy as np
 
 from polymath         import Scalar, Pair, Qube
 from oops.calibration import Calibration
+
 
 class FlatCalib(Calibration):
     """Calibration subclass to use for an un-distorted field of view."""

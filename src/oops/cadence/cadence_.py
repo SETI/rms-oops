@@ -1,9 +1,10 @@
 ##########################################################################################
-# oops/cadence/cadence_: Abstract class Cadence
+# oops/cadence/cadence_
 ##########################################################################################
 
 from polymath import Scalar, Pair
 from oops.mutable import Mutable
+
 
 class Cadence(Mutable):
     """Cadence is an abstract class that defines the timing of an observation.
@@ -28,7 +29,7 @@ class Cadence(Mutable):
     # Methods to be defined for each Cadence subclass
     ######################################################################################
 
-    def time_at_tstep(self, tstep, remask=False, derivs=False, inclusive=True):
+    def time_at_tstep(self, tstep, *, remask=False, derivs=False, inclusive=True):
         """The time associated with the given time step.
 
         This method supports non-integer time step values.
@@ -48,11 +49,10 @@ class Cadence(Mutable):
             (Scalar): Times in seconds TDB.
         """
 
-        raise NotImplementedError(type(self).__name__ + '.time_at_tstep '
-                                  'is not implemented')
+        raise NotImplementedError(f'{type(self).__name__}.time_at_tstep is not '
+                                  'implemented')
 
-    def time_range_at_tstep(self, tstep, remask=False, inclusive=True,
-                                         shift=True):
+    def time_range_at_tstep(self, tstep, *, remask=False, inclusive=True, shift=True):
         """The range of times for the given time step.
 
         In multidimensional cadences, indexing beyond the dimensions of the cadence
@@ -74,10 +74,10 @@ class Cadence(Mutable):
             * `time_max` (Scalar): Defining the maximum time value.
         """
 
-        raise NotImplementedError(type(self).__name__ + '.time_range_at_tstep '
-                                  'is not implemented')
+        raise NotImplementedError(f'{type(self).__name__}.time_range_at_tstep is not '
+                                  'implemented')
 
-    def tstep_at_time(self, time, remask=False, derivs=False, inclusive=True):
+    def tstep_at_time(self, time, *, remask=False, derivs=False, inclusive=True):
         """Time step for the given time.
 
         This method returns non-integer time steps via interpolation.
@@ -98,10 +98,10 @@ class Cadence(Mutable):
             (Scalar or Pair): Time step indices.
         """
 
-        raise NotImplementedError(type(self).__name__ + '.tstep_at_time '
-                                  'is not implemented')
+        raise NotImplementedError(f'{type(self).__name__}.tstep_at_time is not '
+                                  'implemented')
 
-    def tstep_range_at_time(self, time, remask=False, inclusive=True):
+    def tstep_range_at_time(self, time, *, remask=False, inclusive=True):
         """Integer range of time steps active at the given time.
 
         Parameters:
@@ -119,10 +119,10 @@ class Cadence(Mutable):
                 is not inside the cadence, tstep_max < tstep_min.
         """
 
-        raise NotImplementedError(type(self).__name__ + '.tstep_range_at_time '
-                                  'is not implemented')
+        raise NotImplementedError(f'{type(self).__name__}.tstep_range_at_time is not '
+                                  'implemented')
 
-    def time_is_outside(self, time, inclusive=True):
+    def time_is_outside(self, time, *, inclusive=True):
         """A Boolean mask of times that fall outside the cadence.
 
         Parameters:
@@ -152,20 +152,19 @@ class Cadence(Mutable):
             secs (float): Seconds to shift the time later.
         """
 
-        raise NotImplementedError(type(self).__name__ + '.time_shift '
-                                  'is not implemented')
+        raise NotImplementedError(f'{type(self).__name__}.time_shift is not implemented')
 
     def as_continuous(self):
         """Construct a shallow copy of this Cadence, forced to be continuous."""
 
-        raise NotImplementedError(type(self).__name__ + '.as_continuous '
-                                  'is not implemented')
+        raise NotImplementedError(f'{type(self).__name__}.as_continuous is not '
+                                  'implemented')
 
     ######################################################################################
     # Methods probably not requiring overrides
     ######################################################################################
 
-    def time_is_inside(self, time, inclusive=True):
+    def time_is_inside(self, time, *, inclusive=True):
         """A Boolean mask of times that fall inside the cadence.
 
         Parameters:
@@ -180,7 +179,7 @@ class Cadence(Mutable):
 
         return self.time_is_outside(time, inclusive=inclusive).logical_not()
 
-    def tstride_at_tstep(self, tstep, sign=1, remask=False):
+    def tstride_at_tstep(self, tstep, sign=1, *, remask=False):
         """The time interval(s) between the times of adjacent time steps.
 
         Parameters:
@@ -237,8 +236,7 @@ class Cadence(Mutable):
             tstride = tstride.remask(tstep.mask)
             return tstride
 
-        raise NotImplementedError(type(self).__name__ + '.tstride_at_tstep '
-                                  'is not implemented for %d-D cadences'
-                                  % len(self.shape))
+        raise NotImplementedError(f'{type(self).__name__}.tstride_at_tstep is not '
+                                  f'implemented for {len(self.shape)}-D cadences')
 
 ##########################################################################################

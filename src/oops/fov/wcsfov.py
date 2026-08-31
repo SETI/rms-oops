@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/fov/wcsfov.py: FOV subclass for WCS/SIP FOVs described by FITS headers.
+# oops/fov/wcsfov.py
 ##########################################################################################
 
 import numpy as np

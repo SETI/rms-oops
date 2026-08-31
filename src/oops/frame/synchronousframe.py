@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/frame/synchronousframe.py: Subclass SynchronousFrame of class Frame
+# oops/frame/synchronousframe.py
 ##########################################################################################
 
 from polymath       import Matrix3

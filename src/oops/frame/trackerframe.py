@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/frame/trackerframe.py: Subclass TrackerFrame of class Frame
+# oops/frame/trackerframe.py
 ##########################################################################################
 
 from polymath       import Qube, Scalar, Vector3, Matrix3

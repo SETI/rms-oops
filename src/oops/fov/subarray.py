@@ -1,9 +1,10 @@
 ##########################################################################################
-# oops/fov/subarray.py: Subarray subclass of FOV
+# oops/fov/subarray.py
 ##########################################################################################
 
 from polymath import Pair
 from oops.fov import FOV
+
 
 class Subarray(FOV):
     """Subclass of FOV that describes a rectangular region of a larger FOV."""

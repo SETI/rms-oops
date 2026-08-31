@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/cadence/reshapedcadence.py: ReshapedCadence subclass of class Cadence
+# oops/cadence/reshapedcadence.py
 ##########################################################################################
 
 import numpy as np

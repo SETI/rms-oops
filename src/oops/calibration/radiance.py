@@ -1,11 +1,12 @@
 ##########################################################################################
-# oops/calibration/radiance.py: Radiance subclass of Calibration
+# oops/calibration/radiance.py
 ##########################################################################################
 
 import numpy as np
 
 from polymath                   import Scalar, Pair, Qube
 from oops.calibration.flatcalib import FlatCalib
+
 
 class Radiance(FlatCalib):
     """A Calibration subclass for an image array in units of radiance within a distorted

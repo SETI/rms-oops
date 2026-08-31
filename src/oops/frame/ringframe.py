@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/frame/ringframe.py: Subclass RingFrame of class Frame
+# oops/frame/ringframe.py
 ##########################################################################################
 
 from polymath       import Matrix3, Qube, Scalar, Vector3

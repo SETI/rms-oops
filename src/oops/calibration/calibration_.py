@@ -5,6 +5,7 @@
 import numpy as np
 from polymath import Pair
 
+
 class Calibration(object):
     """Calibration is an abstract class defining a relationship between the numeric values
     in an image array and physical quantities.
