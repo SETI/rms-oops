@@ -3,6 +3,7 @@
 ##########################################################################################
 
 import numpy as np
+import pickle
 import pytest
 
 import cspyce
@@ -137,4 +138,12 @@ def test_path():
     event = static.event_at_time(1.)
     assert event.pos == (0,0,0)
     assert event.vel == (0,0,0)
+
+
+def test_ssb_path_is_a_pickled_singleton():
+    restored = pickle.loads(pickle.dumps(Path.SSB))
+
+    assert restored is Path.SSB
+    assert restored.path_id == 'SSB'
+
 ##########################################################################################

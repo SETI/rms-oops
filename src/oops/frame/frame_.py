@@ -745,6 +745,12 @@ class J2000Frame(NullFrame):
     def __init__(self):
         pass
 
+    def __reduce__(self):
+        # Reconstruct by calling the constructor, which returns the singleton; this
+        # overrides NullFrame.__getstate__/__setstate__, which would call __init__ with an
+        # argument and would not preserve the identity of Frame.J2000
+        return (J2000Frame, ())
+
     def __str__(self):
         return 'J2000'
 

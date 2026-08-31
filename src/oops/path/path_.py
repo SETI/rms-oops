@@ -802,6 +802,12 @@ class SSBPath(NullPath):
     def __init__(self):
         pass
 
+    def __reduce__(self):
+        # Reconstruct by calling the constructor, which returns the singleton; this
+        # overrides NullPath.__getstate__/__setstate__, which would call __init__ with an
+        # argument and would not preserve the identity of Path.SSB
+        return (SSBPath, ())
+
     def __str__(self):
         return 'SSB'
 

@@ -3,6 +3,7 @@
 ##########################################################################################
 
 import numpy as np
+import pickle
 import pytest
 
 import cspyce
@@ -137,4 +138,12 @@ def test_frame():
     assert xform.matrix.vals[0,2] == 0
     assert xform.matrix.vals[1,2] == 0
     assert xform.matrix.vals[2,2] == 1
+
+
+def test_j2000_frame_is_a_pickled_singleton():
+    restored = pickle.loads(pickle.dumps(Frame.J2000))
+
+    assert restored is Frame.J2000
+    assert restored.frame_id == 'J2000'
+
 ##########################################################################################
