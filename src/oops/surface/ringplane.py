@@ -83,8 +83,11 @@ class RingPlane(Surface):
                                       epoch = self._epoch)
 
         # Identify the maximum orbital rate by any means necessary; without this
-        # limit, speeds near the origin get ridiculous.
-        if self._radii is not None:
+        # limit, speeds near the origin get ridiculous. Without gravity, there is no
+        # velocity field, so no rate limit is needed.
+        if self._gravity is None:
+            self._max_rate = None
+        elif self._radii is not None:
             r = self._radii[0]
             self._max_rate = self._gravity.n(r)
         elif hasattr(self._gravity, 'rp'):
@@ -168,7 +171,7 @@ class RingPlane(Surface):
                 a = a.remask_or(mask.vals)
                 theta = theta.remask(a.mask)
                 if axes > 2:
-                    z = z.remask(r.mask)
+                    z = z.remask(a.mask)
 
         if axes == 2:
             results = (a, theta)

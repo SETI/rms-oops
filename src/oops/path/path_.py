@@ -283,7 +283,7 @@ class Path(Mutable):
     # Cache Management
     ######################################################################################
 
-    _PATH_REGISTRY = {}     # path ID -> waypoint
+    _PATH_REGISTRY = {}     # path ID -> the Path registered under that ID
     _PATH_CACHE = {}        # waypoint or (waypoint, origin) or (waypoint, origin, frame)
                             #       -> linked "wrt" path
     _PATH_SUBCLASSES = []   # list of all subclasses of Path
@@ -332,7 +332,7 @@ class Path(Mutable):
             # Make sure this ID doesn't already exist
             if path_id in Path._PATH_REGISTRY:
 
-                # ...but it's OK if the ID matches that of its existing wayframe
+                # ...but it's OK if the ID matches that of its existing waypoint
                 if self._waypoint != Path._PATH_REGISTRY[path_id]._waypoint:
                     # Otherwise, add a numeric suffix to make it unique
                     k = 2
@@ -452,7 +452,7 @@ class Path(Mutable):
         if isinstance(path, Path):
             return path._waypoint
 
-        return Path._PATH_REGISTRY[path]
+        return Path._PATH_REGISTRY[path]._waypoint
 
     @staticmethod
     def path_id_exists(path_id):

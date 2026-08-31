@@ -59,7 +59,7 @@ class PoleFrame(Frame):
 
         self._aries = bool(aries)
         if self._aries:
-            # The ascending node of the invariable plane falls 90 degrees ahead pole's RA
+            # The ascending node of the invariable plane falls 90 degrees ahead of the pole's RA
             self._invariable_node_lon = ra + Scalar.HALFPI
         else:
             self._invariable_node_lon = 0.

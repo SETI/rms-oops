@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/backplanes/lighting.py
+# oops/backplane/lighting.py
 ##########################################################################################
 
 from polymath       import Boolean, Scalar
@@ -65,7 +65,7 @@ def emission_angle(self, event_key, apparent=True):
     # Ring emission angles are always measured from the lit side normal
     if event.surface.COORDINATE_TYPE == 'polar':
 
-        # Save this as the "prograde" ring incidence angle
+        # Save this as the "prograde" ring emission angle
         ring_key = ('ring_emission_angle', event_key, 'prograde', apparent)
         self.register_backplane(ring_key, emission)
 
@@ -241,10 +241,11 @@ def minnaert_law(self, event_key, k, k2=None, clip=0.2):
 
     Parameters:
         event_key (str or tuple): Key defining the surface event.
-        k: The Minnaert exponent (for cos(i)).
-        k2 (optional): Optional second Minnaert exponent (for cos(e)). Defaults to k-1.
-        clip (optional): Lower limit on cos(e). Needed because otherwise the Minnaert
-            law diverges near the limb. Default 0.2.
+        k (float): The Minnaert exponent (for cos(i)).
+        k2 (float, optional): Optional second Minnaert exponent (for cos(e)). Defaults
+            to k-1.
+        clip (float, optional): Lower limit on cos(e). Needed because otherwise the
+            Minnaert law diverges near the limb. Default 0.2.
     """
 
     self.refresh()

@@ -409,10 +409,9 @@ class Snapshot(Observation):
               everywhere that the body falls at least partially inside the FOV and is not
               completely obscured.
 
-            * If return_type is "full", it returns a dictionary with one entry per body
-              that falls at least partially inside the FOV and is not completely obscured.
-              Each dictionary entry is itself a dictionary containing data about the body
-              in the FOV:
+            * If return_type is "full", it returns a dictionary with one entry per body,
+              whether or not that body falls inside the FOV. Each dictionary entry is
+              itself a dictionary containing data about the body in the FOV:
 
                 - "name" (str): The body name.
                 - "inside" (bool): True if the body is unobscured inside the FOV.
@@ -534,8 +533,8 @@ class Snapshot(Observation):
             body_data['outer_radius'] = radii[i].vals
             body_data['inner_radius'] = inner_radii[i].vals
 
-            u_res = ranges[i] * self.fov.uv_scale.to_scalar(0).tan()
-            v_res = ranges[i] * self.fov.uv_scale.to_scalar(1).tan()
+            u_res = ranges[i] * fov.uv_scale.to_scalar(0).tan()
+            v_res = ranges[i] * fov.uv_scale.to_scalar(1).tan()
             body_data['resolution'] = Pair.from_scalars(u_res, v_res).vals
 
             u = body_uv[i][0]

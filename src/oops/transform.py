@@ -37,14 +37,14 @@ class Transform(Oops):
           the target frame.
         * omega (Vector3): The angular rotation vector of the target frame relative to the
           reference, specified in the reference coordinate frame.
-        * frame_id (str): The registered ID of the target frame.
-        * reference_id (str): The registered ID of the reference frame, whose coordinates
-          this Transform rotates into the target frame. The reference frame must have
-          shape ().
-        * origin_id (str or None): The path ID of the origin if this is a rotating frame;
-          None otherwise.
-        * shape (tuple): The intrinsic shape of the Transform. This is a static property,
-          generated only if needed.
+        * is_fixed (bool): True if `omega` is zero, meaning that the target frame is not
+          rotating.
+        * frame (Frame): The target frame, into which this Transform rotates.
+        * reference (Frame): The reference frame, whose coordinates this Transform rotates
+          into the target frame. The reference frame must have shape ().
+        * origin (Path or None): The path defining the center of rotation if this is a
+          rotating frame; None otherwise.
+        * shape (tuple): The intrinsic shape of the Transform, generated only if needed.
     """
 
     # Class constants to avoid circular references
@@ -56,10 +56,10 @@ class Transform(Oops):
         Parameters:
             matrix (Matrix3): Object that is used to rotate coordinates from the reference
                 frame into the new frame.
-            omega (Vector3)): The spin vector for the coordinate frame, given in
+            omega (Vector3): The spin vector for the coordinate frame, given in
                 coordinates of the reference frame.
-            frame (Transform): The frame or frame ID into which this Transform rotates.
-            reference (Transform): The frame or frame ID from which this Transform
+            frame (Frame or str): The frame or frame ID into which this Transform rotates.
+            reference (Frame or str): The frame or frame ID from which this Transform
                 rotates.
             origin (Path or str, optional): The path or path ID of the center of rotation.
                 If None, it is derived from the `reference` frame.
@@ -109,7 +109,7 @@ class Transform(Oops):
 
     @property
     def omega1(self):
-        """The negative rotation matrix transformed into the target frame.
+        """The negative of the rotation vector, transformed into the target frame.
 
         Used for the inverse transform.
         """
@@ -156,7 +156,6 @@ class Transform(Oops):
         if self._filled_wod is None:
             self._filled_wod = Transform(self.matrix, Vector3.ZERO, self.frame,
                                          self.reference, origin=self.origin)
-            self._filled_wod = self._filled_wod
 
         return self._filled_wod
 
@@ -184,9 +183,9 @@ class Transform(Oops):
         Optionally, it also rotates any derivatives.
 
         Parameters:
-            pos (Vector3): , Vector or Matrix object. The size of the leading axis must be
-                3. Anything not a subclass of Qube (e.g., a list or tuple) is converted to
-                a Vector3 first.
+            pos (Vector3, Vector, or Matrix): The position or matrix to rotate; the size
+                of its leading axis must be 3. Anything not a subclass of Qube (e.g., a
+                list or tuple) is converted to a Vector3 first.
             derivs (bool, optional): True to calculate the time-derivative as well.
 
         Returns:
@@ -240,15 +239,15 @@ class Transform(Oops):
         """Un-rotate the coordinates of a position into the reference frame.
 
         Parameters:
-            pos (Vector3): , VectorN or Matrix object. The size of the leading axis must
-                be 3. Anything not a subclass of Array (e.g., a list or tuple) is
-                converted to a Vector3 first. Velocity is always assumed zero.
-            derivs (bool, optional): True to calculate dpos/dpos and dpos/dt as well.
+            pos (Vector3, Vector, or Matrix): The position or matrix to un-rotate; the
+                size of its leading axis must be 3. Anything not a subclass of Qube (e.g.,
+                a list or tuple) is converted to a Vector3 first. Velocity is always
+                assumed zero.
+            derivs (bool, optional): True to calculate the time-derivative as well.
 
         Returns:
             Vector3: The same Vector3 position transformed back into the reference frame.
-            If `derivs` is True, then the returned position has a subfield "d_dt", a
-            Vector3 representing the derivatives with respect to time.
+            If `derivs` is True, then the returned position has a time derivative.
         """
 
         if pos is None:
@@ -342,10 +341,10 @@ class Transform(Oops):
     def unrotate_transform(self, arg):
         """Apply the inverse of this transform to another, as a left-multiply.
 
-        The result is a single transform that applies the convert coordinates in the
-        parent frame of the argument transform into the parent frame of this transform.
-        I.e., if arg rotates A to B and self rotates C to B, then the result rotates A to
-        C.
+        The result is a single transform that converts coordinates in the reference frame
+        of the argument transform into the reference frame of this transform. I.e., if
+        `arg` rotates A to B and this Transform rotates C to B, then the result rotates A
+        to C.
         """
 
         return self.invert().rotate_transform(arg)

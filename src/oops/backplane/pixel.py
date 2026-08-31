@@ -1,6 +1,8 @@
 ##########################################################################################
-# oops/backplanes/pixel.py
+# oops/backplane/pixel.py
 ##########################################################################################
+
+import numpy as np
 
 from oops.constants import C
 from oops.backplane import Backplane
@@ -12,11 +14,11 @@ def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
 
     Parameters:
         event_key (str or tuple): Key defining the event on the body's path.
-        radius (optional): If nonzero, override the radius of the body referred to in
-            the event key.
+        radius (float, optional): If nonzero, override the radius of the body referred
+            to in the event key.
         axis (str, optional): "u"   : horizontal pixel direction. "v"   : vertical pixel
-            direction. "min" : direction of largest diameter. "max" : direction of
-            smallest diameter.
+            direction. "min" : direction of smallest diameter. "max" : direction of
+            largest diameter.
     """
     if not self.obs.INVENTORY_IMPLEMENTED:
         raise NotImplementedError('body_diameter_in_pixels not defined for '
@@ -34,14 +36,14 @@ def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
 
     # compute apparent distance
     event = self.get_surface_event(gridless_key, arrivals=True)
-    distance = event._dep_lt_*C
+    distance = event.dep_lt * C
 
     # compute apparent enclosing radius
     (body, mod) = Backplane.get_body_and_modifier(gridless_key[1])
     if radius==0:
         radius = body.radius
 
-    radii_in_pixels = radius/distance / self.obs.fov.uv_scale.vals
+    radii_in_pixels = radius/distance / np.abs(self.obs.fov.uv_scale.vals)
 
     if axis == 'u':
         radius_in_pixels = radii_in_pixels[0]

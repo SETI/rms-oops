@@ -75,7 +75,7 @@ class LightSource(object):
         self.shape = self.source.shape
 
         # Interpret the weights
-        if weight:
+        if weight is not None:
             weight = Scalar.as_scalar(weight).broadcast_to(self.shape)
         else:
             weight = Scalar(1.).broadcast_to(self.shape)
@@ -152,7 +152,7 @@ class DiskSource(LightSource):
     """
 
     def __init__(self, name, source, radius, size=11, compress=False):
-        """Constructor for a DiskSource. This is a 2-D array respresenting a
+        """Constructor for a DiskSource. This is a 2-D array representing a
         uniform, lit circular light source.
 
         Inputs:
@@ -163,14 +163,14 @@ class DiskSource(LightSource):
             radius      radius of the source, in km for paths or in arcseconds
                         for a J2000 fixed source.
             size        number of pixels on the side of the square 2-D array
-                        containing defining the lines of sight. Use an odd
+                        defining the lines of sight. Use an odd
                         number to ensure that the central pixel corresponds to
                         the center of the source.
             compress    if True, the masked pixels (outside the circle) of the
                         source are stripped away. This results in ~20% fewer
                         lines of sight to calculate, and is appropriate when one
                         is only going to average across the disk at the end. If
-                        false, the source remains a 2-D image that can be used
+                        False, the source remains a 2-D image that can be used
                         later.
         """
 

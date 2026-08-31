@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/backplanes/sky.py
+# oops/backplane/sky.py
 ##########################################################################################
 
 import numpy as np
@@ -10,7 +10,7 @@ from oops.frame     import Frame
 
 
 def right_ascension(self, event_key=(), apparent=True, direction='arr'):
-    """Right ascension of the arriving or departing photon
+    """Right ascension of the arriving or departing photon.
 
     Optionally, it allows for stellar aberration.
 
@@ -83,7 +83,7 @@ def celestial_north_angle(self, event_key=()):
 
     Parameters:
         event_key (str or tuple, optional): Key defining the surface event, typically ()
-            to refer refer to the observation.
+            to refer to the observation.
     """
 
     self.refresh()
@@ -102,7 +102,7 @@ def celestial_north_angle(self, event_key=()):
 
 
 def celestial_east_angle(self, event_key=()):
-    """Direction of celestial north at each pixel in the image.
+    """Direction of celestial east at each pixel in the image.
 
     The angle is measured from the U-axis toward the V-axis. This varies across the field
     of view due to spherical distortion and also any distortion in the FOV.
@@ -172,7 +172,7 @@ def center_right_ascension(self, event_key, apparent=True, direction='arr'):
     Parameters:
         event_key (str or tuple): Key defining the event at the body's path.
         apparent (bool, optional): True to return the apparent direction of photons in the
-            the frame of the event; False to return the purely geometric directions of the
+            frame of the event; False to return the purely geometric directions of the
             photons.
         direction (str, optional): 'arr' to return the direction of an arriving photon;
             'dep' to return the direction of a departing photon.

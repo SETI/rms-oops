@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/backplanes/limb.py
+# oops/backplane/limb.py
 ##########################################################################################
 
 import numpy as np
@@ -72,7 +72,7 @@ def _fill_limb_intercepts(self, event_key):
         raise ValueError('invalid coordinate type for limb geometry: '
                          + surface.COORDINATE_TYPE)
 
-    # Get the ring intercept coordinates
+    # Get the limb intercept coordinates
     self.refresh()
     event = self.get_surface_event(event_key)
 

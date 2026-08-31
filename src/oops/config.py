@@ -52,9 +52,8 @@ class QUICK(object):
                                 # via numerical derivatives rather than via
                                 # interpolation of the vector components.
     'ignore_quickframe_omega': False,
-                                # True to derive the omega rotation vectors
-                                # via numerical derivatives rather than via
-                                # interpolation of the vector components.
+                                # True to treat the omega rotation vectors as
+                                # zero within a QuickFrame.
 }
 
 ##########################################################################################
@@ -318,7 +317,7 @@ class LOGGING(object):
 
         Inputs:
             level           logging level as an integer or string, one of
-                            "DEBUG"=10, "ERROR"=20, "WARN" or "WARNING"=30,
+                            "DEBUG"=10, "INFO"=20, "WARN" or "WARNING"=30,
                             "ERROR"=40, or "FATAL"=50. Messages will go to a
                             defined logger only if the level is >= the logger's
                             specified threshold. Messages are sent to other
@@ -326,7 +325,7 @@ class LOGGING(object):
 
             literal         if True, the message is logged as is, without any
                             time tag, level, or other information (but including
-                            any specified prefix.
+                            any specified prefix).
 
             force           log the message even if its level is below that of
                             the logger.
@@ -456,6 +455,10 @@ class LOGGING(object):
 
     @staticmethod
     def exception(exception, message=''):
+        """Log an exception with its traceback at FATAL level.
+
+        If no logger is defined, the exception is raised instead of logged.
+        """
 
         if not LOGGING.logger:
             raise exception
@@ -485,6 +488,7 @@ class LOGGING(object):
                                              'mylevelname': 'FATAL'})
         LOGGING.errors += 1
 
+    @staticmethod
     def literal(*args, level=logging.DEBUG, force=True):
         """Print a literal message to the log."""
         LOGGING.print(*args, level=level, literal=True, force=force)
@@ -520,8 +524,8 @@ class LOGGING(object):
         for key, value in state.items():
             setattr(LOGGING, key, value)
 
-        if old_level != LOGGING.level:
-            LOGGING.set_logging_level(LOGGING.level)
+        if LOGGING.logger and old_level != LOGGING.level:
+            LOGGING.set_logger_level(LOGGING.level)
 
 LOGGING.push()      # At initialization, put the default settings onto the stack
 
@@ -540,7 +544,7 @@ class PICKLE_CONFIG(object):
 
 class AREA_FACTOR(object):
     old = False     # True to use old area factors, which have a small error due
-                    # the fact that off-axis lines of sight in an FOV are not
+                    # to the fact that off-axis lines of sight in an FOV are
                     # not quite unit length.
 
 ##########################################################################################

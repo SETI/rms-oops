@@ -103,7 +103,8 @@ class OblateGravity(Gravity):
         return omega1
 
     def kappa2(self, a):
-        """The square of the radial oscillation frequency (radians/s) at semimajor axis a.
+        """The square of the radial oscillation frequency (radians^2/s^2) at semimajor
+        axis a.
         """
 
         a2 = a * a
@@ -570,7 +571,7 @@ class OblateGravity(Gravity):
         fac = np.sqrt(hx**2 + hy**2)/h
 
         long_node = np.where(fac < tiny, np.zeros(x.shape),
-                                         Gravity._pos_arctan2(hx,-hy))
+                                         OblateGravity._pos_arctan2(hx,-hy))
         tmp = np.arctan2(y, x)
         tmp = np.where(np.abs(inc - np.pi) < 10.*tiny, -tmp, tmp)
         tmp = tmp % TWOPI
@@ -582,9 +583,10 @@ class OblateGravity(Gravity):
         else:
             sin_inc[sin_inc == 0.] = 1.
 
-        u = np.where(fac < tiny, tmp, Gravity._pos_arctan2(z/sin_inc,
-                                                           x*np.cos(long_node) +
-                                                           y*np.sin(long_node)))
+        u = np.where(fac < tiny, tmp,
+                     OblateGravity._pos_arctan2(z/sin_inc,
+                                                x*np.cos(long_node) +
+                                                y*np.sin(long_node)))
 
         # Compute the radius R and velocity squared V2, and the dot
         # product RDOTV, the energy per unit mass ENERGY.
@@ -605,7 +607,7 @@ class OblateGravity(Gravity):
         cape = np.where(fac > tiny, cape, u)
         cw = (np.cos(cape) - e)/(1. - e*np.cos(cape))
         sw = np.sqrt(1. - e*e)*np.sin(cape)/(1. - e*np.cos(cape))
-        w = np.where(fac > 0., Gravity._pos_arctan2(sw,cw), u)
+        w = np.where(fac > 0., OblateGravity._pos_arctan2(sw,cw), u)
 
         mean_anomaly = (cape - e*np.sin(cape)) % TWOPI
         long_peri = (u - w) % TWOPI
@@ -715,7 +717,7 @@ class OblateGravity(Gravity):
 
         # EQ 22-25
         r = np.sqrt(x**2 + y**2)
-        L = Gravity._pos_arctan2(y, x)
+        L = OblateGravity._pos_arctan2(y, x)
         rdot = vx*np.cos(L) + vy*np.sin(L)
         Ldot = (vy*np.cos(L)-vx*np.sin(L))/r
 
@@ -737,7 +739,7 @@ class OblateGravity(Gravity):
         while True:
             (n, kappa, nu, eta2, chi2,
              alpha1, alpha2, alphasq) = self._geom_to_freq(a, e, inc, body_gm)
-            ret = Gravity._freq_to_geom(r, L, z, rdot, Ldot, vz, rc, Lc, zc,
+            ret = OblateGravity._freq_to_geom(r, L, z, rdot, Ldot, vz, rc, Lc, zc,
                                    rdotc, Ldotc, zdotc, n, kappa, nu, eta2,
                                     chi2, alpha1, alpha2, alphasq)
             old_a = a
@@ -834,10 +836,10 @@ class OblateGravity(Gravity):
 
         lam = L - Lc - 2.*n/kappa*(rdot-rdotc)/(a*kappa)
 
-        long_peri = (lam - Gravity._pos_arctan2(rdot-rdotc,
-                                                a*kappa*(1.-(r-rc)/a))) % TWOPI
+        long_peri = (lam - OblateGravity._pos_arctan2(rdot-rdotc,
+                                                      a*kappa*(1.-(r-rc)/a))) % TWOPI
 
-        long_node = (lam - Gravity._pos_arctan2(nu*(z-zc), zdot-zdotc)) % TWOPI
+        long_node = (lam - OblateGravity._pos_arctan2(nu*(z-zc), zdot-zdotc)) % TWOPI
 
         # EQ 36-41
         rc = (a * e**2 * (3./2.*eta2/kappa2 - 1. -

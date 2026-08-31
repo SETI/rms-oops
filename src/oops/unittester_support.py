@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/oops_resources.py
+# oops/unittester_support.py
 ##########################################################################################
 
 import os
@@ -33,7 +33,7 @@ except KeyError:
 # The FileCache in which to store the "$OOPS_RESOURCES/test_data" directory
 TEST_DATA_FILECACHE = FileCache('oops_test_data')
 
-# The FileCache in which to store the "$OOPS_RESOURCES/SPICE" directory; this
+# The FileCache in which to store the "$OOPS_TEST_DATA_PATH/SPICE" directory; this
 # should be DIFFERENT from the name used in spicedb because these could
 # be different kernels with the same name
 TEST_SPICE_FILECACHE = FileCache('oops_test_kernels')

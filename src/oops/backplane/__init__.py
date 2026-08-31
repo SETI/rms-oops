@@ -22,7 +22,7 @@ class Backplane(Mutable):
     """Class that supports the generation and manipulation of sets of backplanes with a
     particular Observation.
 
-    intermediate results are cached to speed up calculations.
+    Intermediate results are cached to speed up calculations.
     """
 
     DIAGNOSTICS = False     # set True to log diagnostics
@@ -34,7 +34,7 @@ class Backplane(Mutable):
         """The constructor.
 
         Parameters:
-            obs (Observation): The  object with which this Backplane is associated.
+            obs (Observation): The Observation with which this Backplane is associated.
             meshgrid (Meshgrid, optional): Defines the sampling of the FOV; default is to
                 sample the center of every pixel.
             time (Scalar, optional): Time in seconds TDB during the Observation. The shape
@@ -44,7 +44,7 @@ class Backplane(Mutable):
                 field of view and to keep track of their locations. This option can speed
                 up backplane calculations for bodies that occupy a small fraction of the
                 field of view. If a dictionary is provided, this dictionary is used.
-            inventory_border (int, optional): The  number of pixels to extend the box
+            inventory_border (int, optional): The number of pixels to extend the box
                 surrounding each body as determined by the inventory.
 
         Notes:
@@ -77,14 +77,14 @@ class Backplane(Mutable):
             In dispersed illumination, each backplane has spatial dimensions that are
             defined by the Meshgrid. Photons leave the source in all directions, and some
             of those that intercept the surface are reflected toward the detector. The
-            detector selects the photons it receives based on its. The event is defined as
-            the moment the photons hit the surface and are reflected.
+            detector selects the photons it receives based on its lines of sight. The
+            event is defined as the moment the photons hit the surface and are reflected.
 
             In occultation illumination, backplanes have no spatial dimensions. Photons
             leave the source along a direct line of sight to the detector, and the event
             is defined as the time and location where the photons intercept the surface.
 
-            In path-based illumination, the photon follows one or more straight- line
+            In path-based illumination, the photon follows one or more straight-line
             paths between the origin points of the surfaces. The backplanes have no
             spatial dimensions, but can be used to answer such questions as "what is the
             sub-solar latitude on Saturn?" or "where is Enceladus in this image?"
@@ -119,7 +119,7 @@ class Backplane(Mutable):
 
         self._input_time = time
 
-        # Intialize the inventory
+        # Initialize the inventory
         self._input_inventory = inventory
         if isinstance(inventory, dict):
             self.inventory = inventory
@@ -305,7 +305,7 @@ class Backplane(Mutable):
 
         # Handle an individual string
         if isinstance(event_key, str):
-            event_key = ('SUN<', event_key.upper())
+            event_key = ['SUN<', event_key.upper()]
         else:
             # Handle a tuple of strings
             event_key = [k.upper() for k in event_key]
@@ -319,6 +319,8 @@ class Backplane(Mutable):
         if event_key[0][:-1] == event_key[1]:
             event_key = event_key[:1] + event_key[2:]
 
+        event_key = tuple(event_key)
+
         # Add the default surface suffix to the body if necessary
         if default and ':' not in event_key[-1]:
             default = default.upper()
@@ -327,8 +329,6 @@ class Backplane(Mutable):
                 event_key = event_key[:-1] + (event_key[-1] + ':' + default,)
             elif default == 'ANSA' and surface.COORDINATE_TYPE == 'polar':
                 event_key = event_key[:-1] + (event_key[-1] + ':' + default,)
-
-        event_key = tuple(event_key)
 
         # Check length
         if Backplane._is_dispersed(event_key) and len(event_key) not in (2,3):
@@ -515,12 +515,12 @@ class Backplane(Mutable):
 
         # ('ansa', origin, frame)
         if surface_type == 'ansa':
-            if intercept_key[2] is not parent.ring_frame:
+            if intercept_key[2] is not parent.ring_frame.wayframe:
                 return surface_key
 
             return body_name + ':ANSA'
 
-        return ''
+        return surface_key
 
     @staticmethod
     @functools.lru_cache(maxsize=100)

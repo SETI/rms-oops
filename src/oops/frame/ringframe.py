@@ -51,7 +51,8 @@ class RingFrame(Frame):
         """
 
         self._planet_frame = Frame.as_frame(frame)
-        self._epoch = epoch and Scalar.as_scalar(epoch).wod.as_readonly()
+        self._epoch = (None if epoch is None
+                       else Scalar.as_scalar(epoch).wod.as_readonly())
         self._retrograde = bool(retrograde)
         self._aries = bool(aries)
         self._cache_size = cache_size
@@ -77,7 +78,7 @@ class RingFrame(Frame):
         self._transform = None
         self._node = None
 
-        # For a fixed epoch, derive the inertial tranform now
+        # For a fixed epoch, derive the inertial transform now
         if self._is_inertial:
             transform = self.transform_at_time(self._epoch)
             self._transform = transform

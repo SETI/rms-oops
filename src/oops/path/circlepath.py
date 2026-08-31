@@ -69,10 +69,10 @@ class CirclePath(Path):
                  f'{blanks}lon = {self._lon.mvals}',
                  f'{blanks}rate = {self._rate.mvals}',
                  f'{blanks}epoch = {self._epoch.mvals}',
-                 f'{blanks}origin = {self._origin.show(level-1, skip+9)})']
+                 f'{blanks}origin = {self._origin.show(level-1, skip+9)}']
 
         if self._frame != self._origin._frame:
-            parts.append(f'{blanks}(frame = {self._frame.show(level-1, skip+8)})')
+            parts.append(f'{blanks}frame = {self._frame.show(level-1, skip+8)}')
 
         return ',\n'.join(parts) + ')'
 

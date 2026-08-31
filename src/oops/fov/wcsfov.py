@@ -65,7 +65,7 @@ class WCSFOV(FOV):
         if ref_axis not in ('x', 'y'):
             raise ValueError('invalid value of ref_axis: ' + repr(ref_axis))
 
-        self.uv_shape = Pair([header['NAXIS2'], header['NAXIS1']])
+        self.uv_shape = Pair([header['NAXIS1'], header['NAXIS2']])
         self.uv_los = Pair([header['CRPIX1'] - 0.5, header['CRPIX2'] - 0.5])
 
         # We require that x_wcs = RA and y_wcs = dec

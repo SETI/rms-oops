@@ -133,6 +133,9 @@ class NullSurface(Surface):
                   guess=None, hints=None):
         """The position where a specified line of sight intercepts the Surface.
 
+        Because a NullSurface has no extent, the returned position and parameter values
+        are entirely masked.
+
         Parameters:
             obs (Vector3): Observer position as a Vector3 relative to this Surface's
                 origin and frame.

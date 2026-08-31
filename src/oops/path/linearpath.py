@@ -41,9 +41,10 @@ class LinearPath(Path):
             self._pos = Vector3.as_vector3(pos[0]).wod.as_readonly()
             self._vel = Vector3.as_vector3(pos[1]).wod.as_readonly()
         else:
-            pos = Vector3.as_vector3(pos).wod.as_readonly()
-            self._pos = pos
-            self._vel = pos.d_dt.as_readonly() if hasattr(pos, 'd_dt') else Vector3.ZERO
+            pos = Vector3.as_vector3(pos)
+            self._vel = (pos.d_dt.wod.as_readonly() if hasattr(pos, 'd_dt')
+                         else Vector3.ZERO)
+            self._pos = pos.wod.as_readonly()
 
         self._epoch = Scalar.as_scalar(epoch)
 

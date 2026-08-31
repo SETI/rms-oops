@@ -252,7 +252,7 @@ class Surface(Mutable):
             derivs (bool, optional): True to propagate derivatives in `pos` and `obs` into
                 the returned intercept points.
             guess (Scalar, optional): Optional initial guess at the coefficient `p` such
-                that `intercept = pos + p * normal(intercept)`. If provided, the converged
+                that `intercept + p * normal(intercept) = pos`. If provided, the converged
                 value of `p` is included in the returned results; use `guess=True` to
                 include this in the return even if an initial guess is not available.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -268,7 +268,7 @@ class Surface(Mutable):
               solution exists, values are masked.
             * `p` (Scalar): The converged solution where::
 
-                 intercept = pos + p * normal(intercept)
+                 intercept + p * normal(intercept) = pos
 
               This is included if `guess` is not None. For subclasses that do not use a
               guess, the input value of `guess` is returned.
@@ -418,7 +418,7 @@ class Surface(Mutable):
         else:
             (coord1, coord2, coord3) = coords
 
-        # Strip derivatives is necessary, but not d_dt
+        # Strip derivatives if necessary, but not d_dt
         if not derivs:
             coord1 = coord1.without_derivs(preserve='t')
             coord2 = coord2.without_derivs(preserve='t')

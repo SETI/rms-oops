@@ -7,7 +7,7 @@ import cspyce
 
 from polymath              import Matrix3, Scalar, Vector3
 from oops.cache            import Cache
-from oops.frame            import Frame, LinkedFrame
+from oops.frame            import Frame, J2000Frame, LinkedFrame
 from oops.frame.spiceframe import SpiceFrame
 from oops.transform        import Transform
 
@@ -97,8 +97,8 @@ class SpiceType1Frame(SpiceFrame):
 
     def __setstate__(self, state):
         (frame_name, reference, tick_tolerance, frame_id, cache_size, quickframes) = state
-        self.__init__(frame_name, reference, tick_tolerance=tick_tolerance,
-                      frame_id=frame_id, cache_size=cache_size)
+        self.__init__(frame_name, tick_tolerance, reference, frame_id=frame_id,
+                      cache_size=cache_size)
         if quickframes:
             self._quickframes = quickframes
 
@@ -220,7 +220,7 @@ class SpiceType1Frame(SpiceFrame):
             # Check cache first
             xform = self._cache[time.vals]
             if xform:
-                return xform
+                return (time, xform)
 
             ticks = cspyce.sce2c(self._spice_origin_code, time.vals)
             (matrix3, true_ticks) = cspyce.ckgp(self._spice_frame_code, ticks,
@@ -228,13 +228,13 @@ class SpiceType1Frame(SpiceFrame):
                                                 self._spice_reference_name)
             xform = Transform(matrix3, Vector3.ZERO, self, self._reference)
             self._cache[time.vals] = xform
-            return xform
+            return (time, xform)
 
         # Check to see if the latest shaped transform is adequate
         if np.shape(time.vals) == self._cached_shape:
             diff = np.abs(time.vals - self._cached_time)
             if np.all(diff < self._time_tolerance):
-                return self._cached_transform
+                return (time, self._cached_transform)
 
         # If all the times are close, we can return more quickly
         time_min = time.vals.min()
@@ -250,7 +250,7 @@ class SpiceType1Frame(SpiceFrame):
             self._cached_time = true_time
             self._cached_transform = Transform(matrix3, Vector3.ZERO, self,
                                                self._reference)
-            return self._cached_transform
+            return (time, self._cached_transform)
 
         # Otherwise, process the array...
         ticks = cspyce.sce2c_vector(self._spice_origin_code, time.vals.ravel())
@@ -263,7 +263,7 @@ class SpiceType1Frame(SpiceFrame):
         self._cached_shape = time.shape
         self._cached_time = true_times
         self._cached_transform = Transform(matrix3, Vector3.ZERO, self, self._reference)
-        return self._cached_transform
+        return (time, self._cached_transform)
 
     ######################################################################################
     # SpiceFrame API
@@ -281,8 +281,8 @@ class SpiceType1Frame(SpiceFrame):
             spice_frame (str or int): The name, frame code, or frame name as used in the
                 SPICE toolkit. Alternatively, an existing SpiceType1Frame (which might use
                 the wrong reference frame).
-            tick_tolerance (float, int, or str, optional): A number or string defining
-                the time tolerance in spacecraft clock ticks for the Frame returned.
+            tick_tolerance (float, int, or str): A number or string defining the time
+                tolerance in spacecraft clock ticks for the Frame returned.
             reference (SpiceFrame or str, optional): The Frame or ID of the Frame relative
                 to which this frame is defined. This must be a SpiceFrame or else, by
                 default, J2000.
@@ -311,7 +311,7 @@ class SpiceType1Frame(SpiceFrame):
         if isinstance(spice_frame, SpiceType1Frame):
             if (reference == spice_frame._reference
                     and tick_tolerance == spice_frame._tick_tolerance
-                    and cache_size in (spice_frame._cache, None)):
+                    and cache_size in (spice_frame._cache_size, None)):
                 return spice_frame
             # Otherwise, identify the name and continue
             name = spice_frame._spice_frame_name
@@ -343,7 +343,7 @@ class SpiceType1Frame(SpiceFrame):
 
         # Find the first SpiceFrame (or J2000) that's an ancestor of the reference
         ancestor = reference
-        while not isinstance(ancestor, (SpiceFrame, Frame.J2000Frame)):
+        while not isinstance(ancestor, (SpiceFrame, J2000Frame)):
             ancestor = ancestor._reference
 
         # Get the SpiceType1Frame to the selected ancestor

@@ -57,7 +57,7 @@ class Event(object):
         * _dep_ap_ (Vector3): As `_dep_`, but the apparent direction of the departing
           photon.
         * _dep_j2000_ (Vector3): As `_dep_`, but in J2000 coordinates.
-        * _dep_j2000_ap_ (Vector3): As `_dep_ap_`, but in J2000 coordinates.
+        * _dep_ap_j2000_ (Vector3): As `_dep_ap_`, but in J2000 coordinates.
         * _dep_lt_ (Scalar): The light travel time of a departing photon to its
           destination.
         * _perp_ (Vector3 or None): The direction of a normal vector if this event falls
@@ -93,10 +93,7 @@ class Event(object):
         Event.__dict__[prop_name].fset(self, value)
 
     def __init__(self, time, state, origin, frame=None, **more):
-        """Constructor for the Event class
-
-        If a link is specified, then either the arriving or the departing photons will be
-        filled in automatically.
+        """Constructor for the Event class.
 
         Parameters:
             time (Scalar): Event times in seconds TDB.
@@ -107,11 +104,10 @@ class Event(object):
             origin (Path or str): The path or path ID identifying the origin of this
                 event.
             frame (Frame, optional): The frame or frame ID identifying the coordinate
-                frame of this event. By default, it matches the default frame of the
-                origin.
-            **more: An arbitrary set of properties and subfields that are will
-                also be accessible as attributes of the Event object. Properties have
-                fixed names and purposes; subfields can be anything.
+                frame of this event. Default is J2000.
+            **more: An arbitrary set of properties and subfields that will also be
+                accessible as attributes of the Event object. Properties have fixed names
+                and purposes; subfields can be anything.
         """
 
         self._time_ = Scalar.as_scalar(time).as_readonly()
@@ -150,72 +146,36 @@ class Event(object):
         """The minimum info necessary to preserve the entire state of the event.
         """
 
-        arr_lt_attr = ''    # name of one "arr" attribute, scaled by arr_lt
-        dep_lt_attr = ''    # name of one "dep" attribute, scaled by dep_lt
-        more = {}           # dict containing one "arr" and/or one "dep" vector
+        more = {}           # dict of the defined photon properties and subfields
 
-        # Save only the first occurrence of an arriving photon property
+        # Save only the first defined arriving photon vector; the rest are derivable
         for prop in Event.ARR_VEC3_PROPERTIES:
-            attr = '_' + prop + '_'
-            if hasattr(self, attr):
-                vec = getattr(self, attr)
-
-                # Scale it by the light time if possible
-                arr_lt = None
-                if hasattr(self, '_arr_lt_'):
-                    arr_lt = self._arr_lt_
-                if arr_lt is not None:
-                    more[prop] = vec.with_norm(arr_lt)
-                    arr_lt_attr = attr
-                else:
-                    more[prop] = vec
-
+            vec = getattr(self, Event.attr_name(prop))
+            if vec is not None:
+                more[prop] = vec
                 break
 
-        # Save only the first occurrence of a departing photon property
+        # Save only the first defined departing photon vector; the rest are derivable
         for prop in Event.DEP_VEC3_PROPERTIES:
-            attr = '_' + prop + '_'
-            if hasattr(self, attr):
-                vec = getattr(self, attr)
-
-                # Scale it by the light time if possible
-                dep_lt = None
-                if hasattr(self, '_dep_lt_'):
-                    dep_lt = self._dep_lt_
-                if dep_lt is not None:
-                    more[prop] = vec.with_norm(dep_lt)
-                    dep_lt_attr = attr
-                else:
-                    more[prop] = vec
-
+            vec = getattr(self, Event.attr_name(prop))
+            if vec is not None:
+                more[prop] = vec
                 break
 
-        # Save additional properties
-        for prop in ('perp', 'vflat'):
-            attr = '_' + prop + '_'
-            if hasattr(self, attr):
-                more[prop] = getattr(self, attr)
+        # Save additional properties if defined
+        for prop in ('arr_lt', 'dep_lt', 'perp', 'vflat'):
+            value = getattr(self, Event.attr_name(prop))
+            if value is not None:
+                more[prop] = value
 
         # Save the subfields
         for (key, value) in self.subfields.items():
             more[key] = value
 
-        return (self._time_, self._state_, self._origin_, self._frame_,  more,
-               arr_lt_attr, dep_lt_attr)
+        return (self._time_, self._state_, self._origin_, self._frame_, more)
 
     def __setstate__(self, state):
-
-        (more, arr_lt_attr, dep_lt_attr) = state[-3:]
-        self.__init__(*state[:-3], **more)
-
-        # Extract arriving and departing light time from the relevant vectors
-        if arr_lt_attr:
-            vec = getattr(self, arr_lt_attr)
-            self.fset('arr_lt', vec.norm())
-
-        if dep_lt_attr:
-            vec = getattr(self, dep_lt_attr)
-            self.fset('dep_lt', vec.norm())
+        self.__init__(*state[:-1], **state[-1])
 
     ######################################################################################
     # Read-only properties
@@ -675,7 +635,7 @@ class Event(object):
             raise ValueError(f'perpendiculars were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
-        perp = Vector3.as_vector(value).as_readonly()
+        perp = Vector3.as_vector3(value).as_readonly()
         self._shape_ = Qube.broadcasted_shape(self.shape, perp)
 
         self._perp_ = perp
@@ -699,7 +659,7 @@ class Event(object):
             raise ValueError(f'surface velocities were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
-        vflat = Vector3.as_vector(value).as_readonly()
+        vflat = Vector3.as_vector3(value).as_readonly()
         self._shape_ = Qube.broadcasted_shape(self.shape, vflat)
 
         self._vflat_ = vflat
@@ -798,11 +758,15 @@ class Event(object):
     ######################################################################################
 
     def _apply_this_func(self, func, *args):
-        """Internal function to return a new event in which the given function has been
-        applied to every attribute. Sort of tricky but very helpful.
+        """A new event in which the given function has been applied to every
+        attribute.
 
         Parameters:
-            Return (Event): Object after this function has been applied.
+            func (callable): Function to apply to each Qube attribute of this Event.
+            *args: Additional arguments to pass to `func` after the attribute value.
+
+        Returns:
+            Event: The new Event, with `func` applied to every attribute.
         """
 
         # Create the new event
@@ -930,7 +894,7 @@ class Event(object):
 
         result = self._apply_this_func(fully_masked)
         result._mask_ = True
-        result.__antimask = False
+        result._antimask_ = False
 
         # Change the origin or frame if requested
         if origin:
@@ -940,10 +904,10 @@ class Event(object):
 
         # Fill in _ssb_, also masked
         if (result._origin_ == Event.SSB and result._frame_ == Frame.J2000):
-                result._ssb_ == result
+            result._ssb_ = result
         else:
-                result._ssb_ = result.as_all_masked(Event.SSB, Frame.J2000)
-                result._ssb_._xform_to_j2000_ = Transform.IDENTITY
+            result._ssb_ = result.as_all_masked(Event.SSB, Frame.J2000)
+            result._ssb_._xform_to_j2000_ = Transform.IDENTITY
 
         if result._xform_to_j2000_ is None:
             result._xform_to_j2000_ = Transform.IDENTITY
@@ -1254,6 +1218,24 @@ class Event(object):
 
     def wrt(self, path=None, frame=None, *, derivs=True, quick=None, include_xform=False):
         """This event relative to a new path and/or a new coordinate frame.
+
+        Parameters:
+            path (Path or str, optional): The new origin path or its ID; None to leave the
+                origin unchanged.
+            frame (Frame or str, optional): The new coordinate frame or its ID; None to
+                leave the frame unchanged.
+            derivs (bool, optional): True to include the derivatives in the returned
+                Event; False to exclude them. Time derivatives are always retained.
+            quick (dict, optional): To override the configured default parameters for
+                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
+                QuickFrames. The default configuration is defined in config.py.
+            include_xform (bool, optional): If True, the transform is returned in a tuple
+                along with the new event.
+
+        Returns:
+            Event or tuple[Event, Transform]: The new Event; if `include_xform` is True, a
+            tuple of the new Event and the Transform from this event's frame to the new
+            frame.
         """
 
         # Interpret inputs
@@ -1450,7 +1432,7 @@ class Event(object):
     def unrotate_by_frame(self, frame, *, derivs=True, quick=None):
         """This Event unrotated back into the given frame.
 
-        The origin is unchanged. Subfields are also urotated.
+        The origin is unchanged. Subfields are also unrotated.
 
         Parameters:
             frame (Frame): Object to inverse-transform the coordinates. Its target frame
@@ -1503,7 +1485,8 @@ class Event(object):
 
         Parameters:
             threshold (float, optional): The allowed difference in seconds between the
-                earliest latest times. None to use the value specifed by the EVENT_CONFIG.
+                earliest and latest times. None to use the value specified by the
+                EVENT_CONFIG.
         """
 
         def without_derivs(arg):
@@ -1558,7 +1541,7 @@ class Event(object):
         relative. Photon events are unchanged except for the coordinate transform.
 
         The returned object has additional attributes 'event' and 'reference', which point
-        to the source events
+        to the source events.
         """
 
         def ref_unrotate(arg):
@@ -1711,7 +1694,7 @@ class Event(object):
             return self._arr_ap_.wod
 
     def actual_arr(self, *, derivs=False, quick=None):
-        """Actual direction of an arriving ray in the event frame. Cached
+        """Actual direction of an arriving ray in the event frame. Cached.
 
         Parameters:
             derivs (bool, optional): True to include the derivatives of the light ray in
@@ -1728,7 +1711,7 @@ class Event(object):
             else:
                 return self._arr_.wod
 
-        # Otherwise, calculate and cache the apparent vector in the SSB frame
+        # Otherwise, calculate and cache the actual vector in the SSB frame
         wrt_ssb = self.wrt_ssb(derivs=derivs, quick=quick)
         arr_ssb = self.actual_ray_ssb(wrt_ssb.arr_ap, derivs=derivs, quick=quick)
         wrt_ssb._arr_ = arr_ssb
@@ -1799,7 +1782,7 @@ class Event(object):
             else:
                 return self._dep_.wod
 
-        # Otherwise, calculate and cache the apparent vector in the SSB frame
+        # Otherwise, calculate and cache the actual vector in the SSB frame
         wrt_ssb = self.wrt_ssb(derivs=derivs, quick=quick)
         dep_ssb = self.actual_ray_ssb(wrt_ssb._dep_ap_, derivs=derivs, quick=quick)
         wrt_ssb._dep_ = dep_ssb
@@ -1939,7 +1922,7 @@ class Event(object):
 
         # Validate the inputs
         if subfield not in ('arr', 'dep'):
-            raise ValueError(f'invalid input value for apparent: {apparent!r}')
+            raise ValueError(f'invalid input value for subfield: {subfield!r}')
 
         # Identify the frame
         if frame == 'J2000' or frame == Frame.J2000:

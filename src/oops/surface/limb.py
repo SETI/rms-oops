@@ -6,7 +6,7 @@ import numpy as np
 
 from polymath              import Scalar, Vector3
 from oops.config           import SURFACE_PHOTONS, LOGGING
-from oops.constants        import PI, TWOPI
+from oops.constants        import HALFPI, TWOPI
 from oops.surface.surface_ import Surface
 
 
@@ -32,7 +32,7 @@ class Limb(Surface):
     COORDINATE_TYPE = 'limb'
     COORDINATE_NAMES = ('longitude', 'latitude', 'elevation')
     COORDINATE_ABBREVS = ('lon', 'lat', 'z')
-    COORDINATE_RANGES = ((0, TWOPI), (-PI, PI), (None, None))
+    COORDINATE_RANGES = ((0, TWOPI), (-HALFPI, HALFPI), (None, None))
     IS_VIRTUAL = True
 
     _DEBUG = False          # Set to True for convergence testing
@@ -42,10 +42,10 @@ class Limb(Surface):
 
         Parameters:
             ground (Surface): Object relative to which limb points are to be defined. It
-                should be a Spheroid or Ellipsoid, optically using Centric or Graphic
+                should be a Spheroid or Ellipsoid, optionally using Centric or Graphic
                 coordinates.
             limits (tuple[float, float], optional): A pair of values defining the lower
-                upper limit(s) placed on `z`; values outside this range are masked.
+                and upper limits placed on `z`; values outside this range are masked.
         """
 
         if ground.COORDINATE_TYPE != 'spherical':
@@ -64,7 +64,7 @@ class Limb(Surface):
         if limits is None:
             self.unmasked = self
         else:
-            self.unmasked = Limb(self._ground, None)
+            self.unmasked = Limb(self._ground)
 
         # Unique key for intercept calculations
         self.intercept_key = ('limb',) + self._ground.intercept_key
@@ -93,8 +93,8 @@ class Limb(Surface):
                 coordinates (lon, lat) or all three (lon, lat, z) as Scalars.
             derivs (bool, optional): True to propagate any derivatives inside pos and obs
                 into the returned coordinates.
-            hints (Scalar, optional): Optionally, the value of the coefficient p such
-                that: ground + p * normal(ground) = pos; for the ground point associate
+            hints (Scalar, optional): Optionally, the value of the coefficient `p` such
+                that `ground + p * normal(ground) = pos`, for the ground point associated
                 with the position. If it is not None, the converged value of `p` is
                 appended to the returned tuple; use `hints=True` if you lack an initial
                 value but require the new value to be returned.
@@ -108,6 +108,8 @@ class Limb(Surface):
             * `lat` (Scalar): Latitude in radians.
             * `z` (Scalar): Vertical altitude in km normal to the body surface; included
               if axes == 3.
+            * `p` (Scalar): The converged coefficient; included if the input value of
+              `hints` is not None.
             * `track`: Associated point on the body surface; included if the input
               groundtrack is True.
         """
@@ -143,6 +145,9 @@ class Limb(Surface):
 
         if axes == 3:
             results += (z,)
+
+        if hints is not None:
+            results += (p,)
 
         if groundtrack:
             results += (track,)
@@ -224,7 +229,7 @@ class Limb(Surface):
                 points to the returned results.
 
         Returns:
-            tuple: Two to five values, where:
+            tuple: Two to four values, where:
 
             * `pos` (Vector3): Intercept points on the Surface relative to this surface's
               origin and frame, in km.

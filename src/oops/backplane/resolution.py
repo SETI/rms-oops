@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/backplanes/resolution.py
+# oops/backplane/resolution.py
 ##########################################################################################
 
 from oops.backplane import Backplane
@@ -59,12 +59,12 @@ def center_resolution(self, event_key, axis='u'):
 
 
 def finest_resolution(self, event_key):
-    """Projected resolution in km/pixel for the optimal direction
+    """Projected resolution in km/pixel for the optimal direction.
 
-    Determined a the intercept point on the surface.
+    Determined at the intercept point on the surface.
 
     Parameters:
-        event_key (str or tuple): Key defining the ring surface event.
+        event_key (str or tuple): Key defining the surface event.
     """
 
     self.refresh()
@@ -81,7 +81,7 @@ def coarsest_resolution(self, event_key):
     point.
 
     Parameters:
-        event_key (str or tuple): Key defining the ring surface event.
+        event_key (str or tuple): Key defining the surface event.
     """
 
     self.refresh()

@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/backplanes/ring.py
+# oops/backplane/ring.py
 ##########################################################################################
 
 import numpy as np
@@ -20,7 +20,7 @@ def ring_radius(self, event_key, rmin=None, rmax=None):
     Parameters:
         event_key (str or tuple): Key defining the ring surface event.
         rmin (optional): Minimum radius in km; None to allow it to be defined by the
-            `event_key.`
+            `event_key`.
         rmax (optional): Maximum radius in km; None to allow it to be defined by the
             `event_key`.
     """
@@ -121,15 +121,15 @@ def radial_mode(self, backplane_key, cycles, epoch, amp, peri0, speed, a0=0., dp
             possibly with other radial modes.
         cycles (float): Radial oscillations in 360 degrees of longitude.
         epoch (float): The time (seconds TDB) at which the mode parameters apply.
-        amp: Radial amplitude of the mode in km.
-        peri0: A longitude (radians) at epoch where the mode is at its radial minimum
-            at semimajor axis a0. For cycles == 0, it is the phase at epoch, where a phase
-            of 0 corresponds to the minimum ring radius, with every particle at
-            pericenter.
-        speed: Local pattern speed in radians per second, as scaled by the number of
-            cycles.
-        a0 (optional): The reference semimajor axis, used for slopes.
-        dperi_da (optional): The rate of change of pericenter with semimajor axis,
+        amp (float): Radial amplitude of the mode in km.
+        peri0 (float): A longitude (radians) at epoch where the mode is at its radial
+            minimum at semimajor axis a0. For cycles == 0, it is the phase at epoch,
+            where a phase of 0 corresponds to the minimum ring radius, with every
+            particle at pericenter.
+        speed (float): Local pattern speed in radians per second, as scaled by the
+            number of cycles.
+        a0 (float, optional): The reference semimajor axis, used for slopes.
+        dperi_da (float, optional): The rate of change of pericenter with semimajor axis,
             measured at semimajor axis a0 in radians/km.
         reference (str, optional): The reference longitude used to describe the mode; same
             options as for ring_longitude.
@@ -263,8 +263,8 @@ def ring_elevation(self, event_key, direction='obs', pole='prograde', apparent=T
     """Angle from the ring plane to the photon direction, evaluated at the ring intercept
     point.
 
-    It is equivalent to (PI/2 - incidence) if photon == 'obs', (PI/2 - emission) if photon
-    == 'sun'.
+    It is equivalent to (PI/2 - emission) if direction == 'obs', (PI/2 - incidence) if
+    direction == 'sun'.
 
     Parameters:
         event_key (str or tuple): Key defining the ring surface event. Alternatively, a
@@ -422,14 +422,14 @@ def ring_emission_angle(self, event_key, pole='sunward', apparent=True):
             inherits the mask of the given backplane array.
         pole (str, optional): One of:
 
-            * 'sunward'  for incidence < pi/2 on the illuminated face;
-            * 'observed' for incidence < pi/2 on the observed face;
-            * 'north'    for incidence < pi/2 on the IAU-defined north face;
-            * 'prograde' for incidence < pi/2 on the side of the ring plane defined by
+            * 'sunward'  for emission < pi/2 on the illuminated face;
+            * 'observed' for emission < pi/2 on the observed face;
+            * 'north'    for emission < pi/2 on the IAU-defined north face;
+            * 'prograde' for emission < pi/2 on the side of the ring plane defined by
               positive angular momentum.
 
-       apparent (bool, optional): True for the apparent angle in the surface frame; False
-            for the actual.
+        apparent (bool, optional): True for the apparent angle in the surface frame;
+            False for the actual.
     """
 
     if pole not in ('sunward', 'observed', 'north', 'prograde'):
@@ -615,10 +615,10 @@ def ring_center_emission_angle(self, event_key, pole='sunward', apparent=True):
         event_key (str or tuple): Key defining the ring surface event.
         pole (str, optional): One of:
 
-            * 'sunward'  for incidence < pi/2 on the illuminated face;
-            * 'observed' for incidence < pi/2 on the observed face;
-            * 'north'    for incidence < pi/2 on the IAU-defined north face;
-            * 'prograde' for incidence < pi/2 on the side of the ring plane defined by
+            * 'sunward'  for emission < pi/2 on the illuminated face;
+            * 'observed' for emission < pi/2 on the observed face;
+            * 'north'    for emission < pi/2 on the IAU-defined north face;
+            * 'prograde' for emission < pi/2 on the side of the ring plane defined by
               positive angular momentum.
 
         apparent (bool, optional): True for the apparent angle in the body frame; False
@@ -670,7 +670,7 @@ def ring_angular_resolution(self, event_key, units="rad"):
         event_key (str or tuple): Key defining the ring surface event. Alternatively, a
             ring_radius or radial_mode backplane key, in which case this backplane
             inherits the mask of the given backplane array.
-        units (Scalar, optional): Longitude representation; "rad" or "km".
+        units (str, optional): Longitude representation; "rad" or "km".
     """
 
     if units not in {'rad', 'km'}:
@@ -801,7 +801,7 @@ def ring_radius_in_front(self, event_key, ring_surface_key):
 
     ring_event_key = event_key[:1] + (ring_surface_key,)
     radius = self.ring_radius(ring_event_key)
-    intercepted = self.where_intercepted(event_key, tvl=False)
+    intercepted = self.where_intercepted(event_key)
     radius = radius.remask_or(intercepted.logical_not())
 
     return self.register_backplane(key, radius)

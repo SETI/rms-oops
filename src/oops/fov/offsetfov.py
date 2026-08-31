@@ -68,6 +68,7 @@ class OffsetFOV(FOV, Fittable):
 
         self.uv_offset = Pair.as_pair(params)
         self.xy_offset = self.fov.xy_from_uv(self.uv_offset + self.fov.uv_los)
+        self.uv_los = self.fov.uv_los - self.uv_offset
 
     @property
     def params(self):

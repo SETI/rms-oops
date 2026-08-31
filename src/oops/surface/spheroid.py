@@ -81,7 +81,7 @@ class Spheroid(Ellipsoid):
             * `intercept` (Vector3): Surface intercept points relative to this surface's
               origin and frame, in km. Where no intercept exists, values are masked.
             * `p` (Scalar): The converged solution such that
-              `intercept = pos + p * normal(intercept)`; included if the input value of
+              `intercept + p * normal(intercept) = pos`; included if the input value of
               `guess` is not None.
             * `hints` (Any): The input value of `hints`, included if it is not None.
         """
@@ -216,8 +216,8 @@ class Spheroid(Ellipsoid):
                 break
 
         if not converged:
-            LOGGING.warn('{type(self).__name__}.intercept_normal_to did not converge: '
-                         'iter=(count+1); change[km]={max_dp:.6g}')
+            LOGGING.warn(f'{type(self).__name__}.intercept_normal_to did not converge: '
+                         f'iter={count+1}; change[km]={max_dp*km_scale:.6g}')
 
         cept_x = pos_x / (1. + p)
         cept_z = pos_z / (1. + C * p)

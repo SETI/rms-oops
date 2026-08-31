@@ -139,7 +139,7 @@ class PolynomialFOV(FOV):
         # Reference values for precision determinations
         # The goal is full precision in pixel coordinates
         self.uv_precision = EPSILON
-        self.xy_precision = EPSILON * min(dx_du, abs(dy_dv))
+        self.xy_precision = EPSILON * min(abs(dx_du), abs(dy_dv))
 
     def __getstate__(self):
         self.refresh()
@@ -218,8 +218,9 @@ class PolynomialFOV(FOV):
 
         xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
 
-        # Transform based on which types of coeffs are given
-        if self.fast and self.coefft_uv_from_xy is not None:
+        # Transform based on which types of coeffs are given; the polynomial must be
+        # evaluated directly if there is no xy_from_uv polynomial to invert
+        if self.fast or self.coefft_xy_from_uv is None:
             duv = PolynomialFOV._eval_polynomial(xy_pair,
                                                  self.coefft_uv_from_xy,
                                                  self.coefft_duv_dx,

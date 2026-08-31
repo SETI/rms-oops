@@ -191,7 +191,7 @@ class OrbitPlane(Surface):
         if self._radii is None:
             self.unmasked = self
         else:
-            self.unmasked = OrbitPlane.__new__(type(OrbitPlane))
+            self.unmasked = OrbitPlane.__new__(type(self))
             self.unmasked.__dict__ = self.__dict__.copy()
             self.unmasked._radii = None
 
@@ -203,7 +203,8 @@ class OrbitPlane(Surface):
                 None, self._radii)
 
     def __setstate__(self, state):
-        self.__init__(*state)
+        (elements, epoch, origin, frame, path_id, radii) = state
+        self.__init__(elements, epoch, origin, frame, path_id=path_id, radii=radii)
         self.freeze()
 
     def coords_from_vector3(self, pos, *, obs=None, time=None, axes=2, derivs=False,
@@ -346,21 +347,21 @@ class OrbitPlane(Surface):
             # In an inertial, planet-centered frame:
             #
             # r = a - ae cos(lon - peri)
-            # lon = lon0 + n * (time - epoch) + 2ae sin(lon - peri)
+            # lon = lon0 + n * (time - epoch) + 2e sin(lon - peri)
             #
             # dr/dt = ae sin(lon - peri) (n - prec)
-            # dlon/dt = n + 2ae cos(n - peri) (n - prec)
+            # dlon/dt = n + 2e cos(lon - peri) (n - prec)
             #
             # In a frame rotating at rate = prec:
             #
             # dr/dt = ae sin(lon - peri) (n - prec)
-            # dlon/dt = (n - prec) + 2ae cos(lon - peri) (n - prec)
+            # dlon/dt = (n - prec) + 2e cos(lon - peri) (n - prec)
             #
             # x = r cos(lon)
             # y = r sin(lon)
             #
             # dx/dt = dr/dt * cos(lon) - r sin(lon) dlon/dt
-            # dy/dy = dr/dt * sin(lon) + r cos(lon) dlon/dt
+            # dy/dt = dr/dt * sin(lon) + r cos(lon) dlon/dt
 
             (x,y,z) = pos.to_scalars()
             x = x + self._ae         # shift origin to center of planet
@@ -370,7 +371,7 @@ class OrbitPlane(Surface):
             sin_lon_sub_peri = y/r
 
             dr_dt = sin_lon_sub_peri * (self._ae * self._n_sub_prec)
-            r_dlon_dt = r * self._n_sub_prec * (cos_lon_sub_peri * 2*self._ae + 1)
+            r_dlon_dt = r * self._n_sub_prec * (cos_lon_sub_peri * 2*self._e + 1)
 
             dx_dt = dr_dt * cos_lon_sub_peri - r_dlon_dt * sin_lon_sub_peri
             dy_dt = dr_dt * sin_lon_sub_peri + r_dlon_dt * cos_lon_sub_peri
@@ -401,7 +402,7 @@ class OrbitPlane(Surface):
         if not self._has_eccentricity:
             return anom
         else:
-            return anom + (2*self._ae) * anom.sin()
+            return anom + (2*self._e) * anom.sin()
 
     def to_mean_anomaly(self, lon):
         """The mean anomaly given an orbital longitude.
@@ -420,24 +421,24 @@ class OrbitPlane(Surface):
         if not self._has_eccentricity:
             return lon
 
-        # Solve lon = x + 2ae sin(x)
+        # Solve lon = x + 2e sin(x)
         #
         # Let
-        #   y(x) = x + 2ae sin(x) - lon
+        #   y(x) = x + 2e sin(x) - lon
         #
-        #   dy/dx = 1 + 2ae cos(x)
+        #   dy/dx = 1 + 2e cos(x)
         #
         # For x[n] as a guess at n,
         #   x[n+1] = x[n] - y(x[n]) / dy/dx
 
-        ae_x2 = 2 * self._ae
-        x = lon - ae_x2 * lon.sin()
+        e_x2 = 2 * self._e
+        x = lon - e_x2 * lon.sin()
 
         # Iterate until all improvement ceases. Should not take long
         prev_max_abs_dx = TWOPI
         max_abs_dx = PI
         while (max_abs_dx < prev_max_abs_dx):
-            dx = (lon - x - ae_x2 * x.sin()) / (x.cos() * ae_x2 + 1)
+            dx = (lon - x - e_x2 * x.sin()) / (x.cos() * e_x2 + 1)
             x += dx
 
             prev_max_abs_dx = max_abs_dx

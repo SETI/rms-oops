@@ -77,11 +77,11 @@ class LinearCoordPath(Path):
             parts.append(f'{blanks}              {coord_str}')
         parts.append(f'{blanks}              {coord_strs[-1]})')
 
-        parts.append(f'{blanks}epoch = {self._epoch},')
+        parts.append(f'{blanks}epoch = {self._epoch}')
         if self._obs_path:
-            parts.append(f'{blanks}obs = {self._obs_path.show(level-1, indent+6)}')
+            parts.append(f'{blanks}obs = {self._obs_path.show(level-1, skip+6)}')
 
-        return ',\n'.join(parts)
+        return ',\n'.join(parts) + ')'
 
     ######################################################################################
     # Serialization support

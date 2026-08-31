@@ -258,7 +258,7 @@ class Observation(Mutable):
             return (Pair.INT00, Pair.as_pair(uv_shape))
 
         # Define the new mask
-        time = Scalar.as_scalar(time, derivs=False)
+        time = Scalar.as_scalar(time, recursive=False)
         new_mask = Qube.or_(time.mask, self.cadence.time_is_outside(time).vals)
 
         # Without any mask, shapeless Pairs are OK
@@ -542,7 +542,7 @@ class Observation(Mutable):
     def delete_subfields(self):
         """Delete all the subfields of this observation."""
 
-        for key in self.subfields:
+        for key in list(self.subfields):
             del self.subfields[key]
             del self.__dict__[key]
 
@@ -862,7 +862,7 @@ class Observation(Mutable):
         if time is None:
             obs_time = self.time[0] + tfrac * (self.time[1] - self.time[0])
 
-            # Require extra at least two iterations if tfrac != 0.5
+            # Require at least two iterations if tfrac != 0.5
             if not (Scalar.as_scalar(Scalar.as_scalar(tfrac) == 0.5)).all():
                 iters = max(2, iters)
 

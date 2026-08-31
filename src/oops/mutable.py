@@ -35,7 +35,7 @@ Information about the Fittable or mutable state of all objects is maintained by 
 added attributes, which are all prefixed "_FITTABLE" or "_MUTABLE". These attributes are
 managed internally and should not be touched by the programmer.
 
-If an object could potentially depend one or more mutable sub-objects, then it may be
+If an object could potentially depend on one or more mutable sub-objects, then it may be
 necessary to define this method::
 
     _refresh(self)
@@ -185,7 +185,7 @@ def _needs_refresh_internal(obj: Any, info_memo: dict,
     """True if any internally cached information of the given object or any of its
     sub-objects needs to be refreshed.
 
-    This is the internal, recursive implementation
+    This is the internal, recursive implementation.
 
     Parameters:
         obj: Object to test.
@@ -434,7 +434,9 @@ def get_params(obj: Any) -> tuple[float, ...]:
 
     Parameters:
         obj: The object.
-        params: Parameter values to apply.
+
+    Returns:
+        The tuple of parameter values, which is empty if the object has no parameters.
     """
 
     if hasattr(obj, '_MUTABLE_param_names'):
@@ -462,7 +464,7 @@ def _get_info(obj: Any, /, memo: dict | None = None) -> _Info:
         (`is_fittable`, `is_mutable`, `is_frozen`, `mutable_names`, `unfrozen_names`,
         `versions`) where:
 
-        * `is_fittable`: True either if `obj` is Fittable.
+        * `is_fittable`: True if `obj` is Fittable.
         * `is_mutable`: True either if the `obj` is Fittable or if it contains any
           Fittable sub-objects. This is a recursive test and does not depend on the frozen
           state of any object.
@@ -697,6 +699,11 @@ def _invalidate(obj: Any, /) -> None:
 ##########################################################################################
 
 class Mutable(Oops):
+    """A mix-in class providing the mutable API as methods.
+
+    An object is "mutable" if it is Fittable or if it might contain a Fittable sub-object
+    (recursively).
+    """
 
     def refresh(self) -> bool:
         """Update any internally cached information if this object or any of its
@@ -769,8 +776,8 @@ class Mutable(Oops):
     def _version(self) -> int:
         """The version number of this object.
 
-        The version number is incremented each time an object of any of its sub-objects is
-        modified.
+        The version number is incremented each time this object or any of its sub-objects
+        is modified.
         """
 
         return version(self)

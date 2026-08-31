@@ -122,7 +122,7 @@ class BarrelFOV(FOV):
         # Reference values for precision determinations
         # The goal is full precision in pixel coordinates
         self.uv_precision = EPSILON
-        self.xy_precision = EPSILON * np.min(self.uv_scale.vals)
+        self.xy_precision = EPSILON * np.min(np.abs(self.uv_scale.vals))
 
     def __getstate__(self):
         self.refresh()
@@ -198,8 +198,9 @@ class BarrelFOV(FOV):
         true_xy = Pair.as_pair(xy_pair, recursive=derivs)
         r_true = true_xy.norm(recursive=derivs)
 
-        # Distort based on which types of coefficients are given
-        if self.fast and self.coefft_uv_from_xy is not None:
+        # Distort based on which types of coefficients are given; the polynomial must be
+        # evaluated directly if there is no xy_from_uv polynomial to invert
+        if self.fast or self.coefft_xy_from_uv is None:
             flat_over_true = BarrelFOV._eval_ratio(r_true,
                                                    self.coefft_uv_from_xy,
                                                    self.dcoefft_uv_from_xy,

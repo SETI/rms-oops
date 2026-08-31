@@ -394,14 +394,14 @@ class ReshapedCadence(Cadence):
             multiple_rows = np.any(old_tstep_min.vals[...,:-1] !=
                                    old_tstep_max.vals[...,:-1] - 1)
             incomplete_lines = ((old_tstep_min.vals[...,-1] != 0) |
-                                (old_tstep_max.vals[...,-1] != self.shape[-1]))
+                                (old_tstep_max.vals[...,-1] != self._old_shape[-1]))
             unmasked = old_tstep_min.antimask
             problems = multiple_rows & incomplete_lines & unmasked
             if np.any(problems):
                 if np.isscalar(problems):
                     timeval = time.vals
-                    minval = new_tstep_min
-                    maxval = new_tstep_max
+                    minval = old_tstep_min
+                    maxval = old_tstep_max
                 else:
                     timeval = time[problems][0]
                     minval = old_tstep_min[problems][0]

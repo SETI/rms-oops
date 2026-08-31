@@ -68,8 +68,8 @@ class TwoVectorFrame(Frame):
         skip = indent + len(name) + 1
         blanks = skip * ' '
 
-        return (f'{name}({self._reference.show(level-1, skip)},\n',
-                f'{blanks}{self._vector1.mvals}, {self._axis1},\n',
+        return (f'{name}({self._reference.show(level-1, skip)},\n'
+                f'{blanks}{self._vector1.mvals}, {self._axis1},\n'
                 f'{blanks}{self._vector2.mvals}, {self._axis2})')
 
     ######################################################################################

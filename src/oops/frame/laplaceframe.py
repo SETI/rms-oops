@@ -33,8 +33,8 @@ class LaplaceFrame(Frame):
         Parameters:
             orbit (KeplerPath or str): The KeplerPath, or the ID of the KeplerPath,
                 describing the orbit of the body for which a Laplace Plane is needed.
-            tilt (Scalar, array-like, or float): The tilt of the Laplace Plane's pole from
-                the planet's pole toward or beyond the invariable pole.
+            tilt (Scalar, array-like, or float): The tilt in radians of the Laplace
+                Plane's pole from the planet's pole toward or beyond the invariable pole.
             frame_id (str, optional): The ID under which to register this Frame; None to
                 leave this Frame unregistered. As a special case, use "+" to automatically
                 generate a Frame ID by appending "_LAPLACE" to the Path ID of `orbit` (if

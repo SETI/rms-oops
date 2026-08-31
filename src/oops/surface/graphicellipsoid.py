@@ -61,7 +61,7 @@ class GraphicEllipsoid(Ellipsoid):
 
         # Use the quick solution for the body points if hints are provided
         if isinstance(hints, (type(None), bool, np.bool_)):
-            (track, p) = self.intercept_normal_to(pos, guess=True)
+            (track, p) = self.intercept_normal_to(pos, derivs=derivs, guess=True)
         else:
             p = Scalar.as_scalar(hints, recursive=derivs)
             denom = Vector3.ONES + p * self._unsquash_sq

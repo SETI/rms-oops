@@ -26,7 +26,8 @@ class QuickPath(Path):
             quickdict (dict): A dictionary containing all the QuickPath parameters.
 
         Raises:
-            ValueError: If `path` does not have shape ().
+            ValueError: If `path` does not have shape (), if `path` is itself a QuickPath,
+                or if the interpolation fails the "path_self_check" precision test.
         """
 
         path = Path.as_path(path)
@@ -357,7 +358,7 @@ class QuickPath(Path):
         if not isinstance(quick, dict):
             return path
 
-        # Obtain the local QuickFrame dictionary
+        # Obtain the local QuickPath dictionary
         quickdict = QUICK.dictionary
         if quick:
             quickdict = quickdict.copy()
@@ -384,7 +385,7 @@ class QuickPath(Path):
             if tmin >= quickpath._tmin and tmax <= quickpath._tmax:
                 if LOGGING.quickpath_creation:
                     LOGGING.diagnostic(f'Re-using QuickPath for {path}: '
-                                       f'{tmin:.3f}, {tmax:.3f})')
+                                       f'{tmin:.3f}, {tmax:.3f}')
                 quickpath.refresh()
                 return quickpath
 
@@ -407,7 +408,7 @@ class QuickPath(Path):
         _SPEEDUP = 10.
         _MIN_SAVINGS = 0.2
 
-        # Estimate the number of Frame evaluations needed by the QuickFrame
+        # Estimate the number of Path evaluations needed by the QuickPath
         tstep = quickdict['path_time_step']
         extend = quickdict['path_time_extension']
         extras = int(quickdict['path_extra_steps'])
@@ -430,17 +431,17 @@ class QuickPath(Path):
             if savings_per_evaluation - overhead/evaluations >= _MIN_SAVINGS:
                 if LOGGING.quickpath_creation:
                     LOGGING.diagnostic(f'Extending QuickPath for {path}: '
-                                       f'{tmin:.3f}, {tmax:.3f})')
+                                       f'{tmin:.3f}, {tmax:.3f}')
                 quickpath.refresh()
                 quickpath.extend(tmin, tmax)
                 return quickpath
 
-        # Otherwise, construct a new QuickFrame
+        # Otherwise, construct a new QuickPath
         steps = (tmax - tmin + 2*extend)/tstep + 2*extras
         overhead = _OVERHEAD + steps
         if savings_per_evaluation - overhead/evaluations >= _MIN_SAVINGS:
             if LOGGING.quickpath_creation:
-                LOGGING.diagnostic(f'New QuickPath for {path}: {tmin:.3f}, {tmax:.3f})')
+                LOGGING.diagnostic(f'New QuickPath for {path}: {tmin:.3f}, {tmax:.3f}')
 
             result = QuickPath(path, tmin, tmax, quickdict)
             if len(path._quickpaths) >= quickdict['quickpath_cache_size']:

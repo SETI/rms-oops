@@ -93,9 +93,9 @@ class TrackerFrame(Frame):
         skip = indent + len(name) + 1
         blanks = skip * ' '
 
-        return (f'{name}(frame = {self._fixed_frame.show(level-1, skip)},\n',
-                f'{blanks}target = {self._target_path.show(level-1, skip)},\n',
-                f'{blanks}observer = {self._observer_path.show(level-1, skip)},\n',
+        return (f'{name}(frame = {self._fixed_frame.show(level-1, skip)},\n'
+                f'{blanks}target = {self._target_path.show(level-1, skip)},\n'
+                f'{blanks}observer = {self._observer_path.show(level-1, skip)},\n'
                 f'{blanks}epoch = {self._epoch})')
 
     ######################################################################################

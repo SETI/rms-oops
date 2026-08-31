@@ -581,7 +581,7 @@ class QuickFrame(Frame):
             if tmin >= quickframe._tmin and tmax <= quickframe._tmax:
                 if LOGGING.quickframe_creation:
                     LOGGING.diagnostic(f'Re-using QuickFrame for {frame}, '
-                                       f'{tmin:.3f}, {tmax:.3f})')
+                                       f'{tmin:.3f}, {tmax:.3f}')
                 quickframe.refresh()
                 return quickframe
 
@@ -627,7 +627,7 @@ class QuickFrame(Frame):
             if savings_per_evaluation - overhead/evaluations >= _MIN_SAVINGS:
                 if LOGGING.quickframe_creation:
                     LOGGING.diagnostic(f'Extending QuickFrame for {frame}, '
-                                       f'{tmin:.3f}, {tmax:.3f})')
+                                       f'{tmin:.3f}, {tmax:.3f}')
                 quickframe.refresh()
                 quickframe.extend(tmin, tmax)
                 return quickframe
@@ -637,7 +637,7 @@ class QuickFrame(Frame):
         overhead = _OVERHEAD + steps
         if savings_per_evaluation - overhead/evaluations >= _MIN_SAVINGS:
             if LOGGING.quickframe_creation:
-                LOGGING.diagnostic(f'New QuickFrame for {frame}: {tmin:.3f}, {tmax:.3f})')
+                LOGGING.diagnostic(f'New QuickFrame for {frame}: {tmin:.3f}, {tmax:.3f}')
 
             result = QuickFrame(frame, tmin, tmax, quick=quickdict)
             if len(frame._quickframes) >= quickdict['quickframe_cache_size']:

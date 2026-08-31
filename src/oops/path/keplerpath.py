@@ -72,10 +72,11 @@ class KeplerPath(Path, Fittable):
                 * [11, 14, ...] `dphase_dt`: rate of change of the wobble term,
                   radians/s.
 
-                Alternatively, provide a dictionary containing keys with these names (in
-                which case only one wobble term is allowed). If the elements are not
-                provided, the object remains uninitialized until `set_elements` is
-                called.
+                Alternatively, provide a dictionary with keys "a", "mean0", "n", "e",
+                "peri0", "dperi_dt", "i", "node0", and "dnode_dt", optionally followed by
+                "amp", "phase0", and "dphase_dt" (in which case only one wobble term is
+                allowed). If the elements are not provided, the object remains
+                uninitialized until `set_elements` is called.
             observer (Path or str, optional): The Path or the ID of the Path of the
                 observer.
                 If provided, then `event_at_time` returns positions relative to this
@@ -133,6 +134,9 @@ class KeplerPath(Path, Fittable):
             self._frame = Frame.J2000
             frame = Frame.J2000.wrt(self._planet.ring_frame)
             self._to_j2000 = frame.transform_at_time(self._epoch).matrix
+
+        # Used by pole_at_time() to express the ring frame's axes in J2000
+        self._frame_wrt_j2000 = self._planet.ring_frame.wrt(Frame.J2000)
 
         if elements is None:
             self._elements = None
@@ -229,7 +233,7 @@ class KeplerPath(Path, Fittable):
         skip = indent + len(name) + 1
         blanks = skip * ' '
 
-        parts = [f'{name}(body = {self._body}',
+        parts = [f'{name}(body = {self._planet}',
                  f'{blanks}epoch = {self._epoch}',
                  f'{blanks}elements = {self.params}']
         if self._observer:
@@ -438,13 +442,13 @@ class KeplerPath(Path, Fittable):
                     dy2_delem = dy_delem + dy1_delem
 
                 amp2 = np.sqrt(x2**2 + y2**2)
-                damp2_dx2 = -x2 / amp2
-                damp2_dy2 = -y2 / amp2
+                damp2_dx2 = x2 / amp2
+                damp2_dy2 = y2 / amp2
                 damp2_dt = damp2_dx2 * dx2_dt + damp2_dy2 * dy2_dt
 
                 angle2 = np.arctan2(y2, x2)
-                dangle2_dx2 =  x2 / (x2**2 + y2**2)
-                dangle2_dy2 = -y2 / (x2**2 + y2**2)
+                dangle2_dx2 = -y2 / (x2**2 + y2**2)
+                dangle2_dy2 =  x2 / (x2**2 + y2**2)
                 dangle2_dt = dangle2_dx2 * dx2_dt + dangle2_dy2 * dy2_dt
 
                 if partials:
@@ -487,7 +491,7 @@ class KeplerPath(Path, Fittable):
                 if partials:
                     dw_delem = np.zeros(partials_shape)
                     dw_delem[..., start] = cos_arg
-                    dw_delem[..., start+1] = self._amp[k] * cos_arg[k]
+                    dw_delem[..., start+1] = -self._amp[k] * sin_arg
                     dw_delem[..., start+2] = dw_delem[..., start+1] * t
 
                 if self._wobbles[k] == 'mean':
@@ -551,16 +555,14 @@ class KeplerPath(Path, Fittable):
         dcosi_dt = -sin_i * di_dt
         dsini_dt =  cos_i * di_dt
 
-        # Partials...
+        # Partials... derived via the chain rule so that any wobble contributions inside
+        # da_delem, de_delem, and di_delem are carried along
         if partials:
-            dae_delem = np.zeros(partials_shape)
-            dae_delem[..., _SEMIM] = e
-            dae_delem[..., _ECCEN] = a
+            dae_delem = (a[..., np.newaxis] * de_delem
+                         + e[..., np.newaxis] * da_delem)
 
-            dcosi_delem = np.zeros(partials_shape)
-            dsini_delem = np.zeros(partials_shape)
-            dcosi_delem[..., _INCLI] = -sin_i
-            dsini_delem[..., _INCLI] =  cos_i
+            dcosi_delem = -sin_i[..., np.newaxis] * di_delem
+            dsini_delem =  cos_i[..., np.newaxis] * di_delem
 
         ##################################################################################
         # Determine moon polar coordinates in orbit plane

@@ -97,7 +97,7 @@ class InclinedFrame(Frame):
                 f'{blanks}node = {self._node.mvals},\n'
                 f'{blanks}rate = {self._rate.mvals},\n'
                 f'{blanks}epoch = {self._epoch.mvals},\n'
-                f'{blanks}reference = {ref_str}\n'
+                f'{blanks}reference = {ref_str},\n'
                 f'{blanks}despin = {self._despin})')
 
     ######################################################################################

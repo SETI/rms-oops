@@ -70,41 +70,41 @@ class Gravity(object):
 
     def n(self, a, e=0., sin_i=0.):
         """The mean motion at semimajor axis a. Identical to omega(a)."""
-        return self.omega(a)
+        return self.omega(a, e, sin_i)
 
     def dmean_dt(self, a, e=0., sin_i=0.):
         """The mean motion at semimajor axis a. Identical to omega(a)."""
-        return self.omega(a)
+        return self.omega(a, e, sin_i)
 
     def dperi_dt(self, a, e=0., sin_i=0.):
         """The pericenter precession rate at semimajor axis a. Identical to combo(a,
         (1,-1,0)).
         """
-        return self.combo(a, (1,-1,0))
+        return self.combo(a, (1,-1,0), e, sin_i)
 
     def dnode_dt(self, a, e=0., sin_i=0.):
         """The nodal regression rate (negative) at semimajor axis a. Identical to combo(a,
         (1,0,-1)).
         """
-        return self.combo(a, (1,0,-1))
+        return self.combo(a, (1,0,-1), e, sin_i)
 
     def d_dmean_dt_da(self, a, e=0., sin_i=0.):
         """The radial derivative of the mean motion at semimajor axis a. Identical to
         domega_da(a).
         """
-        return self.domega_da(a)
+        return self.domega_da(a, e, sin_i)
 
     def d_dperi_dt_da(self, a, e=0., sin_i=0.):
         """The radial derivative of the pericenter precession rate at semimajor axis a.
         Identical to dcombo_da(a, (1,-1,0)).
         """
-        return self.dcombo_da(a, (1,-1,0))
+        return self.dcombo_da(a, (1,-1,0), e, sin_i)
 
     def d_dnode_dt_da(self, a, e=0., sin_i=0.):
         """The radial derivative of the nodal regression rate (negative) at semimajor axis
         a. Identical to dcombo_da(a, (1,0,-1)).
         """
-        return self.dcombo_da(a, (1,0,-1))
+        return self.dcombo_da(a, (1,0,-1), e, sin_i)
 
     def ilr_pattern(self, n, m, p=1):
         """The pattern speed of the m:m-p inner Lindblad resonance, given the mean motion
@@ -126,7 +126,7 @@ class Gravity(object):
 
     @staticmethod
     def lookup(key):
-        """A gravity filed from the registry given its name."""
+        """A gravity field from the registry given its name."""
         return Gravity.GRAVITY_REGISTRY[key.upper()]
 
     @staticmethod

@@ -661,7 +661,6 @@ class NullFrame(Frame):
         self._reference   = frame._wayframe
         self._origin      = frame._origin
         self._shape       = frame._shape
-        self._wayframe    = frame._wayframe
         self._primary     = self
         self._frame_id    = frame._frame_id
         self._wrt_j2000   = frame._wrt_j2000

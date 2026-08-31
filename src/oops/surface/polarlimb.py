@@ -60,6 +60,8 @@ class PolarLimb(Limb):
               measured clockwise from the projected direction of the north pole.
             * `dist`: Optional offset distance in km beyond the virtual limb plane
               along the line of sight, included if axes == 3.
+            * `p` (Scalar): The converged coefficient; included if the input value of
+              `hints` is not None.
             * `track` (Vector3): Intercept point on the surface (where z == 0); included
               if `groundtrack` is True.
         """
@@ -69,10 +71,10 @@ class PolarLimb(Limb):
 
         pos = Vector3.as_vector3(pos, recursive=derivs)
         obs = Vector3.as_vector3(obs, recursive=derivs)
+        los = pos - obs
 
         # There's a quick solution for the surface point if hints are provided
         if isinstance(hints, (type(None), bool, np.bool_)):
-            los = pos - obs
             (cept, _, p, track) = self.intercept(obs, los, derivs=derivs,
                                                  hints=True, groundtrack=True)
                 # The returned value of p speeds up the next calculation
@@ -129,6 +131,7 @@ class PolarLimb(Limb):
 
             * `pos` (Vector3): Points defined by the coordinates, relative to this
               surface's origin and frame.
+            * `hints` (Any): The input value of `hints`, included if it is not None.
             * `track` (Vector3): Associated points on the body surface; included if input
               groundtrack is True.
         """
@@ -141,13 +144,20 @@ class PolarLimb(Limb):
                                                     groundtrack=True)
 
         if len(coords) > 2:
-            d = Scalar.as_scalar(clock, recursive=derivs)
+            d = Scalar.as_scalar(coords[2], recursive=derivs)
             los = cept - obs
             cept += (d / los.norm()) * los
 
+        results = (cept,)
+        if hints is not None:
+            results += (hints,)
+
         if groundtrack:
-            return (cept, track)
-        else:
+            results += (track,)
+
+        if len(results) == 1:
             return cept
+
+        return results
 
 ##########################################################################################

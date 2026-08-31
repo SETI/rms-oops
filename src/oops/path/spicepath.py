@@ -103,7 +103,7 @@ class SpicePath(Path):
         if self._origin == Path.SSB and self._frame == Frame.J2000:
             return f'{type(self).__name__}("{self._spice_path_name}")'
 
-        parts = [f'{type(self).__name__}("{self._spice_path_name}"'
+        parts = [f'{type(self).__name__}("{self._spice_path_name}"',
                  f'{blanks}{self._origin.show(level-1, skip)}']
         if self._frame != Frame.J2000:
             parts.append(f'{blanks}{self._frame.show(level-1, skip)}')

@@ -66,7 +66,7 @@ __all__ = ['cadence', 'calibration', 'fov', 'gravity', 'frame', 'observation',
 
 try:
     from ._version import __version__
-except ImportError as err:
+except ImportError:
     __version__ = 'Version unspecified'
 
 ##########################################################################################

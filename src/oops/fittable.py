@@ -52,7 +52,7 @@ class Fittable(Oops):
         _set_params(self, params)
     where `params` is a scalar, tuple, list, or array of one or more floating-point values
     that are used to update the object. The function `set_params` of the public API uses
-    this function
+    this function.
 
     If the Fittable object maintains cached information internally, it must also have this
     method::
@@ -81,7 +81,7 @@ class Fittable(Oops):
 
         return Fittable._MUTABLE.version(self)
 
-    def set_params(self, params: Any) -> None:
+    def set_params(self, params: Any) -> bool:
         """Redefine this object using the given set of parameters.
 
         This function also refreshes the object.
@@ -153,7 +153,7 @@ class Fittable(Oops):
         positionally must override this method.
 
         Returns:
-            (Fittable): A new, unfrozen object of the same class.
+            Fittable: A new, unfrozen object of the same class.
         """
 
         state = self.__getstate__()     # this also refreshes the object

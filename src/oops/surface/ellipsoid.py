@@ -6,7 +6,7 @@ import numpy as np
 
 from polymath              import Boolean, Matrix, Scalar, Vector3
 from oops.config           import SURFACE_PHOTONS, LOGGING
-from oops.constants        import PI, TWOPI
+from oops.constants        import HALFPI, TWOPI
 from oops.frame.frame_     import Frame
 from oops.path.path_       import Path
 from oops.surface.surface_ import Surface
@@ -21,7 +21,7 @@ class Ellipsoid(Surface):
     on the assumption that a spherical body has been "squashed" along the Y- and Z-axes.
     The latitudes and longitudes defined in this manner are neither planetocentric nor
     planetographic; functions are provided to perform conversions to either choice.
-    Longitudes are measured in a right- handed manner, increasing toward the east; values
+    Longitudes are measured in a right-handed manner, increasing toward the east; values
     range from 0 to 2*pi.
 
     The third coordinate is `z`, which measures vertical distance in km along the normal
@@ -31,7 +31,7 @@ class Ellipsoid(Surface):
     COORDINATE_TYPE = 'spherical'
     COORDINATE_NAMES = ('longitude', 'latitude', 'elevation')
     COORDINATE_ABBREVS = ('lon', 'lat', 'z')
-    COORDINATE_RANGES = ((0, TWOPI), (-PI, PI), (None, None))
+    COORDINATE_RANGES = ((0, TWOPI), (-HALFPI, HALFPI), (None, None))
     IS_VIRTUAL = False
     HAS_INTERIOR = True
 
@@ -441,7 +441,7 @@ class Ellipsoid(Surface):
             * `intercept` (Vector3): Surface intercept points relative to this surface's
               origin and frame, in km. Where no intercept exists, values are masked.
             * `p` (Scalar): The converged solution such that
-              `intercept = pos + p * normal(intercept)`; included if the input value of
+              `intercept + p * normal(intercept) = pos`; included if the input value of
               `guess` is not None.
             * `hints` (Any): The input value of `hints`, included if it is not None.
         """

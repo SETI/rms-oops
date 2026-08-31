@@ -187,7 +187,7 @@ class Cadence(Mutable):
             tstep (Scalar or Pair): Time step index, which need not be integral.
             sign (int, optional): +1 for the time interval to the next time step; -1 for
                 the time interval since the previous time step.
-            remask (bool, optional): True to mask time tsteps that are out of range.
+            remask (bool, optional): True to mask tsteps that are out of range.
 
         Returns:
             Scalar or Pair: Strides in seconds.

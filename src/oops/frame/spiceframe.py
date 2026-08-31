@@ -147,8 +147,8 @@ class SpiceFrame(Frame):
         if self._reference == Frame.J2000:
             return f'{type(self).__name__}("{self._spice_frame_name}")'
 
-        return (f'{type(self).__name__}("{self._spice_frame_name}",\n',
-                f'{blanks}{self._reference.show(level-1, skip)}')
+        return (f'{type(self).__name__}("{self._spice_frame_name}",\n'
+                f'{blanks}{self._reference.show(level-1, skip)})')
 
     @staticmethod
     def _frame_code_and_name(arg):

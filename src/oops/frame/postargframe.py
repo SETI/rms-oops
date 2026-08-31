@@ -73,7 +73,7 @@ class PosTargFrame(Frame):
         blanks = skip * ' '
 
         return (f'{name}({self._xpos}, {self._ypos},\n'
-                f'{blanks}{self._reference.show(level-1, skip)}')
+                f'{blanks}{self._reference.show(level-1, skip)})')
 
     ######################################################################################
     # Serialization support

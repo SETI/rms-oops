@@ -107,7 +107,7 @@ def mxm(m1,m2):
              np.asarray(m2, dtype=np.float64)[..., _ORDER2, _ORDER3])
 
     # Note that m1 and m2 need not have the same shape, as long as they
-    # broadcast to the same shape. For purposes of this illustation, we neglect
+    # broadcast to the same shape. For purposes of this illustration, we neglect
     # any leading axes, so m1 and m2 are just 3x3 matrices.
     #
     # m1[_ORDER1, _ORDER2] = is a 1-D array with 27 elements:

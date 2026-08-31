@@ -114,7 +114,7 @@ class MultiPath(Path):
         # Create the event object
         pos = np.empty(time.shape + (3,))
         vel = np.empty(time.shape + (3,))
-        mask = np.empty(time.shape)
+        mask = np.empty(time.shape, dtype=bool)
 
         for (k, path) in enumerate(self._paths):
             if np.all(time.mask[..., k]):
@@ -152,9 +152,9 @@ class MultiPath(Path):
         # Broadcast everything to the same shape
         time = Qube.broadcast(Scalar.as_scalar(time), self._shape)[0]
 
-        new_paths = np.empty(time.shape, dtype='object')
+        new_paths = np.empty(self._shape, dtype='object')
         for k, path in np.ndenumerate(self._input_paths):
-            new_paths[k] = path.quick_path(time[..., k], quick=quick)
+            new_paths[k] = Path.as_path(path).quick_path(time[..., k], quick=quick)
 
         return MultiPath(new_paths, self._origin, self._frame)
 

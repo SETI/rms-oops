@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/backplanes/where.py
+# oops/backplane/where.py
 ##########################################################################################
 
 from polymath       import Boolean, Scalar
@@ -46,11 +46,12 @@ def where_outside_shadow(self, event_key, surface_key, tvl=False):
 
 
 def _where_inside_or_outside_shadow(self, event_key, surface_key, tvl, inside):
+    """Internal method implementing where_inside_shadow and where_outside_shadow."""
 
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     if len(event_key) != 2:
-        raise ValueError('invalid event key for shadowing: ', event_key)
+        raise ValueError('invalid event key for shadowing: ' + repr(event_key))
 
     surface_key = surface_key.upper()
     if inside:
@@ -88,12 +89,12 @@ def _where_inside_or_outside_shadow(self, event_key, surface_key, tvl, inside):
 
 
 def where_in_front(self, event_key, surface_key, tvl=False):
-    """A mask where the first surface is in not obscured by the second surface.
+    """A mask where the first surface is not obscured by the second surface.
 
     This is where the back_body is either further away than the front body or not
     intercepted at all.
 
-    If tvl is True, this uses the mask uses three-valued logic, where locations outside
+    If tvl is True, this mask uses three-valued logic, where locations outside
     the first surface are masked; otherwise, they are False.
     """
 
@@ -103,7 +104,7 @@ def where_in_front(self, event_key, surface_key, tvl=False):
 def where_in_back(self, event_key, surface_key, tvl=False):
     """A mask where the first surface is behind (obscured by) the second surface.
 
-    If tvl is True, this uses the mask uses three-valued logic, where locations outside
+    If tvl is True, this mask uses three-valued logic, where locations outside
     the first surface are masked; otherwise, they are False.
     """
 
@@ -112,6 +113,7 @@ def where_in_back(self, event_key, surface_key, tvl=False):
 
 
 def _where_in_front_or_in_back(self, event_key, surface_key, tvl, in_front):
+    """Internal method implementing where_in_front and where_in_back."""
 
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
@@ -151,7 +153,7 @@ def _where_in_front_or_in_back(self, event_key, surface_key, tvl, in_front):
 def where_sunward(self, event_key, tvl=False):
     """A mask where the surface of a body is facing toward the Sun.
 
-    If tvl is True, this uses the mask uses three-valued logic, where locations outside
+    If tvl is True, this mask uses three-valued logic, where locations outside
     the surface are masked; otherwise, they are False.
     """
 
@@ -159,9 +161,9 @@ def where_sunward(self, event_key, tvl=False):
 
 
 def where_antisunward(self, event_key, tvl=False):
-    """A mask where the surface of a body is facing away fron the Sun.
+    """A mask where the surface of a body is facing away from the Sun.
 
-    If tvl is True, this uses the mask uses three-valued logic, where locations outside
+    If tvl is True, this mask uses three-valued logic, where locations outside
     the surface are masked; otherwise, they are False.
     """
 
@@ -169,6 +171,7 @@ def where_antisunward(self, event_key, tvl=False):
 
 
 def _where_sunward_or_antisunward(self, event_key, tvl, sunward):
+    """Internal method implementing where_sunward and where_antisunward."""
 
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
@@ -206,7 +209,7 @@ def _where_sunward_or_antisunward(self, event_key, tvl, sunward):
 def where_inside(self, event_key, surface_key, tvl=False):
     """A mask where the first surface is interior to the second surface.
 
-    If tvl is True, this uses the mask uses three-valued logic, where locations outside
+    If tvl is True, this mask uses three-valued logic, where locations outside
     the first surface are masked; otherwise, they are False.
     """
 
@@ -217,7 +220,7 @@ def where_inside(self, event_key, surface_key, tvl=False):
 def where_outside(self, event_key, surface_key, tvl=False):
     """A mask where the first surface is exterior to the second surface.
 
-    If tvl is True, this uses the mask uses three-valued logic, where locations outside
+    If tvl is True, this mask uses three-valued logic, where locations outside
     the surface are masked; otherwise, they are False.
     """
 
@@ -226,12 +229,13 @@ def where_outside(self, event_key, surface_key, tvl=False):
 
 
 def _where_inside_or_outside(self, event_key, surface_key, tvl, inside):
+    """Internal method implementing where_inside and where_outside."""
 
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     if len(event_key) != 2:
-        raise ValueError('invalid event key for inside/outside calculations: ',
-                         event_key)
+        raise ValueError('invalid event key for inside/outside calculations: '
+                         + repr(event_key))
 
     surface_key = surface_key.upper()
     if inside:
@@ -243,8 +247,8 @@ def _where_inside_or_outside(self, event_key, surface_key, tvl, inside):
 
         # Check positions with respect to the surface interior
         surface = Backplane.get_surface(surface_key)
+        event = self.get_surface_event(event_key)
         if surface.HAS_INTERIOR:
-            event = self.get_surface_event(event_key)
             surface_pos = event.wrt(surface.origin, surface.frame).pos
             is_inside = surface.position_is_inside(surface_pos, obs=self.obs,
                                                                 time=self.time)

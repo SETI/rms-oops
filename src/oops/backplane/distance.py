@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/backplanes/distance.py
+# oops/backplane/distance.py
 ##########################################################################################
 
 from oops.backplane import Backplane
@@ -84,9 +84,9 @@ def center_distance(self, event_key, direction='dep'):
             photon.
     """
 
-    map = {'arr':'arr', 'sun':'arr', 'dep':'dep', 'obs':'dep'}
+    directions = {'arr':'arr', 'sun':'arr', 'dep':'dep', 'obs':'dep'}
     gridless_key = Backplane.gridless_event_key(event_key)
-    return self.distance(gridless_key, direction=map[direction])
+    return self.distance(gridless_key, direction=directions[direction])
 
 
 def center_light_time(self, event_key, direction='dep'):
@@ -94,13 +94,14 @@ def center_light_time(self, event_key, direction='dep'):
 
     Parameters:
         event_key (str or tuple): Key defining the event at the body's path.
-        direction (str, optional): 'arr' or 'sun' to return the distance traveled by an
-            arriving photon; 'dep' or 'obs' to return the distance traveled by a departing
+        direction (str, optional): 'arr' or 'sun' to return the travel time of an
+            arriving photon; 'dep' or 'obs' to return the travel time of a departing
             photon.
     """
 
+    directions = {'arr':'arr', 'sun':'arr', 'dep':'dep', 'obs':'dep'}
     gridless_key = Backplane.gridless_event_key(event_key)
-    return self.light_time(gridless_key, direction=direction)
+    return self.light_time(gridless_key, direction=directions[direction])
 
 
 def center_time(self, event_key):

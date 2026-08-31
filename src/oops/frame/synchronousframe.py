@@ -64,12 +64,13 @@ class SynchronousFrame(Frame):
     def _show(self, level, indent=0):
         name = type(self).__name__
         skip = indent + len(name) + 1
+        blanks = skip * ' '
 
         if self._input_planet_path is None:
             return f'{name}({self._orbit_path.show(level-1, skip)})'
 
         return (f'{name}({self._orbit_path.show(level-1, skip)},\n'
-                f'{name}({self._planet_path.show(level-1, skip)})')
+                f'{blanks}{self._planet_path.show(level-1, skip)})')
 
     ######################################################################################
     # Serialization support

@@ -79,10 +79,12 @@ class Ansa(Surface):
         self.refresh()
         return (Path.as_primary_path(self.origin),
                 Frame.as_primary_frame(self.frame),
-                self._gravity, self._state_ringplane, tuple(self._radii))
+                self._gravity, self._state_ringplane,
+                None if self._radii is None else tuple(self._radii))
 
     def __setstate__(self, state):
-        self.__init__(*state)
+        (origin, frame, gravity, ringplane, radii) = state
+        self.__init__(origin, frame, gravity=gravity, ringplane=ringplane, radii=radii)
         self.freeze()
 
     @staticmethod
@@ -186,11 +188,16 @@ class Ansa(Surface):
             phi = (rabs / obs_xy).arccos()
             theta = sign*lon - phi
             if self._radii is not None:
-                theta.remask(r.mask)
+                theta = theta.remask(r.mask)
 
-            return (r, pos_z, theta)
+            results = (r, pos_z, theta)
+        else:
+            results = (r, pos_z)
 
-        return (r, pos_z)
+        if hints is not None:
+            results += (hints,)
+
+        return results
 
     def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
                             hints=None):
