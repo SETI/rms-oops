@@ -2,11 +2,32 @@
 # programs/gold_master/distance.py
 ##########################################################################################
 
+"""Gold master tests of the distance, light time, and event time backplanes.
+"""
+
 import numpy as np
 
 from programs.gold_master import register_test_suite
 
 def distance_test_suite(bpt):
+    """Test the distance backplanes of every body and ring.
+
+    For each surface, the distance and light time to the observer, the distance and light
+    time from the Sun, the corresponding values at the surface center, and the event time
+    are compared to their gold masters. For each planet/ring pair, the center distances of
+    the planet and of its ring are confirmed to be equal, because a ring is centered on
+    its planet.
+
+    If bpt.derivs is True, the analytic d/du and d/dv derivatives of the distance are also
+    compared against numerical derivatives formed from the four backplanes offset in u and
+    v by half of bpt.duv. Those comparisons use the median absolute difference, and are
+    skipped where the numerical difference is entirely masked.
+
+    Parameters:
+        bpt (BackplaneTest): The gold master test object, which provides the Backplane to
+            evaluate, the lists of surface names to test, and the gmtest() and compare()
+            methods that log each result.
+    """
 
     bp = bpt.backplane
     for name in bpt.body_names + bpt.ring_names:

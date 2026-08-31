@@ -2,10 +2,31 @@
 # programs/gold_master/where.py
 ##########################################################################################
 
+"""Gold master tests of the boolean backplanes, which identify the pixels satisfying a
+geometric or lighting condition.
+"""
+
 from polymath         import Scalar
 from programs.gold_master import register_test_suite
 
 def where_test_suite(bpt):
+    """Test the boolean backplanes of every body, ring, and planet/ring pair.
+
+    For each body, the intercepted, sunward, and anti-sunward masks are compared to their
+    gold masters; the sunward and anti-sunward masks are confirmed to partition the
+    intercepted mask and to agree with the incidence angle falling below or above 90
+    degrees; and the intercept mask is confirmed to match the same array obtained through
+    evaluate(). For each planet/ring pair, the in-front, behind, shadowed, and unshadowed
+    masks are compared to their gold masters and confirmed to partition the intercept
+    mask, in both orders; where the ring is an unmasked ring, the mask of the ring inside
+    the planet is also compared. For each ring, the intercepted, sunward, and
+    anti-sunward masks are compared, and no pixel is permitted to have a negative radius.
+
+    Parameters:
+        bpt (BackplaneTest): The gold master test object, which provides the Backplane to
+            evaluate, the lists of surface names to test, and the gmtest() and compare()
+            methods that log each result.
+    """
 
     bp = bpt.backplane
     for name in bpt.body_names:

@@ -2,6 +2,10 @@
 # programs/gold_master/ring.py: Ring backplanes
 ##########################################################################################
 
+"""Gold master tests of the ring backplanes: radius, longitude, azimuth, elevation, and
+the ring lighting angles under each pole convention.
+"""
+
 import numpy as np
 
 from polymath         import Scalar
@@ -9,6 +13,39 @@ from oops.constants   import DPR
 from programs.gold_master import register_test_suite
 
 def ring_test_suite(bpt):
+    """Test the ring backplanes of every planet/ring pair.
+
+    The ring radius and its radial and angular resolutions are compared to their gold
+    masters, as are the ring longitudes relative to the First Point of Aries, the
+    ascending node, the observer, and the Sun, the azimuths and elevations toward the
+    observer and the Sun in both their apparent and actual forms, and the sub-observer and
+    sub-solar longitudes. The longitudes relative to the observer and to the observer hour
+    angle are confirmed to differ by 180 degrees, as are those relative to the Sun and the
+    solar hour angle; the sub-observer longitude relative to the observer and the
+    sub-solar longitude relative to the Sun are each confirmed to be zero.
+
+    The incidence and emission angles are compared under the sunward, north, prograde, and
+    observed pole conventions. The sunward incidence angle and the observed emission angle
+    are confirmed not to exceed 90 degrees, each is confirmed to be the complement of the
+    corresponding elevation, and each is confirmed to match the generic lighting angle of
+    the same surface. The north and prograde conventions are confirmed to agree for
+    Jupiter, Saturn, and Neptune, and to be supplementary for Uranus, whose rings orbit
+    retrograde.
+
+    For Saturn only, the radial mode machinery is exercised: a mode is imposed on a
+    restricted radius backplane, then canceled by an equal and opposite mode, and the
+    result is confirmed to reproduce the modeless radius.
+
+    If bpt.derivs is True, the analytic d/du and d/dv derivatives of the radius,
+    longitude, and azimuth are also compared against numerical derivatives formed from the
+    four backplanes offset in u and v by half of bpt.duv. The angular comparisons use the
+    median absolute difference and are wrapped into the range -180 to 180 degrees.
+
+    Parameters:
+        bpt (BackplaneTest): The gold master test object, which provides the Backplane to
+            evaluate, the lists of ring names and planet/ring pairs to test, and the
+            gmtest() and compare() methods that log each result.
+    """
 
     bp = bpt.backplane
     for (planet, name) in bpt.planet_ring_pairs:

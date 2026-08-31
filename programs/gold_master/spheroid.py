@@ -2,6 +2,10 @@
 # programs/gold_master/spheroid.py
 ##########################################################################################
 
+"""Gold master tests of the surface coordinate backplanes of a spheroidal or ellipsoidal
+body: longitude, latitude, and the sub-observer and sub-solar points.
+"""
+
 import numpy as np
 
 from polymath         import Scalar
@@ -10,6 +14,33 @@ from oops.constants   import DPR
 from programs.gold_master import register_test_suite
 
 def spheroid_test_suite(bpt):
+    """Test the surface coordinate backplanes of every body and limb.
+
+    Longitudes are compared to their gold masters relative to the IAU prime meridian, the
+    observer, the observer hour angle, the Sun, and the solar hour angle, and in the
+    eastward direction; latitudes are compared in both their planetocentric and
+    planetographic forms. Longitude limits are scaled by 1/cos(lat), because meridians
+    converge toward the poles, and limb tests are given a larger shift radius to suppress
+    false positives.
+
+    For each body, the sub-observer and sub-solar longitudes and latitudes are also
+    compared to their gold masters. The sub-observer longitude relative to the observer
+    and the sub-solar longitude relative to the Sun are each confirmed to be zero, because
+    those references are defined by those points. A longitude backplane of a body outside
+    the field of view is evaluated once, to confirm that a fully masked backplane behaves
+    correctly.
+
+    If bpt.derivs is True, the analytic d/du and d/dv derivatives of the longitude and
+    latitude are also compared against numerical derivatives formed from the four
+    backplanes offset in u and v by half of bpt.duv. Those comparisons use the median
+    absolute difference, and longitude differences are wrapped into the range -180 to 180
+    degrees before comparison.
+
+    Parameters:
+        bpt (BackplaneTest): The gold master test object, which provides the Backplane to
+            evaluate, the lists of surface names to test, and the gmtest() and compare()
+            methods that log each result.
+    """
 
     bp = bpt.backplane
     for name in bpt.body_names + bpt.limb_names:

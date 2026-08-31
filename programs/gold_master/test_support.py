@@ -2,6 +2,14 @@
 # programs/gold_master/test_support.py
 ##########################################################################################
 
+"""File paths used by the gold master tests.
+
+Defines the location from which gold master files are read and the location to which
+newly generated backplane arrays are written, based on the environment variables
+$OOPS_RESOURCES, $OOPS_GOLD_MASTER_PATH, and $OOPS_BACKPLANE_OUTPUT_PATH. Any of these
+may name a cloud resource such as gs://rms-oops-resources/gold_master.
+"""
+
 import os
 from oops.unittester_support import (OOPS_RESOURCES,
                                      TEST_DATA_FILECACHE,

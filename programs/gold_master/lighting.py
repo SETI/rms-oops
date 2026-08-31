@@ -2,6 +2,10 @@
 # programs/gold_master/lighting.py
 ##########################################################################################
 
+"""Gold master tests of the lighting geometry backplanes and of the photometric surface
+laws derived from them.
+"""
+
 import numpy as np
 
 from polymath         import Scalar
@@ -10,6 +14,29 @@ from oops.constants   import DPR
 from programs.gold_master import register_test_suite
 
 def lighting_test_suite(bpt):
+    """Test the lighting angle backplanes of every body and ring.
+
+    For each surface, the phase, incidence, and emission angles are compared to their gold
+    masters in both their actual and apparent forms, as are the phase angles at the
+    surface center. The apparent and actual forms are confirmed to agree to within 0.1
+    degrees, which is the scale of stellar aberration, and the phase and scattering angles
+    are confirmed to sum to 180 degrees. The incidence and emission angles at the center
+    are tested for rings. Each body is also evaluated as a Lambert law, a Minnaert law,
+    and a Lommel-Seeliger law.
+
+    If bpt.derivs is True, the analytic d/du and d/dv derivatives of the incidence,
+    emission, and phase angles are also compared against numerical derivatives formed from
+    the four backplanes offset in u and v by half of bpt.duv. Those comparisons use the
+    median absolute difference. For bodies, the tolerance is derived from the projected
+    surface scale at the 95th percentile, because that scale diverges near the limb; for
+    rings, it is derived from the full range of the angle across the field of view,
+    because the variation across a ring is very small.
+
+    Parameters:
+        bpt (BackplaneTest): The gold master test object, which provides the Backplane to
+            evaluate, the lists of surface names to test, and the gmtest() and compare()
+            methods that log each result.
+    """
 
     bp = bpt.backplane
     for name in bpt.body_names + bpt.ring_names:

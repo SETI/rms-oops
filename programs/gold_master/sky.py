@@ -2,6 +2,10 @@
 # programs/gold_master/sky.py: Sky plane (celestial coordinates) backplanes
 ##########################################################################################
 
+"""Gold master tests of the sky plane backplanes, which give the celestial coordinates
+and orientation of each line of sight.
+"""
+
 import numpy as np
 
 from polymath         import Scalar
@@ -9,6 +13,26 @@ from oops.constants   import DPR
 from programs.gold_master import register_test_suite
 
 def sky_test_suite(bpt):
+    """Test the celestial coordinate backplanes.
+
+    The right ascension and declination are compared to their gold masters in both their
+    actual and apparent forms, and the two forms are confirmed to agree to within 0.1
+    degrees, which is the scale of stellar aberration. The celestial north and east
+    angles are compared to their gold masters and confirmed to differ by 90 degrees. The
+    same right ascension and declination tests are then repeated at the center of each
+    body. Right ascension limits are scaled by 1/cos(dec), because lines of right
+    ascension converge toward the poles.
+
+    If bpt.derivs is True, the analytic d/du and d/dv derivatives of the right ascension
+    and declination are also compared against numerical derivatives formed from the four
+    backplanes offset in u and v by half of bpt.duv. The right ascension differences are
+    wrapped into the range -180 to 180 degrees before comparison.
+
+    Parameters:
+        bpt (BackplaneTest): The gold master test object, which provides the Backplane to
+            evaluate, the list of body names to test, and the gmtest() and compare()
+            methods that log each result.
+    """
 
     bp = bpt.backplane
 

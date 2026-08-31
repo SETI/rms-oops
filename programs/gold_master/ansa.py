@@ -2,12 +2,33 @@
 # programs/gold_master/ansa.py
 ##########################################################################################
 
+"""Gold master tests of the ansa backplanes, which describe a ring plane as seen edge-on
+at the ring's projected extremities.
+"""
+
 import numpy as np
 
 from polymath         import Scalar
 from programs.gold_master import register_test_suite
 
 def ansa_test_suite(bpt):
+    """Test the ansa backplanes of every ring.
+
+    The ansa radius, altitude, and radial and vertical resolutions are compared to their
+    gold masters, as are the ansa longitudes relative to the ascending node, the First
+    Point of Aries, the observer, and the Sun. The longitudes relative to the observer
+    and to the observer hour angle are confirmed to differ by 180 degrees, as are those
+    relative to the Sun and the solar hour angle.
+
+    If bpt.derivs is True, the analytic d/du and d/dv derivatives of the radius and
+    altitude are also compared against numerical derivatives formed from the four
+    backplanes offset in u and v by half of bpt.duv.
+
+    Parameters:
+        bpt (BackplaneTest): The gold master test object, which provides the Backplane to
+            evaluate, the list of ansa names to test, and the gmtest() and compare()
+            methods that log each result.
+    """
 
     bp = bpt.backplane
     for name in bpt.ansa_names:

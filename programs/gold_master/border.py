@@ -2,9 +2,30 @@
 # programs/gold_master/border.py
 ##########################################################################################
 
+"""Gold master tests of the border backplanes, which identify the pixels along the edge
+of a mask or along a boundary in the values of another backplane.
+"""
+
 from programs.gold_master import register_test_suite
 
 def border_test_suite(bpt):
+    """Test the border backplanes of every body and ring.
+
+    For each body, the interior and exterior borders of the intercept mask are compared
+    to their gold masters, and the interior border is confirmed to fall inside that mask
+    while the exterior border falls outside it. For each ring, the borders below, above,
+    and atop a radius of 100,000 km are compared to their gold masters; radii along the
+    lower and upper borders are confirmed to fall on the correct side of 100,000 km, and
+    the border atop that radius is confirmed to overlap the union of the other two.
+
+    Border comparisons use method='border', for which the radius value is expressed in
+    undersampled rather than original pixels.
+
+    Parameters:
+        bpt (BackplaneTest): The gold master test object, which provides the Backplane to
+            evaluate, the lists of surface names to test, and the gmtest() and compare()
+            methods that log each result.
+    """
 
     bp = bpt.backplane
 

@@ -2,11 +2,33 @@
 # programs/gold_master/limb.py
 ##########################################################################################
 
+"""Gold master tests of the limb backplanes, which describe the atmosphere along a body's
+limb rather than the body's solid surface.
+"""
+
 import numpy as np
 
 from programs.gold_master import register_test_suite
 
 def limb_test_suite(bpt):
+    """Test the limb backplanes of every body.
+
+    The limb altitude and clock angle are compared to their gold masters, and the limb
+    longitude and latitude are confirmed to match the generic surface longitude and
+    latitude. An altitude backplane restricted to the range 0 to 80,000 km is compared to
+    its gold master, confirmed to equal the unrestricted altitude where it is unmasked,
+    confirmed not to exceed 80,000 km, and its mask is confirmed to propagate into the
+    longitude and latitude derived from it.
+
+    If bpt.derivs is True, the analytic d/du and d/dv derivatives of the altitude and
+    clock angle are also compared against numerical derivatives formed from the four
+    backplanes offset in u and v by half of bpt.duv.
+
+    Parameters:
+        bpt (BackplaneTest): The gold master test object, which provides the Backplane to
+            evaluate, the list of limb names to test, and the gmtest() and compare()
+            methods that log each result.
+    """
 
     bp = bpt.backplane
     for name in bpt.limb_names:

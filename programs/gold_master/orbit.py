@@ -2,9 +2,24 @@
 # programs/gold_master/orbit.py
 ##########################################################################################
 
+"""Gold master tests of the orbit longitude backplane, which describes a moon's position
+within its own orbit about its primary.
+"""
+
 from programs.gold_master import register_test_suite
 
 def orbit_test_suite(bpt):
+    """Test the orbit longitude of every moon against its gold master.
+
+    Longitudes are measured relative to each of the six supported references: the
+    observer, the observer hour angle, the Sun, the solar hour angle, the First Point of
+    Aries, and the ascending node. All are compared modulo 360 degrees.
+
+    Parameters:
+        bpt (BackplaneTest): The gold master test object, which provides the Backplane to
+            evaluate, the list of planet/moon pairs to test, and the gmtest() method that
+            logs each result.
+    """
 
     bp = bpt.backplane
     for (_, name) in bpt.planet_moon_pairs:

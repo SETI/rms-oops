@@ -154,10 +154,10 @@ from oops.constants import DPR
 from polymath       import Boolean, Pair, Qube, Scalar
 
 from programs.gold_master.test_support import (BACKPLANE_OUTPUT_PREFIX,
-                                           GOLD_MASTER_PREFIX,
-                                           OOPS_BACKPLANE_OUTPUT_PATH,
-                                           TEST_DATA_FILECACHE,
-                                           TEST_DATA_PREFIX)
+                                               GOLD_MASTER_PREFIX,
+                                               OOPS_BACKPLANE_OUTPUT_PATH,
+                                               TEST_DATA_FILECACHE,
+                                               TEST_DATA_PREFIX)
 
 __all__ = ['set_default_obs', 'define_standard_obs', 'set_default_args',
            'override', 'execute_as_command', 'execute_as_pytest', 'run_tests',
@@ -171,58 +171,53 @@ __all__ = ['set_default_obs', 'define_standard_obs', 'set_default_args',
 # This is a dictionary test name -> key inputs for test
 STANDARD_OBS_INFO = {}
 
-def set_default_obs(obspath, index, planets, moons=[], rings=[], kwargs={}):
-    """Set the details of the default observation to be used for the gold master
-    test.
+def set_default_obs(obspath, index, planets, moons=(), rings=(), kwargs=None):
+    """Set the details of the default observation to be used for the gold master test.
 
-    These are the default observation file path and module to use if they are
-    not specified in the command line.
+    These are the default observation file path and module to use if they are not
+    specified in the command line.
 
-    The specified planets, moons, and rings are used as the defaults when the
-    observation is unspecified, but can be overridden at the command line.
+    The specified planets, moons, and rings are used as the defaults when the observation
+    is unspecified, but can be overridden at the command line.
 
-    Options:
-        obspath         file path to the default data object to be used.
-        index           index to apply if from_file returns a list. If None,
-                        backplanes will be generated for every Observation
-                        returned by from_file.
-        planets         name of the default planet, or list of planet names.
-        moons           name of the default moon, if any, or list of moon names.
-        rings           name of the default ring, if any, or list of ring names.
-                        Backplane arrays are always generated for the full ring
-                        plane of the specified planet.
-        kwargs          an optional dictionary of keyword arguments to be passed
-                        to from_file.
+    Parameters:
+        obspath (Path or str): File path to the default data object to be used.
+        index (int, tuple[int], or None): The index to apply if `from_file` returns a
+            list. If None, backplanes will be generated for every Observation returned by
+            `from_file`.
+        planets (str or list[str]): Name(s) of the default planet or planets.
+        moons (str or list[str], optional): Name(s) of the default moon or moons.
+        rings (str or list[str], optional): Name(s) of the default ring or rings, if any.
+            Backplane arrays are always generated for the full ring plane of the specified
+            planet.
+        kwargs (dict, optional): Any keyword arguments to be passed to `from_file`.
     """
 
-    define_standard_obs('default', obspath=obspath, index=index,
-                                   planets=planets, moons=moons, rings=rings,
-                                   kwargs=kwargs)
+    define_standard_obs('default', obspath=obspath, index=index, planets=planets,
+                                   moons=moons, rings=rings, kwargs=kwargs)
 
-def define_standard_obs(obsname, obspath, index=None, *, planets=[], moons=[],
-                        rings=[], kwargs={}):
+def define_standard_obs(obsname, obspath, index=None, *, planets=(), moons=(),
+                        rings=(), kwargs=None):
     """Set the details of a standard gold master test.
 
-    These are the observation file path and module to use when a test is
-    identified by name.
+    These are the observation file path and module to use when a test is identified by
+    name.
 
-    The specified planets, moons, and rings are used as the defaults when the
-    observation is unspecified, but can be overridden at the command line.
+    The specified planets, moons, and rings are used as the defaults when the observation
+    is unspecified, but can be overridden at the command line.
 
-    Options:
-        obsname         name given for this observation.
-        obspath         file path to the default data object to be used.
-        index           index to apply if from_file returns a list. If None,
-                        backplanes will be generated for every Observation
-                        returned by from_file.
-        planets         name of the default planet, or list of planet names.
-        moons           optional name of the default moon, if any, or list of
-                        moon names.
-        rings           optional name of the default ring, if any, or list of
-                        ring names. Backplane arrays are always generated for
-                        the full ring plane of the specified planet.
-        kwargs          an optional dictionary of keyword arguments to be passed
-                        to from_file.
+    Parameters:
+        obsname (str): Name given for this observation.
+        obspath (Path or str): File path to the default data object to be used.
+        index (int, tuple[int], or None): The index to apply if `from_file` returns a
+            list. If None, backplanes will be generated for every Observation returned by
+            `from_file`.
+        planets (str or list[str]): Name(s) of the default planet or planets.
+        moons (str or list[str], optional): Name(s) of the default moon or moons.
+        rings (str or list[str], optional): Name(s) of the default ring or rings, if any.
+            Backplane arrays are always generated for the full ring plane of the specified
+            planet.
+        kwargs (dict, optional): Any keyword arguments to be passed to `from_file`.
     """
 
     global STANDARD_OBS_INFO
@@ -240,12 +235,12 @@ def define_standard_obs(obsname, obspath, index=None, *, planets=[], moons=[],
     STANDARD_OBS_INFO[obsname]['planets'] = planets
     STANDARD_OBS_INFO[obsname]['moons']   = moons
     STANDARD_OBS_INFO[obsname]['rings']   = rings
-    STANDARD_OBS_INFO[obsname]['kwargs']  = kwargs
+    STANDARD_OBS_INFO[obsname]['kwargs']  = kwargs or {}
 
 ##########################################################################################
-# The "default defaults" are defined here. A call to set_default_args() can be
-# used to replace them for some specific test. These defaults are required to be
-# identical for all standard observations.
+# The "default defaults" are defined here. A call to set_default_args() can be used to
+# replace them for some specific test. These defaults are required to be identical for all
+# standard observations.
 ##########################################################################################
 
 DEFAULTS = {
@@ -273,46 +268,62 @@ DEFAULTS = {
     'summary'       : False
 }
 
-# Note that default values of output, convergence, diagnostics, internals,
-# performance, and platform cannot be overridden here.
+# Note that default values of output, convergence, diagnostics, internals, performance,
+# and platform cannot be overridden here.
 
 def set_default_args(**options):
     """Set the default command-line arguments for a gold master test.
 
-    Options:
-        planets         name(s) of the planet(s) to use if if this run does not
-                        employ a standard observation.
-        moons           name(s) of the moon(s) to use if if this run does not
-                        employ a standard observation.
-        rings           name(s) of the ring(s) to use if if this run does not
-                        employ a standard observation.
-        module          Name of the module containing the "from_file" method,
-                        e.g., "hosts.cassini.iss".
-        task            name of the default test to perform, one of "preview",
-                        "compare", and "adopt"; default is "compare".
-        tolerance       factor to apply to the defined error allowances for all
-                        backplane arrays; default 1.
-        radius          allowed radius in pixels for a possible spatial offset
-                        between the gold master and the test array; default 1.
-        ignore_missing  True to raise a warning on any missing gold masters;
-                        False to raise an error. Default is False.
-        suite           name or names of the default test suite(s) to run; use
-                        [] (the default) to include all test suites.
-        du, dv          pixel offsets to apply to the origin of the meshgrid,
-                        for testing sensitivity to pointing offsets; default 0.
-        derivs          True to include the unit tests of the derivatives, False
-                        otherwise.
-        undersample     undersample factor for backplane tests and browse
-                        images; default 16.
-        inventory       True to use an inventory when generating backplanes.
-        border          Size of border for inventory; default 0.
-        browse          True to save browse images; default True.
-        zoom            zoom factor for browse images; default 1.
-        browse_format   browse image format, one of "png", "jpg", or "tiff".
-        verbose         True to print output to the terminal by default.
-        log             True to save a log file by default.
-        level           Minimum level for messages to be logged: "debug",
-                        "info", "warning", "error", or an integer 1-30.
+    Each option is given as a keyword argument and replaces the matching default for
+    subsequent tests. An unrecognized keyword is stored but never read.
+
+    Parameters:
+        planets (str or list[str], optional): Name(s) of the planet(s) to use if this
+            run does not employ a standard observation.
+        moons (str or list[str], optional): Name(s) of the moon(s) to use if this run
+            does not employ a standard observation.
+        rings (str or list[str], optional): Name(s) of the ring(s) to use if this run
+            does not employ a standard observation.
+        module (str): Name of the module containing the `from_file` method, e.g.,
+            "`hosts.cassini.iss`".
+        task (str, optional): Name of the default test to perform, one of "preview",
+            "compare", and "adopt"; default is "compare".
+        tolerance (float, optional): Factor to apply to the defined error allowances for
+            all backplane arrays; default 1.
+        radius (float, optional): Allowed radius in pixels for a possible spatial offset
+            between the gold master and the test array; default 1.
+        ignore_missing (bool, optional): True to raise a warning on any missing gold
+            masters; False to raise an error. Default is False.
+        suite (str or list[str], optional): Name(s) of the default test suite(s) to run;
+            use [] (the default) to include all test suites.
+        du (float, optional): Pixel offsets to apply to the u-origin of the meshgrid, for
+            testing sensitivity to pointing offsets; default 0.
+        dv (float, optional): Pixel offsets to apply to the v-origin of the meshgrid, for
+            testing sensitivity to pointing offsets; default 0.
+        undersample (int, optional): Undersample factor for backplane tests and browse
+            images; default 16.
+        arrays (bool, optional): True to save the backplane arrays; default False.
+        inventory (bool, optional): True to use an inventory when generating backplanes.
+            Default is True.
+        border (int): Number of pixels of padding to apply around the limits of each body
+            in the inventory, which is needed to account for pointing errors; default 0.
+        browse (bool): True to save browse images; default False.
+        zoom (int): Zoom factor for browse images; default 1.
+        browse_format (str, optional): browse image format, one of "png", "jpg", or
+            "tiff". Default is "png".
+        verbose (bool, optional): True to print output to the terminal by default.
+        log (bool, optional): True to save a log file; default False
+        level (str or int): Minimum level for messages to be logged: "debug", "info",
+            "warning", "error", or an integer 1-30. Default is "debug".
+        summary (bool, optional): True to write a summary to the output directory;
+            default False.
+
+    Note:
+        The `task`, `suite`, `du`, `dv`, and `zoom` values set here are stored but are not
+        used as command-line defaults; those four options are controlled from the command
+        line alone. The `derivs` option is likewise not configurable here: whether the
+        derivative tests run is decided from the command line and, when unspecified there,
+        from the undersample factor, in which case they run when `undersample` exceeds 1.
     """
 
     global DEFAULTS
@@ -323,8 +334,8 @@ def set_default_args(**options):
 ##########################################################################################
 # Overrides of specific tests
 #
-# Sometimes we understand why certain comparison tests have values that exceed
-# the hard-wired limit.
+# Sometimes we understand why certain comparison tests have values that exceed the
+# hard-wired limit.
 ##########################################################################################
 
 TEST_OVERRIDES = defaultdict(dict)
@@ -333,11 +344,12 @@ def override(title, value, names=None):
     """Override the hard-wired comparison values for specific tests.
 
     Parameters:
-        title: The exact title of a test, e.g., "JUPITER:RING incidence angle, ring
+        title (str): The exact title of a test, e.g., "JUPITER:RING incidence angle, ring
             minus center (deg)".
-        value: The revised comparison value, or None to suppress the test entirely.
-        names (optional): Name(s) of one or more standard observations; None to apply
-            to all standard observations.
+        value (float): The revised comparison value, or None to suppress the test
+            entirely.
+        names (str or list[str], optional): Name(s) of one or more standard observations;
+            None to apply to all standard observations.
     """
 
     global TEST_OVERRIDES
@@ -357,237 +369,197 @@ def override(title, value, names=None):
 ##########################################################################################
 
 def execute_as_command():
-    """Parse command-line arguments for gold master testing of one or more
-    backplanes and then run the tests.
+    """Parse command-line arguments for gold master testing of one or more backplanes and
+    then run the tests.
 
-    A "Namespace" object is returned, containing all of the command line
-    attributes, plus:
-        from_file       the "from_file" function of the selected module.
-        abpaths         the list of absolute paths to the observations.
-        backplane_tests the list of BackplaneTest objects.
+    A "Namespace" object is returned, containing all of the command line attributes, plus:
 
-    Inputs:
-        **options       overrides for any default gold_master input arguments.
+        * `from_file` (function): The "from_file" of the selected module.
+        * `abpaths` (list[str]): The list of absolute paths to the observations.
+        * `backplane_tests` (BackplaneTest): Tests to perform.
     """
 
     import programs.gold_master.all         # noqa: F401 -- defines all test suites
 
     # Define parser...
-    parser = argparse.ArgumentParser(
-                    description='Gold Master backplane test utility%s.'
-                                % ('' if not DEFAULTS['module'] else
-                                   ' for module ' + DEFAULTS['module']))
+    if module := DEFAULTS['module']:
+        description = f'Gold Master backplane test utility for module {module}.'
+    else:
+        description = 'Gold Master backplane test utility.'
+    parser = argparse.ArgumentParser(description=description)
 
     # Data objects
     gr = parser.add_argument_group('Data objects')
     gr.add_argument('obspath', type=str, nargs='*', metavar='filepath',
-                    help='''File path to the data object(s) to be used in place
-                            of a standard observation.''')
+        help='File path to the data object(s) to be used in place of a standard '
+             'observation.')
     gr.add_argument('--index', type=int, metavar='N',
-                    help='''Index to use for a specified filepath; otherwise,
-                            backplane arrays will be generated for each
-                            observation in the file.''')
+        help='Index to use for a specified filepath; otherwise,  backplane arrays will '
+             'be generated for each observation in the file.')
     gr.add_argument('--module', type=str, metavar='oops.hosts...',
-                    help='''Name of the module containing the "from_file"
-                            method for the filepaths specified%s.'''
-                         % ('' if DEFAULTS['module'] is None else
-                            '; default is ' + DEFAULTS['module'] + '.'))
+        help='Name of the module containing the "from_file"  method for the file paths '
+             'specified' + (f'; default is {module}.' if module else '.'))
     gr.add_argument('--name', '-n', type=str, nargs='*',
-                    default=list(STANDARD_OBS_INFO.keys()),
-                    help='''Name(s) of the pre-defined standard observation to
-                            use if a file path is not given explicitly. Default
-                            is to use all of the standard observations.''')
+        default=list(STANDARD_OBS_INFO.keys()),
+        help='Name(s) of the pre-defined standard observation to use if a file path is '
+             'not given explicitly. Default is to use all of the standard observations.')
 
     # Backplane targets
     gr = parser.add_argument_group('Backplane targets')
     gr.add_argument('-p', '--planet', type=str, nargs='*', metavar='name',
-                    default=DEFAULTS['planets'], dest='planets',
-                    help='''Name(s) of one or more planets for which to generate
-                            backplane arrays. Defaults are defined by the named
-                            standard observation(s)%s.'''
-                         % ('' if DEFAULTS['planets'] is None else
-                            '; otherwise ' + ', '.join(DEFAULTS['planets'])))
+        default=DEFAULTS['planets'], dest='planets',
+        help='Name(s) of one or more planets for which to generate backplane arrays. '
+             'Defaults are defined by the named standard observation(s).')
     gr.add_argument('-m', '--moon', type=str, nargs='*', metavar='name',
-                    default=DEFAULTS['moons'], dest='moons',
-                    help='''Name(s) of one or more moons for which to generate
-                            backplane arrays. Defaults are defined by the named
-                            standard observation(s)%s.'''
-                         % ('' if DEFAULTS['moons'] is None else
-                            '; otherwise ' + ', '.join(DEFAULTS['moons'])))
+        default=DEFAULTS['moons'], dest='moons',
+        help='Name(s) of one or more moons for which to generate backplane arrays. '
+             'Defaults are defined by the named standard observation(s).')
     gr.add_argument('-r', '--ring', type=str, nargs='*', metavar='name',
-                    default=DEFAULTS['rings'], dest='rings',
-                    help='''Name(s) of one or more rings for which to generate
-                            backplane arrays. Arrays are always generated for
-                            the default equatorial ring of the planet.'''
-                         + ('' if DEFAULTS['rings'] is None else ' Default is '
-                                + ', '.join(DEFAULTS['rings']) + '.'))
+        default=DEFAULTS['rings'], dest='rings',
+        help='Name(s) of one or more rings for which to generate backplane arrays. '
+             'Arrays are always generated for the default equatorial ring of the planet.')
 
     # Testing options
     gr = parser.add_argument_group('Testing options')
     gr.add_argument('--preview', dest='task', default='compare',
-                    action='store_const', const='preview',
-                    help='''Generate backplane arrays and browse images but do
-                            not compare the arrays to the gold masters.''')
+        action='store_const', const='preview',
+        help='Generate backplane arrays and browse images but do not compare the arrays '
+             'to the gold masters.')
     gr.add_argument('-c', '--compare', dest='task',
-                    action='store_const', const='compare',
-                    help='''Generate backplane arrays and browse images and
-                            compare the arrays to the gold masters.''')
+        action='store_const', const='compare',
+        help='Generate backplane arrays and browse images and compare the arrays to the '
+             'gold masters.')
     gr.add_argument('-a', '--adopt', dest='task',
-                    action='store_const', const='adopt',
-                    help='''Adopt these backplane arrays as the new gold
-                            masters by overwriting the existing gold
-                            masters.''')
+        action='store_const', const='adopt',
+        help='Adopt these backplane arrays as the new gold masters by overwriting the '
+             'existing gold masters.')
     gr.add_argument('--debug', action='store_true',
-                    help='''Shorthand for --arrays --browse --log --summary''')
+        help='Shorthand for --arrays --browse --log --summary')
     gr.add_argument('--tolerance', type=float, metavar='TOL',
-                    default=float(DEFAULTS['tolerance']),
-                    help='''Factor to apply to backplane array error tolerances;
-                            default %s.'''
-                         % str(DEFAULTS['tolerance']))
+        default=float(DEFAULTS['tolerance']),
+        help='Factor to apply to backplane array error tolerances.')
     gr.add_argument('--radius', type=float, metavar='RAD',
-                    default=float(DEFAULTS['radius']),
-                    help='''Factor to apply to backplane array radial offset
-                            limits; default %s.'''
-                         % str(DEFAULTS['radius']))
+        default=float(DEFAULTS['radius']),
+        help='Factor to apply to backplane array radial offset limits.')
     gr.add_argument('--ignore-missing', action='store_true',
-                    default=DEFAULTS['ignore_missing'],
-                    help='''Log a warning rather than an error if a gold
-                            master backplane is missing.''')
+        default=DEFAULTS['ignore_missing'],
+        help='Log a warning rather than an error if a gold master backplane is missing.')
     gr.add_argument('--suite', type=str, nargs='*', metavar='name',
-                    default=[],
-                    help='''Name(s) of the test suites to perform, e.g., "ring"
-                            or "surface"; default is to perform all test suites.
-                            ''')
+        help='Name(s) of the test suites to perform, e.g., "ring" or "surface"; default '
+             'is to perform all test suites.')
     gr.add_argument('--du', type=float, default=0.,
-                    help='''Offset to apply to the u-coordinate of the meshgrid
-                            origin in units of pixels; default 0. This can be
-                            useful for testing the tolerance to pointing
-                            uncertainties.''')
+        help='Offset to apply to the u-coordinate of the meshgrid origin in units of '
+             'pixels; default 0. This can be useful for testing the tolerance to '
+             'pointing uncertainties.')
     gr.add_argument('--dv', type=float, default=0.,
-                    help='''Offset to apply to the v-coordinate of the meshgrid
-                            origin in units of pixels; default 0. This can be
-                            useful for testing the tolerance to pointing
-                            uncertainties.''')
+        help='Offset to apply to the v-coordinate of the meshgrid origin in units of '
+             'pixels; default 0. This can be useful for testing the tolerance to '
+             'pointing uncertainties.')
     gr.add_argument('--derivs', action='store_true', default=None,
-                    help='''Perform tests of spatial derivatives of backplane
-                            arrays. Default is to exclude the derivative tests
-                            when undersampling=1, and to include them otherwise.
-                            Note that tests can take several times longer with
-                            this option enabled.''')
+        help='Perform tests of spatial derivatives of backplane arrays. Default is to '
+             'exclude the derivative tests when undersampling=1, and to include them '
+             'otherwise. Note that tests can take several times longer with this option '
+             'enabled.')
     gr.add_argument('--no-derivs', action='store_false', dest='derivs',
-                    help='''Suppress tests of spatial derivatives of backplane
-                            arrays.''')
+        help='Suppress tests of spatial derivatives of backplane arrays.')
 
     # Backplane array options
     gr = parser.add_argument_group('Backplane array options')
     gr.add_argument('--arrays', action='store_true', default=DEFAULTS['arrays'],
-                    help='Save the backplane arrays%s.'
-                         % (' (default)' if DEFAULTS['arrays'] else ''))
+        help='Save the backplane arrays%s.'
+             % (' (default)' if DEFAULTS['arrays'] else ''))
     gr.add_argument('--no-arrays', dest='arrays', action='store_false',
-                    default=DEFAULTS['arrays'],
-                    help='Do not save backplane arrays%s.'
-                         % ('' if DEFAULTS['arrays'] else ' (default)'))
+        default=DEFAULTS['arrays'],
+        help='Do not save backplane arrays%s.'
+             % ('' if DEFAULTS['arrays'] else ' (default)'))
     gr.add_argument('-u', '--undersample', type=int, metavar='N',
-                    default=DEFAULTS['undersample'],
-                    help='''Factor by which to undersample backplane arrays;
-                            default %d.'''
-                         % DEFAULTS['undersample'])
+        default=DEFAULTS['undersample'],
+        help='Factor by which to undersample backplane arrays; default %d.'
+             % DEFAULTS['undersample'])
     gr.add_argument('--inventory', action='store_true',
-                    default=DEFAULTS['inventory'],
-                    help='Use a body inventory when generating backplane%s.'
-                         % (' (default)' if DEFAULTS['inventory'] else ''))
+        default=DEFAULTS['inventory'],
+        help='Use a body inventory when generating backplane%s.'
+             % (' (default)' if DEFAULTS['inventory'] else ''))
     gr.add_argument('--no-inventory', dest='inventory', action='store_false',
-                    help='''Do not use a body inventory when generating
-                            backplanes%s.'''
-                         % ('' if DEFAULTS['inventory'] else ' (default)'))
+        help='Do not use a body inventory when generating backplanes%s.'''
+             % ('' if DEFAULTS['inventory'] else ' (default)'))
     gr.add_argument('--border', type=int, metavar='N',
-                    default=DEFAULTS['border'],
-                    help='''Number of pixels by which to expand image borders
-                            when constructing the inventory; default %d.'''
-                         % DEFAULTS['border'])
+        default=DEFAULTS['border'],
+        help='Number of pixels by which to expand image borders when constructing the '
+             'inventory; default %d.' % DEFAULTS['border'])
     gr.add_argument('--save-sampled', '--ss', action='store_true',
-                    default=False, dest='save_sampled',
-                    help='''Save copies of the master arrays at the undersampled
-                            grid points.''')
+        default=False, dest='save_sampled',
+        help='Save copies of the master arrays at the undersampled grid points.')
 
     # Browse image options
     gr = parser.add_argument_group('Browse image options')
     gr.add_argument('--browse', action='store_true',
-                    default=DEFAULTS['browse'],
-                    help='Save browse images of the backplane arrays%s.'
-                         % (' (default)' if DEFAULTS['browse'] else ''))
+        default=DEFAULTS['browse'],
+        help='Save browse images of the backplane arrays%s.'
+             % (' (default)' if DEFAULTS['browse'] else ''))
     gr.add_argument('--no-browse', dest='browse', action='store_false',
-                    default=DEFAULTS['browse'],
-                    help='Do not save browse images of backplane arrays%s.'
-                         % ('' if DEFAULTS['browse'] else ' (default)'))
+        default=DEFAULTS['browse'],
+        help='Do not save browse images of backplane arrays%s.'
+             % ('' if DEFAULTS['browse'] else ' (default)'))
     gr.add_argument('--zoom', type=int, metavar='N', default=1,
-                    help='Zoom factor to apply to browse images; default %d.'
-                         % DEFAULTS['zoom'])
+        help='Zoom factor to apply to browse images; default %d.' % DEFAULTS['zoom'])
     gr.add_argument('--format', type=str, dest='browse_format', metavar='EXT',
-                    choices=('jpg', 'png', 'tiff'),
-                    default=DEFAULTS['browse_format'],
-                    help='''Format for saving browse images, one of "png",
-                            "jpg", or "tiff". Default is "%s".'''
-                         % DEFAULTS['browse_format'])
+        choices=('jpg', 'png', 'tiff'),
+        default=DEFAULTS['browse_format'],
+        help='Format for saving browse images; default is "%s".'
+             % DEFAULTS['browse_format'])
 
     # Output options
     gr = parser.add_argument_group('Output options')
     gr.add_argument('-o', '--output', type=str, metavar='dir',
-                    default=OOPS_BACKPLANE_OUTPUT_PATH,
-                    help='''Root directory for saved backplane arrays, browse
-                            images, and logs; default is the value of the
-                            environment variable OOPS_BACKPLANE_OUTPUT_PATH, if
-                            defined, or else the current default directory.''')
+        default=OOPS_BACKPLANE_OUTPUT_PATH,
+        help='Root directory for saved backplane arrays, browse images, and logs; '
+             'default is the value of the environment variable '
+             'OOPS_BACKPLANE_OUTPUT_PATH, if defined, or else the current default '
+             'directory.')
     gr.add_argument('-v', '--verbose', action='store_true',
-                    default=DEFAULTS['verbose'],
-                    help='Write log information to the terminal%s.'
-                         % (' (default)' if DEFAULTS['verbose'] else ''))
+        default=DEFAULTS['verbose'],
+        help='Write log information to the terminal%s.'
+             % (' (default)' if DEFAULTS['verbose'] else ''))
     gr.add_argument('-q', '--quiet', dest='verbose', action='store_false',
-                    help='Do not write log information to the terminal%s.'
-                         % ('' if DEFAULTS['verbose'] else ' (default)'))
+        help='Do not write log information to the terminal%s.'
+             % ('' if DEFAULTS['verbose'] else ' (default)'))
     gr.add_argument('--log', action='store_true',
-                    default=DEFAULTS['log'],
-                    help='Write a log file to the output directory%s.'
-                         % (' (default)' if DEFAULTS['log'] else ''))
+        default=DEFAULTS['log'],
+        help='Write a log file to the output directory%s.'
+             % (' (default)' if DEFAULTS['log'] else ''))
     gr.add_argument('--no-log', dest='log', action='store_false',
-                    default=DEFAULTS['log'],
-                    help='Do not write a log file in the output directory%s.'
-                         % ('' if DEFAULTS['log'] else ' (default)'))
+        default=DEFAULTS['log'],
+        help='Do not write a log file in the output directory%s.'
+             % ('' if DEFAULTS['log'] else ' (default)'))
     gr.add_argument('--level', type=str, metavar='LEVEL',
-                    choices=['debug', 'info', 'warning', 'error']
-                            + [str(k) for k in range(1,31)],
-                    default=DEFAULTS['level'],
-                    help='''Minimum level for messages to be logged: "debug",
-                            "info", "warning", "error", or an integer 1-30;
-                            default is %s.'''
-                         % DEFAULTS['level'])
+        choices=['debug', 'info', 'warning', 'error'] + [str(k) for k in range(1,31)],
+        default=DEFAULTS['level'],
+        help='Minimum level for messages to be logged: "debug", "info", "warning", '
+             '"error", or an integer 1-30')
     gr.add_argument('--summary', action='store_true',
-                    default=DEFAULTS['summary'],
-                    help='Write a summary to the output directory%s.'
-                         % (' (default)' if DEFAULTS['summary'] else ''))
+        default=DEFAULTS['summary'],
+        help='Write a summary to the output directory%s.'
+             % (' (default)' if DEFAULTS['summary'] else ''))
     gr.add_argument('--no-summary', dest='summary', action='store_false',
-                    default=DEFAULTS['summary'],
-                    help='Do not write a summary to the output directory%s.'
-                         % ('' if DEFAULTS['summary'] else ' (default)'))
+        default=DEFAULTS['summary'],
+        help='Do not write a summary to the output directory%s.'
+             % ('' if DEFAULTS['summary'] else ' (default)'))
     gr.add_argument('--convergence', action='store_true', default=False,
-                    help='Show iterative convergence information in the log.')
+        help='Show iterative convergence information in the log.')
     gr.add_argument('--diagnostics', action='store_true', default=False,
-                    help='Include diagnostic information in the log.')
+        help='Include diagnostic information in the log.')
     gr.add_argument('--internals', action='store_true', default=False,
-                    help='''Include info about the Backplane internal state at
-                            the end of the log.''')
+        help='Include info about the Backplane internal state at the end of the log.')
     gr.add_argument('--performance', action='store_true', default=False,
-                    help='Include OOPS performance information in the log.')
+        help='Include OOPS performance information in the log.')
     gr.add_argument('--fullpaths', action='store_true', default=False,
-                    help='''Include the full paths of all output files in the
-                            log.''')
+        help='Include the full paths of all output files in the log.')
     gr.add_argument('--platform', type=str, metavar='OS', default=None,
-                    choices=('macos', 'windows', 'linux'),
-                    help='''Name of the OS, as a proxy for how to name output
-                            files: "macos" for MacOS, "windows" for Windows,
-                            "linux" for Linux; default is to derive the OS name
-                            from the system where this program is running. Gold
-                            master files always use Linux names.''')
+        choices=('macos', 'windows', 'linux'),
+        help='Name of the OS, as a proxy for how to name output files; default is to '
+             'derive the OS name from the system where this program is running. Gold '
+             'master files always use Linux names.''')
 
     args = parser.parse_args()
     args.pytest = False
@@ -604,8 +576,7 @@ def execute_as_command():
 ##########################################################################################
 
 def execute_as_pytest(obsname='default'):
-    """Run the gold master test suites for all of the defined standard
-    observations.
+    """Run the gold master test suites for all of the defined standard observations.
 
     Parameters:
         obsname (str, optional): Name of the standard observation to test.
@@ -668,27 +639,37 @@ def execute_as_pytest(obsname='default'):
     run_tests(args)
 
 def _clean_up_args(args):
-    """Clean up arguments given in the command line."""
+    """Clean up arguments given in the command line.
+
+    Parameters:
+        args (Namespace): The parsed command-line arguments, modified in place.
+
+    Returns:
+        Namespace: The same object, with the module, observation, planet, moon, ring, and
+        test suite values filled in and validated.
+
+    Raises:
+        ValueError: If the given arguments are inconsistent, such as an observation file
+            path combined with a standard observation name.
+    """
 
     global DEFAULTS, TEST_SUITES
 
     # Define the module and observation if not a standard one
     args.module = args.module or DEFAULTS['module']
 
-    # Given obspaths, define temporary "standard observations" and then use
-    # their names.
+    # Given obspaths, define temporary "standard observations" and then use their names
     if args.obspath:
         if args.name is not None:
-            raise ValueError('an observation filepath and a standard '
-                             'observation name cannot be specified together.')
+            raise ValueError('an observation filepath and a standard observation name '
+                             'cannot be specified together.')
 
         if isinstance(args.obspath, str):
             args.obspath = [args.obspath]
 
         for obspath in args.obspaths:
-            define_standard_obs(obspath, obspath, index=args.index,
-                                planets=args.planets, moons=args.moons,
-                                rings=args.rings)
+            define_standard_obs(obspath, obspath, index=args.index, planets=args.planets,
+                                moons=args.moons, rings=args.rings)
 
         args.name = args.obspath        # using obspath as the temporary name
 
@@ -700,11 +681,11 @@ def _clean_up_args(args):
 
     # --format
     if args.browse_format not in ('png', 'jpg', 'tiff'):
-        raise ValueError('unrecognized browse format: ' + args.browse_format)
+        raise ValueError(f'unrecognized browse format: {args.browse_format}')
 
     # --level
     if (args.convergence or args.diagnostics or args.performance):
-            args.level = 'debug'
+        args.level = 'debug'
     try:
         args.level = int(args.level)
     except ValueError:
@@ -751,13 +732,12 @@ def _clean_up_args(args):
         kwargs  = STANDARD_OBS_INFO[obsname]['kwargs']
 
         if not TEST_DATA_PREFIX:
-            raise ValueError('Undefined environment variable: '
-                             'One of OOPS_TEST_DATA_PATH or OOPS_RESOURCES '
-                             'must be provided')
+            raise ValueError('Undefined environment variable: One of '
+                             'OOPS_TEST_DATA_PATH or OOPS_RESOURCES must be provided')
 
-        # This will raise FileNotFoundError if the file doesn't exist or can't
-        # be downloaded. It's more efficient to just load it into the cache here
-        # than check for existence and then load it into the cache later.
+        # This will raise FileNotFoundError if the file doesn't exist or can't be
+        # downloaded. It's more efficient to just load it into the cache here than check
+        # for existence and then load it into the cache later.
         abspath = TEST_DATA_PREFIX / obspath
 
         # Allow overrides of bodies
@@ -785,7 +765,15 @@ def _clean_up_args(args):
     return args
 
 def run_tests(args):
-    """Run all the gold master tests."""
+    """Run all the gold master tests.
+
+    Parameters:
+        args (Namespace): The cleaned-up command-line arguments identifying the
+            observations to test and the tests to perform.
+
+    Raises:
+        AssertionError: If any test fails.
+    """
 
     logger = logging.Logger(__name__)
     if args.verbose:
@@ -843,13 +831,13 @@ def run_tests(args):
 ##########################################################################################
 # Test suite management
 #
-# Each backplane module defines one or more functions that receive a
-# BackplaneTest object as input, create various backplane arrays, and test them
-# via calls to BackplaneTest.compare and BackplaneTest.gmtest.
+# Each backplane module defines one or more functions that receive a BackplaneTest object
+# as input, create various backplane arrays, and test them via calls to
+# BackplaneTest.compare and BackplaneTest.gmtest.
 #
-# Once defined, they call register_test_suite(name, func) to register each test
-# function within the Gold Master testing framework. Afterward, these tests will
-# be included during unit testing.
+# Once defined, they call register_test_suite(name, func) to register each test function
+# within the Gold Master testing framework. Afterward, these tests will be included during
+# unit testing.
 ##########################################################################################
 
 TEST_SUITES = {}            # dictionary of all test suites
@@ -857,7 +845,13 @@ TEST_SUITES = {}            # dictionary of all test suites
 def register_test_suite(name, func):
     """Add the given function to the dictionary of exercise tests.
 
-    This must be called for each defined test suite.
+    This must be called for each defined test suite. The name is also attached to the
+    function as its "name" attribute.
+
+    Parameters:
+        name (str): Name of the test suite, e.g., "ring".
+        func (function): The test suite function, which takes a BackplaneTest as its only
+            argument.
     """
 
     global TEST_SUITES
@@ -866,7 +860,17 @@ def register_test_suite(name, func):
     func.name = name            # add "name" attribute to the function itself
 
 def get_test_suite(name):
-    """Retrieve a test suite function given its name."""
+    """Retrieve a test suite function given its name.
+
+    Parameters:
+        name (str): Name of the test suite, e.g., "ring".
+
+    Returns:
+        function: The registered test suite function.
+
+    Raises:
+        KeyError: If no test suite has been registered under this name.
+    """
 
     global TEST_SUITES
 
@@ -892,37 +896,38 @@ class _BackplaneComparison(object):
     def __init__(self, **kwargs):
         """Container for comparison info.
 
-        status is one of:
-            "Success"               test passed;
-            "Value mismatch"        values differ;
-            "Mask mismatch"         masks differ;
-            "Value/mask mismatch"   both the values and the mask differ;
-            "Shape mismatch"        shapes do not match;
-            "No gold master"        gold master info is missing;
-            "Invalid gold master"   gold master cannot be read.
+        Status is one of:
 
-        title        = title of the test.
-        suite        = name of test suite.
-        limit        = maximum allowed difference.
-        method       = name of the comparison method, e.g., 'mod360.
-        operator     = comparison operator.
-        radius       = allowed offset distance in pixels.
-        mask         = optional mask to exclude pixels from comparison.
-        pickle_path  = path to the pickle file, if any.
+            * "Success":             test passed;
+            * "Value mismatch":      values differ;
+            * "Mask mismatch":       masks differ;
+            * "Value/mask mismatch": both the values and the mask differ;
+            * "Shape mismatch":      shapes do not match;
+            * "No gold master":      gold master info is missing;
+            * "Invalid gold master": gold master cannot be read.
 
-        max_diff1    = the largest difference between unmasked pixels of array
-                       and master, initially.
-        diff_errors1 = the initial number of value discrepancies.
-        mask_errors1 = the number of mask discrepancies.
+        Parameters:
+            **kwargs: Any of the attributes below, which override their default values.
 
-        distance     = the largest offset adequate to eliminate a value
-                       discrepancy; zero if no offset is adequate.
-
-        max_diff2    = the final largest difference.
-        diff_errors2 = the final number of value discrepancies.
-        mask_errors2 = the final number of mask discrepancies.
-
-        pixels       = the total number of pixels.
+        Properties:
+            title (str): Title of the test.
+            suite (str): Name of test suite.
+            limit (float): Maximum allowed difference.
+            method (str): Name of the comparison method, e.g., 'mod360'.
+            operator (str): Comparison operator.
+            radius (float): Allowed offset distance in pixels.
+            mask (ndarray, optional): Mask to exclude pixels from comparison.
+            pickle_path (str): Path to the pickle file, if any.
+            max_diff1 (float): The largest difference between unmasked pixels of array and
+                master, initially.
+            diff_errors1 (int): The initial number of value discrepancies.
+            mask_errors1 (float): The number of mask discrepancies.
+            distance (float): The largest offset adequate to eliminate a value
+                discrepancy; zero if no offset is adequate.
+            max_diff2 (float): The final largest difference.
+            diff_errors2 (int): The final number of value discrepancies.
+            mask_errors2 (int): The final number of mask discrepancies.
+            pixels (int): The total number of pixels.
         """
 
         self.title        = ''
@@ -958,6 +963,10 @@ class _BackplaneComparison(object):
         """Set the success value of status "No gold master".
 
         This is defined globally by input argument "ignore_missing".
+
+        Parameters:
+            is_ok (bool, optional): True to log a missing gold master as a warning; False
+                to log it as an error. Default is False.
         """
 
         level = 'WARNING' if is_ok else 'ERROR'
@@ -1029,7 +1038,7 @@ class BackplaneTest(object):
         self.planet_ring_pairs = []
 
         # Fill in all the backplane surface names
-        for body in planets + moons:
+        for body in list(planets) + list(moons):
             if body:
                 self.body_names.append(body)
                 self.limb_names.append(body + ':LIMB')
@@ -1148,18 +1157,18 @@ class BackplaneTest(object):
                         f'{self.task}.log')
 
             if log_path.exists():
-                
+
                 # Append the latest modification date to the pre-existing file
                 dt = datetime.datetime.fromtimestamp(log_path.modification_time(),
                                                      tz=datetime.timezone.utc)
                 suffix = dt.strftime('-%Y-%m-%dT%H-%M-%S')
-                dated_logpath = log_path[:-4] + suffix + '.log'
-                
+                dated_logpath = log_path.with_stem(log_path.stem + suffix)
+
                 # Move or copy the old log to its timestamped filename using
                 # filecache-aware replacement semantics.
                 log_path.replace(dated_logpath)
 
-            handler = logging.FileHandler(logpath.as_posix(), mode='w')
+            handler = logging.FileHandler(log_path.get_local_path(), mode='w')
             LOGGING.logger.addHandler(handler)
 
         # Run the tests
@@ -1230,11 +1239,11 @@ class BackplaneTest(object):
             if self.args.summary:
                 if self.task in ('preview', 'compare'):
                     file_path = self.write_summary(self.output_dir)
-                    LOGGING.debug('Summary written: ' + file_path)
+                    LOGGING.debug('Summary written: ' + file_path.as_posix())
 
                 else:
                     file_path = self.write_summary(self.gold_dir)
-                    LOGGING.info('Summary written: ' + file_path)
+                    LOGGING.info('Summary written: ' + file_path.as_posix())
 
             # Internals...
             if self.args.internals:
@@ -1318,11 +1327,16 @@ class BackplaneTest(object):
 
     @staticmethod
     def _sort_key(key):
-        """Key function for the sort operation, needed to handle occurrences of
-        Frames, Paths, and None in some dictionary keys.
+        """Sort key that handles Frames, Paths, and None in some dictionary keys.
 
-        Also allow sorting among numbers, strings and tuples: numbers first,
-        strings second, objects third, tuples fourth.
+        Values of mixed type are ordered by category: numbers first, strings second, other
+        objects third, and tuples or lists fourth.
+
+        Parameters:
+            key: The dictionary key to be ordered.
+
+        Returns:
+            tuple: The category number paired with a comparable value.
         """
 
         if isinstance(key, (tuple, list)):
@@ -1343,29 +1357,33 @@ class BackplaneTest(object):
                                             radius=0., mask=False):
         """Compare two backplane arrays and log the results.
 
-        Note that the array can be a backplane that has been undersampled. The
-        gold master array can be either full-resolution or undersampled.
+        The array can be a backplane that has been undersampled. The gold master array can
+        be either full-resolution or undersampled.
 
-        Inputs:
-            array       backplane array to be compared.
-            master      reference value or gold master array.
-            title       title string describing the test; must be unique.
-            limit       upper limit on the difference between the arrays.
-            method      ''        for standard comparisons;
-                        'mod360'  for doing comparisons in degrees mod 360;
-                        'degrees' for doing comparisons in degrees;
-                        'border'  for comparisons of border backplanes, in which
-                                  case the radius value is interpreted in units
-                                  of undersampled pixels rather than original
-                                  pixels;
-            operator    the operator to use for the comparison, one of '=', '>',
-                        '>=', '<', or '<='.
-            radius      the radius of a circle, in units of pixels, by which to
-                        check for a possible spatial shift for the values the
-                        mask. This values is rounded down, so radius < 1
-                        indicates no shift.
-            mask        optional mask to apply. Mask areas are not included in
-                        the comparison.
+        Parameters:
+            array (Qube): Backplane array to be compared.
+            master (Qube or float): Reference value or gold master array.
+            title (str): Title string describing the test; must be unique.
+            limit (float or Qube, optional): Upper limit on the difference between the
+                arrays; default 0. It is scaled by the tolerance factor given on the
+                command line, and is superseded by any override defined for this title.
+            method (str, optional): Comparison method, one of "" for a standard
+                comparison, "mod360" to compare in degrees mod 360, "degrees" to compare
+                in degrees, or "border" for border backplanes, in which case `radius` is
+                interpreted in undersampled pixels rather than original pixels. Default
+                is "".
+            operator (str, optional): Operator to use for the comparison, one of "=",
+                ">", ">=", "<", or "<="; default "=".
+            radius (float, optional): Radius of a circle, in pixels, within which to
+                check for a possible spatial shift of the values or the mask; default 0.
+                The value is rounded down, so a radius below 1 indicates no shift.
+            mask (bool or array, optional): Mask to apply; masked areas are excluded from
+                the comparison. Default is False, meaning nothing is excluded.
+
+        Raises:
+            ValueError: If `method` or `operator` is unrecognized, if a nonzero `radius`
+                or the "border" method is combined with an operator other than "=", or if
+                the shape of `mask` does not match that of `array`.
         """
 
         global TEST_SUITE, LATEST_TITLE
@@ -1394,28 +1412,34 @@ class BackplaneTest(object):
 
     def gmtest(self, array, title, limit=0., method='', operator='=',
                                    radius=0., mask=False):
-        """Compare a backplane array against its gold master. Save the array,
-        browse image, and sampled master.
+        """Compare a backplane array against its gold master.
 
-        Inputs:
-            array       backplane array to be tested.
-            title       title string describing the test; must be unique.
-            limit       upper limit on the difference between the arrays.
-            method      ''        for standard comparisons;
-                        'mod360'  for doing comparisons in degrees mod 360;
-                        'degrees' for doing comparisons in degrees;
-                        'border'  for comparisons of border backplanes, in which
-                                  case the radius value is interpreted in units
-                                  of undersampled pixels rather than original
-                                  pixels;
-            operator    the operator to use for the comparison, one of '=', '>',
-                        '>=', '<', or '<='.
-            radius      the radius of a circle, in units of pixels, by which to
-                        check for a possible spatial shift for the values the
-                        mask. This values is rounded down, so radius < 1
-                        indicates no shift.
-            mask        optional mask to apply. Mask areas are not included in
-                        the comparison.
+        The array, its browse image, and the sampled master are saved as directed by the
+        command-line options.
+
+        Parameters:
+            array (Qube): Backplane array to be tested.
+            title (str): Title string describing the test; must be unique.
+            limit (float or Qube, optional): Upper limit on the difference between the
+                arrays; default 0. It is scaled by the tolerance factor given on the
+                command line, and is superseded by any override defined for this title.
+            method (str, optional): Comparison method, one of "" for a standard
+                comparison, "mod360" to compare in degrees mod 360, "degrees" to compare
+                in degrees, or "border" for border backplanes, in which case `radius` is
+                interpreted in undersampled pixels rather than original pixels. Default
+                is "".
+            operator (str, optional): Operator to use for the comparison, one of "=",
+                ">", ">=", "<", or "<="; default "=".
+            radius (float, optional): Radius of a circle, in pixels, within which to
+                check for a possible spatial shift of the values or the mask; default 0.
+                The value is rounded down, so a radius below 1 indicates no shift.
+            mask (bool or array, optional): Mask to apply; masked areas are excluded from
+                the comparison. Default is False, meaning nothing is excluded.
+
+        Raises:
+            ValueError: If `method` or `operator` is unrecognized, if a nonzero `radius`
+                or the "border" method is combined with an operator other than "=", or if
+                the shape of `mask` does not match that of `array`.
         """
 
         global TEST_SUITE, LATEST_TITLE
@@ -1523,8 +1547,15 @@ class BackplaneTest(object):
         LATEST_TITLE = ''
 
     def _compare(self, array, master, comparison):
-        """Internal method that performs a comparison _after_ the inputs have
-        been validated. Radians must already be converted to degrees.
+        """Perform a comparison after the inputs have been validated.
+
+        Radians must already be converted to degrees.
+
+        Parameters:
+            array (Qube): Backplane array to be compared.
+            master (Qube or float): Reference value or gold master array.
+            comparison (_BackplaneComparison): Container for the comparison options, which
+                receives the status and the details of the result.
         """
 
         # Make objects suitable and compatible
@@ -1829,7 +1860,30 @@ class BackplaneTest(object):
 
     def _validate_inputs(self, array, title, limit, method, operator, radius,
                                mask):
-        """Initial steps for both compare() and gmtest()."""
+        """Validate the comparison inputs shared by `compare` and `gmtest`.
+
+        Any array compared in degrees is converted from radians here.
+
+        Parameters:
+            array (Qube): Backplane array to be tested.
+            title (str): Title string describing the test; must be unique.
+            limit (float or Qube): Upper limit on the difference between the arrays,
+                before the command-line tolerance factor is applied.
+            method (str): Comparison method, one of "", "mod360", "degrees", or "border".
+            operator (str): Comparison operator, one of "=", ">", ">=", "<", or "<=".
+            radius (float): Radius in pixels within which to check for a spatial shift.
+            mask (bool or array): Mask to apply; masked areas are excluded.
+
+        Returns:
+            tuple: (array, comparison), where `array` is the validated array, converted to
+            degrees if the method requires it, and `comparison` is the
+            _BackplaneComparison container holding the validated options.
+
+        Raises:
+            ValueError: If `method` or `operator` is unrecognized, if a nonzero `radius`
+                or the "border" method is combined with an operator other than "=", or if
+                the shape of `mask` does not match that of `array`.
+        """
 
         global TEST_SUITE
 
@@ -1907,15 +1961,34 @@ class BackplaneTest(object):
     def _summarize(self, array, title, method):
         """Save the summary info for this backplane array.
 
-        For boolean arrays, the saved tuple is
-            (False count, True count, masked count, total pixels)
-        For floats, the saved tuple is:
-            (minimum value, maximum vale, masked count, total pixels)
-        The cases are distinguished by whether the first value is int of float.
+        For boolean arrays, the saved tuple is (False count, True count, masked count,
+        total pixels). For floats, it is (minimum value, maximum value, masked count,
+        total pixels). The two cases are distinguished by whether the first value is an
+        integer or a float.
+
+        Parameters:
+            array (Qube): Backplane array to summarize.
+            title (str): Title string describing the test; used as the summary key.
+            method (str): Comparison method, one of "", "mod360", "degrees", or "border".
+
+        Returns:
+            str: A formatted description of the array's range and masking.
         """
 
         def _summary_text(minval, maxval, masked, total):
-            """Save the summary info and return a formatted text string."""
+            """Save the summary info and return a formatted text string.
+
+            Parameters:
+                minval (float or int): Minimum value, or the count of False values for a
+                    boolean array.
+                maxval (float or int): Maximum value, or the count of True values for a
+                    boolean array.
+                masked (int): Number of masked pixels.
+                total (int): Total number of pixels.
+
+            Returns:
+                str: The formatted description.
+            """
 
             self.summary[title] = (minval, maxval, masked, total)
 
@@ -1980,6 +2053,12 @@ class BackplaneTest(object):
 
     def _log_comparison(self, comparison, status=''):
         """Log this comparison info.
+
+        Parameters:
+            comparison (_BackplaneComparison): The completed comparison to be logged.
+            status (str, optional): Status to log in place of the comparison's own status.
+                Default is "", meaning the comparison's status is used.
+
 
         A single record of the log file has this format:
           "<time> | programs.gold_master | <level> | <suite> | <message>"
@@ -2104,7 +2183,15 @@ class BackplaneTest(object):
 
     @staticmethod
     def _valstr(value):
-        """value formatter, avoiding "0.000" and "1.000e-12"."""
+        """Value formatted for display, avoiding "0.000" and "1.000e-12".
+
+        Parameters:
+            value (Qube, int, or float): The value to format. A fully masked value is
+                shown as "--".
+
+        Returns:
+            str: The formatted value.
+        """
 
         if isinstance(value, Qube):
             if value.mask:
@@ -2120,8 +2207,14 @@ class BackplaneTest(object):
 
     @functools.lru_cache(maxsize=10)
     def _footprint(radius):
-        """Circular footprint of the given pixel radius, for scip.ndarray
-        filters.
+        """Circular footprint of the given pixel radius, for scipy.ndimage filters.
+
+        Parameters:
+            radius (float): Radius of the circle in pixels. It is rounded down, so a
+                radius below 1 yields a single pixel.
+
+        Returns:
+            ndarray: A square boolean array that is True inside the circle.
         """
 
         rounded = int(radius // 1)      # rounded down
@@ -2133,9 +2226,14 @@ class BackplaneTest(object):
     def _basename(self, title, gold=False):
         """Convert a title to a file basename.
 
-        if gold is True, the Linux shell-friendly basename is always returned,
-        regardless of the platform. Otherwise, the platform-specific basename is
-        returned.
+        Parameters:
+            title (str): Title string describing the test.
+            gold (bool, optional): True to return the Linux shell-friendly basename
+                regardless of the platform; False to return the platform-specific
+                basename. Default is False.
+
+        Returns:
+            str: The basename, without a file extension.
         """
 
         if self.args.platform in ('darwin', 'macos') and not gold:
@@ -2193,7 +2291,16 @@ class BackplaneTest(object):
     ######################################################################################
 
     def save_browse(self, array, browse_path):
-        """Save a backplane as a PNG, JPG, or TIFF file."""
+        """Save a backplane as a PNG, JPG, or TIFF file.
+
+        The image is scaled to the range of its unmasked values, with masked pixels shown
+        as black, and is zoomed by the factor given on the command line.
+
+        Parameters:
+            array (Qube or ndarray): Backplane array to save.
+            browse_path (FCPath): Path of the file to write. Its suffix determines the
+                image format.
+        """
 
         # Get pixels and mask
         if isinstance(array, np.ndarray):
@@ -2255,6 +2362,12 @@ class BackplaneTest(object):
     @staticmethod
     def read_browse(browse_path):
         """Read a PNG, JPG, or TIFF image file as a 2-D array of unsigned bytes.
+
+        Parameters:
+            browse_path (FCPath): Path of the image file to read.
+
+        Returns:
+            ndarray: The image as a 2-D array of unsigned bytes.
         """
 
         local_path = browse_path.retrieve()
@@ -2273,6 +2386,12 @@ class BackplaneTest(object):
 
     @property
     def gold_summary(self):
+        """The summary dictionary of the gold masters, read from disk on first use.
+
+        Returns:
+            dict: The contents of the gold master summary file, keyed by test title. It is
+            empty if the file is missing or cannot be read.
+        """
 
         if self.gold_summary_ is not None:
             return self.gold_summary_
@@ -2297,19 +2416,27 @@ class BackplaneTest(object):
         return self.gold_summary_
 
     def write_summary(self, outdir):
-        """Write the test summary as a Python dictionary; return its file path.
+        """Write the test summary as a Python dictionary.
+
+        Any pre-existing summary file is renamed with its modification date appended.
+
+        Parameters:
+            outdir (FCPath): Directory in which to write the summary file.
+
+        Returns:
+            FCPath: The path of the file written.
         """
 
         filepath = outdir / 'summary.py'
 
         if filepath.exists():
-            
+
             # Append the latest modification date to any pre-existing file
             dt = datetime.datetime.fromtimestamp(filepath.modification_time(),
                                                  tz=datetime.timezone.utc)
             suffix = dt.strftime('-%Y-%m-%dT%H-%M-%S')
-            dated_filepath = filepath[:-3] + suffix + '.py'
-            
+            dated_filepath = filepath.with_stem(filepath.stem + suffix)
+
             # Move or copy the old summary to its timestamped filename using
             # filecache-aware replacement semantics.
             filepath.replace(dated_filepath)
