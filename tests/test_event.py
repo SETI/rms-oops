@@ -176,28 +176,28 @@ def test_event():
                             ('PLUTO', 'IAU_EARTH')]:
 
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-        assert ev._arr_ is None
-        assert ev._arr_ap_ is None
-        assert ev._neg_arr_ is None
-        assert ev._neg_arr_ap_ is None
-        assert ev._ssb_ is None
+        assert ev._arr is None
+        assert ev._arr_ap is None
+        assert ev._neg_arr is None
+        assert ev._neg_arr_ap is None
+        assert ev._ssb is None
 
         ##################################################################################
         # Define arr
         ##################################################################################
 
         ev.arr = (1,2,3)
-        assert ev._arr_ == Vector3((1.,2.,3.))
-        assert ev._arr_ap_ is None
-        assert ev._neg_arr_ is None
-        assert ev._neg_arr_ap_ is None
-        assert ev._ssb_ is None
+        assert ev._arr == Vector3((1.,2.,3.))
+        assert ev._arr_ap is None
+        assert ev._neg_arr is None
+        assert ev._neg_arr_ap is None
+        assert ev._ssb is None
 
-        assert ev._neg_arr_ is None
+        assert ev._neg_arr is None
         assert ev.neg_arr == Vector3((-1.,-2.,-3.))
-        assert ev.neg_arr is ev._neg_arr_
-        assert ev._neg_arr_ap_ is None
-        assert ev._ssb_ is None
+        assert ev.neg_arr is ev._neg_arr
+        assert ev._neg_arr_ap is None
+        assert ev._ssb is None
 
         try:
             ev.arr_ap = (1,2,3)
@@ -205,9 +205,9 @@ def test_event():
         except ValueError:
             pass
 
-        assert ev._arr_ap_ is None
-        assert ev._neg_arr_ap_ is None
-        assert ev._ssb_ is None
+        assert ev._arr_ap is None
+        assert ev._neg_arr_ap is None
+        assert ev._ssb is None
 
         try:
             ev.neg_arr_ap = (1,2,3)
@@ -215,9 +215,9 @@ def test_event():
         except ValueError:
             pass
 
-        assert ev._arr_ap_ is None
-        assert ev._neg_arr_ap_ is None
-        assert ev._ssb_ is None
+        assert ev._arr_ap is None
+        assert ev._neg_arr_ap is None
+        assert ev._ssb is None
 
         # Let arr_ap and ssb be filled in
         _ = ev.arr_ap
@@ -228,37 +228,37 @@ def test_event():
         assert ev.neg_arr_ap_j2000 == -ev.arr_ap_j2000
 
         if (origin, frame) == ('SSB', 'J2000'):
-            assert ev is ev._ssb_
+            assert ev is ev._ssb
             assert ev.arr_j2000 == ev.arr
             assert ev.arr_ap_j2000 == ev.arr_ap
         else:
-            assert ev._ssb_ is not None
-            assert ev._ssb_.arr is not None
-            assert ev._ssb_.arr_ap is not None
+            assert ev._ssb is not None
+            assert ev._ssb.arr is not None
+            assert ev._ssb.arr_ap is not None
 
         ##################################################################################
         # Define arr_ap
         ##################################################################################
 
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-        assert ev._arr_ is None
-        assert ev._arr_ap_ is None
-        assert ev._neg_arr_ is None
-        assert ev._neg_arr_ap_ is None
-        assert ev._ssb_ is None
+        assert ev._arr is None
+        assert ev._arr_ap is None
+        assert ev._neg_arr is None
+        assert ev._neg_arr_ap is None
+        assert ev._ssb is None
 
         ev.arr_ap = (1,2,3)
-        assert ev._arr_ap_ == Vector3((1.,2.,3.))
-        assert ev._arr_ is None
-        assert ev._neg_arr_ is None
-        assert ev._neg_arr_ap_ is None
-        assert ev._ssb_ is None
+        assert ev._arr_ap == Vector3((1.,2.,3.))
+        assert ev._arr is None
+        assert ev._neg_arr is None
+        assert ev._neg_arr_ap is None
+        assert ev._ssb is None
 
         assert ev.neg_arr_ap == Vector3((-1.,-2.,-3.))
-        assert ev._arr_ap_ == Vector3((1.,2.,3.))
-        assert ev._arr_ is None
-        assert ev._neg_arr_ is None
-        assert ev._ssb_ is None
+        assert ev._arr_ap == Vector3((1.,2.,3.))
+        assert ev._arr is None
+        assert ev._neg_arr is None
+        assert ev._ssb is None
 
         try:
             ev.arr = (1,2,3)
@@ -266,9 +266,9 @@ def test_event():
         except ValueError:
             pass
 
-        assert ev._arr_ is None
-        assert ev._neg_arr_ is None
-        assert ev._ssb_ is None
+        assert ev._arr is None
+        assert ev._neg_arr is None
+        assert ev._ssb is None
 
         # Let arr and ssb be filled in
         _ = ev.arr
@@ -279,36 +279,36 @@ def test_event():
         assert ev.neg_arr_ap_j2000 == -ev.arr_ap_j2000
 
         if (origin, frame) == ('SSB', 'J2000'):
-            assert ev is ev._ssb_
+            assert ev is ev._ssb
             assert ev.arr_j2000 is ev.arr
             assert ev.arr_ap_j2000 is ev.arr_ap
         else:
-            assert ev._ssb_ is not None
-            assert ev._ssb_.arr is not None
-            assert ev._ssb_.arr_ap is not None
+            assert ev._ssb is not None
+            assert ev._ssb.arr is not None
+            assert ev._ssb.arr_ap is not None
 
         ##################################################################################
         # Define arr_j2000
         ##################################################################################
 
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-        assert ev._arr_ is None
-        assert ev._arr_ap_ is None
-        assert ev._neg_arr_ is None
-        assert ev._neg_arr_ap_ is None
-        assert ev._ssb_ is None
+        assert ev._arr is None
+        assert ev._arr_ap is None
+        assert ev._neg_arr is None
+        assert ev._neg_arr_ap is None
+        assert ev._ssb is None
 
         ev.arr_j2000 = (1,2,3)
-        assert ev._ssb_ is not None
-        assert ev.ssb._arr_ == Vector3((1.,2.,3.))
-        assert ev.ssb._arr_ap_ is None
-        assert ev.ssb._neg_arr_ is None
-        assert ev.ssb._neg_arr_ap_ is None
+        assert ev._ssb is not None
+        assert ev.ssb._arr == Vector3((1.,2.,3.))
+        assert ev.ssb._arr_ap is None
+        assert ev.ssb._neg_arr is None
+        assert ev.ssb._neg_arr_ap is None
 
-        assert ev._arr_ is not None
-        assert ev._arr_ap_ is None
-        assert ev._neg_arr_ is None
-        assert ev._neg_arr_ap_ is None
+        assert ev._arr is not None
+        assert ev._arr_ap is None
+        assert ev._neg_arr is None
+        assert ev._neg_arr_ap is None
 
         try:
             ev.arr = (1,2,3)
@@ -322,10 +322,10 @@ def test_event():
         except ValueError:
             pass
 
-        assert ev._arr_ is not None
-        assert ev._arr_ap_ is None
-        assert ev._neg_arr_ is None
-        assert ev._neg_arr_ap_ is None
+        assert ev._arr is not None
+        assert ev._arr_ap is None
+        assert ev._neg_arr is None
+        assert ev._neg_arr_ap is None
 
         try:
             ev.neg_arr = (1,2,3)
@@ -333,9 +333,9 @@ def test_event():
         except ValueError:
             pass
 
-        assert ev._arr_ap_ is None
-        assert ev._neg_arr_ is None
-        assert ev._neg_arr_ap_ is None
+        assert ev._arr_ap is None
+        assert ev._neg_arr is None
+        assert ev._neg_arr_ap is None
 
         # Let arr_ap and ssb be filled in
         _ = ev.arr_ap
@@ -346,36 +346,36 @@ def test_event():
         assert ev.neg_arr_ap_j2000 == -ev.arr_ap_j2000
 
         if (origin, frame) == ('SSB', 'J2000'):
-            assert ev is ev._ssb_
+            assert ev is ev._ssb
             assert ev.arr_j2000 == ev.arr
             assert ev.arr_ap_j2000 == ev.arr_ap
         else:
-            assert ev._ssb_ is not None
-            assert ev._ssb_.arr is not None
-            assert ev._ssb_.arr_ap is not None
+            assert ev._ssb is not None
+            assert ev._ssb.arr is not None
+            assert ev._ssb.arr_ap is not None
 
         ##################################################################################
         # Define arr_ap_j2000
         ##################################################################################
 
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-        assert ev._arr_ is None
-        assert ev._arr_ap_ is None
-        assert ev._neg_arr_ is None
-        assert ev._neg_arr_ap_ is None
-        assert ev._ssb_ is None
+        assert ev._arr is None
+        assert ev._arr_ap is None
+        assert ev._neg_arr is None
+        assert ev._neg_arr_ap is None
+        assert ev._ssb is None
 
         ev.arr_ap_j2000 = (1,2,3)
-        assert ev._ssb_ is not None
-        assert ev.ssb._arr_ap_ == Vector3((1.,2.,3.))
-        assert ev.ssb._arr_ is None
-        assert ev.ssb._neg_arr_ is None
-        assert ev.ssb._neg_arr_ap_ is None
+        assert ev._ssb is not None
+        assert ev.ssb._arr_ap == Vector3((1.,2.,3.))
+        assert ev.ssb._arr is None
+        assert ev.ssb._neg_arr is None
+        assert ev.ssb._neg_arr_ap is None
 
-        assert ev._arr_ap_ is not None
-        assert ev._arr_ is None
-        assert ev._neg_arr_ is None
-        assert ev._neg_arr_ap_ is None
+        assert ev._arr_ap is not None
+        assert ev._arr is None
+        assert ev._neg_arr is None
+        assert ev._neg_arr_ap is None
 
         try:
             ev.arr = (1,2,3)
@@ -389,10 +389,10 @@ def test_event():
         except ValueError:
             pass
 
-        assert ev._arr_ap_ is not None
-        assert ev._arr_ is None
-        assert ev._neg_arr_ is None
-        assert ev._neg_arr_ap_ is None
+        assert ev._arr_ap is not None
+        assert ev._arr is None
+        assert ev._neg_arr is None
+        assert ev._neg_arr_ap is None
 
         try:
             ev.neg_arr_ap = (1,2,3)
@@ -400,9 +400,9 @@ def test_event():
         except ValueError:
             pass
 
-        assert ev._arr_ is None
-        assert ev._neg_arr_ is None
-        assert ev._neg_arr_ap_ is None
+        assert ev._arr is None
+        assert ev._neg_arr is None
+        assert ev._neg_arr_ap is None
 
         # Let arr and ssb be filled in
         _ = ev.arr_ap
@@ -413,31 +413,31 @@ def test_event():
         assert ev.neg_arr_ap_j2000 == -ev.arr_ap_j2000
 
         if (origin, frame) == ('SSB', 'J2000'):
-            assert ev is ev._ssb_
+            assert ev is ev._ssb
             assert ev.arr_j2000 == ev.arr
             assert ev.arr_ap_j2000 == ev.arr_ap
         else:
-            assert ev._ssb_ is not None
-            assert ev._ssb_.arr is not None
-            assert ev._ssb_.arr_ap is not None
+            assert ev._ssb is not None
+            assert ev._ssb.arr is not None
+            assert ev._ssb.arr_ap is not None
 
         ##################################################################################
         # Define neg_arr
         ##################################################################################
 
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-        assert ev._arr_ is None
-        assert ev._arr_ap_ is None
-        assert ev._neg_arr_ is None
-        assert ev._neg_arr_ap_ is None
-        assert ev._ssb_ is None
+        assert ev._arr is None
+        assert ev._arr_ap is None
+        assert ev._neg_arr is None
+        assert ev._neg_arr_ap is None
+        assert ev._ssb is None
 
         ev.neg_arr = (-1,-2,-3)
-        assert ev._arr_ == Vector3((1.,2.,3.))
-        assert ev._neg_arr_ == Vector3((-1.,-2.,-3.))
-        assert ev._arr_ap_ is None
-        assert ev._neg_arr_ap_ is None
-        assert ev._ssb_ is None
+        assert ev._arr == Vector3((1.,2.,3.))
+        assert ev._neg_arr == Vector3((-1.,-2.,-3.))
+        assert ev._arr_ap is None
+        assert ev._neg_arr_ap is None
+        assert ev._ssb is None
 
         try:
             ev.arr = (1,2,3)
@@ -451,9 +451,9 @@ def test_event():
         except ValueError:
             pass
 
-        assert ev._arr_ap_ is None
-        assert ev._neg_arr_ap_ is None
-        assert ev._ssb_ is None
+        assert ev._arr_ap is None
+        assert ev._neg_arr_ap is None
+        assert ev._ssb is None
 
         try:
             ev.neg_arr_ap = (1,2,3)
@@ -461,9 +461,9 @@ def test_event():
         except ValueError:
             pass
 
-        assert ev._arr_ap_ is None
-        assert ev._neg_arr_ap_ is None
-        assert ev._ssb_ is None
+        assert ev._arr_ap is None
+        assert ev._neg_arr_ap is None
+        assert ev._ssb is None
 
         # Let arr_ap and ssb be filled in
         _ = ev.arr_ap
@@ -474,31 +474,31 @@ def test_event():
         assert ev.neg_arr_ap_j2000 == -ev.arr_ap_j2000
 
         if (origin, frame) == ('SSB', 'J2000'):
-            assert ev is ev._ssb_
+            assert ev is ev._ssb
             assert ev.arr_j2000 == ev.arr
             assert ev.arr_ap_j2000 == ev.arr_ap
         else:
-            assert ev._ssb_ is not None
-            assert ev._ssb_.arr is not None
-            assert ev._ssb_.arr_ap is not None
+            assert ev._ssb is not None
+            assert ev._ssb.arr is not None
+            assert ev._ssb.arr_ap is not None
 
         ##################################################################################
         # Define neg_arr_ap
         ##################################################################################
 
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-        assert ev._arr_ is None
-        assert ev._arr_ap_ is None
-        assert ev._neg_arr_ is None
-        assert ev._neg_arr_ap_ is None
-        assert ev._ssb_ is None
+        assert ev._arr is None
+        assert ev._arr_ap is None
+        assert ev._neg_arr is None
+        assert ev._neg_arr_ap is None
+        assert ev._ssb is None
 
         ev.neg_arr_ap = (-1,-2,-3)
-        assert ev._arr_ap_ == Vector3((1.,2.,3.))
-        assert ev._neg_arr_ap_ == Vector3((-1.,-2.,-3.))
-        assert ev._arr_ is None
-        assert ev._neg_arr_ is None
-        assert ev._ssb_ is None
+        assert ev._arr_ap == Vector3((1.,2.,3.))
+        assert ev._neg_arr_ap == Vector3((-1.,-2.,-3.))
+        assert ev._arr is None
+        assert ev._neg_arr is None
+        assert ev._ssb is None
 
         try:
             ev.arr = (1,2,3)
@@ -512,9 +512,9 @@ def test_event():
         except ValueError:
             pass
 
-        assert ev._arr_ is None
-        assert ev._neg_arr_ is None
-        assert ev._ssb_ is None
+        assert ev._arr is None
+        assert ev._neg_arr is None
+        assert ev._ssb is None
 
         try:
             ev.neg_arr_ap = (1,2,3)
@@ -522,9 +522,9 @@ def test_event():
         except ValueError:
             pass
 
-        assert ev._arr_ is None
-        assert ev._neg_arr_ is None
-        assert ev._ssb_ is None
+        assert ev._arr is None
+        assert ev._neg_arr is None
+        assert ev._ssb is None
 
         # Let arr and ssb be filled in
         _ = ev.arr
@@ -535,31 +535,31 @@ def test_event():
         assert ev.neg_arr_ap_j2000 == -ev.arr_ap_j2000
 
         if (origin, frame) == ('SSB', 'J2000'):
-            assert ev is ev._ssb_
+            assert ev is ev._ssb
             assert ev.arr_j2000 == ev.arr
             assert ev.arr_ap_j2000 == ev.arr_ap
         else:
-            assert ev._ssb_ is not None
-            assert ev._ssb_.arr is not None
-            assert ev._ssb_.arr_ap is not None
+            assert ev._ssb is not None
+            assert ev._ssb.arr is not None
+            assert ev._ssb.arr_ap is not None
 
         ##################################################################################
         # Define neg_arr_j2000
         ##################################################################################
 
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-        assert ev._arr_ is None
-        assert ev._arr_ap_ is None
-        assert ev._neg_arr_ is None
-        assert ev._neg_arr_ap_ is None
-        assert ev._ssb_ is None
+        assert ev._arr is None
+        assert ev._arr_ap is None
+        assert ev._neg_arr is None
+        assert ev._neg_arr_ap is None
+        assert ev._ssb is None
 
         ev.neg_arr_j2000 = (-1,-2,-3)
-        assert ev._ssb_ is not None
-        assert ev.ssb._arr_ == Vector3((1.,2.,3.))
-        assert ev.ssb._neg_arr_ == Vector3((-1.,-2.,-3.))
-        assert ev.ssb._arr_ap_ is None
-        assert ev.ssb._neg_arr_ap_ is None
+        assert ev._ssb is not None
+        assert ev.ssb._arr == Vector3((1.,2.,3.))
+        assert ev.ssb._neg_arr == Vector3((-1.,-2.,-3.))
+        assert ev.ssb._arr_ap is None
+        assert ev.ssb._neg_arr_ap is None
 
         try:
             ev.arr = (1,2,3)
@@ -588,31 +588,31 @@ def test_event():
         assert ev.neg_arr_ap_j2000 == -ev.arr_ap_j2000
 
         if (origin, frame) == ('SSB', 'J2000'):
-            assert ev is ev._ssb_
+            assert ev is ev._ssb
             assert ev.arr_j2000 == ev.arr
             assert ev.arr_ap_j2000 == ev.arr_ap
         else:
-            assert ev._ssb_ is not None
-            assert ev._ssb_.arr is not None
-            assert ev._ssb_.arr_ap is not None
+            assert ev._ssb is not None
+            assert ev._ssb.arr is not None
+            assert ev._ssb.arr_ap is not None
 
         ##################################################################################
         # Define neg_arr_ap_j2000
         ##################################################################################
 
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-        assert ev._arr_ is None
-        assert ev._arr_ap_ is None
-        assert ev._neg_arr_ is None
-        assert ev._neg_arr_ap_ is None
-        assert ev._ssb_ is None
+        assert ev._arr is None
+        assert ev._arr_ap is None
+        assert ev._neg_arr is None
+        assert ev._neg_arr_ap is None
+        assert ev._ssb is None
 
         ev.neg_arr_ap_j2000 = (-1,-2,-3)
-        assert ev._ssb_ is not None
-        assert ev.ssb._arr_ap_ == Vector3((1.,2.,3.))
-        assert ev.ssb._neg_arr_ap_ == Vector3((-1.,-2.,-3.))
-        assert ev.ssb._arr_ap_ is not None
-        assert ev.ssb._neg_arr_ap_ is not None
+        assert ev._ssb is not None
+        assert ev.ssb._arr_ap == Vector3((1.,2.,3.))
+        assert ev.ssb._neg_arr_ap == Vector3((-1.,-2.,-3.))
+        assert ev.ssb._arr_ap is not None
+        assert ev.ssb._neg_arr_ap is not None
 
         try:
             ev.arr = (1,2,3)
@@ -641,26 +641,26 @@ def test_event():
         assert ev.neg_arr_ap_j2000 == -ev.arr_ap_j2000
 
         if (origin, frame) == ('SSB', 'J2000'):
-            assert ev is ev._ssb_
+            assert ev is ev._ssb
             assert ev.arr_j2000 == ev.arr
             assert ev.arr_ap_j2000 == ev.arr_ap
         else:
-            assert ev._ssb_ is not None
-            assert ev._ssb_.arr is not None
-            assert ev._ssb_.arr_ap is not None
+            assert ev._ssb is not None
+            assert ev._ssb.arr is not None
+            assert ev._ssb.arr_ap is not None
 
         ##################################################################################
         # Define dep
         ##################################################################################
 
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-        assert ev._dep_ is None
-        assert ev._dep_ap_ is None
+        assert ev._dep is None
+        assert ev._dep_ap is None
 
         ev.dep = (-1,2,-3)
-        assert ev._dep_ == Vector3((-1.,2.,-3.))
-        assert ev._dep_ap_ is None
-        assert ev._ssb_ is None
+        assert ev._dep == Vector3((-1.,2.,-3.))
+        assert ev._dep_ap is None
+        assert ev._ssb is None
 
         try:
             ev.dep_ap = (-1,2,-3)
@@ -668,34 +668,34 @@ def test_event():
         except ValueError:
             pass
 
-        assert ev._dep_ap_ is None
-        assert ev._ssb_ is None
+        assert ev._dep_ap is None
+        assert ev._ssb is None
 
         # Fill in dep_ap and ssb
         _ = ev.dep_ap
         assert (ev.dep_ap - ev.dep).norm() < 5*BETA
 
         if (origin, frame) == ('SSB', 'J2000'):
-            assert ev is ev._ssb_
+            assert ev is ev._ssb
             assert ev.dep_j2000 == ev.dep
             assert ev.dep_ap_j2000 == ev.dep_ap
         else:
-            assert ev._ssb_ is not None
-            assert ev._ssb_.dep is not None
-            assert ev._ssb_.dep_ap is not None
+            assert ev._ssb is not None
+            assert ev._ssb.dep is not None
+            assert ev._ssb.dep_ap is not None
 
         ##################################################################################
         # Define dep_ap
         ##################################################################################
 
         ev = Event(0., (Vector3.ZERO, SPEED * Vector3.ZAXIS), origin, frame)
-        assert ev._dep_ is None
-        assert ev._dep_ap_ is None
+        assert ev._dep is None
+        assert ev._dep_ap is None
 
         ev.dep_ap = (-1,2,-3)
-        assert ev._dep_ap_ == Vector3((-1.,2.,-3.))
-        assert ev._dep_ is None
-        assert ev._ssb_ is None
+        assert ev._dep_ap == Vector3((-1.,2.,-3.))
+        assert ev._dep is None
+        assert ev._ssb is None
 
         try:
             ev.dep_ap = (-1,2,-3)
@@ -703,21 +703,21 @@ def test_event():
         except ValueError:
             pass
 
-        assert ev._dep_ is None
-        assert ev._ssb_ is None
+        assert ev._dep is None
+        assert ev._ssb is None
 
         # Fill in dep and ssb
         _ = ev.dep
         assert (ev.dep_ap - ev.dep).norm() < 5*BETA
 
         if (origin, frame) == ('SSB', 'J2000'):
-            assert ev is ev._ssb_
+            assert ev is ev._ssb
             assert ev.dep_j2000 == ev.dep
             assert ev.dep_ap_j2000 == ev.dep_ap
         else:
-            assert ev._ssb_ is not None
-            assert ev._ssb_.dep is not None
-            assert ev._ssb_.dep_ap is not None
+            assert ev._ssb is not None
+            assert ev._ssb.dep is not None
+            assert ev._ssb.dep_ap is not None
 
 
 def _event_in_a_rotating_frame():
@@ -738,7 +738,7 @@ def _event_in_a_rotating_frame():
 
 
 @pytest.mark.parametrize('method, holder, name',
-                         [('with_pos_derivs', '_state_', 'pos'),
+                         [('with_pos_derivs', '_state', 'pos'),
                           ('with_lt_derivs',  'arr_lt',  'lt'),
                           ('with_dep_derivs', 'dep_ap',  'dep'),
                           ('with_dlt_derivs', 'dep_lt',  'dlt')])
@@ -767,8 +767,8 @@ def test_with_pos_derivs_gives_the_rotation_into_j2000() -> None:
 
     result = event.with_pos_derivs()
 
-    assert np.allclose(result._state_.d_dpos.vals, np.eye(3), atol=1.e-15)
-    assert np.allclose(result.ssb._state_.d_dpos.vals,
+    assert np.allclose(result._state.d_dpos.vals, np.eye(3), atol=1.e-15)
+    assert np.allclose(result.ssb._state.d_dpos.vals,
                        result.xform_to_j2000.matrix.vals, atol=1.e-15)
 
 
@@ -782,7 +782,7 @@ def test_with_pos_derivs_matches_a_numerical_derivative() -> None:
 
     event = _event_in_a_rotating_frame()
     _ = event.wrt_ssb()
-    analytic = event.with_pos_derivs().ssb._state_.d_dpos.vals[..., 0]
+    analytic = event.with_pos_derivs().ssb._state.d_dpos.vals[..., 0]
 
     # A large step, because the SSB position is ~1e8 km and the difference is not
     step = 100.
@@ -792,7 +792,7 @@ def test_with_pos_derivs_matches_a_numerical_derivative() -> None:
 
 
 def test_reading_vflat_does_not_block_assigning_it() -> None:
-    """The zero returned for an undefined surface velocity is not saved as a definition."""
+    """The zero returned for an undefined surface velocity is not saved as a value."""
 
     event = Event(Scalar(0.), (Vector3.ZERO, Vector3.ZERO), 'SSB', 'J2000')
 
