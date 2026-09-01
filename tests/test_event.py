@@ -5,13 +5,13 @@
 import numpy as np
 import pytest
 
-from polymath       import Vector3
+from polymath       import Scalar, Vector3
 from oops.body      import Body
 from oops.event     import Event
 from oops.constants import C, RPD
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope='module', autouse=True)
 def _solar_system():
     Body._undefine_solar_system()
     Body.define_solar_system('1990-01-01', '2010-01-01')
@@ -718,4 +718,97 @@ def test_event():
             assert ev._ssb_ is not None
             assert ev._ssb_.dep is not None
             assert ev._ssb_.dep_ap is not None
+
+
+def _event_in_a_rotating_frame():
+    """An Event on Earth's surface, expressed in a frame that rotates relative to J2000.
+
+    Returns:
+        Event: The event, carrying arrival and departure photons.
+    """
+
+    event = Event(Scalar(0.), (Vector3((6.4e3, 0., 0.)), Vector3((0., 0.4, 0.))),
+                  'EARTH', 'IAU_EARTH')
+    event.arr = Vector3((-1., 0., 0.))
+    event.arr_lt = Scalar(-0.5)
+    event.dep = Vector3((0., -1., 0.))
+    event.dep_lt = Scalar(0.7)
+
+    return event
+
+
+@pytest.mark.parametrize('method, holder, name',
+                         [('with_pos_derivs', '_state_', 'pos'),
+                          ('with_lt_derivs',  'arr_lt',  'lt'),
+                          ('with_dep_derivs', 'dep_ap',  'dep'),
+                          ('with_dlt_derivs', 'dep_lt',  'dlt')])
+def test_with_derivs_inserts_the_derivative(method, holder, name) -> None:
+    """Each `with_*_derivs` method returns a clone carrying its unit derivative."""
+
+    event = _event_in_a_rotating_frame()
+
+    result = getattr(event, method)()
+
+    assert name in getattr(result, holder).derivs
+
+    # Asking again returns the same event rather than inserting the derivative twice
+    assert getattr(result, method)() is result
+
+
+def test_with_pos_derivs_gives_the_rotation_into_j2000() -> None:
+    """The SSB clone's position derivative is the rotation out of the event's frame.
+
+    The derivative in the event's own frame is the identity, so the derivative of the
+    SSB position with respect to it is exactly the transform between the two.
+    """
+
+    event = _event_in_a_rotating_frame()
+    _ = event.wrt_ssb()                     # so the event has an SSB counterpart
+
+    result = event.with_pos_derivs()
+
+    assert np.allclose(result._state_.d_dpos.vals, np.eye(3), atol=1.e-15)
+    assert np.allclose(result.ssb._state_.d_dpos.vals,
+                       result.xform_to_j2000.matrix.vals, atol=1.e-15)
+
+
+def test_with_pos_derivs_matches_a_numerical_derivative() -> None:
+    """The SSB position derivative matches moving the event and re-measuring it."""
+
+    def ssb_position(x):
+        event = Event(Scalar(0.), (Vector3((x, 0., 0.)), Vector3((0., 0.4, 0.))),
+                      'EARTH', 'IAU_EARTH')
+        return event.wrt_ssb().pos.vals
+
+    event = _event_in_a_rotating_frame()
+    _ = event.wrt_ssb()
+    analytic = event.with_pos_derivs().ssb._state_.d_dpos.vals[..., 0]
+
+    # A large step, because the SSB position is ~1e8 km and the difference is not
+    step = 100.
+    numeric = (ssb_position(6.4e3 + step) - ssb_position(6.4e3 - step)) / (2. * step)
+
+    assert np.allclose(numeric, analytic, rtol=1.e-9)
+
+
+def test_reading_vflat_does_not_block_assigning_it() -> None:
+    """The zero returned for an undefined surface velocity is not saved as a definition."""
+
+    event = Event(Scalar(0.), (Vector3.ZERO, Vector3.ZERO), 'SSB', 'J2000')
+
+    assert event.vflat == Vector3.ZERO       # the default, which must not be recorded
+
+    event.vflat = Vector3((1., 0., 0.))
+    assert event.vflat == Vector3((1., 0., 0.))
+
+
+def test_vflat_can_only_be_assigned_once() -> None:
+    """An explicit surface velocity is still refused a second value."""
+
+    event = Event(Scalar(0.), (Vector3.ZERO, Vector3.ZERO), 'SSB', 'J2000')
+    event.vflat = Vector3((1., 0., 0.))
+
+    with pytest.raises(ValueError, match='already defined'):
+        event.vflat = Vector3((2., 0., 0.))
+
 ##########################################################################################

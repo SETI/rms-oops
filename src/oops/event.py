@@ -185,6 +185,8 @@ class Event(object):
 
     @property
     def time(self):
+        """Event times in seconds TDB."""
+
         return self._time_
 
     @property
@@ -199,6 +201,8 @@ class Event(object):
 
     @property
     def vel(self):
+        """Event velocities in km/s, the time-derivative of the position."""
+
         if hasattr(self._state_, 'd_dt'):
             return self._state_.d_dt
         else:
@@ -206,26 +210,38 @@ class Event(object):
 
     @property
     def origin(self):
+        """The Path defining where positions and velocities are measured from."""
+
         return self._origin_
 
     @property
     def origin_id(self):
+        """The ID of the origin Path."""
+
         return self._origin_.path_id
 
     @property
     def frame(self):
+        """The Frame in which the position and velocity components are defined."""
+
         return self._frame_
 
     @property
     def frame_id(self):
+        """The ID of the coordinate Frame."""
+
         return self._frame_.frame_id
 
     @property
     def subfields(self):
+        """The dictionary of further information about this event."""
+
         return self._subfields_
 
     @property
     def shape(self):
+        """The shape of this Event, broadcast across all of its properties."""
+
         if self._shape_ is None:
             self._shape_ = Qube.broadcasted_shape(self._time_, self._state_,
                                                   self._origin_, self._frame_, self._arr_,
@@ -235,10 +251,14 @@ class Event(object):
 
     @property
     def size(self):
+        """The number of elements in this Event."""
+
         return int(np.prod(self.shape))
 
     @property
     def mask(self):
+        """The mask, True where this Event is undefined."""
+
         if self._mask_ is None:
             self._mask_ = Qube.or_(self._time_.mask, self._state_.mask, self.vel.mask)
             if self._dep_ is not None:
@@ -260,6 +280,8 @@ class Event(object):
 
     @property
     def antimask(self):
+        """The antimask, True where this Event is defined."""
+
         if self._antimask_ is None:
             self._antimask_ = np.logical_not(self.mask)
 
@@ -267,6 +289,8 @@ class Event(object):
 
     @property
     def ssb(self):
+        """This Event referenced to SSB/J2000, evaluated on first use."""
+
         if self._ssb_ is None:
             _ = self.wrt_ssb(derivs=True)
 
@@ -288,6 +312,8 @@ class Event(object):
 
     @property
     def wod(self):
+        """This Event without any derivatives, evaluated on first use."""
+
         if self._wod_ is None:
             self._wod_ = self.without_derivs()
             self._wod_._wod_ = self._wod_
@@ -343,6 +369,8 @@ class Event(object):
 
     @property
     def arr(self):
+        """The direction of a photon arriving at this event, in its own frame."""
+
         if self._arr_ is None:
             if self._arr_ap_ is not None:
                 _ = self.actual_arr(derivs=True)    # fill internal attribute
@@ -367,6 +395,8 @@ class Event(object):
 
     @property
     def arr_ap(self):
+        """The apparent direction of a photon arriving at this event."""
+
         if self._arr_ap_ is None:
             if self._arr_ is not None:
                 _ = self.apparent_arr(derivs=True)  # fill internal attribute
@@ -391,6 +421,8 @@ class Event(object):
 
     @property
     def arr_j2000(self):
+        """The direction of an arriving photon, in J2000 coordinates."""
+
         return self.ssb.arr
 
     @arr_j2000.setter
@@ -407,6 +439,8 @@ class Event(object):
 
     @property
     def arr_ap_j2000(self):
+        """The apparent direction of an arriving photon, in J2000 coordinates."""
+
         return self.ssb.arr_ap
 
     @arr_ap_j2000.setter
@@ -423,6 +457,8 @@ class Event(object):
 
     @property
     def arr_lt(self):
+        """The light travel time of an arriving photon from its source, negative."""
+
         return self._arr_lt_        # returns None if still undefined
 
     @arr_lt.setter
@@ -452,6 +488,8 @@ class Event(object):
 
     @property
     def neg_arr(self):
+        """The negative of `arr`."""
+
         if self._neg_arr_ is None and self.arr is not None:
             self._neg_arr_ = -self.arr
 
@@ -467,6 +505,8 @@ class Event(object):
 
     @property
     def neg_arr_ap(self):
+        """The negative of `arr_ap`."""
+
         if self._neg_arr_ap_ is None and self.arr_ap is not None:
             self._neg_arr_ap_ = -self.arr_ap
 
@@ -482,6 +522,8 @@ class Event(object):
 
     @property
     def neg_arr_j2000(self):
+        """The negative of `arr_j2000`."""
+
         return self.ssb.neg_arr
 
     @neg_arr_j2000.setter
@@ -497,6 +539,8 @@ class Event(object):
 
     @property
     def neg_arr_ap_j2000(self):
+        """The negative of `arr_ap_j2000`."""
+
         return self.ssb.neg_arr_ap
 
     @neg_arr_ap_j2000.setter
@@ -523,6 +567,8 @@ class Event(object):
 
     @property
     def dep(self):
+        """The direction of a photon departing from this event, in its own frame."""
+
         if self._dep_ is None:
             if self._dep_ap_ is not None:
                 _ = self.actual_dep(derivs=True)    # fill internal attribute
@@ -547,6 +593,8 @@ class Event(object):
 
     @property
     def dep_ap(self):
+        """The apparent direction of a photon departing from this event."""
+
         if self._dep_ap_ is None:
             if self._dep_ is not None:
                 _ = self.apparent_dep(derivs=True)  # fill internal attribute
@@ -572,6 +620,8 @@ class Event(object):
 
     @property
     def dep_j2000(self):
+        """The direction of a departing photon, in J2000 coordinates."""
+
         return self.ssb.dep
 
     @dep_j2000.setter
@@ -589,6 +639,8 @@ class Event(object):
 
     @property
     def dep_ap_j2000(self):
+        """The apparent direction of a departing photon, in J2000 coordinates."""
+
         return self.ssb.dep_ap
 
     @dep_ap_j2000.setter
@@ -605,6 +657,8 @@ class Event(object):
 
     @property
     def dep_lt(self):
+        """The light travel time of a departing photon to its destination."""
+
         return self._dep_lt_
 
     @dep_lt.setter
@@ -618,7 +672,7 @@ class Event(object):
 
         self._dep_lt_ = dep_lt
 
-        if (self._ssb_ is not None):
+        if (self._ssb_ is not None) and (self._ssb_._dep_lt_ is None):
             self._ssb_._dep_lt_ = self._dep_lt_
 
         self.empty_cache()
@@ -629,6 +683,8 @@ class Event(object):
 
     @property
     def perp(self):
+        """The normal vector where this event falls on a surface, None if undefined."""
+
         return self._perp_
 
     @perp.setter
@@ -650,8 +706,17 @@ class Event(object):
 
     @property
     def vflat(self):
+        """The velocity component within the surface, zero if it was never defined.
+
+        The default is not saved, because doing so would count as defining the value and
+        would block any later assignment.
+
+        Returns:
+            Vector3: The surface velocity, or `Vector3.ZERO` if none was assigned.
+        """
+
         if self._vflat_ is None:
-            self._vflat_ = Vector3.ZERO
+            return Vector3.ZERO
 
         return self._vflat_
 
@@ -1005,79 +1070,89 @@ class Event(object):
 
         return event
 
-# TODO: These are unused; might not work exactly as intended. --Mark
-#
-#     def with_pos_derivs(self):
-#         """A clone of this event containing unit position derivatives d_dpos in
-#         the frame of the event.
-#         """
-#
-#         if 'pos' in self.__state__.derivs:
-#             return self
-#
-#         event = self.copy()
-#         event._state_.insert_deriv('pos', Vector3.IDENTITY, override=True)
-#
-#         if event._ssb_ is not None and event._ssb_ is not event:
-#             dpos_dpos_j2000 = event.xform_to_j2000.rotate(event._state_,
-#                                                           derivs=True)
-#             event.ssb._state_.insert_deriv('pos', dpos_dpos_j2000,
-#                                                   override=True)
-#
-#         return event
-#
-#     #===========================================================================
-#     def with_lt_derivs(self):
-#         """A clone of this event containing unit photon arrival light-time
-#         derivatives d_dlt.
-#         """
-#
-#         if 'lt' in self.arr_lt.derivs:
-#             return self
-#
-#         event = self.copy()
-#         event._arr_lt_.insert_deriv('lt', Scalar.ONE, override=True)
-#
-#         if event._ssb_ is not None and event._ssb_ is not event and \
-#            event._ssb_._arr_lt_ is not event._arr_lt_:
-#             event._ssb_._arr_lt_.insert_deriv('lt', Scalar.ONE, override=True)
-#
-#         return event
-#
-#     #===========================================================================
-#     def with_dep_derivs(self):
-#         """A clone of this event with unit photon departure derivatives d_ddep.
-#         """
-#
-#         if 'dep' in self.dep_ap.derivs:
-#             return self
-#
-#         event = self.copy(omit='dep')
-#         dep_ap = self.dep_ap.copy()
-#         dep_ap.insert_deriv('dep', Vector3.IDENTITY, override=True)
-#         event.dep_ap = dep_ap
-#
-#         return event
-#
-#     #===========================================================================
-#     def with_dlt_derivs(self):
-#         """A clone of this event containing unit photon departure
-#         light-time derivatives d_ddlt.
-#         """
-#
-#         if 'dlt' in self.dep_lt.derivs:
-#             return self
-#
-#         event = self.copy()
-#         event._dep_lt_.insert_deriv('dlt', Scalar.ONE, override=True)
-#
-#         if event._ssb_ is not None and event._ssb_ is not event and \
-#            event._ssb_._dep_lt_ is not event._dep_lt_:
-#             event._ssb_._dep_lt_.insert_deriv('dlt', Scalar.ONE,
-#                                                        override=True)
-#
-#         return event
-#
+    def with_pos_derivs(self):
+        """A clone of this event with unit position derivatives d_dpos.
+
+        The derivatives are with respect to the position in the frame of the event.
+
+        Returns:
+            Event: The clone, or this event unchanged if it already carries the
+            derivatives.
+        """
+
+        if 'pos' in self._state_.derivs:
+            return self
+
+        event = self.copy()
+        event._state_.insert_deriv('pos', Vector3.IDENTITY, override=True)
+
+        if event._ssb_ is not None and event._ssb_ is not event:
+            # Rotating the state carries its derivative along, and the rotated derivative
+            # is what the SSB version needs; the rotated state itself is a position.
+            rotated = event.xform_to_j2000.rotate(event._state_, derivs=True)
+            event.ssb._state_.insert_deriv('pos', rotated.d_dpos, override=True)
+
+        return event
+
+    def with_lt_derivs(self):
+        """A clone of this event with unit photon arrival light-time derivatives d_dlt.
+
+        Returns:
+            Event: The clone, or this event unchanged if it already carries the
+            derivatives.
+        """
+
+        if 'lt' in self.arr_lt.derivs:
+            return self
+
+        event = self.copy()
+        event._arr_lt_.insert_deriv('lt', Scalar.ONE, override=True)
+
+        if (event._ssb_ is not None and event._ssb_ is not event
+            and event._ssb_._arr_lt_ is not event._arr_lt_):
+            event._ssb_._arr_lt_.insert_deriv('lt', Scalar.ONE, override=True)
+
+        return event
+
+    def with_dep_derivs(self):
+        """A clone of this event with unit photon departure derivatives d_ddep.
+
+        Returns:
+            Event: The clone, or this event unchanged if it already carries the
+            derivatives.
+        """
+
+        if 'dep' in self.dep_ap.derivs:
+            return self
+
+        event = self.copy(omit='dep')
+
+        dep_ap = self.dep_ap.copy()
+        dep_ap.insert_deriv('dep', Vector3.IDENTITY, override=True)
+        event.dep_ap = dep_ap
+
+        return event
+
+    def with_dlt_derivs(self):
+        """A clone of this event with unit photon departure light-time derivatives d_ddlt.
+
+        Returns:
+            Event: The clone, or this event unchanged if it already carries the
+            derivatives.
+        """
+
+        if 'dlt' in self.dep_lt.derivs:
+            return self
+
+        event = self.copy()
+        event._dep_lt_.insert_deriv('dlt', Scalar.ONE, override=True)
+
+        if (event._ssb_ is not None and event._ssb_ is not event
+            and event._ssb_._dep_lt_ is not event._dep_lt_):
+            event._ssb_._dep_lt_.insert_deriv('dlt', Scalar.ONE, override=True)
+
+        return event
+
     ######################################################################################
     # Shrink and unshrink operations
     ######################################################################################
@@ -1085,10 +1160,14 @@ class Event(object):
     def shrink(self, antimask):
         """A shrunken version of this event.
 
-        Antimask is None to leave the Event unchanged; otherwise, it must be
-        True where values are kept and False where they are ignored. A single
-        boolean value of True keeps everything; a single boolean value of False
-        ignores everything
+        Parameters:
+            antimask (Boolean, bool, or None): None to leave the Event unchanged;
+                otherwise True where values are kept and False where they are ignored. A
+                single value of True keeps everything and a single value of False ignores
+                everything.
+
+        Returns:
+            Event: The shrunken Event, or this Event where `antimask` keeps everything.
         """
 
         def shrink1(arg):
@@ -1117,8 +1196,14 @@ class Event(object):
     def unshrink(self, antimask, *, shape=None):
         """Expand a shrunken version of this event to its original state.
 
-        Antimask is None to leave the Event unchanged; otherwise, it must be a
-        boolean array where True indicates values to be kept.
+        Parameters:
+            antimask (Boolean, bool, or None): None to leave the Event unchanged;
+                otherwise the boolean array whose True values were kept by `shrink`.
+            shape (tuple, optional): Shape to restore; default None to infer it from
+                `antimask`.
+
+        Returns:
+            Event: The expanded Event, masked wherever `antimask` is False.
         """
 
         def unshrink1(arg, mask):
@@ -1544,6 +1629,16 @@ class Event(object):
 
         The returned object has additional attributes 'event' and 'reference', which point
         to the source events.
+
+        Parameters:
+            reference (Event): The Event to subtract from this one.
+            quick (dict or bool, optional): Overrides for the QuickPath and QuickFrame
+                parameters; use False to disable them. Default None applies the values in
+                the QUICK configuration.
+
+        Returns:
+            Event: The difference, with vectors in the frame of `reference` and times
+            relative to it.
         """
 
         def ref_unrotate(arg):
