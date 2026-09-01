@@ -4,7 +4,8 @@
 
 import pytest
 
-from oops.fov import FlatFOV, OffsetFOV, Platescale, TDIFOV
+from oops.fov       import FlatFOV, OffsetFOV, Platescale, TDIFOV
+from oops.fov.fov_  import FOV
 
 
 def _flat():
@@ -70,7 +71,7 @@ def test_a_time_dependent_fov_caches_nothing(name) -> None:
     after_others = method(time=99.)
 
     assert after_others == getattr(_tdi(), name)(time=99.)
-    assert not [key for key in fov.__dict__ if key.endswith('_filled')]
+    assert not [key for key in FOV._CACHED_NAMES if key in fov.__dict__]
 
 
 def test_refitting_an_offset_fov_discards_its_cached_values() -> None:

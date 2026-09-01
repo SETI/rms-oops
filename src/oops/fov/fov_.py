@@ -59,9 +59,9 @@ class FOV(Mutable):
 
     # Values derived from the FOV geometry and saved on first use. Any change to the FOV,
     # such as a Fittable subclass receiving new parameters, invalidates all of them.
-    _CACHED_NAMES = ('center_xy_filled', 'center_los_filled', 'center_dlos_duv_filled',
-                     'outer_radius_filled', 'inner_radius_filled', 'corner00_filled',
-                     'corner01_filled', 'corner10_filled', 'corner11_filled')
+    _CACHED_NAMES = ('_center_xy_filled', '_center_los_filled', '_center_dlos_duv_filled',
+                     '_outer_radius_filled', '_inner_radius_filled', '_corner00_filled',
+                     '_corner01_filled', '_corner10_filled', '_corner11_filled')
 
     def _refresh(self):
         """Discard every cached value, because a change to this FOV invalidates them.
@@ -312,7 +312,7 @@ class FOV(Mutable):
                                    **kwargs)
         return self.los_from_xy(xy_pair, derivs=derivs)
 
-    def los_from_uv(self, uv_pair, derivs=False, remask=False, **kwargs):
+    def los_from_uv(self, uv_pair, *, derivs=False, remask=False, **kwargs):
         """The unit line of sight vector given FOV coordinates `(u,v)`, assuming this FOV
         is time-independent.
 
@@ -582,7 +582,9 @@ class FOV(Mutable):
             Pair: Nearest `(u,v)` coordinates to `uv_pair`.
         """
 
-        clipped = Pair.as_pair(uv_pair).copy(readonly=False, recursive=False)
+        clipped = Pair.as_pair(uv_pair, recursive=False)
+
+        clipped = uv_pair.copy(readonly=False)
         clipped.vals[...,0] = clipped.vals[...,0].clip(0, self.uv_shape.vals[0])
         clipped.vals[...,1] = clipped.vals[...,1].clip(0, self.uv_shape.vals[1])
 
@@ -643,10 +645,10 @@ class FOV(Mutable):
                                           'requires a time; FOV is time-dependent')
             return self.xy_from_uvt(self.uv_shape/2., time=time)
 
-        if not hasattr(self, 'center_xy_filled'):
-            self.center_xy_filled = self.xy_from_uvt(self.uv_shape/2.)
+        if not hasattr(self, '_center_xy_filled'):
+            self._center_xy_filled = self.xy_from_uvt(self.uv_shape/2.)
 
-        return self.center_xy_filled
+        return self._center_xy_filled
 
     def center_los(self, time=None):
         """The unit line of sight defining the center of the FOV at the specified time.
@@ -668,10 +670,10 @@ class FOV(Mutable):
                                           'requires a time; FOV is time-dependent')
             return self.los_from_xy(self.center_xy(time=time)).unit()
 
-        if not hasattr(self, 'center_los_filled'):
-            self.center_los_filled = self.los_from_xy(self.center_xy()).unit()
+        if not hasattr(self, '_center_los_filled'):
+            self._center_los_filled = self.los_from_xy(self.center_xy()).unit()
 
-        return self.center_los_filled
+        return self._center_los_filled
 
     @property
     def center_dlos_duv(self):
@@ -685,13 +687,13 @@ class FOV(Mutable):
                 takes no time at which to evaluate it.
         """
 
-        if not hasattr(self, 'center_dlos_duv_filled'):
+        if not hasattr(self, '_center_dlos_duv_filled'):
             center_uv = self.uv_shape/2.
             center_uv.insert_deriv('uv', Pair.IDENTITY)
             los = self.los_from_uvt(center_uv, derivs=True)
-            self.center_dlos_duv_filled = los.d_duv
+            self._center_dlos_duv_filled = los.d_duv
 
-        return self.center_dlos_duv_filled
+        return self._center_dlos_duv_filled
 
     @property
     def outer_radius(self):
@@ -705,15 +707,15 @@ class FOV(Mutable):
                 takes no time at which to evaluate it.
         """
 
-        if not hasattr(self, 'outer_radius_filled'):
+        if not hasattr(self, '_outer_radius_filled'):
             umax = self.uv_shape.vals[0]
             vmax = self.uv_shape.vals[1]
             uv_corners = Pair([(0.,0.), (0.,vmax), (umax,0.), (umax,vmax)])
 
             seps = self.center_los().sep(self.los_from_uvt(uv_corners))
-            self.outer_radius_filled = seps.max(builtins=True)
+            self._outer_radius_filled = seps.max(builtins=True)
 
-        return self.outer_radius_filled
+        return self._outer_radius_filled
 
     @property
     def inner_radius(self):
@@ -727,7 +729,7 @@ class FOV(Mutable):
                 takes no time at which to evaluate it.
         """
 
-        if not hasattr(self, 'inner_radius_filled'):
+        if not hasattr(self, '_inner_radius_filled'):
             umax = self.uv_shape.vals[0]
             vmax = self.uv_shape.vals[1]
             umid = umax/2.
@@ -736,9 +738,9 @@ class FOV(Mutable):
             uv_edges = Pair([(0.,vmid), (umax,vmid), (umid,0.), (umid,vmax)])
 
             seps = self.center_los().sep(self.los_from_uvt(uv_edges))
-            self.inner_radius_filled = seps.min(builtins=True)
+            self._inner_radius_filled = seps.min(builtins=True)
 
-        return self.inner_radius_filled
+        return self._inner_radius_filled
 
     def corner00_xy(self, time=None):
         """The `(x,y)` coordinates where `(u,v) = (0,0)`.
@@ -759,10 +761,10 @@ class FOV(Mutable):
                                           'requires a time; FOV is time-dependent')
             return self.xy_from_uvt(Pair.ZEROS, time=time)
 
-        if not hasattr(self, 'corner00_filled'):
-            self.corner00_filled = self.xy_from_uvt(Pair.ZEROS)
+        if not hasattr(self, '_corner00_filled'):
+            self._corner00_filled = self.xy_from_uvt(Pair.ZEROS)
 
-        return self.corner00_filled
+        return self._corner00_filled
 
     def corner01_xy(self, time=None):
         """The `(x,y)` coordinates where `(u,v) = (0,v_max)`.
@@ -783,10 +785,10 @@ class FOV(Mutable):
                                           'requires a time; FOV is time-dependent')
             return self.xy_from_uvt(Pair((0, self.uv_shape.vals[1])), time=time)
 
-        if not hasattr(self, 'corner01_filled'):
-            self.corner01_filled = self.xy_from_uvt(Pair((0, self.uv_shape.vals[1])))
+        if not hasattr(self, '_corner01_filled'):
+            self._corner01_filled = self.xy_from_uvt(Pair((0, self.uv_shape.vals[1])))
 
-        return self.corner01_filled
+        return self._corner01_filled
 
     def corner10_xy(self, time=None):
         """The `(x,y)` coordinates where `(u,v) = (u_max,0)`.
@@ -807,10 +809,10 @@ class FOV(Mutable):
                                           'requires a time; FOV is time-dependent')
             return self.xy_from_uvt(Pair((self.uv_shape.vals[0], 0)), time=time)
 
-        if not hasattr(self, 'corner10_filled'):
-            self.corner10_filled = self.xy_from_uvt(Pair((self.uv_shape.vals[0], 0)))
+        if not hasattr(self, '_corner10_filled'):
+            self._corner10_filled = self.xy_from_uvt(Pair((self.uv_shape.vals[0], 0)))
 
-        return self.corner10_filled
+        return self._corner10_filled
 
     def corner11_xy(self, time=None):
         """The `(x,y)` coordinates where `(u,v) = (u_max,v_max)`.
@@ -831,10 +833,10 @@ class FOV(Mutable):
                                           'requires a time; FOV is time-dependent')
             return self.xy_from_uvt(self.uv_shape, time=time)
 
-        if not hasattr(self, 'corner11_filled'):
-            self.corner11_filled = self.xy_from_uvt(self.uv_shape)
+        if not hasattr(self, '_corner11_filled'):
+            self._corner11_filled = self.xy_from_uvt(self.uv_shape)
 
-        return self.corner11_filled
+        return self._corner11_filled
 
     def sphere_falls_inside(self, center, radius, *, time=None, border=0.):
         """True if any piece of a sphere falls inside this FOV.

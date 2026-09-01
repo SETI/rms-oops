@@ -26,7 +26,7 @@ deviations), SUGGESTION (improvements needing an owner decision).
 | `oops/backplane` | 15 | 69 | 49 | 9 | 9 |
 | **Total** | **118** | **327** | **170** | **90** | **76** |
 
-These counts describe the review as first delivered. Work continued afterward, and 28 of
+These counts describe the review as first delivered. Work continued afterward, and 29 of
 the findings it left open have since been resolved; each is labelled **(fixed after
 review)** in place of "(not fixed)", with its entry saying what was done. A few defects
 found during that later work are labelled **(found after review, fixed)** and were added
@@ -1354,11 +1354,16 @@ coverage, which is a decision about reference data and was left to the author.
   positional-or-keyword parameters while every sibling method makes them keyword-only with
   `*`. Same for `wcs_from_uv` in wcsfov.py. Making them keyword-only would narrow the
   public API, so left for a deliberate decision.
-- **[CONSISTENCY] (not fixed)** `fov_.py:622-786` — the lazy caches (`center_xy_filled`,
-  `center_los_filled`, `center_dlos_duv_filled`, `outer_radius_filled`,
-  `inner_radius_filled`, `corner00_filled`...`corner11_filled`) are public attribute names
-  though purely internal; recent commits privatized equivalent attributes in Surface and
-  Observation. A rename is out of critique scope.
+- **[CONSISTENCY] (fixed after review)** `fov_.py:622-786` — the lazy caches
+  (`center_xy_filled`, `center_los_filled`, `center_dlos_duv_filled`,
+  `outer_radius_filled`, `inner_radius_filled`, `corner00_filled`...`corner11_filled`) are
+  public attribute names though purely internal; recent commits privatized equivalent
+  attributes in Surface and Observation. Renamed after this review, each gaining a leading
+  underscore, which brings them into line with those classes and with the `_filled_*`
+  caches in `transform.py`. The `_CACHED_NAMES` list that `_refresh` clears was updated
+  with them, and the test that asserts a time-dependent FOV caches nothing now checks that
+  list rather than matching on the name suffix, so it cannot drift out of step with a
+  later rename.
 - **[SUGGESTION] (not fixed)** `fov_.py:575` — `nearest_uv` with `remask=True` reads
   `uv_pair.mask` from the raw argument; a tuple or ndarray input (accepted by the
   `Pair.as_pair` conversion used for `clipped`) would raise AttributeError. Converting once
