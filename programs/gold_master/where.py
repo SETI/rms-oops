@@ -137,7 +137,7 @@ def where_test_suite(bpt):
                    name + ' where anti-sunward',
                    radius=1.5)
 
-        bpt.compare(bp.where_below(('ring_radius', ring), 0.),
+        bpt.compare(bp.where_below(('ring_radius', name), 0.),
                     False,
                     name + ' where radius is negative')
 

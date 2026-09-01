@@ -220,7 +220,7 @@ def lighting_test_suite(bpt):
             bpt.compare((utest - dinc_du).abs().median(), 0.,
                         name + ' incidence angle d/du self-check (deg/pix)',
                         limit=ulimit, method='degrees')
-            bpt.compare((utest - dinc_du).abs().median(), 0.,
+            bpt.compare((vtest - dinc_dv).abs().median(), 0.,
                         name + ' incidence angle d/dv self-check (deg/pix)',
                         limit=vlimit, method='degrees')
 
@@ -242,7 +242,7 @@ def lighting_test_suite(bpt):
                         limit=ulimit, method='degrees')
             bpt.compare((vtest - dem_dv).abs().median(), 0.,
                         name + ' emission angle d/dv self-check (deg/pix)',
-                        limit=ulimit, method='degrees')
+                        limit=vlimit, method='degrees')
 
       # phase angle
       for name in bpt.body_names + bpt.ring_names:
@@ -263,7 +263,7 @@ def lighting_test_suite(bpt):
                         limit=ulimit, method='degrees')
             bpt.compare((vtest - dph_dv).abs().median(), 0.,
                         name + ' phase angle d/dv self-check (deg/pix)',
-                        limit=ulimit, method='degrees')
+                        limit=vlimit, method='degrees')
 
 register_test_suite('lighting', lighting_test_suite)
 
