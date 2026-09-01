@@ -2,8 +2,9 @@
 # oops/meshgrid.py
 ##########################################################################################
 
-import numpy as np
 import numbers
+
+import numpy as np
 
 from polymath import Scalar, Pair, Vector3
 
@@ -140,10 +141,10 @@ class Meshgrid(object):
         Parameters:
             fov (FOV): FOV object.
             shape (tuple): Overall shape to which this Meshgrid must broadcast.
-            u_axis (optional): Location of the u axis within the shape; -1 if there is
-                no u-axis.
-            v_axis (optional): Location of the v axis within the shape; -1 if there is
-                no v-axis.
+            u_axis (int, optional): Location of the u axis within the shape; -1 if there
+                is no u-axis, in which case the meshgrid has a single sample along u.
+            v_axis (int, optional): Location of the v axis within the shape; -1 if there
+                is no v-axis, in which case the meshgrid has a single sample along v.
             origin (Pair, optional): A single value, tuple or Pair defining the `(u,v)`
                 origin of the grid. Default is to place the first sample in the middle of
                 the first pixel (after allowing for the under- or oversampling).
@@ -214,9 +215,19 @@ class Meshgrid(object):
         if center_uv is None:
             center_uv = 0.5 * (origin - step/2. + limit)
 
-        # Construct the 1-D index arrays
-        u_range = np.arange(origin[0], limit[0] + step[0]/1.e10, step[0])
-        v_range = np.arange(origin[1], limit[1] + step[1]/1.e10, step[1])
+        # Construct the 1-D index arrays. An axis that is absent from the shape gets a
+        # single sample, because the shape reserves room for only one; its coordinate is
+        # filled in below. Sampling it as if it were present would leave more values than
+        # the final reshape can hold.
+        if u_axis >= 0:
+            u_range = np.arange(origin[0], limit[0] + step[0]/1.e10, step[0])
+        else:
+            u_range = np.zeros(1)
+
+        if v_axis >= 0:
+            v_range = np.arange(origin[1], limit[1] + step[1]/1.e10, step[1])
+        else:
+            v_range = np.zeros(1)
             # We add a small amount to each upper limit just to avoid the possible loss
             # of the last step along each axis due to rounding error.
 

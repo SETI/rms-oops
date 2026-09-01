@@ -40,7 +40,22 @@ def load_leap_seconds():
 ##########################################################################################
 
 def body_id_and_name(arg):
-    """Interpret the argument as the name or ID of a SPICE body."""
+    """The SPICE ID and name of a body, given its name or ID.
+
+    A name or ID already present in the path translation table is resolved through the
+    registered Path; otherwise the SPICE Toolkit is consulted.
+
+    Parameters:
+        arg (str or int): The body name or the SPICE body ID.
+
+    Returns:
+        tuple[int, str]: The SPICE body ID and its name. A body with no name in the
+        Toolkit is given the string form of its ID.
+
+    Raises:
+        LookupError: If the argument is neither a recognized name nor an integer.
+        TypeError: If the argument names a registered Path that is not a SpicePath.
+    """
 
     # First see if the path is already registered
     try:
@@ -49,8 +64,8 @@ def body_id_and_name(arg):
             return (0, 'SSB')
 
         if type(path).__name__ != 'SpicePath':
-            raise TypeError('a SpicePath cannot originate from a ' +
-                            type(path).__name__)
+            raise TypeError('path ' + repr(path.path_id) + ' is a '
+                            + type(path).__name__ + ', not a SpicePath')
 
         return (path.spice_target_id, path.spice_target_name)
     except KeyError:
@@ -78,12 +93,29 @@ def body_id_and_name(arg):
 ##########################################################################################
 
 def frame_id_and_name(arg):
-    """The spice_id and spice_name of a name/ID/SPICE frame."""
+    """The SPICE ID and name of a frame, given its name or ID.
+
+    An argument that names a body rather than a frame yields the frame associated with
+    that body.
+
+    Parameters:
+        arg (str or int): The frame name, the SPICE frame ID, a body name, or a SPICE
+            body ID.
+
+    Returns:
+        tuple[int, str]: The SPICE frame ID and its name.
+
+    Raises:
+        LookupError: If the argument is neither a recognized frame nor a body whose
+            frame is defined, or is neither a string nor an integer.
+    """
 
     # Interpret the SPICE frame ID as an int
     if isinstance(arg, numbers.Integral):
         try:
-            name = cspyce.frmnam(arg)   # does not raise an error; I may fix
+            # cspyce.frmnam returns an empty name for an unrecognized ID rather than
+            # raising, so an empty result is treated as "not a frame ID" below
+            name = cspyce.frmnam(arg)
         except ValueError:
             name = ''
         except KeyError:
@@ -105,7 +137,9 @@ def frame_id_and_name(arg):
 
         # Validate this as the name of a frame
         try:
-            frame_id = cspyce.namfrm(arg)   # does not raise an error; I may fix
+            # cspyce.namfrm returns zero for an unrecognized name rather than raising,
+            # so a zero result is treated as "not a frame name" below
+            frame_id = cspyce.namfrm(arg)
         except ValueError:
             frame_id = 0
         except KeyError:
@@ -132,9 +166,17 @@ def frame_id_and_name(arg):
         # If this is a body, return the name of the associated frame
         return cspyce.cidfrm(body_id)
 
+    raise LookupError('invalid SPICE frame: %s' % str(arg))
+
 ##########################################################################################
 
 def initialize():
+    """Reset the frame and path translation tables to their initial contents.
+
+    Only the entries for J2000 and the solar system barycenter survive, so any name
+    registered since the last call is forgotten.
+    """
+
     global FRAME_TRANSLATION, PATH_TRANSLATION
 
     FRAME_TRANSLATION = {'J2000':'J2000', cspyce.namfrm('J2000'):'J2000'}

@@ -49,10 +49,11 @@ can be used to carry out any special actions that must take place when the objec
 frozen.
 """
 
-import numpy as np
 from collections import namedtuple
 from collections.abc import Iterable
 from typing import Any
+
+import numpy as np
 
 from polymath import Qube
 from oops.fittable import Fittable
@@ -171,10 +172,10 @@ def needs_refresh(obj: Any, /) -> bool:
     function returns False.
 
     Parameters:
-        obj (object): Object to test.
+        obj: Object to test.
 
     Returns:
-        (bool): True if the given object needs to be refreshed.
+        True if the given object needs to be refreshed.
     """
 
     return _needs_refresh_internal(obj, info_memo={})
@@ -344,6 +345,10 @@ def get_param_order(obj: Any) -> list[str]:
 
     Parameters:
         obj: The object.
+
+    Returns:
+        The names of the parameters in the order they are applied, which is empty if the
+        object has no parameters.
     """
 
     if hasattr(obj, '_MUTABLE_param_names'):
@@ -357,6 +362,9 @@ def get_nparams(obj: Any) -> int:
 
     Parameters:
         obj: The object.
+
+    Returns:
+        The number of parameters, which is zero if the object has none.
     """
 
     if hasattr(obj, '_MUTABLE_nparams'):
@@ -764,7 +772,6 @@ class Mutable(Oops):
         """The list of names of the mutable sub-objects of this object."""
 
         return mutable_names(self)
-
 
     def _unfrozen_names(self) -> list[str]:
         """The list of names of the mutable sub-objects of this object that are not

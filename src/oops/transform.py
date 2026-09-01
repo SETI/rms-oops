@@ -73,18 +73,18 @@ class Transform(Oops):
         self.frame     = Transform._Frame.as_wayframe(frame)
         self.reference = Transform._Frame.as_wayframe(reference)
 
-        if origin is not None:
-            self.origin = origin
-        elif reference is not None:
-            self.origin = self.reference.origin
+        if origin is None:
+            self.origin = self.reference.origin if reference is not None else None
+        elif isinstance(origin, str):
+            self.origin = Transform._Frame._Path.as_waypoint(origin)
         else:
-            self.origin = None
+            self.origin = origin.waypoint
 
-        self.filled_shape = None            # filled in only when needed
-        self.filled_omega1 = None
-        self.filled_matrix_with_deriv = None
-        self.filled_inverse_matrix = None
-        self.filled_inverse_with_deriv = None
+        self._filled_shape = None            # filled in only when needed
+        self._filled_omega1 = None
+        self._filled_matrix_with_deriv = None
+        self._filled_inverse_matrix = None
+        self._filled_inverse_with_deriv = None
         self._filled_wod = None
 
     def __getstate__(self):
@@ -102,10 +102,10 @@ class Transform(Oops):
         property rather than an attribute.
         """
 
-        if self.filled_shape is None:
-            self.filled_shape =  Qube.broadcasted_shape(self.matrix, self.omega,
+        if self._filled_shape is None:
+            self._filled_shape =  Qube.broadcasted_shape(self.matrix, self.omega,
                                                         self.frame, self.reference)
-        return self.filled_shape
+        return self._filled_shape
 
     @property
     def omega1(self):
@@ -114,41 +114,41 @@ class Transform(Oops):
         Used for the inverse transform.
         """
 
-        if self.filled_omega1 is None:
-            self.filled_omega1 = self.matrix * (-self.omega)
+        if self._filled_omega1 is None:
+            self._filled_omega1 = self.matrix * (-self.omega)
 
-        return self.filled_omega1
+        return self._filled_omega1
 
     @property
     def matrix_with_deriv(self):
         """The rotation matrix with its time-derivative filled in."""
 
-        if self.filled_matrix_with_deriv is None:
-            self.filled_matrix_with_deriv = self.matrix.clone()
+        if self._filled_matrix_with_deriv is None:
+            self._filled_matrix_with_deriv = self.matrix.clone()
 
             d_dt = self.matrix * (-self.omega.cross_product_as_matrix())
-            self.filled_matrix_with_deriv.insert_deriv('t', d_dt, override=True)
+            self._filled_matrix_with_deriv.insert_deriv('t', d_dt, override=True)
 
-        return self.filled_matrix_with_deriv
+        return self._filled_matrix_with_deriv
 
     @property
     def inverse_matrix(self):
         """The inverse rotation matrix."""
 
-        if self.filled_inverse_matrix is None:
-            self.filled_inverse_matrix = self.matrix.transpose()
+        if self._filled_inverse_matrix is None:
+            self._filled_inverse_matrix = self.matrix.transpose()
 
-        return self.filled_inverse_matrix
+        return self._filled_inverse_matrix
 
     @property
     def inverse_with_deriv(self):
         """The inverse rotation matrix with its time-derivative filled in."""
 
-        if self.filled_inverse_with_deriv is None:
+        if self._filled_inverse_with_deriv is None:
             inverse = self.matrix_with_deriv.inverse(recursive=True)
-            self.filled_inverse_with_deriv = inverse
+            self._filled_inverse_with_deriv = inverse
 
-        return self.filled_inverse_with_deriv
+        return self._filled_inverse_with_deriv
 
     @property
     def wod(self):
@@ -169,7 +169,15 @@ class Transform(Oops):
 
     @staticmethod
     def identity(frame):
-        """An identity transform from a frame to itself."""
+        """An identity transform from a frame to itself.
+
+        Parameters:
+            frame (Frame or str): The frame or frame ID that serves as both the target and
+                the reference of the returned Transform.
+
+        Returns:
+            Transform: A Transform with an identity matrix and zero rotation vector.
+        """
 
         return Transform(Matrix3.IDENTITY, Vector3.ZERO, frame, frame)
 
@@ -296,7 +304,12 @@ class Transform(Oops):
     ######################################################################################
 
     def invert(self):
-        """The inverse transformation."""
+        """The inverse transformation.
+
+        Returns:
+            Transform: A Transform that rotates from this Transform's target frame back
+            into its reference frame, sharing the same origin.
+        """
 
         return Transform(self.matrix.reciprocal(), self.omega1, self.reference,
                          self.frame, origin=self.origin)
@@ -306,6 +319,19 @@ class Transform(Oops):
 
         The result is a single transform that converts coordinates in the reference frame
         of the argument transform into the frame of this transform.
+
+        Parameters:
+            arg (Transform): The Transform to apply first. Its target frame must match the
+                reference frame of this Transform.
+
+        Returns:
+            Transform: The combined Transform, from the reference frame of `arg` into the
+            target frame of this Transform. Where only one of the two defines an origin,
+            that origin is used; where both do, this Transform's origin is used.
+
+        Raises:
+            ValueError: If the target frame of `arg` is not the reference frame of this
+                Transform.
         """
 
         # Two tranforms
@@ -345,6 +371,18 @@ class Transform(Oops):
         of the argument transform into the reference frame of this transform. I.e., if
         `arg` rotates A to B and this Transform rotates C to B, then the result rotates A
         to C.
+
+        Parameters:
+            arg (Transform): The Transform to apply first. Its target frame must match the
+                target frame of this Transform.
+
+        Returns:
+            Transform: The combined Transform, from the reference frame of `arg` into the
+            reference frame of this Transform.
+
+        Raises:
+            ValueError: If the target frame of `arg` is not the target frame of this
+                Transform.
         """
 
         return self.invert().rotate_transform(arg)

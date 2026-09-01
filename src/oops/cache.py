@@ -73,6 +73,10 @@ class Cache:
                 case Cache._Frame():
                     return Cache._Frame.as_primary_frame(item)
                 case x if hasattr(x, '__data__'):
+                    # Keyed by identity, because hashing the object's own data buffer
+                    # would cost more than the lookup saves. An id() is unique only among
+                    # live objects, so a collected object's address can be reused and a
+                    # later object can match its entry; that entry is evicted in turn.
                     return id(item)
                 case list() | tuple():
                     return tuple(clean_item(subitem) for subitem in item)

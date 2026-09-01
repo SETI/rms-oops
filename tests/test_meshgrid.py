@@ -74,4 +74,26 @@ def test_meshgrid_rejects_sampling_in_both_directions(fov: FlatFOV) -> None:
     with pytest.raises(ValueError, match='cannot both be'):
         Meshgrid.for_shape(fov, (8, 8), 0, 1, undersample=2, oversample=2)
 
+
+def test_meshgrid_with_no_u_axis_has_a_single_sample_along_u(fov: FlatFOV) -> None:
+    """An axis absent from the shape contributes one sample, whatever the FOV spans.
+
+    The shape reserves room for only one value along a missing axis, so sampling it as if
+    it were present would leave more values than the result can hold.
+    """
+
+    meshgrid = Meshgrid.for_shape(fov, (8,), u_axis=-1, v_axis=0, limit=(8, 8))
+
+    assert meshgrid.uv.shape == (8,)
+    assert (meshgrid.uv.vals[..., 0] == 0.5).all()
+
+
+def test_meshgrid_with_no_v_axis_has_a_single_sample_along_v(fov: FlatFOV) -> None:
+    """The same holds for a missing v-axis."""
+
+    meshgrid = Meshgrid.for_shape(fov, (8,), u_axis=0, v_axis=-1, limit=(8, 8))
+
+    assert meshgrid.uv.shape == (8,)
+    assert (meshgrid.uv.vals[..., 1] == 0.5).all()
+
 ##########################################################################################

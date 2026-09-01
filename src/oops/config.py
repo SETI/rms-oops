@@ -163,7 +163,7 @@ class LOGGING(object):
 
     @staticmethod
     def reset():
-        """Reset error and warning counts to zero."""
+        """Reset the error, warning, and line counts to zero."""
 
         LOGGING.warnings = 0
         LOGGING.errors = 0
@@ -171,7 +171,17 @@ class LOGGING(object):
 
     @staticmethod
     def all(flag, category='', reset=False):
-        """Turn one or more categories of messages on or off."""
+        """Turn one or more categories of messages on or off.
+
+        Parameters:
+            flag (bool): True to turn the selected categories on; False to turn them off.
+            category (str, optional): "convergence" to select the FOV, path, surface, and
+                observation iteration messages, or "diagnostics" to select the QuickPath
+                and QuickFrame creation and time-collapse messages. Default is "", meaning
+                every category.
+            reset (bool, optional): True to zero the warning, error, and line counts;
+                default False.
+        """
 
         if not category or 'convergence' in category:
             LOGGING.fov_iterations = flag
@@ -194,29 +204,63 @@ class LOGGING(object):
 
     @staticmethod
     def off(category='', reset=True):
-        """Turn one or more categories of messages off."""
+        """Turn one or more categories of messages off.
+
+        Parameters:
+            category (str, optional): The category to turn off, as for `all`; default "",
+                meaning every category.
+            reset (bool, optional): True to zero the warning, error, and line counts;
+                default True.
+        """
 
         LOGGING.all(False, category=category, reset=reset)
 
     @staticmethod
     def on(prefix='   ', category='', reset=False):
-        """Turn one or more categories of messages on."""
+        """Turn one or more categories of messages on.
+
+        Parameters:
+            prefix (str, optional): The string to write in front of each log message;
+                default is three spaces.
+            category (str, optional): The category to turn on, as for `all`; default "",
+                meaning every category.
+            reset (bool, optional): True to zero the warning, error, and line counts;
+                default False.
+        """
 
         LOGGING.all(True, category=category, reset=reset)
         LOGGING.prefix = prefix
 
     @staticmethod
     def set_stdout(flag, reset=False):
-        """Enable or disable log messages to stdout."""
+        """Enable or disable log messages to stdout.
+
+        Parameters:
+            flag (bool): True to write log messages to stdout; False to stop. Stdout
+                remains enabled regardless if no file, logger, or stderr destination is
+                active, because that would leave the messages nowhere to go.
+            reset (bool, optional): True to zero the warning, error, and line counts;
+                default False.
+        """
 
         LOGGING.stdout = bool(flag)
+
+        # Never allow stdout=False if other logging methods are off
+        if not any([LOGGING._file, LOGGING.logger, LOGGING.stderr]):
+            LOGGING.stdout = True
 
         if reset:
             LOGGING.reset()
 
     @staticmethod
     def set_stderr(flag, reset=False):
-        """Enable or disable log messages to stderr."""
+        """Enable or disable log messages to stderr.
+
+        Parameters:
+            flag (bool): True to write log messages to stderr; False to stop.
+            reset (bool, optional): True to zero the warning, error, and line counts;
+                default False.
+        """
 
         LOGGING.stderr = bool(flag)
 
@@ -229,7 +273,19 @@ class LOGGING(object):
 
     @staticmethod
     def set_file(file_path='', reset=False):
-        """Send log messages to a file; use a blank file path to disable."""
+        """Send log messages to a file; use a blank file path to disable.
+
+        Any file already open for logging is closed first.
+
+        Parameters:
+            file_path (str, optional): Path of the file to write; default "", which
+                disables file logging.
+            reset (bool, optional): True to zero the warning, error, and line counts;
+                default False.
+
+        Raises:
+            OSError: If the named file cannot be opened for writing.
+        """
 
         if LOGGING._file:
             LOGGING._file.close()
@@ -255,7 +311,17 @@ class LOGGING(object):
 
     @staticmethod
     def set_logger(logger=None, level='DEBUG', reset=False):
-        """Send log messages to a logger; None to disable Python logging."""
+        """Send log messages to a logger; None to disable Python logging.
+
+        Parameters:
+            logger (Logger, optional): The logger to receive log messages; None, the
+                default, disables Python logging and restores the default level.
+            level (str or int, optional): Minimum level for the logger, given as a name
+                such as "DEBUG" or as an integer; default "DEBUG". Ignored if `logger` is
+                None.
+            reset (bool, optional): True to zero the warning, error, and line counts;
+                default False.
+        """
 
         LOGGING.logger = logger
 
@@ -283,7 +349,12 @@ class LOGGING(object):
 
     @staticmethod
     def set_logger_level(level):
-        """Set the logging level of the logger."""
+        """Set the logging level of the logger.
+
+        Parameters:
+            level (str or int): The minimum level, given as a name such as "DEBUG" or as
+                an integer.
+        """
 
         if isinstance(level, str):
             level = LOGGING.LEVELS[level.lower()]
@@ -315,20 +386,17 @@ class LOGGING(object):
         The message is constructed by converting each argument to a string, and
         then concatenating them with spaces in between.
 
-        Inputs:
-            level           logging level as an integer or string, one of
-                            "DEBUG"=10, "INFO"=20, "WARN" or "WARNING"=30,
-                            "ERROR"=40, or "FATAL"=50. Messages will go to a
-                            defined logger only if the level is >= the logger's
-                            specified threshold. Messages are sent to other
-                            streams regardless of their level.
-
-            literal         if True, the message is logged as is, without any
-                            time tag, level, or other information (but including
-                            any specified prefix).
-
-            force           log the message even if its level is below that of
-                            the logger.
+        Parameters:
+            *args: The values to log; each is converted to a string.
+            level (int or str, optional): Logging level, one of "DEBUG"=10, "INFO"=20,
+                "WARN" or "WARNING"=30, "ERROR"=40, or "FATAL"=50; default "INFO". A
+                message reaches a defined logger only if the level is at or above that
+                logger's threshold, but it is sent to other streams regardless.
+            literal (bool, optional): True to log the message as it is, without a time
+                tag, level, or other information, though any specified prefix is still
+                included. Default is False.
+            force (bool, optional): True to log the message even if its level falls below
+                that of the logger; default False.
         """
 
         # Interpret level

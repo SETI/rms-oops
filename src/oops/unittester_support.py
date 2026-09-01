@@ -8,8 +8,8 @@ from filecache import FileCache
 
 # Environment variables used to support oops and oops host testing:
 #
-# - $OOPS_RESOURCES is the top-level directory. It is expected to have two
-#   subdirectories, "test_data" and "SPICE".
+# - $OOPS_RESOURCES is the top-level directory. This module uses two of its
+#   subdirectories, "test_data" and "SPICE"; see the README for the full set.
 # - $OOPS_TEST_DATA_PATH will override the location of the "test_data"
 #   directory.
 #

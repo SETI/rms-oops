@@ -104,4 +104,25 @@ def test_disksource_weight_matches_the_lightsource_contract() -> None:
     assert float(disk.weight.sum()) == pytest.approx(1.)
     assert np.count_nonzero(disk.weight.vals) == 21
 
+
+def test_lightsource_rejects_a_source_of_no_recognized_form() -> None:
+    """A source that is neither a path, an (RA, dec) pair, nor a line of sight is refused.
+
+    Each form is recognized explicitly, so an input resembling none of them raises rather
+    than being forced into whichever interpretation happens to accept it first.
+    """
+
+    for source in [5, (1., 2., 3., 4.), None]:
+        with pytest.raises(ValueError, match='must be a Path, a path ID'):
+            LightSource('TEST_BAD_SOURCE', source)
+
+
+def test_lightsource_accepts_every_documented_source_form() -> None:
+    """A Path, a path ID, an (RA, dec) pair, and a line of sight are all accepted."""
+
+    assert LightSource('TEST_FORM_PATH', Path.SSB).source_is_moving is True
+    assert LightSource('TEST_FORM_ID', 'SSB').source_is_moving is True
+    assert LightSource('TEST_FORM_RADEC', (30., 45.)).source_is_moving is False
+    assert LightSource('TEST_FORM_LOS', Vector3((1., 0., 0.))).source_is_moving is False
+
 ##########################################################################################

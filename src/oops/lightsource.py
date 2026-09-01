@@ -17,24 +17,36 @@ class LightSource(object):
     """
 
     def __init__(self, name, source, weight=None):
-        """Constructor for a LightSource. It can be specified as:
+        """Constructor for a LightSource.
 
-        * a path.
-        * a Pair representing J2000 right ascension and declination values in degrees.
-        * a Vector3 defining a fixed direction in J2000 coordinates.
-
-        Note that the source can have arbitrary shape, making it possible to describe an
-        extended source via an array of nearby paths or directions.
-
-        Optionally, weight is a Scalar providing relative weights along the given paths or
-        directions. If provided, it must be possible to broadcast the shape of the weight
-        to match that of the source. This makes it possible to define an extended,
-        non-uniform source of light and to retrieve a result that is integrated over the
-        source.
+        The source can have arbitrary shape, making it possible to describe an extended
+        source via an array of nearby paths or directions.
 
         LightSource objects are stored by name in the Body registry, so they share the
         same name space as the Body class. This is necessary so they can be used as keys
         in Backplanes.
+
+        Parameters:
+            name (str): Name under which to register this source; it is converted to
+                upper case.
+            source (Path, str, Pair, or Vector3): The location of the source, as any of:
+
+                * a Path or the ID of a registered Path, for a source that moves;
+                * a Pair or any pair of values, interpreted as J2000 right ascension and
+                  declination in degrees;
+                * a Vector3 or any triple of values, defining a fixed direction in J2000
+                  coordinates.
+
+            weight (Scalar, optional): Relative weights along the given paths or
+                directions, which must broadcast to the shape of `source`. This makes it
+                possible to define an extended, non-uniform source of light and to
+                retrieve a result that is integrated over the source. Default is uniform
+                weighting.
+
+        Raises:
+            TypeError: If `name` is not a string.
+            ValueError: If `name` is already the name of a Body, or if `source` is not
+                one of the forms above.
         """
 
         # Check and validate the name
@@ -48,29 +60,34 @@ class LightSource(object):
             if isinstance(thing, Body):
                 raise ValueError(f'LightSource name is also a Body name: {self.name}')
 
-        # Interpret source as (ra,dec)
-        self.source = None
-        try:
-            pair = Pair.as_pair(source)
-        except (ValueError, TypeError):
-            pass
-        else:
-            (ra, dec) = pair.values * RPD
-            self.source = Vector3.from_ra_dec_length(ra, dec, 1., recursive=False)
-            self.source_is_moving = False
-
-        # Interpret the source as a Vector3
-        if self.source is None:
-            try:
-                self.source = Vector3.as_vector3(source).unit()
-                self.source_is_moving = False
-            except (ValueError, TypeError):
-                pass
-
-        # Interpret the source as a path
-        if self.source is None:
+        # Interpret the source. Each form is recognized explicitly rather than by trying
+        # them in turn, so that an input matching none of them is rejected instead of
+        # being forced into whichever interpretation happens to accept it first.
+        if isinstance(source, (Path, str)):
             self.source = Path.as_primary_path(source)
             self.source_is_moving = True
+        else:
+            if isinstance(source, Pair):
+                items = 2
+            elif isinstance(source, Vector3):
+                items = 3
+            else:
+                try:
+                    values = np.asarray(source, dtype=np.float64)
+                except (TypeError, ValueError):
+                    values = np.array(0.)
+                items = values.shape[-1] if values.ndim else 0
+
+            if items == 2:
+                (ra, dec) = Pair.as_pair(source).values * RPD
+                self.source = Vector3.from_ra_dec_length(ra, dec, 1., recursive=False)
+            elif items == 3:
+                self.source = Vector3.as_vector3(source).unit()
+            else:
+                raise ValueError('LightSource source must be a Path, a path ID, an '
+                                 f'(RA, dec) pair, or a line of sight: {source!r}')
+
+            self.source_is_moving = False
 
         self.shape = self.source.shape
 
@@ -152,26 +169,26 @@ class DiskSource(LightSource):
     """
 
     def __init__(self, name, source, radius, size=11, compress=False):
-        """Constructor for a DiskSource. This is a 2-D array representing a
-        uniform, lit circular light source.
+        """Constructor for a DiskSource, a 2-D array representing a uniform, lit
+        circular light source.
 
-        Inputs:
-            name        name to register in the Body dictionary.
-            source      a Path object or a fixed direction in J2000 coordinates,
-                        defined by a (right ascension, declination) pair in
-                        degrees, or else by a single Vector3 line of sight.
-            radius      radius of the source, in km for paths or in arcseconds
-                        for a J2000 fixed source.
-            size        number of pixels on the side of the square 2-D array
-                        defining the lines of sight. Use an odd
-                        number to ensure that the central pixel corresponds to
-                        the center of the source.
-            compress    if True, the masked pixels (outside the circle) of the
-                        source are stripped away. This results in ~20% fewer
-                        lines of sight to calculate, and is appropriate when one
-                        is only going to average across the disk at the end. If
-                        False, the source remains a 2-D image that can be used
-                        later.
+        Parameters:
+            name (str): Name to register in the Body dictionary.
+            source (Path, tuple, or Vector3): A Path, or a fixed direction in J2000
+                coordinates given either as a (right ascension, declination) pair in
+                degrees or as a single line of sight.
+            radius (float): Radius of the source, in km for a path or in arcseconds for a
+                fixed J2000 source.
+            size (int, optional): Number of pixels along the side of the square array
+                defining the lines of sight; default 11. Use an odd number so that the
+                central pixel falls at the center of the source.
+            compress (bool, optional): True to strip away the masked pixels outside the
+                circle, which leaves about 20% fewer lines of sight to calculate and
+                suits a case where the disk is only averaged over at the end. False, the
+                default, keeps the source as a 2-D image for later use.
+
+        Raises:
+            ValueError: If `source` does not describe a single, unshaped direction.
         """
 
         # Start with the default LightSource
