@@ -7,6 +7,7 @@ import numpy as np
 from polymath                import Scalar, Vector3
 from oops.constants          import PI, HALFPI, TWOPI, RPD
 from oops.event              import Event
+from oops.path               import Path
 from oops.surface.orbitplane import OrbitPlane
 
 
@@ -252,4 +253,111 @@ def test_orbitplane():
 
     lons = orbit.from_mean_anomaly(anoms)
     assert abs(lons - l).max() < 1.e-15
+
+
+# A representative eccentric orbit: 100,000 km, with a mean motion and pericenter fixed in
+# inertial space so that the surface frame does not rotate and the orbital velocity can be
+# compared directly against the Keplerian solution.
+_A = 100000.
+_N = 1.e-4
+_ANOMALIES = np.arange(24) * (TWOPI / 24.)
+
+
+def _eccentric_orbit(e):
+    """An OrbitPlane of eccentricity `e` with its pericenter along the x-axis.
+
+    Parameters:
+        e (float): The orbital eccentricity.
+
+    Returns:
+        OrbitPlane: The orbit, centered on the SSB and defined in the J2000 frame.
+    """
+
+    return OrbitPlane((_A, 0., _N, e, 0., 0.), 0., 'SSB', 'J2000')
+
+
+def _planet_offset(orbit):
+    """The position of the planet relative to the center of the eccentric ring.
+
+    The surface is centered on the displaced ring center, so this is what converts a
+    planet-centered position into one relative to the surface. It is obtained from the
+    orbit's own origin path rather than assumed.
+
+    Parameters:
+        orbit (OrbitPlane): The orbit to evaluate.
+
+    Returns:
+        Vector3: The offset, in km, in the orbit's own frame.
+    """
+
+    ring_center = Path.as_path(orbit.origin).event_at_time(0.).wrt('SSB', orbit.frame)
+    return -ring_center.pos
+
+
+def _kepler_velocity_error(orbit, e):
+    """The largest relative error in `velocity` against the Keplerian solution.
+
+    The comparison is made at points spread around the orbit. Because the surface models
+    the orbit only to first order in eccentricity, the error is expected to be of order
+    e**2.
+
+    Parameters:
+        orbit (OrbitPlane): The orbit to evaluate.
+        e (float): The orbital eccentricity.
+
+    Returns:
+        float: The largest error, relative to the local orbital speed.
+    """
+
+    offset = _planet_offset(orbit)
+    worst = 0.
+    for nu in _ANOMALIES:
+        # The exact Keplerian position and velocity, relative to the planet
+        r = _A * (1. - e**2) / (1. + e * np.cos(nu))
+        v_radial = _N * _A / np.sqrt(1. - e**2) * e * np.sin(nu)
+        v_tangential = _N * _A / np.sqrt(1. - e**2) * (1. + e * np.cos(nu))
+
+        pos = Vector3((r * np.cos(nu), r * np.sin(nu), 0.)) + offset
+        (vx, vy, _) = [value.vals for value in orbit.velocity(pos).to_scalars()]
+
+        radial = vx * np.cos(nu) + vy * np.sin(nu)
+        tangential = -vx * np.sin(nu) + vy * np.cos(nu)
+
+        speed = np.hypot(v_radial, v_tangential)
+        error = np.hypot(radial - v_radial, tangential - v_tangential) / speed
+        worst = max(worst, error)
+
+    return worst
+
+
+def test_velocity_of_a_circular_orbit() -> None:
+    """A circular orbit moves at the mean motion, perpendicular to its radius."""
+
+    orbit = _eccentric_orbit(0.)
+    pos = Vector3([(_A, 0., 0.), (0., _A, 0.), (-_A, 0., 0.), (0., 0.5*_A, 0.)])
+
+    expected = _N * Vector3.ZAXIS.cross(pos)
+    assert (orbit.velocity(pos) - expected).norm().max() < 1.e-15
+
+
+def test_velocity_of_an_eccentric_orbit_matches_kepler() -> None:
+    """An eccentric orbit moves at the Keplerian velocity, to first order in e."""
+
+    e = 0.02
+    assert _kepler_velocity_error(_eccentric_orbit(e), e) < 3. * e**2
+
+
+def test_velocity_error_is_second_order_in_eccentricity() -> None:
+    """The departure from the Keplerian velocity falls as the square of eccentricity.
+
+    A first-order model leaves an error of order e**2, so halving the eccentricity
+    quarters it. An error that instead falls only in proportion to e would mean a term of
+    the wrong order, such as a displacement applied in the wrong direction.
+    """
+
+    errors = [_kepler_velocity_error(_eccentric_orbit(e), e) for e in (0.02, 0.01, 0.005)]
+
+    for (coarse, fine) in zip(errors[:-1], errors[1:]):
+        assert 3.5 < coarse / fine < 4.5
+
 ##########################################################################################

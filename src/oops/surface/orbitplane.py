@@ -364,7 +364,7 @@ class OrbitPlane(Surface):
             # dy/dt = dr/dt * sin(lon) + r cos(lon) dlon/dt
 
             (x,y,z) = pos.to_scalars()
-            x = x + self._ae         # shift origin to center of planet
+            x = x - self._ae         # shift origin to center of planet
 
             r = (x**2 + y**2).sqrt()
             cos_lon_sub_peri = x/r
