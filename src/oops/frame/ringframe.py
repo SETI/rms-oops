@@ -85,10 +85,26 @@ class RingFrame(Frame):
 
             z_axis_wrt_j2000 = transform.unrotate(Vector3.ZAXIS)
             (x, y, _) = z_axis_wrt_j2000.to_scalars()
-            if (x, y) == (0., 0.):
-                self._node = Scalar(0.)
-            else:
-                self._node = (y.arctan2(x) + Scalar.HALFPI) % Scalar.TWOPI
+            self._node = RingFrame._node_from_z_axis(x, y)
+
+    @staticmethod
+    def _node_from_z_axis(x, y):
+        """The longitude of the ascending node, from the J2000 components of the z-axis.
+
+        Parameters:
+            x (Scalar): The x-component of this Frame's z-axis in J2000 coordinates.
+            y (Scalar): The y-component of this Frame's z-axis in J2000 coordinates.
+
+        Returns:
+            Scalar: The node longitude in radians, of the same shape as the inputs. It is
+            zero wherever the z-axis is aligned with that of J2000, because the node is
+            undefined there and the arctangent would otherwise place it a quarter turn
+            away.
+        """
+
+        node = (y.arctan2(x) + Scalar.HALFPI) % Scalar.TWOPI
+
+        return node.mask_where((x == 0.) & (y == 0.), replace=0., remask=False)
 
     def _wayframe_key(self):
         return (self._planet_frame, self._epoch, self._retrograde, self._aries)
@@ -227,10 +243,7 @@ class RingFrame(Frame):
         z_axis_wrt_j2000 = transform.unrotate(Vector3.ZAXIS)
         (x, y, _) = z_axis_wrt_j2000.to_scalars()
 
-        if (x, y) == (0., 0.):
-            return Scalar(0.)
-
-        return (y.arctan2(x) + Scalar.HALFPI) % Scalar.TWOPI
+        return RingFrame._node_from_z_axis(x, y)
 
 ##########################################################################################
 
