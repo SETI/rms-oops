@@ -112,7 +112,7 @@ class NullSurface(Surface):
         # Validate inputs
         self._vector3_from_coords_check(coords)
 
-        # Convert to Scalars and strip units, if any
+        # Convert to Scalars
         x = Scalar.as_scalar(coords[0], recursive=derivs)
         y = Scalar.as_scalar(coords[1], recursive=derivs)
 
@@ -160,14 +160,14 @@ class NullSurface(Surface):
             * `hints` (Any): The input value of `hints`, included if it is not None.
         """
 
-        # This is a quick way to create a position vector of the correct shape,
-        # and with the correct set of derivatives, even though it will be
-        # entirely masked.
+        # This is a quick way to create a position vector of the correct shape, and with
+        # the correct set of derivatives, even though it will be entirely masked.
 
-        pos = Vector3.as_vector(obs, derivs) + Vector3.as_vector(los, derivs)
-        t = pos.to_scalar(0, derivs)
+        pos = (Vector3.as_vector(obs, recursive=derivs)
+               + Vector3.as_vector(los, recursive=derivs))
+        t = pos.to_scalar(0, recursive=derivs)
 
-        pos = pos.as_all_constant(1.).as_all_masked()
+        pos = pos.as_all_constant().as_all_masked()
         t = t.as_all_constant(0.).as_all_masked()
 
         if hints is not None:
