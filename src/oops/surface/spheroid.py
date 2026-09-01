@@ -25,7 +25,7 @@ class Spheroid(Ellipsoid):
     the elevation value is not exactly normal to the surface.
     """
 
-    def __init__(self, origin, frame, radii, exclusion=0.95):
+    def __init__(self, origin, frame, radii):
         """Constructor for a Spheroid surface.
 
         Parameters:
@@ -35,16 +35,13 @@ class Spheroid(Ellipsoid):
                 spheroid is fixed, with the short radius along the Z-axis.
             radii (tuple[float, ...]): `(a, c)` or `(a, a, c)`, the long and short radii
                 of the spheroid, in km.
-            exclusion (float, optional): The fraction of the polar radius within which
-                calculations of intercept_normal_to() are suppressed. Values of less than
-                0.9 are not recommended because the problem becomes numerically unstable.
         """
 
         # Allow either two or three radius values
         if len(radii) == 2:
             radii = (radii[0], radii[0], radii[1])
 
-        Ellipsoid.__init__(self, origin, frame, radii=radii, exclusion=exclusion)
+        Ellipsoid.__init__(self, origin, frame, radii=radii)
 
     def intercept_normal_to(self, pos, *, obs=None, time=None, direction='dep',
                             derivs=False, guess=None, hints=None):

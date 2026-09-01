@@ -11,6 +11,25 @@ from oops.frame.frame_     import Frame
 from oops.path.path_       import Path
 from oops.surface.surface_ import Surface
 
+# The z-coordinate becomes poorly behaved near the evolute of the ellipsoid. For radii
+# a >= b >= c, the smallest radius of curvature anywhere on the surface is c^2/a, at the
+# ends of the longest axis, so the evolute reaches to within that distance of the
+# surface and z <= -c^2/a is ruled out. We exclude z < -g c^2/a, keeping a margin below
+# that depth. In "unsquashed" coordinates, where the surface becomes a sphere of radius
+# a, this excludes a sphere about the center of radius a + z = a - g c^2/a.
+#
+# A factor of 1 would put the boundary on the evolute itself, where intercept_normal_to()
+# fails outright. Accuracy degrades well before that: measured over a range of axis
+# ratios, the intercepts returned for unmasked interior positions hold to a few parts in
+# 1e14 of the radius up to a factor near 0.55, and lose several digits by 0.8. This value
+# keeps the full precision with a wide margin below the evolute.
+#
+# For a body flatter than about c/a = 0.83, the evolute also reaches beyond this sphere
+# along the polar axis, but only outside the surface, where masking would discard
+# legitimate positions. Those positions are limited by the convergence of
+# intercept_normal_to() rather than by this zone, so no exclusion radius can address them.
+_EXCLUSION_FACTOR = 0.5     # This is `g` in the above explanation
+
 
 class Ellipsoid(Surface):
     """An ellipsoidal surface centered on the given path and fixed with respect to the
@@ -37,7 +56,7 @@ class Ellipsoid(Surface):
 
     _DEBUG = False       # True for convergence testing in intercept_normal_to()
 
-    def __init__(self, origin, frame, radii, *, exclusion=0.9):
+    def __init__(self, origin, frame, radii):
         """Constructor for an Ellipsoid object.
 
         Parameters:
@@ -48,9 +67,6 @@ class Ellipsoid(Surface):
                 Z-axis and the longest radius along the X-axis.
             radii (tuple[float, float, float]): `(a, b, c)`, the radii from longest to
                 shortest, in km.
-            exclusion (float, optional): The fraction of the polar radius within which
-                calculations of intercept_normal_to() are suppressed. Values of less than
-                0.95 are not recommended because the problem becomes numerically unstable.
         """
 
         self.origin = Path.as_waypoint(origin)
@@ -78,29 +94,27 @@ class Ellipsoid(Surface):
         self._unsquash_sq    = self._unsquash.element_mul(self._unsquash)
 
         self._unsquash_sq_2d = Matrix(([1.,0.,0.],
-                                      [0.,self._unsquash_y**2,0.],
-                                      [0.,0.,self._unsquash_z**2]))
+                                       [0.,self._unsquash_y**2,0.],
+                                       [0.,0.,self._unsquash_z**2]))
 
         # This is the exclusion zone radius, within which calculations of
-        # intercept_normal_to() are automatically masked due to the ill-defined
-        # geometry.
-        self._exclusion = float(exclusion)
-        self._r_exclusion = self._req * self._exclusion
+        # intercept_normal_to() are automatically masked due to the ill-defined geometry.
+        self._r_exclusion = self._req * (1. - _EXCLUSION_FACTOR * self._squash_z_sq)
 
         self.unmasked = self
 
         # Unique key for intercept calculations
         self.intercept_key = ('ellipsoid', self.origin.waypoint, self.frame.wayframe,
-                                           tuple(self._radii), self._exclusion)
+                                           tuple(self._radii))
 
     def __getstate__(self):
         self.refresh()
         return (Path.as_primary_path(self.origin), Frame.as_primary_frame(self.frame),
-                tuple(self._radii), self._exclusion)
+                tuple(self._radii))
 
     def __setstate__(self, state):
-        (origin, frame, radii, exclusion) = state
-        self.__init__(origin, frame, radii, exclusion=exclusion)
+        (origin, frame, radii) = state
+        self.__init__(origin, frame, radii)
         self.freeze()
 
     def coords_from_vector3(self, pos, *, obs=None, time=None, axes=2, derivs=False,
