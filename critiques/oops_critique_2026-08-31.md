@@ -26,7 +26,7 @@ deviations), SUGGESTION (improvements needing an owner decision).
 | `oops/backplane` | 15 | 69 | 49 | 9 | 9 |
 | **Total** | **118** | **327** | **170** | **90** | **76** |
 
-These counts describe the review as first delivered. Work continued afterward, and 30 of
+These counts describe the review as first delivered. Work continued afterward, and 31 of
 the findings it left open have since been resolved; each is labelled **(fixed after
 review)** in place of "(not fixed)", with its entry saying what was done. A few defects
 found during that later work are labelled **(found after review, fixed)** and were added
@@ -1645,11 +1645,18 @@ JunoCam geometry for shapeless queries, so it is left for the author.
   explicitly.
 
 ### src/oops/cadence/tdicadence.py
-- **[BUG] (not fixed)** `tdicadence.py:102-120` — `tdi_shifts_after_time` clips its result to
-  `[0, self._tdi_stages]`, but the number of shifts remaining can never exceed
-  `self._max_shifts` (= stages-1); for a pre-start time it returns `stages` rather than
-  `stages-1`. The method is unused and untested anywhere in the repo, so the intended
-  convention is unverifiable; flagging instead of fixing.
+- **[BUG] (fixed after review)** `tdicadence.py:102-120` — `tdi_shifts_after_time` clipped
+  its result to `[0, self._tdi_stages]`, but the number of shifts remaining can never
+  exceed `self._max_shifts` (= stages-1). `Scalar.int()` does not clip unless asked
+  (`clip=False` is its default), so a time before `tstart` yields a negative `tstep_int`
+  and an inflated count: a 4-stage cadence reported 3 shifts remaining at its start time
+  but 4 at any earlier time, one more than the detector can ever perform. The sibling
+  method `tdi_shifts_at_line` already clips to `_max_shifts`, which settles the intended
+  convention that the critique called unverifiable. Now clips to `_max_shifts` as well.
+  Both methods were uncalled and untested anywhere in the repo; five tests were added,
+  covering the bound across stage counts, the countdown through the exposure, the
+  independence from `tdi_sign`, and the `remask` behavior. All five fail against the old
+  code.
 - **[SUGGESTION] (not fixed)** `tdicadence.py:57` — `is_unique = (tdi_stages == 1)` conflicts
   with the base-class definition of `is_unique` ("no times ... associated with more than one
   time step"): with 1 stage and N lines, every line spans the same interval, and

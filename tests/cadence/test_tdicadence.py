@@ -3,6 +3,7 @@
 ##########################################################################################
 
 import numpy as np
+import pytest
 
 from polymath import Scalar
 import oops
@@ -484,5 +485,64 @@ def test_tdicadence_time_shift() -> None:
     assert shifted._tdi_sign == cad._tdi_sign
     assert shifted.time[0] == cad.time[0] + 5.
     assert shifted.time[1] == cad.time[1] + 5.
+
+
+@pytest.mark.parametrize('stages', [1, 2, 4, 10])
+def test_tdi_shifts_after_time_never_exceeds_the_shift_count(stages: int) -> None:
+    """A cadence of N stages performs N-1 shifts, so no time has more than that to come.
+
+    A time before the exposure begins still has the whole sequence ahead of it, which is
+    one fewer than the number of stages.
+    """
+
+    cad = oops.cadence.TDICadence(10, 100., 10., stages)
+
+    for time in (-1.e6, 0., 99., 100.):
+        assert cad.tdi_shifts_after_time(time) == stages - 1
+
+
+def test_tdi_shifts_after_time_counts_down_once_per_stage() -> None:
+    """Each elapsed TDI interval completes one shift, leaving one fewer still to come."""
+
+    cad = oops.cadence.TDICadence(10, 100., 10., 4)
+
+    assert cad.tdi_shifts_after_time(100.) == 3
+    assert cad.tdi_shifts_after_time(105.) == 3      # partway through the first stage
+    assert cad.tdi_shifts_after_time(110.) == 2
+    assert cad.tdi_shifts_after_time(120.) == 1
+    assert cad.tdi_shifts_after_time(130.) == 0
+    assert cad.tdi_shifts_after_time(140.) == 0      # the end time
+    assert cad.tdi_shifts_after_time(1.e6) == 0
+
+
+def test_tdi_shifts_after_time_ignores_the_shift_direction() -> None:
+    """The shifts remaining depend on the time alone, not on which way the DNs move."""
+
+    down = oops.cadence.TDICadence(10, 100., 10., 4, tdi_sign=-1)
+    up = oops.cadence.TDICadence(10, 100., 10., 4, tdi_sign=1)
+
+    times = Scalar([0., 100., 115., 140., 1.e6])
+    assert down.tdi_shifts_after_time(times) == up.tdi_shifts_after_time(times)
+
+
+def test_tdi_shifts_after_time_masks_times_outside_the_cadence() -> None:
+    """With remask, a time outside the exposure is masked instead of being clipped."""
+
+    cad = oops.cadence.TDICadence(10, 100., 10., 4)
+    shifts = cad.tdi_shifts_after_time(Scalar([99., 100., 140., 141.]), remask=True)
+
+    assert list(shifts.mask) == [True, False, False, True]
+
+
+def test_tdi_shifts_at_line_and_after_time_share_an_upper_bound() -> None:
+    """Both counts describe the same shifts, so neither can exceed the shift count."""
+
+    cad = oops.cadence.TDICadence(10, 100., 10., 4)
+
+    lines = Scalar(np.arange(-3, 14))
+    times = Scalar(np.arange(80., 161., 5.))
+
+    assert cad.tdi_shifts_at_line(lines).max() == cad._max_shifts
+    assert cad.tdi_shifts_after_time(times).max() == cad._max_shifts
 
 ##########################################################################################

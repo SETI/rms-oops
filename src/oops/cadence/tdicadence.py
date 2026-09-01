@@ -51,7 +51,7 @@ class TDICadence(Cadence):
         # Fill in the required attributes
         self.time = (self._tstart, self._tstart + self._tdi_texp * self._tdi_stages)
         self.midtime = 0.5 * (self.time[0] + self.time[1])
-        self.lasttime = self.time[-1] - self._tdi_texp
+        self.lasttime = self.time[1] - self._tdi_texp
         self.shape = (self._lines,)
         self.is_continuous = True
         self.is_unique = (self._tdi_stages == 1)
@@ -117,7 +117,7 @@ class TDICadence(Cadence):
         time = Scalar.as_scalar(time, recursive=False)
         tstep = (time - self.time[0]) / self._tdi_texp
         tstep_int = tstep.int(top=self._tdi_stages, remask=remask, inclusive=inclusive)
-        return (self._max_shifts - tstep_int).clip(0, self._tdi_stages, remask=remask)
+        return (self._max_shifts - tstep_int).clip(0, self._max_shifts, remask=remask)
 
     ######################################################################################
     # Standard Cadence methods
