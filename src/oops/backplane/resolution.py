@@ -94,7 +94,14 @@ def coarsest_resolution(self, event_key):
 
 
 def _fill_surface_resolution(self, event_key):
-    """Internal method to fill in the surface resolution backplanes."""
+    """Internal method to fill in the surface resolution backplanes.
+
+    Registers the finest and coarsest resolution backplanes, in km per pixel, for the
+    surface intercept points.
+
+    Parameters:
+        event_key (str or tuple): Key defining the surface event.
+    """
 
     event_key = Backplane.standardize_event_key(event_key)
     event = self.get_surface_event(event_key, derivs=True)

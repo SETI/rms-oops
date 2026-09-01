@@ -194,7 +194,11 @@ def _aries_ring_longitude(self, event_key):
     """Gridless longitude of First Point of Aries from the ring ascending node.
 
     Primarily used internally. Longitudes are measured in the eastward
-    (prograde) direction.
+    (prograde) direction, in radians.
+
+    Parameters:
+        event_key (str or tuple): Key defining the event at the ring's path; it defaults
+            to the body's "RING" surface.
     """
 
     event_key = Backplane.gridless_event_key(event_key, default='RING')
@@ -741,7 +745,16 @@ def ring_gradient_angle(self, event_key):
 
 
 def ring_shadow_radius(self, event_key, ring_surface_key):
-    """Radius in the ring plane that casts a shadow at each point on this body."""
+    """Radius in the ring plane that casts a shadow at each point on this body.
+
+    The value is in km, and is masked wherever the arriving photon does not pass through
+    the ring plane.
+
+    Parameters:
+        event_key (str or tuple): Key defining the surface event on the shadowed body.
+        ring_surface_key (str): Name of the ring surface casting the shadow, for example
+            "SATURN_MAIN_RINGS". The name is not case-sensitive.
+    """
 
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
@@ -764,6 +777,14 @@ def ring_shadow_radius(self, event_key, ring_surface_key):
 
 def ring_shadow_incidence(self, event_key, ring_surface_key):
     """Incidence angle in the ring plane that casts a shadow at each point on this body.
+
+    The value is in radians, measured from the ring plane normal on the lit side, and is
+    derived from the emission angle of the ring event.
+
+    Parameters:
+        event_key (str or tuple): Key defining the surface event on the shadowed body.
+        ring_surface_key (str): Name of the ring surface casting the shadow, for example
+            "SATURN_MAIN_RINGS". The name is not case-sensitive.
     """
 
     self.refresh()
@@ -789,7 +810,15 @@ def ring_shadow_incidence(self, event_key, ring_surface_key):
 
 
 def ring_radius_in_front(self, event_key, ring_surface_key):
-    """Radius in the ring plane that obscures each point on this body."""
+    """Radius in the ring plane that obscures each point on this body.
+
+    The value is in km, and is masked wherever the body's surface is not intercepted.
+
+    Parameters:
+        event_key (str or tuple): Key defining the surface event on the obscured body.
+        ring_surface_key (str): Name of the ring surface in front of the body, for example
+            "SATURN_MAIN_RINGS". The name is not case-sensitive.
+    """
 
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
@@ -808,7 +837,14 @@ def ring_radius_in_front(self, event_key, ring_surface_key):
 
 
 def _ring_is_retrograde(self, event_key):
-    """True if this ring is retrograde."""
+    """True if this ring is retrograde.
+
+    The answer is a property of the ring's parent planet, so it is obtained from the
+    planet named in the event key rather than from a backplane array.
+
+    Parameters:
+        event_key (tuple): Standardized key defining the ring surface event.
+    """
 
     body_name = event_key[1]
     if ':' in body_name:

@@ -10,7 +10,11 @@ from oops.frame     import Frame
 def pole_clock_angle(self, event_key):
     """Gridless clock angle of the body's projected pole vector on the sky.
 
-    Measured from north through west; in other words, clockwise on the sky.
+    Measured from north through west; in other words, clockwise on the sky. The value is
+    in radians.
+
+    Parameters:
+        event_key (str or tuple): Key defining the event at the body's path.
     """
 
     self.refresh()
@@ -49,6 +53,11 @@ def pole_clock_angle(self, event_key):
 def pole_position_angle(self, event_key):
     """Projected angle of a body's pole vector on the sky, measured from celestial north
     toward celestial east (i.e., counterclockwise on the sky).
+
+    This is the complement of the clock angle, in radians.
+
+    Parameters:
+        event_key (str or tuple): Key defining the surface event.
     """
 
     self.refresh()

@@ -166,7 +166,18 @@ def _fill_ansa_intercepts(self, event_key):
 
 
 def _fill_ansa_longitudes(self, event_key):
-    """Internal method to fill in the ansa intercept longitude backplane."""
+    """Internal method to fill in the ansa intercept longitude backplane.
+
+    The longitude is measured in the associated ring plane, in radians relative to the
+    ascending node, and is registered under the "node" reference.
+
+    Parameters:
+        event_key (tuple): Standardized key defining the ansa surface event.
+
+    Raises:
+        ValueError: If the event key does not describe a surface using cylindrical
+            coordinates.
+    """
 
     # Validate the surface type
     surface = Backplane.get_surface(event_key[1])

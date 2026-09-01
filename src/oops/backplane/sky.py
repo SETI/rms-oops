@@ -58,7 +58,22 @@ def declination(self, event_key=(), apparent=True, direction='arr'):
 
 
 def _fill_ra_dec(self, event_key, apparent, direction):
-    """Fill internal backplanes of RA and dec."""
+    """Fill internal backplanes of RA and dec.
+
+    Registers the right ascension and declination backplanes, in radians, for the given
+    combination of event key, aberration and photon direction.
+
+    Parameters:
+        event_key (str or tuple): Key defining the surface event; an empty key refers to
+            the observation itself.
+        apparent (bool): True to use the apparent direction of photons in the frame of the
+            event; False to use the purely geometric directions of the photons.
+        direction (str): 'arr' to base the direction on an arriving photon; 'dep' to base
+            it on a departing photon.
+
+    Raises:
+        ValueError: If `direction` is neither 'arr' nor 'dep'.
+    """
 
     if direction not in ('arr', 'dep'):
         raise ValueError('invalid photon direction: ' + direction)
@@ -129,6 +144,13 @@ def celestial_east_angle(self, event_key=()):
 
 def _fill_dlos_dradec(self, event_key):
     """Fill internal backplanes with derivatives with respect to RA and dec.
+
+    Registers the partial derivatives of the line of sight with respect to right ascension
+    and to declination, under the internal keys "_dlos_dra" and "_dlos_ddec".
+
+    Parameters:
+        event_key (str or tuple): Key defining the surface event; an empty key refers to
+            the observation itself.
     """
 
     ra = self.right_ascension(event_key)
@@ -209,7 +231,21 @@ def center_declination(self, event_key, apparent=True, direction='arr'):
 
 
 def _fill_center_ra_dec(self, event_key, apparent, direction):
-    """Internal method to fill in RA and dec for the center of a body."""
+    """Internal method to fill in RA and dec for the center of a body.
+
+    Registers the gridless right ascension and declination backplanes, in radians, for the
+    body's path rather than its surface.
+
+    Parameters:
+        event_key (str or tuple): Key defining the event at the body's path.
+        apparent (bool): True to use the apparent direction of photons in the frame of the
+            event; False to use the purely geometric directions of the photons.
+        direction (str): 'arr' to base the direction on an arriving photon; 'dep' to base
+            it on a departing photon.
+
+    Raises:
+        ValueError: If `direction` is neither 'arr' nor 'dep'.
+    """
 
     if direction not in ('arr', 'dep'):
         raise ValueError('invalid photon direction: ' + direction)

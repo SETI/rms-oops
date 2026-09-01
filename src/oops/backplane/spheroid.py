@@ -138,6 +138,17 @@ def latitude(self, event_key, lat_type='centric'):
 
 def _fill_surface_intercepts(self, event_key):
     """Internal method to fill in the surface intercept geometry backplanes.
+
+    Registers the intercept longitude and latitude backplanes, in radians, using the
+    internal "squashed" longitude type. If the event key describes a limb surface, the
+    limb intercept backplanes are filled in instead.
+
+    Parameters:
+        event_key (tuple): Standardized key defining the surface event.
+
+    Raises:
+        ValueError: If the event key describes a surface that uses neither spherical nor
+            limb coordinates.
     """
 
     surface = Backplane.get_surface(event_key[1])
@@ -162,7 +173,13 @@ def _fill_surface_intercepts(self, event_key):
 
 
 def _sub_observer_longitude(self, event_key):
-    """Gridless sub-observer longitude. Used internally."""
+    """Gridless sub-observer longitude. Used internally.
+
+    Derived from the apparent departure direction seen at the body center, in radians.
+
+    Parameters:
+        event_key (str or tuple): Key defining the event at the body's path.
+    """
 
     gridless_key = Backplane.gridless_event_key(event_key)
     key = ('_sub_observer_longitude', gridless_key)
@@ -177,7 +194,13 @@ def _sub_observer_longitude(self, event_key):
 
 
 def _sub_observer_latitude(self, event_key):
-    """Gridless sub-observer latitude. Used internally."""
+    """Gridless sub-observer latitude. Used internally.
+
+    Derived from the apparent departure direction seen at the body center, in radians.
+
+    Parameters:
+        event_key (str or tuple): Key defining the event at the body's path.
+    """
 
     gridless_key = Backplane.gridless_event_key(event_key)
     key = ('_sub_observer_latitude', gridless_key)
@@ -192,7 +215,14 @@ def _sub_observer_latitude(self, event_key):
 
 
 def _sub_solar_longitude(self, event_key):
-    """Gridless sub-solar longitude. Used internally."""
+    """Gridless sub-solar longitude. Used internally.
+
+    Derived from the negative of the apparent arrival direction seen at the body center,
+    in radians.
+
+    Parameters:
+        event_key (str or tuple): Key defining the event at the body's path.
+    """
 
     gridless_key = Backplane.gridless_event_key(event_key)
     key = ('_sub_solar_longitude', gridless_key)
@@ -207,7 +237,14 @@ def _sub_solar_longitude(self, event_key):
 
 
 def _sub_solar_latitude(self, event_key):
-    """Gridless sub-solar latitude. Used internally."""
+    """Gridless sub-solar latitude. Used internally.
+
+    Derived from the negative of the apparent arrival direction seen at the body center,
+    in radians.
+
+    Parameters:
+        event_key (str or tuple): Key defining the event at the body's path.
+    """
 
     gridless_key = Backplane.gridless_event_key(event_key)
     key = ('_sub_solar_latitude', gridless_key)
@@ -312,7 +349,27 @@ def sub_solar_longitude(self, event_key, reference='iau', direction='west', mini
 
 def _sub_longitude(self, event_key, longitude, reference='iau', direction='west',
                    minimum=0):
-    """Sub-solar or sub-observer longitude."""
+    """Sub-solar or sub-observer longitude.
+
+    Re-expresses a longitude relative to the requested reference, direction and range.
+
+    Parameters:
+        event_key (str or tuple): Key defining the surface event.
+        longitude (Scalar): The longitude to convert, in radians, measured eastward from
+            the IAU-defined prime meridian.
+        reference (str, optional): Defines the location of zero longitude. 'iau' for the
+            IAU-defined prime meridian; 'obs' for the sub-observer longitude; 'sun' for
+            the sub-solar longitude; 'oha' for the anti-observer longitude; 'sha' for the
+            anti-solar longitude.
+        direction (str, optional): Direction on the surface of increasing longitude,
+            'east' or 'west'.
+        minimum (float, optional): The smallest numeric value of longitude, either 0 or
+            -180.
+
+    Raises:
+        ValueError: If `reference`, `direction` or `minimum` is not one of the values
+            listed above.
+    """
 
     if reference not in ('iau', 'sun', 'sha', 'obs', 'oha'):
         raise ValueError('invalid longitude reference: ' + repr(reference))

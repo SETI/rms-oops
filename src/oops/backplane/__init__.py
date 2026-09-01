@@ -133,6 +133,12 @@ class Backplane(Mutable):
         self.refresh()
 
     def _refresh(self):
+        """Evaluate the observation time and rebuild every cache.
+
+        This defines the time grid, the observer events with and without derivatives, and
+        the empty dictionaries that hold surface events, backplanes, antimasks, and
+        surface intercepts. Any previously computed backplane is discarded.
+        """
 
         if self._input_time is None:
             self.time = self.obs.timegrid(self.meshgrid)
@@ -202,12 +208,27 @@ class Backplane(Mutable):
     ######################################################################################
 
     def __getstate__(self):
+        """The state needed to restore this Backplane and its computed events.
+
+        The surface events, gridless arrivals, antimasks, and intercepts are preserved so
+        that backplanes generate quickly after unpickling; the backplanes themselves are
+        not saved, because they are cheap to regenerate from the events.
+
+        Returns:
+            tuple: The observation, meshgrid, time, inventory, inventory border, and the
+            four caches described above.
+        """
 
         return (self.obs, self._input_meshgrid, self.time, self._input_inventory,
                 self.inventory_border, self.surface_events, self.gridless_arrivals,
                 self.antimasks, self.intercepts)
 
     def __setstate__(self, state):
+        """Restore this Backplane and the event caches saved with it.
+
+        Parameters:
+            state (tuple): The tuple returned by `__getstate__`.
+        """
 
         (obs, meshgrid, time, inventory, inventory_border,
          surface_events, gridless_arrivals, antimasks, intercepts) = state
@@ -225,6 +246,10 @@ class Backplane(Mutable):
 
     @property
     def dlos_duv(self):
+        """The derivative of the line of sight with respect to (u,v), evaluated at each
+        pixel of the meshgrid and cached on first use.
+        """
+
         if not hasattr(self, '_dlos_duv'):
             self._dlos_duv = self.meshgrid.dlos_duv(self.time)
 
@@ -265,6 +290,10 @@ class Backplane(Mutable):
 
     @property
     def duv_dlos(self):
+        """The derivative of (u,v) with respect to the line of sight, evaluated at each
+        pixel of the meshgrid and cached on first use. This is the inverse of `dlos_duv`.
+        """
+
         if not hasattr(self, '_duv_dlos'):
             self._duv_dlos = self.meshgrid.duv_dlos(self.time)
 
@@ -272,6 +301,10 @@ class Backplane(Mutable):
 
     @property
     def center_dlos_duv(self):
+        """The derivative of the line of sight with respect to (u,v) at the center of the
+        field of view, cached on first use. This is what the gridless backplanes use.
+        """
+
         if not hasattr(self, '_center_dlos_duv'):
             self._center_dlos_duv = self.meshgrid.center_dlos_duv(self.time)
 
@@ -279,6 +312,10 @@ class Backplane(Mutable):
 
     @property
     def center_duv_dlos(self):
+        """The derivative of (u,v) with respect to the line of sight at the center of the
+        field of view, cached on first use. This is the inverse of `center_dlos_duv`.
+        """
+
         if not hasattr(self, '_center_duv_dlos'):
             self._center_duv_dlos = self.meshgrid.center_duv_dlos(self.time)
 
@@ -298,6 +335,22 @@ class Backplane(Mutable):
 
         Use default = 'ANSA', 'RING', or 'LIMB' to add this suffix to the body name if no
         suffix is specified.
+
+        Parameters:
+            event_key (str or tuple): The key to repair. A bare surface key string is
+                understood as dispersed illumination from the Sun.
+            default (str, optional): "ANSA", "RING", or "LIMB" to append as a suffix to a
+                body name that carries none; default is "", meaning the name is left as
+                it is.
+
+        Returns:
+            tuple: The standardized key, uppercased, with the light source as its first
+            item. An empty key is returned as an empty tuple.
+
+        Raises:
+            ValueError: If the number of items does not suit the kind of illumination:
+                two or three for dispersed illumination, two for occultation or
+                path-based illumination.
         """
 
         if not event_key:
@@ -345,24 +398,64 @@ class Backplane(Mutable):
 
     @staticmethod
     def _is_dispersed(event_key):
+        """True if this key describes dispersed illumination, as an empty key does.
+
+        Parameters:
+            event_key (tuple): A standardized event key.
+
+        Returns:
+            bool: True for dispersed illumination.
+        """
+
         if len(event_key) == 0:
             return True
         return event_key[0][-1] == '<'
 
     @staticmethod
     def _is_occultation(event_key):
+        """True if this key describes occultation illumination.
+
+        Parameters:
+            event_key (tuple): A standardized event key.
+
+        Returns:
+            bool: True for occultation illumination; False for an empty key.
+        """
+
         if len(event_key) == 0:
             return False
         return event_key[0][-1] == '>'
 
     @staticmethod
     def _is_gridless(event_key):
+        """True if this key describes path-based illumination, which has no spatial
+        dimensions.
+
+        Parameters:
+            event_key (tuple): A standardized event key.
+
+        Returns:
+            bool: True for path-based illumination; False for an empty key.
+        """
+
         if len(event_key) == 0:
             return False
         return event_key[0][-1] == '-'
 
     @staticmethod
     def _is_shadowing(event_key):
+        """True if this key describes one surface shadowing another.
+
+        Such a key describes dispersed illumination and carries the extra surface whose
+        shadow is in question.
+
+        Parameters:
+            event_key (tuple): A standardized event key.
+
+        Returns:
+            bool: True if the key has three items and describes dispersed illumination.
+        """
+
         if len(event_key) == 0:
             return False
         return Backplane._is_dispersed(event_key) and len(event_key) == 3
@@ -370,7 +463,17 @@ class Backplane(Mutable):
     @staticmethod
     @functools.lru_cache(maxsize=100)
     def gridless_event_key(event_key, default=''):
-        """Convert event key to gridless."""
+        """The path-based (gridless) form of an event key.
+
+        Parameters:
+            event_key (str or tuple): The key to convert.
+            default (str, optional): "ANSA", "RING", or "LIMB" to append as a suffix to a
+                body name that carries none; default is "".
+
+        Returns:
+            tuple: The standardized key with its light source marked as path-based. An
+            empty key is returned unchanged.
+        """
 
         event_key = Backplane.standardize_event_key(event_key, default=default)
         if not event_key:
@@ -383,6 +486,17 @@ class Backplane(Mutable):
 
         A string is turned into a tuple. Strings are converted to upper case. If the
         argument is a backplane already, the key is extracted from it.
+
+        Parameters:
+            backplane_key (str, tuple, or Qube): The key to repair, or a backplane array
+                that has already been registered.
+
+        Returns:
+            tuple: The standardized key.
+
+        Raises:
+            ValueError: If the argument is neither a string nor a tuple, or is an array
+                that is not a registered backplane.
         """
 
         if isinstance(backplane_key, Qube):
@@ -401,6 +515,20 @@ class Backplane(Mutable):
     @staticmethod
     @functools.lru_cache(maxsize=100)
     def _standardize_backplane_key_if_not_qube(backplane_key):
+        """Repair a backplane key that is not itself a backplane array.
+
+        This is the part of `standardize_backplane_key` whose result depends only on the
+        key, so it can be cached.
+
+        Parameters:
+            backplane_key (str or tuple): The key to repair.
+
+        Returns:
+            tuple: The standardized key, uppercased if it was a string.
+
+        Raises:
+            ValueError: If the key is neither a string nor a tuple.
+        """
 
         if isinstance(backplane_key, str):
             backplane_key = (backplane_key.upper(),)
@@ -422,6 +550,18 @@ class Backplane(Mutable):
 
         Use default = 'ANSA', 'RING', or 'LIMB' to add this suffix to the body name if no
         suffix is specified.
+
+        Parameters:
+            event_key (str or tuple): The key to interpret, which may name a backplane
+                and the event it applies to.
+            names (tuple, optional): The backplane names to recognize; default is (),
+                meaning every defined Backplane name.
+            default (str, optional): "ANSA", "RING", or "LIMB" to append as a suffix to a
+                body name that carries none; default is "".
+
+        Returns:
+            tuple: `(event_key, backplane_key)`, where `backplane_key` is None if the
+            input named no backplane.
         """
 
         if not names:
@@ -447,6 +587,14 @@ class Backplane(Mutable):
 
         The string is normally a registered body ID (case insensitive), but it can be
         modified with ':ANSA', ':RING' or ':LIMB' to indicate an associated surface.
+
+        Parameters:
+            surface_key (str): The surface key naming the body and, optionally, one of
+                its associated surfaces.
+
+        Returns:
+            tuple: `(body, modifier)`, where `body` is the Body and `modifier` is
+            "ANSA", "RING", "LIMB", or None for the body's own surface.
         """
 
         surface_id = surface_key.upper()
@@ -478,6 +626,13 @@ class Backplane(Mutable):
 
         If the surface has no associated unmasked surface, the same surface key is
         returned.
+
+        Parameters:
+            surface_key (str): The surface key.
+
+        Returns:
+            str: The key of the unmasked surface, which shares its intercept geometry and
+            so allows an intercept event to be reused.
         """
 
         (body, modifier) = Backplane.get_body_and_modifier(surface_key)
@@ -525,7 +680,16 @@ class Backplane(Mutable):
     @staticmethod
     @functools.lru_cache(maxsize=100)
     def unmasked_event_key(event_key):
-        """Return the unmasked event key based on an event key."""
+        """The unmasked event key associated with a given event key.
+
+        Every surface key it names is replaced by its unmasked counterpart.
+
+        Parameters:
+            event_key (str or tuple): The key to convert.
+
+        Returns:
+            tuple: The standardized key naming the unmasked surfaces.
+        """
 
         event_key = Backplane.standardize_event_key(event_key)
 
@@ -538,7 +702,17 @@ class Backplane(Mutable):
     @staticmethod
     @functools.lru_cache(maxsize=100)
     def intercept_dict_key(event_key):
-        """Return the key for the intercepts dictionary based on an event key."""
+        """The key into the intercepts dictionary for a given event key.
+
+        Every surface key it names is replaced by that surface's own intercept key, so
+        that surfaces sharing an intercept geometry share a cached intercept event.
+
+        Parameters:
+            event_key (str or tuple): The key to convert.
+
+        Returns:
+            tuple: The intercept dictionary key.
+        """
 
         event_key = Backplane.standardize_event_key(event_key)
 
@@ -554,7 +728,19 @@ class Backplane(Mutable):
     ######################################################################################
 
     def get_obs_event(self, event_key, derivs=False):
-        """The observation event of photons arriving at the detector."""
+        """The observation event of photons arriving at the detector.
+
+        Parameters:
+            event_key (str or tuple): The event key, which selects the gridded event for
+                dispersed illumination and a gridless event otherwise.
+            derivs (bool, optional): True for an event carrying its line-of-sight
+                derivatives; False to strip them. Default is False, although the
+                `ALL_DERIVS` class attribute forces them on.
+
+        Returns:
+            Event: The observer event. It is read-only and shared, so it must not be
+            modified in place.
+        """
 
         derivs = derivs or self.ALL_DERIVS
 
@@ -642,6 +828,13 @@ class Backplane(Mutable):
 
         The antimask defines the bounding box of the meshgrid that intercepts the given
         surface.
+
+        Parameters:
+            surface_key (str): The surface key.
+
+        Returns:
+            ndarray or bool: A boolean array that is True inside the bounding box, or
+            True if no inventory is in use and the whole meshgrid must be considered.
         """
 
         # Return from the antimask cache if present
@@ -687,14 +880,25 @@ class Backplane(Mutable):
         return antimask
 
     def get_surface_event(self, event_key, derivs=False, arrivals=False):
-        """The surface or path event surface based on an event key.
+        """The surface or path event identified by an event key.
 
-        Inputs:
-            event_key       event key.
-            derivs          True for events with time and LOS derivs; False
-                            otherwise.
-            arrivals        True for an event requiring arrival vectors; False
-                            otherwise.
+        The event is taken from the cache when it is already present and computed and
+        cached otherwise, so repeated calls for the same key are inexpensive.
+
+        Parameters:
+            event_key (str or tuple): The key identifying the event; an empty key returns
+                the observer event, which is what the sky backplanes use.
+            derivs (bool, optional): True for an event carrying its time and line-of-sight
+                derivatives; False to strip them. Default is False, although the
+                `ALL_DERIVS` class attribute forces them on.
+            arrivals (bool, optional): True for an event that also carries the vectors of
+                photons arriving from the Sun, which the lighting backplanes require;
+                False otherwise. Default is False.
+
+        Returns:
+            Event: The event, relative to the surface's own origin and frame. It is
+            read-only and shared with every other user of the same key, so it must not be
+            modified in place.
         """
 
         derivs = derivs or self.ALL_DERIVS
@@ -766,7 +970,20 @@ class Backplane(Mutable):
         return event
 
     def _get_los_event(self, event_key, detection, derivs):
-        """The event defined by dispersed lighting over a surface."""
+        """The surface event of photons traveling to a detection event.
+
+        The intercept is reused from the cache when another surface shares its geometry,
+        and the coordinates and mask of this particular surface are applied afterward.
+
+        Parameters:
+            event_key (str or tuple): The standardized event key.
+            detection (Event): The event at which the photons are detected.
+            derivs (bool): True for an event carrying its time and line-of-sight
+                derivatives.
+
+        Returns:
+            Event: The surface event, relative to the surface's origin and frame.
+        """
 
         surface_key = event_key[1]
         surface = Backplane.get_surface(surface_key)
@@ -812,6 +1029,18 @@ class Backplane(Mutable):
         return event
 
     def _save_event(self, event_key, event, surface, derivs):
+        """File a surface event in the cache, along with its antimask.
+
+        The event gains `body` and `surface` subfields. A version without derivatives is
+        filed as well when the event carries them, and the antimask of a dispersed,
+        non-shadowing event is recorded for its surface.
+
+        Parameters:
+            event_key (tuple): The standardized event key.
+            event (Event): The event to save.
+            surface (Surface): The surface on which the event falls.
+            derivs (bool): True if the event carries its derivatives.
+        """
 
         body = Backplane.get_body_and_modifier(event_key[1])[0]
         event.insert_subfield('body', body)
@@ -833,8 +1062,19 @@ class Backplane(Mutable):
             self.surface_events[False][event_key] = event.wod
 
     def get_gridless_event(self, event_key, derivs=False, arrivals=False):
-        """The gridless event associated with this event key, even if the event
-        key refers to dispersed or occultation lighting.
+        """The gridless event associated with this event key, even if the event key
+        refers to dispersed or occultation lighting.
+
+        Parameters:
+            event_key (str or tuple): The event key, which is converted to its
+                path-based form.
+            derivs (bool, optional): True for an event carrying its time and
+                line-of-sight derivatives; default False.
+            arrivals (bool, optional): True for an event that also carries the vectors of
+                photons arriving from the Sun; default False.
+
+        Returns:
+            Event: The gridless event, which has no spatial dimensions.
         """
 
         derivs = derivs or self.ALL_DERIVS
@@ -851,6 +1091,18 @@ class Backplane(Mutable):
 
         If expand is True and the backplane contains just a single value, the
         backplane is expanded to the overall shape.
+
+        Parameters:
+            key (tuple): The standardized backplane key under which to file the array.
+            backplane (Qube, ndarray, or bool): The array to register.
+            expand (bool, optional): True to broadcast a single value to the shape of the
+                backplane; default False.
+            derivs (bool, optional): True to return the array with its derivatives
+                attached; default False.
+
+        Returns:
+            Qube: The registered array, which is read-only and shared with every later
+            user of this key, so it must not be modified in place.
         """
 
         if isinstance(backplane, (np.bool_, bool)):
@@ -887,7 +1139,17 @@ class Backplane(Mutable):
             return backplane.wod
 
     def _remasked_backplane(self, key, backplane_key, derivs=False):
-        """Apply the mask of one backplane to another."""
+        """One backplane with the mask of another applied.
+
+        Parameters:
+            key (tuple): The standardized key under which to register the result.
+            backplane_key (tuple): The key of the backplane supplying the mask.
+            derivs (bool, optional): True to return the array with its derivatives
+                attached; default False.
+
+        Returns:
+            Qube: The remasked, registered array.
+        """
 
         derivs = derivs or self.ALL_DERIVS
 
@@ -900,7 +1162,20 @@ class Backplane(Mutable):
         return array
 
     def get_backplane(self, key, derivs=False):
-        """Return the selected backplane from the cache."""
+        """The selected backplane, taken from the cache.
+
+        Parameters:
+            key (tuple): The standardized backplane key.
+            derivs (bool, optional): True to return the array with its derivatives
+                attached, where a version carrying them was registered; default False.
+
+        Returns:
+            Qube: The registered array, which is read-only and shared, so it must not be
+            modified in place.
+
+        Raises:
+            KeyError: If no backplane has been registered under this key.
+        """
 
         if (derivs or self.ALL_DERIVS) and key in self.backplanes_with_derivs:
             return self.backplanes_with_derivs[key]
@@ -930,6 +1205,15 @@ class Backplane(Mutable):
         where `function_name` is the name of any Backplane array method and the remaining
         items in the tuple are the input arguments to that method, starting with the
         `event_key`.
+
+        Parameters:
+            backplane_key (str or tuple): The name of a Backplane array method, optionally
+                followed by the arguments to pass to it.
+            derivs (bool, optional): True to return the array with its derivatives
+                attached; default False.
+
+        Returns:
+            Qube: The backplane array, computed if it is not already cached.
         """
 
         if isinstance(backplane_key, str):
@@ -950,8 +1234,15 @@ class Backplane(Mutable):
 
     @staticmethod
     def _define_backplane_names(globals_dict):
-        """Call at the end of each set of Backplane definitions to load them into the
-        registry. Input is globals().copy().
+        """Load a module's Backplane definitions into the registry.
+
+        Call this at the end of each module that defines backplane methods. Every
+        module-level function is moved into the Backplane namespace, so such a module must
+        define no helper functions of its own beyond those intended as methods; a name
+        that does not begin with an underscore is also recorded as a callable backplane.
+
+        Parameters:
+            globals_dict (dict): The module's `globals().copy()`.
         """
 
         for key, value in globals_dict.items():
