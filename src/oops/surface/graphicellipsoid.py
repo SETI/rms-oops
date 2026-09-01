@@ -132,8 +132,8 @@ class GraphicEllipsoid(Ellipsoid):
         new_coords = (squashed_lon, squashed_lat,) + coords[2:]
 
         return Ellipsoid.vector3_from_coords(self, new_coords, obs=obs, time=time,
-                                                   derivs=derivs, hints=hints,
-                                                   groundtrack=groundtrack)
+                                             derivs=derivs, hints=hints,
+                                             groundtrack=groundtrack)
 
     ######################################################################################
     # Longitude conversions

@@ -11,8 +11,8 @@ from oops.surface.spheroid         import Spheroid
 class CentricSpheroid(Spheroid):
     """A variant of Spheroid in which latitudes are planetocentric."""
 
-    def coords_from_vector3(self, pos, *, obs=None, time=None, axes=2,
-                            derivs=False, hints=None, groundtrack=False):
+    def coords_from_vector3(self, pos, *, obs=None, time=None, axes=2, derivs=False,
+                            hints=None, groundtrack=False):
         """Surface coordinates associated with a position vector.
 
         Parameters:
@@ -95,8 +95,8 @@ class CentricSpheroid(Spheroid):
         new_coords = (lon, squashed_lat,) + coords[2:]
 
         return Ellipsoid.vector3_from_coords(self, new_coords, obs=obs, time=time,
-                                                   derivs=derivs, hints=hints,
-                                                   groundtrack=groundtrack)
+                                             derivs=derivs, hints=hints,
+                                             groundtrack=groundtrack)
 
     ######################################################################################
     # Latitude conversions
