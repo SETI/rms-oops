@@ -88,16 +88,14 @@ class ReversedCadence(Cadence):
         # Reverse the order of the indices, but allow the fractional part to
         # increase within each time step.
 
-        tstep_int = tstep.int(self._steps, remask=remask, inclusive=inclusive,
-                                          shift=True)
+        tstep_int = tstep.int(self._steps, remask=remask, inclusive=inclusive, shift=True)
             # Note: Because shift=True, the end of the last time step will map
             # into the first time step, yielding tstep_frac = 1 below,
             # regardless of whether it is to be included.
 
         reversed_tstep = self._max_step - tstep_int
-        (time0,
-         time1) = self._cadence.time_range_at_tstep(reversed_tstep, remask=False,
-                                                   inclusive=False)
+        (time0, time1) = self._cadence.time_range_at_tstep(reversed_tstep, remask=False,
+                                                           inclusive=False)
             # inclusive=False above because reversed_tstep == self._steps where
             # tstep_int == -1, which must be excluded. remask=False because the
             # input is already properly masked.
@@ -130,15 +128,15 @@ class ReversedCadence(Cadence):
 
         # Reverse the order of the indices, but handle the top carefully
         tstep_int = tstep.int(self.shape[0], remask=remask, inclusive=inclusive,
-                                             shift=shift)
+                              shift=shift)
             # Note: If shift is True, the end of the last time step will map into
             # the first time step, as intended. If shift is False, the end of the
             # last time step will map into a negative time step instead.
 
         reversed_tstep = self._max_step - tstep_int
 
-        return self._cadence.time_range_at_tstep(reversed_tstep,
-                                                remask=False, inclusive=False)
+        return self._cadence.time_range_at_tstep(reversed_tstep, remask=False,
+                                                 inclusive=False)
             # inclusive=False above because reversed_tstep == self._steps where
             # tstep_int == -1, which must be excluded. remask=False here because
             # the input has already been properly masked.
@@ -162,8 +160,17 @@ class ReversedCadence(Cadence):
         """
 
         tstep = self._cadence.tstep_at_time(time, remask=remask, derivs=derivs,
-                                                 inclusive=inclusive)
-        return self.shape[0] - tstep
+                                            inclusive=inclusive)
+
+        # Only the order of whole steps is reversed; within a step, time still increases
+        # with the index, so the fractional part carries over unchanged. This is the
+        # inverse of time_at_tstep, which reverses the integer part the same way.
+        tstep_int = tstep.int(self._steps, remask=False, inclusive=inclusive, shift=True)
+            # Note: Because shift=True, the end of the underlying cadence maps into its
+            # last time step with a fractional part of 1, which becomes the end of the
+            # first time step here. remask=False because the input is already masked.
+
+        return (self._max_step - tstep_int) + (tstep - tstep_int)
 
     def tstep_range_at_time(self, time, *, remask=False, inclusive=True):
         """Integer range of time steps active at the given time.
@@ -185,7 +192,7 @@ class ReversedCadence(Cadence):
 
         (tstep_min,
          tstep_max) = self._cadence.tstep_range_at_time(time, remask=remask,
-                                                       inclusive=inclusive)
+                                                        inclusive=inclusive)
         return (self.shape[0] - tstep_max, self.shape[0] - tstep_min)
 
     def time_is_outside(self, time, *, inclusive=True):
