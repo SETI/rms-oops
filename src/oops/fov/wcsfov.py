@@ -312,7 +312,7 @@ class WCSFOV(FOV):
         xy0 = self.neg_cdp_inv * Pair.as_pair(xy_pair, recursive=derivs)
         return self.polyfov.uv_from_xy(xy0, derivs=derivs, remask=remask)
 
-    def wcs_from_uv(self, uv, derivs=False, remask=False):
+    def wcs_from_uv(self, uv, *, derivs=False, remask=False):
         """The WCS coordinates (apparent RA, dec) given the FOV coordinates `(u,v)`.
 
         This bypasses any coordinate frame to return the `(RA,dec)` values as indicated in

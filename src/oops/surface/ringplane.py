@@ -29,8 +29,8 @@ class RingPlane(Surface):
     IS_VIRTUAL = False
     IS_TIME_DEPENDENT = False
 
-    def __init__(self, origin, frame, *, radii=None, gravity=None, elevation=0., modes=[],
-                 epoch=0.):
+    def __init__(self, origin, frame, *, radii=None, gravity=None, elevation=0.,
+                 modes=None, epoch=0.):
         """Constructor for a RingPlane surface.
 
         Parameters:
@@ -61,7 +61,7 @@ class RingPlane(Surface):
         self.frame     = Frame.as_wayframe(frame)
         self._gravity   = gravity
         self._elevation = float(elevation)
-        self._modes     = modes
+        self._modes     = modes or []
         self._epoch     = float(epoch)
         self.IS_TIME_DEPENDENT = bool(modes)
 
@@ -82,9 +82,9 @@ class RingPlane(Surface):
                                       modes = self._modes,
                                       epoch = self._epoch)
 
-        # Identify the maximum orbital rate by any means necessary; without this
-        # limit, speeds near the origin get ridiculous. Without gravity, there is no
-        # velocity field, so no rate limit is needed.
+        # Identify the maximum orbital rate by any means necessary; without this limit,
+        # speeds near the origin get ridiculous. Without gravity, there is no velocity
+        # field, so no rate limit is needed.
         if self._gravity is None:
             self._max_rate = None
         elif self._radii is not None:
@@ -185,7 +185,8 @@ class RingPlane(Surface):
 
         return results
 
-    def vector3_from_coords(self, coords, *, obs=None, time=0., derivs=False, hints=None):
+    def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
+                            hints=None):
         """The position where a point with the given coordinates falls relative to this
         surface's origin and frame.
 
@@ -216,7 +217,6 @@ class RingPlane(Surface):
 
         # Validate inputs
         self._vector3_from_coords_check(coords)
-
         a = Scalar.as_scalar(coords[0], recursive=derivs)
         theta = Scalar.as_scalar(coords[1], recursive=derivs)
 
@@ -247,8 +247,7 @@ class RingPlane(Surface):
             obs (Vector3): Observer position as a Vector3 relative to this Surface's
                 origin and frame.
             los (Vector3): Line of sight as a Vector3 in this Surface's frame.
-            time (Scalar, optional): Time at the surface; ignored here unless modes are
-                present.
+            time (Scalar, optional): Time at the surface; ignored here.
             direction (str, optional): 'arr' for a photon arriving at the surface; 'dep'
                 for a photon departing from the surface; ignored here.
             derivs (bool, optional): True to propagate any derivatives inside obs and los
@@ -267,8 +266,8 @@ class RingPlane(Surface):
             * `hints` (Any): The input value of `hints`, included if it is not None.
         """
 
-        # Solve for obs + factor * los for scalar t, such that the z-component
-        # equals zero.
+        # Solve for obs + factor * los for scalar t, such that the z-component equals
+        # zero.
         obs = Vector3.as_vector3(obs, recursive=derivs)
         los = Vector3.as_vector3(los, recursive=derivs)
 
@@ -291,7 +290,7 @@ class RingPlane(Surface):
 
         return (pos, t)
 
-    def normal(self, pos, *, obs=None, time=0., derivs=False, hints=None):
+    def normal(self, pos, *, obs=None, time=None, derivs=False, hints=None):
         """The normal vector at a position at or near a surface.
 
         Parameters:
@@ -329,7 +328,7 @@ class RingPlane(Surface):
 
         return perp
 
-    def velocity(self, pos, *, obs=None, time=0.):
+    def velocity(self, pos, *, obs=None, time=None):
         """The local velocity vector at a point within the surface.
 
         This can be used to describe the orbital motion of ring particles or local wind
@@ -405,6 +404,12 @@ class RingPlane(Surface):
             Scalar or tuple[Scalar, Scalar, Scalar]: The radial offset in km, or
             `(offset, dr_dt, dlon_dt)` if `rates` is True.
         """
+
+        # The callers now default `time` to None, meaning unspecified. The modes are
+        # defined relative to the epoch, so an unspecified time is the epoch itself,
+        # which is what a time of zero meant when that was the default.
+        if time is None:
+            time = self._epoch
 
         offset = 0.
         dr_dt = 0.

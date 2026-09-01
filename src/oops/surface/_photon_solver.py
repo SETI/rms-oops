@@ -767,11 +767,11 @@ def _solve_photon_by_coords(self, link, coords, sign, *, derivs=False, guess=Non
         # Locate the coordinate position relative to the current surface
         surface_xform = frame_wrt_j2000.transform_at_time(surface_time, quick=quick)
         if self.IS_VIRTUAL:
-           obs_wrt_origin_frame = surface_xform.rotate(obs_wrt_origin_j2000, derivs=True)
-           pos_wrt_origin_frame = self.vector3_from_coords(coords,
-                                                           obs=obs_wrt_origin_frame,
-                                                           time=surface_time,
-                                                           derivs=True)
+            obs_wrt_origin_frame = surface_xform.rotate(obs_wrt_origin_j2000, derivs=True)
+            pos_wrt_origin_frame = self.vector3_from_coords(coords,
+                                                            obs=obs_wrt_origin_frame,
+                                                            time=surface_time,
+                                                            derivs=True)
 
         # Locate the coordinate position in J2000
         pos_wrt_origin_j2000 = surface_xform.unrotate(pos_wrt_origin_frame, derivs=True)
@@ -1035,8 +1035,6 @@ def _solve_photon_event_normal(self, link, sign, *, derivs=False, guess=None,
         (Vector3), the surface velocity at the intercept point. It also carries `coord1`,
         `coord2`, and `coord3` Scalars giving the surface coordinates of the normal point.
     """
-
-    # TODO: full testing!!
 
     if self.IS_VIRTUAL:
         raise ValueError('Surface._solve_photon_event_normal does not support '
@@ -1434,8 +1432,6 @@ def _solve_photon_path_normal(self, time, path, sign, *, derivs=False, guess=Non
         (Vector3), the surface velocity at the intercept point. It also carries `coord1`,
         `coord2`, and `coord3` Scalars giving the surface coordinates of the normal point.
     """
-
-    #### TODO: full testing!!
 
     if self.IS_VIRTUAL:
         raise ValueError('Surface._solve_photon_path_normal does not support '

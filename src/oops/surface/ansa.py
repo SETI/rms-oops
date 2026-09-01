@@ -5,6 +5,7 @@
 import numpy as np
 
 from polymath               import Scalar, Vector3
+from oops.constants         import TWOPI
 from oops.frame.frame_      import Frame
 from oops.path.path_        import Path
 from oops.surface.surface_  import Surface
@@ -26,6 +27,9 @@ class Ansa(Surface):
     """
 
     COORDINATE_TYPE = 'cylindrical'
+    COORDINATE_NAMES = ('radius', 'elevation', 'longitude')
+    COORDINATE_ABBREVS = ('r', 'z', 'theta')
+    COORDINATE_RANGES = ((0, None), (None, None), (0, TWOPI))
     IS_VIRTUAL = True
 
     def __init__(self, origin, frame, *, gravity=None, ringplane=None, radii=None):
@@ -176,7 +180,7 @@ class Ansa(Surface):
         # Apply mask as needed
         if self._radii is not None:
             mask = r.tvl_lt(self._radii[0]) | r.tvl_gt(self._radii[1])
-            if mask.any():
+            if mask.any_true_or_masked():
                 r = r.remask_or(mask.vals)
                 pos_z = pos_z.remask(r.mask)
 
