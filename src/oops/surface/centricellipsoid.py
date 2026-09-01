@@ -49,7 +49,6 @@ class CentricEllipsoid(Ellipsoid):
 
         # Validate inputs
         self._coords_from_vector3_check(axes)
-
         pos = Vector3.as_vector3(pos, recursive=derivs)
 
         # Use the quick solution for the body points if hints are provided
@@ -64,20 +63,19 @@ class CentricEllipsoid(Ellipsoid):
         (x,y,z) = track.to_scalars()
         lat = (z/track.norm()).arcsin()
         lon = y.arctan2(x) % Scalar.TWOPI
-
-        results = (lon, lat)
+        results = [lon, lat]
 
         if axes == 3:
             r = (pos - track).norm() * p.sign()
-            results += (r,)
+            results.append(r)
 
         if hints is not None:
-            results += (p,)
+            results.append(p)
 
         if groundtrack:
-            results += (track,)
+            results.append(track)
 
-        return results
+        return tuple(results)
 
     def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
                             hints=None, groundtrack=False):

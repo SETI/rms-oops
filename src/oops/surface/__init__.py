@@ -17,9 +17,8 @@ from oops.surface.ringplane        import RingPlane
 from oops.surface.spheroid         import Spheroid
 from oops.surface.spice_shape      import spice_shape
 
-__all__ = ['Surface', 'Ansa', 'CentricEllipsoid', 'CentricSpheroid',
-           'Ellipsoid', 'GraphicEllipsoid', 'GraphicSpheroid', 'Limb',
-           'NullSurface', 'OrbitPlane', 'PolarLimb', 'RingPlane', 'Spheroid',
-           'spice_shape']
+__all__ = ['Surface', 'Ansa', 'CentricEllipsoid', 'CentricSpheroid', 'Ellipsoid',
+           'GraphicEllipsoid', 'GraphicSpheroid', 'Limb', 'NullSurface', 'OrbitPlane',
+           'PolarLimb', 'RingPlane', 'Spheroid', 'spice_shape']
 
 ##########################################################################################

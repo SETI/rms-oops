@@ -362,9 +362,12 @@ class Surface(Mutable):
         obs_in_frame = obs and obs.wrt(self.origin, self.frame, derivs=derivs).state
 
         # Evaluate the coords and optional derivatives
+        # The `hints` attribute is filled in by the _photon_solver methods.
         hints = event.hints if hasattr(event, 'hints') else None
-        return self.coords_from_vector3(cept_in_frame, obs=obs_in_frame, time=event.time,
-                                        axes=axes, derivs=True, hints=hints)
+        result = self.coords_from_vector3(cept_in_frame, obs=obs_in_frame,
+                                          time=event.time, axes=axes, derivs=True,
+                                          hints=hints)
+        return result[:axes]
 
     def apply_coords_to_event(self, event, *, obs=None, axes=3, derivs=True):
         """A shallow copy of the given Event with subfields for the coordinates.
