@@ -83,6 +83,42 @@ class SpiceFrame(Frame):
             self._wayframe = wrt_j2000._wayframe
             self._frame_id = wrt_j2000._frame_id
 
+        # Save for use by get(). A frame that is inertial relative to its reference has
+        # zero omega whichever option was requested, so it satisfies any omega_type; a
+        # key with omega_dt of None matches a request that does not constrain the step.
+        if self._omega_zero and self._is_inertial and self._reference_is_inertial:
+            omega_types = ('tabulated', 'numerical', 'zero')
+        else:
+            omega_types = (self._omega_type,)
+
+        for key_omega_type in omega_types:
+            for key_omega_dt in (self._omega_dt, None):
+                key = (self._spice_frame_name, self._spice_reference_name,
+                       key_omega_type, key_omega_dt)
+                _ = SpiceFrame._FRAME_LOOKUP.setdefault(key, self)
+
+    @classmethod
+    def _reference_spice_info(cls, reference):
+        """The SPICE code and name of a frame serving as the reference for this one.
+
+        Parameters:
+            reference (Frame): The wayframe to be used as a reference.
+
+        Returns:
+            tuple[int, str]: The SPICE frame code and name.
+
+        Raises:
+            ValueError: If the frame is neither a SpiceFrame nor J2000.
+        """
+
+        if reference == Frame.J2000:
+            return (1, 'J2000')
+
+        if isinstance(reference, SpiceFrame):
+            return (reference._spice_frame_code, reference._spice_frame_name)
+
+        raise ValueError(f'{cls.__name__} reference must be a SpiceFrame or J2000')
+
     def _fill_spice_info(self, spice_frame, reference):
         """Fill in this object's SPICE codes and names, plus the origin and reference.
 
@@ -106,15 +142,8 @@ class SpiceFrame(Frame):
 
         # Determine the reference frame
         self._reference = reference and Frame.as_wayframe(reference) or Frame.J2000
-        if self._reference == Frame.J2000:
-            self._spice_reference_code = 1
-            self._spice_reference_name = 'J2000'
-        elif isinstance(self._reference, SpiceFrame):
-            self._spice_reference_code = self._reference._spice_frame_code
-            self._spice_reference_name = self._reference._spice_frame_name
-        else:
-            raise ValueError(f'{type(self).__name__} reference must be a SpiceFrame or '
-                             'J2000')
+        (self._spice_reference_code,
+         self._spice_reference_name) = type(self)._reference_spice_info(self._reference)
 
         # Determine the origin Path, constructing it if necessary. The origin code is
         # retained because SpiceType1Frame needs it to convert between ET and the host's
@@ -356,8 +385,10 @@ class SpiceFrame(Frame):
         relative to the center of rotation.
 
         Unlike method `transform_at_time`, this variant tolerates times that raise cspyce
-        errors. It returns a new time Scalar along with the new Transform, where both
-        objects skip over the times at which the transform could not be evaluated.
+        errors. If `time` is 1-D, this method returns a new time Scalar along with the new
+        Transform, where both objects skip over the times at which the transform could not
+        be evaluated. If `time ` has more than one dimension, the cspyce error is still
+        raised.
 
         Parameters:
             time (Scalar): The time in seconds TDB.
@@ -461,10 +492,10 @@ class SpiceFrame(Frame):
                     # Use a Univariate spline to get components of the derivative
                     qdot = np.empty(4)
                     for j in range(4):
-                        spline = UnivariateSpline(times, quats.values[:,j], k=2, s=0)
+                        spline = UnivariateSpline(times, quats.vals[:,j], k=2, s=0)
                         qdot[j] = spline.derivative(1)(t)
 
-                    omega[i] = 2. * (Quaternion(qdot) / quats[1]).values[1:4]
+                    omega[i] = 2. * (Quaternion(qdot) / quats[1]).vals[1:4]
                     matrix[i] = mats[1]
 
                     new_time.append(t)
@@ -545,14 +576,18 @@ class SpiceFrame(Frame):
         else:
             (_, name) = SpiceFrame._frame_code_and_name(spice_frame)
 
+        # The reference must be usable by the constructor; fail here with the same error
+        # rather than on a missing attribute below
+        reference_name = SpiceFrame._reference_spice_info(reference)[1]
+
         # See if a pre-existing Frame matches the request (including omega options)
-        if name == reference._spice_frame_name:
+        if name == reference_name:
             if name == 'J2000':
                 return Frame.J2000
             else:
                 return NullFrame(reference)
 
-        key = (name, reference._spice_frame_name, omega_type, omega_dt)
+        key = (name, reference_name, omega_type, omega_dt)
         if key in SpiceFrame._FRAME_LOOKUP:
             return SpiceFrame._FRAME_LOOKUP[key]
 

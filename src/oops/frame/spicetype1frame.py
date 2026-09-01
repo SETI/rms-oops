@@ -16,7 +16,7 @@ class SpiceType1Frame(SpiceFrame):
     """A Frame subclass defined within the SPICE toolkit as a Type 1 (discrete) C kernel.
     """
 
-    _FRAME_LOOKUP = {}          # (code, reference, tick_tolerance) -> SpiceFrame
+    _FRAME_LOOKUP = {}  # (name, reference name, tick_tolerance, cache_size) -> SpiceFrame
 
     def __init__(self, spice_frame, tick_tolerance, reference=None, *, frame_id=None,
                  cache_size=100):
@@ -70,12 +70,12 @@ class SpiceType1Frame(SpiceFrame):
             self._register(frame_id or self._spice_frame_name.replace(' ', '_'))
 
         self._refresh()
-        self._register(frame_id or self._spice_frame_name)
 
         # Save for use by get()
-        for cache_size in (self._cache_size, None):
-            key = (self._spice_frame_name, reference, self._tick_tolerance, cache_size)
-            _ = SpiceFrame._FRAME_LOOKUP.setdefault(key, self)
+        for key_cache_size in (self._cache_size, None):
+            key = (self._spice_frame_name, self._spice_reference_name,
+                   self._tick_tolerance, key_cache_size)
+            _ = SpiceType1Frame._FRAME_LOOKUP.setdefault(key, self)
 
     def _refresh(self):
         self._cache = Cache(self._cache_size)   # saves result for multiple single times
@@ -188,8 +188,10 @@ class SpiceType1Frame(SpiceFrame):
         relative to the center of rotation.
 
         Unlike method `transform_at_time`, this variant tolerates times that raise cspyce
-        errors. It returns a new time Scalar along with the new Transform, where both
-        objects skip over the times at which the transform could not be evaluated.
+        errors. If `time` is 1-D, this method returns a new time Scalar along with the new
+        Transform, where both objects skip over the times at which the transform could not
+        be evaluated. If `time ` has more than one dimension, the cspyce error is still
+        raised.
 
         Parameters:
             time (Scalar): The time in seconds TDB.
@@ -307,7 +309,7 @@ class SpiceType1Frame(SpiceFrame):
 
         reference = Frame.as_wayframe(reference)
 
-        # Handle a SpiceFrame input; use it if it matches
+        # Handle a SpiceType1Frame input; use it if it matches
         if isinstance(spice_frame, SpiceType1Frame):
             if (reference == spice_frame._reference
                     and tick_tolerance == spice_frame._tick_tolerance
@@ -318,10 +320,19 @@ class SpiceType1Frame(SpiceFrame):
         else:
             (_, name) = SpiceFrame._frame_code_and_name(spice_frame)
 
+        # The reference must be usable by the constructor; fail here with the same error
+        # rather than on a missing attribute below
+        reference_name = SpiceType1Frame._reference_spice_info(reference)[1]
+
+        # The constructor converts a tolerance given as a string into ticks, so the key
+        # has to be built from the converted value in order to match what it stored.
+        if isinstance(tick_tolerance, str):
+            tick_tolerance = cspyce.sctiks(cspyce.frinfo(name)[0], tick_tolerance)
+
         # See if a pre-existing Frame matches the request (including ticks and cache size)
-        key = (name, reference, tick_tolerance, cache_size)
-        if key in SpiceFrame._FRAME_LOOKUP:
-            return SpiceFrame._FRAME_LOOKUP[key]
+        key = (name, reference_name, tick_tolerance, cache_size)
+        if key in SpiceType1Frame._FRAME_LOOKUP:
+            return SpiceType1Frame._FRAME_LOOKUP[key]
 
         # Otherwise, we need a new SpiceType1Frame
         return SpiceType1Frame(name, tick_tolerance, reference,

@@ -168,8 +168,10 @@ class Frame(Mutable):
         relative to the center of rotation.
 
         Unlike method `transform_at_time`, this variant tolerates times that raise cspyce
-        errors. It returns a new time Scalar along with the new Transform, where both
-        objects skip over the times at which the transform could not be evaluated.
+        errors. If `time` is 1-D, this method returns a new time Scalar along with the new
+        Transform, where both objects skip over the times at which the transform could not
+        be evaluated. If `time ` has more than one dimension, the cspyce error is still
+        raised.
 
         The default behavior is to assume that all times are valid. As a result, this
         method calls `transform_at_time` and also returns the given time Scalar. This
@@ -337,7 +339,7 @@ class Frame(Mutable):
     # Cache Management
     ######################################################################################
 
-    _FRAME_REGISTRY = {}    # frame ID -> wayframe
+    _FRAME_REGISTRY = {}    # frame ID -> frame
     _FRAME_CACHE = {}       # wayframe or (wayframe, reference) -> linked "wrt" frame
     _FRAME_SUBCLASSES = []  # list of all subclasses of Frame
 
@@ -353,9 +355,12 @@ class Frame(Mutable):
         Frame._FRAME_CACHE[Frame.J2000] = Frame.J2000
         Frame._FRAME_CACHE[Frame.J2000, Frame.J2000] = Frame.J2000
 
+        # Subclasses can define any of these caches, all of which hold Frames that the
+        # registry no longer contains once it has been cleared.
         for subclass in Frame._FRAME_SUBCLASSES:
-            if hasattr(subclass, '_WAYFRAMES'):
-                subclass._WAYFRAMES.clear()
+            for name in ('_WAYFRAMES', '_FOR_NAME', '_FRAME_LOOKUP'):
+                if hasattr(subclass, name):
+                    getattr(subclass, name).clear()
 
     def _register(self, frame_id=None):
         """Fill in this Frame's wayframe and frame_id; register if necessary.
@@ -564,7 +569,7 @@ class Frame(Mutable):
             return ReversedFrame(Frame._FRAME_CACHE[reversed_key])
 
         # Check for a null transform
-        if wayframe == reference:
+        if wayframe is reference:
             return NullFrame(self)
 
         # Connect through this frame's reference, then link
@@ -868,13 +873,10 @@ class LinkedFrame(Frame):
         relative to the center of rotation.
 
         Unlike method `transform_at_time`, this variant tolerates times that raise cspyce
-        errors. It returns a new time Scalar along with the new Transform, where both
-        objects skip over the times at which the transform could not be evaluated.
-
-        The default behavior is to assume that all times are valid. As a result, this
-        method calls `transform_at_time` and also returns the given time Scalar. This
-        behavior is overridden by SpiceFrame, where occasional short gaps in a C-kernel
-        can be tolerated as long as a QuickFrame can interpolate across them.
+        errors. If `time` is 1-D, this method returns a new time Scalar along with the new
+        Transform, where both objects skip over the times at which the transform could not
+        be evaluated. If `time ` has more than one dimension, the cspyce error is still
+        raised.
 
         Parameters:
             time (Scalar): The time in seconds TDB.
@@ -963,13 +965,10 @@ class ReversedFrame(Frame):
         relative to the center of rotation.
 
         Unlike method `transform_at_time`, this variant tolerates times that raise cspyce
-        errors. It returns a new time Scalar along with the new Transform, where both
-        objects skip over the times at which the transform could not be evaluated.
-
-        The default behavior is to assume that all times are valid. As a result, this
-        method calls `transform_at_time` and also returns the given time Scalar. This
-        behavior is overridden by SpiceFrame, where occasional short gaps in a C-kernel
-        can be tolerated as long as a QuickFrame can interpolate across them.
+        errors. If `time` is 1-D, this method returns a new time Scalar along with the new
+        Transform, where both objects skip over the times at which the transform could not
+        be evaluated. If `time ` has more than one dimension, the cspyce error is still
+        raised.
 
         Parameters:
             time (Scalar): The time in seconds TDB.

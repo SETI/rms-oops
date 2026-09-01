@@ -350,4 +350,61 @@ def test_spiceframe(core_kernels):
 
     diff = (xform3.omega - xform2.omega).norm()
     assert diff.max() < 1.e-7
+
+
+def test_get_reuses_a_cached_frame(core_kernels) -> None:
+    """`get` returns the frame it built before, rather than building another."""
+
+    frame = SpiceFrame.get('IAU_MARS')
+
+    assert SpiceFrame.get('IAU_MARS') is frame
+    assert SpiceFrame.get('IAU_MARS', omega_type='tabulated') is frame
+
+    # An unconstrained time step matches the frame built with the default step
+    assert SpiceFrame.get('IAU_MARS', omega_dt=None) is frame
+
+
+def test_get_distinguishes_the_omega_options(core_kernels) -> None:
+    """Frames differing only in how omega is computed are cached separately."""
+
+    tabulated = SpiceFrame.get('IAU_MARS')
+    numerical = SpiceFrame.get('IAU_MARS', omega_type='numerical', omega_dt=2.)
+
+    assert numerical is not tabulated
+    assert numerical._omega_type == 'numerical'
+    assert numerical._omega_dt == 2.
+
+    assert SpiceFrame.get('IAU_MARS', omega_type='numerical', omega_dt=2.) is numerical
+
+    # A different time step is a different frame
+    assert (SpiceFrame.get('IAU_MARS', omega_type='numerical', omega_dt=5.)
+            is not numerical)
+
+
+def test_an_inertial_frame_is_shared_across_the_omega_options(core_kernels) -> None:
+    """A frame inertial with respect to its reference has zero omega either way.
+
+    The constructor forces `omega_type` to "zero" for such a frame, so one frame answers
+    every request.
+    """
+
+    frame = SpiceFrame.get('B1950')
+    assert frame._omega_type == 'zero'
+
+    assert SpiceFrame.get('B1950', omega_type='numerical') is frame
+    assert SpiceFrame.get('B1950', omega_type='zero') is frame
+
+
+def test_resetting_the_caches_empties_the_frame_lookup(core_kernels) -> None:
+    """The lookup holds frames the registry no longer knows, so a reset clears it."""
+
+    SpiceFrame.get('IAU_MARS')
+    assert SpiceFrame._FRAME_LOOKUP
+    assert SpiceFrame._FOR_NAME
+
+    Frame._reset_caches()
+
+    assert not SpiceFrame._FRAME_LOOKUP
+    assert not SpiceFrame._FOR_NAME
+
 ##########################################################################################
