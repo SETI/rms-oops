@@ -121,13 +121,20 @@ class SpiceType1Frame(SpiceFrame):
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the
             specified time.
+
+        Raises:
+            OSError: If any individual time is out of range for the currently furnished C
+                kernels. The SPICE Toolkit reports this as SPICE(CKINSUFFDATA).
         """
 
         # Fill in the time tolerance in seconds
         if self._time_tolerance is None:
             time = Scalar.as_scalar(time)
-            ticks = cspyce.sce2c(self._spice_origin_code, time.vals)
-            ticks_per_sec = cspyce.sce2c(self._spice_origin_code, time.vals + 1.) - ticks
+            # One representative time; sce2c takes a single value, and the tick rate does
+            # not vary appreciably across the times of one call
+            sample = float(np.ravel(time.vals)[0])
+            ticks = cspyce.sce2c(self._spice_origin_code, sample)
+            ticks_per_sec = cspyce.sce2c(self._spice_origin_code, sample + 1.) - ticks
             self._time_tolerance = self._tick_tolerance / ticks_per_sec
 
         # A single input time can be handled quickly
@@ -200,23 +207,32 @@ class SpiceType1Frame(SpiceFrame):
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            tuple[Scalar, Transform]: (`newtimes`, `transform`):
+            tuple[Scalar, Transform]: (`valid_time`, `transform`):
 
-            * `newtimes` identifies the time(s) at which `transform` has been provided;
+            * `valid_time` identifies the time(s) at which `transform` has been provided;
               this may be a subset of the input times, because it omits the times at which
               the Transform could not be evaluated.
-            * `transform` is the Transform defined at `newtimes`. It rotates vectors from
-              the reference frame to this frame.
+            * `transform` is the Transform defined at `valid_time`. It rotates vectors
+              from the reference frame to this frame.
+
+        Raises:
+            OSError: If `time` is multidimensional and any single time is out of range for
+                the currently furnished C kernels, or if every time is out of range. A
+                one-dimensional `time` with some times in range returns those. The SPICE
+                Toolkit reports this as SPICE(CKINSUFFDATA).
         """
 
         # Fill in the time tolerance in seconds
         if self._time_tolerance is None:
             time = Scalar.as_scalar(time)
-            ticks = cspyce.sce2c(self._spice_origin_code, time.vals)
-            ticks_per_sec = cspyce.sce2c(self._spice_origin_code, time.vals + 1.) - ticks
+            # One representative time; sce2c takes a single value, and the tick rate does
+            # not vary appreciably across the times of one call
+            sample = float(np.ravel(time.vals)[0])
+            ticks = cspyce.sce2c(self._spice_origin_code, sample)
+            ticks_per_sec = cspyce.sce2c(self._spice_origin_code, sample + 1.) - ticks
             self._time_tolerance = self._tick_tolerance / ticks_per_sec
 
-        # A single input time can be handled quickly
+        # A single input time can be handled quickly (with RuntimeError on failure)
         time = Scalar.as_scalar(time)
         if time.shape == ():
             # Check cache first
@@ -247,6 +263,7 @@ class SpiceType1Frame(SpiceFrame):
                                                self._tick_tolerance,
                                                self._spice_reference_name)
             true_time = cspyce.sct2e(self._spice_origin_code, true_tick)
+            # If all times fail, raise RuntimeError
 
             self._cached_shape = time.shape
             self._cached_time = true_time
@@ -256,16 +273,66 @@ class SpiceType1Frame(SpiceFrame):
 
         # Otherwise, process the array...
         ticks = cspyce.sce2c_vector(self._spice_origin_code, time.vals.ravel())
-        matrix3, true_ticks = cspyce.ckgp_vector(self._spice_frame_code, ticks,
-                                                 self._tick_tolerance,
-                                                 self._spice_reference_name)
-        matrix3 = Matrix3.as_matrix3(matrix3).reshape(time.shape)
-        true_times = cspyce.sct2e_vector(self._spice_origin_code, true_ticks)
 
-        self._cached_shape = time.shape
-        self._cached_time = true_times
-        self._cached_transform = Transform(matrix3, Vector3.ZERO, self, self._reference)
-        return (time, self._cached_transform)
+        # Try all at once
+        all_at_once = True
+        try:
+            matrix3, true_ticks = cspyce.ckgp_vector(self._spice_frame_code, ticks,
+                                                     self._tick_tolerance,
+                                                     self._spice_reference_name)
+        except (RuntimeError, ValueError, IOError) as e:
+            if len(time.shape) > 1:
+                raise e
+            all_at_once = False
+        else:
+            matrix3 = Matrix3.as_matrix3(matrix3).reshape(time.shape)
+            true_times = cspyce.sct2e_vector(self._spice_origin_code, true_ticks)
+            valid_times = time
+
+        # Try one at a time for 1-D result
+        if not all_at_once:
+            matrices = []
+            true_ticks = []
+            valid_times = []
+            error_found = None
+            for k, tick in enumerate(ticks):
+                if np.shape(time.mask) and time.mask[k]:
+                    continue
+                try:
+                    matrix, true_tick = cspyce.ckgp(self._spice_frame_code, tick,
+                                                    self._tick_tolerance,
+                                                    self._spice_reference_name)
+                except (RuntimeError, ValueError, IOError) as e:
+                    error_found = e
+                    continue
+
+                matrices.append(matrix)
+                true_ticks.append(true_tick)
+                valid_times.append(time[k])
+
+            if not matrices:    # if every time failed
+                raise error_found
+
+            matrix3 = Matrix3.as_matrix3(matrices)
+            true_times = cspyce.sct2e_vector(self._spice_origin_code,
+                                             np.array(true_ticks))
+            valid_times = Scalar(valid_times)
+
+        xform = Transform(matrix3, Vector3.ZERO, self, self._reference)
+
+        # Cache the result only when it covers every input time. A partial result is
+        # defined at fewer times than were asked for, so a later call matching on the
+        # input shape would be handed a transform of the wrong size.
+        if np.shape(valid_times.vals) == np.shape(time.vals):
+            self._cached_shape = time.shape
+            self._cached_time = true_times
+            self._cached_transform = xform
+        else:
+            self._cached_shape = None
+            self._cached_time = None
+            self._cached_transform = None
+
+        return (valid_times, xform)
 
     ######################################################################################
     # SpiceFrame API

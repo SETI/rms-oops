@@ -1,29 +1,12 @@
-def test_get_rejects_a_reference_that_is_not_a_spice_frame(galileo_kernels) -> None:
-    """A reference the constructor could not use is refused by `get` as well.
-
-    The error names the problem rather than surfacing as a missing attribute.
-    """
-
-    with pytest.raises(ValueError, match='must be a SpiceFrame or J2000'):
-        SpiceType1Frame.get(FRAME, TICKS, Frame.as_wayframe('B1950_ROTATED'))
-
 ##########################################################################################
 # tests/frame/test_spicetype1frame.py
-def test_get_rejects_a_reference_that_is_not_a_spice_frame(galileo_kernels) -> None:
-    """A reference the constructor could not use is refused by `get` as well.
-
-    The error names the problem rather than surfacing as a missing attribute.
-    """
-
-    with pytest.raises(ValueError, match='must be a SpiceFrame or J2000'):
-        SpiceType1Frame.get(FRAME, TICKS, Frame.as_wayframe('B1950_ROTATED'))
-
 ##########################################################################################
 
 import cspyce
 import pytest
 
 from spicedb                       import get_spice_filecache_prefix
+from polymath                      import Scalar
 from oops.frame                    import Frame, SpiceFrame, SpinFrame
 from oops.frame.spicetype1frame    import SpiceType1Frame
 
@@ -131,5 +114,85 @@ def test_get_rejects_a_reference_that_is_not_a_spice_frame(galileo_kernels) -> N
 
     with pytest.raises(ValueError, match='must be a SpiceFrame or J2000'):
         SpiceType1Frame.get(FRAME, TICKS, spinning)
+
+
+# The C kernel covering Galileo's scan platform in November 1996. Evaluating a transform
+# needs it; the tests above do not.
+CK_KERNEL = 'Galileo/CK/ckc03b_plt.bc'
+
+
+@pytest.fixture
+def galileo_pointing(galileo_kernels):
+    """Furnish a C kernel and return times at which the scan platform is pointed.
+
+    Yields:
+        list[float]: Four times in seconds TDB, each at an actual pointing instance, so
+        that a query with the frame's own tick tolerance succeeds.
+    """
+
+    cspyce.furnsh(get_spice_filecache_prefix().retrieve(CK_KERNEL))
+
+    spacecraft = -77
+    instrument = -77001
+    times = set()
+    for offset in (0., 500., 1000., 2000.):
+        ticks = cspyce.sce2c(spacecraft, -99777477.0 + offset)
+        (_, true_tick) = cspyce.ckgp(instrument, ticks, 1.e9, 'J2000')
+        times.add(cspyce.sct2e(spacecraft, true_tick))
+
+    yield sorted(times)
+
+
+# A time far outside the coverage of any Galileo C kernel
+UNCOVERED = 0.
+
+
+def test_transforms_are_returned_for_every_covered_time(galileo_pointing) -> None:
+    """An array of covered times yields a transform of the same shape."""
+
+    frame = SpiceType1Frame(FRAME, TICKS)
+
+    (valid, xform) = frame.transform_at_time_if_possible(Scalar(galileo_pointing))
+
+    assert valid.shape == (len(galileo_pointing),)
+    assert xform.matrix.shape == (len(galileo_pointing),)
+
+
+def test_uncovered_times_are_omitted_rather_than_raising(galileo_pointing) -> None:
+    """A time outside the C kernel coverage drops out of the result.
+
+    The transform is defined at the times that remain, and those are what is returned.
+    """
+
+    frame = SpiceType1Frame(FRAME, TICKS)
+    times = [galileo_pointing[0], UNCOVERED, galileo_pointing[1]]
+
+    (valid, xform) = frame.transform_at_time_if_possible(Scalar(times))
+
+    assert valid.shape == (2,)
+    assert xform.matrix.shape == (2,)
+    assert valid == Scalar([galileo_pointing[0], galileo_pointing[1]])
+
+
+def test_a_partial_result_is_not_reused_for_a_later_call(galileo_pointing) -> None:
+    """The transform for a subset of times is not cached against the full input shape."""
+
+    frame = SpiceType1Frame(FRAME, TICKS)
+    times = Scalar([galileo_pointing[0], UNCOVERED, galileo_pointing[1]])
+
+    (first, _) = frame.transform_at_time_if_possible(times)
+    (second, xform) = frame.transform_at_time_if_possible(times)
+
+    assert second == first
+    assert xform.matrix.shape == (2,)
+
+
+def test_every_time_uncovered_raises(galileo_pointing) -> None:
+    """With nothing to return, the error from the Toolkit stands."""
+
+    frame = SpiceType1Frame(FRAME, TICKS)
+
+    with pytest.raises(OSError, match='CKINSUFFDATA'):
+        frame.transform_at_time_if_possible(Scalar([UNCOVERED, UNCOVERED + 1000.]))
 
 ##########################################################################################

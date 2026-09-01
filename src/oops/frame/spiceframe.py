@@ -274,6 +274,10 @@ class SpiceFrame(Frame):
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the
             specified time.
+
+        Raises:
+            RuntimeError: If any individual time is out of range for the currently
+                furnished C kernels.
         """
 
         time = Scalar.as_scalar(time).as_float()
@@ -397,18 +401,25 @@ class SpiceFrame(Frame):
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            tuple[Scalar, Transform]: (`newtimes`, `transform`):
+            tuple[Scalar, Transform]: (`valid_time`, `transform`):
 
-            * `newtimes` identifies the time(s) at which `transform` has been provided;
+            * `valid_time` identifies the time(s) at which `transform` has been provided;
               this may be a subset of the input times, because it omits the times at which
               the Transform could not be evaluated.
-            * `transform` is the Transform defined at `newtimes`. It rotates vectors from
-              the reference frame to this frame.
+            * `transform` is the Transform defined at `valid_time`. It rotates vectors
+              from the reference frame to this frame.
+
+        Raises:
+            RuntimeError: If `time` is multidimensional and any single time is out of
+                range for the currently furnished C kernels, or if every time is out of
+                range. A one-dimensional `time` with some times in range returns those.
+                The SPICE Toolkit reports this as SPICE(NOFRAMECONNECT).
         """
 
         time = Scalar.as_scalar(time).as_float()
 
         # A single input time can be handled via the previous method
+        # RuntimeError on failure
         if time.shape == ():
             return (time, self.transform_at_time(time, quick=quick))
 
@@ -462,7 +473,6 @@ class SpiceFrame(Frame):
                 try:
                     matrix[i] = cspyce.pxform(self._spice_reference_name,
                                               self._spice_frame_name, t)
-
                     new_time.append(t)
                     matrix_list.append(matrix[i])
                     omega_list.append((0., 0., 0.))
