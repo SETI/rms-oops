@@ -136,8 +136,8 @@ class LaplaceFrame(Frame):
 
         # Locate the node of the orbit on the orbit reference equator
         node_lon = self._orbit.node_at_time(time).wod
-        cos_node = np.cos(node_lon)
-        sin_node = np.sin(node_lon)
+        cos_node = node_lon.cos()
+        sin_node = node_lon.sin()
         orbit_node = cos_node * orbit_ref_x_axis + sin_node * orbit_ref_y_axis
 
         # This vector is 90 degrees behind of the node on the orbit reference equator

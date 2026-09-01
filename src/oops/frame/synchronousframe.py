@@ -9,7 +9,8 @@ from oops.transform import Transform
 
 class SynchronousFrame(Frame):
     """A Frame subclass describing a body that always keeps its x-axis pointed toward a
-    central planet and its y-axis in the negative direction of motion.
+    central planet and its y-axis in the negative direction of motion. It is centered on
+    the body.
 
     Note that this Frame is tied to the orbital longitude of the body, so it will
     (incorrectly) rotate at a slightly non-uniform rate if the orbit has eccentricity.
@@ -49,7 +50,7 @@ class SynchronousFrame(Frame):
         self._USE_QUICKFRAMES = (self._reference._USE_QUICKFRAMES
                                  or self._planet_path._USE_QUICKPATHS
                                  or self._orbit_path._USE_QUICKPATHS)
-        self._origin = self._planet_path
+        self._origin = self._orbit_path
         self._shape = self._orbit_path._shape
 
         if frame_id == '+' and self._orbit_path._path_id:

@@ -133,7 +133,7 @@ class Navigation(Frame, Fittable):
             self._link.set_params(params)
             self._angles = self._link._angles
         else:
-            self._angles = params
+            self._angles = tuple(params)
 
     @property
     def params(self):

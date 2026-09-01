@@ -127,7 +127,7 @@ class SpinFrame(Frame):
         time = Scalar.as_scalar(time)
         angle = (time - self._epoch) * self._rate + self._offset
 
-        mat = np.zeros(angle._shape + (3, 3))
+        mat = np.zeros(angle.shape + (3, 3))
         mat[..., self._axis2, self._axis2] = 1.
         mat[..., self._axis0, self._axis0] = np.cos(angle.vals)
         mat[..., self._axis1, self._axis1] = mat[..., self._axis0, self._axis0]

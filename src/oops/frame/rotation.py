@@ -128,7 +128,7 @@ class Rotation(Frame, Fittable):
     def params(self):
         """The fittable parameters of this Rotation, as a tuple of rotation angles."""
         if self._angle_shape == ():
-            return (self._angle,)
+            return (self._angle.vals,)
         else:
             return tuple(self._angle.vals.ravel())
 

@@ -71,7 +71,7 @@ class TrackerFrame(Frame):
         self._target_wrt_ssb = self._target_path.wrt_ssb
         obs_event = Frame._Event(self._epoch, Vector3.ZERO, self._observer_path,
                                  Frame.J2000)
-        (path_event, obs_event) = self._target_wrt_ssb.photon_to_event(obs_event)
+        (_, obs_event) = self._target_wrt_ssb.photon_to_event(obs_event)
         self._trackpoint = obs_event.neg_arr_ap.unit()
 
         # Determine the transform at epoch
@@ -147,8 +147,7 @@ class TrackerFrame(Frame):
 
         # Determine the needed rotation
         obs_event = Frame._Event(time, Vector3.ZERO, self._observer_path, Frame.J2000)
-        (path_event, obs_event) = self._target_wrt_ssb.photon_to_event(obs_event,
-                                                                       quick=quick)
+        (_, obs_event) = self._target_wrt_ssb.photon_to_event(obs_event, quick=quick)
         newpoint = obs_event.neg_arr_ap.unit()
 
         rotation = self._trackpoint.cross(newpoint)
