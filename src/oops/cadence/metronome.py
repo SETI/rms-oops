@@ -82,10 +82,9 @@ class Metronome(Cadence):
             return self.time[0] + self._tstride * tstep
 
         # Other cases
-        tstep_int = tstep.int(top=self._steps, remask=remask,
-                              inclusive=inclusive, clip=self._clip)
-        tstep_frac = (tstep - tstep_int).clip(0, 1, remask=remask,
-                                                    inclusive=False)
+        tstep_int = tstep.int(top=self._steps, remask=remask, inclusive=inclusive,
+                              clip=self._clip)
+        tstep_frac = (tstep - tstep_int).clip(0, 1, remask=remask, inclusive=False)
             # inclusive is False because the end moments of discontinuous time
             # steps are never included, except for the end of the final time
             # step, which is included when inclusive=True.
@@ -96,8 +95,7 @@ class Metronome(Cadence):
             tstep_frac[mask] = tstep[mask] - self._max_step
                 # this sets the value to 1 but preserves derivatives
 
-        return (self.time[0] + tstep_int * self._tstride
-                             + tstep_frac * self._texp)
+        return self.time[0] + tstep_int * self._tstride + tstep_frac * self._texp
 
     def time_range_at_tstep(self, tstep, *, remask=False, inclusive=True, shift=True):
         """The range of times for the given time step.
@@ -145,16 +143,14 @@ class Metronome(Cadence):
 
         if self._gapless:
             if self._clip:
-                tstep = tstep.clip(0, self._steps, remask=remask,
-                                   inclusive=inclusive)
+                tstep = tstep.clip(0, self._steps, remask=remask, inclusive=inclusive)
             elif remask:
                 tstep = tstep.mask_where_outside(0, self._steps, remask=True,
-                                                 mask_endpoints=(False,
-                                                                 not inclusive))
+                                                 mask_endpoints=(False, not inclusive))
 
         elif self.is_unique:
-            tstep_int = tstep.int(top=self._steps, remask=remask,
-                                  inclusive=inclusive, clip=self._clip)
+            tstep_int = tstep.int(top=self._steps, remask=remask, inclusive=inclusive,
+                                  clip=self._clip)
             tstep_diff = tstep - tstep_int
                 # Regardless of self._clip, at the top...
                 # If inclusive, tstep_int = self._steps-1 and tstep_diff = texp
@@ -165,13 +161,11 @@ class Metronome(Cadence):
             if self._clip:
                 tstep_diff[tstep_diff.vals < 0.] = Scalar(0., remask)
 
-            # Don't let an interior fractional part match or exceed tspan, which
-            # happens in the gaps between tsteps. However, if inclusive is True,
-            # then the fractional part is allowed to equal tspan at the end
-            # time.
+            # Don't let an interior fractional part match or exceed tspan, which happens
+            # in the gaps between tsteps. However, if inclusive is True, then the
+            # fractional part is allowed to equal tspan at the end time.
             if inclusive:
-                mask = ((tstep_diff.vals >= self._tspan)
-                        & (time.vals != self.time[1]))
+                mask = (tstep_diff.vals >= self._tspan) & (time.vals != self.time[1])
             else:
                 mask = (tstep_diff.vals >= self._tspan)
 
@@ -182,8 +176,8 @@ class Metronome(Cadence):
 
         else:
             # Because time steps can overlap, avoid remask for now
-            tstep_int = tstep.int(top=self._steps, remask=False,
-                                  inclusive=False, clip=False)
+            tstep_int = tstep.int(top=self._steps, remask=False, inclusive=False,
+                                  clip=False)
 
             # Handle the last, extended time step
             is_last = Qube.is_inside(time.vals, self.lasttime, self.time[1],
@@ -195,12 +189,10 @@ class Metronome(Cadence):
 
             # Clip and remask necessary
             if self._clip:
-                tstep = tstep.clip(0, self._steps,
-                                   remask=remask, inclusive=inclusive)
+                tstep = tstep.clip(0, self._steps, remask=remask, inclusive=inclusive)
             elif remask:
                 endpoints = (False, not inclusive)
-                tstep = tstep.mask_where_outside(0, self._steps,
-                                                 mask_endpoints=endpoints)
+                tstep = tstep.mask_where_outside(0, self._steps, mask_endpoints=endpoints)
 
         return tstep
 
@@ -226,8 +218,8 @@ class Metronome(Cadence):
         tstep = (time - self.time[0]) / self._tstride
 
         # Set mask=True here; restore mask later if remask is False
-        tstep_min = tstep.int(top=self._steps, remask=True,
-                              inclusive=inclusive, clip=True)
+        tstep_min = tstep.int(top=self._steps, remask=True, inclusive=inclusive,
+                              clip=True)
         new_mask = tstep_min.mask       # Note: not a copy so modify cautiously
 
         # For discontinuous or gapless cases...
@@ -237,8 +229,7 @@ class Metronome(Cadence):
             # Expand mask for discontinuous cadences
             if not self.is_continuous:
                 # Determine active time within each time step
-                time_frac = (time.vals - self.time[0]
-                                       - self._tstride * tstep_min.vals)
+                time_frac = time.vals - self.time[0] - self._tstride * tstep_min.vals
 
                 # Mask times when integration is not happening
                 if inclusive:       # extra care needed at end time
@@ -253,11 +244,10 @@ class Metronome(Cadence):
             # For overlapping cases...
             tstep_max = tstep_min + 1
             tstep_min = (tstep - self._tspan1).int(top=self._steps, remask=True,
-                                                   inclusive=inclusive,
-                                                   clip=True)
+                                                   inclusive=inclusive, clip=True)
             # The new mask only applies if _both_ min and max are masked;
-            # Otherwise, it is just a time near the beginning or end, and is
-            # associated with fewer time steps, not no time steps.
+            # Otherwise, it is just a time near the beginning or end, and is associated
+            # with fewer time steps, not no time steps.
             new_mask = Qube.and_(new_mask, tstep_min.mask)
 
         # Masked tstep ranges must have zero length
@@ -298,10 +288,10 @@ class Metronome(Cadence):
         # Use TVL comparison to propagate the mask of time_mod
         if inclusive:
             return (time_mod.tvl_gt(self._texp) | time.tvl_lt(self.time[0])
-                                               | time.tvl_gt(self.time[1]))
+                                                | time.tvl_gt(self.time[1]))
         else:
             return (time_mod.tvl_gt(self._texp) | time.tvl_lt(self.time[0])
-                                               | time.tvl_ge(self.time[1]))
+                                                | time.tvl_ge(self.time[1]))
 
     def time_shift(self, secs):
         """A duplicate of this Cadence with all times shifted by the given amount.

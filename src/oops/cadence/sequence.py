@@ -116,8 +116,7 @@ class Sequence(Cadence):
 
         # Fill in required attributes
         self.lasttime = self._tlist.vals[-1]
-        self.time = (self._tlist.vals[0],
-                     self._tlist.vals[-1] + self._texp.vals[-1])
+        self.time = (self._tlist.vals[0], self._tlist.vals[-1] + self._texp.vals[-1])
         self.midtime = (self.time[0] + self.time[1]) * 0.5
         self.shape = self._tlist.shape
 
@@ -151,11 +150,9 @@ class Sequence(Cadence):
         tstep = Scalar.as_scalar(tstep, recursive=derivs)
         tstep_int = tstep.int(top=self._steps, remask=remask, clip=True,
                               inclusive=inclusive)
-        tstep_frac = (tstep - tstep_int).clip(0, 1, remask=remask,
-                                                    inclusive=inclusive)
+        tstep_frac = (tstep - tstep_int).clip(0, 1, remask=remask, inclusive=inclusive)
 
-        time = (self._tlist[tstep_int.vals] + tstep_frac *
-                                             self._texp[tstep_int.vals])
+        time = (self._tlist[tstep_int.vals] + tstep_frac * self._texp[tstep_int.vals])
         return time
 
     def time_range_at_tstep(self, tstep, *, remask=False, inclusive=True, shift=True):
@@ -223,7 +220,7 @@ class Sequence(Cadence):
         tstep_frac_unclipped = ((time - self._tlist[tstep_int])
                                 / self._texp[tstep_int])
         tstep_frac_clipped = tstep_frac_unclipped.clip(0, 1, remask=remask,
-                                                             inclusive=False)
+                                                       inclusive=False)
 
         tstep = tstep_int + tstep_frac_clipped
 
@@ -343,11 +340,9 @@ class Sequence(Cadence):
         # Compare times, using TVL comparisons to retain the mask on time_diff
         time_diff = time - self._tlist.vals[tstep_int]
         if inclusive:
-            is_outside = (time_diff.tvl_lt(0.) |
-                          time_diff.tvl_gt(self._texp[tstep_int]))
+            is_outside = time_diff.tvl_lt(0.) | time_diff.tvl_gt(self._texp[tstep_int])
         else:
-            is_outside = (time_diff.tvl_lt(0.) |
-                          time_diff.tvl_ge(self._texp[tstep_int]))
+            is_outside = time_diff.tvl_lt(0.) | time_diff.tvl_ge(self._texp[tstep_int])
 
         return is_outside
 

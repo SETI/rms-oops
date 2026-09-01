@@ -190,9 +190,8 @@ class ReversedCadence(Cadence):
             equals the first.
         """
 
-        (tstep_min,
-         tstep_max) = self._cadence.tstep_range_at_time(time, remask=remask,
-                                                        inclusive=inclusive)
+        (tstep_min, tstep_max) = self._cadence.tstep_range_at_time(time, remask=remask,
+                                                                   inclusive=inclusive)
         return (self.shape[0] - tstep_max, self.shape[0] - tstep_min)
 
     def time_is_outside(self, time, *, inclusive=True):

@@ -47,7 +47,7 @@ class ReshapedCadence(Cadence):
         self.max_tstride = self._cadence.max_tstride
 
         self._stride = np.cumprod((self.shape + (1,))[::-1])[-2::-1]
-                                                        # trust me, it works!
+            # trust me, it works!
 
         self._old_shape = self._cadence.shape
         self._old_rank = len(self._cadence.shape)
@@ -76,15 +76,14 @@ class ReshapedCadence(Cadence):
         # Convert old tstep to integer offset + fraction; remask for now
         if old_rank == 1:
             tstep = Scalar.as_scalar(tstep, recursive=derivs)
-            index_1d = tstep.int(old_shape[0], remask=True,
-                                 inclusive=inclusive, clip=True)
+            index_1d = tstep.int(old_shape[0], remask=True, inclusive=inclusive,
+                                 clip=True)
             remainder = tstep - index_1d
             frac = remainder.clip(0, 1, remask=True)
             index_1d = index_1d.vals
         else:
             tstep = Vector.as_vector(tstep, recursive=derivs)
-            tstep_int = tstep.int(old_shape, remask=True, inclusive=inclusive,
-                                             clip=True)
+            tstep_int = tstep.int(old_shape, remask=True, inclusive=inclusive, clip=True)
             remainder = (tstep - tstep_int).to_scalar(-1)
             frac = remainder.clip(0, 1, remask=True)
             index_1d = np.sum(old_stride * tstep_int.vals, axis=-1)
@@ -143,10 +142,9 @@ class ReshapedCadence(Cadence):
                              + deriv.drank * (slice(None),))
 
                 new_deriv_vals[new_index] = deriv.vals[old_index]
-                    # Note that the above works if new_deriv_vals has no shape,
-                    # because indx is an Ellipsis, which is a valid index, and
-                    # because the constructor converts a shapeless array value
-                    # to a scalar.
+                    # Note that the above works if new_deriv_vals has no shape, because
+                    # indx is an Ellipsis, which is a valid index, and because the
+                    # constructor converts a shapeless array value to a scalar.
 
                 # Prepare the new mask
                 if isinstance(deriv.mask, (bool, np.bool_)):
@@ -165,8 +163,7 @@ class ReshapedCadence(Cadence):
 
         return new_tstep
 
-    def _old_tstep_from_new(self, tstep, remask=False, derivs=False,
-                                         inclusive=True):
+    def _old_tstep_from_new(self, tstep, remask=False, derivs=False, inclusive=True):
         """Convert a tstep index for the old cadence to the new."""
 
         return ReshapedCadence._reshape_tstep(
@@ -176,12 +173,10 @@ class ReshapedCadence(Cadence):
                             self._size,
                             remask=remask, derivs=derivs, inclusive=inclusive)
 
-    def _new_tstep_from_old(self, tstep, remask=False, derivs=False,
-                                         inclusive=True):
+    def _new_tstep_from_old(self, tstep, remask=False, derivs=False, inclusive=True):
         """Convert a tstep index for the new cadence to the old."""
 
-        return ReshapedCadence._reshape_tstep(
-                            tstep,
+        return ReshapedCadence._reshape_tstep(tstep,
                             self._old_shape, self._old_stride, self._old_rank,
                             self.shape, self._stride, self._rank, self._size,
                             remask=remask, derivs=derivs, inclusive=inclusive)
@@ -207,10 +202,10 @@ class ReshapedCadence(Cadence):
         """
 
         tstep = self._old_tstep_from_new(tstep, remask=remask, derivs=derivs,
-                                                inclusive=inclusive)
+                                         inclusive=inclusive)
 
         return self._cadence.time_at_tstep(tstep, remask=remask, derivs=derivs,
-                                                 inclusive=inclusive)
+                                           inclusive=inclusive)
 
     def time_range_at_tstep(self, tstep, *, remask=False, inclusive=True, shift=True):
         """The range of times for the given time step.
@@ -232,11 +227,10 @@ class ReshapedCadence(Cadence):
         """
 
         tstep = self._old_tstep_from_new(tstep, derivs=False, remask=remask,
-                                                inclusive=inclusive)
+                                         inclusive=inclusive)
 
         return self._cadence.time_range_at_tstep(tstep, remask=remask,
-                                                       inclusive=inclusive,
-                                                       shift=shift)
+                                                 inclusive=inclusive, shift=shift)
 
     def tstep_at_time(self, time, *, remask=False, derivs=False, inclusive=True):
         """Time step for the given time.
@@ -260,11 +254,9 @@ class ReshapedCadence(Cadence):
 
         # Converting to 1-D or continuous cadences, this is fairly easy...
         if self._rank == 1 or self.is_continuous:
-            tstep = self._cadence.tstep_at_time(time, remask=remask,
-                                               derivs=derivs,
-                                               inclusive=inclusive)
-            tstep = self._new_tstep_from_old(tstep, remask=remask,
-                                             derivs=derivs,
+            tstep = self._cadence.tstep_at_time(time, remask=remask, derivs=derivs,
+                                                inclusive=inclusive)
+            tstep = self._new_tstep_from_old(tstep, remask=remask, derivs=derivs,
                                              inclusive=inclusive)
 
         # Otherwise...
@@ -274,8 +266,7 @@ class ReshapedCadence(Cadence):
             # a time is out of range, including in a gap between discontinuous
             # time steps.
             tstep = self._cadence.tstep_at_time(time.without_mask(), remask=True,
-                                               derivs=derivs,
-                                               inclusive=inclusive)
+                                                derivs=derivs, inclusive=inclusive)
             tstep = self._new_tstep_from_old(tstep, remask=True, derivs=derivs,
                                              inclusive=inclusive)
 
@@ -372,7 +363,7 @@ class ReshapedCadence(Cadence):
                 multiple_rows = np.any((new_tstep_min.vals[...,:-1] !=
                                         new_tstep_max.vals[...,:-1] - 1))
                 incomplete_lines = ((new_tstep_min.vals[...,-1] != 0) |
-                                 (new_tstep_max.vals[...,-1] != self.shape[-1]))
+                                    (new_tstep_max.vals[...,-1] != self.shape[-1]))
                 unmasked = new_tstep_min.antimask
                 problems = multiple_rows & incomplete_lines & unmasked
                 if np.any(problems):
@@ -385,9 +376,8 @@ class ReshapedCadence(Cadence):
                         minval = new_tstep_min[problems][0]
                         maxval = new_tstep_max[problems][0]
 
-                    raise ValueError('returned tstep range is discontinuous ' +
-                                     'at %s: %s, %s' % (timeval, minval,
-                                                                 maxval))
+                    raise ValueError('returned tstep range is discontinuous at '
+                                     f'{timeval}: {minval}, {maxval}')
 
         # Make sure that the old tstep range was continuous
         if not self.is_unique and self._old_rank > 1:
@@ -408,7 +398,7 @@ class ReshapedCadence(Cadence):
                     maxval = old_tstep_max[problems][0]
 
                 raise ValueError('input tstep range is discontinuous at ' +
-                                 '%s: %s, %s' % (timeval, minval, maxval))
+                                 f'{timeval}: {minval}, {maxval}')
 
         # Restore the original mask if necessary
         if not remask:

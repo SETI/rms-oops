@@ -26,7 +26,7 @@ deviations), SUGGESTION (improvements needing an owner decision).
 | `oops/backplane` | 15 | 69 | 49 | 9 | 9 |
 | **Total** | **118** | **327** | **170** | **90** | **76** |
 
-These counts describe the review as first delivered. Work continued afterward, and 31 of
+These counts describe the review as first delivered. Work continued afterward, and 35 of
 the findings it left open have since been resolved; each is labelled **(fixed after
 review)** in place of "(not fixed)", with its entry saying what was done. A few defects
 found during that later work are labelled **(found after review, fixed)** and were added
@@ -1666,22 +1666,52 @@ JunoCam geometry for shapeless queries, so it is left for the author.
 - **[SUGGESTION] (not fixed)** `tdicadence.py:54` — `self.time[-1]` works (2-tuple) but every
   sibling class writes `self.time[1]`.
 
-### src/oops/cadence/instant.py (declared work-in-progress; "DO NOT USE")
-- **[BUG] (not fixed)** `instant.py:83,103` — `time_at_tstep`/`time_range_at_tstep` ignore
-  `tstep` entirely and return the full time array; the author's own `#### Shouldn't this
-  be self._tdb[tstep.int()]?` comments agree. Left as-is per the class's WIP banner.
-- **[BUG] (not fixed)** `instant.py:123` — `tstep_at_time` builds
-  `Scalar(np.zeros(self.shape), self._tdb != time)`, which breaks unless `time` broadcasts
-  against the cadence shape; also returns index 0 for every time.
-- **[DOC] (not fixed)** `instant.py:66-83` — docstrings describe the standard Cadence
-  behavior (interpolation, remask, derivs) that this implementation does not provide.
+### src/oops/cadence/instant.py
+The class carried a "DO NOT USE" banner when the review was written. That banner is gone
+and its constructor has been rebuilt, so the module is live code and was fixed rather than
+left alone.
+
+- **[BUG] (fixed after review)** `instant.py:83,103` —
+  `time_at_tstep`/`time_range_at_tstep` ignored `tstep` entirely and returned the full
+  time array; the author's own `#### Shouldn't this be self._tdb[tstep.int()]?` comments
+  agree. Both now index the times by the given time step. polymath indexes a Scalar by a
+  Scalar or Pair index and propagates the index's mask, so a shared `_index_at_tstep`
+  helper converts the time step with `int(clip=True)`
+  and indexes with the result: fractional indices truncate to the step that contains them
+  (an instant cannot be interpolated), indices beyond the ends clip to the nearest edge as
+  `DualCadence` documents, and `remask`/`inclusive` behave as the base class specifies.
+- **[BUG] (fixed after review)** `instant.py:123` — `tstep_at_time` built
+  `Scalar(np.zeros(self.shape), self._tdb != time)`, which took the shape of the cadence
+  rather than of `time`, broke unless `time` broadcast against the cadence shape, and
+  returned index 0 for every time. A shared `_match_at_time` helper now finds the first
+  unmasked time step whose time equals each given time; unsampled times are masked. The
+  same helper implements `tstep_range_at_time`, which had been left as `### TBD` raising
+  `NotImplementedError`: a sampled time now yields a one-step range and an unsampled one
+  an empty range, per the base-class convention.
+- **[BUG] (found after review, fixed)** `instant.py:159` — `time_is_outside` returned
+  `Scalar.as_scalar(time) != self._tdb`, comparing each time against the whole table
+  instead of reducing over it. It took the shape of the cadence rather than of `time`, and
+  reported a sampled time as outside: for `Instant([100., 110., 130.])`,
+  `time_is_outside(100.)` returned `Boolean(False, True, True)` where the answer is a
+  single `False`. Now reduces over the table via `_match_at_time`.
+- **[DOC] (fixed after review)** `instant.py:66-83` — docstrings described the standard
+  Cadence behavior (interpolation, remask, derivs) that this implementation does not
+  provide. Each parameter that an Instant cannot honor now says so and why: `derivs`,
+  because the time does not vary within a time step; `inclusive` on the time-to-tstep
+  methods, because each step is a single moment always treated as part of the cadence; and
+  `remask` on `tstep_at_time`, because an unsampled time has no time step and so is masked
+  whether or not it is asked for. The methods were untested; 18 tests were added, of which
+  17 fail against the old code.
 
 ### src/oops/cadence/dualcadence.py, sequence.py, snapcadence.py, timeshift.py
-- **[SUGGESTION] (not fixed)** `dualcadence.py:69-72` — `__setstate__` re-derives
-  `time`/`midtime`/`lasttime` after `self.__init__(*state)` already set them; the three
-  duplicated lines are dead weight (compare `Metronome.__setstate__`).
-- **[DOC] (not fixed)** `timeshift.py:63` — the `params` property (Fittable API) has no
-  docstring.
+- **[SUGGESTION] (fixed after review)** `dualcadence.py:69-72` — `__setstate__` re-derived
+  `time`/`midtime`/`lasttime` after `self.__init__(*state)` had already set them. Probing
+  the recomputation during real unpickles of four DualCadences confirmed it reproduced
+  what `__init__` set every time, so the three lines were removed; `__setstate__` matches
+  `Metronome.__setstate__`.
+- **[DOC] (fixed after review)** `timeshift.py:63` — the `params` property (Fittable
+  API) had no docstring; added one in the form its siblings `Platescale.params` and
+  `OffsetFOV.params` use.
 - **[SUGGESTION] (not fixed)** `sequence.py:50-51` — the error message "Sequence tlist must
   be 1-D" also fires for a 1-D list of length <= 1; the length requirement is not mentioned
   in the message or the docstring.

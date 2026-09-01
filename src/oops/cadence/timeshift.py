@@ -61,6 +61,8 @@ class TimeShift(Cadence, Fittable):
 
     @property
     def params(self):
+        """The fitted parameters, the time shift in seconds as a tuple of one float."""
+
         return (self._dt,)
 
     def _set_params(self, params):

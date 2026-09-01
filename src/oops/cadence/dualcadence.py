@@ -30,8 +30,7 @@ class DualCadence(Cadence):
         if len(self._long.shape) != 1 or len(self._short.shape) != 1:
             raise ValueError('long and short cadences must be 1-D')
 
-        self.time = (self._long.time[0],
-                     self._long.lasttime + self._short.time[1])
+        self.time = (self._long.time[0], self._long.lasttime + self._short.time[1])
         self.midtime = (self.time[0] + self.time[1]) * 0.5
         self.lasttime = self._long.lasttime + self._short.lasttime
 
@@ -39,11 +38,11 @@ class DualCadence(Cadence):
         # spanned within each long time step. The cadence is continuous only if that
         # duration reaches the next long time step, and unique only if it does not
         # overlap the next long time step.
-        self.is_continuous = (self._short.is_continuous and
-                              self._short.time[1] >= self._long.max_tstride)
+        self.is_continuous = (self._short.is_continuous
+                              and self._short.time[1] >= self._long.max_tstride)
 
-        self.is_unique = (self._short.is_unique and
-                          self._short.time[1] <= self._long.min_tstride)
+        self.is_unique = (self._short.is_unique
+                          and self._short.time[1] <= self._long.min_tstride)
 
         self.min_tstride = self._short.min_tstride
         self.max_tstride = max(self._long.max_tstride - self._short.time[1],
@@ -53,8 +52,7 @@ class DualCadence(Cadence):
 
     def _refresh(self):
         """Update internals if self._long or self._short is Fittable."""
-        self.time = (self._long.time[0],
-                     self._long.lasttime + self._short.time[1])
+        self.time = (self._long.time[0], self._long.lasttime + self._short.time[1])
         self.midtime = (self.time[0] + self.time[1]) * 0.5
         self.lasttime = self._long.lasttime + self._short.lasttime
 
@@ -65,11 +63,6 @@ class DualCadence(Cadence):
     def __setstate__(self, state):
         self.__init__(*state)
         self.freeze()
-
-        self.time = (self._long.time[0],
-                     self._long.lasttime + self._short.time[1])
-        self.midtime = (self.time[0] + self.time[1]) * 0.5
-        self.lasttime = self._long.lasttime + self._short.lasttime
 
     def time_at_tstep(self, tstep, *, remask=False, derivs=False, inclusive=True):
         """The time associated with the given time step.
@@ -96,12 +89,11 @@ class DualCadence(Cadence):
 
         # Determine long start time
         long_time = self._long.time_range_at_tstep(long_tstep, remask=remask,
-                                                  inclusive=inclusive)[0]
+                                                   inclusive=inclusive)[0]
 
         # Determine short time
         short_time = self._short.time_at_tstep(short_tstep, remask=remask,
-                                              derivs=derivs,
-                                              inclusive=inclusive)
+                                               derivs=derivs, inclusive=inclusive)
 
         return long_time + short_time
 
@@ -129,14 +121,11 @@ class DualCadence(Cadence):
 
         # Determine long start time
         long_time0 = self._long.time_range_at_tstep(long_tstep, remask=remask,
-                                                   inclusive=inclusive,
-                                                   shift=shift)[0]
+                                                    inclusive=inclusive, shift=shift)[0]
 
         # Determine short time range
-        short_times = self._short.time_range_at_tstep(short_tstep,
-                                                     remask=remask,
-                                                     inclusive=inclusive,
-                                                     shift=shift)
+        short_times = self._short.time_range_at_tstep(short_tstep, remask=remask,
+                                                      inclusive=inclusive, shift=shift)
 
         return (long_time0 + short_times[0], long_time0 + short_times[1])
 
@@ -164,14 +153,13 @@ class DualCadence(Cadence):
         # We need remask=False because the end time of each long cadence is
         # ignored; remask=True might mask some times incorrectly.
         tstep0 = self._long.tstep_range_at_time(time, remask=False,
-                                               inclusive=inclusive)[0]
+                                                inclusive=inclusive)[0]
 
         # Determine short tstep
         time0 = self._long.time_at_tstep(tstep0, remask=remask,
-                                        inclusive=inclusive)
-        tstep1 = self._short.tstep_at_time(time - time0, remask=remask,
-                                          derivs=derivs,
-                                          inclusive=inclusive)
+                                         inclusive=inclusive)
+        tstep1 = self._short.tstep_at_time(time - time0, remask=remask, derivs=derivs,
+                                           inclusive=inclusive)
 
         # Revise long time step above the time limits
         if inclusive:
@@ -209,7 +197,7 @@ class DualCadence(Cadence):
         # Times before the start time map to tstep0_min = 0;
         # Times during or after the last time step map to shape[0]-1.
         tstep0_min = self._long.tstep_range_at_time(time, remask=False,
-                                                   inclusive=False)[0]
+                                                    inclusive=False)[0]
         tstep0_max = tstep0_min + 1
 
         # Unique case is MUCH easier
@@ -217,14 +205,13 @@ class DualCadence(Cadence):
 
             # Determine short tstep range
             time0 = self._long.time_at_tstep(tstep0_min, remask=remask,
-                                            inclusive=inclusive)
+                                             inclusive=inclusive)
 
             # Note: exclude the last moment of each short cadence
             # We address the last moment of the cadence overall below
             (tstep1_min,
-             tstep1_max) = self._short.tstep_range_at_time(time - time0,
-                                                          remask=remask,
-                                                          inclusive=False)
+             tstep1_max) = self._short.tstep_range_at_time(time - time0, remask=remask,
+                                                           inclusive=False)
 
             # Time step ranges outside time limits are already zero-length
 
@@ -307,7 +294,7 @@ class DualCadence(Cadence):
 
     @staticmethod
     def for_array2d(samples, lines, tstart, texp, intersample_delay=0.,
-                                                  interline_delay=None):
+                    interline_delay=None):
         """Alternative constructor for a DualCadence involving two Metronome classes, with
         streamlined input.
 
@@ -327,8 +314,7 @@ class DualCadence(Cadence):
             DualCadence: The new cadence.
         """
 
-        fast_cadence = Metronome(tstart, texp + intersample_delay, texp,
-                                 samples)
+        fast_cadence = Metronome(tstart, texp + intersample_delay, texp, samples)
 
         if interline_delay is None:
             interline_delay = intersample_delay
