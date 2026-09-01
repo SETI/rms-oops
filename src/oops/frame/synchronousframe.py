@@ -9,8 +9,8 @@ from oops.transform import Transform
 
 class SynchronousFrame(Frame):
     """A Frame subclass describing a body that always keeps its x-axis pointed toward a
-    central planet and its y-axis in the negative direction of motion. It is centered on
-    the body.
+    central planet, with its z-axis along the angular momentum of the orbit. That leaves
+    the y-axis in the negative direction of motion. It is centered on the body.
 
     Note that this Frame is tied to the orbital longitude of the body, so it will
     (incorrectly) rotate at a slightly non-uniform rate if the orbit has eccentricity.
@@ -111,8 +111,13 @@ class SynchronousFrame(Frame):
         """
 
         event = self._orbit_wrt_planet.event_at_time(time, quick=quick)
-        matrix = Matrix3.twovec(event.pos, 0, event.vel, 1)
-        omega = event.pos.cross(event.vel) / event.pos.dot(event.pos)
+
+        # event.pos runs from the planet to the body, so the x-axis is its negative. The
+        # angular momentum defines the z-axis, which leaves the y-axis opposite the
+        # motion. The frame turns at the orbital angular velocity.
+        angular_momentum = event.pos.cross(event.vel)
+        matrix = Matrix3.twovec(-event.pos, 0, angular_momentum, 2)
+        omega = angular_momentum / event.pos.dot(event.pos)
 
         return Transform(matrix, omega, self, self._reference, origin=self._orbit_path)
 
