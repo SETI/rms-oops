@@ -57,6 +57,21 @@ class FOV(Mutable):
     # Override this class attribute to False for FOV subclasses that have time-dependence
     IS_TIME_INDEPENDENT = True
 
+    # Values derived from the FOV geometry and saved on first use. Any change to the FOV,
+    # such as a Fittable subclass receiving new parameters, invalidates all of them.
+    _CACHED_NAMES = ('center_xy_filled', 'center_los_filled', 'center_dlos_duv_filled',
+                     'outer_radius_filled', 'inner_radius_filled', 'corner00_filled',
+                     'corner01_filled', 'corner10_filled', 'corner11_filled')
+
+    def _refresh(self):
+        """Discard every cached value, because a change to this FOV invalidates them.
+
+        A subclass that defines its own `_refresh` must call this one as well.
+        """
+
+        for name in FOV._CACHED_NAMES:
+            self.__dict__.pop(name, None)
+
     ######################################################################################
     # Methods to be defined for each FOV subclass
     ######################################################################################
@@ -617,16 +632,21 @@ class FOV(Mutable):
 
         Returns:
             Pair: `(x,y)` coordinates of the FOV center.
+
+        Raises:
+            NotImplementedError: If this FOV is time-dependent and no `time` is given.
         """
 
-        if hasattr(self, 'center_xy_filled'):
-            return self.center_xy_filled
+        if not self.IS_TIME_INDEPENDENT:
+            if time is None:
+                raise NotImplementedError(type(self).__name__ + '.center_xy '
+                                          'requires a time; FOV is time-dependent')
+            return self.xy_from_uvt(self.uv_shape/2., time=time)
 
-        if self.IS_TIME_INDEPENDENT or time is None:
+        if not hasattr(self, 'center_xy_filled'):
             self.center_xy_filled = self.xy_from_uvt(self.uv_shape/2.)
-            return self.center_xy_filled
 
-        return self.xy_from_uvt(self.uv_shape/2., time=time)
+        return self.center_xy_filled
 
     def center_los(self, time=None):
         """The unit line of sight defining the center of the FOV at the specified time.
@@ -636,26 +656,33 @@ class FOV(Mutable):
 
         Returns:
             Vector3: The unit line of sight.
+
+        Raises:
+            NotImplementedError: If this FOV is time-dependent and no `time` is given.
         """
 
 
-        if hasattr(self, 'center_los_filled'):
-            return self.center_los_filled
+        if not self.IS_TIME_INDEPENDENT:
+            if time is None:
+                raise NotImplementedError(type(self).__name__ + '.center_los '
+                                          'requires a time; FOV is time-dependent')
+            return self.los_from_xy(self.center_xy(time=time)).unit()
 
-        if self.IS_TIME_INDEPENDENT or time is None:
+        if not hasattr(self, 'center_los_filled'):
             self.center_los_filled = self.los_from_xy(self.center_xy()).unit()
-            return self.center_los_filled
 
-        return self.los_from_xy(self.center_xy(time=time)).unit()
+        return self.center_los_filled
 
     @property
     def center_dlos_duv(self):
         """The line of sight derivative matrix `dlos/d(u,v)` at the FOV center.
 
-        Note that any time-dependence is ignored.
-
         Returns:
             Vector3: `dlos/d(u,v)`, a Vector3 with a `(u,v)` denominator.
+
+        Raises:
+            NotImplementedError: If this FOV is time-dependent, because this property
+                takes no time at which to evaluate it.
         """
 
         if not hasattr(self, 'center_dlos_duv_filled'):
@@ -670,10 +697,12 @@ class FOV(Mutable):
     def outer_radius(self):
         """The radius of a circle circumscribing the entire FOV.
 
-        Note that any time-dependence of the FOV is ignored.
-
         Returns:
             float: Radius value in radians.
+
+        Raises:
+            NotImplementedError: If this FOV is time-dependent, because this property
+                takes no time at which to evaluate it.
         """
 
         if not hasattr(self, 'outer_radius_filled'):
@@ -690,10 +719,12 @@ class FOV(Mutable):
     def inner_radius(self):
         """The radius of a circle entirely enclosed within the FOV.
 
-        Note that any time-dependence of the FOV is ignored.
-
         Returns:
             float: Radius value in radians.
+
+        Raises:
+            NotImplementedError: If this FOV is time-dependent, because this property
+                takes no time at which to evaluate it.
         """
 
         if not hasattr(self, 'inner_radius_filled'):
@@ -717,16 +748,21 @@ class FOV(Mutable):
 
         Returns:
             Pair: The `(x,y)` coordinates.
+
+        Raises:
+            NotImplementedError: If this FOV is time-dependent and no `time` is given.
         """
 
-        if hasattr(self, 'corner00_filled'):
-            return self.corner00_filled
+        if not self.IS_TIME_INDEPENDENT:
+            if time is None:
+                raise NotImplementedError(type(self).__name__ + '.corner00_xy '
+                                          'requires a time; FOV is time-dependent')
+            return self.xy_from_uvt(Pair.ZEROS, time=time)
 
-        if self.IS_TIME_INDEPENDENT or time is None:
+        if not hasattr(self, 'corner00_filled'):
             self.corner00_filled = self.xy_from_uvt(Pair.ZEROS)
-            return self.corner00_filled
 
-        return self.xy_from_uvt(Pair.ZEROS, time=time)
+        return self.corner00_filled
 
     def corner01_xy(self, time=None):
         """The `(x,y)` coordinates where `(u,v) = (0,v_max)`.
@@ -736,16 +772,21 @@ class FOV(Mutable):
 
         Returns:
             Pair: The `(x,y)` coordinates.
+
+        Raises:
+            NotImplementedError: If this FOV is time-dependent and no `time` is given.
         """
 
-        if hasattr(self, 'corner01_filled'):
-            return self.corner01_filled
+        if not self.IS_TIME_INDEPENDENT:
+            if time is None:
+                raise NotImplementedError(type(self).__name__ + '.corner01_xy '
+                                          'requires a time; FOV is time-dependent')
+            return self.xy_from_uvt(Pair((0, self.uv_shape.vals[1])), time=time)
 
-        if self.IS_TIME_INDEPENDENT or time is None:
+        if not hasattr(self, 'corner01_filled'):
             self.corner01_filled = self.xy_from_uvt(Pair((0, self.uv_shape.vals[1])))
-            return self.corner01_filled
 
-        return self.xy_from_uvt(Pair((0, self.uv_shape.vals[1])), time=time)
+        return self.corner01_filled
 
     def corner10_xy(self, time=None):
         """The `(x,y)` coordinates where `(u,v) = (u_max,0)`.
@@ -755,16 +796,21 @@ class FOV(Mutable):
 
         Returns:
             Pair: The `(x,y)` coordinates.
+
+        Raises:
+            NotImplementedError: If this FOV is time-dependent and no `time` is given.
         """
 
-        if hasattr(self, 'corner10_filled'):
-            return self.corner10_filled
+        if not self.IS_TIME_INDEPENDENT:
+            if time is None:
+                raise NotImplementedError(type(self).__name__ + '.corner10_xy '
+                                          'requires a time; FOV is time-dependent')
+            return self.xy_from_uvt(Pair((self.uv_shape.vals[0], 0)), time=time)
 
-        if self.IS_TIME_INDEPENDENT or time is None:
+        if not hasattr(self, 'corner10_filled'):
             self.corner10_filled = self.xy_from_uvt(Pair((self.uv_shape.vals[0], 0)))
-            return self.corner10_filled
 
-        return self.xy_from_uvt(Pair((self.uv_shape.vals[0], 0)), time=time)
+        return self.corner10_filled
 
     def corner11_xy(self, time=None):
         """The `(x,y)` coordinates where `(u,v) = (u_max,v_max)`.
@@ -774,16 +820,21 @@ class FOV(Mutable):
 
         Returns:
             Pair: The `(x,y)` coordinates.
+
+        Raises:
+            NotImplementedError: If this FOV is time-dependent and no `time` is given.
         """
 
-        if hasattr(self, 'corner11_filled'):
-            return self.corner11_filled
+        if not self.IS_TIME_INDEPENDENT:
+            if time is None:
+                raise NotImplementedError(type(self).__name__ + '.corner11_xy '
+                                          'requires a time; FOV is time-dependent')
+            return self.xy_from_uvt(self.uv_shape, time=time)
 
-        if self.IS_TIME_INDEPENDENT or time is None:
+        if not hasattr(self, 'corner11_filled'):
             self.corner11_filled = self.xy_from_uvt(self.uv_shape)
-            return self.corner11_filled
 
-        return self.xy_from_uvt(self.uv_shape, time=time)
+        return self.corner11_filled
 
     def sphere_falls_inside(self, center, radius, *, time=None, border=0.):
         """True if any piece of a sphere falls inside this FOV.

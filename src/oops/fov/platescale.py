@@ -34,6 +34,10 @@ class Platescale(FOV, Fittable):
     nparams = 1
 
     def _refresh(self):
+        """Rescale this FOV and discard the values cached from its former geometry."""
+
+        super()._refresh()
+
         self.uv_scale = self.fov.uv_scale * self.factor
 
         # (x,y) are scaled by the factor, so a unit step in (u,v) covers the square of
