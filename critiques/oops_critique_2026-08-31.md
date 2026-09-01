@@ -70,7 +70,9 @@ deviations), SUGGESTION (improvements needing an owner decision).
 - `SynchronousFrame`'s docstring contradicts its `twovec` axis signs; `Limb`'s `z`
   definition disagrees between `z_clock_from_intercept` and `coords_from_vector3`;
   `Ellipsoid`'s `exclusion` default (0.9) contradicts its own ">= 0.95" recommendation.
-- `KeplerPath` derivative tests need a strengthening pass (they hid 6% velocity errors).
+- `KeplerPath` derivative tests needed a strengthening pass (they hid 6% velocity
+  errors). *Resolved after this review; see "Strengthening the KeplerPath derivative
+  tests" below.*
 - Remaining legacy/incomplete docstrings: `Backplane.get_surface_event` still uses a
   legacy `Inputs:` block; `border.py` and `pole.py` lack `Parameters:` blocks; several
   cache properties are undocumented.
@@ -79,7 +81,7 @@ deviations), SUGGESTION (improvements needing an owner decision).
 
 - Every edited file compiles; per-area unit suites were run by each reviewer.
 - Main suite after all fixes: `pytest tests --ignore=tests/hosts --ignore=tests/spicedb`
-  passes (150 passed).
+  passes (150 passed; 176 after the KeplerPath test rewrite described below).
 - Host (gold-master) suite: `pytest tests/hosts` passes (5 passed) — the gold masters
   are unaffected by the fixes. spicedb suite: 2 passed, 1 skipped.
 
@@ -539,6 +541,67 @@ Path/registry/photon-solver machinery is solid. The defects clustered in the les
 frequently exercised corners: KeplerPath's wobble mathematics (real, measurable
 errors), display methods (`_show`), and MultiPath.quick_path. Tests: `tests/path`
 31 passed; full main suite 150 passed after all fixes.
+
+### Strengthening the KeplerPath derivative tests
+
+Every wobble-derivative bug above passed the existing suite, so `tests/path/
+test_keplerpath.py` was rewritten after the review. The single `test_keplerpath`
+function became six, parametrized over the eight orbits it already exercised, and the
+main suite grew from 150 tests to 176.
+
+**Why the old tests passed buggy code.** Both helpers measured
+
+    (analytic_partial * step - actual_change) / |position|
+
+The flaw is the denominator. In the observer-frame helper `|position|` is the
+Earth-Saturn distance, about 1.29e9 km, while the orbital signal being tested is the
+140,000 km orbit — so every error was divided by roughly 10,000 times its own scale. The
+perturbation was itself a relative step of 1e-5, shrinking the numerator again. A 6%
+error in a partial landed near 1e-11, against a threshold of 1e-8. The suite could not
+have failed.
+
+**What replaced it.** Each partial is now compared against a central finite difference
+and normalized by that element's own partial, so the measure is the relative error of
+the quantity under test:
+
+    max_t |analytic(t) - numeric(t)| / max_t |numeric(t)|
+
+Three details make that measure trustworthy, each found by measurement rather than
+assumption:
+
+- *Step size.* A relative step is wrong for this parameter set, whose magnitudes span
+  1e-8 to 1e5 in mixed units. On a wobble amplitude of 4.4e-8 a relative step of 1e-5
+  moves the body by 3e-8 km against a round-off floor of 2e-11 km — three surviving
+  digits, pure noise. Each step is now sized to move the body a fixed distance. A rate
+  element needs a second bound: it multiplies time, so a step that looks small swings
+  the phase by 360 radians over the 10^5-second span, far outside the linear regime
+  where a derivative means anything. Rate steps are therefore capped by the phase they
+  accumulate.
+- *Normalizing by the amplitude, not the instantaneous value.* A wobble partial
+  oscillates through zero. Dividing by its value at each time produced relative errors of
+  1e7 at the crossings for partials that were in fact correct to three digits.
+- *A noise floor per element.* The weakest wobble elements move the body only a few times
+  the round-off, and no choice of step recovers them; against the observer distance the
+  predicted noise is 11%, and 8.8% was observed. Each element's tolerance is therefore
+  the stated 1e-4 or its own measured round-off limit, whichever is larger, and an
+  element whose signal never clears the floor is skipped rather than tested vacuously.
+  The nine orbital elements always clear it, and the planet-frame test asserts that every
+  element was genuinely checked.
+
+**A gap that had no test at all.** Nothing compared the velocity returned with the
+position against the time derivative of that position — the very quantity the 6.4% error
+corrupted. `test_velocity_matches_position_derivative` now does, to 1e-6; the observed
+error is 3.5e-9.
+
+**Verification.** The rewritten tests were run against the pre-fix `keplerpath.py`
+restored from commit 2c61fee. The old test passed it; 17 of the 27 new tests fail it,
+including the velocity checks for the `e2d`, `i2d`, and `i2d+e2d+a` orbits (velocity
+error 3.2e-3 against a 1e-6 threshold) and the element partials (element 3 off by 2.44,
+a 244% error, against a 1e-4 threshold). Against the fixed code all 27 pass.
+
+The rewrite also made the module's solar-system fixture module-scoped. It had been
+rebuilt for each test, which cost 3 seconds per test; at 27 tests the file took 92
+seconds, and it now takes 3.
 
 ---
 ## Critique: src/oops/frame/

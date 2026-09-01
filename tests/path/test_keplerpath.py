@@ -5,308 +5,370 @@
 import numpy as np
 import pytest
 
-from polymath     import Scalar, Vector3
-from oops.body    import Body
+from polymath       import Scalar, Vector3
+from oops.body      import Body
 from oops.constants import C
-from oops.event   import Event
-from oops.frame   import Frame
-from oops.gravity import Gravity
-from oops.path    import Path, KeplerPath
+from oops.event     import Event
+from oops.frame     import Frame
+from oops.gravity   import Gravity
+from oops.path      import Path, KeplerPath
 
-def _xyz_planet_derivative_test(kep, t, delta=1.e-7):
-    """Error in position change based on numerical vs. analytic derivatives.
+# Element indices, as defined by KeplerPath:
+#   SEMIM = 0    semimajor axis (km)
+#   MEAN0 = 1    mean longitude at epoch (radians)
+#   DMEAN = 2    mean motion (radians/s)
+#   ECCEN = 3    eccentricity
+#   PERI0 = 4    pericenter at epoch (radians)
+#   DPERI = 5    pericenter precession rate (radians/s)
+#   INCLI = 6    inclination (radians)
+#   NODE0 = 7    longitude of ascending node at epoch (radians)
+#   DNODE = 8    nodal regression rate (radians/s)
+# Each wobble appends a further (amplitude, phase, rate) triple.
+
+_NBASE = 9
+_BASE_RATES = (2, 5, 8)         # elements multiplied by time, in radians/s
+
+# A perturbation of a rate element changes a phase by (step * time), so its step is
+# bounded by the phase excursion it produces rather than by its own magnitude.
+_PHASE_STEP = 1.e-2             # radians
+_A = 140000.                    # semimajor axis of the test orbit, km
+
+# Every partial must match to _TOLERANCE, except where the round-off in its own finite
+# difference cannot support that; there it is held to _NOISE_MARGIN times the round-off,
+# which is a few times the error an exact partial would show. An element whose difference
+# clears the round-off by less than _MIN_SIGNAL_TO_NOISE cannot be tested this way at all.
+_TOLERANCE = 1.e-4
+_NOISE_MARGIN = 50.
+_MIN_SIGNAL_TO_NOISE = 1.e3
+
+TIMESTEPS = 100
+TIMES = 3600. * np.arange(TIMESTEPS)
+
+
+def _rate_indices(nwobbles):
+    """Indices of the elements expressed as a rate in radians per second.
+
+    Parameters:
+        nwobbles (int): Number of wobbles defined for the path.
+
+    Returns:
+        set[int]: The element indices that are multiplied by time.
     """
 
-    # Save the position and its derivatives
-    (xyz, d_xyz_dt) = kep._xyz_planet(t, partials=True)
-    d_xyz_d_elem = xyz.d_delements.vals
-    pos_norm = xyz.norm().vals
+    return set(_BASE_RATES) | {_NBASE + 3*i + 2 for i in range(nwobbles)}
 
-    # Create new Kepler objects for tweaking the parameters
-    khi = KeplerPath(kep._planet, kep._epoch, kep._elements.copy(), kep._observer,
-                     wobbles=kep._wobbles)
-    klo = KeplerPath(kep._planet, kep._epoch, kep._elements.copy(), kep._observer,
-                     wobbles=kep._wobbles)
 
-    params = kep.get_elements()
+def _positions(kep, times, observer):
+    """Positions of the path at the given times.
 
-    # Loop through parameters...
-    errors = np.zeros(np.shape(t) + (3, kep._nelements))
-    for i,e in enumerate(range(kep._nelements)):
+    Parameters:
+        kep (KeplerPath): The path to evaluate.
+        times (array): Times in seconds TDB.
+        observer (bool): True to return the position relative to the observer in J2000;
+            False to return the position in the planet's frame.
 
-        # Tweak one parameter
-        hi = params.copy()
-        lo = params.copy()
-
-        if params[e] == 0.:
-            hi[e] += delta
-            lo[e] -= delta
-        else:
-            hi[e] *= 1. + delta
-            lo[e] *= 1. - delta
-
-        denom = hi[e] - lo[e]
-
-        khi.set_params(hi)
-        klo.set_params(lo)
-
-        # Compare the change with that derived from the partial derivative
-        xyz_hi = khi._xyz_planet(t, partials=False)[0].vals
-        xyz_lo = klo._xyz_planet(t, partials=False)[0].vals
-        hi_lo_diff = xyz_hi - xyz_lo
-
-        errors[...,:,e] = ((d_xyz_d_elem[...,:,e] * denom - hi_lo_diff) /
-                           pos_norm[...,np.newaxis])
-
-    return errors
-
-def _pos_derivative_test(kep, t, delta=1.e-5):
-    """Calculates numerical derivatives of (x,y,z) in the observer/J2000 frame
-    relative to the orbital elements, at time(s) t. It returns a tuple of
-    (numerical derivatives, analytic derivatives, relative errors). Used for
-    debugging.
+    Returns:
+        ndarray: An array of shape (len(times), 3), in km.
     """
 
-    # Save the position and its derivatives
-    event = kep.event_at_time(t, partials=True)
-    d_xyz_d_elem = event.pos.d_delements.vals
-    pos_norm = event.pos.norm().vals
+    if observer:
+        return kep.event_at_time(times, partials=False).pos.vals
 
-    # Create new Kepler objects for tweaking the parameters
-    khi = KeplerPath(kep._planet, kep._epoch, kep._elements.copy(), kep._observer,
-                     wobbles=kep._wobbles)
-    klo = KeplerPath(kep._planet, kep._epoch, kep._elements.copy(), kep._observer,
-                     wobbles=kep._wobbles)
+    return kep._xyz_planet(times, partials=False)[0].vals
 
+
+def _partials(kep, times, observer):
+    """Analytic partial derivatives of position with respect to the elements.
+
+    Parameters:
+        kep (KeplerPath): The path to evaluate.
+        times (array): Times in seconds TDB.
+        observer (bool): True for the position relative to the observer in J2000; False
+            for the position in the planet's frame.
+
+    Returns:
+        ndarray: An array of shape (len(times), 3, nelements), in km per element unit.
+    """
+
+    if observer:
+        return kep.event_at_time(times, partials=True).pos.d_delements.vals
+
+    return kep._xyz_planet(times, partials=True)[0].d_delements.vals
+
+
+def _element_partial_errors(kep, times, observer=False):
+    """Relative errors in the analytic partials, one value per element.
+
+    Each analytic partial is compared against a central finite difference. The step for
+    each element is chosen so that it moves the body by a fixed distance, which keeps the
+    difference well above the round-off floor; for an element expressed as a rate, the
+    step is also bounded so that the phase it accumulates stays in the linear regime.
+
+    The partial of an oscillating element passes through zero, so each error is
+    normalized by the largest value of that element's partial over the times sampled,
+    not by its value at one time.
+
+    Parameters:
+        kep (KeplerPath): The path to test.
+        times (array): Times in seconds TDB.
+        observer (bool, optional): True to test the position relative to the observer in
+            J2000; False (the default) to test the position in the planet's frame.
+
+    Returns:
+        tuple: (errors, limits, checked), where `errors` holds one relative error per
+        element, `limits` holds the error each element could attain if it were exact,
+        given the round-off in its own finite difference, and `checked` is True for each
+        element whose difference rises far enough above the round-off to mean anything.
+    """
+
+    analytic = _partials(kep, times, observer)
+    pos = _positions(kep, times, observer)
+
+    # The step is sized to move the body by a fixed fraction of the orbit. Cancellation
+    # against the observer distance costs several digits, so that test takes a larger
+    # step, trading truncation error for a stronger signal.
+    target = (1.e-4 if observer else 1.e-5) * _A
+    roundoff = np.abs(pos).max() * 2.2e-16
+    tmax = np.abs(times).max()
+    rates = _rate_indices(kep._nwobbles)
+
+    tweaked = KeplerPath(kep._planet, kep._epoch, kep._elements.copy(), kep._observer,
+                         wobbles=kep._wobbles)
     params = kep.get_elements()
 
-    # Loop through parameters...
-    errors = np.zeros(np.shape(t) + (3,kep._nelements))
+    errors = np.zeros(kep._nelements)
+    limits = np.zeros(kep._nelements)
+    checked = np.zeros(kep._nelements, dtype='bool')
     for e in range(kep._nelements):
+        d_analytic = analytic[..., :, e]
+        biggest = np.linalg.norm(d_analytic, axis=-1).max()
 
-        # Tweak one parameter
+        cap = _PHASE_STEP / tmax if e in rates else _PHASE_STEP
+        step = min(target / biggest, cap) if biggest > 0. else cap
+
         hi = params.copy()
         lo = params.copy()
+        hi[e] += step
+        lo[e] -= step
 
-        if params[e] == 0.:
-            hi[e] += delta
-            lo[e] -= delta
-        else:
-            hi[e] *= 1. + delta
-            lo[e] *= 1. - delta
+        tweaked.set_params(hi)
+        pos_hi = _positions(tweaked, times, observer)
+        tweaked.set_params(lo)
+        pos_lo = _positions(tweaked, times, observer)
 
-        denom = hi[e] - lo[e]
+        d_numeric = (pos_hi - pos_lo) / (2. * step)
+        scale = np.linalg.norm(d_numeric, axis=-1).max()
 
-        khi.set_params(hi)
-        klo.set_params(lo)
+        errors[e] = np.linalg.norm(d_analytic - d_numeric, axis=-1).max() / max(scale,
+                                                                               1.e-300)
+        # An element whose difference barely clears the round-off in the two positions
+        # cannot be validated at all; one that clears it by a wide margin can be held to
+        # a correspondingly tighter error.
+        signal_to_noise = scale * step / roundoff
+        limits[e] = _NOISE_MARGIN / signal_to_noise
+        checked[e] = signal_to_noise > _MIN_SIGNAL_TO_NOISE
 
-        # Compare the change with that derived from the partial derivative
-        xyz_hi = khi.event_at_time(t, partials=False).pos.vals
-        xyz_lo = klo.event_at_time(t, partials=False).pos.vals
-        hi_lo_diff = xyz_hi - xyz_lo
+    return (errors, limits, checked)
 
-        errors[...,:,e] = ((d_xyz_d_elem[...,:,e] * denom - hi_lo_diff) /
-                           pos_norm[...,np.newaxis])
 
-    return errors
+def _velocity_errors(kep, times, dt=1.):
+    """Relative errors in the analytic velocity, one value per time.
 
-@pytest.fixture(autouse=True)
+    The velocity returned with the position is compared against a central difference of
+    the position in time.
+
+    Parameters:
+        kep (KeplerPath): The path to test.
+        times (array): Times in seconds TDB.
+        dt (float, optional): Time step for the central difference, in seconds; default 1.
+
+    Returns:
+        ndarray: The relative error at each time.
+    """
+
+    (_, d_pos_dt) = kep._xyz_planet(times, partials=True)
+
+    pos_hi = kep._xyz_planet(times + dt, partials=False)[0].vals
+    pos_lo = kep._xyz_planet(times - dt, partials=False)[0].vals
+    numeric = (pos_hi - pos_lo) / (2. * dt)
+
+    return (np.linalg.norm(d_pos_dt.vals - numeric, axis=-1)
+            / np.linalg.norm(numeric, axis=-1))
+
+
+def _kepler(extra=(), wobbles=(), **kwargs):
+    """A KeplerPath about Saturn using the standard test orbit.
+
+    Parameters:
+        extra (tuple, optional): Additional elements appended for the wobbles.
+        wobbles (tuple, optional): Names of the wobbles to apply.
+        **kwargs: Any further keyword arguments for the KeplerPath constructor.
+
+    Returns:
+        KeplerPath: The path, observed from Earth unless an observer is given.
+    """
+
+    saturn = Gravity.lookup('SATURN')
+    elements = (_A, 1., saturn.n(_A),
+                0.2, 3., saturn.dperi_dt(_A),
+                0.1, 5., saturn.dnode_dt(_A)) + extra
+
+    kwargs.setdefault('observer', Path.as_path('EARTH'))
+    return KeplerPath(Body.lookup('SATURN'), 0., elements, wobbles=wobbles, **kwargs)
+
+
+def _orbits():
+    """The (id, extra elements, wobble names) of each orbit exercised by the tests.
+
+    Returns:
+        list[tuple]: One entry per orbit, suitable for parametrization.
+    """
+
+    saturn = Gravity.lookup('SATURN')
+    n = saturn.n(_A)
+    dperi_dt = saturn.dperi_dt(_A)
+    dnode_dt = saturn.dnode_dt(_A)
+
+    return [
+        ('no wobble', (), ()),
+        ('mean+peri+node', (n * 0.10, 2., n / 100.,
+                            dperi_dt * 0.08, 4., n / 50.,
+                            dnode_dt * 0.12, 6., n / 200.), ('mean', 'peri', 'node')),
+        ('a',   (_A * 0.10, 2., n / 100.), ('a',)),
+        ('e',   (0.1, 4., n / 50.), ('e',)),
+        ('i',   (0.15, 2., n / 150.), ('i',)),
+        ('e2d', (1.e-4, 3., dperi_dt / 100.), ('e2d',)),
+        ('i2d', (1.e-4, 2., dnode_dt / 150.), ('i2d',)),
+        ('i2d+e2d+a', (1.e-4, 2., dperi_dt / 150.,
+                       2.e-4, 3., dnode_dt / 200.,
+                       _A * 1.e-3, 4., n / 150.), ('i2d', 'e2d', 'a')),
+    ]
+
+
+@pytest.fixture(scope="module", autouse=True)
 def _solar_system():
     Body.reset_registry()
     Body._undefine_solar_system()
     Body.define_solar_system("2000-01-01", "2010-01-01")
+    yield
+    Frame._reset_caches()
+    Path._reset_caches()
+    Body.reset_registry()
 
-def test_keplerpath():
-    from oops.body import Body
 
-    # SEMIM = 0    elements[SEMIM] = semimajor axis (km)
-    # MEAN0 = 1    elements[MEAN0] = mean longitude at epoch (radians)
-    # DMEAN = 2    elements[DMEAN] = mean motion (radians/s)
-    # ECCEN = 3    elements[ECCEN] = eccentricity
-    # PERI0 = 4    elements[PERI0] = pericenter at epoch (radians)
-    # DPERI = 5    elements[DPERI] = pericenter precession rate (radians/s)
-    # INCLI = 6    elements[INCLI] = inclination (radians)
-    # NODE0 = 7    elements[NODE0] = longitude of ascending node at epoch
-    # DNODE = 8    elements[DNODE] = nodal regression rate (radians/s)
+@pytest.fixture(params=_orbits(), ids=lambda orbit: orbit[0])
+def orbit(request):
+    """One test orbit, as (extra elements, wobble names)."""
 
-    a = 140000.
+    return request.param[1:]
+
+
+def test_element_partials_in_planet_frame(orbit) -> None:
+    """Each analytic partial matches a central finite difference in the planet's frame."""
+
+    kep = _kepler(*orbit)
+    (errors, limits, checked) = _element_partial_errors(kep, TIMES)
+
+    assert np.all(checked), f'element(s) {np.where(~checked)[0]} could not be tested'
+
+    allowed = np.maximum(_TOLERANCE, limits)
+    worst = (errors / allowed).argmax()
+    assert errors[worst] < allowed[worst], (f'element {worst}: {errors[worst]:.3e} '
+                                            f'exceeds {allowed[worst]:.3e}')
+
+
+def test_element_partials_in_observer_frame(orbit) -> None:
+    """Each analytic partial matches a finite difference in the observer's frame.
+
+    Differencing against the distance to the observer costs several digits to
+    cancellation, so the elements whose signal falls into the round-off are skipped; the
+    planet-frame test covers every element.
+    """
+
+    kep = _kepler(*orbit)
+    (errors, limits, checked) = _element_partial_errors(kep, TIMES, observer=True)
+
+    # The nine orbital elements are always strong enough to test.
+    assert np.all(checked[:_NBASE])
+
+    allowed = np.maximum(_TOLERANCE, limits)
+    worst = np.where(checked, errors / allowed, 0.).argmax()
+    assert errors[worst] < allowed[worst], (f'element {worst}: {errors[worst]:.3e} '
+                                            f'exceeds {allowed[worst]:.3e}')
+
+
+def test_velocity_matches_position_derivative(orbit) -> None:
+    """The velocity returned with the position is its derivative in time."""
+
+    kep = _kepler(*orbit)
+
+    assert _velocity_errors(kep, TIMES).max() < 1.e-6
+
+
+def test_partials_of_a_wobble_are_nonzero() -> None:
+    """A wobble contributes to the partials of the elements it modifies.
+
+    Its own elements move the body, and the partials of the underlying orbital element
+    differ from those of the same orbit without the wobble.
+    """
 
     saturn = Gravity.lookup('SATURN')
-    dmean_dt = saturn.n(a)
-    dperi_dt = saturn.dperi_dt(a)
-    dnode_dt = saturn.dnode_dt(a)
+    n = saturn.n(_A)
 
-    TIMESTEPS = 100
-    time = 3600. * np.arange(TIMESTEPS)
+    plain = _kepler()
+    wobbled = _kepler((0.1, 4., n / 50.), ('e',))
 
-    kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                   (a, 1., dmean_dt, 0.2, 3., dperi_dt, 0.1, 5., dnode_dt),
-                   Path.as_path("EARTH"))
+    d_plain = _partials(plain, TIMES, observer=False)
+    d_wobbled = _partials(wobbled, TIMES, observer=False)
 
-    errors = _xyz_planet_derivative_test(kep, time)
-    assert np.max(np.abs(errors)) < 1.e-8
+    # The three elements of the wobble itself move the body.
+    for e in range(_NBASE, wobbled._nelements):
+        assert np.abs(d_wobbled[..., :, e]).max() > 0.
 
-    errors = _pos_derivative_test(kep, time)
-    assert np.max(np.abs(errors)) < 1.e-8
+    # The eccentricity partial is changed by the wobble that modulates it.
+    eccen = 3
+    difference = np.abs(d_wobbled[..., :, eccen] - d_plain[..., :, eccen]).max()
+    assert difference > 0.01 * np.abs(d_plain[..., :, eccen]).max()
 
-    ######################################################################################
 
-    kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                   (a, 1., dmean_dt,
-                    0.2, 3., dperi_dt,
-                    0.1, 5., dnode_dt,
-                    dmean_dt * 0.10, 2., dmean_dt / 100.,
-                    dperi_dt * 0.08, 4., dmean_dt / 50.,
-                    dnode_dt * 0.12, 6., dmean_dt / 200.),
-                   Path.as_path("EARTH"), wobbles=('mean', 'peri', 'node'))
+def test_photon_to_event_without_observer() -> None:
+    """Without an observer, the light time is solved to the body itself."""
 
-    errors = _xyz_planet_derivative_test(kep, time)
-    assert np.max(np.abs(errors)) < 1.e-8
-
-    errors = _pos_derivative_test(kep, time)
-    assert np.max(np.abs(errors)) < 1.e-8
-
-    ######################################################################################
-
-    kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                   (a, 1., dmean_dt,
-                    0.2, 3., dperi_dt,
-                    0.1, 5., dnode_dt,
-                    a * 0.10, 2., dmean_dt / 100.),
-                   Path.as_path("EARTH"), wobbles=('a',))
-
-    errors = _xyz_planet_derivative_test(kep, time)
-    assert np.max(np.abs(errors)) < 1.e-7
-
-    errors = _pos_derivative_test(kep, time)
-    assert np.max(np.abs(errors)) < 1.e-5
-
-    ######################################################################################
-
-    kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                   (a, 1., dmean_dt,
-                    0.2, 3., dperi_dt,
-                    0.1, 5., dnode_dt,
-                    0.1, 4., dmean_dt / 50.),
-                   Path.as_path("EARTH"), wobbles=('e',))
-
-    errors = _xyz_planet_derivative_test(kep, time)
-    assert np.max(np.abs(errors)) < 3.e-7
-
-    errors = _pos_derivative_test(kep, time)
-    assert np.max(np.abs(errors)) < 3.e-5
-
-    ######################################################################################
-
-    kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                   (a, 1., dmean_dt,
-                    0.2, 3., dperi_dt,
-                    0.1, 5., dnode_dt,
-                    0.15, 2., dmean_dt / 150.),
-                   Path.as_path("EARTH"), wobbles=('i',))
-
-    errors = _xyz_planet_derivative_test(kep, time)
-    assert np.max(np.abs(errors)) < 1.e-7
-
-    errors = _pos_derivative_test(kep, time)
-    assert np.max(np.abs(errors)) < 1.e-5
-
-    ######################################################################################
-
-    kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                   (a, 1., dmean_dt,
-                    0.2, 3., dperi_dt,
-                    0.1, 5., dnode_dt,
-                    1.e-4, 3., dperi_dt/100.),
-                   Path.as_path("EARTH"), wobbles=('e2d',))
-
-    errors = _xyz_planet_derivative_test(kep, time)
-    assert np.max(np.abs(errors)) < 1.e-5
-
-    errors = _pos_derivative_test(kep, time)
-    assert np.max(np.abs(errors)) < 1.e-4
-
-    ######################################################################################
-
-    kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                   (a, 1., dmean_dt,
-                    0.2, 3., dperi_dt,
-                    0.1, 5., dnode_dt,
-                    1.e-4, 2., dnode_dt/150.),
-                   Path.as_path("EARTH"), wobbles=('i2d',))
-
-    errors = _xyz_planet_derivative_test(kep, time)
-    assert np.max(np.abs(errors)) < 1.e-6
-
-    errors = _pos_derivative_test(kep, time)
-    assert np.max(np.abs(errors)) < 1.e-5
-
-    ######################################################################################
-
-    kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                   (a, 1., dmean_dt,
-                    0.2, 3., dperi_dt,
-                    0.1, 5., dnode_dt,
-                    1.e-4, 2., dperi_dt/150.,
-                    2.e-4, 3., dnode_dt/200.,
-                    a * 1.e-3, 4., dmean_dt/150.),
-                   Path.as_path("EARTH"), wobbles=('i2d','e2d','a'))
-
-    errors = _xyz_planet_derivative_test(kep, time)
-    assert np.max(np.abs(errors)) < 1.e-5
-
-    errors = _pos_derivative_test(kep, time)
-    assert np.max(np.abs(errors)) < 1.e-4
-
-    ######################################################################################
-    # Photon solution without an observer, which returns events in the ring frame
-    ######################################################################################
-
-    kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                   (a, 1., dmean_dt, 0.2, 3., dperi_dt, 0.1, 5., dnode_dt),
-                   path_id='kepler_unobserved')
+    kep = _kepler(observer=None, path_id='kepler_unobserved')
 
     arrival_time = Scalar(1.e8 + np.arange(5) * 100.)
     arrival = Event(arrival_time, (Vector3.ZERO, Vector3.ZERO), 'EARTH', 'J2000')
-    (path_event, arrival_event) = kep.photon_to_event(arrival)
+    (path_event, _) = kep.photon_to_event(arrival)
 
-    # Here the light travel time is solved to the body itself, so the ray length and
-    # the light travel time agree exactly
+    # The ray length and the light travel time agree exactly.
     ratio = (path_event.dep_j2000.norm() / (C * path_event.dep_lt)).vals
     assert np.max(np.abs(ratio - 1.)) < 1.e-12
 
-    ######################################################################################
-    # Photon solution when an observer is defined
-    ######################################################################################
 
-    kep = KeplerPath(Body.lookup("SATURN"), 0.,
-                   (a, 1., dmean_dt, 0.2, 3., dperi_dt, 0.1, 5., dnode_dt),
-                   Path.as_path("EARTH"), path_id='kepler_observed')
+def test_photon_to_event_with_observer() -> None:
+    """With an observer, the light time is solved to the planet rather than the body."""
+
+    kep = _kepler(path_id='kepler_observed')
 
     arrival_time = Scalar(1.e8 + np.arange(5) * 100.)
     arrival = Event(arrival_time, (Vector3.ZERO, Vector3.ZERO), 'EARTH', 'J2000')
     (path_event, arrival_event) = kep.photon_to_event(arrival)
 
-    # The photon departs before it arrives, so the departure time is measured
-    # forward and the arrival time backward, as in Path._solve_photon
+    # The photon departs before it arrives, so the departure time is measured forward and
+    # the arrival time backward, as in Path._solve_photon.
     assert np.all(path_event.time.vals < arrival_time.vals)
     assert np.all(path_event.dep_lt.vals > 0.)
     assert np.all(arrival_event.arr_lt.vals < 0.)
     assert arrival_event.arr_lt == -path_event.dep_lt
 
-    # The ray is the same vector at both ends, and its length is the distance the
-    # photon travels. The light time is solved to the planet rather than to the body
-    # itself, so the two agree only to the radial part of the orbital offset divided
-    # by the range, which is bounded by 1e-4 for this orbit.
+    # The ray is the same vector at both ends. Its length matches the light travel time
+    # only to the radial part of the orbital offset divided by the range, which is
+    # bounded by 1e-4 for this orbit.
     assert arrival_event.arr_j2000 == path_event.dep_j2000
     ratio = (path_event.dep_j2000.norm() / (C * path_event.dep_lt)).vals
     assert np.max(np.abs(ratio - 1.)) < 1.e-4
 
-    # The departure precedes the arrival by exactly the light travel time
-    assert np.all(path_event.time.vals < arrival_time.vals)
+    # The departure precedes the arrival by exactly the light travel time.
     assert arrival_time - path_event.time == path_event.dep_lt
 
-    Frame._reset_caches()
-    Path._reset_caches()
-    Body.reset_registry()
 ##########################################################################################
