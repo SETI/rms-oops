@@ -20,17 +20,16 @@ class WCSFOV(FOV):
     purposes.
 
     Properties:
-        * header (dict): The given FITS header.
-        * ref_axis (str): The reference axis, "x" or "y". This is the image axis used to
-          define the FOV's frame. It is needed because the axes can be slightly skewed.
-        * ra (float): Apparent right ascension at the reference point in the image, in
-          radians.
-        * dec (float): Apparent declination at the reference point in the image, in
-          radians.
-        * clock (float): Clock angle for celestial north in the image, in radians.
-        * cmatrix (Cmatrix): A Cmatrix frame that rotates apparent J2000 coordinates into
-          the camera FOV, based on the WCS parameters provided. It is useful for
-          consistency testing and as a starting point for a Frame definition.
+        header (dict): The given FITS header.
+        ref_axis (str): The reference axis, "x" or "y". This is the image axis used to
+            define the FOV's frame. It is needed because the axes can be slightly skewed.
+        ra (float): Apparent right ascension at the reference point in the image, in
+            radians.
+        dec (float): Apparent declination at the reference point in the image, in radians.
+        clock (float): Clock angle for celestial north in the image, in radians.
+        cmatrix (Cmatrix): A Cmatrix frame that rotates apparent J2000 coordinates into
+            the camera FOV, based on the WCS parameters provided. It is useful for
+            consistency testing and as a starting point for a Frame definition.
 
     The standard FOV properties `uv_los`, `uv_scale`, `uv_shape` and `uv_area` are also
     defined.

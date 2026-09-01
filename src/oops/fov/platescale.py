@@ -2,15 +2,15 @@
 # oops/fov/platescale.py
 ##########################################################################################
 
+from polymath      import Pair
 from oops.fittable import Fittable
 from oops.fov      import FOV
-from polymath      import Pair
 
 
 class Platescale(FOV, Fittable):
     """An FOV defined by applying a plate scale to another FOV."""
 
-    def __init__(self, factor, /, fov):
+    def __init__(self, factor, fov):
         """Constructor for a Platescale FOV.
 
         Parameters:

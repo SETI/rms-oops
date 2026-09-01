@@ -2,8 +2,9 @@
 # oops/fov/polynomialfov.py
 ##########################################################################################
 
-import numpy as np
 import sys
+
+import numpy as np
 
 from polymath         import Pair
 from oops.config      import LOGGING
@@ -94,8 +95,7 @@ class PolynomialFOV(FOV):
         if uv_los is None:
             self.uv_los = self.uv_shape / 2.
         else:
-            self.uv_los = Pair.as_pair(uv_los).as_float()
-            self.uv_los.as_readonly()
+            self.uv_los = Pair.as_pair(uv_los).as_float().as_readonly()
 
         # Required attribute uv_scale...
 
