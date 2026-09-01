@@ -3,6 +3,7 @@
 ##########################################################################################
 
 import numpy as np
+import pytest
 
 from polymath               import Scalar, Vector3
 from oops.frame.frame_      import Frame
@@ -252,4 +253,52 @@ def test_ellipsoid():
         dt_dpos = (t1 - t2) / (2*eps)
         ref = t.d_dpos.vals[...,i]
         assert abs(dt_dpos/ref - 1).max() < 1.e-5
+
+
+@pytest.mark.parametrize('elevation', [0., 10., 50., 200.])
+def test_vector3_from_coords_derivatives_include_the_normal(elevation) -> None:
+    """The position derivatives account for the normal direction turning with lon and lat.
+
+    Above the surface the offset runs along the normal, whose direction varies with the
+    coordinates, so its derivative belongs in the result. Dropping it leaves the answer
+    wrong by several percent at a modest elevation.
+    """
+
+    surface = Ellipsoid('SSB', 'J2000', (1000., 800., 600.))
+    (lon, lat) = (0.7, 0.4)
+
+    for (key, dlon, dlat) in [('lon', 1., 0.), ('lat', 0., 1.)]:
+        lon_ = Scalar(lon)
+        lon_.insert_deriv(key, Scalar(dlon))
+        lat_ = Scalar(lat)
+        lat_.insert_deriv(key, Scalar(dlat))
+        pos = surface.vector3_from_coords((lon_, lat_, Scalar(elevation)), derivs=True)
+        analytic = pos.derivs[key].vals
+
+        eps = 1.e-6
+        above = surface.vector3_from_coords((Scalar(lon + eps*dlon),
+                                            Scalar(lat + eps*dlat),
+                                            Scalar(elevation))).vals
+        below = surface.vector3_from_coords((Scalar(lon - eps*dlon),
+                                            Scalar(lat - eps*dlat),
+                                            Scalar(elevation))).vals
+        numeric = (above - below) / (2. * eps)
+
+        error = np.linalg.norm(analytic - numeric) / np.linalg.norm(numeric)
+        assert error < 1.e-8
+
+
+def test_intercept_rejects_an_unrecognized_direction() -> None:
+    """A direction that is neither "arr" nor "dep" is refused rather than assumed."""
+
+    surface = Ellipsoid('SSB', 'J2000', (1000., 800., 600.))
+    obs = Vector3((5000., 0., 0.))
+    los = Vector3((-1., 0., 0.))
+
+    for direction in ('arr', 'dep'):
+        surface.intercept(obs, los, direction=direction)
+
+    with pytest.raises(ValueError, match='invalid direction'):
+        surface.intercept(obs, los, direction='ARR')
+
 ##########################################################################################

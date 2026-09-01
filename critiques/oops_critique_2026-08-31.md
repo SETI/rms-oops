@@ -26,7 +26,7 @@ deviations), SUGGESTION (improvements needing an owner decision).
 | `oops/backplane` | 15 | 69 | 49 | 9 | 9 |
 | **Total** | **118** | **327** | **170** | **90** | **76** |
 
-These counts describe the review as first delivered. Work continued afterward, and 26 of
+These counts describe the review as first delivered. Work continued afterward, and 28 of
 the findings it left open have since been resolved; each is labelled **(fixed after
 review)** in place of "(not fixed)", with its entry saying what was done. A few defects
 found during that later work are labelled **(found after review, fixed)** and were added
@@ -1029,13 +1029,24 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
   recommended" — contradictory). Resolved after this review: the parameter was removed
   from `Ellipsoid` and `Spheroid` in favor of a zone derived from the radii, so neither
   the default nor the recommendation survives.
-- **[SUGGESTION] (not fixed)** `ellipsoid.py:225` — In `vector3_from_coords`, the
+- **[BUG] (fixed after review)** `ellipsoid.py:225` — In `vector3_from_coords`, the
   z-offset direction is computed with `self.normal(track)` (no `derivs=derivs`), so
   when `derivs=True` the derivative contribution of the normal direction with respect
-  to lon/lat is dropped from the returned position. Possibly intentional (small
-  effect), but inconsistent with the rest of the derivative plumbing.
-- **[SUGGESTION] (not fixed)** `ellipsoid.py:340` — `intercept` treats any `direction`
-  value other than `'dep'` as `'arr'`; an invalid string is silently accepted.
+  to lon/lat is dropped from the returned position. Reclassified from a suggestion after
+  measurement: the effect is not small. On a 1000x800x600 km body at an elevation of
+  50 km, the returned d(pos)/d(lat) was wrong by 8.7%, growing with elevation and
+  vanishing only at the surface. Passing `derivs=derivs` brings it to within 1e-11 of a
+  central difference at every elevation tested. Nothing covered it; a parametrized test
+  now does, and it fails at 50 km and above against the old code.
+- **[SUGGESTION] (fixed after review)** `ellipsoid.py:340` — `intercept` treats any
+  `direction` value other than `'dep'` as `'arr'`; an invalid string is silently
+  accepted. It now raises ValueError, which the docstring records.
+
+  Worth noting for whoever revisits this method: the two branches compute the same
+  value. `-c/(b + d)` is the numerically stable rewriting of `(d - b)/a`, the larger
+  root, so `direction` selects nothing. Confirmed across four geometries, including an
+  observer inside the body. Whether that is intended, and which root each direction
+  ought to select, is a question this critique does not answer.
 
 ### src/oops/surface/spheroid.py
 - **[BUG] (fixed)** `spheroid.py:219-220` — The non-convergence warning in

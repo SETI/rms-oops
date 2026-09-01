@@ -11,24 +11,26 @@ from oops.frame.frame_     import Frame
 from oops.path.path_       import Path
 from oops.surface.surface_ import Surface
 
-# The z-coordinate becomes poorly behaved near the evolute of the ellipsoid. For radii
-# a >= b >= c, the smallest radius of curvature anywhere on the surface is c^2/a, at the
-# ends of the longest axis, so the evolute reaches to within that distance of the
-# surface and z <= -c^2/a is ruled out. We exclude z < -g c^2/a, keeping a margin below
-# that depth. In "unsquashed" coordinates, where the surface becomes a sphere of radius
-# a, this excludes a sphere about the center of radius a + z = a - g c^2/a.
+# A `z`-coordinate measured normal to the surface becomes poorly behaved near the evolute
+# of the ellipsoid. For radii `a >= b >= c`, the smallest radius of curvature anywhere on
+# the surface is `c^2/a`, at the ends of the longest axis, so the evolute reaches to
+# within that distance of the surface and `z <= -c^2/a` is ruled out. We exclude `z < -g
+# c^2/a`, keeping a margin below that depth. In "unsquashed" coordinates, where the
+# surface becomes a sphere of radius `a`, this excludes a sphere about the center of
+# radius `a + z = a - g c^2/a`.
 #
-# A factor of 1 would put the boundary on the evolute itself, where intercept_normal_to()
-# fails outright. Accuracy degrades well before that: measured over a range of axis
-# ratios, the intercepts returned for unmasked interior positions hold to a few parts in
-# 1e14 of the radius up to a factor near 0.55, and lose several digits by 0.8. This value
-# keeps the full precision with a wide margin below the evolute.
+# A `g` factor of 1 would put the boundary on the evolute itself, where
+# `intercept_normal_to()` fails outright. Accuracy degrades well before that: measured
+# over a range of axis ratios, the intercepts returned for unmasked interior positions
+# hold to a few parts in 1e14 of the radius up to a factor near 0.55, and lose several
+# digits by 0.8. This value keeps the full precision with a wide margin below the evolute.
 #
-# For a body flatter than about c/a = 0.83, the evolute also reaches beyond this sphere
+# For a body flatter than about `c/a = 0.83`, the evolute also reaches beyond this sphere
 # along the polar axis, but only outside the surface, where masking would discard
 # legitimate positions. Those positions are limited by the convergence of
-# intercept_normal_to() rather than by this zone, so no exclusion radius can address them.
-_EXCLUSION_FACTOR = 0.5     # This is `g` in the above explanation
+# `intercept_normal_to()` rather than by this zone, so no exclusion radius can address
+# them.
+_EXCLUSION_FACTOR = 0.5     # This is `g` in the above discussion
 
 
 class Ellipsoid(Surface):
@@ -235,8 +237,9 @@ class Ellipsoid(Surface):
             results = (track, track)
 
         else:
-            # Add the z-component
-            normal = self.normal(track)
+            # Add the z-component. The normal direction varies with lon and lat, so its
+            # derivatives belong in the result along with those of the groundtrack.
+            normal = self.normal(track, derivs=derivs)
             results = (track + (coords[2] / normal.norm()) * normal, track)
 
         extras = ()
@@ -295,6 +298,9 @@ class Ellipsoid(Surface):
               origin and frame, in km.
             * `t` (Scalar): Such that `intercept = obs + t * los`.
             * `hints` (Any): The input value of `hints`, included if it is not None.
+
+        Raises:
+            ValueError: If `direction` is neither "arr" nor "dep".
         """
 
         # Convert to Vector3 and un-squash
@@ -353,8 +359,10 @@ class Ellipsoid(Surface):
 
         if direction == 'dep':                  # Case 1
             t = -c / (b_div2 + d_div4.sqrt())
-        else:                                   # Case 2
+        elif direction == 'arr':                # Case 2
             t = (d_div4.sqrt() - b_div2) / a
+        else:
+            raise ValueError('invalid direction: ' + repr(direction))
 
         pos = obs + t*los
 
