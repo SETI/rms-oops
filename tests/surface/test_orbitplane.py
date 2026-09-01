@@ -3,6 +3,7 @@
 ##########################################################################################
 
 import numpy as np
+import pytest
 
 from polymath                import Scalar, Vector3
 from oops.constants          import PI, HALFPI, TWOPI, RPD
@@ -330,6 +331,19 @@ def _kepler_velocity_error(orbit, e):
     return worst
 
 
+def _kepler_orbit(e):
+    """An OrbitPlane with the given eccentricity, for the anomaly conversions.
+
+    Parameters:
+        e (float): The orbital eccentricity.
+
+    Returns:
+        OrbitPlane: The orbit, unregistered.
+    """
+
+    return OrbitPlane((_A, 0., _N, e, 0., 0.), 0., 'SSB', 'J2000')
+
+
 def test_velocity_of_a_circular_orbit() -> None:
     """A circular orbit moves at the mean motion, perpendicular to its radius."""
 
@@ -359,5 +373,42 @@ def test_velocity_error_is_second_order_in_eccentricity() -> None:
 
     for (coarse, fine) in zip(errors[:-1], errors[1:]):
         assert 3.5 < coarse / fine < 4.5
+
+
+def test_to_mean_anomaly_inverts_from_mean_anomaly() -> None:
+    """The two conversions are exact inverses for an eccentricity the model can solve."""
+
+    lon = Scalar(np.arange(0., TWOPI, 0.01))
+
+    for e in (0.001, 0.01, 0.1, 0.3, 0.45):
+        orbit = _kepler_orbit(e)
+        assert abs(orbit.from_mean_anomaly(orbit.to_mean_anomaly(lon))
+                   - lon).max(builtins=True) < 1.e-14
+
+
+def test_to_mean_anomaly_reports_a_failure_to_converge() -> None:
+    """An eccentricity the iteration cannot solve raises rather than returning a guess.
+
+    The derivative of the longitude with respect to the anomaly approaches zero as the
+    eccentricity approaches 0.5, so Newton's method breaks down there. It used to stop at
+    whatever it had reached and return it, a value that could be many radians wrong.
+    """
+
+    lon = Scalar(np.arange(0., TWOPI, 0.01))
+
+    for e in (0.5, 0.8):
+        with pytest.raises(ValueError, match='did not converge'):
+            _kepler_orbit(e).to_mean_anomaly(lon)
+
+
+def test_to_mean_anomaly_accepts_masked_longitudes() -> None:
+    """A masked longitude has nothing to solve and must not be read as a failure."""
+
+    orbit = _kepler_orbit(0.2)
+
+    assert np.all(orbit.to_mean_anomaly(Scalar([1., 2., 3.], mask=True)).mask)
+
+    partly = orbit.to_mean_anomaly(Scalar([1., 2., 3.], mask=[False, True, False]))
+    assert list(partly.mask) == [False, True, False]
 
 ##########################################################################################

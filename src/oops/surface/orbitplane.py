@@ -14,6 +14,12 @@ from oops.path.circlepath     import CirclePath
 from oops.surface.surface_    import Surface
 from oops.surface.ringplane   import RingPlane
 
+# Newton's method in to_mean_anomaly() reaches the floating-point floor, a few times 1e-16
+# radians, within about six steps for any eccentricity it can solve. The cap is generous
+# enough that reaching it means the iteration is not converging at all.
+_ANOMALY_ITERATIONS = 20
+_ANOMALY_PRECISION = 1.e-14         # radians
+
 
 class OrbitPlane(Surface):
     """A subclass of the Surface class describing a flat surface sharing its geometric
@@ -40,18 +46,19 @@ class OrbitPlane(Surface):
         Parameters:
             elements (tuple[float, ...]): 3, 6, or 9 orbital elements. In order, they are:
 
-            * `a` (km): mean radius of the orbit.
-            * `lon` (rad): Mean longitude at epoch of a reference object. This is
-              provided if the user wishes to track a moving body in the plane. However, it
-              does not affect the Surface or its coordinate system.
-            * `n` (rad/s): The mean motion of a body orbiting within the ring. This
-              affects velocities returned but not the Surface or its coordinate system.
-            * `e`: Orbital eccentricity.
-            * `peri` (rad): Longitude of pericenter at epoch.
-            * `prec` (rad/s): Pericenter precession rate.
-            * `i` (rad): Inclination.
-            * `node` (rad): Longitude of ascending node at epoch.
-            * `regr` (rad/s): Nodal regression rate, always negative.
+                * `a` (km): mean radius of the orbit.
+                * `lon` (rad): Mean longitude at epoch of a reference object. This is
+                  provided if the user wishes to track a moving body in the plane.
+                  However, it does not affect the Surface or its coordinate system.
+                * `n` (rad/s): The mean motion of a body orbiting within the ring. This
+                  affects velocities returned but not the Surface or its coordinate
+                  system.
+                * `e`: Orbital eccentricity.
+                * `peri` (rad): Longitude of pericenter at epoch.
+                * `prec` (rad/s): Pericenter precession rate.
+                * `i` (rad): Inclination.
+                * `node` (rad): Longitude of ascending node at epoch.
+                * `regr` (rad/s): Nodal regression rate, always negative.
 
             epoch (Scalar): The time TDB relative to which the orbital elements are
                 defined.
@@ -415,6 +422,13 @@ class OrbitPlane(Surface):
 
         Returns:
             Scalar: The mean anomaly in radians.
+
+        Raises:
+            ValueError: If the iteration does not converge. The derivative of
+                `lon = anom + 2e sin(anom)` is `1 + 2e cos(anom)`, which approaches zero
+                as the eccentricity approaches 0.5, so the iteration becomes
+                ill-conditioned near that value and fails at and beyond it. Such an orbit
+                is outside the range this first-order model describes.
         """
 
         lon = Scalar.as_scalar(lon)
@@ -434,15 +448,23 @@ class OrbitPlane(Surface):
         e_x2 = 2 * self._e
         x = lon - e_x2 * lon.sin()
 
-        # Iterate until all improvement ceases. Should not take long
-        prev_max_abs_dx = TWOPI
+        # Iterate until the correction stops shrinking, which happens at the precision
+        # floor after a few steps. A fully masked input has nothing to solve.
         max_abs_dx = PI
-        while (max_abs_dx < prev_max_abs_dx):
+        for _ in range(_ANOMALY_ITERATIONS):
             dx = (lon - x - e_x2 * x.sin()) / (x.cos() * e_x2 + 1)
             x += dx
 
             prev_max_abs_dx = max_abs_dx
-            max_abs_dx = abs(dx).max()
+            max_abs_dx = abs(dx).max(builtins=True, masked=0.)
+
+            if max_abs_dx <= _ANOMALY_PRECISION or max_abs_dx >= prev_max_abs_dx:
+                break
+
+        if max_abs_dx > _ANOMALY_PRECISION:
+            raise ValueError(f'{type(self).__name__}.to_mean_anomaly() did not converge '
+                             f'for eccentricity {self._e}: remaining change is '
+                             f'{max_abs_dx:.6g} radians')
 
         return x
 
