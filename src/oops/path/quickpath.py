@@ -345,7 +345,9 @@ class QuickPath(Path):
             QuickPath is extended to cover the full range and returned.
         """
 
-        if not isinstance(quick, (dict, NoneType)) and quick != False:
+        # Compare with != rather than `is not`, because a numpy False is not the
+        # False singleton and `is not False` would wrongly accept it
+        if not isinstance(quick, (dict, NoneType)) and quick != False:  # noqa: E712
             raise ValueError('invalid `quick` input, must be dict, None, or False')
 
         if isinstance(path, QuickPath):     # a QuickPath is already quick

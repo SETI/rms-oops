@@ -2,8 +2,6 @@
 # oops/frame/laplaceframe.py
 ##########################################################################################
 
-import numpy as np
-
 from polymath       import Matrix3, Qube, Scalar, Vector3
 from oops.cache     import Cache
 from oops.frame     import Frame
