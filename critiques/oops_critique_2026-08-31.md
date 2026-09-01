@@ -26,6 +26,15 @@ deviations), SUGGESTION (improvements needing an owner decision).
 | `oops/backplane` | 15 | 69 | 49 | 9 | 9 |
 | **Total** | **118** | **327** | **170** | **90** | **76** |
 
+These counts describe the review as first delivered. Work continued afterward, and 26 of
+the findings it left open have since been resolved; each is labelled **(fixed after
+review)** in place of "(not fixed)", with its entry saying what was done. A few defects
+found during that later work are labelled **(found after review, fixed)** and were added
+to the file where they belong. The longer pieces of work have their own sections:
+"Strengthening the KeplerPath derivative tests", "Replacing the exclusion parameter",
+"Completing the backplane docstrings", and "Fixing the FOV caches". One module,
+`oops/utils.py`, was deleted outright; its section explains why.
+
 ## Headline defects (fixed)
 
 - **`Event` pickling was completely broken** (`event.py`): `__getstate__` stored `None`
@@ -41,7 +50,9 @@ deviations), SUGGESTION (improvements needing an owner decision).
   required** in `lon = M + 2e sin M` (velocity, `from_mean_anomaly`, `to_mean_anomaly`).
   Tests use a=1 where the two coincide, hiding the bug; for real rings (e.g. Uranian,
   a ~ 50,000 km) eccentric-ring velocities were wrong by orders of magnitude. This is a
-  behavior change that could shift gold-master values.
+  behavior change that could shift gold-master values. A second, independent error in the
+  same routine — the pericenter offset applied in the wrong direction, a first-order
+  velocity error — was found later and is described in the `orbitplane.py` section.
 - **Latent crashes in untested modules**: unpickling any `SpiceType1Frame`; `RingPlane`
   constructed with radii but no gravity (which also broke `OrbitPlane` with radii);
   OrbitPlane/Ansa unpickling and `Limb(limits=...)` (keyword-only fallout);
@@ -53,37 +64,56 @@ deviations), SUGGESTION (improvements needing an owner decision).
   swapped (u,v) in `uv_shape` (masked until now by square detectors).
 - Every `oops/backplane` module banner named the package `oops/backplanes/`; 14 fixed.
 
-## Most important unfixed issues (owner decisions)
+## Most important issues left for the owner
+
+Most of these were resolved in the work that followed the review; each says so. The two
+still open are `SpiceType1Frame.__init__`'s double registration and the axis-direction
+and `z`-definition discrepancies noted below.
 
 - `Event.__init__`: the `or origin.frame` default-frame clause is unreachable — the
   default frame is always J2000, not the origin's frame as documented. *Resolved by the
   owner after this review: the default frame is now the frame of the origin path.*
 - `SpiceFrame._FRAME_LOOKUP` is a cache that is never populated, and neither SPICE
-  lookup dict is cleared by `Frame._reset_caches`; `SpiceType1Frame.__init__`
-  double-registers, clobbering its "don't register" branch.
+  lookup dict is cleared by `Frame._reset_caches` (*both resolved after this review; see
+  the `spiceframe.py` entry*); `SpiceType1Frame.__init__` double-registers, clobbering
+  its "don't register" branch (still open).
 - `ReversedCadence.tstep_at_time` is provably not the inverse of `time_at_tstep`
   (demonstrated numerically; existing tests cancel the error), but the correct
-  clipping/derivative semantics are ambiguous.
+  clipping/derivative semantics are ambiguous. *Resolved after this review; see the
+  `reversedcadence.py` entry.*
 - The `FOV` base class's `*_filled` caches ignore `time` and are never invalidated when
   a `Fittable` FOV is refit; `sphere_falls_inside`/`outer_radius` cannot work for
-  `TDIFOV`.
+  `TDIFOV`. *The caches were fixed after this review; see "Fixing the FOV caches" in the
+  `oops/fov` section, which also records a separate TDIFOV defect found there.*
 - `SynchronousFrame`'s docstring contradicts its `twovec` axis signs; `Limb`'s `z`
   definition disagrees between `z_clock_from_intercept` and `coords_from_vector3`;
-  `Ellipsoid`'s `exclusion` default (0.9) contradicts its own ">= 0.95" recommendation.
+  `Ellipsoid`'s `exclusion` default (0.9) contradicted its own ">= 0.95" recommendation.
+  *Resolved after this review: `exclusion` was removed and the zone is now derived from
+  the shape; see "Replacing the exclusion parameter" below.*
 - `KeplerPath` derivative tests needed a strengthening pass (they hid 6% velocity
   errors). *Resolved after this review; see "Strengthening the KeplerPath derivative
   tests" below.*
 - Remaining legacy/incomplete docstrings: `Backplane.get_surface_event` still uses a
   legacy `Inputs:` block; `border.py` and `pole.py` lack `Parameters:` blocks; several
-  cache properties are undocumented.
+  cache properties are undocumented. *Resolved after this review; see "Completing the
+  backplane docstrings" below.*
 
 ## Verification
 
 - Every edited file compiles; per-area unit suites were run by each reviewer.
-- Main suite after all fixes: `pytest tests --ignore=tests/hosts --ignore=tests/spicedb`
-  passes (150 passed; 176 after the KeplerPath test rewrite described below).
-- Host (gold-master) suite: `pytest tests/hosts` passes (5 passed) — the gold masters
-  are unaffected by the fixes. spicedb suite: 2 passed, 1 skipped.
+- Main suite as the review was delivered: `pytest tests --ignore=tests/hosts
+  --ignore=tests/spicedb` passed 150. It passes 224 after the later work, which added
+  tests along with its fixes.
+- spicedb suite: 2 passed, 1 skipped, unchanged throughout.
+- Host (gold-master) suite: `pytest tests/hosts` passed 5 as the review was delivered, so
+  none of the fixes described above disturbed the gold masters. **That is no longer the
+  case.** Removing the `exclusion` parameter shrank the masked zone around a body's
+  center, which is correct and deliberate, and four of the five standard observations now
+  report mask mismatches on their `:LIMB` backplanes. Every one is a "Mask mismatch",
+  meaning the masks differ while the values agree; no "Value mismatch" appears. The
+  masters need re-adoption to record the wider coverage, which is a decision about
+  reference data and was left to the author. See "Replacing the exclusion parameter" for
+  the numbers.
 
 ---
 ## Critique: top-level oops modules
@@ -137,25 +167,41 @@ Files reviewed: `__init__.py`, `oops.py`, `event.py`, `transform.py`, `constants
   times", "specifed", missing periods in `actual_arr` summary and in `sub`; copy-pasted
   comments in `actual_arr`/`actual_dep` said "apparent vector" where the actual vector is
   computed.
-- **[BUG] (not fixed)** `event.py:706` — the `vflat` getter fills `_vflat_` with
+- **[BUG] (fixed after review)** `event.py:706` — the `vflat` getter fills `_vflat_` with
   `Vector3.ZERO` on first read, after which the setter raises "surface velocities were
-  already defined". Reading the property therefore permanently blocks setting it. Fixing
-  requires a design decision (return without caching, or allow the setter to override the
-  implicit zero).
-- **[CONSISTENCY] (not fixed)** `event.py:557` — the `dep_lt` setter propagates to
-  `_ssb_` unconditionally while `arr_lt`'s setter guards with `_ssb_._arr_lt_ is None`;
-  harmless but asymmetric.
-- **[CONSISTENCY] (not fixed)** — most simple properties (`time`, `origin`, `frame`,
-  `arr`, `dep`, ...) have no docstrings; they are documented centrally in the class
-  docstring instead. Acceptable house pattern, but Sphinx `autodoc` would render them
-  undocumented.
-- **[CONSISTENCY] (not fixed)** `event.py:1499` (`sub`) and `shrink`/`unshrink` — public
-  methods whose docstrings document behavior in prose without Parameters blocks
-  (`reference`, `quick`, `antimask`, `shape` undocumented).
-- **[SUGGESTION] (not fixed)** `event.py:1040-1110` — a ~70-line commented-out block of
-  `with_*_derivs` methods marked "TODO: These are unused; might not work exactly as
-  intended. --Mark", containing the retired `#===` separator style. Candidate for
-  deletion; kept because removal is a judgment call.
+  already defined". Reading the property therefore permanently blocks setting it. Fixed
+  after this review by taking the first option: the getter returns `Vector3.ZERO` without
+  saving it, so the default is no longer mistaken for a definition. Returning None
+  instead was measured and rejected: it fails four tests in the main suite and one
+  gold master, because two aberration methods call `vflat.without_deriv('t')` on the
+  result.
+- **[CONSISTENCY] (fixed after review)** `event.py:557` — the `dep_lt` setter propagates
+  to `_ssb_` unconditionally while `arr_lt`'s setter guards with `_ssb_._arr_lt_ is None`;
+  harmless but asymmetric. Fixed after this review; the two setters now match.
+- **[CONSISTENCY] (fixed after review)** — most simple properties (`time`, `origin`,
+  `frame`, `arr`, `dep`, ...) have no docstrings; they are documented centrally in the
+  class docstring instead. Acceptable house pattern, but Sphinx `autodoc` would render
+  them undocumented. Fixed after this review: all 28 now carry a one-line summary, and the
+  central list in the class docstring stays as the fuller description.
+- **[CONSISTENCY] (fixed after review)** `event.py:1499` (`sub`) and `shrink`/`unshrink` —
+  public methods whose docstrings document behavior in prose without Parameters blocks
+  (`reference`, `quick`, `antimask`, `shape` undocumented). Fixed after this review; all
+  three now document their parameters and returns.
+- **[SUGGESTION] (fixed after review)** `event.py:1040-1110` — a ~70-line commented-out
+  block of `with_*_derivs` methods marked "TODO: These are unused; might not work exactly
+  as intended. --Mark", containing the retired `#===` separator style. Restored to live
+  code after this review rather than deleted, and the TODO's doubt turned out to be
+  justified. Two defects had to be repaired before the block would work. `with_pos_derivs`
+  read `self.__state__`, a name-mangled attribute that does not exist, so the method
+  raised immediately. It then inserted `xform_to_j2000.rotate(event._state_)` as the SSB
+  position derivative, but that expression is the rotated *position*; the derivative
+  wanted is the rotated *derivative*, `rotated.d_dpos`, which equals the transform matrix.
+  The wrong value was about four orders of magnitude too large, being a position in km.
+  With that corrected, the SSB derivative matches a numerical derivative of the SSB
+  position to 1e-9, and all four methods insert their derivative, propagate it to the SSB
+  counterpart, and return unchanged when asked twice. The retired `#===` separators are
+  gone and the docstrings carry `Returns:` sections. Six tests were added to
+  `tests/test_event.py`; three fail against the code as it was.
 
 ### src/oops/transform.py
 
@@ -179,11 +225,15 @@ Files reviewed: `__init__.py`, `oops.py`, `event.py`, `transform.py`, `constants
   described in terms of reference frames, matching `rotate_transform`.
 - **[DOC] (not fixed)** — `identity`, `invert`, `rotate_transform`, `unrotate_transform`
   have no Parameters sections for their `frame`/`arg` inputs.
-- **[SUGGESTION] (not fixed)** `transform.py:76-81` — `__init__` stores `origin` without
-  conversion (`self.origin = origin`), so a string path ID is stored as a string while
-  the docstring implies a Path; the sibling attributes go through `as_wayframe`.
-  Also `self.filled_*` cache attributes are public but internal; elsewhere in the
-  package such caches have been renamed with leading underscores.
+- **[SUGGESTION] (fixed after review)** `transform.py:76-81` — `__init__` stores `origin`
+  without conversion (`self.origin = origin`), so a string path ID is stored as a string
+  while the docstring implies a Path; the sibling attributes go through `as_wayframe`.
+  Also `self.filled_*` cache attributes are public but internal; elsewhere in the package
+  such caches have been renamed with leading underscores. Both fixed after this review:
+  `origin` is normalized the way the sibling arguments are, and the five caches now match
+  the `_filled_wod` already in the same file. The missing `Parameters:` blocks on
+  `identity`, `invert`, `rotate_transform`, and `unrotate_transform` were added at the
+  same time.
 
 ### src/oops/config.py
 
@@ -209,11 +259,13 @@ Files reviewed: `__init__.py`, `oops.py`, `event.py`, `transform.py`, `constants
   formatter, but nothing ever restores `log_formatting = True`, so after one literal
   message new handlers are no longer formatted. Needs an owner decision on intended
   life-cycle.
-- **[CONSISTENCY] (not fixed)** — `LOGGING.print` uses a legacy `Inputs:` block; most
-  one-line staticmethod docstrings omit Parameters (`all`'s `category`/`reset` semantics
-  are undocumented). `set_stdout(False)` can disable stdout even when no other
-  destination is active, unlike every sibling setter that re-enables stdout as a
-  fallback.
+- **[CONSISTENCY] (fixed after review)** — `LOGGING.print` uses a legacy `Inputs:` block;
+  most one-line staticmethod docstrings omit Parameters (`all`'s `category`/`reset`
+  semantics are undocumented). `set_stdout(False)` can disable stdout even when no other
+  destination is active, unlike every sibling setter that re-enables stdout as a fallback.
+  Fixed after this review: the legacy block is converted, the LOGGING staticmethods that
+  take arguments document them, and `set_stdout` applies the same fallback guard its
+  siblings use, so stdout can only be switched off while another destination is live.
 - **[STYLE] (not fixed)** — classes are declared `class QUICK(object)` etc. with 2-space
   body indent, an intentional legacy pattern used as namespaces; left alone.
 
@@ -230,12 +282,13 @@ Files reviewed: `__init__.py`, `oops.py`, `event.py`, `transform.py`, `constants
   added one.
 - **[DOC] (fixed)** `mutable.py:730` (`Mutable._version`) — "each time an object of any
   of its sub-objects" corrected to "this object or any of its sub-objects".
-- **[CONSISTENCY] (not fixed)** — `get_param_order`, `get_nparams` lack Returns sections;
-  `needs_refresh` writes `obj (object)` / `(bool)` unlike the annotation-style used in
-  the rest of the file. Double blank line between `_mutable_names` and `_unfrozen_names`.
-- **[STYLE] (not fixed)** — `import numpy as np` precedes the stdlib imports
+- **[CONSISTENCY] (fixed after review)** — `get_param_order`, `get_nparams` lack Returns
+  sections; `needs_refresh` writes `obj (object)` / `(bool)` unlike the annotation-style
+  used in the rest of the file. Double blank line between `_mutable_names` and
+  `_unfrozen_names`. All three fixed after this review.
+- **[STYLE] (fixed)** — `import numpy as np` precedes the stdlib imports
   (`collections`, `typing`); the project convention is stdlib first. Same in
-  `meshgrid.py`.
+  `meshgrid.py`. Both reordered after this review.
 - Note: type annotations here and in `fittable.py` are sanctioned by CLAUDE.md.
 
 ### src/oops/fittable.py
@@ -259,25 +312,33 @@ Files reviewed: `__init__.py`, `oops.py`, `event.py`, `transform.py`, `constants
   changed to `if weight is not None:`.
 - **[DOC] (fixed)** — typos in `DiskSource.__init__`: "respresenting", "containing
   defining the lines of sight", "If false".
-- **[CONSISTENCY] (not fixed)** — `LightSource.__init__` documents its arguments in prose
-  with no Parameters block; `DiskSource.__init__` uses the legacy `Inputs:` two-column
-  style while the same file's `photon_to_event` methods are fully modern. Left for a
-  deliberate conversion pass.
-- **[SUGGESTION] (not fixed)** `lightsource.py:52-73` — source-type dispatch by
+- **[CONSISTENCY] (fixed after review)** — `LightSource.__init__` documents its arguments
+  in prose with no Parameters block; `DiskSource.__init__` uses the legacy `Inputs:`
+  two-column style while the same file's `photon_to_event` methods are fully modern. Both
+  converted after this review.
+- **[SUGGESTION] (fixed after review)** `lightsource.py:52-73` — source-type dispatch by
   try/except chains (Pair, then Vector3, then Path) means a malformed 2-element input is
-  silently interpreted as an (RA, dec) pair; worth an explicit type check some day.
+  silently interpreted as an (RA, dec) pair; worth an explicit type check some day. Done
+  after this review: the dispatch recognizes each documented form explicitly and rejects
+  anything else with a `ValueError` naming the problem, where the try/except chain used to
+  end in a bare `KeyError` from `Path.as_primary_path`.
 - **[SUGGESTION] (not fixed)** `lightsource.py:87` — registers itself in
   `Body.BODY_REGISTRY` directly; documented behavior, but couples this module to Body
   internals.
 
 ### src/oops/meshgrid.py
 
-- **[DOC] (not fixed)** `meshgrid.py:141-144` (`for_shape`) — `u_axis`/`v_axis` are
-  documented "(optional)" with no type; should be "(int, optional)".
-- **[SUGGESTION] (not fixed)** `meshgrid.py:222-231` (`for_shape`) — when `u_axis < 0`
-  the code still builds `u_range` from `origin[0]`/`limit[0]`; if that range has more
-  than one element the trailing reshape raises with an unhelpful message. Edge case,
-  untouched.
+- **[DOC] (fixed after review)** `meshgrid.py:141-144` (`for_shape`) — `u_axis`/`v_axis`
+  are documented "(optional)" with no type; should be "(int, optional)". Fixed after this
+  review.
+- **[SUGGESTION] (fixed after review)** `meshgrid.py:222-231` (`for_shape`) — when `u_axis
+  < 0` the code still builds `u_range` from `origin[0]`/`limit[0]`; if that range has more
+  than one element the trailing reshape raises with an unhelpful message. Fixed after this
+  review by handling it rather than raising: an absent axis is meant to yield a single
+  sample, which is what the surrounding code already assumes when it fills that coordinate
+  with 0.5 and reserves an extent of 1 for it. Only cases that previously crashed behave
+  differently. Reaching the bug needs an explicit `limit`, because the default is 1 along
+  a missing axis.
 - **[STYLE] (not fixed)** — `import numpy as np` precedes `import numbers` (stdlib).
 - Otherwise the cleanest module in this group: modern docstrings with accurate
   Parameters/Returns throughout, correct caching semantics (`_as_key` False sentinel).
@@ -288,22 +349,32 @@ Files reviewed: `__init__.py`, `oops.py`, `event.py`, `transform.py`, `constants
   class patterns require `oops/__init__.py` to have filled `_Path`/`_Frame`; if the
   module were used standalone the match statement would raise TypeError. Consistent with
   the documented "always import oops first" trap.
-- **[SUGGESTION] (not fixed)** `cache.py:66` — `case x if hasattr(x, '__data__')` keys an
-  object by `id()`, which can collide after garbage collection; acceptable for a cache
-  that tolerates false hits only as stale entries, but worth a comment.
+- **[SUGGESTION] (fixed after review)** `cache.py:66` — `case x if hasattr(x, '__data__')`
+  keys an object by `id()`, which can collide after garbage collection; acceptable for a
+  cache that tolerates false hits only as stale entries, but worth a comment. The comment
+  was added after this review; the behavior is unchanged.
 - Docstrings are modern, accurate, and complete.
 
 ### src/oops/spice_support.py
 
-- **[DOC] (not fixed)** `frame_id_and_name` falls through and implicitly returns None for
-  an argument that is neither int nor str, while `body_id_and_name` raises LookupError;
-  neither docstring mentions its failure behavior, and both docstrings are one-line
-  legacy style without Parameters/Returns/Raises.
-- **[DOC] (not fixed)** `initialize()` has no docstring.
-- **[STYLE] (not fixed)** — two comments read "does not raise an error; I may fix", a
-  personal note that should not survive in library code.
-- **[SUGGESTION] (not fixed)** — the TypeError message "a SpicePath cannot originate from
-  a X" describes the situation backwards (the registered path is not a SpicePath).
+- **[DOC] (fixed after review)** `frame_id_and_name` falls through and implicitly
+  returns None for an argument that is neither int nor str, while `body_id_and_name`
+  raises LookupError; neither docstring mentions its failure behavior, and both
+  docstrings are one-line legacy style without Parameters/Returns/Raises. Both now carry
+  full Parameters/Returns/Raises blocks, and `frame_id_and_name` raises `LookupError` on
+  that fall-through, matching its sibling. Neither function has a caller anywhere in the
+  repository — `SpiceFrame` and `SpicePath` use their own `_frame_code_and_name` and
+  `_body_code_and_name` — so nothing depended on the implicit None.
+- **[DOC] (fixed after review)** `initialize()` has no docstring. Added, noting that it
+  discards every translation registered since the last call.
+- **[STYLE] (fixed after review)** — two comments read "does not raise an error; I may
+  fix", a personal note that should not survive in library code. Both now state the fact
+  the code depends on: `cspyce.frmnam` returns an empty name and `cspyce.namfrm` returns
+  zero for an unrecognized argument instead of raising, which is why each call is
+  followed by a test of the result.
+- **[SUGGESTION] (fixed after review)** — the TypeError message "a SpicePath cannot
+  originate from a X" describes the situation backwards (the registered path is not a
+  SpicePath). It now names the offending path and its actual type.
 
 ### src/oops/unittester_support.py
 
@@ -312,31 +383,49 @@ Files reviewed: `__init__.py`, `oops.py`, `event.py`, `transform.py`, `constants
 - **[DOC] (fixed)** — the comment above `TEST_SPICE_FILECACHE` claimed it stores the
   `$OOPS_RESOURCES/SPICE` directory; the code (and the actual resource tree, verified)
   uses `$OOPS_TEST_DATA_PATH/SPICE`. Corrected.
-- **[SUGGESTION] (not fixed)** — the module comment says `$OOPS_RESOURCES` is "expected
-  to have two subdirectories"; README documents five. Harmless in context (only two are
-  used here).
+- **[SUGGESTION] (fixed after review)** — the module comment says `$OOPS_RESOURCES` is
+  "expected to have two subdirectories"; README documents five. The comment now says this
+  module uses two of them and points to the README for the rest.
 
 ### src/oops/utils.py
 
+**Deleted after this review.** The question the review left open, whether the module still
+had callers, was answered: it did not. Nothing in `src/oops`, `programs`, or the hosts
+called any of its seventeen functions, and no qualified `utils.<name>` reference existed
+anywhere in the repository. Its only consumers were `oops/__init__.py`, which imported it
+and listed it in `__all__`, and `tests/test_utils.py`, which existed solely to exercise
+it. The module predates polymath and duplicates on raw ndarrays what the polymath types
+now provide as methods; the apparent matches for names like `dot`, `norm`, and `unit`
+elsewhere in the library are all polymath method calls.
+
+The module and its test were removed, along with the import and the `__all__` entry.
+Note that this narrows the published API: `oops.utils` was exported, so an external
+caller relying on it would break. The findings below were resolved by the deletion rather
+than by editing:
+
 - **[DOC] (fixed)** — "illustation" typo in the `mxm` explanatory comment.
-- **[CONSISTENCY] (not fixed)** — every docstring is the legacy one-line
+- **[CONSISTENCY] (moot)** — every docstring is the legacy one-line
   `f(a,b) = ...` form; none has Parameters/Returns. Flagged for a future conversion
   pass, not converted.
-- **[SUGGESTION] (not fixed)** — module appears to predate polymath and mimics SPICE
+- **[SUGGESTION] (resolved)** — module appears to predate polymath and mimics SPICE
   routines on raw ndarrays; worth checking whether it still has callers.
 
 ### src/oops/__init__.py
 
 - **[STYLE] (fixed)** — `except ImportError as err:` bound an unused variable; now a bare
   `except ImportError:`.
-- **[SUGGESTION] (not fixed)** — the trailing comment block describing the import
-  hierarchy lists "Body, Surface, Path, Gravity, Event, Frame, Transform", but the
-  injected attributes below also cover Cache and Fittable; comment is mildly stale.
+- **[SUGGESTION] (fixed after review)** — the trailing comment block describing the
+  import hierarchy lists "Body, Surface, Path, Gravity, Event, Frame, Transform", but the
+  injected attributes below also cover Cache and Fittable; comment is mildly stale. It now
+  says those two sit outside the hierarchy and are filled in for the same reason.
 
 ### src/oops/oops.py
 
-- **[DOC] (not fixed)** — `class Oops` has a `#` comment instead of a docstring; the only
-  class in the group with neither docstring nor banner description.
+- **[DOC] (fixed after review)** — `class Oops` has a `#` comment instead of a
+  docstring; the only class in the group with neither docstring nor banner description.
+  The comment is now a docstring saying what the class is for: a common ancestor for the
+  library's objects, defining no behavior of its own. It is subclassed by `Transform`,
+  `Fittable`, and `Mutable`.
 
 ### src/oops/constants.py
 
@@ -657,15 +746,30 @@ every repaired `_show` method.
   reference returned a *tuple* of two strings (trailing comma inside the parentheses) and
   omitted the closing `)` of the rendered text. `Frame.show()` promises a `str`. Rewrote
   as a single concatenated f-string ending with `)`.
-- **[BUG] (not fixed)** `spiceframe.py:22, 556-561` — `SpiceFrame._FRAME_LOOKUP` is
-  declared with the comment "(name, reference name, omega_type, omega_dt) -> SpiceFrame"
-  and consulted in `get()`, but nothing ever stores a `SpiceFrame` under such a key, so
-  this cache can never hit and `get()` constructs a fresh `SpiceFrame` on every miss of
-  the earlier name checks. Populating it (e.g. in `get()` after construction) looks
-  intended, but `Frame._reset_caches()` (frame_.py:344-358) does not clear
+- **[BUG] (fixed after review)** `spiceframe.py:22, 556-561` — `SpiceFrame._FRAME_LOOKUP`
+  is declared with the comment "(name, reference name, omega_type, omega_dt) ->
+  SpiceFrame" and consulted in `get()`, but nothing ever stores a `SpiceFrame` under such
+  a key, so this cache can never hit and `get()` constructs a fresh `SpiceFrame` on every
+  miss of the earlier name checks. Populating it (e.g. in `get()` after construction)
+  looks intended, but `Frame._reset_caches()` (frame_.py:344-358) does not clear
   `_FRAME_LOOKUP` or `_FOR_NAME`, so adding entries could leak stale frames across the
-  registry resets the test fixtures rely on. Needs a decision: either populate the cache
-  *and* clear it in `_reset_caches`, or delete the dead lookup.
+  registry resets the test fixtures rely on. Fixed after this review, taking the first of
+  those options: the constructor stores the frame under its key, and `_reset_caches` now
+  clears `_WAYFRAMES`, `_FOR_NAME`, and `_FRAME_LOOKUP` on every Frame subclass that
+  defines them. The stale-frame hazard is closed because every code path that empties the
+  registry, `Body.reset_registry` and the test fixtures included, goes through
+  `_reset_caches`; nothing clears the registry directly except `_reset_caches` itself.
+
+  Two details the key needs. A frame that is inertial relative to its reference has its
+  `omega_type` forced to "zero" by the constructor whichever option was requested, so one
+  frame satisfies every request and is stored under all three; without this, the default
+  request of "tabulated" would miss on every such frame and rebuild it. And a key with
+  `omega_dt` of None is stored alongside the real value, so a caller that does not
+  constrain the step matches, which is what `get`'s docstring promises. Measured effect:
+  100 `get` calls for two frames now run the constructor twice instead of 100 times.
+
+  Four tests were added to `test_spiceframe.py`, covering reuse, the omega options, the
+  inertial-frame sharing, and the reset; all four fail against the unpopulated cache.
 - **[CONSISTENCY] (not fixed)** `spiceframe.py:464, 467` — The numerical-omega branch of
   `transform_at_time_if_possible` uses the `.values` alias while the rest of the file
   uses `.vals`. Both work; one spelling should be chosen.
@@ -673,6 +777,15 @@ every repaired `_show` method.
   advertises tolerance of cspyce errors, but the code re-raises for any time array with
   more than one dimension (`if len(time.shape) > 1: raise e`). This 1-D-only restriction
   is worth documenting.
+- **[BUG] (found after review, fixed)** `spiceframe.py`, `spicetype1frame.py` — Both
+  `get()` methods read `reference._spice_frame_name` before checking that the reference is
+  something the constructor could use, so a reference that is neither a SpiceFrame nor
+  J2000 raised `AttributeError` instead of the `ValueError` the constructor documents and
+  raises for the same input. The rule now lives in one place, `_reference_spice_info`,
+  used by the constructor and by both `get()` methods, so all three agree and fail the
+  same way. Found while implementing `_FRAME_LOOKUP` above, since populating that cache
+  made the two key-building paths matter.
+
 - **[SUGGESTION] (not fixed)** `spiceframe.py:124-128` — `_fill_spice_info` sets
   `self._omega_type = 'zero'` for doubly-inertial frames, but `SpiceFrame.__init__`
   (line 64) immediately overwrites it from the `omega_type` argument; the inertia-based
@@ -712,13 +825,35 @@ every repaired `_show` method.
   `replace(' ', '_')` applied at line 71, so a name containing spaces registers under two
   IDs. Untangling which registration is intended needs the author; note the `_refresh()`
   call on line 74 is required (it builds `_cache`) and must survive any cleanup.
-- **[BUG] (not fixed)** `spicetype1frame.py:19, 76-79, 322` — Cache bookkeeping is
-  confused: the class declares its own `_FRAME_LOOKUP` (line 19, with a 3-tuple comment)
-  that is never used, while reads and writes both go to `SpiceFrame._FRAME_LOOKUP` with
-  4-tuple keys; the key stores the raw `reference` argument rather than a normalized
-  wayframe, so direct construction and `get()` can disagree; and the `for cache_size in
-  (self._cache_size, None):` loop clobbers the `cache_size` parameter. Also, like
-  SpiceFrame's lookup, none of this is cleared by `Frame._reset_caches()`.
+- **[BUG] (fixed after review)** `spicetype1frame.py:19, 76-79, 322` — Cache bookkeeping
+  is confused: the class declares its own `_FRAME_LOOKUP` (line 19, with a 3-tuple
+  comment) that is never used, while reads and writes both go to
+  `SpiceFrame._FRAME_LOOKUP` with 4-tuple keys; the key stores the raw `reference`
+  argument rather than a normalized wayframe, so direct construction and `get()` can
+  disagree; and the `for cache_size in (self._cache_size, None):` loop clobbers the
+  `cache_size` parameter. Also, like SpiceFrame's lookup, none of this is cleared by
+  `Frame._reset_caches()`. The last point no longer holds: `_reset_caches` now clears
+  these dictionaries. The rest stands, and the shared dictionary matters more now that
+  `SpiceFrame` populates it too. The two key shapes do not collide, because this class
+  stores a Frame in the position where `SpiceFrame` stores a name string, but relying on
+  that is fragile; giving this class its own dictionary, which it already declares, would
+  settle it.
+
+  Done after this review, along with the rest of this finding. The class now uses its own
+  `_FRAME_LOOKUP` for both reads and writes, and its key holds the reference's SPICE name
+  rather than the raw argument, so direct construction and `get()` agree. Two further
+  defects surfaced while checking that work. A tolerance passed as a string is converted
+  to ticks by the constructor but was not converted by `get()`, so such a key could never
+  match and every call built another frame; `get()` now converts it the same way. And the
+  unconditional `self._register(frame_id or self._spice_frame_name)` that followed the
+  branches undid both of them: it registered the frame the non-J2000 branch had
+  deliberately left unregistered, displacing the J2000-referenced frame from the registry
+  so that the frame ID silently resolved to a frame on a different reference, and it
+  registered the J2000 branch's frame under the raw name rather than the underscored one.
+  Removing it leaves each branch to register as it intends, which is what the parent
+  `SpiceFrame.__init__` already does. `tests/frame/test_spicetype1frame.py` is new, the
+  class having had no tests at all; two of its five fail against the defects above, and
+  the Galileo gold masters, which build this frame, are unchanged.
 - **[STYLE] (not fixed)** `spicetype1frame.py:126-131, 210-215` — The lazy
   `_time_tolerance` computation is duplicated verbatim in both transform methods; a small
   private helper would remove the copy.
@@ -836,8 +971,9 @@ Counts: 13 fixed (9 BUG, 2 DOC, 2 STYLE), 17 reported unfixed (5 BUG, 5 DOC,
 in good shape, with modern, accurate docstrings and only cosmetic defects. Quality drops
 sharply in the untested corners: `spicetype1frame.py` held four genuine bugs including a
 guaranteed unpickle crash and a broken API contract, and its registration/cache
-bookkeeping still needs an author decision, as do the `_FRAME_LOOKUP` dead cache in
-`spiceframe.py` and the axis-direction discrepancy in `synchronousframe.py`. Docstring
+bookkeeping still needs an author decision, as does the axis-direction discrepancy in
+`synchronousframe.py`. The `_FRAME_LOOKUP` cache in `spiceframe.py` has since been
+implemented. Docstring
 style is uniformly the modern Google form; no legacy `Input:`/`Return:` blocks remain in
 this package.
 
@@ -885,13 +1021,14 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
 - **[DOC] (fixed)** `ellipsoid.py:443-445` — Same sign-flipped `p` formula in the
   `intercept_normal_to` Returns bullet as in `surface_.py`; corrected to
   `intercept + p * normal(intercept) = pos`.
-- **[DOC] (not fixed)** `ellipsoid.py:40,51-53` — `Ellipsoid.__init__` defaults
+- **[DOC] (fixed after review)** `ellipsoid.py:40,51-53` — `Ellipsoid.__init__` defaults
   `exclusion=0.9` while its own docstring says "Values of less than 0.95 are not
   recommended" — the default violates the stated recommendation. This mismatch is
   inherited verbatim from the legacy code (Spheroid: default 0.95, "less than 0.9 not
   recommended" — self-consistent; Ellipsoid: default 0.9, "less than 0.95 not
-  recommended" — contradictory). The author should decide whether the default or the
-  recommendation is correct; left untouched.
+  recommended" — contradictory). Resolved after this review: the parameter was removed
+  from `Ellipsoid` and `Spheroid` in favor of a zone derived from the radii, so neither
+  the default nor the recommendation survives.
 - **[SUGGESTION] (not fixed)** `ellipsoid.py:225` — In `vector3_from_coords`, the
   z-offset direction is computed with `self.normal(track)` (no `derivs=derivs`), so
   when `derivs=True` the derivative contribution of the normal direction with respect
@@ -908,10 +1045,10 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
   to match the per-iteration convergence message.
 - **[DOC] (fixed)** `spheroid.py:83-85` — Same sign-flipped `p` formula in the Returns
   bullet; it now matches the (correct) formula given for the `guess` parameter.
-- **[CONSISTENCY] (not fixed)** `spheroid.py:28` — `Spheroid.__init__` takes `exclusion`
-  as an ordinary positional parameter with default 0.95, while `Ellipsoid.__init__`
-  makes it keyword-only (`*`) with default 0.9. The signatures and defaults should
-  probably agree; changing the signature could break callers, so reported only.
+- **[CONSISTENCY] (fixed)** `spheroid.py:28` — `Spheroid.__init__` took `exclusion` as an
+  ordinary positional parameter with default 0.95, while `Ellipsoid.__init__` made it
+  keyword-only with default 0.9. Both parameters were removed after this review, so the
+  signatures now agree.
 
 ### src/oops/surface/centricspheroid.py
 - **[DOC] (fixed)** `centricspheroid.py:80-87` — `vector3_from_coords` Returns section
@@ -986,6 +1123,22 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
   velocities (`vflat`) and anomaly conversions change for `a != 1`; if any gold-master
   arrays for eccentric Uranian rings depend on `vflat`, they were generated with the
   wrong values and will need review/regeneration.
+- **[BUG] (fixed)** `orbitplane.py:367` — Second, independent error in the same
+  first-order math, found after the review while re-deriving `velocity()`. The surface is
+  centered on the displaced ring center, so `velocity` shifts to planet-centered
+  coordinates before applying its model; it added `a*e` where it must subtract. The ring
+  center lies `a*e` toward *apocenter* (`_peri_path` is a CirclePath at `lon = peri +
+  PI`) while the spin frame puts x along *pericenter*, so the planet sits at `+a*e`
+  relative to the ring center and the conversion subtracts. This was confirmed
+  independently from the orbit's own origin path, which reports the ring center at
+  `x = -a*e`. The consequence was first-order: against an exact Kepler orbit at
+  `e = 0.02`, the tangential speed at pericenter was high by 4% (exactly `2e`) and the
+  radial speed at 90 degrees of true anomaly was three times too large. With the sign
+  corrected, the residual scales as `e**2` — the ratio `error/e**2` converges to 2.50 as
+  `e` falls — which is the expected limit of a model documented as first-order.
+  `test_orbitplane.py` had no velocity coverage whatsoever, which is why this and the
+  `a*e` error above both survived; three tests were added, two of which fail on the old
+  sign.
 - **[DOC] (fixed)** `orbitplane.py:363` — Comment typo `dy/dy` corrected to `dy/dt`.
 - **[STYLE] (not fixed)** `orbitplane.py:41-54` — In the `__init__` docstring, the
   bullet list describing the elements is not indented under the `elements` parameter,
@@ -1117,18 +1270,75 @@ and the hints/guess return contracts were unevenly implemented across subclasses
 remains uncollected and both PolarLimb bugs found here would have been caught by a
 working test.
 
+### Replacing the exclusion parameter
+
+`Ellipsoid` and `Spheroid` took an `exclusion` argument that scaled the zone in which
+`intercept_normal_to` is masked, as a fixed fraction of the equatorial radius (0.9 and
+0.95 respectively, with contradictory advice in the docstrings). It was replaced after
+this review by a zone derived from the shape,
+
+    r_exclusion = a - g c^2/a,     g = _EXCLUSION_FACTOR
+
+applied in unsquashed coordinates, and the parameter was removed from both classes along
+with its pickle and intercept-key entries. No caller anywhere in the repository ever
+passed it.
+
+**The formula is geometrically right.** For radii a >= b >= c the smallest radius of
+curvature anywhere on the surface is c^2/a, at the ends of the longest axis, so the
+evolute, where the normal-foot stops being unique and the solution degenerates, comes
+within exactly that distance of the surface. Placing the boundary at depth g c^2/a with
+g < 1 keeps a proportional margin. Measurement confirms the derivation: sweeping g over
+interior positions, results are exact to a few parts in 1e14 up to g ~ 0.55, degrade
+through 0.8, and fail outright at g = 1.0, which is the evolute itself. The cusps along
+the intermediate axis are covered for any g <= a^2/b^2, which holds for any triaxial
+shape.
+
+**Extreme proportions.** For a body flatter than about c/a = 0.83 the evolute also
+reaches outside this sphere along the polar axis. Those positions cannot be masked: they
+lie outside the surface — 100% of them, at unsquashed radii of 1.3 to 3.4 a for a
+1:1:0.4 body — so a zone large enough to cover them would discard legitimate exterior
+positions just above the pole. Bodies flatter than about c/a = 0.5 do return bad
+intercepts there, off the surface by up to 1e8 times the radius, but the old fixed
+fraction produced *identical* failures at those axis ratios; the limit is the
+convergence of `intercept_normal_to`, not the size of this zone. Interior positions are
+accurate for every shape tested, including a 1:0.3:0.3 needle and a 1:0.5:0.2 triaxial.
+
+**The factor.** 0.8 was the proposed value; 0.5 was adopted. At 0.8 five tests in
+`tests/surface` fail, not on masking but on precision — a groundtrack round-trip that
+asserts agreement within 1e-10 km on a 6e4 km body reads 1.4e-9. The safe range for the
+suite's existing tolerances ends between 0.55 and 0.6. 0.5 keeps full precision, sits
+inside that range rather than on its edge, and leaves a factor of two below the evolute.
+
+**Consequence for the gold masters.** The zone is now far smaller for round bodies: for
+a sphere the evolute is a single point, so the old 0.95 masked 95% of the interior for no
+numerical reason, where the new zone masks 50%. Four of the five gold-master
+observations (Cassini ISS W1573721822 and three of the four Galileo SSI images) therefore
+report discrepancies on their `:LIMB` backplanes, which gain unmasked pixels: 711 of 4096
+on `SATURN:LIMB`, 292 of 625 on `GANYMEDE:LIMB`.
+
+Every one of those is a "Mask mismatch", which the framework defines as the masks
+disagreeing while the values agree; not one "Value mismatch" or "Value/mask mismatch"
+appears. The Ganymede values match to 1.6e-07 against a limit of 0.1. Saturn's raw
+altitude discrepancy of 83 km is the expected artifact of a moving mask edge and falls to
+exactly zero once the test's own one-pixel offset is applied. No value of the factor
+preserves the recorded masks: reproducing them needs a factor near 0.05, which for a
+sphere is the old, unjustified 95% zone. The masters need re-adoption to record the wider
+coverage, which is a decision about reference data and was left to the author.
+
 ---
 ## Critique: src/oops/fov
 
 ### src/oops/fov/fov_.py
-- **[BUG] (not fixed)** `fov_.py:622` — `center_xy`, `center_los`, and the four `corner*_xy`
-  methods consult their `*_filled` cache before examining `time`, so for a time-dependent
-  FOV a value cached by a `time=None` call would be returned for every later call with an
-  explicit time. In practice this is unreachable today: the only time-dependent subclass
-  (TDIFOV) raises on `time=None`, which also means `outer_radius`, `inner_radius`, and
-  `sphere_falls_inside` (which call `center_los()` with no time) do not work for TDIFOV at
-  all. Correct behavior for time-dependent FOVs needs a design decision, so this was not
-  patched.
+- **[BUG] (fixed after review)** `fov_.py:622` — `center_xy`, `center_los`, and the four
+  `corner*_xy` methods consult their `*_filled` cache before examining `time`, so for a
+  time-dependent FOV a value cached by a `time=None` call would be returned for every
+  later call with an explicit time. In practice this is unreachable today: the only
+  time-dependent subclass (TDIFOV) raises on `time=None`, which also means
+  `outer_radius`, `inner_radius`, and `sphere_falls_inside` (which call `center_los()`
+  with no time) do not work for TDIFOV at all. Fixed after this review; see "Fixing the
+  FOV caches" below, which also records why the TDIFOV failure was a `TypeError` from
+  inside polymath rather than a stale value, and a separate TDIFOV defect found while
+  verifying it.
 - **[CONSISTENCY] (not fixed)** `fov_.py:300` — `los_from_uv` accepts `derivs`/`remask` as
   positional-or-keyword parameters while every sibling method makes them keyword-only with
   `*`. Same for `wcs_from_uv` in wcsfov.py. Making them keyword-only would narrow the
@@ -1142,8 +1352,8 @@ working test.
   `uv_pair.mask` from the raw argument; a tuple or ndarray input (accepted by the
   `Pair.as_pair` conversion used for `clipped`) would raise AttributeError. Converting once
   at the top would make the two uses consistent.
-- **[STYLE] (not fixed)** `fov_.py:640-641` — stray double blank line at the top of
-  `center_los`.
+- **[STYLE] (fixed after review)** `fov_.py:640-641` — stray double blank line at the top
+  of `center_los`; removed when that method was rewritten.
 - **[DOC]** Docstrings are modern Google style, accurate against signatures and behavior;
   `Parameters:`/`Returns:` blocks are complete. No factual errors found.
 
@@ -1253,9 +1463,66 @@ accurate against signatures, and wrapped to 90 columns; banners and house style 
 observed. The genuine defects clustered in the less-traveled paths: sign handling of
 negative pixel scales in the two Newton-solver precision targets, the `fast=False`
 single-polynomial crash in both distortion FOVs, a (u,v) axis swap in WCSFOV masked by
-square detectors, and a stale `uv_los` after refitting an OffsetFOV. The remaining
-unfixed items are design-level: time-dependent-FOV caching in the base class and cache
-invalidation under the Fittable protocol. All 10 tests in tests/fov pass after the fixes.
+square detectors, and a stale `uv_los` after refitting an OffsetFOV. The two items the
+review left open were design-level, time-dependent-FOV caching in the base class and cache
+invalidation under the Fittable protocol; both were settled afterward, as described below.
+All 10 tests in tests/fov passed after the review's fixes, and 30 after the later work.
+
+### Fixing the FOV caches
+
+Both cache defects were repaired after the review, in `center_xy`, `center_los`, and the
+four `corner*_xy` methods, which shared one broken shape:
+
+    if hasattr(self, 'center_xy_filled'):       # consulted before time is considered
+        return self.center_xy_filled
+    if self.IS_TIME_INDEPENDENT or time is None:
+        self.center_xy_filled = self.xy_from_uvt(self.uv_shape/2.)
+        ...
+
+Two things go wrong. The cache is consulted before the time is looked at, so a value
+computed once for `time=None` is returned for every later time, making the result depend
+on the order the calls happen to arrive in. And the branch that fills the cache is taken
+whenever `time is None`, even for a time-dependent FOV, where it calls `xy_from_uvt`
+without a time; a TDIFOV cannot do that, so `center_xy()` did not merely return a stale
+value, it raised `TypeError: invalid Scalar data type: <class 'NoneType'>` from inside
+polymath. That is also why `outer_radius`, `inner_radius`, `center_dlos_duv`, and
+`sphere_falls_inside` could not work for a TDIFOV: each reaches one of these methods
+without a time.
+
+The cache is now keyed on `IS_TIME_INDEPENDENT` alone. A time-independent FOV caches its
+value and returns it for any time, since time cannot matter; a time-dependent FOV
+computes fresh for the time it is given and caches nothing, and raises
+`NotImplementedError` naming the method when no time is given, which is the pattern
+`xy_from_uv`, `uv_from_xy`, and `uv_from_los` already use for the same situation. The
+three time-less properties document that they raise it too, in place of their former
+claim that time-dependence is "ignored", which was never true.
+
+For invalidation, `FOV` gained a `_refresh` that discards every cached name. The Mutable
+protocol already calls `_refresh` after `set_params`, so no subclass needs to know about
+it; `Platescale`, which defines its own `_refresh`, now calls up to it. Before this, a
+refit left every cached value describing the FOV's former geometry: doubling a
+Platescale's factor left `corner11_xy` and `outer_radius` reporting their old values
+indefinitely.
+
+`tests/fov/test_fov.py` is new; nothing had exercised these methods or the caches. Its 20
+tests cover both defects and fail against each original behavior.
+
+**A separate TDIFOV defect, found while verifying this and not fixed.** `TDIFOV`'s
+`xy_from_uvt` and `uv_from_xyt` apply the TDI line shift through a buffer they expect to
+share with the `(u,v)` they return:
+
+    line = uv.to_scalar(self._uv_line_index, recursive=False)
+        # uv and line share memory, so updating line also updates uv.
+    ...
+    line -= self.tdi_sign * shifts
+
+That holds only for shaped input. For a shapeless Pair, `to_scalar` returns a copy rather
+than a view (`np.shares_memory` is False), so `line -= ...` rebinds a local and the shift
+never reaches `uv`: the TDI FOV silently behaves as though it were the undistorted FOV
+beneath it. Every cached method above passes a shapeless Pair — `uv_shape/2.`,
+`Pair.ZEROS` — so all of them are affected, and `tests/fov/test_tdifov.py` passes because
+it only ever tests arrays. Repairing it means not relying on the aliasing, which changes
+JunoCam geometry for shapeless queries, so it is left for the author.
 
 ---
 ## Critique: oops/observation, oops/cadence, oops/calibration, oops/gravity
@@ -1319,16 +1586,41 @@ invalidation under the Fittable protocol. All 10 tests in tests/fov pass after t
   tsteps that are out of range".
 
 ### src/oops/cadence/reversedcadence.py
-- **[BUG] (not fixed)** `reversedcadence.py:166` — `tstep_at_time` returns
+- **[BUG] (fixed after review)** `reversedcadence.py:166` — `tstep_at_time` returns
   `self.shape[0] - tstep`, which mirrors the fractional part within each time step, so it
   is not the inverse of `time_at_tstep` (which deliberately lets the fraction increase with
   time within each step). Demonstrated numerically: for a reversed continuous Metronome
   (100-140, 4 steps), `time_at_tstep(0.25) == 132.5` but `tstep_at_time(132.5) == 0.75`
   (should be 0.25). The existing tests never expose this: the TDI comparison cases skip
   `tstep_at_time`, and the doubly-reversed Metronome cases cancel the error
-  (`steps - (steps - u) == u`). The correct fix needs decisions about clipping semantics at
-  the boundaries (the reversed tstep-to-time map is a sawtooth, so out-of-range clipping
-  targets are ambiguous) and about derivative signs, so it is not applied here.
+  (`steps - (steps - u) == u`). Fixed after this review: the reversal applies to whole
+  steps only, so the integer part is reversed and the fractional part carries over
+  unchanged, `(max_step - int(u)) + frac(u)`, splitting the index with the same
+  `shift=True` convention `time_at_tstep` uses. The error was `1 - 2f` in the fraction,
+  which is why it vanished at the midpoint of every step and the tests passed. Round-trip
+  error is now at machine precision across continuous, gapped, and non-uniform cadences,
+  and the derivative is `+du/dT`, not negated: within a step, time still increases with
+  the index.
+
+  One consequence is worth recording. A doubly-reversed cadence is exactly the original at
+  every time strictly inside its range, and for `time_at_tstep` and `tstep_range_at_time`
+  everywhere, but not at the final time: the original reports `steps`, the doubled cadence
+  reports 2. This is not a residual defect but the boundary convention composing with
+  itself. A time at the end of a step maps to that step's exclusive upper bound, which is
+  the index where the next step begins; one reversal sends the end of the underlying
+  cadence to the end of this cadence's first step, and a second reversal can no longer
+  distinguish that index from the start of its second step. The old code preserved this
+  one value only through the compensating error that made every other value wrong. The end
+  time of a singly-reversed cadence is in any case not attained at any exact index, since
+  the index-to-time map is a sawtooth; the value returned is the limit approached from
+  below, which is the physically meaningful step.
+
+  `test_reversedcadence.py` gained a direct test that `tstep_at_time` inverts
+  `time_at_tstep`, one pinning the derivative sign, and one asserting the double-reversal
+  property above; the first three fail against the old code. The four doubly-reversed
+  cases previously borrowed the Metronome suite's shared assertions, which is what
+  cancelled the error, and now make the comparison against the original cadence
+  explicitly.
 
 ### src/oops/cadence/tdicadence.py
 - **[BUG] (not fixed)** `tdicadence.py:102-120` — `tdi_shifts_after_time` clips its result to
@@ -1445,8 +1737,8 @@ invalidation under the Fittable protocol. All 10 tests in tests/fov pass after t
   shape — docstrings match signatures and behavior closely. The weak spots are the files the
   proofreading pass skipped: `oblategravity.py` (two public methods crashed outright, and its
   docstrings are still legacy one-liners), `gravity_.py`, and the two declared-WIP modules
-  (`instant.py`, `insitu.py`). `ReversedCadence.tstep_at_time` is the one substantive
-  unfixed correctness issue in actively used code.
+  (`instant.py`, `insitu.py`). `ReversedCadence.tstep_at_time` was the one substantive
+  unfixed correctness issue in actively used code; it has since been fixed.
 - Verification: `py_compile` on every edited file; `pytest tests/cadence tests/gravity
   tests/calibration tests/observation` all pass; full main suite
   (`pytest tests --ignore=tests/hosts --ignore=tests/spicedb`) passes 150/150.
@@ -1675,4 +1967,31 @@ items (legacy `Inputs:` block in `get_surface_event`, missing `Parameters:` bloc
 border.py/pole.py, missing property docstrings in `__init__.py`) would bring the
 package to a uniform standard. There is no test directory for backplanes in the main
 suite; coverage comes only from the gold-master host tests.
+
+### Completing the backplane docstrings
+
+The proofread above was carried out after the review. Every module and class in the
+package, and in `config.py` and `lightsource.py`, now carries a docstring with a
+`Parameters:` block; an audit of the package reports no function that lacks one. That
+covered 101 items: the 31 in the `Backplane` class itself, including the cache properties
+`dlos_duv`, `duv_dlos`, `center_dlos_duv`, and `center_duv_dlos`, the `_refresh` and
+pickling methods, and the whole key-manipulation and event-retrieval surface; 26 in
+`where.py` and `border.py`; 18 across `ring.py`, `spheroid.py`, `sky.py`, `pole.py`,
+`ansa.py`, and `resolution.py`; and the last three legacy blocks in the library outside
+`body.py` and the hosts — `Backplane.get_surface_event`, `LOGGING.print`, and
+`DiskSource.__init__`, all of which used the two-column `Inputs:` layout. No legacy block
+now remains in that tree.
+
+`Returns:` blocks were added only in `__init__.py`. The package's convention is
+unambiguous on this point: the thirteen modules that define backplane methods carry 96
+`Parameters:` blocks between them and not one `Returns:`, stating the returned quantity
+in the summary line instead, while the `Backplane` class methods use `Returns:`
+throughout. Both styles were left as they were found.
+
+Reading the code closely enough to document it also turned up two summary lines that
+misdescribed behavior, now corrected. `where_not` claimed a mask "where the value of the
+given backplane is False, zero, or masked", but a masked location never comes back True:
+with `tvl=False` the values are ANDed with the antimask, and with `tvl=True` a masked
+location stays masked. `where_in_front` described its arguments as `back_body` and
+`front_body`, names that appear nowhere in the signature or the code.
 
