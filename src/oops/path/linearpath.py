@@ -17,9 +17,9 @@ class LinearPath(Path):
         """Constructor for a LinearPath.
 
         Parameters:
-            pos (Vector3, array-like, or tuple): Position vector(s). The velocity is
-                defined via a derivative 'd_dt'. Alternatively, provide (pos, vel) as a
-                tuple of two Vector3 or array-like values.
+            pos (Vector3 or tuple): Position vector. The velocity is defined via a
+                derivative 'd_dt'. Alternatively, provide (pos, vel) as a tuple of two
+                Vector3 or array-like values.
             epoch (Scalar, array-like, or float): The time TDB relative to which all
                 orbital elements are defined.
             origin (Path or str): The Path or the ID of the Path defining the origin of
@@ -51,8 +51,8 @@ class LinearPath(Path):
         # Required attributes
         self._origin = Path.as_waypoint(origin)
         self._frame = frame and Frame.as_wayframe(frame) or self._origin._frame
-        self._shape = Qube.broadcasted_shape(self._pos, self._epoch, self._origin._shape,
-                                             self._frame._shape)
+        self._shape = Qube.broadcasted_shape(self._pos, self._vel, self._epoch,
+                                             self._origin._shape, self._frame._shape)
 
         self._register(path_id)
         self.refresh()

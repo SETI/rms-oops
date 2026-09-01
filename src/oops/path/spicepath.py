@@ -130,8 +130,8 @@ class SpicePath(Path):
         if isinstance(arg, numbers.Integral):
             try:
                 name = cspyce.bodc2n_error(arg)
-            except (KeyError, LookupError):
-                raise LookupError(f'unrecognized SPICE body {arg}')
+            except (KeyError, IndexError):
+                raise IndexError(f'unrecognized SPICE body {arg}')
 
             return (arg, name)
 
@@ -140,8 +140,8 @@ class SpicePath(Path):
             try:
                 body_code = cspyce.bodn2c_error(arg)
                 name = cspyce.bodc2n_error(body_code)
-            except (KeyError, LookupError):
-                raise LookupError(f'unrecognized SPICE body "{arg}"')
+            except (KeyError, IndexError):
+                raise KeyError(f'unrecognized SPICE body "{arg}"')
 
             return (body_code, name)
 
@@ -288,8 +288,7 @@ class SpicePath(Path):
             (code, _) = SpicePath._body_code_and_name(spice_path)
 
         # Intervene for the SSB, but only where the canonical SSB Path is what was asked
-        # for. Relative to any other origin or frame, the SSB needs a Path of its own;
-        # returning Path.SSB here would silently ignore `origin` and `frame`.
+        # for. Relative to any other origin or frame, the SSB needs a Path of its own.
         if code == 0 and origin == Path.SSB and frame == Frame.J2000:
             result = Path.SSB
 

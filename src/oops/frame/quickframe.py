@@ -2,6 +2,8 @@
 # oops/frame/quickframe.py
 ##########################################################################################
 
+from types import NoneType
+
 import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
 
@@ -53,8 +55,8 @@ class QuickFrame(Frame):
 
         # `use_quickframes` is not consulted here. It governs whether for_frame()
         # substitutes a QuickFrame automatically, and for_frame() checks it before
-        # reaching this constructor; a caller who names QuickFrame directly has asked
-        # for one. QuickPath draws the same line.
+        # reaching this constructor; a caller who names QuickFrame directly has asked for
+        # one. QuickPath draws the same line.
         tstep = quickdict['frame_time_step']
         extend = quickdict['frame_time_extension']
         extras = int(quickdict['frame_extra_steps'])
@@ -239,11 +241,6 @@ class QuickFrame(Frame):
         Unlike method `transform_at_time`, this variant tolerates times that raise cspyce
         errors. It returns a new time Scalar along with the new Transform, where both
         objects skip over the times at which the transform could not be evaluated.
-
-        The default behavior is to assume that all times are valid. As a result, this
-        method calls `transform_at_time` and also returns the given time Scalar. This
-        behavior is overridden by SpiceFrame, where occasional short gaps in a C-kernel
-        can be tolerated as long as a QuickFrame can interpolate across them.
 
         Parameters:
             time (Scalar): The time in seconds TDB.
@@ -538,6 +535,9 @@ class QuickFrame(Frame):
             QuickFrame. If a QuickFrame is found in the list that partially covers the
             time range, that QuickFrame is extended to cover the full range and returned.
         """
+
+        if not isinstance(quick, (dict, NoneType)) and quick != False:
+            raise ValueError('invalid `quick` input, must be dict, None, or False')
 
         if isinstance(frame, QuickFrame):    # a QuickFrame is already quick
             return frame

@@ -19,7 +19,7 @@ class MultiPath(Path):
         """Constructor for a MultiPath.
 
         Parameters:
-            paths (tuple or list): The Paths or Path IDs to include in this MultiPath.
+            paths (list[Path or str]): The Paths or Path IDs to include in this MultiPath.
             origin (Path or str, optional): The Path or the ID of the Path defining the
                 common origin of all the Paths; None to use the SSB.
             frame (Frame or str, optional): The Frame or the ID of the Frame in which
@@ -37,6 +37,8 @@ class MultiPath(Path):
         self._frame = frame and Frame.as_wayframe(frame) or self._origin._frame
 
         self._input_paths = np.array(paths, dtype='object')
+        if self._input_paths.ndim != 1:
+            raise ValueError('a MultiPath cannot be multidimensional')
         self._shape = self._input_paths.shape
         self._paths = np.empty(self._shape, dtype='object')
 
@@ -47,8 +49,9 @@ class MultiPath(Path):
         for k, path in np.ndenumerate(self._input_paths):
             self._paths[k] = Path.as_path(path).wrt(self._origin, self._frame)
 
-    # Support indexing by integer or numeric range
     def __getitem__(self, i):
+        """Support for indexing, returning the selected Path if `i` is an integer, or a
+        new MultiPath if `i` is a numeric range."""
         paths = self._paths[i]
         if np.shape(paths) == ():
             return paths

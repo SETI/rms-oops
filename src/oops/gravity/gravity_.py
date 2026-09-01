@@ -17,30 +17,27 @@ class Gravity(object):
         pass
 
     def kappa(self, a, e=0., sin_i=0.):
-        """The radial oscillation frequency (radians/s) at semimajor axis a.
-        """
+        """The radial oscillation frequency (radians/s) at semimajor axis a."""
         pass
 
     def nu(self, a, e=0., sin_i=0.):
-        """The vertical oscillation frequency (radians/s) at semimajor axis a.
-        """
+        """The vertical oscillation frequency (radians/s) at semimajor axis a."""
         pass
 
     def domega_da(self, a, e=0., sin_i=0.):
-        """The radial derivative of the mean motion (radians/s/km) at semimajor
-        axis a.
+        """The radial derivative of the mean motion (radians/s/km) at semimajor axis a.
         """
         pass
 
     def dkappa_da(self, a, e=0., sin_i=0.):
-        """The radial derivative of the radial oscillation frequency
-        (radians/s/km) at semimajor axis a.
+        """The radial derivative of the radial oscillation frequency (radians/s/km) at
+        semimajor axis a.
         """
         pass
 
     def dnu_da(self, a, e=0., sin_i=0.):
-        """The radial derivative of the vertical oscillation frequency
-        (radians/s/km) at semimajor axis a.
+        """The radial derivative of the vertical oscillation frequency (radians/s/km) at
+        semimajor axis a.
         """
         pass
 
@@ -69,46 +66,46 @@ class Gravity(object):
     ######################################################################################
 
     def n(self, a, e=0., sin_i=0.):
-        """The mean motion at semimajor axis a. Identical to omega(a)."""
+        """The mean motion at semimajor axis `a`. Identical to `omega(a)`."""
         return self.omega(a, e, sin_i)
 
     def dmean_dt(self, a, e=0., sin_i=0.):
-        """The mean motion at semimajor axis a. Identical to omega(a)."""
+        """The mean motion at semimajor axis `a`. Identical to `omega(a)`."""
         return self.omega(a, e, sin_i)
 
     def dperi_dt(self, a, e=0., sin_i=0.):
-        """The pericenter precession rate at semimajor axis a. Identical to combo(a,
-        (1,-1,0)).
+        """The pericenter precession rate at semimajor axis `a.` Identical to
+        `combo(a, (1,-1,0))`.
         """
         return self.combo(a, (1,-1,0), e, sin_i)
 
     def dnode_dt(self, a, e=0., sin_i=0.):
-        """The nodal regression rate (negative) at semimajor axis a. Identical to combo(a,
-        (1,0,-1)).
+        """The nodal regression rate (negative) at semimajor axis `a`. Identical to
+        `combo(a, (1,0,-1))`.
         """
         return self.combo(a, (1,0,-1), e, sin_i)
 
     def d_dmean_dt_da(self, a, e=0., sin_i=0.):
-        """The radial derivative of the mean motion at semimajor axis a. Identical to
-        domega_da(a).
+        """The radial derivative of the mean motion at semimajor axis `a`. Identical to
+        `domega_da(a)`.
         """
         return self.domega_da(a, e, sin_i)
 
     def d_dperi_dt_da(self, a, e=0., sin_i=0.):
-        """The radial derivative of the pericenter precession rate at semimajor axis a.
-        Identical to dcombo_da(a, (1,-1,0)).
+        """The radial derivative of the pericenter precession rate at semimajor axis `a`.
+        Identical to `dcombo_da(a, (1,-1,0))`.
         """
         return self.dcombo_da(a, (1,-1,0), e, sin_i)
 
     def d_dnode_dt_da(self, a, e=0., sin_i=0.):
         """The radial derivative of the nodal regression rate (negative) at semimajor axis
-        a. Identical to dcombo_da(a, (1,0,-1)).
+        `a`. Identical to `dcombo_da(a, (1,0,-1))`.
         """
         return self.dcombo_da(a, (1,0,-1), e, sin_i)
 
     def ilr_pattern(self, n, m, p=1):
-        """The pattern speed of the m:m-p inner Lindblad resonance, given the mean motion
-        n of the perturber.
+        """The pattern speed of the `m:m-p` inner Lindblad resonance, given the mean
+        motion `n` of the perturber.
         """
         a = self.solve_a(n, (1,0,0))
         return (n + self.kappa(a) * p/m)

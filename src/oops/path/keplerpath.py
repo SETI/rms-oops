@@ -310,7 +310,8 @@ class KeplerPath(Path, Fittable):
                 with respect to the elements.
 
         Returns:
-            tuple[Vector3, Vector3]: (position, velocity), each represented by a Vector3.
+            tuple[Vector3, Vector3]: `(position, velocity)`. If `partials` is True, then
+                these values have derivatives by the orbital elements.
         """
 
         # Convert to array if necessary
@@ -784,7 +785,7 @@ class KeplerPath(Path, Fittable):
         return Event(time, (pos_j2000, vel_j2000), self._observer, Frame.J2000)
 
     def _photon_from_planet(self, time, *, derivs=False, guess=None, antimask=None,
-                            quick=None, converge={}):
+                            quick=None, converge=None):
 
         # Check the cache for the planet event
         events = self._events[time]

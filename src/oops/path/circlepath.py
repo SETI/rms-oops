@@ -59,7 +59,6 @@ class CirclePath(Path):
         return (self._radius, self._lon, self._rate, self._epoch, self._origin,
                 self._frame)
 
-
     def _show(self, level, indent=0):
         name = type(self).__name__
         skip = indent + len(name) + 1

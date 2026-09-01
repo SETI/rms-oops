@@ -2,6 +2,8 @@
 # oops/path/quickpath.py: Subclass QuickPath of class Path
 ##########################################################################################
 
+from types import NoneType
+
 import numpy as np
 import scipy.interpolate as interp
 
@@ -342,6 +344,9 @@ class QuickPath(Path):
             If a QuickPath is found in the list that partially covers the time range, that
             QuickPath is extended to cover the full range and returned.
         """
+
+        if not isinstance(quick, (dict, NoneType)) and quick != False:
+            raise ValueError('invalid `quick` input, must be dict, None, or False')
 
         if isinstance(path, QuickPath):     # a QuickPath is already quick
             return path
