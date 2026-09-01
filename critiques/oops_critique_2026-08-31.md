@@ -26,7 +26,7 @@ deviations), SUGGESTION (improvements needing an owner decision).
 | `oops/backplane` | 15 | 69 | 49 | 9 | 9 |
 | **Total** | **118** | **327** | **170** | **90** | **76** |
 
-These counts describe the review as first delivered. Work continued afterward, and 29 of
+These counts describe the review as first delivered. Work continued afterward, and 30 of
 the findings it left open have since been resolved; each is labelled **(fixed after
 review)** in place of "(not fixed)", with its entry saying what was done. A few defects
 found during that later work are labelled **(found after review, fixed)** and were added
@@ -1399,9 +1399,15 @@ coverage, which is a decision about reference data and was left to the author.
   convergence early. Fixed with `np.abs`.
 - **[BUG] (fixed)** `barrelfov.py:202` — same `fast=False`-with-only-`coefft_uv_from_xy`
   crash as PolynomialFOV; same fix, verified by round-trip.
-- **[DOC] (not fixed)** `barrelfov.py:356` — the non-convergence warning reports `max_dr`
-  (the previous iteration's change) where PolynomialFOV reports the latest change; the
-  logged number can be misleading. Cosmetic.
+- **[DOC] (fixed after review)** `barrelfov.py:356` — the non-convergence warning
+  reported `max_dr` (the previous iteration's change) where PolynomialFOV reports the
+  latest change. The two exits from the loop differ: when it runs out of iterations the
+  two are equal, but when it breaks because the step grew (`new_max_dr >= max_dr`) the
+  step that triggered the break was never assigned to `max_dr`, so the warning reported
+  the smaller preceding step. That understates the failure and prints a
+  converged-looking number: replaying the control flow over steps of 1, 1e-3, 1e-6, 4e-6
+  logged `change=1e-06` for the iteration whose actual change was `4e-06`. Now reports
+  `new_max_dr`, making the warning identical in form to PolynomialFOV's.
 
 ### src/oops/fov/wcsfov.py
 - **[BUG] (fixed)** `wcsfov.py:68` — `uv_shape` was built as `Pair([NAXIS2, NAXIS1])`,

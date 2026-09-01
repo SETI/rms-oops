@@ -354,7 +354,7 @@ class BarrelFOV(FOV):
 
         if not converged:
             LOGGING.warn('BarrelFOV._solve_ratio did not converge;',
-                         'iter=%d; change=%.6g' % (count+1, max_dr))
+                         'iter=%d; change=%.6g' % (count+1, new_max_dr))
 
         # Prepare ratio r/f
         ratio = 1. / f_over_r   # f_over_r can't be zero
