@@ -132,7 +132,7 @@ class RingPlane(Surface):
             obs (Vector3, optional): Observer position relative to this Surface's origin
                 and frame; ignored for this Surface subclass.
             time (Scalar, optional): Time at which to evaluate the Surface; ignored unless
-                this RingPlane contains radial modes.
+                this RingPlane contains radial modes, in which case it is required.
             axes (int, optional): 2 or 3, indicating whether to return the first two
                 coordinates (rad, theta) or all three (rad, theta, z) as Scalars.
             derivs (bool, optional): True to propagate any derivatives inside pos and obs
@@ -150,6 +150,9 @@ class RingPlane(Surface):
             * `z` (Scalar): Vertical distance in km above the ring plane; included if
               `axes` == 3.
             * `hints` (Any): The input value of `hints`, included if it is not None.
+
+        Raises:
+            ValueError: If this RingPlane contains radial modes and no `time` is given.
         """
 
         # Validate inputs
@@ -202,7 +205,7 @@ class RingPlane(Surface):
             obs (Vector3, optional): Observer position relative to this Surface's origin
                 and frame; ignored for this subclass.
             time (Scalar, optional): Time at which to evaluate the Surface; ignored unless
-                this RingPlane contains radial modes.
+                this RingPlane contains radial modes, in which case it is required.
             derivs (bool, optional): True to propagate any derivatives inside `coords` and
                 `obs` into the returned position vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -213,6 +216,9 @@ class RingPlane(Surface):
             Vector3 or tuple[Vector3, Any]: Points defined by the coordinates, relative to
             this Surface's origin and frame, optionally followed by `hints`. The input
             value of `hints` is returned if it is not None.
+
+        Raises:
+            ValueError: If this RingPlane contains radial modes and no `time` is given.
         """
 
         # Validate inputs
@@ -340,10 +346,13 @@ class RingPlane(Surface):
             obs (Vector3, optional): Observer position relative to this Surface's origin
                 and frame; ignored for this Surface subclass.
             time (Scalar, optional): Time at which to evaluate the Surface; ignored unless
-                this RingPlane contains radial modes.
+                this RingPlane contains radial modes, in which case it is required.
 
         Returns:
             Vector3: Velocities, in units of km/s.
+
+        Raises:
+            ValueError: If this RingPlane contains radial modes and no `time` is given.
         """
 
         pos = Vector3.as_vector3(pos, recursive=False)
@@ -394,7 +403,8 @@ class RingPlane(Surface):
 
         Parameters:
             lon (Scalar): Longitude in radians of the intercept point.
-            time (Scalar): Time at which to evaluate the modes, in seconds TDB.
+            time (Scalar): Time at which to evaluate the modes, in seconds TDB. It is
+                required, because the modes vary with it.
             derivs (bool, optional): True to propagate any derivatives of `lon` and `time`
                 into the returned offset.
             rates (bool, optional): True to return the epicyclic rates along with the
@@ -403,13 +413,15 @@ class RingPlane(Surface):
         Returns:
             Scalar or tuple[Scalar, Scalar, Scalar]: The radial offset in km, or
             `(offset, dr_dt, dlon_dt)` if `rates` is True.
+
+        Raises:
+            ValueError: If this RingPlane contains radial modes and no `time` is given.
         """
 
-        # The callers now default `time` to None, meaning unspecified. The modes are
-        # defined relative to the epoch, so an unspecified time is the epoch itself,
-        # which is what a time of zero meant when that was the default.
-        if time is None:
-            time = self._epoch
+        # The modes vary with time, so there is no sensible value to assume for one that
+        # was not given.
+        if self._modes and time is None:
+            raise ValueError(f'{type(self).__name__} with radial modes requires a time')
 
         offset = 0.
         dr_dt = 0.

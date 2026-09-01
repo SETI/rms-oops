@@ -3,8 +3,9 @@
 ##########################################################################################
 
 import numpy as np
+import pytest
 
-from polymath               import Vector3
+from polymath               import Scalar, Vector3
 from oops.constants         import TWOPI
 from oops.frame.frame_      import Frame
 from oops.path.path_        import Path
@@ -104,7 +105,8 @@ def test_ringplane():
     plane = RingPlane(Path.SSB, Frame.J2000,
                       modes=[(10, 1000., 0., 0.)], epoch=0.)
 
-    vels = plane.velocity(obs)
+    # A ring with modes requires a time, though this mode does not move
+    vels = plane.velocity(obs, time=0.)
     assert vels == (0.,0.,0.)
 
     # No gravity, modes (10 cycles, 100 km amplitude, period = 10,000 s)
@@ -161,4 +163,62 @@ def test_ringplane():
         ##################################################################################
         # Note: Additional unit testing is performed in orbitplane.py
         ##################################################################################
+
+
+# One radial mode: two cycles around the ring, 10 km in amplitude, drifting slowly
+MODES = [(2, 10., 0., 1.e-6)]
+
+
+def _ringed():
+    """A RingPlane carrying a radial mode.
+
+    Returns:
+        RingPlane: The ring, whose radius therefore varies with time.
+    """
+
+    return RingPlane('SSB', 'J2000', modes=MODES, epoch=0.)
+
+
+def test_radial_modes_require_a_time() -> None:
+    """A ring whose radius varies with time cannot be evaluated without one.
+
+    There is no sensible value to assume, so each entry point refuses rather than
+    silently picking one.
+    """
+
+    ringed = _ringed()
+    pos = Vector3((1.e5, 2.e4, 0.))
+
+    with pytest.raises(ValueError, match='requires a time'):
+        ringed.coords_from_vector3(pos)
+
+    with pytest.raises(ValueError, match='requires a time'):
+        ringed.vector3_from_coords((Scalar(1.e5), Scalar(0.2)))
+
+    with pytest.raises(ValueError, match='requires a time'):
+        ringed.velocity(pos)
+
+
+def test_a_ring_without_modes_needs_no_time() -> None:
+    """Time is irrelevant without modes, so it stays optional there."""
+
+    plain = RingPlane('SSB', 'J2000')
+    pos = Vector3((1.e5, 2.e4, 0.))
+
+    assert plain.coords_from_vector3(pos)[0].vals > 0.
+
+
+def test_radial_modes_shift_the_radius_with_time() -> None:
+    """Given a time, the mode displaces the radius from the unmodulated value."""
+
+    ringed = _ringed()
+    plain = RingPlane('SSB', 'J2000')
+    pos = Vector3((1.e5, 2.e4, 0.))
+
+    modulated = ringed.coords_from_vector3(pos, time=Scalar(500.))[0]
+    unmodulated = plain.coords_from_vector3(pos, time=Scalar(500.))[0]
+
+    assert abs(modulated - unmodulated) > 1.
+    assert abs(modulated - unmodulated) <= 10.      # bounded by the amplitude
+
 ##########################################################################################
