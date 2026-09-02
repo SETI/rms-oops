@@ -47,8 +47,13 @@ class SpiceFrame(Frame):
                 SpiceFrames are always registered.
 
         Raises:
-            LookupError: If `spice_frame` is not a recognized frame name, frame code, body
-                name, or body code within the SPICE Toolkit.
+            IndexError: If `spice_frame` is an integer but is not a recognized frame ID or
+                body ID.
+            KeyError: If `spice_frame` is a string but is not a recognized frame name or
+                body name.
+            KeyError: If `spice_frame` defines a known SPICE body but its rotation frame
+                is undefined.
+            TypeError: If `spice_frame` is not an integer or string.
             ValueError: If `reference` is not a SpiceFrame or J2000, or if `omega_type`
                 does not have a recognized value.
         """
@@ -131,8 +136,13 @@ class SpiceFrame(Frame):
                 relative to which this Frame is defined; None for J2000.
 
         Raises:
-            LookupError: If `spice_frame` is not a recognized frame name, frame code, body
-                name, or body code within the SPICE Toolkit.
+            IndexError: If `spice_frame` is an integer but is not a recognized frame ID or
+                body ID.
+            KeyError: If `spice_frame` is a string but is not a recognized frame name or
+                body name.
+            KeyError: If `spice_frame` defines a known SPICE body but its rotation frame
+                is undefined.
+            TypeError: If `spice_frame` is not an integer or string.
             ValueError: If `reference` is not a SpiceFrame or J2000.
         """
 
@@ -192,53 +202,70 @@ class SpiceFrame(Frame):
             Toolkit.
 
         Raises:
-            LookupError: If `arg` is not a recognized frame name, frame code, body name,
-                or body code within the SPICE Toolkit.
+            IndexError: If `arg` is an integer but is not a recognized frame ID or body
+                ID.
+            KeyError: If `arg` is a string but is not a recognized frame name or body
+                name.
+            KeyError: If `arg` defines a known SPICE body but its rotation frame is
+                undefined.
+            TypeError: If `arg` is not an integer or string.
         """
+
+        # A trapped cspyce error is suppressed with `from None`; its traceback ends
+        # inside the SWIG wrapper and its message names the C signature rather than the
+        # input, so it adds nothing the caller can act on.
 
         # Interpret an integer input
         if isinstance(arg, numbers.Integral):
             try:
                 name = cspyce.frmnam_error(arg)
-            except (KeyError, LookupError):
+            except (IndexError, KeyError, RuntimeError):  # not a frame code
                 pass
             else:
                 return (arg, name)
 
             # Otherwise, perhaps it is a body code
             if not cspyce.bodfnd(arg, 'POLE_RA'):
-                raise LookupError(f'unrecognized SPICE frame {arg}')
+                raise IndexError(f'unrecognized SPICE frame {arg}')
+
+            # It's a body code, so return its frame info
             try:
-                return tuple(cspyce.cidfrm(arg))
-            except (KeyError, LookupError):
-                raise LookupError(f'unrecognized SPICE frame {arg}')
+                return tuple(cspyce.cidfrm_error(arg))
+            except (IndexError, KeyError, RuntimeError):
+                raise KeyError(f'frame for body {arg} is undefined') from None
 
         # Interpret a string input
-        else:
+        elif isinstance(arg, str):
             # Validate this as the name of a frame
             try:
                 frame_code = cspyce.namfrm_error(arg)
-            except (KeyError, LookupError):
+            except (IndexError, KeyError, RuntimeError):  # not a frame name
                 pass
             else:
-                # Make sure the frame is defined
+                # Frame code exists; If it's a body frame, make sure the frame is defined
                 body_code = cspyce.frinfo(frame_code)[0]
                 if body_code > 0 and not cspyce.bodfnd(body_code, 'POLE_RA'):
-                    raise LookupError(f'frame "{arg}" is undefined')
+                    raise KeyError(f'frame "{arg}" is undefined')
                 return (frame_code, cspyce.frmnam(frame_code))
 
             # See if this is the name of a body
             try:
                 body_code = cspyce.bodn2c_error(arg)
-            except (KeyError, LookupError):
-                raise LookupError(f'unrecognized SPICE frame "{arg}"')
+            except (IndexError, KeyError, RuntimeError):
+                raise KeyError(f'unrecognized SPICE frame "{arg}"') from None
 
             # Make sure the body's frame is defined
             if not cspyce.bodfnd(body_code, 'POLE_RA'):
-                raise LookupError(f'frame for body "{arg}" is undefined')
+                raise KeyError(f'frame for body "{arg}" is undefined')
 
             # Return the name of the associated frame
-            return tuple(cspyce.cidfrm(body_code))
+            try:
+                return tuple(cspyce.cidfrm_error(body_code))
+            except (IndexError, KeyError, RuntimeError):
+                raise KeyError(f'frame for body "{arg}" is undefined') from None
+
+        else:
+            raise TypeError(f'invalid SPICE frame: {arg!r}')
 
     ######################################################################################
     # Serialization support
@@ -568,8 +595,15 @@ class SpiceFrame(Frame):
             SpiceFrame: The SpiceFrame, newly constructed if necessary.
 
         Raises:
-            LookupError: If `spice_frame` is not a recognized frame name, frame code, body
-                name, or body code within the SPICE Toolkit.
+            IndexError: If `spice_frame` is an integer but is not a recognized frame ID or
+                body ID.
+            KeyError: If `spice_frame` is a string but is not a recognized frame name or
+                body name.
+            KeyError: If `spice_frame` defines a known SPICE body but its rotation frame
+                is undefined.
+            TypeError: If `spice_frame` is not an integer or string.
+            ValueError: If `reference` is not a SpiceFrame or J2000, or if `omega_type`
+                does not have a recognized value.
         """
 
         reference = Frame.as_wayframe(reference)

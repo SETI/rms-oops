@@ -70,7 +70,7 @@ class Frame(Mutable):
     "ENCELADUS-2". However, if the new Frame is functionally identical to the existing
     Frame called "ENCELADUS", then its ID will also be "ENCELADUS".
 
-    Properties:
+    Attributes:
         frame_id (str or None): The optional ID string for this Frame. Once registered, a
             Frame can be referenced globally by its Frame ID.
         reference (Frame): The Frame from which this Frame transforms. The

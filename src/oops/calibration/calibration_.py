@@ -3,14 +3,16 @@
 ##########################################################################################
 
 import numpy as np
-from polymath import Pair
+
+from polymath  import Pair
+from oops.oops import Oops
 
 
-class Calibration(object):
+class Calibration(Oops):
     """Calibration is an abstract class defining a relationship between the numeric values
     in an image array and physical quantities.
 
-    Properties:
+    Attributes:
         name (str): The name of the quantity that this Calibration converts to.
         factor (Scalar): The value or array that multiplies DN values.
         baseline (Scalar): An offset value subtracted from each DN before the factor is

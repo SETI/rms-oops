@@ -17,6 +17,7 @@ from oops.frame.synchronousframe import SynchronousFrame
 from oops.frame.twovectorframe   import TwoVectorFrame
 from oops.gravity.gravity_       import Gravity
 from oops.gravity.oblategravity  import OblateGravity
+from oops.oops                   import Oops
 from oops.path.path_             import Path
 from oops.path.multipath         import MultiPath
 from oops.path.spicepath         import SpicePath
@@ -228,47 +229,47 @@ _INERTIALS = ['B1950', 'GALACTIC', 'ECLIPJ2000']
 
 ##########################################################################################
 
-class Body(object):
+class Body(Oops):
     """Defines the properties and relationships of solar system bodies.
 
     Bodies include planets, dwarf planets, satellites and rings.
 
-    Properties:
-        * name (str): The name of this body.
-        * spice_id (int or None): The ID from the SPICE toolkit if the body is found in
-          SPICE; otherwise None.
-        * path (Path): A Waypoint for the body's path.
-        * frame (Frame): A Wayframe for the body's frame.
-        * parent (Body): The physical body, not necessarily the barycenter, about which
-          this body orbits. If a string is given, the parent is found by looking it up in
-          the BODY_REGISTRY dictionary.
-        * barycenter (Body): The body defining the barycenter of motion and the gravity
-          field defining this body's motion. If a string is given, the barycenter is found
-          by looking it up in the BODY_REGISTRY dictionary. If None, this is the parent
-          body.
-        * spice_name (str): Name of the Body within the SPICE toolkit, if it is in SPICE.
-        * ring_frame (Frame or None): The Wayframe of a "despun" RingFrame relevant to a
-          ring that might orbit this body; None if not (yet) defined.
-        * ring_is_retrograde (bool): True if the ring frame is retrograde relative to
-          IAU-defined north.
-        * ring_body (Body or None): The Body object associated with an equatorial,
-          unbounded ring; None if not defined.
-        * surface (Surface or None): The Surface object defining the body's surface; None
-          if the body is a point and has no surface.
-        * radius (float): A single value in km, defining the radius of a sphere that
-          encloses the entire body. Zero for bodies that have no surface.
-        * inner_radius (float): A single value in km, defining the radius of a sphere that
-          is entirely enclosed by the body. Zero for bodies that have no surface.
-        * gravity (Gravity or None): The gravity field of the body; None if the gravity
-          field is undefined or negligible.
-        * keywords (list): Keywords associated with the body. Typical values are "PLANET",
-          "BARYCENTER", "SATELLITE", "SPACECRAFT", "RING", and for satellites, "REGULAR",
-          "IRREGULAR", "CLASSICAL". The name of each body appears as a keyword in its own
-          keyword list. In addition, every planet appears as a keyword for its system
-          barycenter and for each of its satellites and rings.
-        * children (list): Child bodies associated with this body. Every Body object
-          appears on the list of the children of its parent and also the children of its
-          barycenter.
+    Attributes:
+        name (str): The name of this body.
+        spice_id (int or None): The ID from the SPICE toolkit if the body is found in
+            SPICE; otherwise None.
+        path (Path): A Waypoint for the body's path.
+        frame (Frame): A Wayframe for the body's frame.
+        parent (Body): The physical body, not necessarily the barycenter, about which this
+            body orbits. If a string is given, the parent is found by looking it up in the
+            BODY_REGISTRY dictionary.
+        barycenter (Body): The body defining the barycenter of motion and the gravity
+            field defining this body's motion. If a string is given, the barycenter is
+            found by looking it up in the BODY_REGISTRY dictionary. If None, this is the
+            parent body.
+        spice_name (str): Name of the Body within the SPICE toolkit, if it is in SPICE.
+        ring_frame (Frame or None): The Wayframe of a "despun" RingFrame relevant to a
+            ring that might orbit this body; None if not (yet) defined.
+        ring_is_retrograde (bool): True if the ring frame is retrograde relative to
+            IAU-defined north.
+        ring_body (Body or None): The Body object associated with an equatorial, unbounded
+            ring; None if not defined.
+        surface (Surface or None): The Surface object defining the body's surface; None if
+            the body is a point and has no surface.
+        radius (float): A single value in km, defining the radius of a sphere that
+            encloses the entire body. Zero for bodies that have no surface.
+        inner_radius (float): A single value in km, defining the radius of a sphere that
+            is entirely enclosed by the body. Zero for bodies that have no surface.
+        gravity (Gravity or None): The gravity field of the body; None if the gravity
+            field is undefined or negligible.
+        keywords (list): Keywords associated with the body. Typical values are "PLANET",
+            "BARYCENTER", "SATELLITE", "SPACECRAFT", "RING", and for satellites,
+            "REGULAR", "IRREGULAR", "CLASSICAL". The name of each body appears as a
+            keyword in its own keyword list. In addition, every planet appears as a
+            keyword for its system barycenter and for each of its satellites and rings.
+        children (list): Child bodies associated with this body. Every Body object appears
+            on the list of the children of its parent and also the children of its
+            barycenter.
     """
 
     BODY_REGISTRY = {}          # global dictionary of body objects

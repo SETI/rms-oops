@@ -39,7 +39,7 @@ class FOV(Mutable):
     dependencies on wavelength, etc. Additional arguments and keyword values can be passed
     through these methods and into the subclass methods.
 
-    Properties:
+    Attributes:
         uv_los (Pair): The `(u,v)` coordinates of the nominal line of sight.
         uv_scale (Pair): The approximate ratios `dx/du` and `dy/dv`. For example, if
             `(u,v)` are in units of arcseconds, then `uv_scale` is::

@@ -38,8 +38,13 @@ class SpiceType1Frame(SpiceFrame):
                 used repeatedly at a finite set of times.
 
         Raises:
-            LookupError: If `spice_frame` is not a recognized frame name or frame code
-                within the SPICE Toolkit.
+            IndexError: If `spice_frame` is an integer but is not a recognized frame ID or
+                body ID.
+            KeyError: If `spice_frame` is a string but is not a recognized frame name or
+                body name.
+            KeyError: If `spice_frame` defines a known SPICE body but its rotation frame
+                is undefined.
+            TypeError: If `spice_frame` is not an integer or string.
             ValueError: If `reference` is not a SpiceFrame or J2000.
         """
 
@@ -380,8 +385,13 @@ class SpiceType1Frame(SpiceFrame):
             SpiceType1Frame: The SpiceType1Frame, newly constructed if necessary.
 
         Raises:
-            LookupError: If `spice_frame` is not a recognized frame name or frame code
-                within the SPICE Toolkit.
+            IndexError: If `spice_frame` is an integer but is not a recognized frame ID or
+                body ID.
+            KeyError: If `spice_frame` is a string but is not a recognized frame name or
+                body name.
+            KeyError: If `spice_frame` defines a known SPICE body but its rotation frame
+                is undefined.
+            TypeError: If `spice_frame` is not an integer or string.
             ValueError: If `reference` is not a SpiceFrame or J2000.
         """
 

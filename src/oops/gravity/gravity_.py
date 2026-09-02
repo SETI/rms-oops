@@ -2,7 +2,10 @@
 # oops/gravity/gravity_.py
 ##########################################################################################
 
-class Gravity(object):
+from oops.oops import Oops
+
+
+class Gravity(Oops):
     """An abstract class describing the gravity field of a body."""
 
     GRAVITY_REGISTRY = {}           # global dictionary of gravity objects
@@ -41,21 +44,21 @@ class Gravity(object):
         """
         pass
 
-    def combo(self, a, factors, e=0., sin_i=0.):
+    def combo(self, a, factors, *, e=0., sin_i=0.):
         """A frequency combination, based on given coefficients for omega, kappa and nu.
         Full numeric precision is preserved in the limit of first- or second-order
         cancellation of the coefficients.
         """
         pass
 
-    def dcombo_da(self, a, factors, e=0., sin_i=0.):
+    def dcombo_da(self, a, factors, *, e=0., sin_i=0.):
         """The radial derivative of a frequency combination, based on given coefficients
         for omega, kappa and nu. Unlike method combo(), this one does not guarantee full
         precision if the coefficients cancel to first or second order.
         """
         pass
 
-    def solve_a(self, freq, factors=(1,0,0), e=0., sin_i=0.):
+    def solve_a(self, freq, factors=(1,0,0), *, e=0., sin_i=0.):
         """Solve for the semimajor axis at which the frequency is equal to the given
         combination of factors on omega, kappa and nu.
         """
@@ -103,19 +106,19 @@ class Gravity(object):
         """
         return self.dcombo_da(a, (1,0,-1), e, sin_i)
 
-    def ilr_pattern(self, n, m, p=1):
+    def ilr_pattern(self, n, m, *, p=1):
         """The pattern speed of the `m:m-p` inner Lindblad resonance, given the mean
         motion `n` of the perturber.
         """
         a = self.solve_a(n, (1,0,0))
-        return (n + self.kappa(a) * p/m)
+        return n + self.kappa(a) * p/m
 
-    def olr_pattern(self, n, m, p=1):
-        """The pattern speed of the m:m+p outer Lindblad resonance, given the mean motion
-        n of the perturber.
+    def olr_pattern(self, n, m, *, p=1):
+        """The pattern speed of the `m:m+p` outer Lindblad resonance, given the mean
+        motion `n` of the perturber.
         """
         a = self.solve_a(n, (1,0,0))
-        return (n - self.kappa(a) * p/(m+p))
+        return n - self.kappa(a) * p/(m+p)
 
     ######################################################################################
     # Gravity registry

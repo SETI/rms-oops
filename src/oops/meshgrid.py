@@ -7,24 +7,25 @@ import numbers
 import numpy as np
 
 from polymath import Scalar, Pair, Vector3
+from oops.oops import Oops
 
 
-class Meshgrid(object):
+class Meshgrid(Oops):
     """An arbitrary array of coordinate pairs within a Field of View.
 
     A Meshgrid caches information about the line of sight and various derivatives,
     preventing the need for repeated calls to the FOV functions when the same field of
     view describes multiple images.
 
-    Properties:
-        * fov (FOV): The field of view that this Meshgrid samples.
-        * uv (Pair): The `(u,v)` coordinates of the samples, without derivatives.
-        * uv_w_duv_duv (Pair): The same `(u,v)` coordinates, carrying the identity
-          derivative `d(u,v)/d(u,v)`.
-        * center_uv (Pair): The `(u,v)` coordinates of the center of the meshgrid.
-        * center_uv_w_duv_duv (Pair): The center coordinates, carrying the identity
-          derivative `d(u,v)/d(u,v)`.
-        * shape (tuple[int, ...]): The shape of the array of `(u,v)` coordinates.
+    Attributes:
+        fov (FOV): The field of view that this Meshgrid samples.
+        uv (Pair): The `(u,v)` coordinates of the samples, without derivatives.
+        uv_w_duv_duv (Pair): The same `(u,v)` coordinates, carrying the identity
+            derivative `d(u,v)/d(u,v)`.
+        center_uv (Pair): The `(u,v)` coordinates of the center of the meshgrid.
+        center_uv_w_duv_duv (Pair): The center coordinates, carrying the identity
+            derivative `d(u,v)/d(u,v)`.
+        shape (tuple[int, ...]): The shape of the array of `(u,v)` coordinates.
 
     Lines of sight and their derivatives are obtained from methods rather than
     attributes, because each one depends on the time at which the FOV is sampled. Every

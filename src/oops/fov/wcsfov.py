@@ -19,7 +19,7 @@ class WCSFOV(FOV):
     instantaneous (aberration-corrected) pointing. These two must be decoupled for our
     purposes.
 
-    Properties:
+    Attributes:
         header (dict): The given FITS header.
         ref_axis (str): The reference axis, "x" or "y". This is the image axis used to
             define the FOV's frame. It is needed because the axes can be slightly skewed.

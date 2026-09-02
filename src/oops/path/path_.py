@@ -74,7 +74,7 @@ class Path(Mutable):
     However, if the new Path is functionally identical to the existing Path called
     "SATURN", then its ID will also be "SATURN".
 
-    Properties:
+    Attributes:
         path_id (str or None): The optional ID string for this Path. Once registered, a
             Path can be referenced globally by its Path ID.
         stripped_id (str or None): The Path ID with any numeric suffix stripped; None if

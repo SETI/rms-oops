@@ -17,7 +17,7 @@ class Surface(Mutable):
     two primary coordinates define locations on the surface, and an optional third
     coordinate can define points above or below that surface.
 
-    Properties:
+    Attributes:
         origin (Path): The waypoint of the path defining the surface's center.
         frame (Frame): The wayframe of the frame in which the surface is defined.
         unmasked (Surface): An unmasked version of this surface. If the surface has no
@@ -25,8 +25,6 @@ class Surface(Mutable):
         intercept_key (tuple): A unique, immutable key that defines the surface. Some
             surface classes are identical except for a mask or coordinate definition;
             those classes return the same intercept key.
-
-    Attributes:
         IS_VIRTUAL (bool): True if this surface is virtual. A virtual surface is one that
             is only defined from the viewpoint of an observer, such as a Limb or Ansa
             point. It has no physical presence.
@@ -315,6 +313,10 @@ class Surface(Mutable):
             Boolean: True where positions are inside the Surface. For subclasses
             that have no interior, such as RingPlane, a single value of Boolean False is
             always returned.
+
+        Raises:
+            NotImplementedError: If the Surface subclass has an interior but this method
+                is not implemented.
         """
 
         if self.HAS_INTERIOR:

@@ -60,9 +60,15 @@ napoleon_include_private_with_doc = False
 napoleon_include_special_with_doc = True
 napoleon_use_param = True
 napoleon_use_rtype = True
-# `Properties:` is the house heading for a class's public attributes; Napoleon does not
-# know it, so without this the block is left as raw text and docutils reads the indented
-# descriptions as a definition list that unindents unexpectedly.
+# Render an `Attributes:` block as `:ivar:` fields. With the default directive form,
+# Napoleon emits a `py:attribute` for each entry, which collides with the `property`
+# of the same name that autodoc already documents.
+napoleon_use_ivar = True
+# `Properties:` survives only in `programs.gold_master`, which this tree does not
+# autodoc; Napoleon does not know the heading, so without this the block would be left
+# as raw text and docutils would read the indented descriptions as a definition list
+# that unindents unexpectedly. The `oops` and `spicedb` classes use `Attributes:`,
+# which Napoleon handles natively.
 napoleon_custom_sections = [('Properties', 'params_style')]
 
 intersphinx_mapping = {

@@ -91,7 +91,7 @@ house style. Do not "fix" alignment or blank-line counts that flake8 passes.
 - There are no `#===...` or `#---...` separator rules. They used to sit above
   each `def` in the legacy modules; do not reintroduce them.
 - Docstrings come in two coexisting styles. Modern: Google-ish, using
-  `Parameters:` (never `Args:`), with class-level `Properties:` bullets and
+  `Parameters:` (never `Args:`), a class-level `Attributes:` block, and
   noun-phrase summary lines. Legacy: two-column `Input:` / `Return:` blocks
   hanging at column 25. Match the file.
 - A subpackage directory shares its name with the abstract class it exports, so

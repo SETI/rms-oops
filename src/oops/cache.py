@@ -3,10 +3,12 @@
 ##########################################################################################
 
 import numpy as np
-from polymath import Qube
+
+from polymath  import Qube
+from oops.oops import Oops
 
 
-class Cache:
+class Cache(Oops):
     """Class that can be indexed like a dictionary, where `maxsize` items are preserved.
     When the size of the cache exceeds `maxsize` by ~ 10%, the least-recently accessed
     items are deleted.

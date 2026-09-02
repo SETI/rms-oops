@@ -8,10 +8,11 @@ from polymath          import Qube, Scalar, Vector3
 from oops.config       import EVENT_CONFIG, LOGGING
 from oops.constants    import C_INVERSE
 from oops.frame.frame_ import Frame
+from oops.oops         import Oops
 from oops.transform    import Transform
 
 
-class Event(object):
+class Event(Oops):
     """An Event is defined by a time, position and velocity.
 
     Each property below is also accessible through a property of the same name without
@@ -25,48 +26,44 @@ class Event(object):
     The properties of an Event need not have the same shape, but they must all be
     broadcastable to the same shape.
 
-    Properties:
-        * _time (Scalar): Event time of arbitrary shape, in seconds TDB relative to noon
-          TDB on January 1, 2000, consistent with the time system used by the SPICE
-          toolkit.
-        * _state (Vector3): Position of the event, of arbitrary shape, in km relative to
-          `_origin`. Velocities are carried in km/s as the "t" derivative of the
-          position.
-        * _origin (Path): The path defining the location relative to which all positions
-          and velocities are measured.
-        * _frame (Frame): The frame defining the coordinate system in which the
-          components of the positions and velocities are defined.
-        * _subfields (dict): An arbitrary dictionary of objects providing further
-          information about the properties of the event.
-        * _arr (Vector3): The direction of a photon arriving at this event, defined in
-          the frame of this event and not corrected for stellar aberration. Its length is
-          arbitrary.
-        * _arr_ap (Vector3): As `_arr`, but the apparent direction of the arriving
-          photon.
-        * _arr_j2000 (Vector3): As `_arr`, but in J2000 coordinates.
-        * _arr_ap_j2000 (Vector3): As `_arr_ap`, but in J2000 coordinates.
-        * _neg_arr (Vector3): Negative of `_arr`, because it is used so often.
-        * _neg_arr_ap (Vector3): Negative of `_arr_ap`.
-        * _neg_arr_j2000 (Vector3): Negative of `_arr_j2000`.
-        * _neg_arr_ap_j2000 (Vector3): Negative of `_arr_ap_j2000`.
-        * _arr_lt (Scalar): The (negative) light travel time for the arriving photon from
-          its origin.
-        * _dep (Vector3): The direction of a photon departing from this event, defined in
-          the frame of this event and not corrected for stellar aberration. Its length is
-          arbitrary.
-        * _dep_ap (Vector3): As `_dep`, but the apparent direction of the departing
-          photon.
-        * _dep_j2000 (Vector3): As `_dep`, but in J2000 coordinates.
-        * _dep_ap_j2000 (Vector3): As `_dep_ap`, but in J2000 coordinates.
-        * _dep_lt (Scalar): The light travel time of a departing photon to its
-          destination.
-        * _perp (Vector3 or None): The direction of a normal vector if this event falls
-          on a surface.
-        * _vflat (Vector3): A velocity component within the surface, which can be used to
-          describe winds across a planet or orbital motion within a ring plane.
-        * _ssb (Event): This event referenced to SSB/J2000.
-        * _xform_to_j2000 (Transform): The transform that converts coordinates in this
-          event to J2000.
+    Attributes:
+        _time (Scalar): Event time of arbitrary shape, in seconds TDB relative to noon TDB
+            on January 1, 2000, consistent with the time system used by the SPICE toolkit.
+        _state (Vector3): Position of the event, of arbitrary shape, in km relative to
+            `_origin`. Velocities are carried in km/s as the "t" derivative of the
+            position.
+        _origin (Path): The path defining the location relative to which all positions and
+            velocities are measured.
+        _frame (Frame): The frame defining the coordinate system in which the components
+            of the positions and velocities are defined.
+        _subfields (dict): An arbitrary dictionary of objects providing further
+            information about the properties of the event.
+        _arr (Vector3): The direction of a photon arriving at this event, defined in the
+            frame of this event and not corrected for stellar aberration. Its length is
+            arbitrary.
+        _arr_ap (Vector3): As `_arr`, but the apparent direction of the arriving photon.
+        _arr_j2000 (Vector3): As `_arr`, but in J2000 coordinates.
+        _arr_ap_j2000 (Vector3): As `_arr_ap`, but in J2000 coordinates.
+        _neg_arr (Vector3): Negative of `_arr`, because it is used so often.
+        _neg_arr_ap (Vector3): Negative of `_arr_ap`.
+        _neg_arr_j2000 (Vector3): Negative of `_arr_j2000`.
+        _neg_arr_ap_j2000 (Vector3): Negative of `_arr_ap_j2000`.
+        _arr_lt (Scalar): The (negative) light travel time for the arriving photon from
+            its origin.
+        _dep (Vector3): The direction of a photon departing from this event, defined in
+            the frame of this event and not corrected for stellar aberration. Its length
+            is arbitrary.
+        _dep_ap (Vector3): As `_dep`, but the apparent direction of the departing photon.
+        _dep_j2000 (Vector3): As `_dep`, but in J2000 coordinates.
+        _dep_ap_j2000 (Vector3): As `_dep_ap`, but in J2000 coordinates.
+        _dep_lt (Scalar): The light travel time of a departing photon to its destination.
+        _perp (Vector3 or None): The direction of a normal vector if this event falls on a
+            surface.
+        _vflat (Vector3): A velocity component within the surface, which can be used to
+            describe winds across a planet or orbital motion within a ring plane.
+        _ssb (Event): This event referenced to SSB/J2000.
+        _xform_to_j2000 (Transform): The transform that converts coordinates in this event
+            to J2000.
     """
 
     # To avoid circular imports; filled in by oops/__init__.py

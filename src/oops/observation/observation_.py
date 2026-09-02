@@ -31,7 +31,7 @@ class Observation(Mutable):
     the start time to the end time of an integration, or a location inside the boundaries
     of a spatial pixel. Half-integer indices fall at the midpoint of each sample.
 
-    Properties:
+    Attributes:
         cadence (Cadence): Defines the timing of the observation.
         time (tuple or Pair): The start time and end time of the observation overall, in
             seconds TDB. Inherited from `cadence`.
@@ -62,11 +62,6 @@ class Observation(Mutable):
         subfields (dict): All of the optional attributes. Additional subfields may be
             included as needed. The subfield `data` is reserved to contain the NumPy array
             of numbers associated with the observation.
-
-    Attributes:
-        _INVENTORY_IMPLEMENTED (bool): True if this subclass implements `inventory()`.
-        _DEBUG (bool): True to log the iterative convergence steps of the geometry
-            solvers.
     """
 
     _INVENTORY_IMPLEMENTED = False

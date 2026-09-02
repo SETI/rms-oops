@@ -6,12 +6,13 @@ import numpy as np
 
 from polymath       import Scalar, Pair, Vector3, Matrix3
 from oops.body      import Body
-from oops.path      import Path
 from oops.constants import C, RPD, RPS
 from oops.event     import Event
+from oops.oops      import Oops
+from oops.path      import Path
 
 
-class LightSource(object):
+class LightSource(Oops):
     """Defines a source of illumination, such as the Sun, a star, or a radio transmitter
     on the Earth or a spacecraft.
     """

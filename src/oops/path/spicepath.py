@@ -39,8 +39,10 @@ class SpicePath(Path):
                 SpicePaths are always registered.
 
         Raises:
-            LookupError: If `spice_path` is not a recognized body name or code within the
-                SPICE Toolkit.
+            IndexError: If `spice_path` is an integer but is not a recognized body code.
+            KeyError: If `spice_path` is a string but is not a recognized SPICE body name.
+            KeyError: If `origin` or `frame` is an ID string that has not been registered.
+            TypeError: If `spice_path` is not an integer or string.
             ValueError: If `origin` is not a SpicePath or `frame` is not a SpiceFrame.
         """
 
@@ -122,28 +124,37 @@ class SpicePath(Path):
             Toolkit.
 
         Raises:
-            LookupError: If `arg` is not a recognized body name or code within the SPICE
-                Toolkit.
+            IndexError: If `arg` is an integer but is not a recognized SPICE body code.
+            KeyError: If `arg` is a string but is not a recognized SPICE body name.
+            TypeError: If `arg` is not an integer or string.
         """
+
+        # A trapped cspyce error carries no information the caller can act on: its
+        # traceback ends inside the SWIG wrapper and its message names the C signature
+        # rather than the input. These raises therefore use `from None`, suppressing the
+        # chain, in place of the `from e` the general re-raise convention calls for.
 
         # Interpret an integer input
         if isinstance(arg, numbers.Integral):
             try:
                 name = cspyce.bodc2n_error(arg)
             except (KeyError, IndexError):
-                raise IndexError(f'unrecognized SPICE body {arg}')
+                raise IndexError(f'unrecognized SPICE body {arg}') from None
 
             return (arg, name)
 
         # Interpret a string input
-        else:
+        elif isinstance(arg, str):
             try:
                 body_code = cspyce.bodn2c_error(arg)
                 name = cspyce.bodc2n_error(body_code)
             except (KeyError, IndexError):
-                raise KeyError(f'unrecognized SPICE body "{arg}"')
+                raise KeyError(f'unrecognized SPICE body "{arg}"') from None
 
             return (body_code, name)
+
+        else:
+            raise TypeError(f'invalid SPICE body: {arg!r}')
 
     ######################################################################################
     # Serialization support
@@ -254,8 +265,9 @@ class SpicePath(Path):
         is constructed and returned.
 
         Parameters:
-            spice_path (str or int): The SPICE toolkit identification of the target body
-                as a name or integer.
+            spice_path (SpicePath, str, or int): The SPICE toolkit identification of the
+                target body as a name or integer, or an existing SpicePath. A SpicePath is
+                returned unchanged if its origin and frame already match those requested.
             origin (SpicePath or str, optional): The Path or the ID of the Path relative
                 to which this Path is defined. This must be a SpicePath or else, by
                 default, the Solar System Barycenter.
@@ -271,8 +283,11 @@ class SpicePath(Path):
             SpicePath: The SpicePath, newly constructed if necessary.
 
         Raises:
-            LookupError: If `spice_path` is not a recognized body name or code within the
-                SPICE Toolkit.
+            IndexError: If `spice_path` is an integer but is not a recognized body code.
+            KeyError: If `spice_path` is a string but is not a recognized SPICE body name.
+            KeyError: If `origin` or `frame` is an ID string that has not been registered.
+            TypeError: If `spice_path` is not an integer or string.
+            ValueError: If `origin` is not a SpicePath or `frame` is not a SpiceFrame.
         """
 
         origin = Path.as_waypoint(origin)

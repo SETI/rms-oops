@@ -32,19 +32,19 @@ class Transform(Oops):
     Z axes in reference coordinates and `omega` is the body's rotation vector in reference
     coordinates.
 
-    Properties:
-        * matrix (Matrix3): Rotates coordinates from the reference coordinate frame into
-          the target frame.
-        * omega (Vector3): The angular rotation vector of the target frame relative to the
-          reference, specified in the reference coordinate frame.
-        * is_fixed (bool): True if `omega` is zero, meaning that the target frame is not
-          rotating.
-        * frame (Frame): The target frame, into which this Transform rotates.
-        * reference (Frame): The reference frame, whose coordinates this Transform rotates
-          into the target frame. The reference frame must have shape ().
-        * origin (Path or None): The path defining the center of rotation if this is a
-          rotating frame; None otherwise.
-        * shape (tuple): The intrinsic shape of the Transform, generated only if needed.
+    Attributes:
+        matrix (Matrix3): Rotates coordinates from the reference coordinate frame into the
+            target frame.
+        omega (Vector3): The angular rotation vector of the target frame relative to the
+            reference, specified in the reference coordinate frame.
+        is_fixed (bool): True if `omega` is zero, meaning that the target frame is not
+            rotating.
+        frame (Frame): The target frame, into which this Transform rotates.
+        reference (Frame): The reference frame, whose coordinates this Transform rotates
+            into the target frame. The reference frame must have shape ().
+        origin (Path or None): The path defining the center of rotation if this is a
+            rotating frame; None otherwise.
+        shape (tuple): The intrinsic shape of the Transform, generated only if needed.
     """
 
     # Class constants to avoid circular references
