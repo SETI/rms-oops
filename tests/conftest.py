@@ -26,7 +26,8 @@ def pytest_addoption(parser: pytest.Parser) -> None:
                           'under tests/hosts compare against, overriding '
                           '$OOPS_GOLD_MASTER_PATH and $OOPS_RESOURCES. The directory '
                           'must have the standard layout, with the files for one '
-                          'observation in DIR/<module>/<basename>.')
+                          'observation in DIR/<mission>.<instrument>/<basename>, such '
+                          'as DIR/cassini.iss/W1573721822_1.')
 
 
 @pytest.fixture(scope='session', autouse=True)

@@ -160,9 +160,27 @@ from programs.gold_master.test_support import (BACKPLANE_OUTPUT_PREFIX,
                                                TEST_DATA_PREFIX)
 
 __all__ = ['set_default_obs', 'define_standard_obs', 'set_default_args',
-           'override', 'set_gold_master_path', 'execute_as_command',
+           'override', 'module_dirname', 'set_gold_master_path', 'execute_as_command',
            'execute_as_pytest', 'run_tests', 'register_test_suite', 'get_test_suite',
            'BackplaneTest']
+
+
+def module_dirname(module):
+    """The name of the directory holding the files of one instrument.
+
+    The name is the mission and the instrument, the last two components of the module
+    name, so that the files of a module do not have to move when the module itself does.
+    Both "oops.hosts.cassini.iss" and "cassini.iss" give "cassini.iss".
+
+    Parameters:
+        module (str): Name of the module containing the "from_file" method.
+
+    Returns:
+        str: The directory name. It is the module name itself if that name has fewer
+        than two components.
+    """
+
+    return '.'.join(module.split('.')[-2:])
 
 
 def set_gold_master_path(path):
@@ -173,9 +191,9 @@ def set_gold_master_path(path):
     subsequent test, whether run from the command line or under pytest.
 
     The directory must have the same layout as the default one: the files for one
-    observation are found in `<path>/<module>/<basename>`, where `<module>` is the value
-    of the `module` argument, such as "oops.hosts.cassini.iss", and `<basename>` is the
-    stem of the observation's file path.
+    observation are found in `<path>/<mission>.<instrument>/<basename>`, such as
+    "cassini.iss/W1573721822_1", where the directory name comes from `module_dirname` and
+    `<basename>` is the stem of the observation's file path.
 
     Parameters:
         path (str): Directory containing the gold master files. It may name a cloud
@@ -287,7 +305,6 @@ DEFAULTS = {
     'verbose'       : True,
     'log'           : False,
     'level'         : 'debug',
-    'summary'       : False
 }
 
 # Note that default values of output, convergence, diagnostics, internals, performance,
@@ -456,7 +473,7 @@ def execute_as_command():
         help='Adopt these backplane arrays as the new gold masters by overwriting the '
              'existing gold masters.')
     gr.add_argument('--debug', action='store_true',
-        help='Shorthand for --arrays --browse --log --summary')
+        help='Shorthand for --arrays --browse --log')
     gr.add_argument('--tolerance', type=float, metavar='TOL',
         default=float(DEFAULTS['tolerance']),
         help='Factor to apply to backplane array error tolerances.')
@@ -539,7 +556,8 @@ def execute_as_command():
              'value of the environment variable OOPS_GOLD_MASTER_PATH, if defined, or '
              'else the "gold_master" subdirectory of OOPS_RESOURCES. The directory must '
              'have the standard layout, with the files for one observation in '
-             '<dir>/<module>/<basename>.')
+             '<dir>/<mission>.<instrument>/<basename>, such as '
+             '<dir>/cassini.iss/W1573721822_1.')
     gr.add_argument('-o', '--output', type=str, metavar='dir',
         default=OOPS_BACKPLANE_OUTPUT_PATH,
         help='Root directory for saved backplane arrays, browse images, and logs; '
@@ -566,14 +584,6 @@ def execute_as_command():
         default=DEFAULTS['level'],
         help='Minimum level for messages to be logged: "debug", "info", "warning", '
              '"error", or an integer 1-30')
-    gr.add_argument('--summary', action='store_true',
-        default=DEFAULTS['summary'],
-        help='Write a summary to the output directory%s.'
-             % (' (default)' if DEFAULTS['summary'] else ''))
-    gr.add_argument('--no-summary', dest='summary', action='store_false',
-        default=DEFAULTS['summary'],
-        help='Do not write a summary to the output directory%s.'
-             % ('' if DEFAULTS['summary'] else ' (default)'))
     gr.add_argument('--convergence', action='store_true', default=False,
         help='Show iterative convergence information in the log.')
     gr.add_argument('--diagnostics', action='store_true', default=False,
@@ -641,7 +651,6 @@ def execute_as_pytest(obsname='default'):
         args.browse = False
         args.log = False
         args.verbose = True
-        args.summary = False
 
         # These have no entry in the DEFAULTS dictionary
         args.obspath = None
@@ -744,7 +753,6 @@ def _clean_up_args(args):
         args.arrays = True
         args.browse = True
         args.log = True
-        args.summary = True
 
     # Special requirements for task --adopt or --preview
     if args.task in ('adopt', 'preview'):
@@ -1134,24 +1142,25 @@ class BackplaneTest(object):
         self.backplane.ALL_DERIVS = True
 
         # Determine file paths. The gold master and output trees share one layout, so a
-        # directory of generated backplanes can serve as the masters of a later run. In
-        # the example below, <module> is the value of the --module argument, such as
-        # "oops.hosts.cassini.iss".
+        # directory of generated backplanes can serve as the masters of a later run.
+        # Each is named for the mission and instrument alone, not for the module's place
+        # in any import tree, so the files stay put when the module moves.
         # filespec: $OOPS_TEST_DATA_PATH/cassini/ISS/N1460072401_1.IMG
-        # masters:  $OOPS_GOLD_MASTER_PATH/<module>/N1460072401_1/arrays
-        # arrays:   $OOPS_BACKPLANE_OUTPUT_PATH/<module>/N1460072401_1/arrays
-        # browse:   $OOPS_BACKPLANE_OUTPUT_PATH/<module>/N1460072401_1/browse
+        # masters:  $OOPS_GOLD_MASTER_PATH/cassini.iss/N1460072401_1/arrays
+        # arrays:   $OOPS_BACKPLANE_OUTPUT_PATH/cassini.iss/N1460072401_1/arrays
+        # browse:   $OOPS_BACKPLANE_OUTPUT_PATH/cassini.iss/N1460072401_1/browse
         # gold masters sampled at the undersampling grid:
-        #           $OOPS_BACKPLANE_OUTPUT_PATH/<module>/N1460072401_1/sampled_gold
+        #           $OOPS_BACKPLANE_OUTPUT_PATH/cassini.iss/N1460072401_1/sampled_gold
 
         self.abspath = TEST_DATA_PREFIX / obs.filespec
         basename_prefix = self.abspath.stem
+        dirname = module_dirname(args.module)
 
-        self.gold_dir = GOLD_MASTER_PREFIX / args.module / basename_prefix
+        self.gold_dir = GOLD_MASTER_PREFIX / dirname / basename_prefix
         self.gold_arrays = self.gold_dir / f'arrays{self.suffix}'
         self.gold_browse = self.gold_dir / f'browse{self.suffix}'
 
-        self.output_dir = BACKPLANE_OUTPUT_PREFIX / args.module / basename_prefix
+        self.output_dir = BACKPLANE_OUTPUT_PREFIX / dirname / basename_prefix
         self.output_arrays = self.output_dir / f'arrays{self.suffix}'
         self.output_browse = self.output_dir / f'browse{self.suffix}'
         self.sampled_gold = self.output_dir / f'sampled_gold{self.suffix}'
@@ -1273,8 +1282,10 @@ class BackplaneTest(object):
                     else:
                         LOGGING.exception(e, '%s | Fatal error' % TEST_SUITE)
 
-            # Wrap up
-            if self.args.summary:
+            # Wrap up. The summary holds the backplanes whose value is constant, which
+            # are not written as arrays, so it is part of any complete set of files and
+            # is written whenever the arrays are.
+            if self.args.arrays:
                 if self.task in ('preview', 'compare'):
                     file_path = self.write_summary(self.output_dir)
                     LOGGING.debug('Summary written: ' + file_path.as_posix())

@@ -139,20 +139,21 @@ PYTHONPATH=. python tests/hosts/cassini/iss/gold_master.py --gold-master=/path/t
 ```
 
   The directory must have the standard layout, in which the files for one observation
-  are found in `<path>/<module>/<basename>`, such as
-  `<path>/oops.hosts.cassini.iss/W1573721822_1`. As with the environment variables, the
-  path may name a cloud resource such as `gs://rms-oops-resources/gold_master`.
+  are found in `<path>/<mission>.<instrument>/<basename>`, such as
+  `<path>/cassini.iss/W1573721822_1`. The directory is named for the mission and the
+  instrument alone, not for the module's place in any import tree, so the files stay put
+  when the module moves. As with the environment variables, the path may name a cloud
+  resource such as `gs://rms-oops-resources/gold_master`.
 
 - Generated backplanes are written to `$OOPS_BACKPLANE_OUTPUT_PATH` (or `--output`) under
-  that same `<module>/<basename>` layout, so an output directory can be handed straight
-  back to `--gold-master`. To build a complete set of masters somewhere else, adopt into
-  it: `--adopt` writes the full-resolution arrays that a comparison expects, and
-  `--summary` adds the `summary.py` holding the backplanes whose value is constant. Both
-  are needed; without `--summary`, the constant-valued backplanes report "No gold master".
+  that same `<mission>.<instrument>/<basename>` layout, so an output directory can be
+  handed straight back to `--gold-master`. To build a complete set of masters somewhere
+  else, adopt into it: `--adopt` writes the full-resolution arrays that a comparison
+  expects, along with the `summary.py` holding the backplanes whose value is constant.
 
 ```sh
 export PYTHONPATH=.
-python tests/hosts/cassini/iss/gold_master.py --adopt --summary --gold-master=/path/to/new
+python tests/hosts/cassini/iss/gold_master.py --adopt --gold-master=/path/to/new
 python tests/hosts/cassini/iss/gold_master.py --gold-master=/path/to/new
 pytest tests/hosts/cassini/iss --gold-master=/path/to/new
 ```
