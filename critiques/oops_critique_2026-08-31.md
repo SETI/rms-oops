@@ -26,7 +26,7 @@ deviations), SUGGESTION (improvements needing an owner decision).
 | `oops/backplane` | 15 | 69 | 49 | 9 | 9 |
 | **Total** | **118** | **327** | **170** | **90** | **76** |
 
-These counts describe the review as first delivered. Work continued afterward, and 35 of
+These counts describe the review as first delivered. Work continued afterward, and 36 of
 the findings it left open have since been resolved; each is labelled **(fixed after
 review)** in place of "(not fixed)", with its entry saying what was done. A few defects
 found during that later work are labelled **(found after review, fixed)** and were added
@@ -1657,12 +1657,31 @@ JunoCam geometry for shapeless queries, so it is left for the author.
   covering the bound across stage counts, the countdown through the exposure, the
   independence from `tdi_sign`, and the `remask` behavior. All five fail against the old
   code.
-- **[SUGGESTION] (not fixed)** `tdicadence.py:57` — `is_unique = (tdi_stages == 1)` conflicts
-  with the base-class definition of `is_unique` ("no times ... associated with more than one
-  time step"): with 1 stage and N lines, every line spans the same interval, and
-  `tstep_range_at_time` returns all N lines. The tests pin this behavior
-  (`case_tdicadence_10_100_10_1`), so it is a deliberate convention, but the base-class
-  Properties docstring does not admit it.
+- **[SUGGESTION] (fixed after review)** `tdicadence.py:57` — `is_unique =
+  (tdi_stages == 1)` conflicted with the base-class definition ("no times ... associated
+  with more than one time step") and was backwards from the geometry: with 1 stage and N
+  lines every line spans the same interval, and `tstep_range_at_time` reports all N
+  active at every time, which is the most degenerate case the class can build. Sweeping
+  every valid `(lines, stages)` pair and both shift directions shows the count of
+  simultaneously active lines always equals `lines` — at the end of the exposure every
+  line is still integrating, whatever the stage count — so the correct expression is
+  `self._lines == 1`, which is what it now uses.
+
+  The flag was serving as a stand-in for a second question, whether `tstep_at_time` is
+  implementable, but the two were already decoupled: `is_unique` is never read inside
+  `tdicadence.py`, and that guard tests `_tdi_stages > 1` directly. Its
+  `NotImplementedError` claimed "time values are not unique", which is not the reason —
+  times are not unique with one stage either, where 105 maps to ten valid time steps. It
+  now says each line spans a different time interval, so no one line's time step
+  represents the others.
+
+  The flag is read only by `DualCadence`, `ReshapedCadence`, and `ReversedCadence`; a
+  1-stage TDICadence nested in a `DualCadence` had been setting `DualCadence.is_unique`
+  True and selecting its "Unique case is MUCH easier" branch. Nothing in the shipped
+  JunoCam path reads it, so no behavior had been wrong in practice. Four tests were
+  added, one tying the flag to `tstep_range_at_time` across configurations so the two
+  cannot drift apart again; the pinned `case_tdicadence_10_100_10_1` assertion is
+  inverted. Six tests fail against the old flag.
 - **[SUGGESTION] (not fixed)** `tdicadence.py:54` — `self.time[-1]` works (2-tuple) but every
   sibling class writes `self.time[1]`.
 

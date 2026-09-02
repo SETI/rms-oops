@@ -54,7 +54,10 @@ class TDICadence(Cadence):
         self.lasttime = self.time[1] - self._tdi_texp
         self.shape = (self._lines,)
         self.is_continuous = True
-        self.is_unique = (self._tdi_stages == 1)
+
+        # Every line is still integrating at the end of the exposure, whatever the stage
+        # count, so a time falls in as many time steps as there are lines.
+        self.is_unique = (self._lines == 1)
         self.min_tstride = 0.
         self.max_tstride = tdi_texp
 
@@ -188,17 +191,22 @@ class TDICadence(Cadence):
             inclusive (bool, optional): True to treat the end time as part of this
                 Cadence; False to exclude it.
 
+        Every line of a single-stage cadence spans the same time interval, so the time
+        step of the first line represents them all. This is why the method is limited to
+        one stage.
+
         Returns:
-            Scalar: Time step index values.
+            Scalar: Time step index values, within the first time step.
 
         Raises:
-            NotImplementedError: If the cadence has more than one TDI stage, in which case
-                time values are not unique.
+            NotImplementedError: If the cadence has more than one TDI stage, because then
+                each line spans a different time interval and no one line's time step
+                represents the others.
         """
 
         if self._tdi_stages > 1:
-            raise NotImplementedError('TDICadence.tstep_at_time cannot be implemented; '
-                                      'time values are not unique')
+            raise NotImplementedError('TDICadence.tstep_at_time requires a single TDI '
+                                      'stage; each line spans a different time interval')
 
         time = Scalar.as_scalar(time, recursive=derivs)
         tstep = (time - self.time[0]) / self._tdi_texp

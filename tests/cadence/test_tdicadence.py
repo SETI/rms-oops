@@ -386,7 +386,7 @@ def case_tdicadence_100_1000_10_100_down(cad):
 def case_tdicadence_10_100_10_1(cad):
 
     assert cad.is_continuous
-    assert cad.is_unique
+    assert not cad.is_unique        # all ten lines span the one interval
 
     # time_at_tstep()
     assert cad.time_at_tstep(-0.1) == 100.
@@ -544,5 +544,51 @@ def test_tdi_shifts_at_line_and_after_time_share_an_upper_bound() -> None:
 
     assert cad.tdi_shifts_at_line(lines).max() == cad._max_shifts
     assert cad.tdi_shifts_after_time(times).max() == cad._max_shifts
+
+
+def test_tdicadence_is_unique_only_with_one_line() -> None:
+    """A lone line has the cadence to itself; any more and they overlap in time."""
+
+    assert oops.cadence.TDICadence(1, 100., 10., 1).is_unique is True
+    assert oops.cadence.TDICadence(2, 100., 10., 1).is_unique is False
+    assert oops.cadence.TDICadence(10, 100., 10., 1).is_unique is False
+    assert oops.cadence.TDICadence(10, 100., 10., 4).is_unique is False
+
+
+@pytest.mark.parametrize('lines,stages', [(1, 1), (2, 1), (2, 2), (10, 1), (10, 4),
+                                          (10, 10)])
+@pytest.mark.parametrize('sign', [-1, 1])
+def test_tdicadence_is_unique_agrees_with_the_active_lines(lines: int, stages: int,
+                                                           sign: int) -> None:
+    """The flag means what the base class says: no time is shared by two time steps."""
+
+    cad = oops.cadence.TDICadence(lines, 100., 10., stages, tdi_sign=sign)
+
+    times = np.linspace(cad.time[0], cad.time[1], 101)
+    spans = [int(cad.tstep_range_at_time(float(t))[1].vals)
+             - int(cad.tstep_range_at_time(float(t))[0].vals) for t in times]
+
+    assert cad.is_unique == (max(spans) <= 1)
+
+
+def test_tdicadence_tstep_at_time_requires_a_single_stage() -> None:
+    """With more stages each line spans a different interval, so no one step will do."""
+
+    cad = oops.cadence.TDICadence(10, 100., 10., 4)
+
+    with pytest.raises(NotImplementedError, match='single TDI stage'):
+        cad.tstep_at_time(105.)
+
+
+def test_tdicadence_tstep_at_time_reports_the_first_line() -> None:
+    """Every line of a one-stage cadence gives the same time, so the first stands in."""
+
+    cad = oops.cadence.TDICadence(10, 100., 10., 1)
+    tstep = cad.tstep_at_time(105.)
+
+    assert tstep == 0.5
+    assert cad.time_at_tstep(tstep) == 105.
+    assert cad.time_at_tstep(tstep + 5.) == 105.    # and so does every other line
+
 
 ##########################################################################################
