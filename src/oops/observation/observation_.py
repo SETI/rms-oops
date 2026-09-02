@@ -862,8 +862,11 @@ class Observation(Mutable):
         if time is None:
             obs_time = self.time[0] + tfrac * (self.time[1] - self.time[0])
 
-            # Require at least two iterations if tfrac != 0.5
-            if not (Scalar.as_scalar(Scalar.as_scalar(tfrac) == 0.5)).all():
+            # Require at least two iterations if tfrac != 0.5. A comparison against a
+            # shapeless Scalar returns a Python bool, which has no all(), so the result
+            # has to be converted back before it can be tested.
+            is_midtime = Scalar.as_scalar(Scalar.as_scalar(tfrac) == 0.5)
+            if not is_midtime.all():
                 iters = max(2, iters)
 
         else:
@@ -1072,31 +1075,33 @@ class Observation(Mutable):
               everywhere that the body falls at least partially inside the FOV and is not
               completely obscured.
 
-            * If return_type is "full", it returns a dictionary with one entry per body
-              that falls at least partially inside the FOV and is not completely obscured.
-              Each dictionary entry is itself a dictionary containing data about the body
-              in the FOV:
+            * If return_type is "full", it returns a dictionary with one entry per body,
+              whether or not that body falls inside the FOV. Each dictionary entry is
+              itself a dictionary containing data about the body in the FOV:
 
                 - "name" (str): The body name.
-                - "center_uv" (Pair): The `(u,v)` coordinates of the center point.
-                - "center" (Vector3): The direction of the center point.
+                - "inside" (bool): True if the body is unobscured inside the FOV.
+                - "center_uv" (ndarray): The `(u,v)` coordinates of the center
+                  point, as two floats.
+                - "center" (ndarray): The direction of the center point, as three
+                  floats.
                 - "range" (float): The distance in km.
                 - "outer_radius" (float): The outer radius of the body in km.
                 - "inner_radius" (float): The inner radius of the body in km.
-                - "resolution" (Pair): The resolution in the `(u,v)` directions at the
-                  given range.
-                - "u_min" (float): The minimum `u` value covered by the body, clipped to
+                - "resolution" (ndarray): The resolution in the `(u,v)` directions
+                  at the given range, as two floats.
+                - "u_min" (int): The minimum `u` value covered by the body, clipped to
                   the FOV boundaries.
-                - "u_max" (float): The maximum `u` value covered by the body, clipped to
+                - "u_max" (int): The maximum `u` value covered by the body, clipped to
                   the FOV boundaries.
-                - "v_min" (float): The minimum `v` value covered by the body, clipped to
+                - "v_min" (int): The minimum `v` value covered by the body, clipped to
                   the FOV boundaries.
-                - "v_max" (float): The maximum `v` value covered by the body, clipped to
+                - "v_max" (int): The maximum `v` value covered by the body, clipped to
                   the FOV boundaries.
-                - "u_min_unclipped" (float): Same as "u_min", but not clipped.
-                - "u_max_unclipped" (float): Same as "u_max", but not clipped.
-                - "v_min_unclipped" (float): Same as "v_min", but not clipped.
-                - "v_max_unclipped" (float): Same as "v_max", but not clipped.
+                - "u_min_unclipped" (int): Same as "u_min", but not clipped.
+                - "u_max_unclipped" (int): Same as "u_max", but not clipped.
+                - "v_min_unclipped" (int): Same as "v_min", but not clipped.
+                - "v_max_unclipped" (int): Same as "v_max", but not clipped.
                 - "u_pixel_size" (float): The diameter of the body in pixels in units of
                   the `u` pixels.
                 - "v_pixel_size" (float): The diameter of the body in pixels in units of

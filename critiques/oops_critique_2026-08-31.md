@@ -26,7 +26,7 @@ deviations), SUGGESTION (improvements needing an owner decision).
 | `oops/backplane` | 15 | 69 | 49 | 9 | 9 |
 | **Total** | **118** | **327** | **170** | **90** | **76** |
 
-These counts describe the review as first delivered. Work continued afterward, and 37 of
+These counts describe the review as first delivered. Work continued afterward, and 38 of
 the findings it left open have since been resolved; each is labelled **(fixed after
 review)** in place of "(not fixed)", with its entry saying what was done. A few defects
 found during that later work are labelled **(found after review, fixed)** and were added
@@ -1752,14 +1752,33 @@ left alone.
   the axes symmetrically via `Qube.is_outside`.
 - **[DOC] (fixed)** `observation_.py:865` — garbled comment "Require extra at least two
   iterations" → "Require at least two iterations".
-- **[DOC] (not fixed)** `observation_.py:1075-1077` — the abstract `inventory` docstring for
-  `return_type='full'` claims the dictionary holds "one entry per body that falls at least
-  partially inside the FOV and is not completely obscured", but the only implementation
-  (Snapshot) returns an entry for *every* body with an `"inside"` flag; the base docstring
-  also omits the `"inside"` key. Should be aligned with the Snapshot behavior (whose own
-  docstring is now corrected).
-- **[SUGGESTION] (not fixed)** `observation_.py:866` — `Scalar.as_scalar(Scalar.as_scalar(
-  tfrac) == 0.5)` double-wraps; one `as_scalar` suffices.
+- **[DOC] (fixed after review)** `observation_.py:1075-1077` — the abstract `inventory`
+  docstring for `return_type='full'` claimed the dictionary holds "one entry per body that
+  falls at least partially inside the FOV and is not completely obscured", but the loop in
+  the only implementation (Snapshot) stores an entry for *every* body unconditionally,
+  with an `"inside"` flag the base docstring omitted. Aligned with the Snapshot wording
+  and the `"inside"` key added, so the two key lists are now character-for-character
+  identical.
+- **[DOC] (found after review, fixed)** `observation_.py` and `snapshot.py` — the shared
+  key list gave the wrong type for eleven of the eighteen keys, in **both** files. Every
+  value is stored through `.vals`, so `"center_uv"`, `"center"` and `"resolution"` are
+  numpy arrays rather than the documented `Pair`, `Vector3` and `Pair`, and the eight
+  pixel bounds (`"u_min"` … `"v_max_unclipped"`) are integers rather than floats.
+  Checking each claim of the old text against a live inventory found all seven distinct
+  assertions false. The types now match what the code stores. Six tests were added,
+  pinning the documented keys, their types, and the agreement of `"inside"` with the
+  `"list"` and `"flags"` return types; they guard the docstring rather than a code
+  change, since the implementation was already correct.
+- **[SUGGESTION] (WITHDRAWN — this finding was wrong)** `observation_.py:866` — the
+  review claimed `Scalar.as_scalar(Scalar.as_scalar(tfrac) == 0.5)` double-wraps and that
+  one `as_scalar` suffices. It does not. Comparing a *shapeless* Scalar returns a Python
+  `bool`, which has no `.all()`; the outer call converts it back to a Boolean. Only an
+  array-valued `tfrac` yields a Boolean directly. Acting on this advice and removing the
+  outer call made `uv_from_ra_and_dec` raise `AttributeError: 'bool' object has no
+  attribute 'all'` for every scalar `tfrac`, including the shipped default of 0.5. The
+  wrap is restored, with a comment saying why it is needed, and a parametrized test
+  covers a float, a shapeless Scalar and an array; three of its four cases fail without
+  the wrap.
 - **[SUGGESTION] (fixed after review)** `observation_.py:1234-1236` —
   `parallel_offset_duv` forwarded `time=None` straight into the FOV methods while the
   other three `parallel_*` methods substitute the midtime, as all four docstrings

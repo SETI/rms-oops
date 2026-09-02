@@ -415,25 +415,27 @@ class Snapshot(Observation):
 
                 - "name" (str): The body name.
                 - "inside" (bool): True if the body is unobscured inside the FOV.
-                - "center_uv" (Pair): The `(u,v)` coordinates of the center point.
-                - "center" (Vector3): The direction of the center point.
+                - "center_uv" (ndarray): The `(u,v)` coordinates of the center
+                  point, as two floats.
+                - "center" (ndarray): The direction of the center point, as three
+                  floats.
                 - "range" (float): The distance in km.
                 - "outer_radius" (float): The outer radius of the body in km.
                 - "inner_radius" (float): The inner radius of the body in km.
-                - "resolution" (Pair): The resolution in the `(u,v)` directions at the
-                  given range.
-                - "u_min" (float): The minimum `u` value covered by the body, clipped to
+                - "resolution" (ndarray): The resolution in the `(u,v)` directions
+                  at the given range, as two floats.
+                - "u_min" (int): The minimum `u` value covered by the body, clipped to
                   the FOV boundaries.
-                - "u_max" (float): The maximum `u` value covered by the body, clipped to
+                - "u_max" (int): The maximum `u` value covered by the body, clipped to
                   the FOV boundaries.
-                - "v_min" (float): The minimum `v` value covered by the body, clipped to
+                - "v_min" (int): The minimum `v` value covered by the body, clipped to
                   the FOV boundaries.
-                - "v_max" (float): The maximum `v` value covered by the body, clipped to
+                - "v_max" (int): The maximum `v` value covered by the body, clipped to
                   the FOV boundaries.
-                - "u_min_unclipped" (float): Same as "u_min", but not clipped.
-                - "u_max_unclipped" (float): Same as "u_max", but not clipped.
-                - "v_min_unclipped" (float): Same as "v_min", but not clipped.
-                - "v_max_unclipped" (float): Same as "v_max", but not clipped.
+                - "u_min_unclipped" (int): Same as "u_min", but not clipped.
+                - "u_max_unclipped" (int): Same as "u_max", but not clipped.
+                - "v_min_unclipped" (int): Same as "v_min", but not clipped.
+                - "v_max_unclipped" (int): Same as "v_max", but not clipped.
                 - "u_pixel_size" (float): The diameter of the body in pixels in units of
                   the `u` pixels.
                 - "v_pixel_size" (float): The diameter of the body in pixels in units of

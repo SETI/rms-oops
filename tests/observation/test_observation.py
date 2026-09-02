@@ -4,6 +4,7 @@
 
 import pickle
 
+import numpy as np
 import pytest
 
 from oops.cadence     import DualCadence, Metronome
@@ -12,7 +13,7 @@ from oops.frame       import Frame
 from oops.observation import (InSitu, Observation, Pixel, RasterSlit1D, Slit1D,
                               Snapshot, TimedImage)
 from oops.path        import Path
-from polymath         import Pair
+from polymath         import Pair, Scalar
 
 
 def _observations() -> dict[str, Observation]:
@@ -114,6 +115,25 @@ def test_parallel_offset_duv_inverts_the_fov_offset_angles(time: float | None) -
     expected = parallel.fov.offset_duv_from_angles(angles, time=at)
 
     assert obs.parallel_offset_duv(parallel, duv, time=time) == expected
+
+
+
+@pytest.mark.parametrize('tfrac', [0.5, 0.25, Scalar(0.5), Scalar([0.5, 0.25])],
+                         ids=['float-midtime', 'float-other', 'shapeless', 'array'])
+def test_uv_from_ra_and_dec_accepts_any_shape_of_tfrac(tfrac) -> None:
+    """A shapeless tfrac must work as well as an array one.
+
+    Comparing a shapeless Scalar returns a Python bool rather than a Boolean, so the
+    iteration count test has to convert the result before calling all() on it.
+    """
+
+    fov = FlatFOV((1.e-4, 1.e-4), (64, 64))
+    obs = Snapshot(('u','v'), 0., 10., fov, 'SSB', 'J2000')
+
+    # The FlatFOV axis is +Z, which is a declination of 90 degrees: the FOV center.
+    uv = obs.uv_from_ra_and_dec(0., np.pi/2, tfrac=tfrac)
+
+    assert float((uv - Pair((32., 32.))).norm().vals) == pytest.approx(0., abs=1.e-9)
 
 
 ##########################################################################################
