@@ -18,43 +18,45 @@ import warnings
 ##########################################################################################
 
 class QUICK(object):
-  flag = True                   # Defines the default behavior as quick=True or
+    flag = True                 # Defines the default behavior as quick=True or
                                 # quick=False.
 
-  dictionary = {
-    'use_quickpaths': True,
-    'path_time_step': 0.05,     # time step in seconds.
-    'path_time_extension': 5.,  # secs by which to extend interval at each end.
-    'path_self_check': None,    # fractional precision for self-testing.
-    'path_extra_steps': 4,      # number of extra time steps at each end.
-    'quickpath_cache_size': 40, # maximum number of non-overlapping quickpaths
-                                # to cache for any given path.
-    'quickpath_linear_interpolation_threshold': 3.,
-                                # if a time span is less than this amount,
-                                # perform linear interpolation instead of
-                                # using InterpolatedUnivariateSpline; this
-                                # improves performance
+    dictionary = {
+        'use_quickpaths': True,
+        'path_time_step': 0.05,             # time step in seconds.
+        'path_time_extension': 5.,          # secs by which to extend interval at each
+                                            # end.
+        'path_self_check': None,            # fractional precision for self-testing.
+        'path_extra_steps': 4,              # number of extra time steps at each end.
+        'quickpath_cache_size': 40,         # maximum number of non-overlapping
+                                            # quickpaths to cache for any given path.
+        'quickpath_linear_interpolation_threshold': 3.,
+                                            # if a time span is less than this amount,
+                                            # perform linear interpolation instead of
+                                            # using InterpolatedUnivariateSpline; this
+                                            # improves performance
 
-    'use_quickframes': True,
-    'frame_time_step': 0.05,    # time interval in seconds.
-    'frame_time_extension': 5., # secs by which to extend interval at each end.
-    'frame_self_check': None,   # fractional precision for self-testing.
-    'frame_extra_steps': 4,     # number of extra time steps at each end.
-    'quickframe_cache_size': 40,# maximum number of non-overlapping quickframes
-                                # to cache for any given frame.
-    'quickframe_linear_interpolation_threshold': 1.,
-                                # if a time span is less than this amount,
-                                # perform linear interpolation instead of
-                                # using InterpolatedUnivariateSpline; this
-                                # improves performance
-    'quickframe_numerical_omega': False,
-                                # True to derive the omega rotation vectors
-                                # via numerical derivatives rather than via
-                                # interpolation of the vector components.
-    'ignore_quickframe_omega': False,
-                                # True to treat the omega rotation vectors as
-                                # zero within a QuickFrame.
-}
+        'use_quickframes': True,
+        'frame_time_step': 0.05,            # time interval in seconds.
+        'frame_time_extension': 5.,         # secs by which to extend interval at each
+                                            # end.
+        'frame_self_check': None,           # fractional precision for self-testing.
+        'frame_extra_steps': 4,             # number of extra time steps at each end.
+        'quickframe_cache_size': 40,        # maximum number of non-overlapping
+                                            # quickframes to cache for any given frame.
+        'quickframe_linear_interpolation_threshold': 1.,
+                                            # if a time span is less than this amount,
+                                            # perform linear interpolation instead of
+                                            # using InterpolatedUnivariateSpline; this
+                                            # improves performance
+        'quickframe_numerical_omega': False,
+                                            # True to derive the omega rotation vectors
+                                            # via numerical derivatives rather than via
+                                            # interpolation of the vector components.
+        'ignore_quickframe_omega': False,
+                                            # True to treat the omega rotation vectors
+                                            # as zero within a QuickFrame.
+    }
 
 ##########################################################################################
 # Photon solver parameters
@@ -134,7 +136,8 @@ class LOGGING(object):
     logger = None                   # logger or PdsLogger object.
     level = logging.DEBUG           # Minimum logging level.
     handlers = set()                # Set of handlers for logger.
-    log_formatting = True           # True to use DEFAULT_LOG_FORMAT.
+    log_formatting = True           # False while the handlers carry the formatter of
+                                    # a literal message instead of LOG_FORMATTER.
     warnings = 0                    # Warning count.
     errors = 0                      # Error count.
     lines = 0                       # Number of lines logged.
@@ -335,6 +338,7 @@ class LOGGING(object):
         if logger is None:      # reset defaults
             LOGGING.level = logging.DEBUG
             LOGGING.handlers = set()
+            LOGGING.log_formatting = True
             return
 
         # Apply the formatter to each handler
@@ -363,21 +367,26 @@ class LOGGING(object):
 
     @staticmethod
     def _check_logger_formatters():
-        """Make sure all handlers have their formatter set properly."""
+        """Make sure all handlers have their formatter set properly.
 
-        handlers = set(LOGGING.logger.handlers)
+        A literal message installs a formatter of its own on every handler and clears
+        `log_formatting`. This restores LOG_FORMATTER, and the flag with it, so the
+        handlers are only re-formatted once rather than on every message afterward.
+        """
 
-        # If formatting was NOT temporarily disabled...
         if LOGGING.log_formatting:
-
-            # Only apply the formatter to a new handler
-            handlers -= LOGGING.handlers
-            if handlers:
-                LOGGING.handlers = handlers     # update the current set
-        # Otherwise, apply it to all handlers
+            # Every handler seen before still carries the formatter, so only one added
+            # since the last message needs it
+            handlers = set(LOGGING.logger.handlers) - LOGGING.handlers
+        else:
+            # A literal message replaced the formatter on every handler
+            handlers = set(LOGGING.logger.handlers)
+            LOGGING.log_formatting = True
 
         for handler in handlers:
             handler.setFormatter(LOG_FORMATTER)
+
+        LOGGING.handlers = set(LOGGING.logger.handlers)
 
     @staticmethod
     def print(*args, level=logging.INFO, literal=False, force=False):
