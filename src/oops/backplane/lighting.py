@@ -266,9 +266,7 @@ def minnaert_law(self, event_key, k, k2=None, clip=0.2):
 
 
 def lommel_seeliger_law(self, event_key):
-    """Lommel-Seeliger law model for the surface.
-
-    Returns mu0 / (mu + mu0)
+    """Lommel-Seeliger law model for the surface, mu0 / (mu + mu0).
 
     Parameters:
         event_key (str or tuple): Key defining the surface event.

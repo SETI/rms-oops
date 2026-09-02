@@ -19,8 +19,9 @@ def longitude(self, event_key, reference='iau', direction='west',
             west.
         direction (str, optional): Direction on the surface of increasing longitude,
             'east' or 'west'.
-        minimum (float, optional): The smallest numeric value of longitude in degrees,
-            either 0 or -180.
+        minimum (float, optional): The smallest value of the returned longitude,
+            given in degrees as either 0 or -180. The returned values are in
+            radians, spanning 0 to 2*pi or -pi to pi respectively.
         lon_type (str, optional): Defines the type of longitude measurement: 'centric'
             for planetocentric; 'graphic'   for planetographic; 'squashed'  for an
             intermediate longitude type used internally. Note that lon_type is irrelevant
@@ -278,8 +279,9 @@ def sub_observer_longitude(self, event_key, reference='iau', direction='west',
             west.
         direction (str, optional): Direction on the surface of increasing longitude,
             'east' or 'west'.
-        minimum (float, optional): The smallest numeric value of longitude, either 0 or
-            -180.
+        minimum (float, optional): The smallest value of the returned longitude,
+            given in degrees as either 0 or -180. The returned values are in
+            radians, spanning 0 to 2*pi or -pi to pi respectively.
     """
 
     self.refresh()
@@ -320,8 +322,9 @@ def sub_solar_longitude(self, event_key, reference='iau', direction='west', mini
             west.
         direction (str, optional): Direction on the surface of increasing longitude,
             'east' or 'west'.
-        minimum (float, optional): The smallest numeric value of longitude, either 0 or
-            -180.
+        minimum (float, optional): The smallest value of the returned longitude,
+            given in degrees as either 0 or -180. The returned values are in
+            radians, spanning 0 to 2*pi or -pi to pi respectively.
     """
 
     self.refresh()
@@ -336,7 +339,7 @@ def sub_solar_longitude(self, event_key, reference='iau', direction='west', mini
     if key_default in self.backplanes:
         longitude = self.get_backplane(key_default)
     else:
-        longitude = self._sub_solar_longitude(event_key)
+        longitude = self._sub_solar_longitude(gridless_key)
         longitude = self.register_backplane(key_default, longitude)
 
     if key == key_default:
@@ -363,8 +366,9 @@ def _sub_longitude(self, event_key, longitude, reference='iau', direction='west'
             anti-solar longitude.
         direction (str, optional): Direction on the surface of increasing longitude,
             'east' or 'west'.
-        minimum (float, optional): The smallest numeric value of longitude, either 0 or
-            -180.
+        minimum (float, optional): The smallest value of the returned longitude,
+            given in degrees as either 0 or -180. The returned values are in
+            radians, spanning 0 to 2*pi or -pi to pi respectively.
 
     Raises:
         ValueError: If `reference`, `direction` or `minimum` is not one of the values
@@ -428,7 +432,7 @@ def sub_observer_latitude(self, event_key, lat_type='centric'):
     dep_ap = event.dep_ap
 
     if lat_type == 'graphic':
-        dep_ap = dep_ap.element_mul(event.surface._unsquash_sq, recursive=self.ALL_DERIVS)
+        dep_ap = dep_ap.element_mul(event.surface.unsquash_sq, recursive=self.ALL_DERIVS)
 
     latitude = dep_ap.latitude(recursive=self.ALL_DERIVS)
     return self.register_backplane(key, latitude)
@@ -456,7 +460,7 @@ def sub_solar_latitude(self, event_key, lat_type='centric'):
     neg_arr_ap = event.neg_arr_ap
 
     if lat_type == 'graphic':
-        neg_arr_ap = neg_arr_ap.element_mul(event.surface._unsquash_sq,
+        neg_arr_ap = neg_arr_ap.element_mul(event.surface.unsquash_sq,
                                             recursive=self.ALL_DERIVS)
 
     latitude = neg_arr_ap.latitude(recursive=self.ALL_DERIVS)

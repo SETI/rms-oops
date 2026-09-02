@@ -57,17 +57,17 @@ def pole_position_angle(self, event_key):
     This is the complement of the clock angle, in radians.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str or tuple): Key defining the event at the body's path.
     """
 
     self.refresh()
-    event_key = Backplane.standardize_event_key(event_key)
+    gridless_key = Backplane.gridless_event_key(event_key)
 
-    key = ('pole_position_angle', event_key)
+    key = ('pole_position_angle', gridless_key)
     if key in self.backplanes:
         return self.get_backplane(key)
 
-    clock = self.pole_clock_angle(event_key)
+    clock = self.pole_clock_angle(gridless_key)
     return self.register_backplane(key, Scalar.TWOPI - clock)
 
 ##########################################################################################

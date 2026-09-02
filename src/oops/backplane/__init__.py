@@ -27,11 +27,11 @@ class Backplane(Mutable):
 
     DIAGNOSTICS = False     # set True to log diagnostics
     PERFORMANCE = False     # set True to log timings of surface calculations
-    ALL_DERIVS = False
+    ALL_DERIVS = False      # set True to force derivatives on in every calculation
 
     def __init__(self, obs, meshgrid=None, time=None, *, inventory=None,
                  inventory_border=0):
-        """The constructor.
+        """A Backplane for one Observation, sampled by a meshgrid at a given time.
 
         Parameters:
             obs (Observation): The Observation with which this Backplane is associated.
@@ -369,7 +369,8 @@ class Backplane(Mutable):
 
         # If SUN is duplicated, remove the extra one
         # This happens when re-using old event keys that did not have the suffix
-        if event_key[0][:-1] == event_key[1]:
+        # A key of one item names no surface; the length check below rejects it
+        if len(event_key) > 1 and event_key[0][:-1] == event_key[1]:
             event_key = event_key[:1] + event_key[2:]
 
         event_key = tuple(event_key)
@@ -599,7 +600,6 @@ class Backplane(Mutable):
 
         surface_id = surface_key.upper()
 
-        modifier = None
         if surface_id.endswith(':ANSA'):
             modifier = 'ANSA'
             body_id = surface_id[:-5]

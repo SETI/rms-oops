@@ -69,6 +69,26 @@ class Limb(Surface):
         # Unique key for intercept calculations
         self.intercept_key = ('limb',) + self._ground.intercept_key
 
+    @property
+    def ground(self):
+        """The surface relative to which this limb is defined.
+
+        Returns:
+            Surface: The ground surface, typically an Ellipsoid or Spheroid.
+        """
+
+        return self._ground
+
+    @property
+    def limits(self):
+        """The range of vertical distances from the ground surface, in km.
+
+        Returns:
+            tuple or None: The (lower, upper) limits in km, or None if unlimited.
+        """
+
+        return self._limits
+
     def __getstate__(self):
         self.refresh()
         return (self._ground, self._limits)

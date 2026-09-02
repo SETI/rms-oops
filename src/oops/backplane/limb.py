@@ -29,7 +29,7 @@ def limb_altitude(self, event_key, zmin=None, zmax=None, scaled=False):
 
     if scaled:
         body = self.get_body_and_modifier(event_key[-1])[0]
-        radius = body.surface._radii.max()
+        radius = body.surface.radii.max()
         if zmin is not None:
             zmin = zmin * radius
         if zmax is not None:
@@ -84,7 +84,7 @@ def _fill_limb_intercepts(self, event_key):
                              event.coord3)
 
 
-def limb_longitude(self, event_key, reference='iau', direction='west',  minimum=0,
+def limb_longitude(self, event_key, reference='iau', direction='west', minimum=0,
                    lon_type='centric'):
     """Longitude at the limb surface intercept point in the image.
 
@@ -103,8 +103,9 @@ def limb_longitude(self, event_key, reference='iau', direction='west',  minimum=
 
         direction (str, optional): Direction on the surface of increasing longitude,
             'east' or 'west'.
-        minimum (float, optional): The smallest numeric value of longitude, either 0 or
-            -180.
+        minimum (float, optional): The smallest value of the returned longitude,
+            given in degrees as either 0 or -180. The returned values are in
+            radians, spanning 0 to 2*pi or -pi to pi respectively.
         lon_type (str, optional): Defines the type of longitude measurement:
 
             * 'centric' for planetocentric;
@@ -189,7 +190,7 @@ def limb_clock_angle(self, event_key):
     surface = Backplane.get_surface(event_key[1])
     event = self.get_surface_event(event_key)
 
-    polar_surface = PolarLimb(surface._ground, limits=surface._limits)
+    polar_surface = PolarLimb(surface.ground, limits=surface.limits)
     event = polar_surface.apply_coords_to_event(event, obs=self.obs_event,
                                                        axes=2,
                                                        derivs=self.ALL_DERIVS)

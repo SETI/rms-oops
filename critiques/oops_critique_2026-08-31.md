@@ -26,7 +26,7 @@ deviations), SUGGESTION (improvements needing an owner decision).
 | `oops/backplane` | 15 | 69 | 49 | 9 | 9 |
 | **Total** | **118** | **327** | **170** | **90** | **76** |
 
-These counts describe the review as first delivered. Work continued afterward, and 39 of
+These counts describe the review as first delivered. Work continued afterward, and 59 of
 the findings it left open have since been resolved; each is labelled **(fixed after
 review)** in place of "(not fixed)", with its entry saying what was done. A few defects
 found during that later work are labelled **(found after review, fixed)** and were added
@@ -1839,9 +1839,11 @@ left alone.
 ### src/oops/calibration/* (calibration_.py, flatcalib.py, nullcalib.py, radiance.py, rawcounts.py)
 - **[CONSISTENCY] (not fixed)** all subclasses set a public `has_baseline` attribute that the
   base-class `Properties:` docstring does not document.
-- **[DOC] (not fixed)** `flatcalib.py:20` (also radiance.py, rawcounts.py) — `factor` is
-  typed as "(float)" but the note under `baseline` explains both may be arrays broadcastable
-  to the non-spatial data shape; the type should say "(float or array-like)".
+- **[DOC] (partly fixed after review)** `flatcalib.py:20` (also radiance.py,
+  rawcounts.py) — `factor` is typed as "(float)" but the note under `baseline` explains
+  both may be arrays broadcastable to the non-spatial data shape. `flatcalib.py` now says
+  "(np.ndarray or float)"; the four occurrences in `radiance.py` and `rawcounts.py` are
+  still typed "(float)".
 - The prescale algebra (`prescaled_args`) was verified symbolically and is correct; the
   extended/point source area-factor asymmetry between Radiance and RawCounts is internally
   consistent.
@@ -1891,26 +1893,30 @@ left alone.
   detector selects the photons it receives based on its." Completed as "…based on its
   lines of sight."
 - **[DOC] (fixed)** `__init__.py:87` — "straight- line" wrap artifact → "straight-line".
-- **[DOC] (not fixed)** `__init__.py:34` — Constructor summary is just "The
-  constructor." — permissible but thin; a noun-phrase summary describing the object
-  would be better.
-- **[DOC] (not fixed)** `__init__.py:135,204,210` — `_refresh`, `__getstate__`,
-  `__setstate__` have no docstrings; the four cached resolution properties `dlos_duv`,
-  `duv_dlos`, `center_dlos_duv`, `center_duv_dlos` (lines 226–285) also lack docstrings
-  while sibling `dlos_duv1` has one.
-- **[CONSISTENCY] (not fixed)** `__init__.py:692` — `get_surface_event` uses a legacy
-  two-column `Inputs:` block (note: nonstandard even for legacy, which uses `Input:`)
-  while `get_surface` in the same file is fully modern Google style. Several other
-  methods (`standardize_event_key`, `register_backplane`, `evaluate`, …) use free-text
-  docstrings without `Parameters:`/`Returns:` sections.
-- **[SUGGESTION] (not fixed)** `__init__.py:319` — `standardize_event_key` indexes
-  `event_key[1]` in the SUN-dedup check; a 1-item key whose only entry ends in
-  `<`/`>`/`-` (e.g. `('SUN<',)`) would raise IndexError. Probably unreachable in
-  practice.
-- **[SUGGESTION] (not fixed)** `__init__.py:454,468` — `modifier = None` assigned twice
-  in `get_body_and_modifier` (dead initialization).
-- **[SUGGESTION] (not fixed)** `__init__.py:30` — `ALL_DERIVS` lacks the explanatory
-  trailing comment its two sibling class flags have.
+- **[DOC] (fixed after review)** `__init__.py:34` — Constructor summary was just "The
+  constructor."; now a noun phrase naming the object: "A Backplane for one Observation,
+  sampled by a meshgrid at a given time.
+- **[DOC] (fixed)** `__init__.py:135,204,210` — `_refresh`, `__getstate__`,
+  `__setstate__` and the four cached resolution properties had no docstrings. Resolved by
+  the docstring pass described under "Completing the backplane docstrings"; all seven now
+  carry one.
+- **[CONSISTENCY] (fixed)** `__init__.py:692` — `get_surface_event` used a legacy
+  two-column `Inputs:` block while `get_surface` alongside it was modern Google style.
+  Resolved by the docstring pass; no `Inputs:` or `Input:` block remains anywhere in the
+  package, and the free-text docstrings named here now carry `Parameters:` blocks.
+- **[BUG] (fixed after review)** `__init__.py:319` — `standardize_event_key` indexed
+  `event_key[1]` in the SUN-dedup check, so a 1-item key whose only entry ends in
+  `<`/`>`/`-` raised `IndexError: list index out of range`. All three forms did:
+  `('SUN<',)`, `('MOON>',)` and `('MOON-',)`. The dedup is now guarded by a length test,
+  which lets the length validation below it report the real problem instead — those three
+  keys now raise `illegal surface event key`, `illegal occultation event key` and
+  `illegal gridless event key` respectively. Normal keys are unaffected.
+- **[SUGGESTION] (fixed after review)** `__init__.py:454,468` — `modifier = None` was
+  assigned before an if/elif/else whose every branch assigns it, the `else` included. The
+  dead initialization is removed.
+- **[SUGGESTION] (fixed after review)** `__init__.py:30` — `ALL_DERIVS` now carries the
+  trailing comment its two sibling flags have: "set True to force derivatives on in every
+  calculation".
 
 ### src/oops/backplane/all.py
 - No defects. Correctly carries `# flake8: noqa: F401` per house rules.
@@ -1925,16 +1931,20 @@ left alone.
   radial resolution"; it is the vertical resolution.
 - **[DOC] (fixed)** `ansa.py:145` — `_fill_ansa_intercepts` documented parameters
   `radius_type` and `rmax` that do not exist; the only parameter is `event_key`.
-- **[SUGGESTION] (not fixed)** `ansa.py:185` — Reaches into
-  `event.surface._ringplane` (private attribute of Ansa) from outside the class.
+- **[SUGGESTION] (fixed after review)** `ansa.py:185` — Reached into
+  `event.surface._ringplane` from outside the class. `Ansa` now exposes a read-only
+  `ringplane` property and the backplane uses it.
 
 ### src/oops/backplane/border.py
 - **[STYLE] (fixed)** banner path (see ansa.py).
-- **[CONSISTENCY] (not fixed)** No `Parameters:` blocks anywhere in this module; all
-  docstrings are short free text, unlike the rest of the package.
-- **[SUGGESTION] (not fixed)** `border.py:12,18` — "locus of points surrounding the
-  region" is loose: `border_above`/`border_below` mark edge pixels *inside* the
-  region, not surrounding it.
+- **[CONSISTENCY] (fixed)** No `Parameters:` blocks anywhere in this module. Resolved by
+  the docstring pass; the module now carries seven.
+- **[DOC] (fixed after review)** `border.py:12,18` — "locus of points surrounding the
+  region" was wrong, not merely loose. The mask is built from
+  `(xbackplane[:-1] >= 0) & (xbackplane[1:] < 0)` and its mirror, which selects pixels
+  that satisfy the condition and neighbor one that does not: the inner edge of the
+  region, not a ring around it. All three docstrings, `_border_above_or_below` included,
+  now say so.
 
 ### src/oops/backplane/distance.py
 - **[STYLE] (fixed)** banner path (see ansa.py).
@@ -1954,27 +1964,28 @@ left alone.
   the 'prograde' ring incidence angle"; it saves the emission angle.
 - **[DOC] (fixed)** `lighting.py:244` — `minnaert_law` parameters `k`, `k2`, `clip`
   lacked types; added `(float)`.
-- **[CONSISTENCY] (not fixed)** `lommel_seeliger_law` states its return value in prose
-  ("Returns mu0 / (mu + mu0)") rather than a `Returns:` section; backplane methods
-  generally omit `Returns:` sections everywhere, so left as-is.
+- **[CONSISTENCY] (fixed after review)** `lommel_seeliger_law` stated its return value
+  in a stray prose line rather than in the summary. The package's convention is to name
+  the returned quantity in the summary line and omit `Returns:`, so the summary is now
+  "Lommel-Seeliger law model for the surface, mu0 / (mu + mu0)." and the prose line is
+  gone.
 
 ### src/oops/backplane/limb.py
 - **[STYLE] (fixed)** banner path (see ansa.py).
 - **[DOC] (fixed)** `limb.py:75` — Comment said "Get the ring intercept coordinates" in
   `_fill_limb_intercepts`; changed to "limb".
-- **[STYLE] (not fixed)** `limb.py:87` — Stray double space in the signature
-  (`direction='west',  minimum=0`). Harmless; whitespace checks are deliberately
-  relaxed here.
-- **[SUGGESTION] (not fixed)** `limb.py:32,192` — Reaches into private surface
-  attributes `_radii`, `_ground`, `_limits` from outside the Surface classes.
-  Consider public accessors if these are legitimate cross-module needs.
+- **[STYLE] (fixed after review)** `limb.py:87` — Stray double space in the
+  `limb_longitude` signature, removed.
+- **[SUGGESTION] (fixed after review)** `limb.py:32,192` — Reached into `_radii`,
+  `_ground` and `_limits` from outside the Surface classes. These are legitimate
+  cross-module needs, so `Ellipsoid` gained a read-only `radii` property and `Limb` gained
+  `ground` and `limits`; the backplane uses them.
 
 ### src/oops/backplane/orbit.py
 - **[STYLE] (fixed)** banner path (see ansa.py).
-- **[SUGGESTION] (not fixed)** `orbit.py:39-49` — `orbit_longitude` computes the
-  gridless event *before* checking the backplane cache; harmless (the event itself is
-  cached) but wasted work on a cache hit, and inconsistent with the other modules'
-  check-cache-first pattern.
+- **[SUGGESTION] (fixed after review)** `orbit.py:39-49` — `orbit_longitude` computed
+  the gridless event before checking the backplane cache. The cache test now comes first,
+  matching the other modules; nothing between the two needed the event.
 
 ### src/oops/backplane/pixel.py
 - **[STYLE] (fixed)** banner path (see ansa.py).
@@ -1993,11 +2004,13 @@ left alone.
 - **[STYLE] (fixed)** banner path (see ansa.py).
 - **[DOC] (fixed)** `pole.py:11` — `pole_clock_angle` summary described the return as a
   "projected pole vector"; it returns the clock *angle* of that vector. Reworded.
-- **[CONSISTENCY] (not fixed)** Neither function has a `Parameters:` block.
-- **[SUGGESTION] (not fixed)** `pole.py:55` — `pole_position_angle` standardizes but
-  does not gridless-ify its cache key, while `pole_clock_angle` uses the gridless key;
-  the two entries for the same quantity are keyed inconsistently (correct results,
-  duplicate cache entries possible).
+- **[CONSISTENCY] (fixed)** Neither function had a `Parameters:` block. Resolved by the
+  docstring pass; both now carry one.
+- **[SUGGESTION] (fixed after review)** `pole.py:55` — `pole_position_angle` keyed its
+  cache on the standardized key while `pole_clock_angle`, which it calls, keys on the
+  gridless one, so the same quantity could occupy two entries. It now uses the gridless
+  key for both the cache and the call, and its `event_key` description matches its
+  sibling's.
 
 ### src/oops/backplane/resolution.py
 - **[STYLE] (fixed)** banner path (see ansa.py).
@@ -2025,12 +2038,14 @@ left alone.
   `speed` lacked types; added `(float)` and rewrapped to 90 columns.
 - **[DOC] (fixed)** `ring.py:673` — `ring_angular_resolution` declared
   `units (Scalar, optional)`; it is a string flag. Changed to `(str, optional)`.
-- **[CONSISTENCY] (not fixed)** `ring.py:521,525,574,578` — Uses `np.pi` where every
-  parallel branch elsewhere uses `Scalar.PI` (numerically identical).
-- **[DOC] (not fixed)** `ring.py:588,615` — `ring_center_incidence_angle` /
-  `ring_center_emission_angle` describe `event_key` as "Key defining the ring surface
-  event"; for gridless center quantities the parallel modules say "Key defining the
-  event on the body's path".
+- **[CONSISTENCY] (fixed after review)** `ring.py:521,525,574,578` — Four uses of
+  `np.pi` where every parallel branch uses `Scalar.PI`, now converted. The two are
+  numerically equal, and `numpy` is still imported for `np.any` elsewhere in the file.
+- **[DOC] (fixed after review)** `ring.py:588,615` — `ring_center_incidence_angle` and
+  `ring_center_emission_angle` described `event_key` as "Key defining the ring surface
+  event", but both convert it with `gridless_event_key` and describe the ring system's
+  path. Both now say "Key defining the event on the ring system's path", matching the
+  parallel modules.
 
 ### src/oops/backplane/sky.py
 - **[STYLE] (fixed)** banner path (see ansa.py).
@@ -2041,16 +2056,19 @@ left alone.
 
 ### src/oops/backplane/spheroid.py
 - **[STYLE] (fixed)** banner path (see ansa.py).
-- **[DOC] (not fixed)** `spheroid.py:22` — `minimum … in degrees, either 0 or -180`:
-  the value is a selector label (0 or -180) while the returned backplane is in radians;
-  consistent with the repo-wide "labels say deg, values are radians" trap, but a
-  clarifying phrase ("selects the branch cut; values are radians") would help. Same
-  wording appears in limb.py and the sub-longitude functions.
-- **[CONSISTENCY] (not fixed)** `spheroid.py:302` — `sub_solar_longitude` passes
-  `event_key` where `sub_observer_longitude` passes `gridless_key` to the underscore
-  helper (equivalent because the helper re-standardizes, but inconsistent).
-- **[SUGGESTION] (not fixed)** `spheroid.py:374,402` — Reaches into
-  `event.surface._unsquash_sq` (private attribute) from outside the class.
+- **[DOC] (fixed after review)** `spheroid.py:22` — `minimum` is a selector given in
+  degrees while the returned backplane is in radians, the repo-wide "labels say deg,
+  values are radians" trap. All five occurrences, in `spheroid.py` and `limb.py`, now
+  read "The smallest value of the returned longitude, given in degrees as either 0 or
+  -180. The returned values are in radians, spanning 0 to 2*pi or -pi to pi
+  respectively." 
+- **[CONSISTENCY] (fixed after review)** `spheroid.py:302` — `sub_solar_longitude`
+  passed `event_key` where `sub_observer_longitude` passes `gridless_key` to the
+  underscore helper. Equivalent, since both helpers call `gridless_event_key` on their
+  argument, but now consistent.
+- **[SUGGESTION] (fixed after review)** `spheroid.py:374,402` — Reached into
+  `event.surface._unsquash_sq` from outside the class. `Ellipsoid`, which `Spheroid`
+  extends, now exposes a read-only `unsquash_sq` property and both call sites use it.
 
 ### src/oops/backplane/where.py
 - **[STYLE] (fixed)** banner path (see ansa.py).
@@ -2087,6 +2105,29 @@ items (legacy `Inputs:` block in `get_surface_event`, missing `Parameters:` bloc
 border.py/pole.py, missing property docstrings in `__init__.py`) would bring the
 package to a uniform standard. There is no test directory for backplanes in the main
 suite; coverage comes only from the gold-master host tests.
+
+### Clearing the backplane findings
+
+Every finding this section left open has since been resolved. Four were already closed by
+the docstring pass described below and are marked "(fixed)"; the rest were fixed
+afterward and are marked "(fixed after review)". One, the `standardize_event_key` index,
+was reclassified from SUGGESTION to BUG once all three of its degenerate key forms were
+shown to raise `IndexError`.
+
+Three of them called for public accessors in place of private attribute reads from
+outside the Surface classes. Those were added rather than the reads left in place:
+`Ellipsoid.radii`, `Ellipsoid.unsquash_sq` (inherited by `Spheroid`), `Ansa.ringplane`,
+`Limb.ground` and `Limb.limits`. No `surface._` access remains anywhere in the backplane
+package.
+
+The package has no test directory in the main suite, so the changes were verified two
+ways. The gold-master suite produces 52 diagnostic lines across its four known `:LIMB`
+failures; those lines are byte-identical before and after. Separately, twenty backplanes
+spanning every module touched — the two pole angles, two orbit longitudes, ring longitude
+under all five references, both sub-longitudes, limb altitude and longitude, ansa radius
+and altitude, longitude, latitude, emission angle, the Lommel-Seeliger law and a border
+mask — were computed for a Saturn observation before and after. Every value, mask count
+and shape is identical.
 
 ### Completing the backplane docstrings
 

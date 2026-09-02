@@ -79,6 +79,16 @@ class Ansa(Surface):
         # Unique key for intercept calculations
         self.intercept_key = ('ansa', self.origin.waypoint, self.frame.wayframe)
 
+    @property
+    def ringplane(self):
+        """The RingPlane surface with which this ansa surface is associated.
+
+        Returns:
+            RingPlane: The equatorial plane defining the ansa geometry.
+        """
+
+        return self._ringplane
+
     def __getstate__(self):
         self.refresh()
         return (Path.as_primary_path(self.origin),

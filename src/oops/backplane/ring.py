@@ -522,11 +522,11 @@ def ring_sub_observer_longitude(self, event_key, reference='node'):
     elif reference == 'sun':
         ref_lon = self._sub_solar_longitude(gridless_key)
     elif reference == 'sha':
-        ref_lon = self._sub_solar_longitude(gridless_key) - np.pi
+        ref_lon = self._sub_solar_longitude(gridless_key) - Scalar.PI
     elif reference == 'obs':
         ref_lon = self._sub_observer_longitude(gridless_key)
     elif reference == 'oha':
-        ref_lon = self._sub_observer_longitude(gridless_key) - np.pi
+        ref_lon = self._sub_observer_longitude(gridless_key) - Scalar.PI
 
     longitude = (longitude - ref_lon) % Scalar.TWOPI
     return self.register_backplane(key, longitude)
@@ -575,11 +575,11 @@ def ring_sub_solar_longitude(self, event_key, reference='node'):
     elif reference == 'sun':
         ref_lon = self._sub_solar_longitude(gridless_key)
     elif reference == 'sha':
-        ref_lon = self._sub_solar_longitude(gridless_key) - np.pi
+        ref_lon = self._sub_solar_longitude(gridless_key) - Scalar.PI
     elif reference == 'obs':
         ref_lon = self._sub_observer_longitude(gridless_key)
     elif reference == 'oha':
-        ref_lon = self._sub_observer_longitude(gridless_key) - np.pi
+        ref_lon = self._sub_observer_longitude(gridless_key) - Scalar.PI
 
     longitude = (longitude - ref_lon) % Scalar.TWOPI
     return self.register_backplane(key, longitude)
@@ -589,7 +589,7 @@ def ring_center_incidence_angle(self, event_key, pole='sunward', apparent=True):
     """Incidence angle of the arriving photons at the ring system center.
 
     Parameters:
-        event_key (str or tuple): Key defining the ring surface event.
+        event_key (str or tuple): Key defining the event on the ring system's path.
         pole (str, optional): One of:
 
             * 'sunward'  for incidence < pi/2 on the illuminated face;
@@ -616,7 +616,7 @@ def ring_center_emission_angle(self, event_key, pole='sunward', apparent=True):
     prograde pole are also supported.
 
     Parameters:
-        event_key (str or tuple): Key defining the ring surface event.
+        event_key (str or tuple): Key defining the event on the ring system's path.
         pole (str, optional): One of:
 
             * 'sunward'  for emission < pi/2 on the illuminated face;

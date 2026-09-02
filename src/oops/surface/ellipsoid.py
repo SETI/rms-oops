@@ -109,6 +109,29 @@ class Ellipsoid(Surface):
         self.intercept_key = ('ellipsoid', self.origin.waypoint, self.frame.wayframe,
                                            tuple(self._radii))
 
+    @property
+    def radii(self):
+        """The three radii of the ellipsoid in km, from longest to shortest.
+
+        Returns:
+            ndarray: The (a, b, c) radii, in km.
+        """
+
+        return self._radii
+
+    @property
+    def unsquash_sq(self):
+        """The squared scale factors that unsquash a vector into spherical coordinates.
+
+        Multiplying a vector by these factors element by element converts it from the
+        ellipsoid's frame to the frame in which the body is a sphere.
+
+        Returns:
+            Vector3: The squared unsquash factors.
+        """
+
+        return self._unsquash_sq
+
     def __getstate__(self):
         self.refresh()
         return (Path.as_primary_path(self.origin), Frame.as_primary_frame(self.frame),

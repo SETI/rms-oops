@@ -36,17 +36,17 @@ def orbit_longitude(self, event_key, reference='obs', planet=None):
         (body,_) = self.get_body_and_modifier(event_key[1])
         planet = body.parent.name
 
-    # Get the event
-    if reference in ('sun', 'sha'):
-        orbit_event = self.get_gridless_event(event_key, arrivals=True)
-    else:
-        orbit_event = self.get_gridless_event(event_key)
-
     # Look up under the reference
     key0 = ('orbit_longitude', event_key)
     key = key0 + (reference, planet)
     if key in self.backplanes:
         return self.get_backplane(key)
+
+    # Get the event
+    if reference in ('sun', 'sha'):
+        orbit_event = self.get_gridless_event(event_key, arrivals=True)
+    else:
+        orbit_event = self.get_gridless_event(event_key)
 
     planet_body = Body.lookup(planet)
     planet_event = planet_body.path.event_at_time(orbit_event.time)

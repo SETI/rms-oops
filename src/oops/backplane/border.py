@@ -9,7 +9,10 @@ from oops.backplane import Backplane
 
 
 def border_above(self, backplane_key, value):
-    """The locus of points surrounding the region >= a specified value.
+    """The locus of pixels at or above a specified value and adjacent to a pixel
+    below it.
+
+    These pixels are the inner edge of the region, not a ring of pixels around it.
 
     Parameters:
         backplane_key (str or tuple): Key defining the backplane to evaluate.
@@ -20,7 +23,10 @@ def border_above(self, backplane_key, value):
 
 
 def border_below(self, backplane_key, value):
-    """The locus of points surrounding the region <= a specified value.
+    """The locus of pixels at or below a specified value and adjacent to a pixel
+    above it.
+
+    These pixels are the inner edge of the region, not a ring of pixels around it.
 
     Parameters:
         backplane_key (str or tuple): Key defining the backplane to evaluate.
@@ -68,7 +74,7 @@ def border_atop(self, backplane_key, value):
 
 
 def _border_above_or_below(self, sign, backplane_key, value):
-    """The locus of points <= or >= a specified value.
+    """The locus of pixels on the inner edge of the region above or below a value.
 
     Parameters:
         sign (int): +1 for the border of the region >= `value`; -1 for the border of the
