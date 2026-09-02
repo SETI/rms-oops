@@ -92,7 +92,7 @@ class Calibration(object):
         calibration is applied.
 
         Parameters:
-            factor (float): Scale factor to apply to DN values.
+            factor (np.ndarray or float): Scale factor to apply to DN values.
             baseline (float, optional): An optional baseline value to subtract from every
                 DN value before applying the new scale factor.
             name (str, optional): Optional new name. If blank, the existing name is
@@ -176,7 +176,7 @@ class Calibration(object):
         supplies the results to its own constructor.
 
         Parameters:
-            factor (float): Scale factor to apply to DN values.
+            factor (np.ndarray or float): Scale factor to apply to DN values.
             baseline (float, optional): An optional baseline value to subtract from every
                 DN value before applying the new scale factor.
             name (str, optional): Optional new name. If blank, the existing name is

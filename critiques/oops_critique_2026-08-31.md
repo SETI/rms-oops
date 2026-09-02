@@ -1839,11 +1839,18 @@ left alone.
 ### src/oops/calibration/* (calibration_.py, flatcalib.py, nullcalib.py, radiance.py, rawcounts.py)
 - **[CONSISTENCY] (not fixed)** all subclasses set a public `has_baseline` attribute that the
   base-class `Properties:` docstring does not document.
-- **[DOC] (partly fixed after review)** `flatcalib.py:20` (also radiance.py,
-  rawcounts.py) — `factor` is typed as "(float)" but the note under `baseline` explains
-  both may be arrays broadcastable to the non-spatial data shape. `flatcalib.py` now says
-  "(np.ndarray or float)"; the four occurrences in `radiance.py` and `rawcounts.py` are
-  still typed "(float)".
+- **[DOC] (fixed after review)** `flatcalib.py:20` (also radiance.py, rawcounts.py) —
+  `factor` was typed as "(float)" while the note under `baseline` explains both may be
+  arrays broadcastable to the non-spatial data shape. Arrays were confirmed to work
+  through every path: the constructors of `FlatCalib`, `Radiance` and `RawCounts` each
+  store an array factor, and `prescale` carries one through, `NullCalib.prescale`
+  included, which returns a `FlatCalib`. All nine occurrences across the package now read
+  "(np.ndarray or float)" — the three constructors and the six `prescale`/`prescaled_args`
+  parameters, the latter added so the family does not disagree with itself. The
+  class-level `factor (Scalar)` in the base `Properties:` block is left as it is, since it
+  describes the converted attribute rather than the argument. `baseline` keeps its
+  "(float, optional)" type: the note explaining that arrays are allowed sits directly
+  under it.
 - The prescale algebra (`prescaled_args`) was verified symbolically and is correct; the
   extended/point source area-factor asymmetry between Radiance and RawCounts is internally
   consistent.

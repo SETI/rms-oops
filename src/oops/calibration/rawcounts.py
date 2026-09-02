@@ -23,8 +23,8 @@ class RawCounts(FlatCalib):
                 "REFLECTIVITY".
             fov (FOV): The field of view, used to model the distortion. Alternatively, it
                 can be a 2-D array containing the pixel area corrections.
-            factor (float): A constant scale factor to be applied to every pixel in the
-                field of view.
+            factor (np.ndarray or float): A constant scale factor to be applied to
+                every pixel in the field of view.
             baseline (float, optional): An optional baseline value to subtract from the
                 image before applying the scale factor. Note that the factor and baseline
                 values could be arrays for cases in which the non-spatial axes of the data
@@ -93,7 +93,7 @@ class RawCounts(FlatCalib):
         calibration is applied.
 
         Parameters:
-            factor (float): Scale factor to apply to DN values.
+            factor (np.ndarray or float): Scale factor to apply to DN values.
             baseline (float, optional): An optional baseline value to subtract from every
                 DN value before applying the new scale factor.
             name (str, optional): Optional new name. If blank, the existing name is
