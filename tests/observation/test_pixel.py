@@ -240,4 +240,78 @@ def test_pixel_gridless_event():
     event = obs.gridless_event(meshgrid, tfrac=None, time=Scalar(7.))
     assert event.time == Scalar(7.)
 
+
+def test_pixel_gridless_event_without_a_meshgrid():
+    fov = FlatFOV((0.001,0.001), (1,1))
+    cadence = Metronome(tstart=0., tstride=10., texp=10., steps=4)
+    obs = Pixel(axes=('t'),
+                cadence=cadence, fov=fov, path='SSB', frame='J2000')
+
+    # The meshgrid only shapes the event, so omitting it leaves the cadence times alone
+    event = obs.gridless_event()
+
+    assert event.shape == (4,)
+    assert event.time == Scalar([5., 15., 25., 35.])
+
+
+def test_pixel_gridless_event_without_a_meshgrid_is_shapeless():
+    fov = FlatFOV((0.001,0.001), (1,1))
+    cadence = Metronome(tstart=0., tstride=10., texp=10., steps=4)
+    obs = Pixel(axes=('t'),
+                cadence=cadence, fov=fov, path='SSB', frame='J2000')
+
+    event = obs.gridless_event(shapeless=True)
+
+    assert event.time == Scalar(20.)
+
+
+def test_pixel_uvt_accepts_a_number_without_a_time_axis():
+    """`scalar_from_indices` accepts a number, so `uvt` must too."""
+
+    fov = FlatFOV((0.001,0.001), (1,1))
+    cadence = Metronome(tstart=0., tstride=10., texp=10., steps=4)
+    obs = Pixel(axes=('u'),
+                cadence=cadence, fov=fov, path='SSB', frame='J2000')
+
+    (uv, time) = obs.uvt(0)
+
+    assert uv == Pair((0.5,0.5))
+
+
+def test_pixel_uvt_returns_the_midtime_without_a_time_axis():
+    fov = FlatFOV((0.001,0.001), (1,1))
+    cadence = Metronome(tstart=0., tstride=10., texp=10., steps=4)
+    obs = Pixel(axes=('u'),
+                cadence=cadence, fov=fov, path='SSB', frame='J2000')
+
+    (uv, time) = obs.uvt(0)
+
+    assert time == Scalar(cadence.midtime)
+
+
+def test_pixel_uvt_accepts_a_list_of_index_components():
+    """A flat list is one index vector, so the (u,v) result is shapeless."""
+
+    fov = FlatFOV((0.001,0.001), (1,1))
+    cadence = Metronome(tstart=0., tstride=10., texp=10., steps=4)
+    obs = Pixel(axes=('u','v'),
+                cadence=cadence, fov=fov, path='SSB', frame='J2000')
+
+    (uv, time) = obs.uvt([0, 0])
+
+    assert uv.shape == ()
+
+
+def test_pixel_uvt_range_accepts_a_number():
+    """`uvt_range` reads the same raw `indices` argument that `uvt` does."""
+
+    fov = FlatFOV((0.001,0.001), (1,1))
+    cadence = Metronome(tstart=0., tstride=10., texp=10., steps=4)
+    obs = Pixel(axes=('t'),
+                cadence=cadence, fov=fov, path='SSB', frame='J2000')
+
+    (uv_min, uv_max, time_min, time_max) = obs.uvt_range(0)
+
+    assert uv_min == Pair((0,0))
+
 ##########################################################################################

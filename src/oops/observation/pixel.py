@@ -111,7 +111,11 @@ class Pixel(Observation):
         tstep = Observation.scalar_from_indices(indices, self.t_axis, derivs=derivs)
 
         if tstep is None:       # if t_axis < 0
-            uv = Pair.filled(indices.shape, 0.5)
+            # `indices` need not be a polymath object; scalar_from_indices also accepts a
+            # list, an array, or a number, so the shape has to come from the same
+            # conversion rather than from the argument itself
+            shape = Observation.scalar_from_indices(indices, 0, derivs=False).shape
+            uv = Pair.filled(shape, 0.5)
             return (uv, Scalar(self.cadence.midtime))
 
         time = self.cadence.time_at_tstep(tstep, remask=remask)
@@ -143,8 +147,8 @@ class Pixel(Observation):
         tstep = Observation.scalar_from_indices(indices, self.t_axis)
         (time_min, time_max) = self.cadence.time_range_at_tstep(tstep, remask=remask)
 
-        # uv pair
-        uv_min = Pair.zeros(indices.shape, dtype='int', mask=time_min.mask)
+        # uv pair; time_min carries the shape of the converted indices
+        uv_min = Pair.zeros(time_min.shape, dtype='int', mask=time_min.mask)
 
         return (uv_min, uv_min + self.fov.uv_shape, time_min, time_max)
 
@@ -234,8 +238,9 @@ class Pixel(Observation):
         time sequence by default.
 
         Parameters:
-            meshgrid (Meshgrid, optional): Object describing the sampling of the field of
-                view.
+            meshgrid (Meshgrid): Object describing the sampling of the field of view.
+                Required, because the returned Event carries the arrival directions that
+                it defines.
             tfrac (Scalar, optional): Scalar of fractional times during the exposure,
                 where tfrac=0 at the beginning and 1 at the end. Default is 0.5. Ignored
                 if `time` is specified.
@@ -265,7 +270,9 @@ class Pixel(Observation):
 
         Parameters:
             meshgrid (Meshgrid, optional): Object describing the sampling of the field of
-                view. Here, it is only used to define the shape of the returned event.
+                view. Here, it is only used to define the shape of the returned event;
+                if None, the times are returned with one value per sample of the cadence
+                and no additional axes.
             tfrac (Scalar, optional): Scalar of fractional times during the exposure,
                 where tfrac=0 at the beginning and 1 at the end. Default is 0.5.
             time (Scalar, optional): Optional Scalar of absolute time in seconds. If
@@ -280,7 +287,8 @@ class Pixel(Observation):
         if time is None:
             tstep = np.arange(self.cadence.shape[0]) + tfrac
             time = self.cadence.time_at_tstep(tstep)
-            time = time.reshape(time.shape + len(meshgrid.shape) * (1,))
+            if meshgrid is not None:
+                time = time.reshape(time.shape + len(meshgrid.shape) * (1,))
 
         if shapeless:
             time = time.mean()
