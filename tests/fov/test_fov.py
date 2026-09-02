@@ -2,7 +2,10 @@
 # tests/fov/test_fov.py
 ##########################################################################################
 
+import numpy as np
 import pytest
+
+from polymath import Pair
 
 from oops.fov       import FlatFOV, OffsetFOV, Platescale, TDIFOV
 from oops.fov.fov_  import FOV
@@ -101,5 +104,52 @@ def test_refitting_a_platescale_discards_its_cached_values() -> None:
 
     assert fov.corner11_xy() != corner
     assert fov.outer_radius != radius
+
+
+NEAREST_UV_INPUTS = ((70., 70.), [70., 70.], np.array([70., 70.]), Pair((70., 70.)))
+
+
+@pytest.mark.parametrize('uv_pair', NEAREST_UV_INPUTS)
+def test_nearest_uv_clips_any_accepted_input(uv_pair) -> None:
+    """Every input form Pair.as_pair accepts is clipped to the FOV boundary."""
+
+    assert _flat().nearest_uv(uv_pair) == Pair((64., 64.))
+
+
+@pytest.mark.parametrize('uv_pair', NEAREST_UV_INPUTS)
+def test_nearest_uv_remasks_any_accepted_input(uv_pair) -> None:
+    """A point outside the FOV is masked with remask=True, whatever form it arrived in."""
+
+    assert _flat().nearest_uv(uv_pair, remask=True).mask
+
+
+def test_nearest_uv_leaves_a_point_inside_the_fov_alone() -> None:
+    """A point already inside the FOV comes back unchanged."""
+
+    assert _flat().nearest_uv((10., 20.)) == Pair((10., 20.))
+
+
+def test_nearest_uv_does_not_mask_a_point_inside_the_fov() -> None:
+    """remask=True masks only the points that had to move."""
+
+    assert not _flat().nearest_uv((10., 20.), remask=True).mask
+
+
+def test_nearest_uv_does_not_modify_its_argument() -> None:
+    """The clip is applied to a copy; the caller's Pair is shared and must not move."""
+
+    uv_pair = Pair([(10., 10.), (70., 70.)])
+    _flat().nearest_uv(uv_pair)
+
+    assert uv_pair == Pair([(10., 10.), (70., 70.)])
+
+
+def test_nearest_uv_keeps_derivatives() -> None:
+    """Derivatives survive the clip when the result is not remasked."""
+
+    uv_pair = Pair([(10., 10.), (70., 70.)])
+    uv_pair.insert_deriv('t', Pair([(1., 1.), (1., 1.)]))
+
+    assert 't' in _flat().nearest_uv(uv_pair).derivs
 
 ##########################################################################################

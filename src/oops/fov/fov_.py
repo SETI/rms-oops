@@ -576,15 +576,18 @@ class FOV(Mutable):
         """The closest `(u,v)` coordinates inside the FOV.
 
         Parameters:
-            uv_pair (Pair): `(u,v)` coordinates in this FOV.
+            uv_pair (Pair, tuple, list, or array): `(u,v)` coordinates in this FOV.
             remask (bool, optional): True to mask the points outside the FOV's boundary.
 
         Returns:
-            Pair: Nearest `(u,v)` coordinates to `uv_pair`.
+            Pair: Nearest `(u,v)` coordinates to `uv_pair`. Derivatives are carried
+            through unless `remask` is True.
         """
 
-        clipped = Pair.as_pair(uv_pair, recursive=False)
-
+        # Normalize once; the clip below writes into `clipped.vals`, so it needs a
+        # writable copy, and the remask test needs the same converted value to compare
+        # against
+        uv_pair = Pair.as_pair(uv_pair)
         clipped = uv_pair.copy(readonly=False)
         clipped.vals[...,0] = clipped.vals[...,0].clip(0, self.uv_shape.vals[0])
         clipped.vals[...,1] = clipped.vals[...,1].clip(0, self.uv_shape.vals[1])
