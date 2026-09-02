@@ -12,10 +12,9 @@ class GraphicEllipsoid(Ellipsoid):
     """A variant of Ellipsoid in which latitudes and longitudes are planetographic,
     meaning that their direction is defined by the local surface normal.
 
-    Note that planetographic longitude differs from conventional
-    (planetocentric) longitude for triaxial ellipsoids, and is an unconventional
-    choice. Use method lon_to_centric() if you wish to convert it to centric
-    longitude.
+    Note that planetographic longitude differs from conventional (planetocentric)
+    longitude for triaxial ellipsoids, and is an unconventional choice. Use method
+    `lon_to_centric()` if you wish to convert it to centric longitude.
     """
 
     def coords_from_vector3(self, pos, *, obs=None, time=None, axes=2, derivs=False,
