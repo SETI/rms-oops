@@ -216,7 +216,7 @@ class SpiceType1Frame(SpiceFrame):
         Unlike method `transform_at_time`, this variant tolerates times that raise cspyce
         errors. If `time` is 1-D, this method returns a new time Scalar along with the new
         Transform, where both objects skip over the times at which the transform could not
-        be evaluated. If `time ` has more than one dimension, the cspyce error is still
+        be evaluated. If `time` has more than one dimension, the cspyce error is still
         raised.
 
         Parameters:

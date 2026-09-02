@@ -103,7 +103,6 @@ class Rotation(Frame, Fittable):
             parts = [f'{self._angle.mvals}, {self._axis2}',
                      self._reference.show(level-1, skip)]
 
-
         return f'{name}(' + f'\n{blanks}'.join(parts) + ')'
 
     ######################################################################################

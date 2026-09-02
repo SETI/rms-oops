@@ -232,34 +232,6 @@ class QuickFrame(Frame):
         (matrix, omega) = self._interpolate_matrix_omega(time)
         return Transform(matrix, omega, self, self._reference, origin=self._origin)
 
-    def transform_at_time_if_possible(self, time, *, quick=False):
-        """Transform that rotates coordinates from the reference to this frame.
-
-        If the frame is rotating, then the coordinates being transformed must be given
-        relative to the center of rotation.
-
-        Unlike method `transform_at_time`, this variant tolerates times that raise cspyce
-        errors. It returns a new time Scalar along with the new Transform, where both
-        objects skip over the times at which the transform could not be evaluated.
-
-        Parameters:
-            time (Scalar): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
-
-        Returns:
-            tuple[Scalar, Transform]: (`newtimes`, `transform`):
-
-            * `newtimes` identifies the time(s) at which `transform` has been provided;
-              this may be a subset of the input times, because it omits the times at which
-              the Transform could not be evaluated.
-            * `transform` is the Transform defined at `newtimes`. It rotates vectors from
-              the reference frame to this frame.
-        """
-        xform = self.transform_at_time(time)
-        return (time, xform)
-
     def _interpolate_matrix_omega(self, time, collapse_threshold=None):
         """Use the tabulated splines for a quick evaluation of the transform.
 
@@ -286,7 +258,7 @@ class QuickFrame(Frame):
             identity[..., 1, 1] = 1.
             identity[..., 2, 2] = 1.
             matrix = Matrix3(identity, True)
-            omega = Vector3(np.ones(time.shape + (3,)), True)
+            omega = Vector3(np.zeros(time.shape + (3,)), True)
             return (matrix, omega)
 
         tflat_max = np.max(tflat.vals)

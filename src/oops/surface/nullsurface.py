@@ -163,8 +163,8 @@ class NullSurface(Surface):
         # This is a quick way to create a position vector of the correct shape, and with
         # the correct set of derivatives, even though it will be entirely masked.
 
-        pos = (Vector3.as_vector(obs, recursive=derivs)
-               + Vector3.as_vector(los, recursive=derivs))
+        pos = (Vector3.as_vector3(obs, recursive=derivs)
+               + Vector3.as_vector3(los, recursive=derivs))
         t = pos.to_scalar(0, recursive=derivs)
 
         pos = pos.as_all_constant().as_all_masked()

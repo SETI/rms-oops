@@ -17,8 +17,6 @@ class InSitu(Observation):
 
     It can be useful for describing in situ measurements. InSitu observations can also be
     used to evaluate gridless backplanes, which do not require directional information.
-
-    NOTE: This is still a work in progress. Not yet tested. Do not use.
     """
 
     def __init__(self, cadence, path, **subfields):
@@ -86,7 +84,6 @@ class InSitu(Observation):
             Observation: A (shallow) copy of the object with a new time.
         """
 
-        return InSitu(self.cadence.time_shift(dtime), self.path,
-                      **self.subfields)
+        return InSitu(self.cadence.time_shift(dtime), self.path, **self.subfields)
 
 ##########################################################################################

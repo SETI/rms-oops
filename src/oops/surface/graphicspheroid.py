@@ -3,7 +3,6 @@
 ##########################################################################################
 
 from polymath import Scalar
-
 from oops.surface.spheroid         import Spheroid
 from oops.surface.graphicellipsoid import GraphicEllipsoid
 
@@ -11,8 +10,8 @@ from oops.surface.graphicellipsoid import GraphicEllipsoid
 class GraphicSpheroid(Spheroid):
     """A variant of Spheroid in which latitudes are planetographic."""
 
-    def coords_from_vector3(self, pos, *, obs=None, time=None, axes=2,  derivs=False,
-                           hints=None, groundtrack=False):
+    def coords_from_vector3(self, pos, *, obs=None, time=None, axes=2, derivs=False,
+                            hints=None, groundtrack=False):
         """Surface coordinates associated with a position vector.
 
         Parameters:

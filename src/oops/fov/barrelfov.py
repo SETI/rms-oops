@@ -2,8 +2,9 @@
 # oops/fov/barrelfov.py
 ##########################################################################################
 
-import numpy as np
 import sys
+
+import numpy as np
 
 from polymath         import Scalar, Pair
 from oops.config      import LOGGING

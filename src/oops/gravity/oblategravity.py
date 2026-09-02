@@ -5,9 +5,9 @@
 import numpy as np
 import warnings
 
-from oops.config    import LOGGING
-from oops.constants import TWOPI
-from oops.gravity   import Gravity
+from oops.gravity import Gravity
+
+_TWOPI = 2 * np.pi
 
 
 class OblateGravity(Gravity):
@@ -20,8 +20,7 @@ class OblateGravity(Gravity):
 
         Parameters:
             gm (float): The body's GM in units of km^3/s^2.
-            jlist (list, optional): Optional list of even gravity harmonics:
-                [J2, J4, ...].
+            jlist (list, optional): Optional list of even gravity harmonics: [J2,J4,...].
             radius (float, optional): Body radius for associated J-values.
         """
 
@@ -80,8 +79,7 @@ class OblateGravity(Gravity):
     def potential(self, a):
         """The potential energy at radius a, in the equatorial plane."""
 
-        return -self.gm/a * (1. - OblateGravity._jseries(self.potential_jn,
-                                                         self.r2/a**2))
+        return -self.gm/a * (1. - OblateGravity._jseries(self.potential_jn, self.r2/a**2))
 
     def omega(self, a, e=0., sin_i=0.):
         """The mean motion (radians/s) at semimajor axis a.
@@ -97,8 +95,7 @@ class OblateGravity(Gravity):
         omega1 = np.sqrt(omega2)
 
         if (e or sin_i) and self.jn:
-            omega1 += (np.sqrt(gm_a3) * ratio2 * self.jn[0]
-                       * (3. * e**2 - 12. * sin_i**2))
+            omega1 += np.sqrt(gm_a3) * ratio2 * self.jn[0] * (3. * e**2 - 12. * sin_i**2)
 
         return omega1
 
@@ -307,10 +304,9 @@ class OblateGravity(Gravity):
         return sum_values
 
     def dcombo_da(self, a, factors, e=0., sin_i=0.):
-        """The radial derivative of a frequency combination, based on given
-        coefficients for omega, kappa and nu. Unlike method combo(), this one
-        does not guarantee full precision if the coefficients cancel to first
-        or second order.
+        """The radial derivative of a frequency combination, based on given coefficients
+        for omega, kappa and nu. Unlike method combo(), this one does not guarantee full
+        precision if the coefficients cancel to first or second order.
         """
 
         sum_values = 0.
@@ -434,21 +430,21 @@ class OblateGravity(Gravity):
 
         return self.dcombo_da(a, (1,0,-1), e, sin_i)
 
-    def ilr_pattern(self, n, m, p=1):
-        """The pattern speed of the m:m-p inner Lindblad resonance, given the  mean motion
-        `n` of the perturber.
+    def ilr_pattern(self, n, m, *, p=1):
+        """The pattern speed of the `m:m-p` inner Lindblad resonance, given the mean
+        motion `n` of the perturber.
         """
 
         a = self.solve_a(n, (1,0,0))
-        return (n + self.kappa(a) * p/m)
+        return n + self.kappa(a) * p/m
 
-    def olr_pattern(self, n, m, p=1):
+    def olr_pattern(self, n, m, *, p=1):
         """The pattern speed of the m:m+p outer Lindblad resonance, given the mean motion
         `n` of the perturber.
         """
 
         a = self.solve_a(n, (1,0,0))
-        return (n - self.kappa(a) * p/(m+p))
+        return n - self.kappa(a) * p/(m+p)
 
     ######################################################################################
     # Orbital elements
@@ -574,7 +570,7 @@ class OblateGravity(Gravity):
                                          OblateGravity._pos_arctan2(hx,-hy))
         tmp = np.arctan2(y, x)
         tmp = np.where(np.abs(inc - np.pi) < 10.*tiny, -tmp, tmp)
-        tmp = tmp % TWOPI
+        tmp = tmp % _TWOPI
 
         sin_inc = np.sin(inc)
         if np.shape(sin_inc) == ():             # Avoid possible divide-by-zero
@@ -609,10 +605,10 @@ class OblateGravity(Gravity):
         sw = np.sqrt(1. - e*e)*np.sin(cape)/(1. - e*np.cos(cape))
         w = np.where(fac > 0., OblateGravity._pos_arctan2(sw,cw), u)
 
-        mean_anomaly = (cape - e*np.sin(cape)) % TWOPI
-        long_peri = (u - w) % TWOPI
+        mean_anomaly = (cape - e*np.sin(cape)) % _TWOPI
+        long_peri = (u - w) % _TWOPI
 
-        mean_lon = (mean_anomaly + long_peri) % TWOPI
+        mean_lon = (mean_anomaly + long_peri) % _TWOPI
 
         # Convert any shapeless arrays to scalars
         elements = []
@@ -625,8 +621,8 @@ class OblateGravity(Gravity):
         return tuple(elements)
 
     def state_from_geom(self, elements, body_gm=0.):
-        """Position and velocity based on geometric orbital elements: (a, e, i,
-        mean longitude, longitude of pericenter, longitude of ascending node).
+        """Position and velocity based on geometric orbital elements: (a, e, i, mean
+        longitude, longitude of pericenter, longitude of ascending node).
 
         Adapted from Renner & Sicardy (2006) EQ 2-13 by Rob French.
 
@@ -754,8 +750,8 @@ class OblateGravity(Gravity):
                 if not idx_to_use.any():
                     break
                 if not announced:
-                    LOGGING.warn('geom_from_state() started diverging! ' +
-                                 'Tolerance met = %e' % diffmax)
+                    warnings.warn('OblateGravity.geom_from_state started diverging: '
+                                  f'tolerance met = {diffmax}')
                     announced = True
 
                 diff_of_diff = diff - old_diff
@@ -837,9 +833,9 @@ class OblateGravity(Gravity):
         lam = L - Lc - 2.*n/kappa*(rdot-rdotc)/(a*kappa)
 
         long_peri = (lam - OblateGravity._pos_arctan2(rdot-rdotc,
-                                                      a*kappa*(1.-(r-rc)/a))) % TWOPI
+                                                      a*kappa*(1.-(r-rc)/a))) % _TWOPI
 
-        long_node = (lam - OblateGravity._pos_arctan2(nu*(z-zc), zdot-zdotc)) % TWOPI
+        long_node = (lam - OblateGravity._pos_arctan2(nu*(z-zc), zdot-zdotc)) % _TWOPI
 
         # EQ 36-41
         rc = (a * e**2 * (3./2.*eta2/kappa2 - 1. -
@@ -884,7 +880,7 @@ class OblateGravity(Gravity):
     # A nicer version of arctan2
     @staticmethod
     def _pos_arctan2(y, x):
-        return np.arctan2(y, x) % TWOPI
+        return np.arctan2(y, x) % _TWOPI
 
 ##########################################################################################
 # Planetary gravity fields defined...

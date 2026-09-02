@@ -28,6 +28,7 @@ def spice_shape(spice_id, frame=None, default_radii=None):
         KeyError: If the radius values are missing from the SPICE kernel pool and default
             values are not provided.
         LookupError: If the `spice_id` is not recognized.
+        RuntimeError: On any other SPICE failure.
     """
 
     spice_body_code = SpicePath._body_code_and_name(spice_id)[0]
@@ -36,9 +37,9 @@ def spice_shape(spice_id, frame=None, default_radii=None):
 
     try:
         radii = cspyce.bodvcd(spice_body_code, 'RADII')
-    except (RuntimeError, KeyError) as e:
+    except (RuntimeError, KeyError):
         if default_radii is None:
-            raise e
+            raise
         radii = default_radii
 
     if radii[0] == radii[1]:
