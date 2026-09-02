@@ -4,7 +4,6 @@
 
 from polymath                      import Scalar
 from oops.surface.centricellipsoid import CentricEllipsoid
-from oops.surface.ellipsoid        import Ellipsoid
 from oops.surface.spheroid         import Spheroid
 
 
@@ -47,6 +46,8 @@ class CentricSpheroid(Spheroid):
               if `groundtrack` is True.
         """
 
+        # Spheroid has no centric variant of this method, and CentricEllipsoid's works
+        # unchanged for a spheroid
         return CentricEllipsoid.coords_from_vector3(self, pos, obs=obs, time=time,
                                                     axes=axes, derivs=derivs, hints=hints,
                                                     groundtrack=groundtrack)
@@ -94,9 +95,9 @@ class CentricSpheroid(Spheroid):
         squashed_lat = Spheroid.lat_from_centric(self, lat, derivs=derivs)
         new_coords = (lon, squashed_lat,) + coords[2:]
 
-        return Ellipsoid.vector3_from_coords(self, new_coords, obs=obs, time=time,
-                                             derivs=derivs, hints=hints,
-                                             groundtrack=groundtrack)
+        return Spheroid.vector3_from_coords(self, new_coords, obs=obs, time=time,
+                                            derivs=derivs, hints=hints,
+                                            groundtrack=groundtrack)
 
     ######################################################################################
     # Latitude conversions

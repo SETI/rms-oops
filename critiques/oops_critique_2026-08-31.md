@@ -69,9 +69,9 @@ three open correctness defects above is unchanged. Three more were then cleared:
 fixed outright, and the two `graphicspheroid.py` style findings were confirmed resolved,
 with the unpadded `from polymath` line accepted as it stands. `fittable.py:150` was then
 examined in detail and accepted as it stands, labelled **(not fixed; accepted)** because
-its entry records the analysis rather than simply declining the finding. That leaves 9
-findings genuinely open: 8 bullets still marked "(not fixed)" plus the TDIFOV aliasing
-defect.
+its entry records the analysis rather than simply declining the finding, and
+`centricspheroid.py:50,96` was fixed. That leaves 8 findings genuinely open: 7 bullets
+still marked "(not fixed)" plus the TDIFOV aliasing defect.
 
 ## Headline defects (fixed)
 
@@ -1247,10 +1247,24 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
 - **[DOC] (fixed)** `centricspheroid.py:80-87` — `vector3_from_coords` Returns section
   omitted the `hints` bullet even though the parameter list promises hints is appended
   (and the delegated Ellipsoid implementation does append it). Added the bullet.
-- **[CONSISTENCY] (not fixed)** `centricspheroid.py:50,96` — `coords_from_vector3`
-  delegates to `CentricEllipsoid`, while `vector3_from_coords` delegates to
-  `Ellipsoid` directly; `GraphicSpheroid` delegates to `Spheroid` in the same spot.
-  All resolve correctly, but the asymmetry is confusing.
+- **[CONSISTENCY] (fixed after review)** `centricspheroid.py:50,96` —
+  `coords_from_vector3` delegates to `CentricEllipsoid`, while `vector3_from_coords`
+  delegates to `Ellipsoid` directly; `GraphicSpheroid` delegates to `Spheroid` in the same
+  spot. All resolve correctly, but the asymmetry is confusing. Half of it was illusory:
+  `Spheroid` overrides neither method, so `Spheroid.vector3_from_coords` and
+  `Ellipsoid.vector3_from_coords` are the same function object and the two spellings
+  differed in appearance only. `centricspheroid.py` now says `Spheroid`, matching
+  `GraphicSpheroid` and naming the direct superclass, and the `Ellipsoid` import it no
+  longer needs was removed, leaving the two files with identical import blocks. The other
+  half is load-bearing and was kept: `CentricEllipsoid.coords_from_vector3` is a genuinely
+  different algorithm, deriving `lat` and `lon` from the intercept point rather than from
+  the squashed internal coordinates, and it is correct for a spheroid because it touches
+  only `intercept_normal_to` and `_unsquash_sq`; delegating to `Ellipsoid` there would
+  return squashed coordinates. The reverse borrowing is impossible for the same reason —
+  `CentricEllipsoid.vector3_from_coords` unsquashes longitude as well, on the
+  longitude-dependent triaxial path, where a spheroid needs only the longitude-independent
+  `Spheroid.lat_from_centric`. A comment at the remaining sideways call now records why it
+  is there.
 
 ### src/oops/surface/graphicspheroid.py
 - **[DOC] (fixed)** `graphicspheroid.py:80-87` — Same missing `hints` bullet as
