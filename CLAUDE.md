@@ -32,8 +32,9 @@ imports fail because these are unset, say so; do not report it as a code defect.
   Sphinx build. pip-audit and PyMarkdown remain off by default (`ENABLE_*` in the
   script): pip-audit reports findings against pinned upstream dependencies this
   repository does not control, and PyMarkdown reports pre-existing findings in the
-  Markdown. `.github/workflows/run-lint.yml` is dispatch-only and has not yet been
-  brought into step with this set.
+  Markdown. `.github/workflows/run-lint.yml` runs the same set minus the pytest
+  suites, which belong to `run-tests.yml`; each gate is its own step so a failure
+  names itself. Keep the two in step: the script is authoritative.
 - Tests use **pytest**: module-level `test_*` functions and plain `assert`. There
   are no `unittest.TestCase` classes and no `runTest` methods.
   - `pytest tests --ignore=tests/hosts --ignore=tests/spicedb` — main suite

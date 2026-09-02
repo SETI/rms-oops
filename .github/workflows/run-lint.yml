@@ -3,15 +3,15 @@ run-name: "Run Lint: ${{ github.ref_type }} ${{ github.ref_name }} by ${{ github
 
 on:
   workflow_dispatch:
-  # pull_request:
-  #   branches: [ master ]
-  # push:
-  #   branches: [ master ]
-  # schedule:
-  #   - cron: "03 00 * * *"
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: "03 00 * * *"
 
 jobs:
-  test:
+  lint:
     name: Run Lint
     runs-on: self-hosted-linux
     steps:
@@ -25,10 +25,44 @@ jobs:
         with:
           python-version: 3.12
 
-      - name: Run flake8 on the library packages
+      # The dev extra pulls in every tool below, and rms-oops[docs] with it.
+      - name: Install dependencies
         run: |
-          flake8 src
+          python -m pip install -e ".[dev]"
 
-      - name: Run flake8 on the programs
+      # Each gate is its own step, so a failure names itself. The set and the
+      # arguments match scripts/run-all-checks.sh, which is authoritative; the pytest
+      # suites belong to run-tests.yml and are not repeated here.
+
+      - name: Run ruff
         run: |
-          flake8 programs
+          python -m ruff check .
+
+      # Ruff implements no rule in the E121-E133 range, so the continuation-line
+      # indent checks come from flake8 and nothing else.
+      - name: Run flake8 (continuation-line checks only)
+        run: |
+          python -m flake8 --select=E12,E13 src programs tests
+
+      # The tests only; src carries no annotations by house rule.
+      - name: Run mypy
+        run: |
+          python -m mypy
+
+      - name: Run pyroma
+        run: |
+          python -m pyroma --min=10 .
+
+      - name: Run bandit
+        run: |
+          python -m bandit -q -c pyproject.toml -r src
+
+      - name: Run vulture
+        run: |
+          python -m vulture
+
+      # -W makes a warning fail the build; -E rebuilds from scratch so a cached page
+      # cannot hide one. This step needs no SPICE kernels: conf.py mocks cspyce.
+      - name: Build the documentation
+        run: |
+          python -m sphinx -W -E -b html docs docs/_build
