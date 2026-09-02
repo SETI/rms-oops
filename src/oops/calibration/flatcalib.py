@@ -17,8 +17,8 @@ class FlatCalib(Calibration):
         Parameters:
             name (str): The name of the value returned by the calibration, e.g.,
                 "REFLECTIVITY".
-            factor (float): A scale factor to be applied to every pixel in the field of
-                view.
+            factor (np.ndarray or float): A scale factor to be applied to every pixel in
+                the field of view.
             baseline (float, optional): An optional baseline value to subtract from the
                 image before applying the scale factor. Note that the factor and baseline
                 values could be arrays for cases in which the non-spatial axes of the data

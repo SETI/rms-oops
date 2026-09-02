@@ -953,7 +953,7 @@ class Observation(Mutable):
     ######################################################################################
 
     def uv_from_ra_and_dec(self, ra, dec, *, tfrac=0.5, time=None, apparent=True,
-                           derivs=False, iters=2, quick={}):
+                           derivs=False, iters=2, quick=None):
         """Convert arbitrary scalars of RA and dec to FOV `(u,v)` coordinates.
 
         Parameters:
@@ -1033,7 +1033,7 @@ class Observation(Mutable):
         return uv
 
     def uv_from_path(self, path, *, tfrac=0.5, time=None, derivs=False, guess=None,
-                     quick={}, converge={}):
+                     quick=None, converge=None):
         """The `(u,v)` indices of an object in the FOV, given its path. **** NOT WELL
         TESTED! ****
 
