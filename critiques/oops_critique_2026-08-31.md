@@ -71,11 +71,9 @@ with the unpadded `from polymath` line accepted as it stands. `fittable.py:150` 
 examined in detail and accepted as it stands, labelled **(not fixed; accepted)** because
 its entry records the analysis rather than simply declining the finding, and
 `centricspheroid.py:50,96` was fixed. The remaining seven bullets were all in
-`gravity_.py` and `oblategravity.py`; a pass over those two modules closed five of them
-outright and left two partly open: the `ilr_pattern`/`olr_pattern` provenance, with a
-question for the author recorded in its entry, and the `geom_from_state` diagnostics,
-whose `LOGGING` half the owner has declined. That leaves 2 findings genuinely open: the
-`ilr_pattern`/`olr_pattern` remainder plus the TDIFOV aliasing defect.
+`gravity_.py` and `oblategravity.py`; a pass over those two modules closed six of them
+outright and left one partly open, the `geom_from_state` diagnostics, whose `LOGGING` half
+the owner has declined. That leaves 1 finding genuinely open, the TDIFOV aliasing defect.
 
 ## Headline defects (fixed)
 
@@ -1943,16 +1941,14 @@ JunoCam geometry for shapeless queries, so it is left for the author.
   Calibration, and Observation abstract bases do. All eleven now raise
   `NotImplementedError` with the same `f'{type(self).__name__}.<method> is not
   implemented'` message those bases use.
-- **[SUGGESTION] (partly fixed after review)** `gravity_.py:109-121` — `ilr_pattern`/`olr_pattern` had no
-  `Parameters:` documentation and their resonance-formula provenance was undocumented. Both
-  now document their parameters and state the formula they evaluate. The provenance is
-  still open, and so is a question the documentation pass raised: the summary lines call the
-  result a *pattern speed*, but a pattern speed satisfies `Omega_p = n_r -/+ p*kappa_r/m` at
-  an ILR/OLR respectively, whereas these methods return `n + p*kappa/m` and
-  `n - p*kappa/(m+p)` with `kappa` evaluated at the perturber's own semimajor axis. Those
-  values track the *mean motion at the resonance* for a resonance whose mean-motion ratio is
-  `m:(m-p)` or `m:(m+p)`. Either the summary lines or the signs need the author's ruling;
-  the formulas are unchanged and now appear verbatim in the docstrings.
+- **[SUGGESTION] (fixed after review)** `gravity_.py:109-121` — `ilr_pattern`/`olr_pattern`
+  had no `Parameters:` documentation and their resonance-formula provenance was
+  undocumented. Both now document their parameters and state the formula they evaluate.
+  The documentation pass had queried the signs; the owner has since supplied the governing
+  requirement, that an inner Lindblad resonance always has a pattern speed faster than `n`
+  and an outer Lindblad resonance always slower. Both formulas satisfy it identically,
+  since `kappa` is a non-negative square root and `p/m` and `p/(m+p)` are positive, so the
+  code stands as written and each docstring now records the property it guarantees.
 
 ### src/oops/cadence/reshapedcadence.py
 - **[DOC] (fixed)** `reshapedcadence.py:170,181` — the docstrings of `_old_tstep_from_new`

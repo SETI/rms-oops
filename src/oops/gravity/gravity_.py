@@ -305,16 +305,16 @@ class Gravity(Oops):
         motion `n` of the perturber.
 
         The value returned is `n + kappa(a) * p/m`, where `a` is the semimajor axis at
-        which the mean motion equals `n`.
+        which the mean motion equals `n`. An inner Lindblad resonance always has a pattern
+        speed faster than `n`.
 
         Parameters:
             n (float or array): Mean motion of the perturber in radians/s.
-            m (int): The first index of the resonance, so that the ratio of the resonant
-                mean motion to `n` is approximately `m/(m-p)`.
+            m (int): The first index of the resonance, for which the resonance is named.
             p (int, optional): The order of the resonance; default 1.
 
         Returns:
-            float or array: The pattern speed in radians/s.
+            float or array: The pattern speed in radians/s, always greater than `n`.
         """
 
         a = self.solve_a(n, (1,0,0))
@@ -325,16 +325,16 @@ class Gravity(Oops):
         motion `n` of the perturber.
 
         The value returned is `n - kappa(a) * p/(m+p)`, where `a` is the semimajor axis at
-        which the mean motion equals `n`.
+        which the mean motion equals `n`. An outer Lindblad resonance always has a pattern
+        speed slower than `n`.
 
         Parameters:
             n (float or array): Mean motion of the perturber in radians/s.
-            m (int): The first index of the resonance, so that the ratio of the resonant
-                mean motion to `n` is approximately `m/(m+p)`.
+            m (int): The first index of the resonance, for which the resonance is named.
             p (int, optional): The order of the resonance; default 1.
 
         Returns:
-            float or array: The pattern speed in radians/s.
+            float or array: The pattern speed in radians/s, always less than `n`.
         """
 
         a = self.solve_a(n, (1,0,0))
