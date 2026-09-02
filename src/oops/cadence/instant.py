@@ -86,12 +86,12 @@ class Instant(Cadence):
         """
 
         if len(self.shape) == 1:
-            return Scalar.as_scalar(tstep, recursive=False).int(
-                            top=self.shape[0], remask=remask, clip=True,
-                            inclusive=inclusive)
+            tstep = Scalar.as_scalar(tstep, recursive=False)
+            return tstep.int(top=self.shape[0], remask=remask, clip=True,
+                             inclusive=inclusive)
 
-        return Vector.as_vector(tstep, recursive=False).int(
-                            self.shape, remask=remask, clip=True, inclusive=inclusive)
+        tstep = Vector.as_vector(tstep, recursive=False)
+        return tstep.int(self.shape, remask=remask, clip=True, inclusive=inclusive)
 
     def _match_at_time(self, time):
         """The index of the first time step sampling each of the given times.
