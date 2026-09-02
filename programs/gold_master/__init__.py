@@ -139,7 +139,6 @@ import importlib
 import logging
 import numbers
 import numpy as np
-import os
 import pickle
 import PIL.Image
 import sys
@@ -1134,13 +1133,16 @@ class BackplaneTest(object):
         self.backplane = self.backplanes[0]
         self.backplane.ALL_DERIVS = True
 
-        # Determine file paths. Example:
-        # filespec = $OOPS_TEST_DATA_PATH/cassini/ISS/N1460072401_1.IMG
-        # masters: $OOPS_GOLD_MASTER_PATH/hosts.cassini.iss/ISS/N1460072401_1/
-        # arrays: $OOPS_BACKPLANE_OUTPUT_PATH/N1460072401_1/arrays
-        # browse: $OOPS_BACKPLANE_OUTPUT_PATH/N1460072401_1/browse
+        # Determine file paths. The gold master and output trees share one layout, so a
+        # directory of generated backplanes can serve as the masters of a later run. In
+        # the example below, <module> is the value of the --module argument, such as
+        # "oops.hosts.cassini.iss".
+        # filespec: $OOPS_TEST_DATA_PATH/cassini/ISS/N1460072401_1.IMG
+        # masters:  $OOPS_GOLD_MASTER_PATH/<module>/N1460072401_1/arrays
+        # arrays:   $OOPS_BACKPLANE_OUTPUT_PATH/<module>/N1460072401_1/arrays
+        # browse:   $OOPS_BACKPLANE_OUTPUT_PATH/<module>/N1460072401_1/browse
         # gold masters sampled at the undersampling grid:
-        #         $OOPS_BACKPLANE_OUTPUT_PATH/N1460072401_1/sampled_gold
+        #           $OOPS_BACKPLANE_OUTPUT_PATH/<module>/N1460072401_1/sampled_gold
 
         self.abspath = TEST_DATA_PREFIX / obs.filespec
         basename_prefix = self.abspath.stem
@@ -1149,7 +1151,7 @@ class BackplaneTest(object):
         self.gold_arrays = self.gold_dir / f'arrays{self.suffix}'
         self.gold_browse = self.gold_dir / f'browse{self.suffix}'
 
-        self.output_dir = BACKPLANE_OUTPUT_PREFIX / basename_prefix
+        self.output_dir = BACKPLANE_OUTPUT_PREFIX / args.module / basename_prefix
         self.output_arrays = self.output_dir / f'arrays{self.suffix}'
         self.output_browse = self.output_dir / f'browse{self.suffix}'
         self.sampled_gold = self.output_dir / f'sampled_gold{self.suffix}'
@@ -1190,8 +1192,7 @@ class BackplaneTest(object):
         # Set up the log handler; set aside any old log
         # Note that each BackplaneTest gets its own dedicated log file.
         if self.args.log:
-            log_path = (BACKPLANE_OUTPUT_PREFIX / self.output_dir /
-                        f'{self.task}.log')
+            log_path = self.output_dir / f'{self.task}.log'
 
             if log_path.exists():
 
@@ -1555,7 +1556,7 @@ class BackplaneTest(object):
             else:
                 if self.args.arrays:
                     LOGGING.debug(comparison.suite, '| Written:',
-                                  os.path.basename(output_pickle_path) + ';',
+                                  output_pickle_path.name + ';',
                                   comparison.text)
 
         # Shapeless case
