@@ -37,6 +37,20 @@ pieces of work have their own sections: "Strengthening the KeplerPath derivative
 the FOV caches". One module, `oops/utils.py`, was deleted outright; its section explains
 why.
 
+**Labels re-verified again 2026-09-02, second pass.** After the gravity work below closed
+the last of the "(not fixed)" bullets, the five entries marked "(partly fixed after
+review)" were checked against the working tree. Three of their remainders had in fact been
+resolved and are relabelled **(fixed after review)**: the `spicepath.py` re-raises (now
+`from None`, with a comment recording why the chain is suppressed), the `nullsurface.py`
+`as_vector3` call, and the `barrelfov.py` import order. Of the two that remain, the
+`oblategravity.py` `LOGGING` half has been declined by the owner, leaving the missing
+`tests/frame/test_laplaceframe.py` as the only live remainder. The TDIFOV shapeless
+aliasing defect was re-tested and is still live: with a shapeless `Pair`,
+`TDIFOV.xy_from_uvt` returns the same `(x,y)` at t=10 and t=99, while a shaped `Pair`
+correctly moves. **So two findings are genuinely open: the TDIFOV aliasing defect and the
+untested `laplaceframe.py`.** Everything else is fixed, declined by the owner, accepted as
+it stands, or retracted.
+
 **Labels re-verified 2026-09-02.** Every entry still marked "(not fixed)" was checked
 against the working tree. Forty-three had in fact been fixed and are relabelled above;
 one (`fittable.py:104`) the review had already retracted as a non-issue and is now marked
@@ -699,12 +713,14 @@ All fixes below were verified with `py_compile`, targeted numerical experiments,
   implicitly concatenated into a single list element, so the path name and the origin
   sub-display were joined with no `,\n` separator, producing a malformed multi-line
   display. Split into two list elements as clearly intended.
-- **[STYLE] (partly fixed after review)** `spicepath.py:130-144` — `_body_code_and_name`
-  re-raises `LookupError` without `from`, losing the cspyce traceback; also `except
-  (KeyError, LookupError)` is redundant since KeyError is a subclass of LookupError.
-  Harmless. The redundancy is gone after this review; the handlers now catch `(KeyError,
-  IndexError)` and raise the matching subclass. Neither re-raise uses `from`, so the
-  cspyce traceback is still lost.
+- **[STYLE] (fixed after review)** `spicepath.py:130-144` — `_body_code_and_name`
+  re-raised `LookupError` without `from`, losing the cspyce traceback; also `except
+  (KeyError, LookupError)` was redundant since KeyError is a subclass of LookupError.
+  Harmless. The redundancy is gone; the handlers now catch `(KeyError, IndexError)` and
+  raise the matching subclass. Both re-raises now use `from None`, above a comment
+  recording why the chain is suppressed rather than passed through: a trapped cspyce error
+  carries no information the caller can act on, since its traceback ends inside the SWIG
+  wrapper and its message names the C signature rather than the input.
 
 ### src/oops/path/quickpath.py
 
@@ -1477,11 +1493,11 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
 - **[DOC] (fixed)** `nullsurface.py:134` — `intercept` returns entirely masked values
   by construction (a NullSurface has no extent), but the docstring did not say so;
   added a sentence.
-- **[SUGGESTION] (partly fixed after review)** `nullsurface.py:164` — Uses
+- **[SUGGESTION] (fixed after review)** `nullsurface.py:164` — Used
   `Vector3.as_vector(obs, derivs)` (the inherited `Vector.as_vector`, with `recursive`
   passed positionally) where every sibling uses `Vector3.as_vector3(obs,
-  recursive=derivs)`. The argument is passed as `recursive=derivs` after this review, but
-  the call is still `as_vector` rather than the sibling `as_vector3`.
+  recursive=derivs)`. Both the `obs` and `los` conversions now read
+  `Vector3.as_vector3(..., recursive=derivs)`, matching the siblings.
 - **[SUGGESTION] (fixed after review)** `nullsurface.py:115` — Stale comment "Convert to
   Scalars and strip units, if any": units are implicit in oops and nothing here strips
   them. Trimmed to "Convert to Scalars" after this review.
@@ -1687,10 +1703,10 @@ coverage, which is a decision about reference data and was left to the author.
   `self.uv_los.as_readonly()` return value is discarded (works because `as_readonly` marks
   in place), whereas line 92 uses the return value; the two idioms coexist in most fov
   modules. Settled after this review on using the return value in both places.
-- **[STYLE] (partly fixed after review)** `polynomialfov.py:5-6` — `import sys` (stdlib)
-  is placed after `import numpy` (third-party); the project rule puts stdlib first. Same
-  in barrelfov.py. Reordered in `polynomialfov.py` after this review; `barrelfov.py` still
-  has `import sys` below `import numpy as np`.
+- **[STYLE] (fixed after review)** `polynomialfov.py:5-6` — `import sys` (stdlib) was
+  placed after `import numpy` (third-party); the project rule puts stdlib first. Same in
+  barrelfov.py. Both are reordered, each with `import sys` alone in a stdlib group above
+  numpy.
 
 ### src/oops/fov/barrelfov.py
 - **[BUG] (fixed)** `barrelfov.py:125` — `xy_precision = EPSILON * np.min(uv_scale.vals)`
