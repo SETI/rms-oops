@@ -30,6 +30,7 @@ class MultiPath(Path):
         Raises:
             KeyError: If `paths`, `origin`, or `frame` contains an ID string that has not
                 been registered.
+            ValueError: If `paths` is not one-dimensional.
         """
 
         # Interpret the inputs
@@ -39,6 +40,10 @@ class MultiPath(Path):
         self._input_paths = np.array(paths, dtype='object')
         if self._input_paths.ndim != 1:
             raise ValueError('a MultiPath cannot be multidimensional')
+
+        for k, path in enumerate(self._input_paths):
+            self._input_paths[k] = Path.as_path(path)
+
         self._shape = self._input_paths.shape
         self._paths = np.empty(self._shape, dtype='object')
 
@@ -47,7 +52,7 @@ class MultiPath(Path):
 
     def _refresh(self):
         for k, path in np.ndenumerate(self._input_paths):
-            self._paths[k] = Path.as_path(path).wrt(self._origin, self._frame)
+            self._paths[k] = path.wrt(self._origin, self._frame)
 
     def __getitem__(self, i):
         """Support for indexing, returning the selected Path if `i` is an integer, or a
@@ -152,12 +157,15 @@ class MultiPath(Path):
             for the given range of times.
         """
 
+        if quick == False:  # noqa E712 -- allow bool, np.bool_, and int 0, but not None
+            return self
+
         # Broadcast everything to the same shape
         time = Qube.broadcast(Scalar.as_scalar(time), self._shape)[0]
 
         new_paths = np.empty(self._shape, dtype='object')
-        for k, path in np.ndenumerate(self._input_paths):
-            new_paths[k] = Path.as_path(path).quick_path(time[..., k], quick=quick)
+        for k, path in enumerate(self._input_paths):
+            new_paths[k] = path.quick_path(time[..., k], quick=quick)
 
         return MultiPath(new_paths, self._origin, self._frame)
 
