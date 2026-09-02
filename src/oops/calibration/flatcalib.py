@@ -17,14 +17,14 @@ class FlatCalib(Calibration):
         Parameters:
             name (str): The name of the value returned by the calibration, e.g.,
                 "REFLECTIVITY".
-            factor (np.ndarray or float): A scale factor to be applied to every pixel in
-                the field of view.
-            baseline (float, optional): An optional baseline value to subtract from the
+            factor (Scalar): A scale factor to be applied to every pixel in the field of
+                view.
+            baseline (Scalar, optional): An optional baseline value to subtract from the
                 image before applying the scale factor. Note that the factor and baseline
                 values could be arrays for cases in which the non-spatial axes of the data
                 array require different scalings. Their shapes must broadcast to the shape
                 of the data array after the spatial axes are removed.
-            fov (object, optional): Ignored by FlatCalib. Provided for compatibility with
+            fov (FOV, optional): Ignored by FlatCalib. Provided for compatibility with
                 subclasses Radiance and RawCounts.
         """
 
@@ -56,8 +56,8 @@ class FlatCalib(Calibration):
             Scalar: Calibrated values for an extended source.
         """
 
-        (uv_pair, factor, baseline) = self.factor_and_baseline(uv_pair)
-
+        (uv_pair, factor, baseline) = self._factor_and_baseline(uv_pair)
+        dn = Scalar.as_scalar(dn)
         if self.has_baseline:
             return (dn - baseline) * factor
 
@@ -75,8 +75,8 @@ class FlatCalib(Calibration):
             Scalar: Un-calibrated values for an extended source.
         """
 
-        (uv_pair, factor, baseline) = self.factor_and_baseline(uv_pair)
-
+        (uv_pair, factor, baseline) = self._factor_and_baseline(uv_pair)
+        value = Scalar.as_scalar(value)
         if self.has_baseline:
             return value / factor + baseline
 
@@ -94,8 +94,8 @@ class FlatCalib(Calibration):
             Scalar: Calibrated values for a point source.
         """
 
-        (uv_pair, factor, baseline) = self.factor_and_baseline(uv_pair)
-
+        (uv_pair, factor, baseline) = self._factor_and_baseline(uv_pair)
+        dn = Scalar.as_scalar(dn)
         if self.has_baseline:
             return (dn - baseline) * factor
 
@@ -113,8 +113,8 @@ class FlatCalib(Calibration):
             Scalar: Un-calibrated values for a point source.
         """
 
-        (uv_pair, factor, baseline) = self.factor_and_baseline(uv_pair)
-
+        (uv_pair, factor, baseline) = self._factor_and_baseline(uv_pair)
+        value = Scalar.as_scalar(value)
         if self.has_baseline:
             return value / factor + baseline
 
@@ -125,8 +125,8 @@ class FlatCalib(Calibration):
         calibration is applied.
 
         Parameters:
-            factor (np.ndarray or float): Scale factor to apply to DN values.
-            baseline (float, optional): An optional baseline value to subtract from every
+            factor (Scalar): Scale factor to apply to DN values.
+            baseline (Scalar, optional): An optional baseline value to subtract from every
                 DN value before applying the new scale factor.
             name (str, optional): Optional new name. If blank, the existing name is
                 preserved.
@@ -135,6 +135,6 @@ class FlatCalib(Calibration):
             Calibration: A new object with the given `factor` and `baseline` incorporated.
         """
 
-        return FlatCalib(*self.prescaled_args(factor, baseline, name=name))
+        return FlatCalib(*self._prescaled_args(factor, baseline, name=name))
 
 ##########################################################################################

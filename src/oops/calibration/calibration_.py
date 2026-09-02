@@ -92,9 +92,9 @@ class Calibration(object):
         calibration is applied.
 
         Parameters:
-            factor (np.ndarray or float): Scale factor to apply to DN values.
-            baseline (float, optional): An optional baseline value to subtract from every
-                DN value before applying the new scale factor.
+            factor (Scalar): Scale factor to apply to DN values.
+            baseline (Scalar, optional): An optional baseline value to subtract from
+                every DN value before applying the new scale factor.
             name (str, optional): Optional new name. If blank, the existing name is
                 preserved.
 
@@ -114,8 +114,7 @@ class Calibration(object):
         DEPRECATED. Use extended_from_dn or point_from_dn.
 
         Parameters:
-            dn (Scalar or array-like): Un-calibrated image array values at the given pixel
-                coordinates.
+            dn (Scalar): Un-calibrated image array values at the given pixel coordinates.
             uv_pair (Pair): Associated `(u,v)` pixel coordinates in the image. Note that
                 `dn` and `uv_pair` will be casted to the same shape.
 
@@ -145,7 +144,7 @@ class Calibration(object):
     # Support methods
     ######################################################################################
 
-    def factor_and_baseline(self, uv_pair):
+    def _factor_and_baseline(self, uv_pair):
         """The factor and baseline, shaped to broadcast against the given coordinates.
 
         The factor and the baseline describe the non-spatial axes of a data array, so
@@ -169,16 +168,16 @@ class Calibration(object):
 
         return (uv_pair, self.factor, self.baseline)
 
-    def prescaled_args(self, factor, baseline=0., *, name=''):
+    def _prescaled_args(self, factor, baseline=0., *, name=''):
         """The name, factor and baseline of a pre-scaled version of this Calibration.
 
         This performs the algebra shared by every `prescale` implementation. The caller
         supplies the results to its own constructor.
 
         Parameters:
-            factor (np.ndarray or float): Scale factor to apply to DN values.
-            baseline (float, optional): An optional baseline value to subtract from every
-                DN value before applying the new scale factor.
+            factor (Scalar): Scale factor to apply to DN values.
+            baseline (Scalar, optional): An optional baseline value to subtract from
+                every DN value before applying the new scale factor.
             name (str, optional): Optional new name. If blank, the existing name is
                 preserved.
 
@@ -196,9 +195,7 @@ class Calibration(object):
         # new_factor = self.factor * factor
         # new_baseline = baseline + self.baseline/factor
 
-        return (name or self.name,
-                factor * self.factor,
-                baseline + self.baseline/factor)
+        return (name or self.name, factor * self.factor, baseline + self.baseline/factor)
 
     def area_factor(self, uv_pair):
         """Pixel area relative to the center of the field of view.

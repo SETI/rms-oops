@@ -23,9 +23,9 @@ class RawCounts(FlatCalib):
                 "REFLECTIVITY".
             fov (FOV): The field of view, used to model the distortion. Alternatively, it
                 can be a 2-D array containing the pixel area corrections.
-            factor (np.ndarray or float): A constant scale factor to be applied to
-                every pixel in the field of view.
-            baseline (float, optional): An optional baseline value to subtract from the
+            factor (Scalar): A constant scale factor to be applied to every pixel in the
+                field of view.
+            baseline (Scalar, optional): An optional baseline value to subtract from the
                 image before applying the scale factor. Note that the factor and baseline
                 values could be arrays for cases in which the non-spatial axes of the data
                 array require different scalings. Their shapes must broadcast to the shape
@@ -60,8 +60,8 @@ class RawCounts(FlatCalib):
             Scalar: Calibrated values for an extended source.
         """
 
-        (uv_pair, factor, baseline) = self.factor_and_baseline(uv_pair)
-
+        dn = Scalar.as_scalar(dn)
+        (uv_pair, factor, baseline) = self._factor_and_baseline(uv_pair)
         if self.has_baseline:
             dn = dn - baseline
 
@@ -79,10 +79,8 @@ class RawCounts(FlatCalib):
             Scalar: Un-calibrated values for an extended source.
         """
 
-        (uv_pair, factor, baseline) = self.factor_and_baseline(uv_pair)
-
-        dn = value * self.area_factor(uv_pair) / factor
-
+        (uv_pair, factor, baseline) = self._factor_and_baseline(uv_pair)
+        dn = Scalar.as_scalar(value) * self.area_factor(uv_pair) / factor
         if self.has_baseline:
             dn += baseline
 
@@ -93,8 +91,8 @@ class RawCounts(FlatCalib):
         calibration is applied.
 
         Parameters:
-            factor (np.ndarray or float): Scale factor to apply to DN values.
-            baseline (float, optional): An optional baseline value to subtract from every
+            factor (Scalar): Scale factor to apply to DN values.
+            baseline (Scalar, optional): An optional baseline value to subtract from every
                 DN value before applying the new scale factor.
             name (str, optional): Optional new name. If blank, the existing name is
                 preserved.
@@ -103,7 +101,7 @@ class RawCounts(FlatCalib):
             Calibration: A new object with the given `factor` and `baseline` incorporated.
         """
 
-        (name, factor, baseline) = self.prescaled_args(factor, baseline, name=name)
+        (name, factor, baseline) = self._prescaled_args(factor, baseline, name=name)
         return RawCounts(name, self.fov, factor, baseline)
 
 ##########################################################################################
