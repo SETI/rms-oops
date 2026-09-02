@@ -842,8 +842,8 @@ class OblateGravity(Gravity):
                                                 x*np.cos(long_node) +
                                                 y*np.sin(long_node)))
 
-        # Compute the radius R and velocity squared V2, and the dot
-        # product RDOTV, the energy per unit mass ENERGY.
+        # Compute the radius R and velocity squared V2, and the dot product RDOTV, the
+        # energy per unit mass ENERGY.
         r = np.sqrt(x*x + y*y + z*z)
         v2 = vx*vx + vy*vy + vz*vz
         vdotr = x*vx + y*vy + z*vz
@@ -1021,8 +1021,8 @@ class OblateGravity(Gravity):
             (n, kappa, nu, eta2, chi2,
              alpha1, alpha2, alphasq) = self._geom_to_freq(a, e, inc, body_gm)
             ret = OblateGravity._freq_to_geom(r, L, z, rdot, Ldot, vz, rc, Lc, zc,
-                                   rdotc, Ldotc, zdotc, n, kappa, nu, eta2,
-                                    chi2, alpha1, alpha2, alphasq)
+                                              rdotc, Ldotc, zdotc, n, kappa, nu, eta2,
+                                              chi2, alpha1, alpha2, alphasq)
             old_a = a
             (a, e, inc, long_peri, long_node, lam,
              rc, Lc, zc, rdotc, Ldotc, zdotc) = ret
