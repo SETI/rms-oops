@@ -742,8 +742,10 @@ def _solve_photon_by_coords(self, link, coords, sign, *, derivs=False, guess=Non
     lt_min = lt.min(builtins=True) - limit
     lt_max = lt.max(builtins=True) + limit
 
-    # For a non-virtual surface, pos_wrt_origin is fixed
-    if not self.IS_VIRTUAL:
+    # For a non-virtual surface whose shape does not vary, pos_wrt_origin is fixed and
+    # can be evaluated once. A time-dependent surface has to be re-evaluated inside the
+    # loop, because surface_time changes with every iteration.
+    if not self.IS_VIRTUAL and not self.IS_TIME_DEPENDENT:
         pos_wrt_origin_frame = self.vector3_from_coords(coords, time=surface_time,
                                                         derivs=True)
 
@@ -771,6 +773,9 @@ def _solve_photon_by_coords(self, link, coords, sign, *, derivs=False, guess=Non
             pos_wrt_origin_frame = self.vector3_from_coords(coords,
                                                             obs=obs_wrt_origin_frame,
                                                             time=surface_time,
+                                                            derivs=True)
+        elif self.IS_TIME_DEPENDENT:
+            pos_wrt_origin_frame = self.vector3_from_coords(coords, time=surface_time,
                                                             derivs=True)
 
         # Locate the coordinate position in J2000
@@ -1291,10 +1296,13 @@ def photon_path_to_normal(self, time, path, *, derivs=False, guess=None, antimas
         * `path_event`: The Event on `path` from which the photon departed.
 
     Notes:
+        The iteration applies light-time correction but no stellar aberration, so
+        the photon directions below are actual rather than apparent.
+
         These subfields are defined in the returned Events:
 
-        * In `surface_event`, `arr_ap` (Vector3) is the apparent direction of the incoming
-          photon, which is the surface normal, and `arr_lt` (Scalar) is the negative light
+        * In `surface_event`, `arr` (Vector3) is the direction of the incoming photon,
+          which is the surface normal, and `arr_lt` (Scalar) is the negative light
           travel time from `path_event`. `perp` (Vector3) is the surface normal and
           `vflat` (Vector3) is the surface velocity at the intercept point. It also
           carries `coord1`, `coord2`, and `coord3` Scalars giving the surface coordinates
@@ -1349,10 +1357,13 @@ def photon_normal_to_path(self, time, path, *, derivs=False, guess=None, antimas
         * `path_event`: The Event on `path` at which the photon arrived.
 
     Notes:
+        The iteration applies light-time correction but no stellar aberration, so
+        the photon directions below are actual rather than apparent.
+
         These subfields are defined in the returned Events:
 
-        * In `surface_event`, `dep_ap` (Vector3) is the apparent direction of the outgoing
-          photon, which is the surface normal, and `dep_lt` (Scalar) is the positive light
+        * In `surface_event`, `dep` (Vector3) is the direction of the outgoing photon,
+          which is the surface normal, and `dep_lt` (Scalar) is the positive light
           travel time to `path_event`. `perp` (Vector3) is the surface normal and `vflat`
           (Vector3) is the surface velocity at the intercept point.  It also carries
           `coord1`, `coord2`, and `coord3` Scalars giving the surface coordinates of the
@@ -1413,17 +1424,17 @@ def _solve_photon_path_normal(self, time, path, sign, *, derivs=False, guess=Non
         These subfields are defined in the returned Events:
 
         * If `sign` is negative:
-            - In `surface_event`, `arr_ap` (Vector3) is the apparent direction of the
-              incoming photon, which is the surface normal, and `arr_lt` (Scalar) is the
-              negative light travel time from `path_event`.
+            - In `surface_event`, `arr` (Vector3) is the direction of the incoming
+              photon, which is the surface normal, and `arr_lt` (Scalar) is the negative
+              light travel time from `path_event`.
             - In `path_event`, `dep` (Vector3) is the direction of the outgoing photon to
               this Surface and `dep_lt` (Scalar) is the positive light travel time to
               `surface_event`.
 
         * If `sign` is positive:
-            - In `surface_event`, `dep_ap` (Vector3) is the apparent direction of the
-              outgoing photon, which is the surface normal, and `dep_lt` (Scalar) is the
-              positive light travel time to `path_event`.
+            - In `surface_event`, `dep` (Vector3) is the direction of the outgoing
+              photon, which is the surface normal, and `dep_lt` (Scalar) is the positive
+              light travel time to `path_event`.
             - In `path_event`, `arr` (Vector3) is the direction of the incoming photon
               from this Surface and `arr_lt` (Scalar) is the negative light travel time
               from `surface_event`.
@@ -1606,8 +1617,13 @@ def _solve_photon_path_normal(self, time, path, sign, *, derivs=False, guess=Non
     # have correct time-derivatives. This is OK because these time-derivatives are not
     # physical velocities.
 
+    # The iteration above applies light-time correction but no stellar aberration, so the
+    # normal is the actual photon direction, not the apparent one. Inserting it under the
+    # plain key rather than '_ap' keeps the '_j2000' value read back below a pure rotation
+    # into J2000; inserting it as apparent would make that read-back remove an aberration
+    # that was never applied.
     normal = self.normal(cept_in_frame, time=surface_time, derivs=True)
-    surface_event.insert_subfield(surface_key + '_ap', normal)
+    surface_event.insert_subfield(surface_key, normal)
     surface_event.insert_subfield(surface_key + '_lt', -lt)
     surface_event.insert_subfield('perp', normal)
     surface_event.insert_subfield('vflat',

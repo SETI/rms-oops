@@ -7,6 +7,7 @@ import pytest
 
 from polymath               import Scalar, Vector3
 from oops.constants         import TWOPI
+from oops.event            import Event
 from oops.frame.frame_      import Frame
 from oops.path.path_        import Path
 from oops.surface.ringplane import RingPlane
@@ -220,5 +221,50 @@ def test_radial_modes_shift_the_radius_with_time() -> None:
 
     assert abs(modulated - unmodulated) > 1.
     assert abs(modulated - unmodulated) <= 10.      # bounded by the amplitude
+
+
+def test_photon_to_coords_re_evaluates_a_time_dependent_ring() -> None:
+    """The intercept must sit where the coordinates are at the converged surface time.
+
+    The solver evaluates vector3_from_coords once, before iterating, for a non-virtual
+    surface whose shape is fixed. A ring carrying a radial mode is not fixed, so it has
+    to be re-evaluated as the surface time is refined; otherwise the returned event holds
+    the position the coordinates occupied at the initial time guess.
+    """
+
+    # A large, fast mode, so the shape moves appreciably over the light travel time.
+    ring = RingPlane('SSB', 'J2000', modes=[(2, 500., 0., 1.e-3)], epoch=0.)
+    assert ring.IS_TIME_DEPENDENT is True
+    assert ring.IS_VIRTUAL is False
+
+    obs = Event(Scalar([0., 50.]), Vector3([(1.e6, 0., 1.e5), (1.e6, 0., 1.e5)]),
+                Path.SSB, Frame.J2000)
+    coords = (Scalar([1.4e5, 1.4e5]), Scalar([1.0, 2.0]))
+
+    (surface_event, _) = ring.photon_to_coords(obs, coords)
+
+    where_they_are = ring.vector3_from_coords(coords, time=surface_event.time)
+    error = (surface_event.state - where_they_are).norm()
+
+    assert float(error.max()) == pytest.approx(0., abs=1.e-6)
+
+
+def test_photon_to_coords_still_solves_a_ring_without_modes() -> None:
+    """A ring of fixed shape is solved the same way, its one evaluation being enough."""
+
+    ring = RingPlane('SSB', 'J2000')
+    assert ring.IS_TIME_DEPENDENT is False
+
+    obs = Event(Scalar([0., 50.]), Vector3([(1.e6, 0., 1.e5), (1.e6, 0., 1.e5)]),
+                Path.SSB, Frame.J2000)
+    coords = (Scalar([1.4e5, 1.4e5]), Scalar([1.0, 2.0]))
+
+    (surface_event, _) = ring.photon_to_coords(obs, coords)
+
+    where_they_are = ring.vector3_from_coords(coords, time=surface_event.time)
+    error = (surface_event.state - where_they_are).norm()
+
+    assert float(error.max()) == pytest.approx(0., abs=1.e-6)
+
 
 ##########################################################################################

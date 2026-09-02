@@ -311,4 +311,42 @@ def test_intercept_normal_to_masks_only_the_excluded_elements():
 
     assert list(np.asarray(cept.mask).ravel()) == [False, True]
 
+
+@pytest.mark.parametrize('method,key', [('photon_path_to_normal', 'arr'),
+                                        ('photon_normal_to_path', 'dep')])
+def test_photon_normal_direction_is_actual_not_apparent(sun_and_planet, method: str,
+                                                        key: str) -> None:
+    """The normal is the actual photon direction, so its J2000 form is a pure rotation.
+
+    The solver applies light-time correction but no stellar aberration, so the surface
+    normal it reports carries none either. Were it stored as the apparent direction, the
+    J2000 value read back from the Event would have an aberration removed from it, which
+    for the Earth amounts to a rotation of roughly ten arcseconds.
+    """
+
+    (sun, planet) = sun_and_planet
+    (surface_event, _) = getattr(planet, method)(Scalar([0.]), sun)
+
+    direction = surface_event.get_subfield(key)
+    in_j2000 = surface_event.get_subfield(key + '_j2000')
+    rotated = surface_event.xform_to_j2000.rotate(direction)
+
+    assert float(rotated.sep(in_j2000).max()) == pytest.approx(0., abs=1.e-12)
+
+
+@pytest.mark.parametrize('method,key', [('photon_path_to_normal', 'arr'),
+                                        ('photon_normal_to_path', 'dep')])
+def test_photon_normal_direction_is_the_surface_normal(sun_and_planet, method: str,
+                                                       key: str) -> None:
+    """The reported photon direction is the surface normal, as `perp` also is."""
+
+    (sun, planet) = sun_and_planet
+    (surface_event, _) = getattr(planet, method)(Scalar([0.]), sun)
+
+    direction = surface_event.get_subfield(key)
+    offset = float((direction - surface_event.perp).norm().max())
+
+    assert offset == pytest.approx(0., abs=1.e-9)
+
+
 ##########################################################################################

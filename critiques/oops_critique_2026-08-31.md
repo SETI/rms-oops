@@ -26,7 +26,7 @@ deviations), SUGGESTION (improvements needing an owner decision).
 | `oops/backplane` | 15 | 69 | 49 | 9 | 9 |
 | **Total** | **118** | **327** | **170** | **90** | **76** |
 
-These counts describe the review as first delivered. Work continued afterward, and 59 of
+These counts describe the review as first delivered. Work continued afterward, and 61 of
 the findings it left open have since been resolved; each is labelled **(fixed after
 review)** in place of "(not fixed)", with its entry saying what was done. A few defects
 found during that later work are labelled **(found after review, fixed)** and were added
@@ -1238,18 +1238,37 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
   Event.__init__() missing 1 required positional argument: 'origin'` (reproduced). The
   branch only runs when every element is masked, which is why no test reached it. Fixed
   by passing `path` positionally as the origin.
-- **[SUGGESTION] (not fixed)** `_photon_solver.py:1614,1635` — In
-  `_solve_photon_path_normal`, the surface event gets only a `surface_key + '_ap'`
-  subfield, but line 1635 reads `surface_key + '_j2000'` back via `get_subfield`;
-  whether Event derives `dep_j2000` from `dep_ap` needs verification (the function is
-  marked "TODO: full testing!!"). The sibling `_solve_photon_event_normal` inserts
-  `_j2000` directly.
+- **[BUG] (fixed after review)** `_photon_solver.py:1614,1635` — In
+  `_solve_photon_path_normal`, the surface event got only a `surface_key + '_ap'`
+  subfield, while line 1635 read `surface_key + '_j2000'` back. The read-back does
+  resolve: `Event.dep_j2000` returns `self.ssb.dep`, and the `dep` property derives
+  itself from `_dep_ap` through `actual_dep()`, so nothing crashed. But that derivation
+  *removes stellar aberration*, and this solver's iteration applies light-time correction
+  and no aberration at all, working from geometric positions throughout. Declaring the
+  normal to be the apparent direction therefore handed the remote event a de-aberrated
+  vector, rotated 11.1 arcsec from the normal it came from, measured for an Earth-Moon
+  case. The normal is now inserted under the plain key as the actual direction, which
+  makes the `_j2000` read-back an exact rotation into J2000 (separation 0.000e+00
+  arcsec) and leaves `perp` unchanged. The sibling `_solve_photon_event_normal` reaches
+  the same convention by another route, inserting its geometric line of sight straight
+  into `_j2000`. Four subfield descriptions across the two public wrappers and the
+  private solver were corrected, and both wrappers now record that their directions carry
+  no stellar aberration. Four tests added; three fail against the old code.
 - **[STYLE] (not fixed)** `_photon_solver.py:770-774` — Lines inside
   `if self.IS_VIRTUAL:` are indented three spaces instead of four.
-- **[SUGGESTION] (not fixed)** `_photon_solver.py:747` — For a time-dependent,
-  non-virtual surface, `_solve_photon_by_coords` evaluates `vector3_from_coords` once
-  with the initial `surface_time` and never re-evaluates inside the loop;
-  `IS_TIME_DEPENDENT` is not consulted.
+- **[BUG] (fixed after review)** `_photon_solver.py:747` — For a non-virtual surface,
+  `_solve_photon_by_coords` evaluated `vector3_from_coords` once before the loop, using
+  the initial `surface_time`, and never re-evaluated it; `IS_TIME_DEPENDENT` was not
+  consulted. That is a sound optimization for a surface of fixed shape, but `RingPlane`
+  sets `IS_TIME_DEPENDENT` when it carries radial modes, and `surface_time` is refined by
+  `surface_time = link.time + lt` on every iteration, so the returned event held the
+  position the coordinates occupied at the *initial guess*. For a ring with a 500 km mode
+  at 1e-3 rad/s the intercept came back 0.103 km from where those coordinates actually
+  were at the converged time; it is now 1e-9 km, the convergence residual. The evaluation
+  is skipped before the loop and repeated inside it when the surface is time-dependent.
+  Virtual and fixed-shape surfaces are untouched, verified by comparing a modeless
+  `RingPlane` and an `Ansa` before and after. Two tests added, one failing against the old
+  code and one a control that passes either way.
 - **[DOC] (not fixed)** Docstrings here are thorough and consistent (modern style
   throughout); the long converge-parameter block is duplicated eight times and could
   be shared via a `Notes` cross-reference, but that is a judgment call.
