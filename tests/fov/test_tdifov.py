@@ -5,7 +5,7 @@
 import numpy as np
 
 from polymath import Scalar, Pair
-from oops.fov import TDIFOV
+from oops.fov import FlatFOV, NullFOV, TDIFOV
 
 
 def test_tdifov():
@@ -91,4 +91,104 @@ def test_tdifov():
     diffs = xy0.d_dt - xy.d_dt
     assert np.all(diffs.vals[...,0] == 0)
     assert np.all(abs(diffs.vals[...,1] + 1/2048./8.) < 1.e-14)
+
+class _SharingFOV(FlatFOV):
+    """An FOV whose `uv_from_xyt` returns the same object on every call.
+
+    Every FOV subclass in this package builds a fresh Pair per call, so none of them
+    exercises a wrapped FOV that hands back an object it still owns. NullFOV comes
+    closest: it returns the global, readonly `Pair.ZEROS`.
+    """
+
+    def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
+        return self.shared_uv
+
+
+def _sharing_fov(uv):
+    """A `_SharingFOV` that hands back `uv` itself.
+
+    Parameters:
+        uv (Pair): The object every `uv_from_xyt` call will return.
+
+    Returns:
+        _SharingFOV: A 64 by 64 FOV returning `uv`.
+    """
+
+    fov = _SharingFOV((1.e-4, 1.e-4), (64, 64))
+    fov.shared_uv = uv
+    return fov
+
+
+def test_uv_from_xyt_does_not_modify_the_wrapped_fovs_result() -> None:
+    """The TDI line shift must not be written into an object the wrapped FOV owns."""
+
+    uv = Pair([(3., 4.), (5., 6.)])
+    fov = TDIFOV(_sharing_fov(uv), 100., 8., '-v')
+
+    fov.uv_from_xyt(Pair([(0., 0.), (0., 0.)]), time=Scalar([50., 50.]))
+
+    assert uv == Pair([(3., 4.), (5., 6.)])
+
+
+def test_uv_from_xyt_returns_a_new_object() -> None:
+    """The result is a copy, so a caller cannot reach the wrapped FOV's object."""
+
+    uv = Pair([(3., 4.)])
+    fov = TDIFOV(_sharing_fov(uv), 100., 8., '-v')
+
+    assert fov.uv_from_xyt(Pair([(0., 0.)]), time=Scalar([50.])) is not uv
+
+
+def test_uv_from_xyt_still_applies_the_line_shift() -> None:
+    """Copying must not cost the shift: at t=50 with tstop=100 the -v shift is 6 lines."""
+
+    uv = Pair([(3., 4.)])
+    fov = TDIFOV(_sharing_fov(uv), 100., 8., '-v')
+
+    assert fov.uv_from_xyt(Pair([(0., 0.)]), time=Scalar([50.])) == Pair([(3., -2.)])
+
+
+def test_uv_from_xyt_accepts_a_readonly_result() -> None:
+    """A wrapped FOV may return a readonly object; writing into one raises in polymath."""
+
+    uv = Pair([(3., 4.)]).as_readonly()
+    fov = TDIFOV(_sharing_fov(uv), 100., 8., '-v')
+
+    assert fov.uv_from_xyt(Pair([(0., 0.)]), time=Scalar([50.])) == Pair([(3., -2.)])
+
+
+def test_uv_from_xyt_does_not_modify_a_shared_derivative() -> None:
+    """The TDI readout compensation must not be written into the caller's derivative."""
+
+    uv = Pair([(3., 4.)])
+    dt = Pair([(1., 1.)])
+    uv.insert_deriv('t', dt)
+    fov = TDIFOV(_sharing_fov(uv), 100., 8., '-v')
+
+    fov.uv_from_xyt(Pair([(0., 0.)]), time=Scalar([50.]), derivs=True)
+
+    assert dt == Pair([(1., 1.)])
+
+
+def test_uv_from_xyt_still_compensates_the_time_derivative() -> None:
+    """Copying the derivative dict must not cost the readout compensation."""
+
+    uv = Pair([(3., 4.)])
+    uv.insert_deriv('t', Pair([(1., 1.)]))
+    fov = TDIFOV(_sharing_fov(uv), 100., 8., '-v')
+
+    result = fov.uv_from_xyt(Pair([(0., 0.)]), time=Scalar([50.]), derivs=True)
+
+    assert result.derivs['t'] == Pair([(1., 1. - 1./8.)])
+
+
+def test_uv_from_xyt_leaves_the_null_fov_constant_alone() -> None:
+    """NullFOV returns the global, readonly Pair.ZEROS; corrupting it would be library
+    wide."""
+
+    fov = TDIFOV(NullFOV(), 100., 8., '-v')
+    fov.uv_from_xyt(Pair((0., 0.)), time=Scalar(50.))
+
+    assert Pair.ZEROS == Pair((0., 0.))
+
 ##########################################################################################

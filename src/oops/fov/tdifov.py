@@ -123,23 +123,29 @@ class TDIFOV(FOV):
         """
 
         # Apply the conversion for tstop
-        uv = self.fov.uv_from_xyt(xy_pair, derivs=derivs, remask=remask, **kwargs)
+        result = self.fov.uv_from_xyt(xy_pair, derivs=derivs, remask=remask, **kwargs)
 
-        # Extract the line index from uv, sharing memory
+        # Work on a copy. The shift below is applied in place, and the wrapped FOV is
+        # free to return an object it still owns; NullFOV returns the readonly, global
+        # Pair.ZEROS.
+        uv = result.copy(recursive=False)
         line = uv.to_scalar(self._uv_line_index, recursive=False)
+            # uv and line share memory, so updating line also updates uv.
 
         # Determine the number of TDI shifts
         time = Scalar.as_scalar(time, recursive=False)
         shifts = -1 - ((time - self.tstop) // self.tdi_texp).as_int()
         shifts[time == self.tstop] = 0
 
-        # Apply the line shift to uv
+        # Apply the line shift to our copy of uv
         line += self.tdi_sign * shifts
 
         # If a time derivative is present, we need to compensate for the TDI
         # readout
-        if 't' in uv.derivs:
-            uv.derivs['t'] += self._duv_dt
+        if derivs:
+            uv.insert_derivs(result.derivs.copy())  # copy dict but not derivs
+            if 't' in uv.derivs:
+                uv.derivs['t'] = uv.derivs['t'] + self._duv_dt
 
         return uv
 
