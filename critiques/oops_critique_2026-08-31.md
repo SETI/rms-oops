@@ -45,11 +45,11 @@ resolved and are relabelled **(fixed after review)**: the `spicepath.py` re-rais
 `as_vector3` call, and the `barrelfov.py` import order. Of the two that remain, the
 `oblategravity.py` `LOGGING` half has been declined by the owner, leaving the missing
 `tests/frame/test_laplaceframe.py` as the only live remainder. The TDIFOV shapeless
-aliasing defect was re-tested and is still live: with a shapeless `Pair`,
-`TDIFOV.xy_from_uvt` returns the same `(x,y)` at t=10 and t=99, while a shaped `Pair`
-correctly moves. **So two findings are genuinely open: the TDIFOV aliasing defect and the
-untested `laplaceframe.py`.** Everything else is fixed, declined by the owner, accepted as
-it stands, or retracted.
+aliasing defect was re-tested and confirmed live — with a shapeless `Pair`,
+`TDIFOV.xy_from_uvt` returned the same `(x,y)` at t=10 and t=99, while a shaped `Pair`
+correctly moved — and has since been fixed; its paragraph under "Fixing the FOV caches"
+records how. **That leaves one finding genuinely open: the untested `laplaceframe.py`.**
+Everything else is fixed, declined by the owner, accepted as it stands, or retracted.
 
 **Labels re-verified 2026-09-02.** Every entry still marked "(not fixed)" was checked
 against the working tree. Forty-three had in fact been fixed and are relabelled above;
@@ -87,7 +87,8 @@ its entry records the analysis rather than simply declining the finding, and
 `centricspheroid.py:50,96` was fixed. The remaining seven bullets were all in
 `gravity_.py` and `oblategravity.py`; a pass over those two modules closed six of them
 outright and left one partly open, the `geom_from_state` diagnostics, whose `LOGGING` half
-the owner has declined. That leaves 1 finding genuinely open, the TDIFOV aliasing defect.
+the owner has declined. The TDIFOV aliasing defect has since been fixed, leaving the
+missing `tests/frame/test_laplaceframe.py` as the one finding genuinely open.
 
 ## Headline defects (fixed)
 
@@ -1816,9 +1817,11 @@ coverage, which is a decision about reference data and was left to the author.
   compensation so the copy cannot silently cost either.
 
   This is **not** the TDIFOV aliasing defect recorded under "Fixing the FOV caches", which
-  is untouched and still open. That one turns on `to_scalar` returning a copy rather than
-  a view for a shapeless Pair; the copy added here sits in front of the same aliasing and
-  neither repairs nor worsens it.
+  was untouched by this fix. That one turns on `to_scalar` returning a copy rather than a
+  view for a shapeless Pair; the copy added here sat in front of the same aliasing and
+  neither repaired nor worsened it. Both are now fixed, and the copy added here has been
+  removed as redundant: the shift is applied by an expression, which already yields a new
+  object.
 
 ### src/oops/fov/__init__.py
 - No defects found; `__all__` matches the re-exported names.
@@ -1876,9 +1879,9 @@ indefinitely.
 `tests/fov/test_fov.py` is new; nothing had exercised these methods or the caches. Its 20
 tests cover both defects and fail against each original behavior.
 
-**A separate TDIFOV defect, found while verifying this and not fixed.** `TDIFOV`'s
-`xy_from_uvt` and `uv_from_xyt` apply the TDI line shift through a buffer they expect to
-share with the `(u,v)` they return:
+**A separate TDIFOV defect, found while verifying this, fixed after review.** `TDIFOV`'s
+`xy_from_uvt` and `uv_from_xyt` applied the TDI line shift through a buffer they expected
+to share with the `(u,v)` they return:
 
     line = uv.to_scalar(self._uv_line_index, recursive=False)
         # uv and line share memory, so updating line also updates uv.
@@ -1886,12 +1889,32 @@ share with the `(u,v)` they return:
     line -= self.tdi_sign * shifts
 
 That holds only for shaped input. For a shapeless Pair, `to_scalar` returns a copy rather
-than a view (`np.shares_memory` is False), so `line -= ...` rebinds a local and the shift
-never reaches `uv`: the TDI FOV silently behaves as though it were the undistorted FOV
+than a view (`np.shares_memory` is False), so `line -= ...` rebound a local and the shift
+never reached `uv`: the TDI FOV silently behaved as though it were the undistorted FOV
 beneath it. Every cached method above passes a shapeless Pair — `uv_shape/2.`,
-`Pair.ZEROS` — so all of them are affected, and `tests/fov/test_tdifov.py` passes because
-it only ever tests arrays. Repairing it means not relying on the aliasing, which changes
-JunoCam geometry for shapeless queries, so it is left for the author.
+`Pair.ZEROS` — so all of them were affected, and `tests/fov/test_tdifov.py` passed because
+it only ever tested arrays.
+
+Both methods now compute the shift as an expression rather than an in-place update of one
+component: `uv = uv_pair.wod - self._duv_dshift * shifts` and, for the inverse,
+`uv = result.wod + self._duv_dshift * shifts`. `_duv_dshift` already holds the TDI sign in
+the line component and zero in the other, so scaling it by the shift count gives the whole
+offset, and the same expression serves all four `tdi_axis` directions. Because the result
+is a new object, the explicit `.copy(recursive=False)` that the previous fix added is no
+longer needed and is gone: nothing is written into the caller's Pair or into an object the
+wrapped FOV still owns, and the result is writable, so the derivative dictionary can still
+be re-inserted onto it.
+
+Nine tests were added to `tests/fov/test_tdifov.py`, seven of which fail against the
+original: the shift for a shapeless Pair along each of the four `tdi_axis` directions, the
+shapeless inverse, agreement between a shapeless input and a one-element shaped input in
+both directions, and the two properties the previous fix had already secured for shapeless
+input. The behavior change the finding predicted is visible and is the point of the fix:
+`center_xy(time=50.)` on a `-v` TDIFOV over a 100 by 10 FlatFOV now returns the shifted
+`(0, -0.00293)` where it used to return the unshifted `(0, -0)`. The main suite, the
+spicedb suite, and the host suite are unchanged by it; the four failing gold masters
+(Cassini ISS and Galileo SSI) fail identically before and after, and neither instrument
+uses TDI.
 
 ---
 ## Critique: oops/observation, oops/cadence, oops/calibration, oops/gravity

@@ -3,6 +3,7 @@
 ##########################################################################################
 
 import numpy as np
+import pytest
 
 from polymath import Scalar, Pair
 from oops.fov import FlatFOV, NullFOV, TDIFOV
@@ -190,5 +191,82 @@ def test_uv_from_xyt_leaves_the_null_fov_constant_alone() -> None:
     fov.uv_from_xyt(Pair((0., 0.)), time=Scalar(50.))
 
     assert Pair.ZEROS == Pair((0., 0.))
+
+
+@pytest.mark.parametrize('tdi_axis, line', [('-v', 1), ('+v', 1),
+                                            ('-u', 0), ('+u', 0)],
+                         ids=['-v', '+v', '-u', '+u'])
+def test_xy_from_uvt_shifts_a_shapeless_pair(tdi_axis: str, line: int) -> None:
+    """At t=50 with tstop=100 and 8 sec/shift, the shift is 6 stages along the TDI axis.
+
+    A shapeless Pair must be shifted exactly as a shaped one is. The component of a
+    shapeless Pair is a copy rather than a view, so an implementation that shifts one
+    component in place silently leaves a shapeless input alone.
+    """
+
+    staticfov = FlatFOV((1., 1.), (64, 64))
+    fov = TDIFOV(staticfov, 100., 8., tdi_axis)
+    sign = -1 if '-' in tdi_axis else 1
+
+    expected = [32., 32.]
+    expected[line] -= sign * 6
+
+    assert fov.xy_from_uvt(Pair((32., 32.)), time=Scalar(50.)) == \
+           staticfov.xy_from_uvt(Pair(expected))
+
+
+def test_xy_from_uvt_agrees_between_shapeless_and_shaped() -> None:
+    """A shapeless input and a one-element shaped input must give the same result."""
+
+    fov = TDIFOV(FlatFOV((1., 1.), (64, 64)), 100., 8., '-v')
+
+    shapeless = fov.xy_from_uvt(Pair((32., 32.)), time=Scalar(50.))
+    shaped = fov.xy_from_uvt(Pair([(32., 32.)]), time=Scalar([50.]))
+
+    assert shapeless == shaped[0]
+
+
+def test_uv_from_xyt_shifts_a_shapeless_pair() -> None:
+    """The inverse must shift a shapeless Pair too, in the opposite direction."""
+
+    uv = Pair((3., 4.))
+    fov = TDIFOV(_sharing_fov(uv), 100., 8., '-v')
+
+    assert fov.uv_from_xyt(Pair((0., 0.)), time=Scalar(50.)) == Pair((3., -2.))
+
+
+def test_uv_from_xyt_agrees_between_shapeless_and_shaped() -> None:
+    """A shapeless input and a one-element shaped input must give the same result."""
+
+    fov = TDIFOV(FlatFOV((1., 1.), (64, 64)), 100., 8., '-v')
+    xy = fov.xy_from_uvt(Pair((32., 32.)), time=Scalar(100.))
+
+    shapeless = fov.uv_from_xyt(xy, time=Scalar(50.))
+    shaped = fov.uv_from_xyt(Pair([xy.vals]), time=Scalar([50.]))
+
+    assert shapeless == shaped[0]
+
+
+def test_xy_from_uvt_leaves_a_shapeless_input_alone() -> None:
+    """The caller's Pair must not be shifted in place, shapeless or not."""
+
+    uv = Pair((32., 32.))
+    fov = TDIFOV(FlatFOV((1., 1.), (64, 64)), 100., 8., '-v')
+
+    fov.xy_from_uvt(uv, time=Scalar(50.))
+
+    assert uv == Pair((32., 32.))
+
+
+def test_xy_from_uvt_compensates_a_shapeless_time_derivative() -> None:
+    """The TDI readout compensation applies to a shapeless input as well."""
+
+    uv = Pair((32., 32.))
+    uv.insert_deriv('t', Pair((1., 1.)))
+    fov = TDIFOV(FlatFOV((1., 1.), (64, 64)), 100., 8., '-v')
+
+    result = fov.xy_from_uvt(uv, time=Scalar(50.), derivs=True)
+
+    assert result.derivs['t'] == Pair((1., 1. + 1./8.))
 
 ##########################################################################################

@@ -80,18 +80,20 @@ class TDIFOV(FOV):
                 shape as uv_pair.
         """
 
-        # Update (u,v) based on the line and the number of TDI stages
-        uv = Pair.as_pair(uv_pair, recursive=derivs).copy(recursive=False)
-        line = uv.to_scalar(self._uv_line_index, recursive=False)
-            # uv and line share memory, so updating line also updates uv.
+        uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
 
         # Determine the number of TDI shifts
         time = Scalar.as_scalar(time, recursive=False)
         shifts = -1 - ((time - self.tstop) // self.tdi_texp).as_int()
         shifts[time == self.tstop] = 0
 
-        # Apply the line shift to our copy of uv
-        line -= self.tdi_sign * shifts
+        # Shift the line coordinate. _duv_dshift carries the sign in the line component
+        # and zero in the other, so scaling it by the shift count gives the whole offset.
+        # This is an arithmetic expression rather than an in-place update of one component
+        # of uv, because the component of a shapeless Pair is a copy rather than a view,
+        # so an in-place update would never reach uv. It also leaves the caller's object
+        # untouched and yields a writable result for the derivatives below.
+        uv = uv_pair.wod - self._duv_dshift * shifts
 
         # If a time derivative is present, we need to compensate for the TDI
         # readout
@@ -125,20 +127,19 @@ class TDIFOV(FOV):
         # Apply the conversion for tstop
         result = self.fov.uv_from_xyt(xy_pair, derivs=derivs, remask=remask, **kwargs)
 
-        # Work on a copy. The shift below is applied in place, and the wrapped FOV is
-        # free to return an object it still owns; NullFOV returns the readonly, global
-        # Pair.ZEROS.
-        uv = result.copy(recursive=False)
-        line = uv.to_scalar(self._uv_line_index, recursive=False)
-            # uv and line share memory, so updating line also updates uv.
-
         # Determine the number of TDI shifts
         time = Scalar.as_scalar(time, recursive=False)
         shifts = -1 - ((time - self.tstop) // self.tdi_texp).as_int()
         shifts[time == self.tstop] = 0
 
-        # Apply the line shift to our copy of uv
-        line += self.tdi_sign * shifts
+        # Shift the line coordinate. _duv_dshift carries the sign in the line component
+        # and zero in the other, so scaling it by the shift count gives the whole offset.
+        # This is an arithmetic expression rather than an in-place update of one component
+        # of the result, because the component of a shapeless Pair is a copy rather than a
+        # view, so an in-place update would never reach the Pair. It also leaves the
+        # wrapped FOV's own object untouched, which matters because that FOV is free to
+        # return something it still owns; NullFOV returns the readonly, global Pair.ZEROS.
+        uv = result.wod + self._duv_dshift * shifts
 
         # If a time derivative is present, we need to compensate for the TDI
         # readout
