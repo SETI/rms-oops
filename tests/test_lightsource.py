@@ -2,12 +2,13 @@
 # tests/test_lightsource.py
 ##########################################################################################
 
+from collections.abc import Iterator
+
 import pytest
 
 import numpy as np
 
 from polymath import Scalar, Vector3
-import oops
 from oops.body        import Body
 from oops.event       import Event
 from oops.lightsource import DiskSource, LightSource
@@ -15,7 +16,7 @@ from oops.path        import Path
 
 
 @pytest.fixture(autouse=True)
-def _restore_body_registry() -> None:
+def _restore_body_registry() -> Iterator[None]:
     """Undo the Body registry entries that constructing a LightSource creates."""
 
     saved = set(Body.BODY_REGISTRY)

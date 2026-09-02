@@ -1034,8 +1034,9 @@ class Observation(Mutable):
 
     def uv_from_path(self, path, *, tfrac=0.5, time=None, derivs=False, guess=None,
                      quick=None, converge=None):
-        """The `(u,v)` indices of an object in the FOV, given its path. **** NOT WELL
-        TESTED! ****
+        """The `(u,v)` indices of an object in the FOV, given its path.
+
+        WARNING: this method is not well tested.
 
         Parameters:
             path (Path): Object.

@@ -2,13 +2,11 @@
 # tests/surface/test_spice_shape.py
 ##########################################################################################
 
-import os
 import pytest
 
 import cspyce
 
 from oops.frame.frame_        import Frame
-from oops.frame.spiceframe    import SpiceFrame
 from oops.path.path_          import Path
 from oops.path.spicepath      import SpicePath
 from oops.surface.spice_shape import spice_shape

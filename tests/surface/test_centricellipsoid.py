@@ -5,8 +5,6 @@
 import numpy as np
 
 from polymath                      import Scalar, Vector3
-from oops.frame.frame_             import Frame
-from oops.path.path_               import Path
 from oops.surface.ellipsoid        import Ellipsoid
 from oops.surface.centricellipsoid import CentricEllipsoid
 

@@ -15,6 +15,11 @@
 #   -m, --markdown         Run only PyMarkdown (RUN_PYMARKDOWN)
 #   --flake8               Run flake8 only (may combine with other --* flags)
 #   --ruff-check           Run ruff check only
+#   --mypy                 Run mypy only (the tests; src has no annotations)
+#   --pyroma               Run pyroma only
+#   --bandit               Run bandit only
+#   --vulture              Run vulture only
+#   --sphinx               Build the documentation only
 #   --pytest               Run the main oops test suite only
 #   --pytest-hosts         Run the host (gold master) test suite only
 #   --pytest-spicedb       Run the spicedb tests only
@@ -33,24 +38,35 @@
 #   environment problem rather than a code defect.
 #
 #   RUN_* (set by this script from CLI or full-run defaults): RUN_FLAKE8,
-#   RUN_RUFF_CHECK, RUN_PYTEST, RUN_PYTEST_HOSTS, RUN_PYTEST_SPICEDB,
-#   RUN_PIP_AUDIT, RUN_PYMARKDOWN
+#   RUN_RUFF_CHECK, RUN_MYPY, RUN_PYROMA, RUN_BANDIT, RUN_VULTURE, RUN_PYTEST,
+#   RUN_PYTEST_HOSTS, RUN_PYTEST_SPICEDB, RUN_PIP_AUDIT, RUN_SPHINX,
+#   RUN_PYMARKDOWN
 #
 #   Per-check toggles (true/false). Each check runs only if both RUN_* and
 #   ENABLE_* are true (RUN_* from CLI or defaults below; ENABLE_* from env):
-#     ENABLE_FLAKE8            (default: false; see the note below)
-#     ENABLE_RUFF_CHECK        (default: false; see the note below)
+#     ENABLE_FLAKE8            continuation-line checks only (default: true)
+#     ENABLE_RUFF_CHECK        the linter of record (default: true)
+#     ENABLE_MYPY              the tests only (default: true)
+#     ENABLE_PYROMA            packaging metadata, --min=10 (default: true)
+#     ENABLE_BANDIT            security scan of src (default: true)
+#     ENABLE_VULTURE           dead code in src (default: true)
 #     ENABLE_PYTEST            main suite, tests/ minus hosts and spicedb
 #                              (default: true)
 #     ENABLE_PYTEST_HOSTS      host suite, tests/hosts (default: true)
 #     ENABLE_PYTEST_SPICEDB    spicedb tests, tests/spicedb (default: true)
 #     ENABLE_PIP_AUDIT         (default: false)
+#     ENABLE_SPHINX            documentation build, warnings as errors
+#                              (default: true)
 #     ENABLE_PYMARKDOWN        PyMarkdown scan (default: false)
 #
-#   flake8, ruff check, pip-audit, and PyMarkdown are configured but off by
-#   default: each currently reports pre-existing findings against the legacy
-#   modules and Markdown, so turning one on is a cleanup project rather than a
-#   gate. .github/workflows/run-lint.yml is dispatch-only for the same reason.
+#   pip-audit and PyMarkdown remain off by default: pip-audit reports findings
+#   against pinned upstream dependencies this repository does not control, and
+#   PyMarkdown reports pre-existing findings in the Markdown. Turning either on
+#   is a cleanup project rather than a gate.
+#
+#   `ruff format` is deliberately absent. The house style aligns assignments,
+#   imports, and trailing comments in columns, which the formatter would undo;
+#   [tool.ruff.format] records the quote style for anyone running it by hand.
 #
 # Checks (each run separately):
 #   Code:     the three pytest suites, and optionally flake8 (the linter of
@@ -85,21 +101,31 @@ RESET='\033[0m'
 PARALLEL=true
 RUN_FLAKE8=false
 RUN_RUFF_CHECK=false
+RUN_MYPY=false
+RUN_PYROMA=false
+RUN_BANDIT=false
+RUN_VULTURE=false
 RUN_PYTEST=false
 RUN_PYTEST_HOSTS=false
 RUN_PYTEST_SPICEDB=false
 RUN_PIP_AUDIT=false
+RUN_SPHINX=false
 RUN_PYMARKDOWN=false
 SCOPE_SPECIFIED=false
 
 # Per-check defaults (override by exporting before invoking this script, or
 # permanently change here)
-: "${ENABLE_FLAKE8:=false}"
-: "${ENABLE_RUFF_CHECK:=false}"
+: "${ENABLE_FLAKE8:=true}"
+: "${ENABLE_RUFF_CHECK:=true}"
+: "${ENABLE_MYPY:=true}"
+: "${ENABLE_PYROMA:=true}"
+: "${ENABLE_BANDIT:=true}"
+: "${ENABLE_VULTURE:=true}"
 : "${ENABLE_PYTEST:=true}"
 : "${ENABLE_PYTEST_HOSTS:=true}"
 : "${ENABLE_PYTEST_SPICEDB:=true}"
 : "${ENABLE_PIP_AUDIT:=false}"
+: "${ENABLE_SPHINX:=true}"
 : "${ENABLE_PYMARKDOWN:=false}"
 
 # Get script directory and project root
@@ -199,6 +225,10 @@ while [[ $# -gt 0 ]]; do
         -c|--code)
             RUN_FLAKE8=true
             RUN_RUFF_CHECK=true
+            RUN_MYPY=true
+            RUN_PYROMA=true
+            RUN_BANDIT=true
+            RUN_VULTURE=true
             RUN_PYTEST=true
             RUN_PYTEST_HOSTS=true
             RUN_PYTEST_SPICEDB=true
@@ -213,6 +243,31 @@ while [[ $# -gt 0 ]]; do
             ;;
         --flake8)
             RUN_FLAKE8=true
+            SCOPE_SPECIFIED=true
+            shift
+            ;;
+        --mypy)
+            RUN_MYPY=true
+            SCOPE_SPECIFIED=true
+            shift
+            ;;
+        --pyroma)
+            RUN_PYROMA=true
+            SCOPE_SPECIFIED=true
+            shift
+            ;;
+        --bandit)
+            RUN_BANDIT=true
+            SCOPE_SPECIFIED=true
+            shift
+            ;;
+        --vulture)
+            RUN_VULTURE=true
+            SCOPE_SPECIFIED=true
+            shift
+            ;;
+        --sphinx)
+            RUN_SPHINX=true
             SCOPE_SPECIFIED=true
             shift
             ;;
@@ -262,10 +317,15 @@ done
 if [ "$SCOPE_SPECIFIED" = false ]; then
     RUN_FLAKE8=true
     RUN_RUFF_CHECK=true
+    RUN_MYPY=true
+    RUN_PYROMA=true
+    RUN_BANDIT=true
+    RUN_VULTURE=true
     RUN_PYTEST=true
     RUN_PYTEST_HOSTS=true
     RUN_PYTEST_SPICEDB=true
     RUN_PIP_AUDIT=true
+    RUN_SPHINX=true
     RUN_PYMARKDOWN=true
 fi
 
@@ -287,6 +347,10 @@ _code_checks_any_scheduled() {
     [ "$RUN_PYTEST_HOSTS" = true ] && [ "$ENABLE_PYTEST_HOSTS" = true ] && return 0
     [ "$RUN_PYTEST_SPICEDB" = true ] && [ "$ENABLE_PYTEST_SPICEDB" = true ] && return 0
     [ "$RUN_PIP_AUDIT" = true ] && [ "$ENABLE_PIP_AUDIT" = true ] && return 0
+    [ "$RUN_MYPY" = true ] && [ "$ENABLE_MYPY" = true ] && return 0
+    [ "$RUN_PYROMA" = true ] && [ "$ENABLE_PYROMA" = true ] && return 0
+    [ "$RUN_BANDIT" = true ] && [ "$ENABLE_BANDIT" = true ] && return 0
+    [ "$RUN_VULTURE" = true ] && [ "$ENABLE_VULTURE" = true ] && return 0
     return 1
 }
 
@@ -321,8 +385,12 @@ run_code_checks() {
     local failed_checks=""
 
     if [ "$RUN_FLAKE8" = true ] && [ "$ENABLE_FLAKE8" = true ]; then
-        print_info "Running flake8..."
-        if python -m flake8 src programs; then
+        # Ruff is the linter of record. It implements no rule in the E121-E133 range, so
+        # the continuation-line indent checks come from flake8 and nothing else; every
+        # other code flake8 reports is either ruff's job or ignored in .flake8. This is
+        # the same split rms-polymath uses.
+        print_info "Running flake8 (continuation-line checks only)..."
+        if python -m flake8 --select=E12,E13 src programs tests; then
             print_success "Flake8 passed"
         else
             print_error "Flake8 failed"
@@ -333,7 +401,7 @@ run_code_checks() {
 
     if [ "$RUN_RUFF_CHECK" = true ] && [ "$ENABLE_RUFF_CHECK" = true ]; then
         print_info "Running ruff check..."
-        if python -m ruff check src programs tests; then
+        if python -m ruff check .; then
             print_success "Ruff check passed"
         else
             print_error "Ruff check failed"
@@ -375,6 +443,52 @@ run_code_checks() {
         fi
     fi
 
+    if [ "$RUN_MYPY" = true ] && [ "$ENABLE_MYPY" = true ]; then
+        # The tests only; src carries no annotations by house rule. The scope is set by
+        # `files` in [tool.mypy].
+        print_info "Running mypy on the tests..."
+        if python -m mypy; then
+            print_success "Mypy passed"
+        else
+            print_error "Mypy failed"
+            failed=true
+            failed_checks="${failed_checks}Code - Mypy"$'\n'
+        fi
+    fi
+
+    if [ "$RUN_PYROMA" = true ] && [ "$ENABLE_PYROMA" = true ]; then
+        print_info "Running pyroma..."
+        if python -m pyroma --min=10 .; then
+            print_success "Pyroma passed"
+        else
+            print_error "Pyroma failed"
+            failed=true
+            failed_checks="${failed_checks}Code - Pyroma"$'\n'
+        fi
+    fi
+
+    if [ "$RUN_BANDIT" = true ] && [ "$ENABLE_BANDIT" = true ]; then
+        print_info "Running bandit..."
+        if python -m bandit -q -c pyproject.toml -r src; then
+            print_success "Bandit passed"
+        else
+            print_error "Bandit failed"
+            failed=true
+            failed_checks="${failed_checks}Code - Bandit"$'\n'
+        fi
+    fi
+
+    if [ "$RUN_VULTURE" = true ] && [ "$ENABLE_VULTURE" = true ]; then
+        print_info "Running vulture..."
+        if python -m vulture; then
+            print_success "Vulture passed"
+        else
+            print_error "Vulture failed"
+            failed=true
+            failed_checks="${failed_checks}Code - Vulture"$'\n'
+        fi
+    fi
+
     if [ "$RUN_PIP_AUDIT" = true ] && [ "$ENABLE_PIP_AUDIT" = true ]; then
         print_info "Running pip-audit..."
         if python -m pip_audit; then
@@ -393,6 +507,44 @@ run_code_checks() {
         return 1
     fi
     return 0
+}
+
+# ---- Documentation build (Sphinx) ----
+run_docs_checks() {
+    local output_file="${1:-}"
+    local status_file="${2:-}"
+
+    if [ -n "$output_file" ]; then
+        exec > "$output_file" 2>&1
+    fi
+
+    print_section "Documentation (Sphinx)"
+
+    cd "$PROJECT_ROOT" || exit 1
+
+    if [ ! -f "$VENV/bin/activate" ]; then
+        print_error "Virtual environment not found at $VENV; run ./scripts/setup-venv.sh"
+        [ -n "$status_file" ] && echo "Docs - Virtual environment not found" >> "$status_file"
+        return 1
+    fi
+
+    # shellcheck source=/dev/null
+    source "$VENV/bin/activate"
+
+    # -W turns every warning into an error, so a broken reference or an unparseable
+    # docstring fails the build rather than scrolling past. -E rebuilds from scratch, so
+    # a stale cache cannot hide a warning that a previous run already reported.
+    print_info "Building the documentation..."
+    if python -m sphinx -W -E -b html docs docs/_build; then
+        print_success "Documentation build passed"
+        deactivate 2>/dev/null || true
+        return 0
+    else
+        print_error "Documentation build failed"
+        [ -n "$status_file" ] && echo "Docs - Sphinx build" >> "$status_file"
+        deactivate 2>/dev/null || true
+        return 1
+    fi
 }
 
 # ---- Markdown lint only (PyMarkdown) ----
@@ -466,6 +618,15 @@ if [ "$PARALLEL" = true ]; then
         pids+=($!)
     fi
 
+    if [ "$RUN_SPHINX" = true ] && [ "$ENABLE_SPHINX" = true ]; then
+        docs_output="$TEMP_DIR/docs.log"
+        docs_status="$TEMP_DIR/docs.status"
+        temp_files+=("$docs_output")
+        status_files+=("$docs_status")
+        run_docs_checks "$docs_output" "$docs_status" &
+        pids+=($!)
+    fi
+
     if [ "$RUN_PYMARKDOWN" = true ] && [ "$ENABLE_PYMARKDOWN" = true ]; then
         markdown_output="$TEMP_DIR/markdown.log"
         markdown_status="$TEMP_DIR/markdown.status"
@@ -503,6 +664,14 @@ else
             EXIT_CODE=1
         fi
         _collect_status "$code_status"
+    fi
+
+    if [ "$RUN_SPHINX" = true ] && [ "$ENABLE_SPHINX" = true ]; then
+        docs_status="$TEMP_DIR/docs.status"
+        if ! run_docs_checks "" "$docs_status"; then
+            EXIT_CODE=1
+        fi
+        _collect_status "$docs_status"
     fi
 
     if [ "$RUN_PYMARKDOWN" = true ] && [ "$ENABLE_PYMARKDOWN" = true ]; then

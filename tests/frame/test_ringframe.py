@@ -6,7 +6,6 @@ import numpy as np
 
 from polymath   import Scalar, Vector3
 from oops       import Event
-from oops.body  import Body
 from oops.frame import Frame, RingFrame, SpiceFrame
 from oops.path  import SpicePath
 

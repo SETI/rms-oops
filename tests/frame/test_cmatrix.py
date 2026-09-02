@@ -5,7 +5,6 @@
 import numpy as np
 
 from polymath   import Scalar
-from oops.body  import Body
 from oops.event import Event
 from oops.frame import Cmatrix, SpiceFrame
 from oops.path  import SpicePath

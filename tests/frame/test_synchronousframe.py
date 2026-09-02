@@ -2,6 +2,8 @@
 # tests/frame/test_synchronousframe.py
 ##########################################################################################
 
+from typing import cast
+
 import numpy as np
 import pytest
 
@@ -10,6 +12,19 @@ from oops       import Body
 from oops.frame import SynchronousFrame
 from oops.path.circlepath import CirclePath
 
+
+def _dot(a: Vector3, b: Vector3) -> float:
+    """The dot product of two shapeless Vector3 objects, as a Python float.
+
+    Parameters:
+        a: The first vector.
+        b: The second vector.
+
+    Returns:
+        float: The dot product.
+    """
+
+    return float(cast(Scalar, a.dot(b)))
 
 @pytest.fixture(autouse=True)
 def _solar_system():
@@ -71,8 +86,8 @@ def test_the_axes_follow_the_planet_and_the_angular_momentum(rate, sense) -> Non
         # The rows of the matrix are this Frame's axes, in the reference frame
         (x_axis, y_axis, z_axis) = [Vector3(xform.matrix.vals[i]) for i in range(3)]
 
-        assert float(x_axis.dot(toward_planet).vals) == pytest.approx(1., abs=1.e-12)
-        assert float(z_axis.dot(angular_momentum).vals) == pytest.approx(1., abs=1.e-12)
-        assert float(y_axis.dot(against_motion).vals) == pytest.approx(1., abs=1.e-12)
+        assert _dot(x_axis, toward_planet) == pytest.approx(1., abs=1.e-12)
+        assert _dot(z_axis, angular_momentum) == pytest.approx(1., abs=1.e-12)
+        assert _dot(y_axis, against_motion) == pytest.approx(1., abs=1.e-12)
 
 ##########################################################################################

@@ -27,12 +27,13 @@ imports fail because these are unset, say so; do not report it as a code defect.
 - Because the packages live under `src/`, nothing imports from a bare checkout.
   Work inside the virtualenv `./scripts/setup-venv.sh` creates, which installs
   `-e ".[dev]"`. Never install into system Python.
-- `scripts/run-all-checks.sh` runs the gates; `-h` lists the flags. It defaults
-  to the three pytest suites. flake8, ruff, pip-audit, and PyMarkdown are
-  configured but off by default (`ENABLE_*` in the script), because each still
-  reports pre-existing findings against the legacy modules — turning one on is a
-  cleanup project, not a gate. `.github/workflows/run-lint.yml` is dispatch-only
-  for the same reason.
+- `scripts/run-all-checks.sh` runs the gates; `-h` lists the flags. A full run is
+  ruff, flake8, mypy, pyroma, bandit, vulture, the three pytest suites, and the
+  Sphinx build. pip-audit and PyMarkdown remain off by default (`ENABLE_*` in the
+  script): pip-audit reports findings against pinned upstream dependencies this
+  repository does not control, and PyMarkdown reports pre-existing findings in the
+  Markdown. `.github/workflows/run-lint.yml` is dispatch-only and has not yet been
+  brought into step with this set.
 - Tests use **pytest**: module-level `test_*` functions and plain `assert`. There
   are no `unittest.TestCase` classes and no `runTest` methods.
   - `pytest tests --ignore=tests/hosts --ignore=tests/spicedb` — main suite
@@ -57,7 +58,18 @@ imports fail because these are unset, say so; do not report it as a code defect.
   dependencies from `-e ".[dev]"` and requires `SPICE_PATH`,
   `SPICE_SQLITE_DB_NAME`, and `OOPS_RESOURCES`. Keep it in step with
   `run-all-checks.sh`.
-- Lint is flake8, on two targets: `flake8 src` and `flake8 programs`.
+- **Ruff is the linter of record**, over the whole repository. It implements no
+  rule in the E121-E133 range, so the continuation-line indent checks come from
+  flake8 and nothing else: the gate is `flake8 --select=E12,E13`, the same split
+  rms-polymath uses. `.flake8` remains authoritative for anyone running the full
+  flake8 by hand, which still reports pre-existing findings in the legacy modules.
+- `ruff format` is deliberately never run. Column-aligned assignments, imports,
+  and trailing comments are the house style and the formatter would undo them.
+- mypy covers `tests/` only; `src` carries no annotations by house rule, so
+  checking it would report their absence rather than any defect.
+- The legacy exclusions are recorded in `pyproject.toml`: `ideas/` and the parked,
+  uncollected test modules are outside ruff's scope, and `src/oops/hosts/*` and
+  `src/spicedb/*` carry per-file ignores.
 
 ## Code style
 

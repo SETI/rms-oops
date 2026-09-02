@@ -2,7 +2,6 @@
 # tests/hosts/galileo/ssi/standard_obs.py:
 ##########################################################################################
 
-import os
 import programs.gold_master as gm
 
 gm.set_default_args(module='oops.hosts.galileo.ssi', inventory=False, border=4)

@@ -6,7 +6,6 @@ import pickle
 
 import pytest
 
-import oops
 from oops.constants import RPD
 from oops.fov       import FlatFOV
 from oops.meshgrid  import Meshgrid

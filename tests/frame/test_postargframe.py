@@ -3,7 +3,7 @@
 ##########################################################################################
 
 from polymath   import Vector3
-from oops.frame import Frame, PosTargFrame
+from oops.frame import PosTargFrame
 
 
 def test_postargframe():

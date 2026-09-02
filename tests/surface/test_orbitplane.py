@@ -2,6 +2,8 @@
 # tests/surface/test_orbitplane.py
 ##########################################################################################
 
+from typing import cast
+
 import numpy as np
 import pytest
 
@@ -350,7 +352,7 @@ def test_velocity_of_a_circular_orbit() -> None:
     orbit = _eccentric_orbit(0.)
     pos = Vector3([(_A, 0., 0.), (0., _A, 0.), (-_A, 0., 0.), (0., 0.5*_A, 0.)])
 
-    expected = _N * Vector3.ZAXIS.cross(pos)
+    expected = _N * cast(Vector3, Vector3.ZAXIS.cross(pos))
     assert (orbit.velocity(pos) - expected).norm().max() < 1.e-15
 
 

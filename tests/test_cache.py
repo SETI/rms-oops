@@ -71,16 +71,16 @@ def test_clean_key():
 
     path = LinearPath((0,0,0), 0., 'SSB')
     assert clean_key(path) == path.waypoint
-    test = {path.waypoint}      # TypeError if unhashable
+    {path.waypoint}             # a set literal: TypeError if the key is unhashable
 
     frame = Rotation(1., 2, 'J2000')
     assert clean_key(frame) == frame.wayframe
-    test = {frame.wayframe}     # TypeError if unhashable
+    {frame.wayframe}            # a set literal: TypeError if the key is unhashable
 
     key = (1, Vector([[1,2],[3,4]]), path, frame)
     assert (clean_key(key)
             == (1, ('Vector', (2,), (1, 2, 3, 4), False), path.waypoint, frame.wayframe))
-    test = {clean_key(key)}     # TypeError if unhashable
+    {clean_key(key)}            # a set literal: TypeError if the key is unhashable
 
 def test_clean_key_is_recursive():
     clean_key = Cache.clean_key
@@ -164,7 +164,7 @@ def test_Cache():
     cache['h-bar'] = 1.054e-34
     assert len(cache) == 5
 
-    ignore = cache['e']
+    cache['e']                  # touch 'e' so that it is not the next eviction
     cache['G'] = 6.67e-11
     assert len(cache) == 2
     assert 'e' in cache

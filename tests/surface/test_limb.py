@@ -9,8 +9,6 @@ from oops.surface.limb import Limb
 
 
 def test_limb():
-    from oops.frame                    import Frame
-    from oops.path                     import Path
     from oops.surface.centricellipsoid import CentricEllipsoid
     from oops.surface.centricspheroid  import CentricSpheroid
     from oops.surface.ellipsoid        import Ellipsoid

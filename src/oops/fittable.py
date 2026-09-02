@@ -49,18 +49,24 @@ class Fittable(Oops):
     * nparams: The number of required parameters.
 
     This method must also be defined::
+
         _set_params(self, params)
+
     where `params` is a scalar, tuple, list, or array of one or more floating-point values
     that are used to update the object. The function `set_params` of the public API uses
     this function.
 
     If the Fittable object maintains cached information internally, it must also have this
     method::
+
         _refresh(self)
+
     which updates any internal attributes based on the currently defined parameters (along
     with the current values of any internal sub-objects that might also be Fittable or
     mutable). In addition, the method::
+
         _freeze(self)
+
     can be used to carry out any special actions that must take place if the object is
     frozen.
     """

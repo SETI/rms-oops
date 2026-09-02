@@ -29,6 +29,11 @@ dependencies = [
   "scipy"
 ]
 license = {text = "Apache-2.0"}
+authors = [
+  {name = "Mark R. Showalter", email = "mshowalter@seti.org"},
+  {name = "Robert S. French", email = "rfrench@seti.org"},
+  {name = "Joseph N. Spitale", email = "jspitale@seti.org"}
+]
 maintainers = [
   {name = "Robert S. French", email = "rfrench@seti.org"},
   {name = "Joseph N. Spitale", email = "jspitale@seti.org"}
@@ -52,18 +57,31 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = [
+  "bandit[toml]>=1.8",
   "coverage>=7.0",
   "flake8",
+  # mypy checks the tests only; src carries no annotations (see [tool.mypy]).
+  "mypy>=1.0",
   "pip-audit>=2.7",
   "pymarkdownlnt>=0.9.35",
+  "pyroma>=4.2",
   "pytest>=7.0",
   "pytest-cov>=4.0",
   "pytest-xdist>=3.8.0",
-  "ruff>=0.8"
+  "ruff>=0.8",
+  "vulture>=2.14",
+  "rms-oops[docs]"
+]
+docs = [
+  "myst-parser",
+  "sphinx>=7",
+  "sphinxcontrib-mermaid",
+  "sphinx-rtd-theme"
 ]
 
 [project.urls]
 Homepage = "https://github.com/SETI/rms-oops"
+Documentation = "https://rms-oops.readthedocs.io/en/latest"
 Repository = "https://github.com/SETI/rms-oops"
 Source = "https://github.com/SETI/rms-oops"
 Issues = "https://github.com/SETI/rms-oops/issues"
@@ -99,7 +117,9 @@ python_files = ["test_*.py"]
 # `filterwarnings = ["error"]` is absent for the same reason it always was: the spicedb
 # tests raise a RuntimeWarning for a kernel that is missing from the resource tree, and
 # the legacy modules still emit NumPy warnings. Both belong here once those are fixed.
-addopts = ["--strict-markers", "--strict-config"]
+# `--cov` with no argument measures what [tool.coverage.run] includes, which is src/
+# and programs/. Coverage is cheap here because `-n auto` is off anyway.
+addopts = ["--strict-markers", "--strict-config", "--cov", "--cov-report="]
 markers = []
 
 [tool.coverage.run]
@@ -123,10 +143,57 @@ exclude_lines = [
 # tests, which need the full OOPS_RESOURCES tree, so a floor would measure the
 # environment rather than the tests.
 
+[tool.mypy]
+# The tests only. `src` carries no annotations by house rule, so type-checking it would
+# report the absence of types rather than any defect; CLAUDE.md says not to run mypy
+# there. Everything under tests/ that pytest does not collect is excluded: those modules
+# were parked mid-conversion and several do not even parse.
+files = ["tests"]
+exclude = [
+  "^tests/frame/all\\.py$",
+  "^tests/hosts/",
+  "^tests/surface/xtest_",
+]
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+# oops, spicedb and programs ship no py.typed marker, so mypy cannot import them. The
+# tests exercise them at runtime; this keeps the check on the test code itself.
+module = ["oops.*", "spicedb.*", "programs.*", "cspyce.*", "astropy.*", "spicedb",
+          "oops"]
+ignore_missing_imports = true
+
+[tool.bandit]
+# The library is the target; the tests are not shipped.
+targets = ["src"]
+exclude_dirs = ["tests", "venv", ".venv", "ideas"]
+# B101 assert_used: asserts are used throughout for internal invariants, which is
+# idiomatic here and not a security finding in a scientific library.
+skips = ["B101"]
+
+[tool.vulture]
+paths = ["src"]
+# juno/__init__.py parks a block of unfinished kernel-management code behind an early
+# return, under a `## TODO:` marker and a note explaining what it is for. Vulture is
+# right that it is unreachable; it is kept deliberately.
+exclude = ["ideas/", "src/oops/hosts/juno/__init__.py"]
+min_confidence = 70
+
 [tool.ruff]
 target-version = "py311"
 # 90 in the refactored modules, 80 in the legacy ones; E501 is off either way (see below).
 line-length = 90
+# `ideas/` holds scratch and deprecated drafts that are not part of either package and
+# are not importable; several files do not parse. The rest are test modules that were
+# parked mid-conversion, which pytest does not collect for the same reason (see
+# `python_files` above); several of those do not parse either.
+exclude = [
+  "ideas",
+  "tests/hosts/cassini/uvis/uvis_test_suite.py",
+  "tests/hosts/cassini/vims/vims_test_suite.py",
+  "tests/hosts/hst/wfc3/*.py",
+  "tests/hosts/newhorizons/lorri.py",
+]
 
 [tool.ruff.format]
 quote-style = "single"
@@ -151,6 +218,19 @@ ignore = [
   "E302", "E303", "E305", "E402", "E501", "E741",
   "W291", "W391",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Importing a submodule binds it as an attribute of the parent package, and a package's
+# __init__ globals are that package's namespace, so `frame` and `path` are defined here
+# at run time even though no import statement names them. Ruff cannot see that.
+"src/oops/__init__.py" = ["F821"]
+# The host modules and spicedb predate this rule set and are excluded from the cleanup
+# per CLAUDE.md. E721 is the type-comparison idiom throughout spicedb; the rest are
+# unused names and one-line compound statements in the legacy readers.
+"src/oops/hosts/*" = ["E701", "E722", "F401", "F821", "F841", "W293"]
+"src/spicedb/*" = ["E721", "F841"]
+# Test modules pytest does not collect, parked mid-conversion.
+"tests/hosts/*" = ["E701", "F401", "F821"]
 
 [tool.pymarkdown.plugins.md013]
 # Line length: the Markdown files use longer lines than the default 80.

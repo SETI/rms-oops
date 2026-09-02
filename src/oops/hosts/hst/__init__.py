@@ -2,6 +2,7 @@
 # oops/hosts/hst/__init__.py
 ##########################################################################################
 
+import ast
 import glob
 import numpy as np
 import os
@@ -582,14 +583,15 @@ class HST(object):
         f = open(os.path.join(HST_IDC_PATH, 'IDC_FILE_NAME_DICT.txt'))
         lines = []
         for line in f:
-            if regex.match(line) is False:
+            if regex.match(line) is None:
                 raise IOError('syntax error in IDC definition: ' + line)
 
             lines.append(line)
         f.close()
 
-        # Define the global dictionary
-        IDC_FILE_NAME_DICT = eval('{' + ', '.join(lines) + '}')
+        # Define the global dictionary. The file holds nothing but tuples of strings
+        # mapping to strings, so it is parsed as a literal rather than evaluated.
+        IDC_FILE_NAME_DICT = ast.literal_eval('{' + ', '.join(lines) + '}')
 
         return
 

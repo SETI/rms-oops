@@ -21,7 +21,7 @@ def test_kernelinfo():
     T5 = '2005-01-01T00:00:00'
     T6 = '2006-01-01T00:00:00'
     T7 = '2007-01-01T00:00:00'
-    T8 = '2008-01-01T00:00:00'
+    T8 = '2008-01-01T00:00:00'  # noqa: F841  unused; keeps T0-T9 contiguous
     T9 = '2009-01-01T00:00:00'
 
     lsk  = spicedb.KernelInfo(['LSK',  '1', 'LSK',  'file', T0, T1, T2, 0, 1])

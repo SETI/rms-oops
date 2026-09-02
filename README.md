@@ -107,6 +107,19 @@ pytest tests/spicedb
 pytest tests
 ```
 
+- To run the full set of quality gates (ruff, flake8, mypy, pyroma, bandit,
+  vulture, the three test suites, and the documentation build):
+
+```sh
+./scripts/run-all-checks.sh
+```
+
+- To build the documentation on its own:
+
+```sh
+./scripts/run-all-checks.sh --sphinx
+```
+
 - To run the gold master tests for one instrument with the ability to specify command
   line options:
 

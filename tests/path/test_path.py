@@ -9,7 +9,6 @@ import pytest
 import cspyce
 
 from oops.config import QUICK
-from oops.body   import Body
 from oops.frame  import Frame, SpiceFrame
 from oops.path   import (Path, LinkedPath, ReversedPath, RelativePath,
                          RotatedPath, QuickPath, LinearPath, SpicePath)

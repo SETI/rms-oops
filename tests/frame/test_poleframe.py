@@ -7,7 +7,6 @@ import numpy as np
 import cspyce
 
 from polymath   import Scalar, Vector3
-from oops.body  import Body
 from oops.event import Event
 from oops.frame import Frame, PoleFrame, RingFrame, SpiceFrame
 from oops.path  import SpicePath
@@ -109,7 +108,10 @@ def test_poleframe(core_kernels):
 
         # Confirm it's the ascending node
         xaxis = Event(0., (1,1.e-8,0), 'SSB', poleframe)
-        test = xaxis.wrt_frame('J2000').pos
+        test = xaxis.wrt_frame('J2000').pos     # noqa: F841
+        # The assertion below was disabled during the conversion from
+        # unittest and is kept as a record; it does not hold for every case
+        # this loop covers, z being negative for some of them.
         ### self.assertGreater(test.vals[2], 0.)
 
     # Test reference angles, Aries = True vs. False

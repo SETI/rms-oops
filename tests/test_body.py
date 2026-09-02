@@ -5,8 +5,6 @@
 import pytest
 
 from oops.body  import Body
-from oops.frame import Frame
-from oops.path  import Path
 
 
 @pytest.fixture(autouse=True)

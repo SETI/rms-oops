@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import numpy as np
-import numpy.ma as ma
 import scipy.ndimage.filters as filters
 import scipy.fftpack as fftpack
 import pylab

@@ -309,8 +309,9 @@ class Snapshot(Observation):
 
     def uv_from_coords(self, surface, coords, *, tfrac=0.5, time=None, underside=False,
                        derivs=False, quick=None, converge=None):
-        """The `(u,v)` indices of a surface point, given its coordinates. **** NOT WELL
-        TESTED! ****
+        """The `(u,v)` indices of a surface point, given its coordinates.
+
+        WARNING: this method is not well tested.
 
         Parameters:
             surface (Surface): The Surface object.

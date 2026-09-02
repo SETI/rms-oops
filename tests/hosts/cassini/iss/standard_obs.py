@@ -2,10 +2,8 @@
 # tests/hosts/cassini/iss/standard_obs.py:
 ##########################################################################################
 
-import os
 import programs.gold_master as gm
 
-from oops.unittester_support import TEST_DATA_PREFIX
 
 # Define the default observation
 gm.define_standard_obs('W1573721822_1',
