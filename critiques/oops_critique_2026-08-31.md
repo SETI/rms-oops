@@ -26,7 +26,7 @@ deviations), SUGGESTION (improvements needing an owner decision).
 | `oops/backplane` | 15 | 69 | 49 | 9 | 9 |
 | **Total** | **118** | **327** | **170** | **90** | **76** |
 
-These counts describe the review as first delivered. Work continued afterward, and 36 of
+These counts describe the review as first delivered. Work continued afterward, and 37 of
 the findings it left open have since been resolved; each is labelled **(fixed after
 review)** in place of "(not fixed)", with its entry saying what was done. A few defects
 found during that later work are labelled **(found after review, fixed)** and were added
@@ -1760,9 +1760,21 @@ left alone.
   docstring is now corrected).
 - **[SUGGESTION] (not fixed)** `observation_.py:866` — `Scalar.as_scalar(Scalar.as_scalar(
   tfrac) == 0.5)` double-wraps; one `as_scalar` suffices.
-- **[SUGGESTION] (not fixed)** `observation_.py:1234-1236` — `parallel_offset_duv` forwards
-  `time=None` straight into the FOV methods while `parallel_offset_angles` substitutes the
-  midtime; the None-handling is inconsistent across the three `parallel_*` methods.
+- **[SUGGESTION] (fixed after review)** `observation_.py:1234-1236` —
+  `parallel_offset_duv` forwarded `time=None` straight into the FOV methods while the
+  other three `parallel_*` methods substitute the midtime, as all four docstrings
+  promise. The inconsistency is not cosmetic: a time-dependent FOV rejects `None`, so
+  `TDIFOV.offset_angles_from_duv(duv, time=None)` raises `TypeError: invalid Scalar data
+  type: <class 'NoneType'>` where a real time succeeds. It now substitutes
+  `self.midtime` like its siblings.
+- **[BUG] (found after review, fixed)** `observation_.py:1236` — the same method called
+  `parallel.fov.duv_from_offset_angles(...)`, which is defined nowhere in the tree; the
+  FOV method is `offset_duv_from_angles`. Every call raised `AttributeError: 'FlatFOV'
+  object has no attribute 'duv_from_offset_angles'`, so `parallel_offset_duv` had never
+  run — another of this file's paths with no coverage at all. Both halves work once the
+  name is corrected: a pointing offset through a parallel observation sharing its frame
+  and FOV round-trips to the same `(u,v)` offset. Five tests were added, all of which
+  fail against the old code.
 
 ### src/oops/observation/snapshot.py
 - **[BUG] (fixed)** `snapshot.py:537-538` — `inventory` computed the "resolution" entry from

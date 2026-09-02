@@ -1231,8 +1231,9 @@ class Observation(Mutable):
             observation's FOV.
         """
 
+        time = self.midtime if time is None else time
         angles = self.fov.offset_angles_from_duv(duv, time=time, origin=origin)
         angles = self.parallel_offset_angles(parallel, angles, time=time)
-        return parallel.fov.duv_from_offset_angles(angles, time=time)
+        return parallel.fov.offset_duv_from_angles(angles, time=time)
 
 ##########################################################################################

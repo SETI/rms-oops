@@ -12,6 +12,7 @@ from oops.frame       import Frame
 from oops.observation import (InSitu, Observation, Pixel, RasterSlit1D, Slit1D,
                               Snapshot, TimedImage)
 from oops.path        import Path
+from polymath         import Pair
 
 
 def _observations() -> dict[str, Observation]:
@@ -54,5 +55,65 @@ def test_observation_survives_a_pickle_round_trip(name: str) -> None:
     # very same objects; the registries and the `is` tests in oops depend on it
     assert restored.path is Path.SSB
     assert restored.frame is Frame.J2000
+
+
+def _parallel_pair() -> tuple[Snapshot, Snapshot]:
+    """Two observations sharing an origin and a time, for the parallel_* methods.
+
+    Returns:
+        tuple[Snapshot, Snapshot]: This observation and a parallel one. They share a
+        frame and FOV, so a pointing offset maps to the identical offset.
+    """
+
+    fov = FlatFOV((1.e-4, 1.e-4), (64, 64))
+    return (Snapshot(('u','v'), 0., 10., fov, 'SSB', 'J2000'),
+            Snapshot(('u','v'), 0., 10., fov, 'SSB', 'J2000'))
+
+
+def test_parallel_offset_duv_maps_an_offset_through_an_identical_fov() -> None:
+    """A parallel observation with the same frame and FOV sees the same pixel offset."""
+
+    (obs, parallel) = _parallel_pair()
+
+    assert obs.parallel_offset_duv(parallel, Pair((1., 2.))) == Pair((1., 2.))
+
+
+def test_parallel_offset_duv_assumes_the_midtime() -> None:
+    """Omitting the time gives the same answer as passing the midtime, as documented."""
+
+    (obs, parallel) = _parallel_pair()
+    duv = Pair((1., 2.))
+
+    assert obs.parallel_offset_duv(parallel, duv) \
+           == obs.parallel_offset_duv(parallel, duv, time=obs.midtime)
+
+
+def test_parallel_offset_duv_measures_from_the_given_origin() -> None:
+    """The origin selects the reference point the offset is measured from."""
+
+    (obs, parallel) = _parallel_pair()
+    duv = Pair((1., 2.))
+
+    from_center = obs.parallel_offset_duv(parallel, duv)
+    from_corner = obs.parallel_offset_duv(parallel, duv, origin=Pair((10., 20.)))
+
+    assert from_center == Pair((1., 2.))
+    assert from_corner != from_center           # a different reference, a different map
+
+
+@pytest.mark.parametrize('time', [None, 5.])
+def test_parallel_offset_duv_inverts_the_fov_offset_angles(time: float | None) -> None:
+    """The method is the composition its docstring describes, at any time."""
+
+    (obs, parallel) = _parallel_pair()
+    duv = Pair((1., 2.))
+    at = obs.midtime if time is None else time
+
+    angles = obs.fov.offset_angles_from_duv(duv, time=at)
+    angles = obs.parallel_offset_angles(parallel, angles, time=at)
+    expected = parallel.fov.offset_duv_from_angles(angles, time=at)
+
+    assert obs.parallel_offset_duv(parallel, duv, time=time) == expected
+
 
 ##########################################################################################
