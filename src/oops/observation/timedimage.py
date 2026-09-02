@@ -325,6 +325,32 @@ class TimedImage(Observation):
                                             fast=self._fast_t_uv_axis,
                                             remask=remask)
 
+    def uv_range_at_tstep(self, tstep, *, remask=False):
+        """The range of spatial `(u,v)` pixels active at a particular time step.
+
+        One line of the image is active at each time step if the cadence is 1-D; one
+        pixel is active if it is 2-D.
+
+        Parameters:
+            tstep (Scalar or Pair): Time step index. This is a Scalar if the cadence is
+                1-D and a Pair, as (slow, fast), if it is 2-D.
+            remask (bool, optional): True to mask time steps outside the cadence.
+
+        Returns:
+            tuple[Pair, Pair]: `(uv_min, uv_max)`, where `uv_min` is the lower corner of
+            the `(u,v)` rectangle active at this time step and `uv_max` is the upper
+            corner, exclusive.
+        """
+
+        if self._time_is_1d:
+            return self.uv_range_at_tstep_1d(tstep, self.uv_shape,
+                                             axis=self._t_uv_axis, remask=remask)
+        else:
+            return self.uv_range_at_tstep_2d(tstep, self.uv_shape,
+                                             slow=(1-self._fast_t_uv_axis),
+                                             fast=self._fast_t_uv_axis,
+                                             remask=remask)
+
     def time_shift(self, dtime):
         """A copy of the observation object with a time-shift.
 

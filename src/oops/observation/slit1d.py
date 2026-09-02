@@ -104,8 +104,8 @@ class Slit1D(Observation):
 
     def __getstate__(self):
         self.refresh()
-        return (self._axes, self.cadence, self._texp, self.fov, self.path,
-                self.frame, self.subfields)
+        return (self._axes, self.cadence, self._texp, self.fov, self.path, self.frame,
+                self.subfields)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
@@ -128,13 +128,11 @@ class Slit1D(Observation):
         """
 
         # Interpret a 1-D index or a multi-D index
-        slit_coord = Observation.scalar_from_indices(indices,
-                                                     self._along_slit_index,
+        slit_coord = Observation.scalar_from_indices(indices, self._along_slit_index,
                                                      derivs=derivs)
 
         if remask:
-            is_outside = ((slit_coord.vals < 0) |
-                          (slit_coord.vals > self._along_slit_len))
+            is_outside = (slit_coord.vals < 0) | (slit_coord.vals > self._along_slit_len)
             slit_coord = slit_coord.remask_or(is_outside)
 
         # Create the (u,v) Pair
@@ -170,8 +168,7 @@ class Slit1D(Observation):
         """
 
         # Interpret a 1-D index or a multi-D index
-        slit_coord = Observation.scalar_from_indices(indices,
-                                                     self._along_slit_index)
+        slit_coord = Observation.scalar_from_indices(indices, self._along_slit_index)
 
         slit_int = slit_coord.int(top=self._along_slit_len, remask=remask)
 
@@ -221,9 +218,27 @@ class Slit1D(Observation):
             the `(u,v)` rectangle observed and `uv_max` is the upper corner.
         """
 
-        return Observation.uv_range_at_time_0d(self, time,
-                                               uv_shape=self.fov.uv_shape,
+        return Observation.uv_range_at_time_0d(self, time, uv_shape=self.fov.uv_shape,
                                                remask=remask)
+
+    def uv_range_at_tstep(self, tstep, *, remask=False):
+        """The range of spatial `(u,v)` pixels active at a particular time step.
+
+        A Slit1D observation has no time-dependence, so the whole slit is active at every
+        time step.
+
+        Parameters:
+            tstep (Scalar): Time step index.
+            remask (bool, optional): True to mask time steps outside the cadence.
+
+        Returns:
+            tuple[Pair, Pair]: `(uv_min, uv_max)`, where `uv_min` is the lower corner of
+            the `(u,v)` rectangle active at this time step and `uv_max` is the upper
+            corner, exclusive.
+        """
+
+        return Observation.uv_range_at_tstep_0d(self, tstep, uv_shape=self.fov.uv_shape,
+                                                remask=remask)
 
     def time_shift(self, dtime):
         """A copy of the observation object with a time-shift.
@@ -237,8 +252,7 @@ class Slit1D(Observation):
         """
 
         cadence = self.cadence.time_shift(dtime)
-        return Slit1D(axes=self._axes, tstart=cadence, texp=self._texp,
-                      fov=self.fov, path=self.path, frame=self.frame,
-                      **self.subfields)
+        return Slit1D(axes=self._axes, tstart=cadence, texp=self._texp, fov=self.fov,
+                      path=self.path, frame=self.frame, **self.subfields)
 
 ##########################################################################################

@@ -64,8 +64,7 @@ class RasterSlit1D(Observation):
         count1 = ('ut' in self._axes) + ('vt' in self._axes)
         count2 = ('t' in self._axes)
         if (count1, count2) != (1,0):
-            raise ValueError('invalid axes for RasterSlit1D: '
-                             + repr(self._axes))
+            raise ValueError('invalid axes for RasterSlit1D: ' + repr(self._axes))
 
         self.shape = len(axes) * [0]
 
@@ -115,8 +114,7 @@ class RasterSlit1D(Observation):
 
     def __getstate__(self):
         self.refresh()
-        return (self._axes, self.cadence, self.fov, self.path, self.frame,
-                self.subfields)
+        return (self._axes, self.cadence, self.fov, self.path, self.frame, self.subfields)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
@@ -139,8 +137,7 @@ class RasterSlit1D(Observation):
         """
 
         # Interpret a 1-D index or a multi-D index
-        slit_coord = Observation.scalar_from_indices(indices, self.t_axis,
-                                                     derivs=derivs)
+        slit_coord = Observation.scalar_from_indices(indices, self.t_axis, derivs=derivs)
 
         # Create time Scalar
         time = self.cadence.time_at_tstep(slit_coord, remask=remask)
@@ -172,12 +169,10 @@ class RasterSlit1D(Observation):
         """
 
         # Works for a 1-D index or a multi-D index
-        slit_coord = Observation.scalar_from_indices(indices, self.t_axis,
-                                                     derivs=False)
+        slit_coord = Observation.scalar_from_indices(indices, self.t_axis, derivs=False)
 
         # Get the time range
-        (time0,
-         time1) = self.cadence.time_range_at_tstep(slit_coord, remask=remask)
+        (time0, time1) = self.cadence.time_range_at_tstep(slit_coord, remask=remask)
             # there's only one relevant axis and remask has it covered now
 
         # Create uv_min from the slit index
@@ -230,6 +225,26 @@ class RasterSlit1D(Observation):
                                                axis=self._along_slit_uv_index,
                                                remask=remask)
 
+    def uv_range_at_tstep(self, tstep, *, remask=False):
+        """The range of spatial `(u,v)` pixels active at a particular time step.
+
+        A RasterSlit1D samples one pixel of the slit at a time, so a single pixel is
+        active at each time step.
+
+        Parameters:
+            tstep (Scalar): Time step index.
+            remask (bool, optional): True to mask time steps outside the cadence.
+
+        Returns:
+            tuple[Pair, Pair]: `(uv_min, uv_max)`, where `uv_min` is the lower corner of
+            the `(u,v)` rectangle active at this time step and `uv_max` is the upper
+            corner, exclusive.
+        """
+
+        return Observation.uv_range_at_tstep_1d(self, tstep, self.uv_shape,
+                                                axis=self._along_slit_uv_index,
+                                                remask=remask)
+
     def time_shift(self, dtime):
         """A copy of the observation object with a time-shift.
 
@@ -241,8 +256,7 @@ class RasterSlit1D(Observation):
             Observation: A (shallow) copy of the object with a new time.
         """
 
-        obs = RasterSlit1D(axes=self._axes,
-                           cadence=self.cadence.time_shift(dtime),
+        obs = RasterSlit1D(axes=self._axes, cadence=self.cadence.time_shift(dtime),
                            fov=self.fov, path=self.path, frame=self.frame)
 
         for key in self.subfields.keys():

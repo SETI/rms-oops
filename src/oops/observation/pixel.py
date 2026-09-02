@@ -108,8 +108,7 @@ class Pixel(Observation):
         """
 
         # Works for a 1-D index or a multi-D index
-        tstep = Observation.scalar_from_indices(indices, self.t_axis,
-                                                derivs=derivs)
+        tstep = Observation.scalar_from_indices(indices, self.t_axis, derivs=derivs)
 
         if tstep is None:       # if t_axis < 0
             uv = Pair.filled(indices.shape, 0.5)
@@ -142,8 +141,7 @@ class Pixel(Observation):
 
         # Works for a 1-D index or a multi-D index
         tstep = Observation.scalar_from_indices(indices, self.t_axis)
-        (time_min,
-         time_max) = self.cadence.time_range_at_tstep(tstep, remask=remask)
+        (time_min, time_max) = self.cadence.time_range_at_tstep(tstep, remask=remask)
 
         # uv pair
         uv_min = Pair.zeros(indices.shape, dtype='int', mask=time_min.mask)
@@ -188,6 +186,24 @@ class Pixel(Observation):
         return Observation.uv_range_at_time_0d(self, time, uv_shape=self.uv_shape,
                                                remask=remask)
 
+    def uv_range_at_tstep(self, tstep, *, remask=False):
+        """The range of spatial `(u,v)` pixels active at a particular time step.
+
+        A Pixel observation has a single pixel, so the range always covers it.
+
+        Parameters:
+            tstep (Scalar): Time step index.
+            remask (bool, optional): True to mask time steps outside the cadence.
+
+        Returns:
+            tuple[Pair, Pair]: `(uv_min, uv_max)`, where `uv_min` is the lower corner of
+            the `(u,v)` rectangle active at this time step and `uv_max` is the upper
+            corner, exclusive.
+        """
+
+        return Observation.uv_range_at_tstep_0d(self, tstep, uv_shape=self.uv_shape,
+                                                remask=remask)
+
     def time_shift(self, dtime):
         """A copy of the observation object with a time-shift.
 
@@ -199,8 +215,8 @@ class Pixel(Observation):
             Observation: A (shallow) copy of the object with a new time.
         """
 
-        obs = Pixel(axes=self._axes, cadence=self.cadence.time_shift(dtime),
-                    fov=self.fov, path=self.path, frame=self.frame)
+        obs = Pixel(axes=self._axes, cadence=self.cadence.time_shift(dtime), fov=self.fov,
+                    path=self.path, frame=self.frame)
 
         for key in self.subfields.keys():
             obs.insert_subfield(key, self.subfields[key])

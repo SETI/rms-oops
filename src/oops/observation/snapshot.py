@@ -90,8 +90,8 @@ class Snapshot(Observation):
 
     def __getstate__(self):
         self.refresh()
-        return (self._axes, self.cadence, self._texp, self.fov, self.path,
-                self.frame, self.subfields)
+        return (self._axes, self.cadence, self._texp, self.fov, self.path, self.frame,
+                self.subfields)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], **state[-1])
@@ -168,17 +168,8 @@ class Snapshot(Observation):
             maximum value, exclusive.
         """
 
-        uv_min = Pair.INT00     # without a mask, return shapeless pairs
-        uv_max = Pair.as_pair(self.fov.uv_shape)
-
-        # If the object needs a mask, expand it and mask it
-        tstep = Scalar.as_scalar(tstep, recursive=False)
-        if remask or np.any(tstep.mask):
-            new_mask = Qube.or_(tstep.mask, (tstep.vals < 0) | (tstep.vals > 1))
-            uv_min = Pair.zeros(tstep.shape, dtype='int', mask=new_mask)
-            uv_max = Pair.filled(tstep.shape, self.uv_shape, mask=new_mask)
-
-        return (uv_min, uv_max)
+        return Observation.uv_range_at_tstep_0d(self, tstep, uv_shape=self.uv_shape,
+                                                remask=remask)
 
     def time_range_at_uv(self, uv_pair, *, remask=False):
         """The start and stop times of the specified spatial pixel `(u,v)`.
@@ -202,10 +193,8 @@ class Snapshot(Observation):
             is_outside = self.uv_is_outside(uv_pair, inclusive=True)
             new_mask = Qube.or_(is_outside.vals, uv_pair.mask)
             if new_mask is not False:
-                time_min = Scalar.filled(uv_pair.shape, self.time[0],
-                                                        mask=new_mask)
-                time_max = Scalar.filled(uv_pair.shape, self.time[1],
-                                                        mask=new_mask)
+                time_min = Scalar.filled(uv_pair.shape, self.time[0], mask=new_mask)
+                time_max = Scalar.filled(uv_pair.shape, self.time[1], mask=new_mask)
                 return (time_min, time_max)
 
         # Without a mask, it's OK to return shapeless values
@@ -242,16 +231,15 @@ class Snapshot(Observation):
         """
 
         cadence = self.cadence.time_shift(dtime)
-        return Snapshot(axes=self._axes, tstart=cadence, texp=self._texp,
-                        fov=self.fov, path=self.path, frame=self.frame,
-                        **self.subfields)
+        return Snapshot(axes=self._axes, tstart=cadence, texp=self._texp, fov=self.fov,
+                        path=self.path, frame=self.frame, **self.subfields)
 
     ######################################################################################
     # Overrides of Observation methods
     ######################################################################################
 
     def uv_from_ra_and_dec(self, ra, dec, *, tfrac=0.5, time=None, apparent=True,
-                           derivs=False, iters=2, quick={}):
+                           derivs=False, iters=2, quick=None):
         """Convert arbitrary scalars of RA and dec to FOV `(u,v)` coordinates.
 
         Parameters:
@@ -280,14 +268,12 @@ class Snapshot(Observation):
         """
 
         # Limit iterations to 1 for Snapshot
-        return super(Snapshot, self).uv_from_ra_and_dec(ra, dec,
-                                                        tfrac=tfrac, time=time,
-                                                        apparent=apparent,
-                                                        derivs=derivs,
+        return super(Snapshot, self).uv_from_ra_and_dec(ra, dec, tfrac=tfrac, time=time,
+                                                        apparent=apparent, derivs=derivs,
                                                         iters=1, quick=quick)
 
     def uv_from_path(self, path, *, tfrac=0.5, time=None, derivs=False, guess=None,
-                     quick={}, converge={}):
+                     quick=None, converge=None):
         """The `(u,v)` indices of an object in the FOV, given its path.
 
         Because every pixel of a Snapshot is exposed at the same time, `tfrac` is
@@ -322,7 +308,7 @@ class Snapshot(Observation):
                                                   quick=quick, converge=converge)
 
     def uv_from_coords(self, surface, coords, *, tfrac=0.5, time=None, underside=False,
-                       derivs=False, quick={}, converge={}):
+                       derivs=False, quick=None, converge=None):
         """The `(u,v)` indices of a surface point, given its coordinates. **** NOT WELL
         TESTED! ****
 
@@ -365,7 +351,7 @@ class Snapshot(Observation):
         return self.fov.uv_from_los_t(neg_arr_ap, time=time, derivs=derivs)
 
     def inventory(self, bodies, *, tfrac=0.5, time=None, expand=0., cache=True,
-                  return_type='list', fov=None, quick={}, converge={}):
+                  return_type='list', fov=None, quick=None, converge=None):
         """Info about the bodies that appear unobscured inside the FOV.
 
         Restrictions: All inventory calculations are performed at a single observation
@@ -482,8 +468,8 @@ class Snapshot(Observation):
         # This array equals True for each body falling somewhere inside the FOV
         falls_inside = np.empty(nbodies, dtype='bool')
         for i in range(nbodies):
-            falls_inside[i] = fov.sphere_falls_inside(centers[i], radii[i],
-                                                      time=obs_time, border=expand)
+            falls_inside[i] = fov.sphere_falls_inside(centers[i], radii[i], time=obs_time,
+                                                      border=expand)
 
         # This array equals True for each body completely hidden by another
         is_hidden = np.zeros(nbodies, dtype='bool')
@@ -523,8 +509,7 @@ class Snapshot(Observation):
 
         u_scale = fov.uv_scale.vals[0]
         v_scale = np.abs(fov.uv_scale.vals[1])
-        body_uv = fov.uv_from_los_t(arrival_event.neg_arr_ap,
-                                    time=obs_time).vals
+        body_uv = fov.uv_from_los_t(arrival_event.neg_arr_ap, time=obs_time).vals
         for i in range(nbodies):
             body_data = {}
             body_data['name'] = body_names[i]

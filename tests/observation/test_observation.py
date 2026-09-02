@@ -169,4 +169,105 @@ def test_a_timed_image_with_an_extended_fov_disowns_inventory() -> None:
     assert not extended._INVENTORY_IMPLEMENTED
 
 
+
+# The (u,v) range each subclass reports for its first two time steps, and the number of
+# steps in its cadence.
+UV_RANGE_AT_TSTEP = {
+    'Snapshot':     ((( 0, 0), (10, 20)), (( 0, 0), (10, 20)),  1),
+    'Pixel':        ((( 0, 0), ( 1,  1)), (( 0, 0), ( 1,  1)),  5),
+    'Slit1D':       ((( 0, 0), (10,  1)), (( 0, 0), (10,  1)),  1),
+    'RasterSlit1D': ((( 0, 0), ( 1,  1)), (( 1, 0), ( 2,  1)),  5),
+    'TimedImage':   ((( 0, 0), (10,  1)), (( 0, 1), (10,  2)), 20),
+}
+
+
+@pytest.mark.parametrize('name', sorted(UV_RANGE_AT_TSTEP))
+def test_uv_range_at_tstep_covers_the_pixels_of_each_step(name: str) -> None:
+    """Each subclass reports the pixels its cadence exposes at a given time step."""
+
+    (first, second, _) = UV_RANGE_AT_TSTEP[name]
+    obs = _observations()[name]
+
+    assert obs.uv_range_at_tstep(0) == (Pair(first[0]), Pair(first[1]))
+    assert obs.uv_range_at_tstep(1) == (Pair(second[0]), Pair(second[1]))
+
+
+def test_uv_range_at_tstep_indexes_a_two_dimensional_cadence_by_a_pair() -> None:
+    """A TimedImage with a 2-D cadence exposes one pixel per (slow, fast) time step."""
+
+    obs = _observations()['TimedImage2D']
+
+    assert obs.uv_range_at_tstep(Pair((0, 0))) == (Pair((0, 0)), Pair((1, 1)))
+    assert obs.uv_range_at_tstep(Pair((3, 7))) == (Pair((3, 7)), Pair((4, 8)))
+    assert obs.uv_range_at_tstep(Pair((9, 19))) == (Pair((9, 19)), Pair((10, 20)))
+
+
+@pytest.mark.parametrize('name', sorted(UV_RANGE_AT_TSTEP))
+def test_uv_range_at_tstep_agrees_with_uv_range_at_time(name: str) -> None:
+    """The pixels of a time step are those active at a time within that step.
+
+    uv_range_at_time is implemented independently, so this ties the two together.
+    """
+
+    (_, _, steps) = UV_RANGE_AT_TSTEP[name]
+    obs = _observations()[name]
+
+    for tstep in range(steps):
+        midtime = obs.cadence.time_at_tstep(tstep + 0.5)
+
+        assert obs.uv_range_at_tstep(tstep) == obs.uv_range_at_time(midtime)
+
+
+def test_uv_range_at_tstep_agrees_with_uv_range_at_time_in_two_dimensions() -> None:
+    """The same agreement holds over the whole grid of a 2-D cadence."""
+
+    obs = _observations()['TimedImage2D']
+
+    for i in range(10):
+        for j in range(20):
+            midtime = obs.cadence.time_at_tstep(Pair((i + 0.5, j + 0.5)))
+
+            assert obs.uv_range_at_tstep(Pair((i, j))) == obs.uv_range_at_time(midtime)
+
+
+def test_uv_range_at_tstep_masks_steps_outside_the_cadence() -> None:
+    """With remask, a time step outside the cadence has no pixels to report."""
+
+    obs = _observations()['RasterSlit1D']       # five time steps
+    (uv_min, uv_max) = obs.uv_range_at_tstep(Scalar([-1, 4, 5, 6]), remask=True)
+
+    # Index 5 is the inclusive end of the last step, so it belongs to the cadence.
+    assert list(uv_min.mask) == [True, False, False, True]
+    assert list(uv_max.mask) == [True, False, False, True]
+
+
+def test_uv_range_at_tstep_clips_outside_steps_without_remask() -> None:
+    """Without remask, a time step beyond either end reports the nearest one."""
+
+    obs = _observations()['RasterSlit1D']       # five time steps
+
+    assert obs.uv_range_at_tstep(-1) == obs.uv_range_at_tstep(0)
+    assert obs.uv_range_at_tstep(99) == obs.uv_range_at_tstep(4)
+
+
+def test_uv_range_at_tstep_propagates_the_mask_of_its_time_step() -> None:
+    """A masked time step yields a masked range even when remask is False."""
+
+    obs = _observations()['RasterSlit1D']
+    (uv_min, uv_max) = obs.uv_range_at_tstep(Scalar([0, 2], [True, False]),
+                                             remask=False)
+
+    assert list(uv_min.mask) == [True, False]
+    assert uv_min[1] == Pair((2, 0))
+
+
+def test_uv_range_at_tstep_is_not_implemented_for_an_insitu_observation() -> None:
+    """InSitu has no field of view, so it declines this as it declines its sibling."""
+
+    obs = _observations()['InSitu']
+
+    with pytest.raises(NotImplementedError, match='uv_range_at_tstep'):
+        obs.uv_range_at_tstep(0)
+
+
 ##########################################################################################

@@ -348,6 +348,137 @@ class Observation(Mutable):
         uv_max = Pair(uv_max_vals, tstep_min.mask)
         return (uv_min, uv_max)
 
+    def uv_range_at_tstep(self, tstep, *, remask=False):
+        """The range of spatial `(u,v)` pixels active at a particular time step.
+
+        Parameters:
+            tstep (Scalar or Pair): Time step index. This is a Scalar for an observation
+                with a 1-D cadence and a Pair for one with a 2-D cadence.
+            remask (bool, optional): True to mask time steps outside the cadence.
+
+        Returns:
+            tuple[Pair, Pair]: `(uv_min, uv_max)`, where `uv_min` is the lower corner of
+            the `(u,v)` rectangle active at this time step and `uv_max` is the upper
+            corner, exclusive.
+        """
+
+        raise NotImplementedError(f'{type(self).__name__}.uv_range_at_tstep is not '
+                                  'implemented')
+
+    def uv_range_at_tstep_0d(self, tstep, uv_shape, *, remask=False):
+        """uv_range_at_tstep() for an observation in which any time-dependence is
+        decoupled from the spatial axes.
+
+        Every pixel is active at every time step, so the range always covers the whole
+        field of view.
+
+        Parameters:
+            tstep (Scalar): Time step index.
+            uv_shape (tuple or Pair): Shape of the active detector(s) within the FOV, in
+                (u,v) order.
+            remask (bool, optional): True to mask time steps outside the cadence.
+
+        Returns:
+            tuple[Pair, Pair]: `(uv_min, uv_max)`, where `uv_min` is the lower corner of
+            the `(u,v)` rectangle active at this time step and `uv_max` is the upper
+            corner, exclusive.
+        """
+
+        uv_min = Pair.INT00     # without a mask, return shapeless pairs
+        uv_max = Pair.as_pair(uv_shape)
+
+        # If the object needs a mask, expand it and mask it
+        tstep = Scalar.as_scalar(tstep, recursive=False)
+        if remask or np.any(tstep.mask):
+            is_outside = (tstep.vals < 0) | (tstep.vals > self.cadence.shape[0])
+            new_mask = Qube.or_(tstep.mask, is_outside)
+            uv_min = Pair.zeros(tstep.shape, dtype='int', mask=new_mask)
+            uv_max = Pair.filled(tstep.shape, uv_shape, mask=new_mask)
+
+        return (uv_min, uv_max)
+
+    def uv_range_at_tstep_1d(self, tstep, uv_shape, *, axis=0, remask=False):
+        """uv_range_at_tstep() for some observations with a 1-D cadence.
+
+        Parameters:
+            tstep (Scalar): Time step index.
+            uv_shape (tuple): Shape of the active detector(s) within the FOV, in (u,v)
+                order.
+            axis (int, optional): 0 or 1, indicating the uv axis associated with the
+                cadence. Alternatively, -1 indicates that the time axis is not associated
+                with a spatial axis.
+            remask (bool, optional): True to mask time steps outside the cadence.
+
+        Returns:
+            tuple[Pair, Pair]: `(uv_min, uv_max)`, where `uv_min` is the lower corner of
+            the `(u,v)` rectangle active at this time step and `uv_max` is the upper
+            corner, exclusive. One pixel is active along `axis`; the full extent of the
+            FOV is active along the other axis.
+        """
+
+        if axis < 0:
+            return self.uv_range_at_tstep_0d(tstep, uv_shape, remask=remask)
+
+        tstep = Scalar.as_scalar(tstep, recursive=False)
+        tstep_int = tstep.int(top=self.cadence.shape[0], remask=remask, clip=True)
+
+        uv_min_vals = np.zeros(tstep_int.shape + (2,), dtype='int')
+        uv_max_vals = np.empty(tstep_int.shape + (2,), dtype='int')
+
+        uv_min_vals[..., axis] = tstep_int.vals
+        uv_max_vals[..., axis] = tstep_int.vals + 1
+        uv_max_vals[..., 1-axis] = uv_shape[1-axis]
+
+        uv_min = Pair(uv_min_vals, tstep_int.mask)
+        uv_max = Pair(uv_max_vals, tstep_int.mask)
+        return (uv_min, uv_max)
+
+    def uv_range_at_tstep_2d(self, tstep, uv_shape, *, slow=0, fast=1, remask=False):
+        """uv_range_at_tstep() for some observations with a 2-D cadence.
+
+        Parameters:
+            tstep (Pair): Time step index, as (slow, fast).
+            uv_shape (tuple): Shape of the active detector(s) within the FOV, in (u,v)
+                order.
+            slow (int, optional): 0 or 1, indicating the uv axis associated with the slow
+                index of the cadence. Alternatively, -1 indicates that this index is not
+                associated with a spatial axis.
+            fast (int, optional): 0 or 1, indicating the uv axis associated with the fast
+                index of the cadence. Alternatively, -1 indicates that this index is not
+                associated with a spatial axis.
+            remask (bool, optional): True to mask time steps outside the cadence.
+
+        Returns:
+            tuple[Pair, Pair]: `(uv_min, uv_max)`, where `uv_min` is the lower corner of
+            the `(u,v)` rectangle active at this time step and `uv_max` is the upper
+            corner, exclusive.
+        """
+
+        tstep = Pair.as_pair(tstep, recursive=False)
+        tstep_int = tstep.int(self.cadence.shape, remask=remask, clip=True)
+
+        if slow == 0 and fast == 1:
+            return (tstep_int, tstep_int + Pair.INT11)
+        elif slow == 1 and fast == 0:
+            swapped = tstep_int.swapxy()
+            return (swapped, swapped + Pair.INT11)
+
+        uv_min_vals = np.zeros(tstep_int.shape + (2,), dtype='int')
+        uv_max_vals = np.empty(tstep_int.shape + (2,), dtype='int')
+        uv_max_vals[..., 0] = uv_shape[0]
+        uv_max_vals[..., 1] = uv_shape[1]
+
+        if slow >= 0:
+            uv_min_vals[..., slow] = tstep_int.vals[..., 0]
+            uv_max_vals[..., slow] = tstep_int.vals[..., 0] + 1
+        if fast >= 0:
+            uv_min_vals[..., fast] = tstep_int.vals[..., 1]
+            uv_max_vals[..., fast] = tstep_int.vals[..., 1] + 1
+
+        uv_min = Pair(uv_min_vals, tstep_int.mask)
+        uv_max = Pair(uv_max_vals, tstep_int.mask)
+        return (uv_min, uv_max)
+
     def time_shift(self, dtime):
         """A copy of the observation object with a time-shift.
 
@@ -619,13 +750,9 @@ class Observation(Mutable):
             Meshgrid: The desired Meshgrid.
         """
 
-        return Meshgrid.for_shape(self.fov, self.shape,
-                                  self.u_axis, self.v_axis,
-                                  origin=origin,
-                                  undersample=undersample,
-                                  oversample=oversample,
-                                  limit=limit,
-                                  center_uv=center_uv,
+        return Meshgrid.for_shape(self.fov, self.shape, self.u_axis, self.v_axis,
+                                  origin=origin, undersample=undersample,
+                                  oversample=oversample, limit=limit, center_uv=center_uv,
                                   fov_kwargs=fov_kwargs)
 
     def timegrid(self, meshgrid, *, oversample=1, tfrac_limits=(0,1)):
@@ -977,8 +1104,7 @@ class Observation(Mutable):
 
             # Test for convergence
             prev_max_dt = max_dt
-            max_dt = (new_obs_time - obs_time).abs().max(builtins=True,
-                                                         masked=-1.)
+            max_dt = (new_obs_time - obs_time).abs().max(builtins=True, masked=-1.)
             obs_time = new_obs_time
 
             if LOGGING.observation_iterations or Observation._DEBUG:

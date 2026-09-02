@@ -26,7 +26,7 @@ deviations), SUGGESTION (improvements needing an owner decision).
 | `oops/backplane` | 15 | 69 | 49 | 9 | 9 |
 | **Total** | **118** | **327** | **170** | **90** | **76** |
 
-These counts describe the review as first delivered. Work continued afterward, and 38 of
+These counts describe the review as first delivered. Work continued afterward, and 39 of
 the findings it left open have since been resolved; each is labelled **(fixed after
 review)** in place of "(not fixed)", with its entry saying what was done. A few defects
 found during that later work are labelled **(found after review, fixed)** and were added
@@ -1804,9 +1804,20 @@ left alone.
   every body, with `body_data['inside']` carrying that flag. Docstring now says so.
 - **[SUGGESTION] (not fixed)** `snapshot.py:523-524` — `v_scale` is wrapped in `np.abs` but
   `u_scale` is not; a negative u-scale FOV would corrupt the u_min/u_max pixel bounds.
-- **[SUGGESTION] (not fixed)** `snapshot.py:155-181` — `uv_range_at_tstep` is not part of
-  the Observation API (no other subclass defines it) and is untested; either promote it to
-  the base class or remove it.
+- **[SUGGESTION] (fixed after review)** `snapshot.py:155-181` — `uv_range_at_tstep` was
+  not part of the Observation API (no other subclass defined it) and was untested. It has
+  been promoted: `Observation` now declares it alongside `uv_range_at_time`, with
+  `uv_range_at_tstep_0d`, `_1d` and `_2d` helpers mirroring the three that already back
+  the time-indexed method, and each concrete subclass delegates to the same helper its own
+  `uv_range_at_time` uses. Snapshot's implementation became a one-line delegation whose
+  behavior is unchanged, verified identical across fourteen combinations of time step and
+  `remask`. `InSitu` leaves it unimplemented, as it already leaves `uv_range_at_time`,
+  having no field of view.
+
+  Correctness was checked against the independently written time-indexed method: for every
+  time step of every subclass, `uv_range_at_tstep(i)` equals `uv_range_at_time` evaluated
+  at a time inside step `i` — 237 steps across the six observations, no mismatches.
+  Sixteen tests were added, of which fourteen fail before the promotion.
 
 ### src/oops/observation/pixel.py
 - **[BUG] (not fixed)** `pixel.py:115` — in `uvt` with `t_axis < 0`, `indices.shape` is
