@@ -26,14 +26,30 @@ deviations), SUGGESTION (improvements needing an owner decision).
 | `oops/backplane` | 15 | 69 | 49 | 9 | 9 |
 | **Total** | **118** | **327** | **170** | **90** | **76** |
 
-These counts describe the review as first delivered. Work continued afterward, and 61 of
+These counts describe the review as first delivered. Work continued afterward, and 101 of
 the findings it left open have since been resolved; each is labelled **(fixed after
-review)** in place of "(not fixed)", with its entry saying what was done. A few defects
-found during that later work are labelled **(found after review, fixed)** and were added
-to the file where they belong. The longer pieces of work have their own sections:
-"Strengthening the KeplerPath derivative tests", "Replacing the exclusion parameter",
-"Completing the backplane docstrings", and "Fixing the FOV caches". One module,
-`oops/utils.py`, was deleted outright; its section explains why.
+review)** in place of "(not fixed)", with its entry saying what was done. Four more are
+labelled **(partly fixed after review)**, where part of the finding was addressed and the
+entry names the remainder. A few defects found during that later work are labelled
+**(found after review, fixed)** and were added to the file where they belong. The longer
+pieces of work have their own sections: "Strengthening the KeplerPath derivative tests",
+"Replacing the exclusion parameter", "Completing the backplane docstrings", and "Fixing
+the FOV caches". One module, `oops/utils.py`, was deleted outright; its section explains
+why.
+
+**Labels re-verified 2026-09-02.** Every entry still marked "(not fixed)" was checked
+against the working tree. Forty-three had in fact been fixed and are relabelled above;
+one (`fittable.py:104`) the review had already retracted as a non-issue and is now marked
+**(no issue)**. The two `config.py` findings, the two `pixel.py` findings, the
+`fov_.nearest_uv` regression, the `tdifov.uv_from_xyt` in-place mutation, all three
+`limb.py` findings and the `multipath.py` indexing question were then fixed outright, so
+31 findings remain open: 30 bullets still marked "(not fixed)" plus the TDIFOV aliasing
+defect recorded as a paragraph under "Fixing the FOV caches". Three of the open ones are
+correctness defects; the rest are docstring,
+naming and house-style items, several of them deliberate. One finding was reclassified
+upward on measurement: `limb.py:476`, filed as a SUGGESTION that two methods "should
+probably agree", is a BUG — they are supposed to be inverses and were not. Three points fall outside the original findings and are listed at the
+end of "Most important issues left for the owner".
 
 ## Headline defects (fixed)
 
@@ -66,9 +82,10 @@ to the file where they belong. The longer pieces of work have their own sections
 
 ## Most important issues left for the owner
 
-Most of these were resolved in the work that followed the review; each says so. The two
-still open are `SpiceType1Frame.__init__`'s double registration and the axis-direction
-and `z`-definition discrepancies noted below.
+Most of these were resolved in the work that followed the review; each says so. As of the
+2026-09-02 re-verification and the fixes that followed it, none of the headline issues
+remain open: `SpiceType1Frame`'s double registration, `SynchronousFrame`'s axis-direction
+contradiction and `Limb`'s `z`-definition discrepancy have all been repaired.
 
 - `Event.__init__`: the `or origin.frame` default-frame clause is unreachable — the
   default frame is always J2000, not the origin's frame as documented. *Resolved by the
@@ -76,7 +93,8 @@ and `z`-definition discrepancies noted below.
 - `SpiceFrame._FRAME_LOOKUP` is a cache that is never populated, and neither SPICE
   lookup dict is cleared by `Frame._reset_caches` (*both resolved after this review; see
   the `spiceframe.py` entry*); `SpiceType1Frame.__init__` double-registers, clobbering
-  its "don't register" branch (still open).
+  its "don't register" branch. *Also resolved after this review: the two branches now
+  choose one `registered_id` and a single `_register` call follows.*
 - `ReversedCadence.tstep_at_time` is provably not the inverse of `time_at_tstep`
   (demonstrated numerically; existing tests cancel the error), but the correct
   clipping/derivative semantics are ambiguous. *Resolved after this review; see the
@@ -86,10 +104,15 @@ and `z`-definition discrepancies noted below.
   `TDIFOV`. *The caches were fixed after this review; see "Fixing the FOV caches" in the
   `oops/fov` section, which also records a separate TDIFOV defect found there.*
 - `SynchronousFrame`'s docstring contradicts its `twovec` axis signs; `Limb`'s `z`
-  definition disagrees between `z_clock_from_intercept` and `coords_from_vector3`;
+  definition disagrees between `z_clock_from_intercept` and `coords_from_vector3`
+  (*both resolved after this review; the `Limb` disagreement was a 1.4%-of-`z` error and
+  is described in the `limb.py:476` entry*);
   `Ellipsoid`'s `exclusion` default (0.9) contradicted its own ">= 0.95" recommendation.
-  *Resolved after this review: `exclusion` was removed and the zone is now derived from
-  the shape; see "Replacing the exclusion parameter" below.*
+  *`exclusion` was removed after this review and the zone is now derived from the shape;
+  see "Replacing the exclusion parameter" below. `SynchronousFrame` was also resolved,
+  in favor of the docstring. `Limb`'s `z` is still defined two ways — a radius difference
+  in `z_clock_from_intercept`, a perpendicular distance in `coords_from_vector3` — and
+  remains the one headline issue open.*
 - `KeplerPath` derivative tests needed a strengthening pass (they hid 6% velocity
   errors). *Resolved after this review; see "Strengthening the KeplerPath derivative
   tests" below.*
@@ -98,22 +121,43 @@ and `z`-definition discrepancies noted below.
   cache properties are undocumented. *Resolved after this review; see "Completing the
   backplane docstrings" below.*
 
+Three further points surfaced during the 2026-09-02 re-verification. They are not among
+the original findings, because each is a consequence of the work that followed the review:
+
+- **`CLAUDE.md`'s "Architecture traps" section is now stale.** It states that `for_path`
+  and `for_frame` "accept only `None` or a dict; anything else silently returns the
+  unoptimized object". Both now raise `ValueError` for anything that is not a dict, None,
+  or False, so the silent-passthrough trap no longer exists and the guidance misdescribes
+  the code.
+- **`fov_.nearest_uv` had regressed** — a conversion line was added and then immediately
+  overwritten, leaving a dead statement and the original defect intact. *Fixed; see the
+  `fov_.py:575` entry, which also records the two ways the finding turned out to be wider
+  than stated.*
+- **`QuickFrame.transform_at_time_if_possible`'s replacement docstring is inaccurate.**
+  It claims the method skips times at which the transform could not be evaluated, but it
+  returns `(time, xform)` and never drops one. A one-line typo also survives in the
+  `spiceframe.py` / `spicetype1frame.py` paragraph added at the same time: `` `time ` ``
+  carries a trailing space inside the backticks.
+
 ## Verification
 
 - Every edited file compiles; per-area unit suites were run by each reviewer.
 - Main suite as the review was delivered: `pytest tests --ignore=tests/hosts
-  --ignore=tests/spicedb` passed 150. It passes 224 after the later work, which added
-  tests along with its fixes.
+  --ignore=tests/spicedb` passed 150. It passed 224 after the first round of later work,
+  and passes 341 as of 2026-09-02.
 - spicedb suite: 2 passed, 1 skipped, unchanged throughout.
+- Lint gates re-run 2026-09-02: `ruff check .` and `flake8 --select=E12,E13` both clean.
+  Neither catches the dead statement in `fov_.nearest_uv`, because the name is rebound
+  rather than left unused.
 - Host (gold-master) suite: `pytest tests/hosts` passed 5 as the review was delivered, so
   none of the fixes described above disturbed the gold masters. **That is no longer the
-  case.** Removing the `exclusion` parameter shrank the masked zone around a body's
-  center, which is correct and deliberate, and four of the five standard observations now
-  report mask mismatches on their `:LIMB` backplanes. Every one is a "Mask mismatch",
-  meaning the masks differ while the values agree; no "Value mismatch" appears. The
-  masters need re-adoption to record the wider coverage, which is a decision about
-  reference data and was left to the author. See "Replacing the exclusion parameter" for
-  the numbers.
+  case, and still is not as of 2026-09-02: 4 failed, 1 passed.** Removing the `exclusion`
+  parameter shrank the masked zone around a body's center, which is correct and
+  deliberate, and four of the five standard observations report mask mismatches on their
+  `:LIMB` backplanes. Every one is a "Mask mismatch", meaning the masks differ while the
+  values agree; no "Value mismatch" appears. The masters need re-adoption to record the
+  wider coverage, which is a decision about reference data and remains with the author.
+  See "Replacing the exclusion parameter" for the numbers.
 
 ---
 ## Critique: top-level oops modules
@@ -223,8 +267,11 @@ Files reviewed: `__init__.py`, `oops.py`, `event.py`, `transform.py`, `constants
 - **[DOC] (fixed)** `transform.py:337` (`unrotate_transform`) — garbled sentence "applies
   the convert coordinates in the parent frame" rewritten; the transforms' composition is
   described in terms of reference frames, matching `rotate_transform`.
-- **[DOC] (not fixed)** — `identity`, `invert`, `rotate_transform`, `unrotate_transform`
-  have no Parameters sections for their `frame`/`arg` inputs.
+- **[DOC] (fixed after review)** — `identity`, `invert`, `rotate_transform`,
+  `unrotate_transform` have no Parameters sections for their `frame`/`arg` inputs. Fixed
+  after this review: `identity` documents `frame`, `rotate_transform` and
+  `unrotate_transform` document `arg`, and all four gained `Returns:` blocks (`invert`
+  takes no arguments, so it needs no Parameters section).
 - **[SUGGESTION] (fixed after review)** `transform.py:76-81` — `__init__` stores `origin`
   without conversion (`self.origin = origin`), so a string path ID is stored as a string
   while the docstring implies a Path; the sibling attributes go through `as_wayframe`.
@@ -254,11 +301,20 @@ Files reviewed: `__init__.py`, `oops.py`, `event.py`, `transform.py`, `constants
   the raise-when-no-logger behavior.
 - **[DOC] (fixed)** `config.py:543` (`AREA_FACTOR`) — comment typos "due the fact" and
   "are not not quite".
-- **[BUG] (not fixed)** `config.py:400-412` (`LOGGING.print`, literal mode with a
-  logger) — literal mode sets `LOGGING.log_formatting = False` and installs a literal
+- **[BUG] (fixed after review)** `config.py:400-412` (`LOGGING.print`, literal mode with
+  a logger) — literal mode sets `LOGGING.log_formatting = False` and installs a literal
   formatter, but nothing ever restores `log_formatting = True`, so after one literal
-  message new handlers are no longer formatted. Needs an owner decision on intended
-  life-cycle.
+  message new handlers are no longer formatted. Fixed after this review by settling the
+  life-cycle as "the flag is true exactly while the handlers carry LOG_FORMATTER":
+  `_check_logger_formatters` now restores the flag on the same pass that restores the
+  formatter, and `set_logger(None)` restores it with the rest of the defaults. A second
+  defect in the same method surfaced while fixing it and was repaired too:
+  `LOGGING.handlers = handlers` assigned only the newly-seen handlers instead of
+  accumulating, so with two handlers the set oscillated between them and each was
+  re-formatted on every message; it now records all of the logger's handlers. The stale
+  attribute comment, which named a nonexistent `DEFAULT_LOG_FORMAT`, was corrected.
+  `tests/test_config.py` is new; nothing had exercised LOGGING. Its 8 tests cover the
+  life-cycle, and 3 of them fail against the original code.
 - **[CONSISTENCY] (fixed after review)** — `LOGGING.print` uses a legacy `Inputs:` block;
   most one-line staticmethod docstrings omit Parameters (`all`'s `category`/`reset`
   semantics are undocumented). `set_stdout(False)` can disable stdout even when no other
@@ -266,8 +322,16 @@ Files reviewed: `__init__.py`, `oops.py`, `event.py`, `transform.py`, `constants
   Fixed after this review: the legacy block is converted, the LOGGING staticmethods that
   take arguments document them, and `set_stdout` applies the same fallback guard its
   siblings use, so stdout can only be switched off while another destination is live.
-- **[STYLE] (not fixed)** — classes are declared `class QUICK(object)` etc. with 2-space
-  body indent, an intentional legacy pattern used as namespaces; left alone.
+- **[STYLE] (fixed after review)** — classes are declared `class QUICK(object)` etc. with
+  2-space body indent, an intentional legacy pattern used as namespaces. Re-checked after
+  this review: only `QUICK` actually had the 2-space body; `PATH_PHOTONS`,
+  `SURFACE_PHOTONS`, `EVENT_CONFIG`, `LOGGING`, `PICKLE_CONFIG` and `AREA_FACTOR` were
+  already 4-space. `QUICK` was re-indented to match, its `dictionary` literal given the
+  8-space entries and closing brace the file already uses for `LOGGING.LEVELS`, and the
+  trailing comments re-aligned into one column. The parsed value of `QUICK.flag` and all
+  16 `QUICK.dictionary` entries are unchanged. The `(object)` base was left in place: it
+  is the convention throughout `src/oops`, so dropping it here alone would create the
+  inconsistency the finding objects to.
 
 ### src/oops/mutable.py
 
@@ -297,10 +361,11 @@ Files reviewed: `__init__.py`, `oops.py`, `event.py`, `transform.py`, `constants
   True/False (and its docstring documents the bool); changed to `-> bool`.
 - **[DOC] (fixed)** — missing period after "uses this function"; `copy`'s Returns used
   `(Fittable):` instead of `Fittable:`.
-- **[DOC] (not fixed)** `fittable.py:104` — `set_params` docstring has a `Returns:`
+- **[DOC] (no issue)** `fittable.py:104` — `set_params` docstring has a `Returns:`
   section but the summary does not mention that equal parameters short-circuit before
   the length check, so a wrong-length tuple equal in prefix... (actually unreachable;
-  no issue). The `Raises:` note is accurate.
+  no issue). The `Raises:` note is accurate. Re-checked after the review and confirmed:
+  nothing to do.
 - **[SUGGESTION] (not fixed)** `fittable.py:150` (`copy`) — relies on
   `hasattr(self, 'stripped_id')` to decide whether to drop the last `__getstate__` item;
   fragile coupling to Frame/Path internals, but documented.
@@ -339,7 +404,9 @@ Files reviewed: `__init__.py`, `oops.py`, `event.py`, `transform.py`, `constants
   with 0.5 and reserves an extent of 1 for it. Only cases that previously crashed behave
   differently. Reaching the bug needs an explicit `limit`, because the default is 1 along
   a missing axis.
-- **[STYLE] (not fixed)** — `import numpy as np` precedes `import numbers` (stdlib).
+- **[STYLE] (fixed after review)** — `import numpy as np` precedes `import numbers`
+  (stdlib). Reordered after this review into stdlib / third-party / project groups; see
+  also the `mutable.py` entry, which covers the same reordering.
 - Otherwise the cleanest module in this group: modern docstrings with accurate
   Parameters/Returns throughout, correct caching semantics (`_as_key` False sentinel).
 
@@ -489,18 +556,24 @@ All fixes below were verified with `py_compile`, targeted numerical experiments,
   `peri`, `prec`, `node`, `regr`), but the code reads keys `mean0`, `peri0`,
   `dperi_dt`, `node0`, `dnode_dt` (plus `amp`, `phase0`, `dphase_dt`). The docstring
   now lists the actual keys.
-- **[STYLE] (not fixed)** `keplerpath.py:785` — `_photon_from_planet` has a mutable
-  default argument `converge={}` (flake8-bugbear B006). It is never mutated, so it is
-  harmless, but `converge=None` would match the rest of the API. It also lacks a
-  docstring.
-- **[SUGGESTION] (not fixed)** `tests/path/test_keplerpath.py` — The derivative tests
-  normalize errors by `pos_norm` and scale by tiny parameter deltas, which made them
+- **[STYLE] (fixed after review)** `keplerpath.py:785` — `_photon_from_planet` has a
+  mutable default argument `converge={}` (flake8-bugbear B006). It is never mutated, so it
+  is harmless, but `converge=None` would match the rest of the API. It also lacks a
+  docstring. The default is `converge=None` after this review, matching the rest of the
+  API. The method is private and still carries no docstring.
+- **[SUGGESTION] (fixed after review)** `tests/path/test_keplerpath.py` — The derivative
+  tests normalize errors by `pos_norm` and scale by tiny parameter deltas, which made them
   numerically incapable of detecting any of the four partial/velocity bugs above (all
   passed the suite). Consider normalizing each element's error by the magnitude of that
-  element's own partial, and adding a velocity-vs-finite-difference check.
-- **[DOC] (not fixed)** `keplerpath.py:292-310` — `_xyz_planet`'s Returns section does
-  not mention that with `partials=True` the position carries a derivative named
-  'elements' (accessed as `pos.d_delements`). Minor; internal method.
+  element's own partial, and adding a velocity-vs-finite-difference check. Both were done
+  after this review, along with the rest of a rewrite; see "Strengthening the KeplerPath
+  derivative tests" below.
+- **[DOC] (fixed after review)** `keplerpath.py:292-310` — `_xyz_planet`'s Returns
+  section does not mention that with `partials=True` the position carries a derivative
+  named 'elements' (accessed as `pos.d_delements`). Minor; internal method. The Returns
+  block states after this review that the values carry derivatives by the orbital elements
+  when `partials` is True; it still does not name the derivative, which matters only to a
+  caller inside this module.
 
 ### src/oops/path/linearpath.py
 
@@ -509,9 +582,10 @@ All fixes below were verified with `py_compile`, targeted numerical experiments,
   `hasattr(pos, 'd_dt')`, and `.wod` strips all derivatives (verified empirically), so
   the velocity was silently `Vector3.ZERO`. The derivative is now captured before
   `.wod` is applied; a LinearPath built from a pos with `d_dt` now moves.
-- **[SUGGESTION] (not fixed)** `linearpath.py:53` — `_shape` broadcasts `_pos`,
+- **[SUGGESTION] (fixed after review)** `linearpath.py:53` — `_shape` broadcasts `_pos`,
   `_epoch`, origin, and frame but omits `_vel`, so a shaped velocity with a shapeless
-  position yields shape (). Edge case; left as is.
+  position yields shape (). Fixed after this review: `_vel` is included in the broadcast,
+  so a shaped velocity now shapes the Path.
 
 ### src/oops/path/multipath.py
 
@@ -525,12 +599,34 @@ All fixes below were verified with `py_compile`, targeted numerical experiments,
 - **[STYLE] (fixed)** `multipath.py:117` — The mask accumulator was `np.empty(shape)`
   (float dtype) used as a boolean mask; polymath casts it, but it now uses
   `dtype=bool` explicitly.
-- **[SUGGESTION] (not fixed)** `multipath.py:157` — `time[..., k]` uses the tuple `k`
-  from `np.ndenumerate`; this is only well-behaved for the documented 1-D case. If
+- **[SUGGESTION] (fixed after review)** `multipath.py:157` — `time[..., k]` uses the tuple
+  `k` from `np.ndenumerate`; this is only well-behaved for the documented 1-D case. If
   N-D MultiPaths are ever intended (`__getitem__` suggests so), this indexing needs
-  revisiting.
-- **[DOC] (not fixed)** `multipath.py:51` — `__getitem__` has an inline comment but no
-  docstring; it returns a scalar Path or a sliced MultiPath, worth documenting.
+  revisiting. Resolved after this review, and the open question it raised is now settled
+  in the negative: `__init__` rejects a multidimensional `paths` array outright, so N-D
+  MultiPaths are not intended. The loop uses `enumerate` rather than `np.ndenumerate`, so
+  `k` is a plain index and `time[..., k]` is unambiguous. Verified against a shapeless
+  `time`, a per-path `(4,)` time, and a `(3,4)` time with leading axes; `__getitem__`
+  returns a 1-D MultiPath for a slice and a bare Path for an integer.
+
+  The same change added a `quick == False` short circuit, carrying a `# noqa` for the
+  intentional comparison. Checked: `False`, `np.bool_(False)` and integer `0` all return
+  `self`, `None` does not, and `quick=True` is still rejected by `QuickPath.for_path` with
+  "invalid `quick` input, must be dict, None, or False". The noqa is the blanket form
+  rather than the targeted `# noqa: E712` used at quickframe.py:541 and quickpath.py:350;
+  it suppresses the diagnostic either way.
+
+  **A regression in that change was found while confirming this and repaired.** Converting
+  the paths with `[Path.as_path(p) for p in paths]` *before* the `ndim` check hands
+  `Path.as_path` a row of the 2-D array, so a multidimensional input died with
+  `TypeError: unhashable type: 'numpy.ndarray'` from inside `Path._PATH_REGISTRY`, in
+  place of the `ValueError('a MultiPath cannot be multidimensional')` that the code before
+  it raised. The shape check now runs first and the conversion happens in place afterward.
+  The `ValueError` was undocumented even before the regression; it is now in the
+  constructor's `Raises:` block and pinned by a test.
+- **[DOC] (fixed after review)** `multipath.py:51` — `__getitem__` has an inline comment
+  but no docstring; it returns a scalar Path or a sliced MultiPath, worth documenting. It
+  carries a docstring after this review, stating both return forms.
 
 ### src/oops/path/path_.py
 
@@ -560,9 +656,12 @@ All fixes below were verified with `py_compile`, targeted numerical experiments,
   implicitly concatenated into a single list element, so the path name and the origin
   sub-display were joined with no `,\n` separator, producing a malformed multi-line
   display. Split into two list elements as clearly intended.
-- **[STYLE] (not fixed)** `spicepath.py:130-144` — `_body_code_and_name` re-raises
-  `LookupError` without `from`, losing the cspyce traceback; also `except (KeyError,
-  LookupError)` is redundant since KeyError is a subclass of LookupError. Harmless.
+- **[STYLE] (partly fixed after review)** `spicepath.py:130-144` — `_body_code_and_name`
+  re-raises `LookupError` without `from`, losing the cspyce traceback; also `except
+  (KeyError, LookupError)` is redundant since KeyError is a subclass of LookupError.
+  Harmless. The redundancy is gone after this review; the handlers now catch `(KeyError,
+  IndexError)` and raise the matching subclass. Neither re-raise uses `from`, so the
+  cspyce traceback is still lost.
 
 ### src/oops/path/quickpath.py
 
@@ -583,8 +682,9 @@ All fixes below were verified with `py_compile`, targeted numerical experiments,
   element and wrapped the optional frame element in extra parentheses, producing
   doubled/misplaced closing parens in the display (the method already appends `)`
   after the join). Both removed.
-- **[STYLE] (not fixed)** `circlepath.py:61-62` — Double blank line between methods;
-  harmless deviation from the file's own single-blank-line rhythm.
+- **[STYLE] (fixed after review)** `circlepath.py:61-62` — Double blank line between
+  methods; harmless deviation from the file's own single-blank-line rhythm. Removed after
+  this review.
 
 ### src/oops/path/linearcoordpath.py
 
@@ -702,37 +802,44 @@ every repaired `_show` method.
 ### src/oops/frame/frame_.py
 - **[BUG] (fixed)** `frame_.py:664` — `NullFrame.__init__` assigned `self._wayframe =
   frame._wayframe` twice (lines 660 and 664). Removed the duplicate.
-- **[DOC] (not fixed)** `frame_.py:874-878, 970-973` — The boilerplate paragraph in
-  `transform_at_time_if_possible` ("The default behavior is to assume that all times are
-  valid. As a result, this method calls `transform_at_time`...") is copied into the
+- **[DOC] (fixed after review)** `frame_.py:874-878, 970-973` — The boilerplate paragraph
+  in `transform_at_time_if_possible` ("The default behavior is to assume that all times
+  are valid. As a result, this method calls `transform_at_time`...") is copied into the
   `LinkedFrame` and `ReversedFrame` overrides, where it is inaccurate: those overrides
   delegate to their component frames and can genuinely drop times. The same stale
   paragraph appears in `QuickFrame.transform_at_time_if_possible` (quickframe.py:243-246).
-  Deciding the right replacement wording per class is a judgment call, so it is reported
-  rather than edited.
+  Replaced in all three after this review; the paragraph now survives only in the abstract
+  base (frame_.py:176), where it is true. One inaccuracy remains in the replacement text:
+  `QuickFrame`'s copy says it skips the times at which the transform could not be
+  evaluated, but the method returns `(time, xform)` and never drops a time.
 - **[CONSISTENCY] (not fixed)** `frame_.py:684` — `NullFrame.transform_at_time` declares
   `quick=False` while the abstract signature (line 140) uses `quick=None`. Harmless
   (the argument is ignored), but several fixed-frame subclasses do the same
   (`QuickFrame:210`, `Cmatrix`, `Navigation`, `Rotation`, ...) while others use `None`;
   the convention is not applied uniformly.
-- **[DOC] (not fixed)** `frame_.py:340` — The comment `_FRAME_REGISTRY = {}  # frame ID ->
-  wayframe` is imprecise: `_register()` (line 405) stores the registered Frame itself,
-  which is not always its wayframe.
-- **[SUGGESTION] (not fixed)** `frame_.py:567` — `_wrt` compares `wayframe == reference`
-  with `==` where the class docstring (line 55) promises `is`-comparability of wayframes;
-  `is` would be cheaper and clearer. Behavior is correct either way.
+- **[DOC] (fixed after review)** `frame_.py:340` — The comment `_FRAME_REGISTRY = {}  #
+  frame ID -> wayframe` is imprecise: `_register()` (line 405) stores the registered Frame
+  itself, which is not always its wayframe. The comment reads `# frame ID -> frame` after
+  this review.
+- **[SUGGESTION] (fixed after review)** `frame_.py:567` — `_wrt` compares
+  `wayframe == reference` with `==` where the class docstring (line 55) promises
+  `is`-comparability of wayframes; `is` would be cheaper and clearer. Behavior is correct
+  either way. The comparison is `wayframe is reference` after this review.
 
 ### src/oops/frame/quickframe.py
 - **[BUG] (fixed)** `quickframe.py:584, 630, 640` — All three
   `LOGGING.diagnostic(...)` messages ended with a stray unmatched `)` inside the text
   (e.g. `'... {tmax:.3f})'`). Removed the stray parentheses.
-- **[DOC] (not fixed)** `quickframe.py:525-528` — The `quick` parameter of `for_frame`
-  (and of `Frame.quick_frame`, frame_.py:622) is documented as "If False, no QuickFrame is
-  created", but the code returns `frame` unchanged for *any* non-dict, non-None value,
-  including `True`. This is the documented CLAUDE.md trap; the docstring would benefit
-  from stating that only `None` or a dict enables a QuickFrame. Left for a coordinated
-  wording pass because the same text recurs in path/quickpath.py (owned by another
-  reviewer).
+- **[DOC] (fixed after review)** `quickframe.py:525-528` — The `quick` parameter of
+  `for_frame` (and of `Frame.quick_frame`, frame_.py:622) is documented as "If False, no
+  QuickFrame is created", but the code returns `frame` unchanged for *any* non-dict,
+  non-None value, including `True`. This is the documented CLAUDE.md trap; the docstring
+  would benefit from stating that only `None` or a dict enables a QuickFrame. Resolved
+  after this review by fixing the behavior rather than the wording: `QuickFrame.for_frame`
+  and `QuickPath.for_path` now raise `ValueError` for anything that is not a dict, None,
+  or False, so the silent-passthrough trap is gone and the existing text is accurate. Note
+  that this makes the "Architecture traps" note in CLAUDE.md stale, which still describes
+  the silent behavior.
 - **[SUGGESTION] (not fixed)** `quickframe.py:292` — In the empty-time branch of
   `_interpolate_matrix_omega`, `omega` is built from `np.ones(...)`; zeros would be more
   natural. Harmless because the array is empty by construction.
@@ -770,13 +877,17 @@ every repaired `_show` method.
 
   Four tests were added to `test_spiceframe.py`, covering reuse, the omega options, the
   inertial-frame sharing, and the reset; all four fail against the unpopulated cache.
-- **[CONSISTENCY] (not fixed)** `spiceframe.py:464, 467` — The numerical-omega branch of
-  `transform_at_time_if_possible` uses the `.values` alias while the rest of the file
-  uses `.vals`. Both work; one spelling should be chosen.
-- **[DOC] (not fixed)** `spiceframe.py:423-426, 439-442, 474-477` — The docstring
+- **[CONSISTENCY] (fixed after review)** `spiceframe.py:464, 467` — The numerical-omega
+  branch of `transform_at_time_if_possible` uses the `.values` alias while the rest of the
+  file uses `.vals`. Both work; one spelling should be chosen. Settled on `.vals` after
+  this review; no `.values` remains in the file.
+- **[DOC] (fixed after review)** `spiceframe.py:423-426, 439-442, 474-477` — The docstring
   advertises tolerance of cspyce errors, but the code re-raises for any time array with
   more than one dimension (`if len(time.shape) > 1: raise e`). This 1-D-only restriction
-  is worth documenting.
+  is worth documenting. Documented after this review: the docstrings state that a 1-D
+  `time` skips the unevaluable times and that a multidimensional `time` still raises.
+  (A typo survives in the added text: `` `time ` `` carries a trailing space inside the
+  backticks, here and in the matching paragraph in spicetype1frame.py.)
 - **[BUG] (found after review, fixed)** `spiceframe.py`, `spicetype1frame.py` — Both
   `get()` methods read `reference._spice_frame_name` before checking that the reference is
   something the constructor could use, so a reference that is neither a SpiceFrame nor
@@ -812,19 +923,23 @@ every repaired `_show` method.
   (e.g. `QuickFrame._refresh`, which this class enables via `_USE_QUICKFRAMES`). Each
   return now yields `(time, transform)`. The method still does not actually skip
   error-raising times (see next item).
-- **[DOC] (not fixed)** `spicetype1frame.py:190-192` — The docstring still claims the
-  method "tolerates times that raise cspyce errors", but there is no try/except; whether
-  gap-skipping should be implemented (as in SpiceFrame) or the claim dropped is a design
-  decision.
+- **[DOC] (fixed after review)** `spicetype1frame.py:190-192` — The docstring still claims
+  the method "tolerates times that raise cspyce errors", but there is no try/except;
+  whether gap-skipping should be implemented (as in SpiceFrame) or the claim dropped is a
+  design decision. Resolved after this review by implementing the gap-skipping: the method
+  now catches `(RuntimeError, ValueError, IOError)` the way SpiceFrame does, and documents
+  the surviving `OSError` case in a `Raises:` block.
 - **[DOC] (fixed)** `spicetype1frame.py:284` — `get()` documented `tick_tolerance` as
   "optional"; it is a required positional parameter. Removed the marker.
-- **[BUG] (not fixed)** `spicetype1frame.py:73-75` — `__init__` calls `_register` a
-  second time (line 75) after both branches above have already registered or deliberately
-  not registered: in the non-J2000 branch this defeats the "cache but don't register"
-  intent, and in the J2000 branch the second call uses the raw SPICE name *without* the
-  `replace(' ', '_')` applied at line 71, so a name containing spaces registers under two
-  IDs. Untangling which registration is intended needs the author; note the `_refresh()`
-  call on line 74 is required (it builds `_cache`) and must survive any cleanup.
+- **[BUG] (fixed after review)** `spicetype1frame.py:73-75` — `__init__` calls `_register`
+  a second time (line 75) after both branches above have already registered or
+  deliberately not registered: in the non-J2000 branch this defeats the "cache but don't
+  register" intent, and in the J2000 branch the second call uses the raw SPICE name
+  *without* the `replace(' ', '_')` applied at line 71, so a name containing spaces
+  registers under two IDs. Fixed after this review: the two branches now choose a
+  `registered_id` (the space-substituted name, or None for the non-J2000 case) and a
+  single `_register` call follows, so each frame registers exactly once and under one ID.
+  The required `_refresh()` call survived.
 - **[BUG] (fixed after review)** `spicetype1frame.py:19, 76-79, 322` — Cache bookkeeping
   is confused: the class declares its own `_FRAME_LOOKUP` (line 19, with a 3-tuple
   comment) that is never used, while reads and writes both go to
@@ -854,9 +969,10 @@ every repaired `_show` method.
   `SpiceFrame.__init__` already does. `tests/frame/test_spicetype1frame.py` is new, the
   class having had no tests at all; two of its five fail against the defects above, and
   the Galileo gold masters, which build this frame, are unchanged.
-- **[STYLE] (not fixed)** `spicetype1frame.py:126-131, 210-215` — The lazy
+- **[STYLE] (fixed after review)** `spicetype1frame.py:126-131, 210-215` — The lazy
   `_time_tolerance` computation is duplicated verbatim in both transform methods; a small
-  private helper would remove the copy.
+  private helper would remove the copy. Extracted after this review into
+  `_fill_time_tolerance`, which both methods call.
 
 ### src/oops/frame/cmatrix.py
 - No defects found. Docstrings are accurate and in the modern style; `_show` builds a
@@ -876,17 +992,18 @@ every repaired `_show` method.
 - **[DOC] (fixed)** `laplaceframe.py:36-37` — The `tilt` parameter did not state its
   units; per house convention all angles are radians and the code takes `cos`/`sin`
   directly. Now reads "The tilt in radians ...".
-- **[SUGGESTION] (not fixed)** `laplaceframe.py:137-139` — `np.cos(node_lon)` /
-  `np.sin(node_lon)` on a polymath `Scalar` returns an object-dtype ndarray of `Scalar`s
-  (verified in the venv), which then multiplies Vector3s element-wise. It works but is
-  slow and obscure; `node_lon.cos()` / `.sin()` would be idiomatic and faster. There is
-  no `tests/frame/test_laplaceframe.py`, so this module is untested.
+- **[SUGGESTION] (partly fixed after review)** `laplaceframe.py:137-139` —
+  `np.cos(node_lon)` / `np.sin(node_lon)` on a polymath `Scalar` returns an object-dtype
+  ndarray of `Scalar`s (verified in the venv), which then multiplies Vector3s
+  element-wise. It works but is slow and obscure; `node_lon.cos()` / `.sin()` would be
+  idiomatic and faster. Converted to `node_lon.cos()` / `.sin()` after this review. There
+  is still no `tests/frame/test_laplaceframe.py`, so the module remains untested.
 
 ### src/oops/frame/navigation.py
-- **[SUGGESTION] (not fixed)** `navigation.py:141` — `_set_params` stores `params`
-  as-is (`self._angles = params`), so after a fit `_angles` may be a list or ndarray
-  while the constructor normalizes to a tuple; `_wayframe_key` then mixes types.
-  Normalizing with `tuple(params)` would be safer.
+- **[SUGGESTION] (fixed after review)** `navigation.py:141` — `_set_params` stores
+  `params` as-is (`self._angles = params`), so after a fit `_angles` may be a list or
+  ndarray while the constructor normalizes to a tuple; `_wayframe_key` then mixes types.
+  Fixed after this review: `_set_params` stores `tuple(params)`.
 - Otherwise clean; docstrings accurate, including the `_matrix` private speed-up
   parameter.
 
@@ -906,21 +1023,24 @@ every repaired `_show` method.
   `None` test. Verified `RingFrame(frame, epoch=0.)` now yields a readonly Scalar epoch
   and an inertial frame.
 - **[STYLE] (fixed)** `ringframe.py:80` — Comment typo "tranform" corrected.
-- **[SUGGESTION] (not fixed)** `ringframe.py:88, 232` — The `(x, y) == (0., 0.)` pole
-  test compares polymath Scalars inside a tuple; it works via `Boolean.__bool__` but
-  raises if `x`/`y` are arrays. Reachable only for array-shaped planet frames, which are
-  rare; noted for robustness.
+- **[SUGGESTION] (fixed after review)** `ringframe.py:88, 232` — The `(x, y) == (0., 0.)`
+  pole test compares polymath Scalars inside a tuple; it works via `Boolean.__bool__` but
+  raises if `x`/`y` are arrays. Fixed after this review: both call sites delegate to a new
+  `_node_from_z_axis` static method, which masks with `(x == 0.) & (y == 0.)` and so works
+  element-wise for any shape.
 
 ### src/oops/frame/rotation.py
-- **[SUGGESTION] (not fixed)** `rotation.py:132-137` — For a shapeless angle, `params`
-  returns `(self._angle,)` (a Scalar inside the tuple) while the array case returns plain
-  floats; FrameShift returns floats. A fitter consuming `params` uniformly as numbers
-  would trip on the Scalar. Report only, since the Fittable contract is not spelled out.
+- **[SUGGESTION] (fixed after review)** `rotation.py:132-137` — For a shapeless angle,
+  `params` returns `(self._angle,)` (a Scalar inside the tuple) while the array case
+  returns plain floats; FrameShift returns floats. A fitter consuming `params` uniformly
+  as numbers would trip on the Scalar. Fixed after this review: the shapeless branch
+  returns `(self._angle.vals,)`, so both branches yield plain numbers.
 - **[STYLE] (not fixed)** `rotation.py:107-108` — Double blank line inside `_show`.
 
 ### src/oops/frame/spinframe.py
-- **[STYLE] (not fixed)** `spinframe.py:131` — Uses the private `angle._shape` where the
-  public `angle.shape` is meant; works but violates the code's own privacy convention.
+- **[STYLE] (fixed after review)** `spinframe.py:131` — Uses the private `angle._shape`
+  where the public `angle.shape` is meant; works but violates the code's own privacy
+  convention. Changed to `angle.shape` after this review.
 - Otherwise clean; the omega vector and matrix construction agree with rotation.py.
 
 ### src/oops/frame/synchronousframe.py
@@ -928,25 +1048,27 @@ every repaired `_show` method.
   second line as `SynchronousFrame(<planet>` (repeating the class name instead of
   indenting) because it used `{name}(` where the blanks-indent belongs. Fixed to match
   the house `_show` pattern.
-- **[DOC] (not fixed)** `synchronousframe.py:10-12` — The class docstring says the body
-  "keeps its x-axis pointed toward a central planet and its y-axis in the negative
-  direction of motion", but `transform_at_time` builds `Matrix3.twovec(event.pos, 0,
-  event.vel, 1)` where `event.pos` points from the planet *to* the body and `event.vel`
+- **[DOC] (fixed after review)** `synchronousframe.py:10-12` — The class docstring says
+  the body "keeps its x-axis pointed toward a central planet and its y-axis in the
+  negative direction of motion", but `transform_at_time` builds `Matrix3.twovec(event.pos,
+  0, event.vel, 1)` where `event.pos` points from the planet *to* the body and `event.vel`
   is the *positive* direction of motion — i.e. the code's x-axis points away from the
-  planet and y along the motion. Either the docstring or the sign convention is wrong;
-  needs the author's intent (test_synchronousframe.py exercises consistency, not the
-  sign).
-- **[BUG] (not fixed)** `synchronousframe.py:117` — `transform_at_time` returns
+  planet and y along the motion. Resolved after this review in favor of the docstring: the
+  code builds `Matrix3.twovec(-event.pos, 0, angular_momentum, 2)`, so the x-axis points
+  at the planet and the z-axis lies along the orbital angular momentum, leaving y opposite
+  the motion as documented. A comment at the call site now states the convention.
+- **[BUG] (fixed after review)** `synchronousframe.py:117` — `transform_at_time` returns
   `Transform(..., origin=self._orbit_path)` while the Frame's own `_origin` is
-  `self._planet_path` (line 51). The two should agree; which one is the true center of
-  rotation for this frame is a design question.
+  `self._planet_path` (line 51). Resolved after this review in favor of the orbiting body:
+  `__init__` sets `self._origin = self._orbit_path`, so the Frame's origin and the
+  Transform's origin agree.
 
 ### src/oops/frame/trackerframe.py
 - **[BUG] (fixed)** `trackerframe.py:104-107` — `_show` returned a 4-tuple of strings
   (trailing commas) instead of one string. Joined into a single f-string.
-- **[STYLE] (not fixed)** `trackerframe.py:75, 148` — `path_event` is assigned and never
-  used in both `_refresh` and `transform_at_time`; `_ = ...` or `(_, obs_event)` would be
-  clearer.
+- **[STYLE] (fixed after review)** `trackerframe.py:75, 148` — `path_event` is assigned
+  and never used in both `_refresh` and `transform_at_time`. Both now unpack as
+  `(_, obs_event)` after this review.
 
 ### src/oops/frame/twovectorframe.py
 - **[BUG] (fixed)** `twovectorframe.py:76-78` — `_show` returned a 3-tuple of strings
@@ -993,10 +1115,12 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
   Corrected the formula in both the `guess` parameter and the Returns bullet.
 - **[DOC] (fixed)** `surface_.py:421` — Comment typo "Strip derivatives is necessary"
   corrected to "if necessary".
-- **[DOC] (not fixed)** `surface_.py:345` — `coords_of_event` documents its return as
-  "Two or three unitless Scalars", but when the event carries a `hints` subfield the
-  underlying `coords_from_vector3` appends the hints value to the tuple, so a fourth
-  element can appear. The docstring should mention the optional hints element.
+- **[DOC] (fixed after review)** `surface_.py:345` — `coords_of_event` documents its
+  return as "Two or three unitless Scalars", but when the event carries a `hints` subfield
+  the underlying `coords_from_vector3` appends the hints value to the tuple, so a fourth
+  element can appear. Resolved after this review by fixing the code rather than the
+  docstring: the method returns `result[:axes]`, so the hints element can no longer reach
+  the caller and the documented contract holds.
 - **[SUGGESTION] (not fixed)** `surface_.py:303` — `position_is_inside` raises
   `NotImplementedError` for subclasses with `HAS_INTERIOR = True` that fail to override
   it, but the docstring has no `Raises:` section.
@@ -1102,16 +1226,19 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
   whose mask never includes the radial-limit mask) instead of `a.mask` (used for
   `theta` two lines above). Out-of-range points therefore kept an unmasked `z`.
   Changed to `a.mask`.
-- **[STYLE] (not fixed)** `ringplane.py:32` — Mutable default argument `modes=[]`. It is
-  never mutated, so it is harmless, but a `None` or tuple default would be safer.
-- **[CONSISTENCY] (not fixed)** `ringplane.py:185,239,291,329` — The `time` parameter
-  defaults to `0.` in `vector3_from_coords`, `normal`, and `velocity` but to `None` in
-  `intercept` and in every other Surface subclass; `velocity(pos, time=None)` with
-  modes present would raise. Harmonizing on one default would be safer.
-- **[CONSISTENCY] (not fixed)** `ringplane.py:167` — Uses `mask.any_true_or_masked()`
-  where `ansa.py:179` uses plain `mask.any()` for the identical pattern; the RingPlane
-  comment says the former allows fully masked results, so Ansa may have the lesser
-  variant.
+- **[STYLE] (fixed after review)** `ringplane.py:32` — Mutable default argument
+  `modes=[]`. It is never mutated, so it is harmless, but a `None` or tuple default would
+  be safer. The default is `modes=None` after this review.
+- **[CONSISTENCY] (fixed after review)** `ringplane.py:185,239,291,329` — The `time`
+  parameter defaults to `0.` in `vector3_from_coords`, `normal`, and `velocity` but to
+  `None` in `intercept` and in every other Surface subclass; `velocity(pos, time=None)`
+  with modes present would raise. Harmonized on `time=None` after this review, across all
+  five methods, matching the rest of the Surface subclasses.
+- **[CONSISTENCY] (fixed after review)** `ringplane.py:167` — Uses
+  `mask.any_true_or_masked()` where `ansa.py:179` uses plain `mask.any()` for the
+  identical pattern; the RingPlane comment says the former allows fully masked results, so
+  Ansa may have the lesser variant. Settled after this review in favor of the RingPlane
+  form; Ansa now uses `any_true_or_masked()` too.
 
 ### src/oops/surface/orbitplane.py
 - **[BUG] (fixed)** `orbitplane.py:194` — Building the unmasked variant used
@@ -1151,12 +1278,14 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
   `a*e` error above both survived; three tests were added, two of which fail on the old
   sign.
 - **[DOC] (fixed)** `orbitplane.py:363` — Comment typo `dy/dy` corrected to `dy/dt`.
-- **[STYLE] (not fixed)** `orbitplane.py:41-54` — In the `__init__` docstring, the
-  bullet list describing the elements is not indented under the `elements` parameter,
-  so Napoleon will not associate it with the parameter.
-- **[SUGGESTION] (not fixed)** `orbitplane.py:439-444` — `to_mean_anomaly`'s Newton loop
-  has no iteration cap; it relies solely on the improvement test. Fine in practice now
-  that the coefficient is `2e < 1`, but a `max_iterations` guard would be cheap.
+- **[STYLE] (fixed after review)** `orbitplane.py:41-54` — In the `__init__` docstring,
+  the bullet list describing the elements is not indented under the `elements` parameter,
+  so Napoleon will not associate it with the parameter. Indented after this review, so the
+  nine elements render under `elements`.
+- **[SUGGESTION] (fixed after review)** `orbitplane.py:439-444` — `to_mean_anomaly`'s
+  Newton loop has no iteration cap; it relies solely on the improvement test. Capped after
+  this review at a module constant `_ANOMALY_ITERATIONS`, with a failure to converge
+  reported.
 
 ### src/oops/surface/ansa.py
 - **[BUG] (fixed)** `ansa.py:78-88` — Pickling failed two ways (both reproduced):
@@ -1169,10 +1298,11 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
 - **[BUG] (fixed)** `ansa.py:183-193` — `coords_from_vector3` documented that a
   non-None `hints` value is appended to the returned tuple (the base-class contract)
   but never appended it. Restructured the returns to honor the contract.
-- **[CONSISTENCY] (not fixed)** `ansa.py:28` — Ansa sets `COORDINATE_TYPE =
+- **[CONSISTENCY] (fixed after review)** `ansa.py:28` — Ansa sets `COORDINATE_TYPE =
   'cylindrical'` but does not override `COORDINATE_NAMES`/`COORDINATE_ABBREVS`/
   `COORDINATE_RANGES`, so it inherits `('x','y','z')` from Surface even though its
-  coordinates are `(r, z, theta)`.
+  coordinates are `(r, z, theta)`. All three are declared after this review, as
+  `('radius', 'elevation', 'longitude')` / `('r', 'z', 'theta')` with matching ranges.
 
 ### src/oops/surface/limb.py
 - **[BUG] (fixed)** `limb.py:67` — `self.unmasked = Limb(self._ground, None)` passed
@@ -1192,17 +1322,61 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
   the maximum is four (`pos`, `t`, `p`, `track`); corrected to "Two to four".
 - **[BUG] (fixed)** `limb.py:35` — Latitude range in `COORDINATE_RANGES` was
   `(-PI, PI)`; corrected to `(-HALFPI, HALFPI)` (see ellipsoid.py entry).
-- **[SUGGESTION] (not fixed)** `limb.py:476` — `z_clock_from_intercept` computes
-  `z = pos.norm() - track.norm()` (difference of radii), whereas
-  `coords_from_vector3:135` computes `z = (pos - track).norm() * p.sign()`
-  (perpendicular distance, as the docstring states). For an ellipsoid these differ;
-  the two methods should probably agree.
-- **[SUGGESTION] (not fixed)** `limb.py:67` — `unmasked` is created as class `Limb`
-  even when `self` is a `PolarLimb` (which inherits this constructor); `type(self)`
-  may be intended.
-- **[SUGGESTION] (not fixed)** `limb.py:563-589` — `intercept_from_z_clock`'s Newton
-  loop lacks the divergence check (`max_dp >= prev_max_dp`) that every other iteration
-  in this package has.
+- **[BUG] (reclassified; fixed after review)** `limb.py:476` — `z_clock_from_intercept`
+  computes `z = pos.norm() - track.norm()` (difference of radii), whereas
+  `coords_from_vector3:135` computes `z = (pos - track).norm() * p.sign()` (perpendicular
+  distance, as the docstring states). Filed as a SUGGESTION that "the two methods should
+  probably agree"; measurement after the review showed it is a defect with a definite
+  right answer, so it is reclassified as a BUG.
+
+  `intercept_from_z_clock` solves `surface(normal) + z * normal = pos`, so it defines `z`
+  as the perpendicular distance, confirmed to 3e-12 km. Both methods' docstrings say
+  "perpendicular distance", and `coords_from_vector3` uses it. `z_clock_from_intercept`
+  was the only dissenter, which made it **not the inverse of `intercept_from_z_clock`**.
+  Building limb points from a known `z` over a Saturn-like spheroid (Rpol/Req = 0.83) and
+  asking for it back returned 986.2 for 1000 and 1972.8 for 2000: a systematic error of
+  about 1.4% of `z`, growing linearly with altitude and vanishing at `z == 0`, which is
+  why tests confined to the limb itself never saw it.
+
+  Fixed after this review with one line, `z = normal.unit().dot(pos - track)`. Note that
+  `coords_from_vector3`'s `p.sign()` idiom cannot simply be copied, because `p` is None in
+  the `hints is None` branch; `normal` is already computed on the preceding line for the
+  clock calculation and is defined in every branch. Round-trip error over a 220x220 grid
+  is now 2e-10 km worst case for both a Spheroid and an Ellipsoid, and the method agrees
+  with `coords_from_vector3` to the same precision.
+
+  No gold master moved: the only caller is `PolarLimb`, which nothing in `src` constructs.
+  The host suite still reports 52 mask mismatches and zero value mismatches, exactly as
+  before.
+- **[SUGGESTION] (fixed after review)** `limb.py:67` — `unmasked` is created as class
+  `Limb` even when `self` is a `PolarLimb` (which inherits this constructor); `type(self)`
+  may be intended. It was: `PolarLimb(ground, limits=...).unmasked` was a `Limb`, whose
+  `COORDINATE_ABBREVS` are `('lon','lat','z')` where PolarLimb's are `('z','clock','d')`
+  — a silent change of coordinate system under the same method names, not merely a type
+  mismatch. Fixed after this review to `type(self)(self._ground)`, matching the idiom
+  `OrbitPlane` already uses for the same purpose.
+
+  It was unreachable in practice, for three independent reasons worth recording: the only
+  production construction is `Limb(body.surface)` with no `limits`, so `unmasked` is
+  `self`; nothing in `src` constructs a `PolarLimb`; and the sole consumer,
+  `backplane/__init__.py:1008`, reaches `photon_to_event` -> `intercept`, which PolarLimb
+  does not override. A related suspicion was investigated and dismissed: `Limb` and
+  `PolarLimb` over the same ground share an `intercept_key`, but `surface_.py:25`
+  documents that as deliberate — "classes identical except for a mask or coordinate
+  definition return the same intercept key" — so it stays as it is.
+- **[SUGGESTION] (fixed after review)** `limb.py:563-589` — `intercept_from_z_clock`'s
+  Newton loop lacks the divergence check (`max_dp >= prev_max_dp`) that every other
+  iteration in this package has, `Limb.intercept` in the same file included. Added after
+  this review.
+
+  The risk in adding it was that the loop might be non-monotonic, in which case the guard
+  would abort a solve that would otherwise converge; the comment "Extra steps are often
+  needed for convergence" and the `+ 10` iteration allowance both hinted at that. Measured
+  first: over `z` from 0 to 100,000 km, all clock angles, and an observer as close as
+  1.05 Req, the iteration converges in 3 to 6 steps and is strictly monotonic every time,
+  so the guard never fires. It is consistency insurance rather than a fix for observed
+  behavior, and the `+ 10` allowance now looks generous. Nothing tests it directly; no
+  input is known that would trigger it.
 
 ### src/oops/surface/polarlimb.py
 - **[BUG] (fixed)** `polarlimb.py:144` — In `vector3_from_coords`, the third
@@ -1224,11 +1398,14 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
 - **[DOC] (fixed)** `nullsurface.py:134` — `intercept` returns entirely masked values
   by construction (a NullSurface has no extent), but the docstring did not say so;
   added a sentence.
-- **[SUGGESTION] (not fixed)** `nullsurface.py:164` — Uses `Vector3.as_vector(obs,
-  derivs)` (the inherited `Vector.as_vector`, with `recursive` passed positionally)
-  where every sibling uses `Vector3.as_vector3(obs, recursive=derivs)`.
-- **[SUGGESTION] (not fixed)** `nullsurface.py:115` — Stale comment "Convert to Scalars
-  and strip units, if any": units are implicit in oops and nothing here strips them.
+- **[SUGGESTION] (partly fixed after review)** `nullsurface.py:164` — Uses
+  `Vector3.as_vector(obs, derivs)` (the inherited `Vector.as_vector`, with `recursive`
+  passed positionally) where every sibling uses `Vector3.as_vector3(obs,
+  recursive=derivs)`. The argument is passed as `recursive=derivs` after this review, but
+  the call is still `as_vector` rather than the sibling `as_vector3`.
+- **[SUGGESTION] (fixed after review)** `nullsurface.py:115` — Stale comment "Convert to
+  Scalars and strip units, if any": units are implicit in oops and nothing here strips
+  them. Trimmed to "Convert to Scalars" after this review.
 
 ### src/oops/surface/_photon_solver.py
 - **[BUG] (fixed)** `_photon_solver.py:1588` (`_solve_photon_path_normal`) — the
@@ -1254,8 +1431,9 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
   into `_j2000`. Four subfield descriptions across the two public wrappers and the
   private solver were corrected, and both wrappers now record that their directions carry
   no stellar aberration. Four tests added; three fail against the old code.
-- **[STYLE] (not fixed)** `_photon_solver.py:770-774` — Lines inside
-  `if self.IS_VIRTUAL:` are indented three spaces instead of four.
+- **[STYLE] (fixed after review)** `_photon_solver.py:770-774` — Lines inside
+  `if self.IS_VIRTUAL:` are indented three spaces instead of four. Re-indented after this
+  review.
 - **[BUG] (fixed after review)** `_photon_solver.py:747` — For a non-virtual surface,
   `_solve_photon_by_coords` evaluated `vector3_from_coords` once before the loop, using
   the initial `surface_time`, and never re-evaluated it; `IS_TIME_DEPENDENT` was not
@@ -1369,10 +1547,10 @@ coverage, which is a decision about reference data and was left to the author.
   FOV caches" below, which also records why the TDIFOV failure was a `TypeError` from
   inside polymath rather than a stale value, and a separate TDIFOV defect found while
   verifying it.
-- **[CONSISTENCY] (not fixed)** `fov_.py:300` — `los_from_uv` accepts `derivs`/`remask` as
-  positional-or-keyword parameters while every sibling method makes them keyword-only with
-  `*`. Same for `wcs_from_uv` in wcsfov.py. Making them keyword-only would narrow the
-  public API, so left for a deliberate decision.
+- **[CONSISTENCY] (fixed after review)** `fov_.py:300` — `los_from_uv` accepts
+  `derivs`/`remask` as positional-or-keyword parameters while every sibling method makes
+  them keyword-only with `*`. Same for `wcs_from_uv` in wcsfov.py. Both were made
+  keyword-only after this review, so the whole FOV surface is now uniform.
 - **[CONSISTENCY] (fixed after review)** `fov_.py:622-786` — the lazy caches
   (`center_xy_filled`, `center_los_filled`, `center_dlos_duv_filled`,
   `outer_radius_filled`, `inner_radius_filled`, `corner00_filled`...`corner11_filled`) are
@@ -1383,10 +1561,32 @@ coverage, which is a decision about reference data and was left to the author.
   with them, and the test that asserts a time-dependent FOV caches nothing now checks that
   list rather than matching on the name suffix, so it cannot drift out of step with a
   later rename.
-- **[SUGGESTION] (not fixed)** `fov_.py:575` — `nearest_uv` with `remask=True` reads
-  `uv_pair.mask` from the raw argument; a tuple or ndarray input (accepted by the
-  `Pair.as_pair` conversion used for `clipped`) would raise AttributeError. Converting once
-  at the top would make the two uses consistent.
+- **[SUGGESTION] (fixed after review)** `fov_.py:575` — `nearest_uv` with `remask=True`
+  reads `uv_pair.mask` from the raw argument; a tuple or ndarray input (accepted by the
+  `Pair.as_pair` conversion used for `clipped`) would raise AttributeError. Converting
+  once at the top would make the two uses consistent. A first attempt added a conversion
+  line without wiring it in — `clipped = Pair.as_pair(uv_pair, recursive=False)` was
+  immediately overwritten by `clipped = uv_pair.copy(readonly=False)` — leaving a dead
+  statement and the defect intact. Fixed properly afterward: `uv_pair` is normalized once
+  with `Pair.as_pair` and that name is used throughout, so the clip and the remask test
+  share one converted value, and the dead line is gone.
+
+  Measuring the original before fixing it widened the finding twice. The crash is not
+  confined to `remask=True`: `clipped = uv_pair.copy(readonly=False)` is on the common
+  path, so a tuple failed with `AttributeError: 'tuple' object has no attribute 'copy'`
+  and an ndarray with `TypeError: copy() got an unexpected keyword argument 'readonly'`,
+  whatever `remask` was. The method simply did not accept anything but a Qube, and its
+  docstring said `uv_pair (Pair)`; that now reads `(Pair, tuple, list, or array)`.
+
+  The abandoned line's `recursive=False` was deliberately not adopted. `copy()` defaults
+  to keeping derivatives, so the live behavior carries them through, and `Pair.as_pair`
+  with the default `recursive=True` preserves that exactly; adopting `recursive=False`
+  would have silently dropped derivatives for the one host caller that passes a Meshgrid's
+  `uv` (`hosts/cassini/vims.py:820`). **A pre-existing inconsistency left open:** the two
+  branches disagree about derivatives — `remask=False` returns them, while `remask=True`
+  loses them, because `Pair(clipped, mask)` does not carry them over. That is a behavior
+  question about a public method rather than part of this finding, so the Returns block
+  now documents what actually happens instead of the code being changed.
 - **[STYLE] (fixed after review)** `fov_.py:640-641` — stray double blank line at the top
   of `center_los`; removed when that method was rewritten.
 - **[DOC]** Docstrings are modern Google style, accurate against signatures and behavior;
@@ -1404,11 +1604,14 @@ coverage, which is a decision about reference data and was left to the author.
   `if self.fast or self.coefft_xy_from_uv is None:`, evaluating the polynomial directly
   when there is no forward polynomial to invert. Verified by round-tripping such an FOV
   (`max_inversion_error()` ~1e-14).
-- **[CONSISTENCY] (not fixed)** `polynomialfov.py:98` — `self.uv_los.as_readonly()` return
-  value is discarded (works because `as_readonly` marks in place), whereas line 92 uses the
-  return value; the two idioms coexist in most fov modules.
-- **[STYLE] (not fixed)** `polynomialfov.py:5-6` — `import sys` (stdlib) is placed after
-  `import numpy` (third-party); the project rule puts stdlib first. Same in barrelfov.py.
+- **[CONSISTENCY] (fixed after review)** `polynomialfov.py:98` —
+  `self.uv_los.as_readonly()` return value is discarded (works because `as_readonly` marks
+  in place), whereas line 92 uses the return value; the two idioms coexist in most fov
+  modules. Settled after this review on using the return value in both places.
+- **[STYLE] (partly fixed after review)** `polynomialfov.py:5-6` — `import sys` (stdlib)
+  is placed after `import numpy` (third-party); the project rule puts stdlib first. Same
+  in barrelfov.py. Reordered in `polynomialfov.py` after this review; `barrelfov.py` still
+  has `import sys` below `import numpy as np`.
 
 ### src/oops/fov/barrelfov.py
 - **[BUG] (fixed)** `barrelfov.py:125` — `xy_precision = EPSILON * np.min(uv_scale.vals)`
@@ -1434,10 +1637,12 @@ coverage, which is a decision about reference data and was left to the author.
   the HST host code builds `uv_shape` as `(NAXIS1, NAXIS2)`. The swap was invisible only
   because all current users (JWST NIRCam, the unit tests) have square 2048x2048 images.
   Fixed to `(NAXIS1, NAXIS2)`.
-- **[CONSISTENCY] (not fixed)** `wcsfov.py:315` — `wcs_from_uv` takes `derivs`/`remask`
-  positionally (see fov_.py:300 note).
-- **[CONSISTENCY] (not fixed)** `wcsfov.py:22-33` — the class `Properties:` block uses
-  bulleted `*` items unlike the plain-indent style of the FOV base class docstring.
+- **[CONSISTENCY] (fixed after review)** `wcsfov.py:315` — `wcs_from_uv` takes
+  `derivs`/`remask` positionally (see fov_.py:300 note). Made keyword-only after this
+  review, with `los_from_uv`.
+- **[CONSISTENCY] (fixed after review)** `wcsfov.py:22-33` — the class `Properties:` block
+  uses bulleted `*` items unlike the plain-indent style of the FOV base class docstring.
+  Converted to the plain-indent style after this review.
 - **[SUGGESTION] (not fixed)** `wcsfov.py:95-97` — the attribute `polyfov` may actually
   hold a FlatFOV (the code comments on this); a neutral name would be clearer.
 
@@ -1458,20 +1663,23 @@ coverage, which is a decision about reference data and was left to the author.
   `fov.uv_los - uv_offset`), so after a pointing fit the FOV advertised the wrong line of
   sight. `_set_params` now recomputes `uv_los`. Verified: `set_params((3,4))` leaves
   `uv_los == fov.uv_los - uv_offset`.
-- **[SUGGESTION] (not fixed)** — the FOV base-class `*_filled` caches are never
+- **[SUGGESTION] (fixed after review)** — the FOV base-class `*_filled` caches are never
   invalidated when a Fittable FOV (OffsetFOV, Platescale) is refit via `set_params`, so a
-  `center_xy()` computed before the fit remains cached afterward. Cache invalidation
-  belongs in the Fittable/Mutable refresh path and needs a design decision.
+  `center_xy()` computed before the fit remains cached afterward. Fixed after this review:
+  `FOV` gained a `_refresh` that discards every name in `_CACHED_NAMES`, which the Mutable
+  protocol already calls after `set_params`. See "Fixing the FOV caches" below, which also
+  covers the time-keying defect in the same methods.
 
 ### src/oops/fov/platescale.py
 - Verified non-issue: `_set_params` does not call `_refresh`, but the Fittable framework
   (`fittable.py` `set_params`) invokes `_refresh` afterward, so `uv_scale`/`uv_area` stay
   consistent.
-- **[STYLE] (not fixed)** `platescale.py:5-7` — import block lists `polymath` after the
-  `oops` imports; every other fov module lists `polymath` first.
-- **[STYLE] (not fixed)** `platescale.py:13` — `__init__(self, factor, /, fov)` uses a
-  positional-only marker mid-signature for no evident reason; harmless but unusual for
-  this codebase.
+- **[STYLE] (fixed after review)** `platescale.py:5-7` — import block lists `polymath`
+  after the `oops` imports; every other fov module lists `polymath` first. Reordered after
+  this review.
+- **[STYLE] (fixed after review)** `platescale.py:13` — `__init__(self, factor, /, fov)`
+  uses a positional-only marker mid-signature for no evident reason; harmless but unusual
+  for this codebase. The marker was dropped after this review.
 
 ### src/oops/fov/subarray.py
 - No defects found.
@@ -1485,12 +1693,36 @@ coverage, which is a decision about reference data and was left to the author.
 - No defects found.
 
 ### src/oops/fov/tdifov.py
-- **[SUGGESTION] (not fixed)** `tdifov.py:126-142` — `uv_from_xyt` mutates the Pair
-  returned by the wrapped FOV in place (via the shared-memory `line += ...` and
+- **[SUGGESTION] (fixed after review)** `tdifov.py:126-142` — `uv_from_xyt` mutates the
+  Pair returned by the wrapped FOV in place (via the shared-memory `line += ...` and
   `uv.derivs['t'] += ...`). Safe with current subclasses, which return freshly built
   objects, but a wrapped FOV returning a shared or readonly object (e.g. NullFOV's
   `Pair.ZEROS`) would be corrupted — the "mutating shared objects" trap in CLAUDE.md.
-  `xy_from_uvt` defends with an explicit `.copy()`; `uv_from_xyt` should too.
+  `xy_from_uvt` defends with an explicit `.copy()`; `uv_from_xyt` should too. Fixed after
+  this review by giving it the same shape as its sibling: the wrapped FOV's result is kept
+  under its own name, `uv` becomes `result.copy(recursive=False)`, and the derivative
+  dictionary is re-inserted so that the readout compensation rebinds `uv.derivs['t']`
+  rather than adding into the caller's object in place.
+
+  Both mutations were demonstrated against the original before the fix, using a wrapped
+  FOV that returns the same object on every call. The values Pair was corrupted from
+  `[(3,4),(5,6)]` to `[(3,-2),(5,0)]` and the method returned that very object, so the
+  caller could reach it; a shared `t` derivative was corrupted from `1.0` to `0.875`.
+  Against the readonly case the failure is louder than the finding suggests: polymath
+  refuses the write, so `TDIFOV(NullFOV(), ...).uv_from_xyt(...)` raised `ValueError:
+  Scalar object is read-only` rather than corrupting anything. That call now works.
+
+  One consequence worth recording: with `derivs=False` the copy drops any derivatives a
+  wrapped FOV returns in spite of being asked not to, where the old code would have
+  compensated and returned them. That matches what `xy_from_uvt` already did and what the
+  caller asked for. Seven tests were added to `tests/fov/test_tdifov.py`; five fail
+  against the original, and two of the three that pass pin the shift and the derivative
+  compensation so the copy cannot silently cost either.
+
+  This is **not** the TDIFOV aliasing defect recorded under "Fixing the FOV caches", which
+  is untouched and still open. That one turns on `to_scalar` returning a copy rather than
+  a view for a shapeless Pair; the copy added here sits in front of the same aliasing and
+  neither repairs nor worsens it.
 
 ### src/oops/fov/__init__.py
 - No defects found; `__all__` matches the re-exported names.
@@ -1701,8 +1933,9 @@ JunoCam geometry for shapeless queries, so it is left for the author.
   added, one tying the flag to `tstep_range_at_time` across configurations so the two
   cannot drift apart again; the pinned `case_tdicadence_10_100_10_1` assertion is
   inverted. Six tests fail against the old flag.
-- **[SUGGESTION] (not fixed)** `tdicadence.py:54` — `self.time[-1]` works (2-tuple) but every
-  sibling class writes `self.time[1]`.
+- **[SUGGESTION] (fixed after review)** `tdicadence.py:54` — `self.time[-1]` works
+  (2-tuple) but every sibling class writes `self.time[1]`. Changed to `self.time[1]` after
+  this review.
 
 ### src/oops/cadence/instant.py
 The class carried a "DO NOT USE" banner when the review was written. That banner is gone
@@ -1839,13 +2072,28 @@ left alone.
   Sixteen tests were added, of which fourteen fail before the promotion.
 
 ### src/oops/observation/pixel.py
-- **[BUG] (not fixed)** `pixel.py:115` — in `uvt` with `t_axis < 0`, `indices.shape` is
-  evaluated on the raw argument, which `scalar_from_indices` allows to be a list or plain
-  number; those inputs crash with `AttributeError`. Convert first or document the
-  restriction.
-- **[BUG] (not fixed)** `pixel.py:235,267` — `event_at_grid`/`gridless_event` document
-  `meshgrid` as optional (None allowed) but dereference `meshgrid.shape` whenever `time` is
-  None; `gridless_event(None)` crashes where the base-class version works.
+- **[BUG] (fixed after review)** `pixel.py:115` — in `uvt` with `t_axis < 0`,
+  `indices.shape` is evaluated on the raw argument, which `scalar_from_indices` allows to
+  be a list or plain number; those inputs crash with `AttributeError`. Fixed after this
+  review by converting rather than restricting: the shape now comes from
+  `Observation.scalar_from_indices(indices, 0)`, the same conversion the time step would
+  have used, which was verified to reproduce `indices.shape` exactly for every input that
+  already worked (number, list, ndarray, Scalar, Pair, Vector). **The identical defect at
+  `pixel.py:147` was found while fixing this and repaired too**: `uvt_range` read
+  `indices.shape` on the raw argument as well, so `uvt_range(0)` crashed the same way; it
+  now uses `time_min.shape`, which already carries the converted shape.
+- **[BUG] (fixed after review)** `pixel.py:235,267` — `event_at_grid`/`gridless_event`
+  document `meshgrid` as optional (None allowed) but dereference `meshgrid.shape` whenever
+  `time` is None; `gridless_event(None)` crashes where the base-class version works. The
+  two halves turned out to need opposite treatments, and both were applied after this
+  review. `gridless_event` uses the meshgrid only to shape the event, so the reshape is
+  now skipped when it is None; the times keep one value per sample of the cadence, which
+  preserves the override's whole purpose, and the docstring says so. `event_at_grid`
+  dereferences the meshgrid unconditionally at line 256 to fill in `neg_arr_ap`, whatever
+  `time` is, so the meshgrid is genuinely required there and guarding the reshape would
+  only defer the crash by five lines; its docstring now documents the parameter as
+  required. (The base class carries the same "optional" wording over the same mandatory
+  use, but that is outside `pixel.py` and was left alone.)
 
 ### src/oops/observation/slit1d.py, rasterslit1d.py, timedimage.py, insitu.py, __init__.py
 - **[DOC] (not fixed)** `insitu.py:21` and class docstring — WIP banner ("Not yet tested. Do
@@ -1856,8 +2104,10 @@ left alone.
   cadence-extended-FOV bookkeeping); no defects found.
 
 ### src/oops/calibration/* (calibration_.py, flatcalib.py, nullcalib.py, radiance.py, rawcounts.py)
-- **[CONSISTENCY] (not fixed)** all subclasses set a public `has_baseline` attribute that the
-  base-class `Properties:` docstring does not document.
+- **[CONSISTENCY] (fixed after review)** all subclasses set a public `has_baseline`
+  attribute that the base-class `Properties:` docstring does not document. Documented
+  after this review in the `Calibration` class docstring, and `NullCalib` gained the
+  attribute so that every subclass really does define it.
 - **[DOC] (fixed after review)** `flatcalib.py:20` (also radiance.py, rawcounts.py) —
   `factor` was typed as "(float)" while the note under `baseline` explains both may be
   arrays broadcastable to the non-spatial data shape. Arrays were confirmed to work
