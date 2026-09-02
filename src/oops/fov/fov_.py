@@ -47,7 +47,8 @@ class FOV(Mutable):
                 Pair((pi/180/3600., pi/180/3600.)).
 
             Use the sign of the second element to define the direction of increasing `v`:
-            negative for up, positive for down.
+            negative for up, positive for down. Note that, by its definition, uv_scale[0]
+            must _always_ be positive.
         uv_shape (Pair): The size of the field of view in pixels. This number can be
             non-integral if the detector is not composed of a rectangular array of pixels.
         uv_area (float): The nominal area of a region defined by unit steps in `(u,v)`,

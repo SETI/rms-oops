@@ -22,6 +22,7 @@ class NullCalib(Calibration):
         # Required attributes
         self.factor = 1
         self.baseline = 0
+        self.has_baseline = False
         self.fov = None
         self.shape = ()
 
