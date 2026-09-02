@@ -64,9 +64,13 @@ tree, found already repaired there, and relabelled **(fixed after review)**, eac
 saying what was done: `quickframe.py:292`, `rotation.py:107-108`, `surface_.py:303`,
 `spice_shape.py:27-29`, `spice_shape.py:41`, and the `insitu.py` WIP banner. That leaves
 13 findings genuinely open. None of the six was a correctness defect, so the count of
-three open correctness defects above is unchanged. `spiceframe.py:124-128`, the dead
-`_omega_type` assignment in `_fill_spice_info`, was then fixed outright, leaving 12
-findings genuinely open: 11 bullets still marked "(not fixed)" plus the TDIFOV aliasing
+three open correctness defects above is unchanged. Three more were then cleared:
+`spiceframe.py:124-128`, the dead `_omega_type` assignment in `_fill_spice_info`, was
+fixed outright, and the two `graphicspheroid.py` style findings were confirmed resolved,
+with the unpadded `from polymath` line accepted as it stands. `fittable.py:150` was then
+examined in detail and accepted as it stands, labelled **(not fixed; accepted)** because
+its entry records the analysis rather than simply declining the finding. That leaves 9
+findings genuinely open: 8 bullets still marked "(not fixed)" plus the TDIFOV aliasing
 defect.
 
 ## Headline defects (fixed)
@@ -384,9 +388,28 @@ Files reviewed: `__init__.py`, `oops.py`, `event.py`, `transform.py`, `constants
   the length check, so a wrong-length tuple equal in prefix... (actually unreachable;
   no issue). The `Raises:` note is accurate. Re-checked after the review and confirmed:
   nothing to do.
-- **[SUGGESTION] (not fixed)** `fittable.py:150` (`copy`) — relies on
+- **[SUGGESTION] (not fixed; accepted)** `fittable.py:150` (`copy`) — relies on
   `hasattr(self, 'stripped_id')` to decide whether to drop the last `__getstate__` item;
-  fragile coupling to Frame/Path internals, but documented.
+  fragile coupling to Frame/Path internals, but documented. Reviewed and accepted as it
+  stands. The coupling is narrower than the finding suggests: of the eight Fittable
+  classes, `TimeShift`, `Platescale` and `OffsetFOV` have no `stripped_id`, so their state
+  is already the constructor's positional arguments, and `KeplerPath` overrides `copy()`
+  because `wobbles` is keyword-only. The heuristic therefore serves four classes —
+  `FrameShift`, `Navigation`, `Rotation` and `PathShift` — each of which ends its state
+  with `stripped_id` and takes `frame_id`/`path_id` as keyword-only, which is why the item
+  cannot be passed positionally and has to be dropped. The assumption it makes is that the
+  ID is the *last* state item. A Fittable Frame or Path that violated it would not copy
+  incorrectly: because the ID parameter is keyword-only in all of these constructors, the
+  surplus item raises `TypeError` from the constructor on the first `copy()` call. That
+  shape already exists in `LaplaceFrame` and `PoleFrame`, which append `_cache_size` after
+  `stripped_id`; neither is Fittable, and either one would fail loudly rather than
+  silently if it became so. The requirement, then, is that a Fittable Frame or Path put
+  its ID last in `__getstate__`, and `KeplerPath` shows the documented override for a
+  class that cannot. Two alternatives were considered and rejected: an isinstance test
+  against Frame/Path needs injected class references to dodge the circular import and
+  restates the same positional assumption, and moving the ID-dropping into `Frame.copy` /
+  `Path.copy` would put a Fittable-only method on every Frame and Path and lean on the MRO
+  of `class Rotation(Frame, Fittable)`.
 
 ### src/oops/lightsource.py
 
@@ -1232,11 +1255,16 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
 ### src/oops/surface/graphicspheroid.py
 - **[DOC] (fixed)** `graphicspheroid.py:80-87` — Same missing `hints` bullet as
   centricspheroid; added.
-- **[STYLE] (not fixed)** `graphicspheroid.py:14-15` — Double space in `axes=2,  derivs`
-  and a continuation line misaligned by one column relative to the opening parenthesis.
-- **[STYLE] (not fixed)** `graphicspheroid.py:5-8` — Imports split into a `polymath`
-  group and an `oops` group, unlike the sibling modules which keep them in one aligned
-  block (per house style, `polymath` groups with the `oops` imports).
+- **[STYLE] (fixed after review)** `graphicspheroid.py:14-15` — Double space in
+  `axes=2,  derivs` and a continuation line misaligned by one column relative to the
+  opening parenthesis. Both repaired: the signature now reads `axes=2, derivs=False`, and
+  every continuation line in the file aligns with its opening parenthesis.
+- **[STYLE] (fixed after review)** `graphicspheroid.py:5-8` — Imports split into a
+  `polymath` group and an `oops` group, unlike the sibling modules which keep them in one
+  aligned block (per house style, `polymath` groups with the `oops` imports). The blank
+  line between the groups was removed, so the imports are one block. The `from polymath`
+  line is left unpadded rather than column-aligned with the two `oops` lines, which the
+  owner has accepted; no further change is expected here.
 
 ### src/oops/surface/centricellipsoid.py
 - **[BUG] (fixed)** `centricellipsoid.py:57` — `coords_from_vector3` called
