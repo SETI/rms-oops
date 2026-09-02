@@ -60,6 +60,8 @@ class SpiceFrame(Frame):
 
         self._fill_spice_info(spice_frame, reference)
 
+        # _fill_spice_info infers inertia from the origin, which is only a proxy; the
+        # SPICE frame class is the authoritative test, so it takes precedence here.
         self._is_inertial = cspyce.frinfo(self._spice_frame_name)[1] == 1   # frame class
         self._reference_is_inertial = cspyce.frinfo(self._spice_reference_name)[1] == 1
         if self._is_inertial and self._reference_is_inertial:
@@ -163,8 +165,6 @@ class SpiceFrame(Frame):
         if spice_origin_code == 0:  # if the origin is the SSB, this Frame is inertial
             self._origin = None
             self._is_inertial = True
-            if self._reference._origin is None:     # no omega if both frames are inertial
-                self._omega_type = 'zero'
         else:
             self._origin = Frame._SpicePath.get(spice_origin_code)
             self._is_inertial = False

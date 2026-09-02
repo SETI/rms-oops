@@ -63,9 +63,11 @@ They are: `cache.py:63` (`clean_key` class patterns), `path_.py:748` and
 tree, found already repaired there, and relabelled **(fixed after review)**, each entry
 saying what was done: `quickframe.py:292`, `rotation.py:107-108`, `surface_.py:303`,
 `spice_shape.py:27-29`, `spice_shape.py:41`, and the `insitu.py` WIP banner. That leaves
-13 findings genuinely open: 12 bullets still marked "(not fixed)" plus the TDIFOV aliasing
-defect. None of the six was a correctness defect, so the count of three open correctness
-defects above is unchanged.
+13 findings genuinely open. None of the six was a correctness defect, so the count of
+three open correctness defects above is unchanged. `spiceframe.py:124-128`, the dead
+`_omega_type` assignment in `_fill_spice_info`, was then fixed outright, leaving 12
+findings genuinely open: 11 bullets still marked "(not fixed)" plus the TDIFOV aliasing
+defect.
 
 ## Headline defects (fixed)
 
@@ -915,11 +917,18 @@ every repaired `_show` method.
   same way. Found while implementing `_FRAME_LOOKUP` above, since populating that cache
   made the two key-building paths matter.
 
-- **[SUGGESTION] (not fixed)** `spiceframe.py:124-128` — `_fill_spice_info` sets
+- **[SUGGESTION] (fixed after review)** `spiceframe.py:124-128` — `_fill_spice_info` set
   `self._omega_type = 'zero'` for doubly-inertial frames, but `SpiceFrame.__init__`
-  (line 64) immediately overwrites it from the `omega_type` argument; the inertia-based
-  forcing actually in effect is the one at lines 60-61. The assignment inside
-  `_fill_spice_info` is dead for SpiceFrame and only matters for SpiceType1Frame.
+  (line 64) immediately overwrote it from the `omega_type` argument; the inertia-based
+  forcing actually in effect is the one at lines 60-61. The assignment was dead for
+  SpiceFrame, and the finding's guess that it "only matters for SpiceType1Frame" proved
+  wrong: `SpiceType1Frame.__init__` does not call `SpiceFrame.__init__`, so the omega
+  attributes are never established on it, and no code path reads `_omega_type` on a
+  SpiceType1Frame — every method that does (`__getstate__`, `transform_at_time`, `get`,
+  `_get_shortcut`) is overridden there. The two dead lines were removed. The
+  `_is_inertial` assignment in the same branch was kept, because it is the only one a
+  SpiceType1Frame gets and `Frame.is_inertial` reads it; a comment at the `__init__`
+  forcing site now records that the SPICE frame class supersedes the origin-based proxy.
 
 ### src/oops/frame/spicetype1frame.py
 - **[BUG] (fixed)** `spicetype1frame.py:103-105` — `__setstate__` called
