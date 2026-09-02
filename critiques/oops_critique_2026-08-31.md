@@ -51,6 +51,22 @@ upward on measurement: `limb.py:476`, filed as a SUGGESTION that two methods "sh
 probably agree", is a BUG — they are supposed to be inverses and were not. Three points fall outside the original findings and are listed at the
 end of "Most important issues left for the owner".
 
+**Findings the owner has decided to ignore.** Twelve of the open bullets are labelled
+**(not fixed; ignored by owner)**. They were reviewed and deliberately declined; no
+further action is expected on them, and they are excluded from any remaining-work count.
+They are: `cache.py:63` (`clean_key` class patterns), `path_.py:748` and
+`path_.py:430-433`, `quickpath.py:148`, `frame_.py:684`, `quickframe.py:97-99`,
+`surface_.py:362`, the `_photon_solver.py` duplicated converge-parameter block,
+`wcsfov.py:95-97`, `sequence.py:50-51`, `snapshot.py:523-524`, and `lightsource.py:87`.
+
+**Six more confirmed fixed.** Six of the open bullets were checked against the working
+tree, found already repaired there, and relabelled **(fixed after review)**, each entry
+saying what was done: `quickframe.py:292`, `rotation.py:107-108`, `surface_.py:303`,
+`spice_shape.py:27-29`, `spice_shape.py:41`, and the `insitu.py` WIP banner. That leaves
+13 findings genuinely open: 12 bullets still marked "(not fixed)" plus the TDIFOV aliasing
+defect. None of the six was a correctness defect, so the count of three open correctness
+defects above is unchanged.
+
 ## Headline defects (fixed)
 
 - **`Event` pickling was completely broken** (`event.py`): `__getstate__` stored `None`
@@ -387,7 +403,7 @@ Files reviewed: `__init__.py`, `oops.py`, `event.py`, `transform.py`, `constants
   after this review: the dispatch recognizes each documented form explicitly and rejects
   anything else with a `ValueError` naming the problem, where the try/except chain used to
   end in a bare `KeyError` from `Path.as_primary_path`.
-- **[SUGGESTION] (not fixed)** `lightsource.py:87` — registers itself in
+- **[SUGGESTION] (not fixed; ignored by owner)** `lightsource.py:87` — registers itself in
   `Body.BODY_REGISTRY` directly; documented behavior, but couples this module to Body
   internals.
 
@@ -412,10 +428,10 @@ Files reviewed: `__init__.py`, `oops.py`, `event.py`, `transform.py`, `constants
 
 ### src/oops/cache.py
 
-- **[SUGGESTION] (not fixed)** `cache.py:63` (`clean_key`) — the `case Cache._Path()`
-  class patterns require `oops/__init__.py` to have filled `_Path`/`_Frame`; if the
-  module were used standalone the match statement would raise TypeError. Consistent with
-  the documented "always import oops first" trap.
+- **[SUGGESTION] (not fixed; ignored by owner)** `cache.py:63` (`clean_key`) — the `case
+  Cache._Path()` class patterns require `oops/__init__.py` to have filled
+  `_Path`/`_Frame`; if the module were used standalone the match statement would raise
+  TypeError. Consistent with the documented "always import oops first" trap.
 - **[SUGGESTION] (fixed after review)** `cache.py:66` — `case x if hasattr(x, '__data__')`
   keys an object by `id()`, which can collide after garbage collection; acceptable for a
   cache that tolerates false hits only as stale entries, but worth a comment. The comment
@@ -640,15 +656,15 @@ All fixes below were verified with `py_compile`, targeted numerical experiments,
   corrected.
 - **[DOC] (fixed)** `path_.py:335` — Comment said "its existing wayframe" (a Frame
   term, copied from frame code) where "waypoint" was meant.
-- **[CONSISTENCY] (not fixed)** `path_.py:748` — `NullPath.event_at_time` declares
-  `quick=False` while the abstract method and other subclasses use `quick=None`. The
-  parameter is unused here (as in QuickPath, where `False` is deliberate), so this is
-  cosmetic.
-- **[SUGGESTION] (not fixed)** `path_.py:430-433` — `as_primary_path(id_string)`
-  returns the registry entry without `._primary`. This mirrors
-  `Frame.as_primary_frame` and is safe today because `_register()` always sets
-  `_primary = self` on registered paths, but the symmetry with the object branch is
-  worth a comment if that invariant ever weakens.
+- **[CONSISTENCY] (not fixed; ignored by owner)** `path_.py:748` —
+  `NullPath.event_at_time` declares `quick=False` while the abstract method and other
+  subclasses use `quick=None`. The parameter is unused here (as in QuickPath, where
+  `False` is deliberate), so this is cosmetic.
+- **[SUGGESTION] (not fixed; ignored by owner)** `path_.py:430-433` —
+  `as_primary_path(id_string)` returns the registry entry without `._primary`. This
+  mirrors `Frame.as_primary_frame` and is safe today because `_register()` always sets
+  `_primary = self` on registered paths, but the symmetry with the object branch is worth
+  a comment if that invariant ever weakens.
 
 ### src/oops/path/spicepath.py
 
@@ -672,9 +688,9 @@ All fixes below were verified with `py_compile`, targeted numerical experiments,
 - **[DOC] (fixed)** `quickpath.py:28-30` — The constructor's Raises section documented
   only the shape check; it also raises for a QuickPath-of-a-QuickPath and for a
   failed "path_self_check" precision test. Docstring extended.
-- **[CONSISTENCY] (not fixed)** `quickpath.py:148` — `event_at_time(quick=False)`
-  default differs from the abstract signature; deliberate here (a QuickPath never
-  quickens itself), so left alone.
+- **[CONSISTENCY] (not fixed; ignored by owner)** `quickpath.py:148` —
+  `event_at_time(quick=False)` default differs from the abstract signature; deliberate
+  here (a QuickPath never quickens itself), so left alone.
 
 ### src/oops/path/circlepath.py
 
@@ -812,11 +828,11 @@ every repaired `_show` method.
   base (frame_.py:176), where it is true. One inaccuracy remains in the replacement text:
   `QuickFrame`'s copy says it skips the times at which the transform could not be
   evaluated, but the method returns `(time, xform)` and never drops a time.
-- **[CONSISTENCY] (not fixed)** `frame_.py:684` — `NullFrame.transform_at_time` declares
-  `quick=False` while the abstract signature (line 140) uses `quick=None`. Harmless
-  (the argument is ignored), but several fixed-frame subclasses do the same
-  (`QuickFrame:210`, `Cmatrix`, `Navigation`, `Rotation`, ...) while others use `None`;
-  the convention is not applied uniformly.
+- **[CONSISTENCY] (not fixed; ignored by owner)** `frame_.py:684` —
+  `NullFrame.transform_at_time` declares `quick=False` while the abstract signature (line
+  140) uses `quick=None`. Harmless (the argument is ignored), but several fixed-frame
+  subclasses do the same (`QuickFrame:210`, `Cmatrix`, `Navigation`, `Rotation`, ...)
+  while others use `None`; the convention is not applied uniformly.
 - **[DOC] (fixed after review)** `frame_.py:340` — The comment `_FRAME_REGISTRY = {}  #
   frame ID -> wayframe` is imprecise: `_register()` (line 405) stores the registered Frame
   itself, which is not always its wayframe. The comment reads `# frame ID -> frame` after
@@ -840,13 +856,15 @@ every repaired `_show` method.
   or False, so the silent-passthrough trap is gone and the existing text is accurate. Note
   that this makes the "Architecture traps" note in CLAUDE.md stale, which still describes
   the silent behavior.
-- **[SUGGESTION] (not fixed)** `quickframe.py:292` — In the empty-time branch of
-  `_interpolate_matrix_omega`, `omega` is built from `np.ones(...)`; zeros would be more
-  natural. Harmless because the array is empty by construction.
-- **[SUGGESTION] (not fixed)** `quickframe.py:97-99` — `_refresh` computes `self._steps =
-  len(times)` before `transform_at_time_if_possible` may shorten `times`, so `_steps` can
-  overcount dropped samples; it is only used in the extension-cost heuristic of
-  `for_frame`, so the effect is a slightly wrong cost estimate, not a wrong result.
+- **[SUGGESTION] (fixed after review)** `quickframe.py:292` — In the empty-time branch of
+  `_interpolate_matrix_omega`, `omega` was built from `np.ones(...)`; zeros would be more
+  natural. Harmless because the array is empty by construction. The branch now builds
+  `omega` from `np.zeros(...)`, and no `np.ones` remains in the file.
+- **[SUGGESTION] (not fixed; ignored by owner)** `quickframe.py:97-99` — `_refresh`
+  computes `self._steps = len(times)` before `transform_at_time_if_possible` may shorten
+  `times`, so `_steps` can overcount dropped samples; it is only used in the
+  extension-cost heuristic of `for_frame`, so the effect is a slightly wrong cost
+  estimate, not a wrong result.
 
 ### src/oops/frame/spiceframe.py
 - **[BUG] (fixed)** `spiceframe.py:150-151` — `_show` for a frame with a non-J2000
@@ -1035,7 +1053,9 @@ every repaired `_show` method.
   returns plain floats; FrameShift returns floats. A fitter consuming `params` uniformly
   as numbers would trip on the Scalar. Fixed after this review: the shapeless branch
   returns `(self._angle.vals,)`, so both branches yield plain numbers.
-- **[STYLE] (not fixed)** `rotation.py:107-108` — Double blank line inside `_show`.
+- **[STYLE] (fixed after review)** `rotation.py:107-108` — Double blank line inside
+  `_show`. Removed; `_show` now carries a single blank line after its `blanks`
+  assignment.
 
 ### src/oops/frame/spinframe.py
 - **[STYLE] (fixed after review)** `spinframe.py:131` — Uses the private `angle._shape`
@@ -1121,19 +1141,25 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
   element can appear. Resolved after this review by fixing the code rather than the
   docstring: the method returns `result[:axes]`, so the hints element can no longer reach
   the caller and the documented contract holds.
-- **[SUGGESTION] (not fixed)** `surface_.py:303` — `position_is_inside` raises
+- **[SUGGESTION] (fixed after review)** `surface_.py:303` — `position_is_inside` raises
   `NotImplementedError` for subclasses with `HAS_INTERIOR = True` that fail to override
-  it, but the docstring has no `Raises:` section.
-- **[SUGGESTION] (not fixed)** `surface_.py:362` — `obs and obs.wrt(...)` relies on the
-  truthiness of an Event; `None if obs is None else obs.wrt(...)` would be more explicit.
+  it, but the docstring had no `Raises:` section. One was added, naming
+  `NotImplementedError` and the condition that triggers it.
+- **[SUGGESTION] (not fixed; ignored by owner)** `surface_.py:362` — `obs and
+  obs.wrt(...)` relies on the truthiness of an Event; `None if obs is None else
+  obs.wrt(...)` would be more explicit.
 
 ### src/oops/surface/spice_shape.py
-- **[DOC] (not fixed)** `spice_shape.py:27-29` — The `Raises:` section documents only
-  `KeyError`, but the code catches and re-raises `(RuntimeError, KeyError)` from
-  `cspyce.bodvcd`, so a `RuntimeError` can also propagate.
-- **[STYLE] (not fixed)** `spice_shape.py:41` — `raise e` inside the `except` block;
-  bare `raise` is the idiomatic way to re-raise and preserves the original traceback
-  identically.
+- **[DOC] (fixed after review)** `spice_shape.py:27-29` — The `Raises:` section
+  documented only `KeyError`, but the code caught and re-raised `(RuntimeError,
+  KeyError)` from `cspyce.bodvcd`, so a `RuntimeError` could also propagate. Resolved by
+  making the docstring true rather than by extending it: the `except` block now either
+  falls back to `default_radii` or raises `KeyError(...) from None`, so no `RuntimeError`
+  escapes and the documented `IndexError`/`KeyError`/`TypeError` list is complete.
+- **[STYLE] (fixed after review)** `spice_shape.py:41` — `raise e` inside the `except`
+  block; bare `raise` is the idiomatic way to re-raise and preserves the original
+  traceback identically. `raise e` is gone; the block raises `KeyError(...) from None`,
+  with a comment recording that the SPICE traceback is suppressed deliberately.
 
 ### src/oops/surface/ellipsoid.py
 - **[BUG] (fixed)** `ellipsoid.py:34` — `COORDINATE_RANGES` gave the latitude range as
@@ -1447,9 +1473,9 @@ All fixes below were verified with `py_compile` and by running `pytest tests/sur
   Virtual and fixed-shape surfaces are untouched, verified by comparing a modeless
   `RingPlane` and an `Ansa` before and after. Two tests added, one failing against the old
   code and one a control that passes either way.
-- **[DOC] (not fixed)** Docstrings here are thorough and consistent (modern style
-  throughout); the long converge-parameter block is duplicated eight times and could
-  be shared via a `Notes` cross-reference, but that is a judgment call.
+- **[DOC] (not fixed; ignored by owner)** Docstrings here are thorough and consistent
+  (modern style throughout); the long converge-parameter block is duplicated eight times
+  and could be shared via a `Notes` cross-reference, but that is a judgment call.
 
 ### src/oops/surface/__init__.py
 - No findings. `__all__` matches the imports; banner style correct.
@@ -1643,8 +1669,9 @@ coverage, which is a decision about reference data and was left to the author.
 - **[CONSISTENCY] (fixed after review)** `wcsfov.py:22-33` — the class `Properties:` block
   uses bulleted `*` items unlike the plain-indent style of the FOV base class docstring.
   Converted to the plain-indent style after this review.
-- **[SUGGESTION] (not fixed)** `wcsfov.py:95-97` — the attribute `polyfov` may actually
-  hold a FlatFOV (the code comments on this); a neutral name would be clearer.
+- **[SUGGESTION] (not fixed; ignored by owner)** `wcsfov.py:95-97` — the attribute
+  `polyfov` may actually hold a FlatFOV (the code comments on this); a neutral name would
+  be clearer.
 
 ### src/oops/fov/flatfov.py
 - No defects found. Docstrings accurate and in modern style.
@@ -1983,9 +2010,9 @@ left alone.
 - **[DOC] (fixed after review)** `timeshift.py:63` — the `params` property (Fittable
   API) had no docstring; added one in the form its siblings `Platescale.params` and
   `OffsetFOV.params` use.
-- **[SUGGESTION] (not fixed)** `sequence.py:50-51` — the error message "Sequence tlist must
-  be 1-D" also fires for a 1-D list of length <= 1; the length requirement is not mentioned
-  in the message or the docstring.
+- **[SUGGESTION] (not fixed; ignored by owner)** `sequence.py:50-51` — the error message
+  "Sequence tlist must be 1-D" also fires for a 1-D list of length <= 1; the length
+  requirement is not mentioned in the message or the docstring.
 - sequence.py, snapcadence.py, timeshift.py, dualcadence.py, metronome.py, cadence_.py are
   otherwise accurate: signatures, defaults, keyword-only markers, and Returns blocks match
   the code, and the modern Google style is applied consistently.
@@ -2054,8 +2081,9 @@ left alone.
 - **[DOC] (fixed)** `snapshot.py:412-415` — the `return_type='full'` docstring claimed
   entries exist only for unobscured bodies inside the FOV; the loop stores an entry for
   every body, with `body_data['inside']` carrying that flag. Docstring now says so.
-- **[SUGGESTION] (not fixed)** `snapshot.py:523-524` — `v_scale` is wrapped in `np.abs` but
-  `u_scale` is not; a negative u-scale FOV would corrupt the u_min/u_max pixel bounds.
+- **[SUGGESTION] (not fixed; ignored by owner)** `snapshot.py:523-524` — `v_scale` is
+  wrapped in `np.abs` but `u_scale` is not; a negative u-scale FOV would corrupt the
+  u_min/u_max pixel bounds.
 - **[SUGGESTION] (fixed after review)** `snapshot.py:155-181` — `uv_range_at_tstep` was
   not part of the Observation API (no other subclass defined it) and was untested. It has
   been promoted: `Observation` now declares it alongside `uv_range_at_time`, with
@@ -2096,9 +2124,12 @@ left alone.
   use, but that is outside `pixel.py` and was left alone.)
 
 ### src/oops/observation/slit1d.py, rasterslit1d.py, timedimage.py, insitu.py, __init__.py
-- **[DOC] (not fixed)** `insitu.py:21` and class docstring — WIP banner ("Not yet tested. Do
-  not use."); depends on the also-WIP Instant cadence. No further findings; the pickle
-  support and time_shift are consistent with the other subclasses.
+- **[DOC] (fixed after review)** `insitu.py:21` and class docstring — WIP banner ("Not
+  yet tested. Do not use."); depended on the also-WIP Instant cadence. Both banners are
+  gone, and both classes are now tested: `InSitu` in
+  `tests/observation/test_observation.py`, `Instant` in `tests/cadence/test_instant.py`.
+  No further findings; the pickle support and time_shift are consistent with the other
+  subclasses.
 - slit1d.py, rasterslit1d.py, timedimage.py: docstrings verified against signatures and
   behavior (including the tricky fast/slow axis-suffix mapping in TimedImage and its
   cadence-extended-FOV bookkeeping); no defects found.
