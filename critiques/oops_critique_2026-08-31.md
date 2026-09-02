@@ -70,8 +70,12 @@ fixed outright, and the two `graphicspheroid.py` style findings were confirmed r
 with the unpadded `from polymath` line accepted as it stands. `fittable.py:150` was then
 examined in detail and accepted as it stands, labelled **(not fixed; accepted)** because
 its entry records the analysis rather than simply declining the finding, and
-`centricspheroid.py:50,96` was fixed. That leaves 8 findings genuinely open: 7 bullets
-still marked "(not fixed)" plus the TDIFOV aliasing defect.
+`centricspheroid.py:50,96` was fixed. The remaining seven bullets were all in
+`gravity_.py` and `oblategravity.py`; a pass over those two modules closed five of them
+outright and left two partly open: the `ilr_pattern`/`olr_pattern` provenance, with a
+question for the author recorded in its entry, and the `geom_from_state` diagnostics,
+whose `LOGGING` half the owner has declined. That leaves 2 findings genuinely open: the
+`ilr_pattern`/`olr_pattern` remainder plus the TDIFOV aliasing defect.
 
 ## Headline defects (fixed)
 
@@ -1887,22 +1891,44 @@ JunoCam geometry for shapeless queries, so it is left for the author.
   Realigned the continuation lines the rename disturbed.
 - **[DOC] (fixed)** `oblategravity.py:106` — `kappa2()` described its return as "(radians/s)"
   although it returns the *square* of the frequency. Now reads "(radians^2/s^2)".
-- **[DOC] (not fixed)** `oblategravity.py:625-634,694-702` — `state_from_geom` says "Returns
+- **[DOC] (fixed after review)** `oblategravity.py:625-634,694-702` — `state_from_geom` said "Returns
   x, y, z, vx, vy, vz" but actually returns two stacked arrays `(pos, vel)`;
-  `geom_from_state` says "Returns: a, e, inc, long_peri, long_node, mean_anomaly" but
+  `geom_from_state` said "Returns: a, e, inc, long_peri, long_node, mean_anomaly" but
   actually returns `(a, e, inc, mean_lon, long_peri, long_node)` — both the names and the
-  order are wrong. These docstrings (adapted-from-SWIFT notes) need a rewrite into the
-  modern format with correct Returns blocks; left for a deliberate documentation pass.
-- **[CONSISTENCY] (not fixed)** `oblategravity.py:80` — `potential(self, a)` drops the
-  `e=0., sin_i=0.` parameters that the base-class signature declares.
-- **[CONSISTENCY] (not fixed)** whole file — docstrings are one-line summaries with no
+  order were wrong. Both now carry modern `Parameters:`/`Returns:` blocks, verified against
+  live round trips through `state_from_geom`/`geom_from_state`. `geom_from_state` also
+  credited SWIFT's `orbel_vx2el.f`, a copy-paste from `osc_from_state`; its algorithm is
+  Renner & Sicardy (2006) EQ 22-47, and the attribution now says so.
+- **[CONSISTENCY] (fixed after review)** `oblategravity.py:80` — `potential(self, a)` dropped the
+  `e=0., sin_i=0.` parameters that the base-class signature declared. `Gravity.potential`
+  now declares `potential(self, a)`: the potential energy in the equatorial plane has no
+  dependence on the eccentricity or the inclination, so the subclass signature was the
+  correct one.
+- **[CONSISTENCY] (found after review, fixed)** `oblategravity.py` and `gravity_.py` — `Gravity` declared the
+  optional `e`/`sin_i` parameters keyword-only while `OblateGravity` still took them
+  positionally, and the base-class wrappers called `self.combo(a, factors, e, sin_i)`
+  positionally against their own declared signature, which would raise `TypeError` in any
+  subclass that followed the base. Every optional orbital parameter is now keyword-only in
+  both classes, and every internal call passes them by keyword.
+- **[CONSISTENCY] (fixed after review)** whole file — docstrings were one-line summaries with no
   `Parameters:`/`Returns:` sections; several public methods (`combo`, `solve_a`,
-  `state_from_osc`, ...) document neither their inputs nor their return structure.
-- **[STYLE] (not fixed)** `oblategravity.py:5-6` — `import numpy as np` precedes
-  `import warnings`; the stdlib import belongs in its own group above the third-party group.
-- **[SUGGESTION] (not fixed)** `oblategravity.py:761` — the divergence diagnostics in
-  `geom_from_state` use `warnings.warn` with raw state values; elsewhere the module logs
-  through `LOGGING`. Also `bad_idx` indexing assumes array (not scalar) inputs.
+  `state_from_osc`, ...) documented neither their inputs nor their return structure. Every
+  module, class, method, and internal helper in both files now carries a Google-style
+  docstring with `Parameters:` and `Returns:` blocks and explicit units, and
+  `OblateGravity` gained an `Attributes:` block. The duplicated `# Orbital elements`
+  section banner above `osc_from_state` is gone.
+- **[STYLE] (fixed after review)** `oblategravity.py:5-6` — `import numpy as np` preceded
+  `import warnings`. The stdlib import now sits in its own group above the third-party
+  group.
+- **[SUGGESTION] (partly fixed after review)** `oblategravity.py:761` — the divergence
+  diagnostics in `geom_from_state` use `warnings.warn` with raw state values, where the
+  rest of the library logs through `LOGGING`. The owner has ruled that `warnings` is
+  correct here, so this half of the finding is declined; no further action is expected.
+  The second half was a defect and is fixed: `bad_idx` came from `diff_of_diff.argmax()`,
+  a *flat* index that was then used to index the state arrays, correct only for 1-D input,
+  silently reporting a whole row for 2-D input and raising `IndexError` for shapeless
+  input. It is now unraveled to a tuple index, which also covers the shapeless case (the
+  empty tuple). Exercised live for shapeless, 1-D, and 2-D inputs.
 
 ### src/oops/gravity/gravity_.py
 - **[DOC] (fixed)** `gravity_.py:129` — "A gravity filed from the registry" typo → "field".
@@ -1912,11 +1938,21 @@ JunoCam geometry for shapeless queries, so it is left for the author.
   `OblateGravity` overrides all of these and passes the parameters through, so the base
   versions were both unused and wrong. They now forward `e` and `sin_i`, matching the
   subclass behavior.
-- **[CONSISTENCY] (not fixed)** `gravity_.py:11-65` — the abstract methods use bare `pass`
+- **[CONSISTENCY] (fixed after review)** `gravity_.py:11-65` — the abstract methods used bare `pass`
   (silently returning None) instead of raising `NotImplementedError` as the Cadence,
-  Calibration, and Observation abstract bases do.
-- **[SUGGESTION] (not fixed)** `gravity_.py:109-121` — `ilr_pattern`/`olr_pattern` have no
-  `Parameters:` documentation and their resonance-formula provenance is undocumented.
+  Calibration, and Observation abstract bases do. All eleven now raise
+  `NotImplementedError` with the same `f'{type(self).__name__}.<method> is not
+  implemented'` message those bases use.
+- **[SUGGESTION] (partly fixed after review)** `gravity_.py:109-121` — `ilr_pattern`/`olr_pattern` had no
+  `Parameters:` documentation and their resonance-formula provenance was undocumented. Both
+  now document their parameters and state the formula they evaluate. The provenance is
+  still open, and so is a question the documentation pass raised: the summary lines call the
+  result a *pattern speed*, but a pattern speed satisfies `Omega_p = n_r -/+ p*kappa_r/m` at
+  an ILR/OLR respectively, whereas these methods return `n + p*kappa/m` and
+  `n - p*kappa/(m+p)` with `kappa` evaluated at the perturber's own semimajor axis. Those
+  values track the *mean motion at the resonance* for a resonance whose mean-motion ratio is
+  `m:(m-p)` or `m:(m+p)`. Either the summary lines or the signs need the author's ruling;
+  the formulas are unchanged and now appear verbatim in the docstrings.
 
 ### src/oops/cadence/reshapedcadence.py
 - **[DOC] (fixed)** `reshapedcadence.py:170,181` — the docstrings of `_old_tstep_from_new`
@@ -2214,10 +2250,11 @@ left alone.
 - DOC: 10 found — 6 fixed, 4 reported.
 - CONSISTENCY: 4 reported. STYLE: 1 reported. SUGGESTION: 8 reported.
 - Overall: the recently proofread files (observation subclasses, most cadences) are in good
-  shape — docstrings match signatures and behavior closely. The weak spots are the files the
+  shape — docstrings match signatures and behavior closely. The weak spots were the files the
   proofreading pass skipped: `oblategravity.py` (two public methods crashed outright, and its
-  docstrings are still legacy one-liners), `gravity_.py`, and the two declared-WIP modules
-  (`instant.py`, `insitu.py`). `ReversedCadence.tstep_at_time` was the one substantive
+  docstrings were still legacy one-liners), `gravity_.py`, and the two declared-WIP modules
+  (`instant.py`, `insitu.py`). The two gravity modules have since had their own pass, which
+  closed every finding above. `ReversedCadence.tstep_at_time` was the one substantive
   unfixed correctness issue in actively used code; it has since been fixed.
 - Verification: `py_compile` on every edited file; `pytest tests/cadence tests/gravity
   tests/calibration tests/observation` all pass; full main suite

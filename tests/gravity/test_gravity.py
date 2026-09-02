@@ -23,7 +23,7 @@ def test_gravity():
           for i in (0., 0.1):
             a = obj.rp * 10. ** (np.random.rand() * 2.)
             for f in factors:
-                b = obj.solve_a(obj.combo(a,f,e,i), f, e, i)
+                b = obj.solve_a(obj.combo(a, f, e=e, sin_i=i), f, e=e, sin_i=i)
                 c = abs((b - a) / a)
                 assert c < ERROR_TOLERANCE
 
@@ -34,7 +34,7 @@ def test_gravity():
           for i in (0., 0.1):
             a = obj.rp * 10. ** (np.random.rand() * 2.)
             for f in [(1,0,0),(0,0,1)]:
-                b = obj.solve_a(obj.combo(a,f,e,i), f, e, i)
+                b = obj.solve_a(obj.combo(a, f, e=e, sin_i=i), f, e=e, sin_i=i)
                 c = abs((b - a) / a)
                 assert c < ERROR_TOLERANCE
 
@@ -58,7 +58,7 @@ def test_gravity():
       for e in (0., 0.1):
         for i in (0., 0.1):
           for f in factors:
-            b = obj.solve_a(obj.combo(a,f,e,i), f, e, i)
+            b = obj.solve_a(obj.combo(a, f, e=e, sin_i=i), f, e=e, sin_i=i)
             c = abs((b - a) / a)
             assert np.all(c < ERROR_TOLERANCE)
 
