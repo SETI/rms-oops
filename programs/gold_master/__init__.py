@@ -156,12 +156,35 @@ from polymath       import Boolean, Pair, Qube, Scalar
 from programs.gold_master.test_support import (BACKPLANE_OUTPUT_PREFIX,
                                                GOLD_MASTER_PREFIX,
                                                OOPS_BACKPLANE_OUTPUT_PATH,
+                                               OOPS_GOLD_MASTER_PATH,
                                                TEST_DATA_FILECACHE,
                                                TEST_DATA_PREFIX)
 
 __all__ = ['set_default_obs', 'define_standard_obs', 'set_default_args',
-           'override', 'execute_as_command', 'execute_as_pytest', 'run_tests',
-           'register_test_suite', 'get_test_suite', 'BackplaneTest']
+           'override', 'set_gold_master_path', 'execute_as_command',
+           'execute_as_pytest', 'run_tests', 'register_test_suite', 'get_test_suite',
+           'BackplaneTest']
+
+
+def set_gold_master_path(path):
+    """Redirect the directory from which gold master files are read.
+
+    This overrides the location that the environment variables $OOPS_GOLD_MASTER_PATH and
+    $OOPS_RESOURCES define, for the remainder of the session. It applies to every
+    subsequent test, whether run from the command line or under pytest.
+
+    The directory must have the same layout as the default one: the files for one
+    observation are found in `<path>/<module>/<basename>`, where `<module>` is the value
+    of the `module` argument, such as "oops.hosts.cassini.iss", and `<basename>` is the
+    stem of the observation's file path.
+
+    Parameters:
+        path (str): Directory containing the gold master files. It may name a cloud
+            resource such as gs://rms-oops-resources/gold_master.
+    """
+
+    global GOLD_MASTER_PREFIX
+    GOLD_MASTER_PREFIX = TEST_DATA_FILECACHE.new_path(path)
 
 ##########################################################################################
 # Use set_default_obs() and set_standard_obs() to define the observation used
@@ -511,6 +534,13 @@ def execute_as_command():
 
     # Output options
     gr = parser.add_argument_group('Output options')
+    gr.add_argument('-g', '--gold-master', type=str, dest='gold_master', metavar='dir',
+        default=OOPS_GOLD_MASTER_PATH,
+        help='Root directory of the gold master files to compare against; default is the '
+             'value of the environment variable OOPS_GOLD_MASTER_PATH, if defined, or '
+             'else the "gold_master" subdirectory of OOPS_RESOURCES. The directory must '
+             'have the standard layout, with the files for one observation in '
+             '<dir>/<module>/<basename>.')
     gr.add_argument('-o', '--output', type=str, metavar='dir',
         default=OOPS_BACKPLANE_OUTPUT_PATH,
         help='Root directory for saved backplane arrays, browse images, and logs; '
@@ -563,11 +593,18 @@ def execute_as_command():
 
     args = parser.parse_args()
     args.pytest = False
-    args = _clean_up_args(args)
+
+    # Redirect the input and output directories before _clean_up_args, which builds the
+    # BackplaneTest objects; each one resolves its own paths against these prefixes as it
+    # is constructed, so a later override would not reach it.
+    if args.gold_master != OOPS_GOLD_MASTER_PATH:
+        set_gold_master_path(args.gold_master)
 
     if args.output != OOPS_BACKPLANE_OUTPUT_PATH:
         global BACKPLANE_OUTPUT_PREFIX
         BACKPLANE_OUTPUT_PREFIX = TEST_DATA_FILECACHE.new_path(args.output)
+
+    args = _clean_up_args(args)
 
     run_tests(args)
 

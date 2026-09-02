@@ -128,3 +128,17 @@ export PYTHONPATH=.
 python tests/hosts/cassini/iss/gold_master.py --help
 python tests/hosts/galileo/ssi/gold_master.py --help
 ```
+
+- To compare against a set of gold master files somewhere other than the default, use
+  `--gold-master` on either the instrument command or pytest. It overrides
+  `$OOPS_GOLD_MASTER_PATH` and `$OOPS_RESOURCES` for that run only:
+
+```sh
+pytest tests/hosts --gold-master=/path/to/masters
+PYTHONPATH=. python tests/hosts/cassini/iss/gold_master.py --gold-master=/path/to/masters
+```
+
+  The directory must have the standard layout, in which the files for one observation
+  are found in `<path>/<module>/<basename>`, such as
+  `<path>/oops.hosts.cassini.iss/W1573721822_1`. As with the environment variables, the
+  path may name a cloud resource such as `gs://rms-oops-resources/gold_master`.

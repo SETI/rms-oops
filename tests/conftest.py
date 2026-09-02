@@ -14,6 +14,37 @@ from oops.unittester_support import TEST_SPICE_PREFIX
 CORE_KERNELS = ['naif0009.tls', 'pck00010.tpc', 'de421.bsp']
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Add the command-line options of the oops test suite.
+
+    Parameters:
+        parser (Parser): The pytest command-line parser.
+    """
+
+    parser.addoption('--gold-master', action='store', default=None, metavar='DIR',
+                     help='Root directory of the gold master files that the tests '
+                          'under tests/hosts compare against, overriding '
+                          '$OOPS_GOLD_MASTER_PATH and $OOPS_RESOURCES. The directory '
+                          'must have the standard layout, with the files for one '
+                          'observation in DIR/<module>/<basename>.')
+
+
+@pytest.fixture(scope='session', autouse=True)
+def gold_master_path(request: pytest.FixtureRequest) -> None:
+    """Point the gold master tests at the directory given by --gold-master.
+
+    The option applies for the whole session and is a no-op when it is not given, so the
+    tests then read the gold masters that the environment defines.
+    """
+
+    path = request.config.getoption('--gold-master')
+    if path:
+        # Imported here rather than at the top of the module: programs.gold_master pulls
+        # in oops and scipy, and nothing else in the test suite needs it.
+        import programs.gold_master as gm
+        gm.set_gold_master_path(path)
+
+
 @pytest.fixture
 def core_kernels():
     """Furnish the core SPICE kernels with the Path and Frame registries cleared.
