@@ -62,6 +62,11 @@ def test_limb():
     cept2 = limb.intercept_from_z_clock(z, clock, obs)
     (z2, clock2) = limb.z_clock_from_intercept(cept2, obs)
 
+    # The two methods are inverses; measured over this grid, the worst case is 2e-10
+    assert abs(z2 - z).max() < 1.e-8
+    assert abs(clock2 - clock).max() < 1.e-12
+    assert (cept2 - cept).norm().max() < 1.e-8
+
     # Validate solution
     (cept, t, track) = limb.intercept(obs, los, groundtrack=True)
     normal = limb.normal(track).unit()
@@ -264,6 +269,11 @@ def test_limb():
     cept2 = limb.intercept_from_z_clock(z, clock, obs)
     (z2, clock2) = limb.z_clock_from_intercept(cept2, obs)
 
+    # The two methods are inverses; measured over this grid, the worst case is 2e-10
+    assert abs(z2 - z).max() < 1.e-8
+    assert abs(clock2 - clock).max() < 1.e-12
+    assert (cept2 - cept).norm().max() < 1.e-8
+
     # Validate solution
     assert abs(normal.sep(los) - Scalar.HALFPI).max() < 1.e-12
 
@@ -422,5 +432,104 @@ def test_limb():
     assert abs(coords[1] - lat).max() < 1.e-12
     assert abs(coords[2] - z).max() < 1.e-6
 
-##########################################################################################
+
+def _spheroid_limb():
+    """A Limb over a strongly oblate spheroid, where the two definitions of z diverge.
+
+    Returns:
+        Limb: A Limb over a Saturn-like spheroid, Rpol/Req = 0.83.
+    """
+
+    from oops.surface.spheroid import Spheroid
+
+    return Limb(Spheroid('SSB', 'J2000', (60268., 50000.)))
+
+
+def _known_z_points(limb, obs):
+    """Limb points built from known (z, clock) values.
+
+    Parameters:
+        limb (Limb): The Limb surface.
+        obs (Vector3): The observer position.
+
+    Returns:
+        tuple[Vector3, Scalar, Scalar]: `(pos, z, clock)`, the points and the values they
+        were built from.
+    """
+
+    z = Scalar(np.array([0., 10., 100., 500., 1000., 2000.] * 7))
+    clock = Scalar(np.repeat(np.linspace(0., 2.*np.pi, 7, endpoint=False), 6))
+
+    return (limb.intercept_from_z_clock(z, clock, obs), z, clock)
+
+
+def test_z_clock_from_intercept_inverts_intercept_from_z_clock():
+    """z must survive the round trip.
+
+    z is the perpendicular distance from the surface, not the difference of the two
+    radii. For an oblate body those differ by more than 1% of z and agree only at z == 0,
+    which is why a test confined to the limb itself cannot tell them apart.
+    """
+
+    limb = _spheroid_limb()
+    obs = Vector3([4*60268., 0, 0])
+    (pos, z, _) = _known_z_points(limb, obs)
+
+    assert abs(limb.z_clock_from_intercept(pos, obs)[0] - z).max() < 1.e-8
+
+
+def test_z_clock_from_intercept_recovers_the_clock_angle():
+    limb = _spheroid_limb()
+    obs = Vector3([4*60268., 0, 0])
+    (pos, _, clock) = _known_z_points(limb, obs)
+
+    assert abs(limb.z_clock_from_intercept(pos, obs)[1] - clock).max() < 1.e-12
+
+
+def test_z_clock_from_intercept_agrees_with_coords_from_vector3():
+    """The two methods must report the same z for the same point."""
+
+    limb = _spheroid_limb()
+    obs = Vector3([4*60268., 0, 0])
+    (pos, _, _) = _known_z_points(limb, obs)
+
+    z_from_coords = limb.coords_from_vector3(pos, obs=obs, axes=3)[2]
+
+    assert abs(limb.z_clock_from_intercept(pos, obs)[0] - z_from_coords).max() < 1.e-8
+
+
+def test_z_clock_from_intercept_works_with_hints():
+    """The hints branch supplies the coefficient p rather than solving for it."""
+
+    limb = _spheroid_limb()
+    obs = Vector3([4*60268., 0, 0])
+    (pos, z, _) = _known_z_points(limb, obs)
+
+    (_, _, p) = limb.z_clock_from_intercept(pos, obs, hints=True)
+
+    assert abs(limb.z_clock_from_intercept(pos, obs, hints=p)[0] - z).max() < 1.e-8
+
+
+def test_limb_unmasked_is_a_limb():
+    limb = Limb(_spheroid_limb().ground, limits=(0., 1000.))
+
+    assert type(limb.unmasked) is Limb
+
+
+def test_polarlimb_unmasked_is_a_polarlimb():
+    """A PolarLimb must not hand back a Limb: the two report different coordinates under
+    the same method names."""
+
+    from oops.surface.polarlimb import PolarLimb
+
+    limb = PolarLimb(_spheroid_limb().ground, limits=(0., 1000.))
+
+    assert type(limb.unmasked) is PolarLimb
+
+
+def test_unmasked_limb_carries_no_limits():
+    limb = Limb(_spheroid_limb().ground, limits=(0., 1000.))
+
+    assert limb.unmasked.limits is None
+
 ##########################################################################################

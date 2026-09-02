@@ -13,10 +13,7 @@ from oops.surface.spheroid  import Spheroid
 from oops.surface.ellipsoid import Ellipsoid
 
 
-# TODO: This test was erroneously testing class Limb instead of class PolarLimb.
-# When I change Limb() to PolarLimb(), it fails. This needs to be fixed!!
-
-def xtest_polarlimb():
+def test_polarlimb():
 
     REQ  = 60268.
     RMID = 54364.
@@ -38,10 +35,10 @@ def xtest_polarlimb():
     perp = limb.normal(track)
     assert abs(perp.sep(los) - HALFPI).max() < 1.e-12
 
-    coords = limb.coords_from_vector3(cept, obs, axes=3)
+    coords = limb.coords_from_vector3(cept, obs=obs, axes=3)
     assert abs(coords[2]).max() < 1.e6
 
-    cept2 = limb.vector3_from_coords(coords, obs)
+    cept2 = limb.vector3_from_coords(coords, obs=obs)
     assert (cept2 - cept).norm().median() < 1.e-10
 
     ######################################################################################
@@ -62,10 +59,10 @@ def xtest_polarlimb():
     perp = limb.normal(track)
     assert abs(perp.sep(los) - HALFPI).max() < 1.e-12
 
-    coords = limb.coords_from_vector3(cept, obs, axes=3)
+    coords = limb.coords_from_vector3(cept, obs=obs, axes=3)
     assert abs(coords[2]).max() < 1.e6
 
-    cept2 = limb.vector3_from_coords(coords, obs)
+    cept2 = limb.vector3_from_coords(coords, obs=obs)
     assert (cept2 - cept).norm().median() < 1.e-10
 
     Path._reset_caches()

@@ -60,11 +60,13 @@ class Limb(Surface):
         else:
             self._limits = (limits[0], limits[1])
 
-        # Save the unmasked version of this surface
+        # Save the unmasked version of this surface. It must be of this class, not
+        # necessarily Limb; a PolarLimb defines different coordinates under the same
+        # method names.
         if limits is None:
             self.unmasked = self
         else:
-            self.unmasked = Limb(self._ground)
+            self.unmasked = type(self)(self._ground)
 
         # Unique key for intercept calculations
         self.intercept_key = ('limb',) + self._ground.intercept_key
@@ -498,7 +500,7 @@ class Limb(Surface):
 
         normal = self._ground.normal(track, derivs=derivs)
 
-        z = pos.norm() - track.norm()
+        z = normal.unit().dot(pos - track)
 
         x_axis = Vector3.ZAXIS.perp(obs).unit()
         y_axis = Vector3.ZAXIS.ucross(obs)
@@ -602,6 +604,7 @@ class Limb(Surface):
             dp[mask] = 0
             p -= dp
 
+            prev_max_dp = max_dp
             max_dp = dp.abs().max(builtins=True, masked=-1.)
 
             if LOGGING.surface_iterations or Limb._DEBUG:
@@ -611,6 +614,9 @@ class Limb(Surface):
 
             if max_dp <= SURFACE_PHOTONS.rel_precision:
                 converged = True
+                break
+
+            if max_dp >= prev_max_dp:
                 break
 
         if not converged:
