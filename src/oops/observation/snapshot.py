@@ -20,7 +20,7 @@ class Snapshot(Observation):
     exposed at the same time.
     """
 
-    INVENTORY_IMPLEMENTED = True
+    _INVENTORY_IMPLEMENTED = True
 
     def __init__(self, axes, tstart, texp, fov, path, frame, **subfields):
         """Constructor for a Snapshot.

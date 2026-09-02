@@ -20,7 +20,7 @@ def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
             direction. "min" : direction of smallest diameter. "max" : direction of
             largest diameter.
     """
-    if not self.obs.INVENTORY_IMPLEMENTED:
+    if not self.obs._INVENTORY_IMPLEMENTED:
         raise NotImplementedError('body_diameter_in_pixels not defined for '
                                   + type(self.obs).__name__)
 

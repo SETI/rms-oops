@@ -64,13 +64,14 @@ class Observation(Mutable):
             of numbers associated with the observation.
 
     Attributes:
-        INVENTORY_IMPLEMENTED (bool): True if this subclass implements `inventory()`.
-        DEBUG (bool): True to log the iterative convergence steps of the geometry solvers.
+        _INVENTORY_IMPLEMENTED (bool): True if this subclass implements `inventory()`.
+        _DEBUG (bool): True to log the iterative convergence steps of the geometry
+            solvers.
     """
 
-    INVENTORY_IMPLEMENTED = False
+    _INVENTORY_IMPLEMENTED = False
 
-    DEBUG = False       # True to log iterative convergence steps
+    _DEBUG = False      # True to log iterative convergence steps
 
     ######################################################################################
     # Methods to be defined for each subclass
@@ -980,7 +981,7 @@ class Observation(Mutable):
                                                          masked=-1.)
             obs_time = new_obs_time
 
-            if LOGGING.observation_iterations or Observation.DEBUG:
+            if LOGGING.observation_iterations or Observation._DEBUG:
                 LOGGING.convergence('Observation.uv_from_path',
                                     f'iter={count+1}; change[s]={max_dt:.6g}')
 

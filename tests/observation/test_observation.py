@@ -136,4 +136,37 @@ def test_uv_from_ra_and_dec_accepts_any_shape_of_tfrac(tfrac) -> None:
     assert float((uv - Pair((32., 32.))).norm().vals) == pytest.approx(0., abs=1.e-9)
 
 
+
+def test_inventory_flag_marks_the_subclasses_that_implement_it() -> None:
+    """The flag records which subclasses can answer inventory(); the base class cannot."""
+
+    assert Observation._INVENTORY_IMPLEMENTED is False
+    assert Snapshot._INVENTORY_IMPLEMENTED is True
+    assert TimedImage._INVENTORY_IMPLEMENTED is True
+    assert Pixel._INVENTORY_IMPLEMENTED is False
+
+
+def test_a_timed_image_with_an_extended_fov_disowns_inventory() -> None:
+    """A cadence longer than the FOV extends it, leaving inventory unable to answer.
+
+    The instance value has to override the class default for this to work.
+    """
+
+    fov = FlatFOV((1.e-3, 1.e-3), (10, 20))
+    plain = TimedImage(('u','vt'), cadence=Metronome(tstart=0., tstride=1., texp=1.,
+                                                     steps=20),
+                       fov=fov, path='SSB', frame='J2000')
+    extended = TimedImage(('u','vt'), cadence=Metronome(tstart=0., tstride=1., texp=1.,
+                                                        steps=25),
+                          fov=fov, path='SSB', frame='J2000')
+
+    # Truthiness, not identity: the comparison that sets _extended_fov can yield a
+    # numpy bool, which is not the True or False singleton.
+    assert not plain._extended_fov
+    assert plain._INVENTORY_IMPLEMENTED
+
+    assert extended._extended_fov
+    assert not extended._INVENTORY_IMPLEMENTED
+
+
 ##########################################################################################

@@ -22,7 +22,7 @@ class TimedImage(Observation):
     # RasterSlit, and Slit. (In other words, every observation subclass with two spatial
     # dimensions except Snapshot.)
 
-    INVENTORY_IMPLEMENTED = True
+    _INVENTORY_IMPLEMENTED = True
 
     def __init__(self, axes, cadence, fov, path, frame, **subfields):
         """Constructor for a TimedImage.
@@ -135,7 +135,7 @@ class TimedImage(Observation):
             self.shape = tuple(subfields['shape'])
             del subfields['shape']
 
-        self.INVENTORY_IMPLEMENTED = not self._extended_fov
+        self._INVENTORY_IMPLEMENTED = not self._extended_fov
 
         # Optional subfields
         self.subfields = {}
