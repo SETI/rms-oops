@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/surface/spice_shape.py: For bodies with shapes defined in SPICE.
+# oops/surface/spice_shape.py
 ##########################################################################################
 
 import cspyce

@@ -1,10 +1,10 @@
 ##########################################################################################
-# oops/surface/graphicellipsoid.py: GraphicEllipsoid subclass of class Surface
+# oops/surface/graphicellipsoid.py
 ##########################################################################################
 
 import numpy as np
 
-from polymath               import Scalar, Vector3
+from polymath import Scalar, Vector3
 from oops.surface.ellipsoid import Ellipsoid
 
 

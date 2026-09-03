@@ -1,10 +1,10 @@
 ##########################################################################################
-# oops/surface/centricellipsoid.py: CentricEllipsoid subclass of class Surface
+# oops/surface/centricellipsoid.py
 ##########################################################################################
 
 import numpy as np
 
-from polymath               import Scalar, Vector3
+from polymath import Scalar, Vector3
 from oops.surface.ellipsoid import Ellipsoid
 
 

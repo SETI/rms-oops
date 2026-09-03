@@ -1,10 +1,10 @@
 ##########################################################################################
-# oops/surface/polarlimb.py: PolarLimb subclass of class Surface
+# oops/surface/polarlimb.py
 ##########################################################################################
 
 import numpy as np
 
-from polymath          import Scalar, Vector3
+from polymath import Scalar, Vector3
 from oops.constants    import TWOPI
 from oops.surface.limb import Limb
 

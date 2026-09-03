@@ -1,11 +1,11 @@
 ##########################################################################################
-# oops/surface/spheroid.py: Spheroid subclass of class Surface
+# oops/surface/spheroid.py
 ##########################################################################################
 
 import numpy as np
 
-from polymath               import Scalar, Vector3
-from oops.config            import SURFACE_PHOTONS, LOGGING
+from polymath import Scalar, Vector3
+from oops.config import SURFACE_PHOTONS, LOGGING
 from oops.surface.ellipsoid import Ellipsoid
 
 

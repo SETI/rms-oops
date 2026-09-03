@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/surface/orbitplane.py: OrbitPlane subclass of class Surface
+# oops/surface/orbitplane.py
 ##########################################################################################
 
 import numpy as np

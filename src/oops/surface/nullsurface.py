@@ -1,8 +1,8 @@
 ##########################################################################################
-# oops/surface/nullsurface.py: NullSurface subclass of class Surface
+# oops/surface/nullsurface.py
 ##########################################################################################
 
-from polymath              import Scalar, Vector3
+from polymath import Scalar, Vector3
 from oops.frame.frame_     import Frame
 from oops.path.path_       import Path
 from oops.surface.surface_ import Surface

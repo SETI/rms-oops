@@ -1,12 +1,12 @@
 ##########################################################################################
-# oops/surface/limb.py: Limb subclass of class Surface
+# oops/surface/limb.py
 ##########################################################################################
 
 import numpy as np
 
-from polymath              import Scalar, Vector3
-from oops.config           import SURFACE_PHOTONS, LOGGING
-from oops.constants        import HALFPI, TWOPI
+from polymath import Scalar, Vector3
+from oops.config import SURFACE_PHOTONS, LOGGING
+from oops.constants import HALFPI, TWOPI
 from oops.surface.surface_ import Surface
 
 

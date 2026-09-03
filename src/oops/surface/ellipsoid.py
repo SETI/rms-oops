@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/surface/ellipsoid.py: Ellipsoid subclass of class Surface
+# oops/surface/ellipsoid.py
 ##########################################################################################
 
 import numpy as np

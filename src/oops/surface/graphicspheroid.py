@@ -1,9 +1,9 @@
 ##########################################################################################
-# oops/surface/graphicspheroid.py: GraphicSpheroid subclass of class Surface
+# oops/surface/graphicspheroid.py
 ##########################################################################################
 
 from polymath import Scalar
-from oops.surface.spheroid         import Spheroid
+from oops.surface.spheroid import Spheroid
 from oops.surface.graphicellipsoid import GraphicEllipsoid
 
 

@@ -1,8 +1,8 @@
 ##########################################################################################
-# oops/surface/centricspheroid.py: CentricSpheroid subclass of class Surface
+# oops/surface/centricspheroid.py
 ##########################################################################################
 
-from polymath                      import Scalar
+from polymath import Scalar
 from oops.surface.centricellipsoid import CentricEllipsoid
 from oops.surface.spheroid         import Spheroid
 

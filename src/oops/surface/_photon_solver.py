@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/surface/_photon_solver.py: Photon solvers attached to class Surface
+# oops/surface/_photon_solver.py
 ##########################################################################################
 
 import numpy as np
