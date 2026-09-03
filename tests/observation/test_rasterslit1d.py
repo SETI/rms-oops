@@ -3,6 +3,7 @@
 ##########################################################################################
 
 import numpy as np
+import pytest
 
 from polymath         import Scalar, Pair
 from oops.cadence     import Metronome
@@ -218,4 +219,111 @@ def test_rasterslit1d():
 
     (uv,t) = obs.uvt(indices, remask=True)
     assert np.all(t.mask == np.array(2*[False] + [True]))
+
+##########################################################################################
+# Constructor validation, alternative cadence forms, subfields, and time_shift
+##########################################################################################
+
+SLIT_FOV = FlatFOV((0.001, 0.001), (10, 1))
+CADENCE = Metronome(tstart=0., tstride=10., texp=10., steps=10)
+
+
+def _rasterslit(**kwargs) -> RasterSlit1D:
+    """A RasterSlit1D sweeping the u-axis of a ten-pixel slit.
+
+    Parameters:
+        kwargs: Overrides of the default constructor arguments.
+
+    Returns:
+        RasterSlit1D: The observation.
+    """
+
+    args = {'axes': ('ut', 'a'), 'cadence': CADENCE, 'fov': SLIT_FOV,
+            'path': 'SSB', 'frame': 'J2000'}
+    args.update(kwargs)
+
+    return RasterSlit1D(**args)
+
+
+@pytest.mark.parametrize('axes', [('u', 'a'), ('ut', 'vt'), ('ut', 't')],
+                         ids=['neither', 'both', 'with-t'])
+def test_the_axes_must_name_exactly_one_swept_axis(axes: tuple[str, ...]) -> None:
+    """Exactly one axis is swept in time, and no axis is time alone."""
+
+    with pytest.raises(ValueError, match='invalid axes for RasterSlit1D'):
+        _rasterslit(axes=axes)
+
+
+def test_the_cross_slit_axis_of_the_fov_must_be_one_pixel_wide() -> None:
+    """A slit is one pixel across; a wider FOV is not a slit."""
+
+    with pytest.raises(ValueError, match='cross-slit axis must have length 1'):
+        _rasterslit(fov=FlatFOV((0.001, 0.001), (10, 2)))
+
+
+def test_a_cadence_given_as_a_tuple_is_built_for_the_slit() -> None:
+    """A tuple supplies the Metronome arguments other than the number of steps."""
+
+    obs = _rasterslit(cadence=(0., 10.))
+
+    assert obs.cadence.shape == (10,)
+    assert obs.time == (0., 100.)
+
+
+def test_a_cadence_given_as_a_dictionary_is_built_for_the_slit() -> None:
+    """A dictionary supplies the same arguments by keyword."""
+
+    obs = _rasterslit(cadence={'tstart': 0., 'texp': 10.})
+
+    assert obs.cadence.shape == (10,)
+    assert obs.time == (0., 100.)
+
+
+def test_a_cadence_of_the_wrong_length_is_rejected() -> None:
+    """The cadence has one step per pixel along the slit."""
+
+    wrong = Metronome(tstart=0., tstride=10., texp=10., steps=9)
+
+    with pytest.raises(ValueError, match='Cadence and FOV shapes'):
+        _rasterslit(cadence=wrong)
+
+
+def test_a_cadence_of_an_unusable_type_is_rejected() -> None:
+    """Anything that is neither a Cadence nor its arguments is refused."""
+
+    with pytest.raises(TypeError, match='Invalid cadence class: float'):
+        _rasterslit(cadence=10.)
+
+
+def test_a_subfield_becomes_an_attribute() -> None:
+    """Optional keywords are inserted as subfields, and so as attributes."""
+
+    obs = _rasterslit(data=Scalar([1., 2., 3.]))
+
+    assert obs.data == Scalar([1., 2., 3.])
+    assert obs.subfields['data'] == Scalar([1., 2., 3.])
+
+
+def test_time_shift_moves_the_cadence_and_keeps_the_subfields() -> None:
+    """A shifted observation is the same observation at a later time."""
+
+    obs = _rasterslit(data=Scalar([1., 2., 3.]))
+
+    shifted = obs.time_shift(100.)
+
+    assert shifted.time == (100., 200.)
+    assert shifted.shape == obs.shape
+    assert shifted.data == obs.data
+
+
+def test_a_slit_along_the_v_axis_is_swept_the_same_way() -> None:
+    """"vt" sweeps the v-axis, so the FOV is one pixel wide in u instead."""
+
+    obs = _rasterslit(axes=('a', 'vt'), fov=FlatFOV((0.001, 0.001), (1, 10)))
+
+    assert obs.u_axis == -1
+    assert obs.v_axis == 1
+    assert obs.t_axis == 1
+    assert obs.uv_shape == (1, 10)
+
 ##########################################################################################

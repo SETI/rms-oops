@@ -594,4 +594,50 @@ def test_the_numerical_omega_is_shaped_like_its_times(core_kernels) -> None:
     assert omega.shape == (3,)
     assert omega.sep(expected).vals == pytest.approx([0., 0., 0.], abs=1.e-6)
 
+def test_a_body_code_selects_its_rotation_frame(core_kernels) -> None:
+    """An integer that is a body code, not a frame code, names that body's frame."""
+
+    assert SpiceFrame._frame_code_and_name(399)[1] == 'IAU_EARTH'
+
+
+def test_a_body_name_with_no_pole_raises(core_kernels) -> None:
+    """A body whose pole the planetary constants do not give has no frame.
+
+    New Horizons is a body name the Toolkit knows, but no test here furnishes a frame
+    kernel for it, so it has no rotation frame.
+    """
+
+    with pytest.raises(KeyError, match='frame for body "NEW HORIZONS" is undefined'):
+        SpiceFrame._frame_code_and_name('NEW HORIZONS')
+
+
+def test_the_tolerant_transform_builds_a_quickframe_by_default(core_kernels) -> None:
+    """With `quick` left at its default, an interpolator is built for a span of times."""
+
+    SpicePath('EARTH', 'SSB')
+    frame = SpiceFrame('IAU_EARTH', 'J2000')
+    time = Scalar(np.arange(0., 100., 0.01))
+
+    (valid, xform) = frame.transform_at_time_if_possible(time)
+
+    assert valid.shape == time.shape
+    assert xform.matrix.vals == pytest.approx(
+        frame.transform_at_time(time, quick=False).matrix.vals, abs=1.e-9)
+
+
+def test_the_tolerant_transform_of_a_numerical_omega_frame_limits_the_time_step(
+        core_kernels) -> None:
+    """A numerically differentiated omega needs the interpolation step it was built for.
+    """
+
+    SpicePath('EARTH', 'SSB')
+    frame = SpiceFrame('IAU_EARTH', 'J2000', omega_type='numerical',
+                       frame_id='TEST_NUMERICAL_OMEGA')
+    time = Scalar(np.arange(0., 100., 0.01))
+
+    (valid, xform) = frame.transform_at_time_if_possible(time)
+
+    assert valid.shape == time.shape
+    assert xform.omega.shape == time.shape
+
 ##########################################################################################

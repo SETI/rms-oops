@@ -321,3 +321,143 @@ def test_nearest_uv_accepts_any_arraylike() -> None:
         assert fov.nearest_uv(arg) == expected
 
 ##########################################################################################
+# uv_from_los, the outside tests, and the one-axis variant
+##########################################################################################
+
+def test_uv_from_los_works_on_a_time_independent_fov() -> None:
+    """Without time dependence, the line of sight alone determines the pixel."""
+
+    fov = _flat()
+    uv = Pair([(10.5, 20.5), (30.25, 40.75)])
+
+    assert fov.uv_from_los(fov.los_from_uvt(uv)) == uv
+
+
+def test_uv_from_los_is_refused_on_a_time_dependent_fov() -> None:
+    """A TDI FOV needs a time, so the timeless entry point is not available."""
+
+    with pytest.raises(NotImplementedError, match='TDIFOV.uv_from_los'):
+        _tdi().uv_from_los(Vector3((0., 0., 1.)))
+
+
+def test_uv_is_outside_marks_the_points_beyond_the_field() -> None:
+    """A point outside either axis of the field of view is outside it."""
+
+    outside = _flat().uv_is_outside(Pair([(10., 20.), (100., 20.), (10., 90.)]))
+
+    assert list(outside.vals) == [False, True, True]
+
+
+def test_uv_is_outside_can_be_restricted_to_a_sub_rectangle() -> None:
+    """Explicit corners replace the full extent of the field of view."""
+
+    fov = _flat()
+    uv = Pair([(10., 20.), (40., 20.)])
+
+    assert list(fov.uv_is_outside(uv, uv_min=Pair((0, 0)),
+                                 uv_max=Pair((32, 32))).vals) == [False, True]
+
+
+def test_u_or_v_is_outside_tests_one_axis_alone() -> None:
+    """Only the coordinate named by uv_index is tested."""
+
+    fov = _flat()
+    uv = Pair([(10., 90.), (100., 20.)])
+
+    assert list(fov.u_or_v_is_outside(uv, 0).vals) == [False, True]
+    assert list(fov.u_or_v_is_outside(uv, 1).vals) == [True, False]
+
+
+def test_u_or_v_is_outside_can_be_restricted_to_a_sub_range() -> None:
+    """Explicit corners replace the full extent along the selected axis."""
+
+    fov = _flat()
+    uv = Pair([(10., 20.), (40., 20.)])
+
+    assert list(fov.u_or_v_is_outside(uv, 0, uv_min=Pair((0, 0)),
+                                      uv_max=Pair((32, 32))).vals) == [False, True]
+
+
+def test_u_or_v_is_outside_can_exclude_the_upper_edge() -> None:
+    """inclusive=False treats the far edge of the range as outside."""
+
+    fov = _flat()
+    uv = Pair((64., 32.))
+
+    assert not fov.u_or_v_is_outside(uv, 0)
+    assert fov.u_or_v_is_outside(uv, 0, inclusive=False)
+
+
+def test_xy_is_outside_maps_the_coordinates_back_to_the_field() -> None:
+    """The (x,y) coordinates are converted to (u,v) before the test is applied."""
+
+    fov = _flat()
+    uv = Pair([(10., 20.), (100., 20.)])
+
+    assert list(fov.xy_is_outside(fov.xy_from_uvt(uv)).vals) == [False, True]
+
+
+def test_los_is_outside_maps_the_direction_back_to_the_field() -> None:
+    """A line of sight is converted to (x,y) and then to (u,v) before the test."""
+
+    fov = _flat()
+    uv = Pair([(10., 20.), (100., 20.)])
+
+    assert list(fov.los_is_outside(fov.los_from_uvt(uv)).vals) == [False, True]
+
+##########################################################################################
+# sphere_falls_inside
+##########################################################################################
+
+# A sphere at this distance along the FOV axis subtends about 0.001 radians, which is
+# roughly a third of the half-width of the 64x64 flat FOV
+SPHERE_RANGE = 1.e6
+SPHERE_RADIUS = 1.e3
+
+
+def _sphere_center(uv) -> Vector3:
+    """The center of a test sphere, seen through a pixel of the flat FOV.
+
+    Parameters:
+        uv: The (u,v) coordinates of the pixel it is seen through.
+
+    Returns:
+        Vector3: The position of the sphere's center.
+    """
+
+    return _flat().los_from_uvt(Pair.as_pair(uv)).unit() * SPHERE_RANGE
+
+
+def test_a_sphere_at_the_center_falls_inside() -> None:
+    """A sphere on the optic axis is well inside the field of view."""
+
+    assert _flat().sphere_falls_inside(_sphere_center((32., 32.)), SPHERE_RADIUS)
+
+
+def test_a_sphere_far_off_the_axis_falls_outside() -> None:
+    """A sphere many fields away is nowhere near the field of view."""
+
+    assert not _flat().sphere_falls_inside(_sphere_center((1000., 1000.)),
+                                           SPHERE_RADIUS)
+
+
+def test_a_sphere_just_beyond_the_corner_can_still_reach_inside() -> None:
+    """A sphere centered outside the field still falls inside if its limb reaches in."""
+
+    fov = _flat()
+    just_outside = _sphere_center((64.5, 64.5))
+
+    assert not fov.sphere_falls_inside(just_outside, 1.)
+    assert fov.sphere_falls_inside(just_outside, 1.e4)
+
+
+def test_a_border_extends_the_field_the_sphere_is_tested_against() -> None:
+    """The border is added to the field of view before the test is applied."""
+
+    fov = _flat()
+    center = _sphere_center((70., 32.))
+
+    assert not fov.sphere_falls_inside(center, 1.)
+    assert fov.sphere_falls_inside(center, 1., border=0.001)
+
+##########################################################################################

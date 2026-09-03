@@ -8,6 +8,7 @@ import pytest
 from oops.backplane import Backplane
 
 PLANET = 'SATURN'
+RING = 'SATURN:RING'
 PI = np.pi
 
 
@@ -144,6 +145,21 @@ def test_center_angles_are_gridless(method: str, bp: Backplane) -> None:
     """A center backplane refers to the body's path, so it has no spatial extent."""
 
     assert getattr(bp, method)(PLANET).shape == ()
+
+
+@pytest.mark.parametrize('body', [PLANET, RING])
+def test_center_emission_angle_does_not_depend_on_evaluation_order(
+        body: str, fresh_bp: Backplane, bp: Backplane) -> None:
+    """The center emission angle is the same from an empty cache as from a warm one.
+
+    A gridless event is filed on the body's path rather than on its surface, without the
+    surface subfield that the ring branch of the emission angle consults. The surface has
+    to be looked up by name; reading it off the event succeeds only once some other
+    backplane has filled that subfield in, which is what makes the order matter.
+    """
+
+    assert fresh_bp.center_emission_angle(body).vals == pytest.approx(
+                                                    bp.center_emission_angle(body).vals)
 
 
 def test_center_phase_angle_matches_the_disk(bp: Backplane) -> None:

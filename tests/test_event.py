@@ -7,8 +7,9 @@ import pytest
 
 from polymath       import Scalar, Vector3
 from oops.body      import Body
+from oops.config    import LOGGING
 from oops.event     import Event
-from oops.frame     import Frame
+from oops.frame     import Frame, Rotation
 from oops.path      import Path
 from oops.constants import C, RPD
 
@@ -1374,5 +1375,341 @@ def test_sub_keeps_both_source_events() -> None:
 
     assert difference.event is event
     assert difference.reference is reference
+
+##########################################################################################
+# Construction, the setters that refuse to be called twice, and the description
+##########################################################################################
+
+def test_the_frame_defaults_to_the_frame_of_the_origin() -> None:
+    """With no frame given, the event adopts the frame in which its origin is defined."""
+
+    event = Event(Scalar(0.), Vector3((1.e5, 0., 0.)), 'SSB')
+
+    assert event.frame is Path.as_waypoint('SSB').frame
+
+
+def test_the_velocity_of_a_position_without_derivatives_is_zero() -> None:
+    """A state given as a position alone is at rest."""
+
+    event = Event(Scalar(0.), Vector3((1.e5, 0., 0.)), 'SSB', 'J2000')
+
+    assert event.vel == Vector3.ZERO
+
+
+@pytest.mark.parametrize('name, value',
+                         [('arr', Vector3((0., 0., -1.))),
+                          ('arr_lt', Scalar(-1.)),
+                          ('dep', Vector3((0., 0., 1.))),
+                          ('dep_lt', Scalar(1.)),
+                          ('perp', Vector3((0., 0., 1.)))])
+def test_a_photon_attribute_can_only_be_assigned_once(name: str, value) -> None:
+    """An event's photons are set once; a second assignment would be ambiguous."""
+
+    event = _simple_event()
+    setattr(event, name, value)
+
+    with pytest.raises(ValueError, match='already defined'):
+        setattr(event, name, value)
+
+
+def test_assigning_a_j2000_departure_rotates_it_into_the_event_frame() -> None:
+    """A departure given in J2000 is rotated into the frame of the event."""
+
+    frame = Rotation(0.5, 2, Frame.J2000, frame_id='TEST_EVENT_ROTATED')
+    event = Event(Scalar(0.), Vector3((1.e5, 0., 0.)), 'SSB', frame)
+
+    event.dep_ap_j2000 = Vector3((0., 0., 1.))
+
+    assert event.dep_ap_j2000 == Vector3((0., 0., 1.))
+    assert event.ssb.dep_ap == Vector3((0., 0., 1.))
+
+
+def test_assigning_a_j2000_departure_to_an_ssb_event_is_direct() -> None:
+    """An event already in SSB/J2000 has nothing to rotate."""
+
+    event = _simple_event()
+
+    event.dep_ap_j2000 = Vector3((0., 0., 1.))
+
+    assert event.dep_ap == Vector3((0., 0., 1.))
+
+
+def test_assigning_a_perpendicular_fills_in_the_ssb_version() -> None:
+    """The barycentric copy of an event picks up the rotated normal."""
+
+    frame = Rotation(0.5, 2, Frame.J2000, frame_id='TEST_EVENT_PERP')
+    event = Event(Scalar(0.), Vector3((1.e5, 0., 0.)), 'SSB', frame)
+    _ = event.ssb                                   # build the barycentric copy first
+
+    event.perp = Vector3((0., 0., 1.))
+
+    assert event.ssb.perp == Vector3((0., 0., 1.))  # the z-axis is the rotation axis
+
+
+def test_assigning_a_flat_velocity_fills_in_the_ssb_version() -> None:
+    """The barycentric copy of an event picks up the rotated surface velocity."""
+
+    frame = Rotation(0.5, 2, Frame.J2000, frame_id='TEST_EVENT_VFLAT')
+    event = Event(Scalar(0.), Vector3((1.e5, 0., 0.)), 'SSB', frame)
+    _ = event.ssb
+
+    event.vflat = Vector3((0., 0., 1.))
+
+    assert event.ssb.vflat == Vector3((0., 0., 1.))
+
+
+@pytest.mark.parametrize('size, expected',
+                         [(1, 'Scalar(0.0)'), (2, 'Scalar(0. 1.)'),
+                          (4, 'Scalar(0.0), ..., Scalar(3.0)')])
+def test_the_description_abbreviates_a_long_array(size: int, expected: str) -> None:
+    """One value is printed alone, two together, and more as the first and the last."""
+
+    times = np.arange(float(size))
+    event = Event(Scalar(times), Vector3(np.zeros((size, 3))), 'SSB', 'J2000')
+
+    assert expected in str(event)
+
+
+def test_the_description_lists_the_subfields() -> None:
+    """Every subfield is named after the shape, origin and frame."""
+
+    event = _simple_event()
+    event.insert_subfield('coord1', Scalar(1.))
+
+    assert '; coord1' in str(event)
+
+
+##########################################################################################
+# Copies, masking and derivatives
+##########################################################################################
+
+def test_copy_can_omit_a_subfield_that_is_not_there() -> None:
+    """Omitting a name the event does not carry is harmless."""
+
+    event = _simple_event()
+
+    assert event.copy(omit=('not_a_subfield',)).pos == event.pos
+
+
+def test_copy_omits_a_subfield_from_the_barycentric_copy_too() -> None:
+    """A subfield dropped from the event is dropped from its SSB counterpart."""
+
+    frame = Rotation(0.5, 2, Frame.J2000, frame_id='TEST_EVENT_OMIT')
+    event = Event(Scalar(0.), Vector3((1.e5, 0., 0.)), 'SSB', frame)
+    event.insert_subfield('coord1', Scalar(1.))
+    _ = event.ssb
+
+    copied = event.copy(omit=('coord1',))
+
+    assert 'coord1' not in copied.subfields
+    assert 'coord1' not in copied.ssb.subfields
+
+
+def test_mask_where_broadcasts_a_shapeless_subfield() -> None:
+    """A subfield that does not yet have the event's shape is broadcast before masking."""
+
+    event = _sequence_event()
+    event.insert_subfield('coord1', Scalar(1.))
+
+    masked = event.mask_where(np.array([False, True, False, True]))
+
+    assert list(masked.coord1.mask) == [False, True, False, True]
+
+
+def test_with_time_derivs_returns_the_same_event_when_it_already_has_them() -> None:
+    """The derivative is inserted once; a second request changes nothing."""
+
+    event = _simple_event().with_time_derivs()
+
+    assert event.with_time_derivs() is event
+
+
+def test_with_time_derivs_inserts_the_derivative_into_the_ssb_copy() -> None:
+    """The barycentric copy carries the same time derivative."""
+
+    frame = Rotation(0.5, 2, Frame.J2000, frame_id='TEST_EVENT_TIME_DERIVS')
+    event = Event(Scalar(0.), Vector3((1.e5, 0., 0.)), 'SSB', frame)
+    _ = event.ssb
+
+    with_derivs = event.with_time_derivs()
+
+    assert 't' in with_derivs.time.derivs
+    assert 't' in with_derivs.ssb.time.derivs
+
+
+def test_with_los_derivs_returns_the_same_event_when_it_already_has_them() -> None:
+    """The derivative is inserted once; a second request changes nothing."""
+
+    event = _simple_event()
+    event.arr = Vector3((0., 0., -1.))
+    with_derivs = event.with_los_derivs()
+
+    assert with_derivs.with_los_derivs() is with_derivs
+
+
+##########################################################################################
+# Frames, paths, and the errors the geometry raises
+##########################################################################################
+
+def test_from_ssb_requires_a_barycentric_event() -> None:
+    """An event that is not in SSB/J2000 has nothing to convert from."""
+
+    frame = Rotation(0.5, 2, Frame.J2000, frame_id='TEST_EVENT_FROM_SSB')
+    event = Event(Scalar(0.), Vector3((1.e5, 0., 0.)), 'SSB', frame)
+
+    with pytest.raises(ValueError, match='requires a SSB/J2000 event'):
+        event.from_ssb('SSB', 'J2000')
+
+
+def test_wrt_defaults_to_the_origin_and_frame_of_the_event() -> None:
+    """With neither given, the event is returned relative to what it already uses."""
+
+    event = _simple_event()
+
+    assert event.wrt().pos == event.pos
+
+
+def test_wrt_path_of_none_keeps_the_origin_of_the_event() -> None:
+    """A path of None means the event keeps its own origin."""
+
+    event = _simple_event()
+
+    assert event.wrt_path(None).pos == event.pos
+
+
+def test_wrt_frame_of_none_keeps_the_frame_of_the_event() -> None:
+    """A frame of None means the event keeps its own frame."""
+
+    event = _simple_event()
+
+    assert event.wrt_frame(None).pos == event.pos
+
+
+def test_unrotate_by_frame_returns_the_event_to_the_reference_frame() -> None:
+    """The event is expressed in the frame the rotation is defined relative to."""
+
+    frame = Rotation(0.5, 2, Frame.J2000, frame_id='TEST_EVENT_UNROTATE')
+    event = Event(Scalar(0.), Vector3((1.e5, 0., 0.)), 'SSB', frame)
+    event.arr = Vector3((0., 0., -1.))
+    event.insert_subfield('normal', Vector3((0., 0., 1.)))
+
+    unrotated = event.unrotate_by_frame(frame)
+
+    assert unrotated.frame is Frame.J2000.wayframe
+    assert unrotated.pos.vals == pytest.approx(event.wrt_frame(Frame.J2000).pos.vals,
+                                               abs=1.e-9)
+
+    # The z-axis is the rotation axis, so a normal along it is unchanged
+    assert unrotated.normal.vals == pytest.approx((0., 0., 1.), abs=1.e-12)
+
+
+def test_unrotate_by_frame_can_drop_the_derivatives() -> None:
+    """Without derivs, the event is stripped before it is unrotated."""
+
+    frame = Rotation(0.5, 2, Frame.J2000, frame_id='TEST_EVENT_UNROTATE_WOD')
+    event = Event(Scalar(0.), Vector3((1.e5, 0., 0.)), 'SSB', frame)
+    event.insert_subfield('coord1', Scalar(1.))
+    event.coord1.insert_deriv('x', Scalar(1.))
+
+    assert 'x' not in event.unrotate_by_frame(frame, derivs=False).coord1.derivs
+    assert 'x' in event.unrotate_by_frame(frame, derivs=True).coord1.derivs
+
+
+def test_collapse_time_leaves_an_event_with_time_derivatives_alone() -> None:
+    """A time derivative names each element, so the times cannot be collapsed."""
+
+    event = _sequence_event().with_time_derivs()
+
+    assert event.collapse_time() is event
+
+
+def test_collapsing_the_time_is_reported_as_a_diagnostic(
+        capsys: pytest.CaptureFixture[str]) -> None:
+    """The span that was collapsed is logged when diagnostics are on."""
+
+    event = Event(Scalar([0., 1.e-9]), Vector3([(1., 0., 0.), (2., 0., 0.)]),
+                  'SSB', 'J2000')
+
+    LOGGING.on()
+    LOGGING.event_time_collapse = True
+    try:
+        event.collapse_time()
+    finally:
+        LOGGING.event_time_collapse = False
+        LOGGING.off()
+
+    assert 'Event.collapse_time()' in capsys.readouterr().out
+
+
+def test_subtraction_carries_the_subfields_of_the_barycentric_event() -> None:
+    """A vector subfield of the event survives into the difference, unrotated."""
+
+    first = _simple_event()
+    first.insert_subfield('normal', Vector3((0., 0., 1.)))
+    second = Event(Scalar(0.), Vector3((0., 0., 0.)), 'SSB', 'J2000')
+
+    diff = first.sub(second)
+
+    assert diff.normal == Vector3((0., 0., 1.))
+
+
+@pytest.mark.parametrize('method, missing',
+                         [('incidence_angle', 'arr'),
+                          ('emission_angle', 'dep')])
+def test_an_angle_needs_the_photon_it_is_measured_from(method: str,
+                                                       missing: str) -> None:
+    """The incidence angle needs an arrival and the emission angle a departure."""
+
+    event = _simple_event()
+    event.perp = Vector3((0., 0., 1.))
+
+    with pytest.raises(ValueError, match=f'undefined {missing}'):
+        getattr(event, method)()
+
+
+@pytest.mark.parametrize('method', ['incidence_angle', 'emission_angle'])
+def test_an_angle_needs_a_surface_normal(method: str) -> None:
+    """Both angles are measured from the normal, so the normal has to be there."""
+
+    event = _simple_event()
+    event.arr = Vector3((0., 0., -1.))
+    event.dep = Vector3((0., 0., 1.))
+
+    with pytest.raises(ValueError, match='undefined perpendicular'):
+        getattr(event, method)()
+
+
+@pytest.mark.parametrize('missing', ['arr', 'dep'])
+def test_the_phase_angle_needs_both_photons(missing: str) -> None:
+    """The phase angle separates the arriving photon from the departing one."""
+
+    event = _simple_event()
+    if missing == 'arr':
+        event.dep = Vector3((0., 0., 1.))
+    else:
+        event.arr = Vector3((0., 0., -1.))
+
+    with pytest.raises(ValueError, match=f'undefined {missing}'):
+        event.phase_angle()
+
+
+def test_ra_and_dec_rejects_an_unknown_subfield() -> None:
+    """The direction comes from the arriving photon or the departing one."""
+
+    event = _simple_event()
+    event.arr = Vector3((0., 0., -1.))
+
+    with pytest.raises(ValueError, match='invalid input value for subfield'):
+        event.ra_and_dec(subfield='perp')
+
+
+def test_ra_and_dec_needs_the_photon_it_is_asked_for() -> None:
+    """An event with no departing photon has no direction to report."""
+
+    event = _simple_event()
+    event.arr = Vector3((0., 0., -1.))
+
+    with pytest.raises(ValueError, match='undefined light ray'):
+        event.ra_and_dec(subfield='dep')
 
 ##########################################################################################

@@ -4,9 +4,10 @@
 
 import pickle
 
+import numpy as np
 import pytest
 
-from polymath import Pair, Scalar
+from polymath import Pair, Scalar, Vector
 import oops
 
 
@@ -242,5 +243,61 @@ def test_instant_of_a_single_time_has_one_time_step() -> None:
     assert cad.time_is_outside(100.) == False       # noqa: E712  numpy bool, not the
                                                     # False singleton
 
+def test_a_multidimensional_instant_reports_a_pair_of_step_ranges() -> None:
+    """With a 2-D array of moments, a step range is a pair of indices."""
+
+    cad = oops.cadence.Instant([[100., 110.], [120., 130.]])
+
+    (first, last) = cad.tstep_range_at_time(Scalar([110., 105.]))
+
+    assert isinstance(first, Pair)
+    assert first == Pair([(0, 1), (0, 0)])
+    assert last == Pair([(1, 2), (0, 0)])       # the second time is not sampled
+
+
+def test_a_three_dimensional_instant_reports_a_vector_of_step_ranges() -> None:
+    """Beyond two dimensions the indices are returned as a Vector."""
+
+    cad = oops.cadence.Instant(np.arange(8.).reshape(2, 2, 2))
+
+    (first, last) = cad.tstep_range_at_time(Scalar(5.))
+
+    assert isinstance(first, Vector)
+    assert first == Vector((1, 0, 1))
+    assert last == Vector((2, 1, 2))    # the upper limit is exclusive on every axis
+
+
+def test_a_shapeless_instant_reports_a_shapeless_step_range() -> None:
+    """One moment alone has a single time step, index zero."""
+
+    cad = oops.cadence.Instant(100.)
+
+    (first, last) = cad.tstep_range_at_time(Scalar([100., 101.]))
+
+    assert first == Scalar([0, 0])
+    assert last == Scalar([1, 0])               # the second time is not sampled
+
+
+def test_shifting_an_instant_moves_every_moment() -> None:
+    """A shifted Instant samples the same moments, later by the offset."""
+
+    cad = oops.cadence.Instant([100., 110., 130.])
+
+    shifted = cad.time_shift(50.)
+
+    assert shifted.time == (150., 180.)
+    assert shifted.time_at_tstep(Scalar(1)) == Scalar(160.)
+
+
+def test_an_instant_can_be_declared_continuous() -> None:
+    """as_continuous returns a copy that claims continuity, leaving the original alone."""
+
+    cad = oops.cadence.Instant([100., 110., 130.])
+
+    continuous = cad.as_continuous()
+
+    assert continuous.is_continuous
+    assert not cad.is_continuous
+    assert continuous.time == cad.time
 
 ##########################################################################################

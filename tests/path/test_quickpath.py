@@ -2,12 +2,14 @@
 # oops/path/quickpath.py: Subclass QuickPath of class Path
 ##########################################################################################
 
+import pickle
+
 import numpy as np
 import pytest
 
 from polymath     import Scalar, Vector3
 from oops.body    import Body
-from oops.config  import QUICK
+from oops.config  import LOGGING, QUICK
 from oops.frame   import Frame
 from oops.gravity import Gravity
 from oops.path    import FixedPath, KeplerPath, Path, QuickPath, SpicePath
@@ -272,5 +274,132 @@ def test_quickpath_rejects_a_quickpath(core_kernels) -> None:
 
     with pytest.raises(ValueError):
         QuickPath(quick, _EPOCH, _EPOCH + 100., QUICK.dictionary)
+
+##########################################################################################
+# Serialization, empty inputs, validation, and the creation diagnostics
+##########################################################################################
+
+def test_a_quickpath_survives_a_round_trip_through_pickle(core_kernels) -> None:
+    """By default only the path and its limits are pickled, and the table is rebuilt."""
+
+    mars = SpicePath('MARS', 'SSB')
+    quick = QuickPath.for_path(mars, _dense_times(0., 100.), quick={})
+    time = Scalar(_EPOCH + 50.)
+    expected = quick.event_at_time(time).pos
+
+    restored = pickle.loads(pickle.dumps(quick))
+
+    assert isinstance(restored, QuickPath)
+    assert restored.event_at_time(time).pos == expected
+
+
+def test_a_quickpath_can_pickle_its_tabulated_details(core_kernels) -> None:
+    """With the flag set, the interpolation table is pickled along with the path."""
+
+    mars = SpicePath('MARS', 'SSB')
+    quick = QuickPath.for_path(mars, _dense_times(0., 100.), quick={})
+    time = Scalar(_EPOCH + 50.)
+    expected = quick.event_at_time(time).pos
+
+    quick.pickle_quickpath_details = True
+    try:
+        restored = pickle.loads(pickle.dumps(quick))
+    finally:
+        quick.pickle_quickpath_details = False
+
+    assert restored.event_at_time(time).pos == expected
+
+
+def test_an_empty_array_of_times_gives_an_empty_state(core_kernels) -> None:
+    """With no times to evaluate, the position and velocity are masked."""
+
+    mars = SpicePath('MARS', 'SSB')
+    quick = QuickPath.for_path(mars, _dense_times(0., 100.), quick={})
+
+    (pos, vel) = quick._interpolate_pos_vel(Scalar(np.zeros((0,))))
+
+    assert pos.shape == (0,)
+    assert vel.shape == (0,)
+
+
+def test_extending_a_quickpath_over_a_covered_interval_does_nothing(
+        core_kernels) -> None:
+    """An interval already inside the table leaves the table unchanged."""
+
+    mars = SpicePath('MARS', 'SSB')
+    quick = QuickPath.for_path(mars, _dense_times(0., 100.), quick={})
+    before = quick._times.size
+
+    quick.extend(quick._tmin, quick._tmax)
+
+    assert quick._times.size == before
+
+
+def test_for_path_rejects_an_unusable_quick_argument(core_kernels) -> None:
+    """The `quick` argument is a dictionary of overrides, None, or False."""
+
+    mars = SpicePath('MARS', 'SSB')
+
+    with pytest.raises(ValueError, match='invalid `quick` input'):
+        QuickPath.for_path(mars, _dense_times(0., 100.), quick=17)
+
+
+def test_for_path_returns_a_shaped_path_unchanged(core_kernels) -> None:
+    """A QuickPath tabulates one path, so a shaped path cannot be quickened."""
+
+    shaped = FixedPath(Vector3([(1.e5, 0., 0.), (0., 1.e5, 0.)]), 'SSB', 'J2000',
+                       path_id='TEST_QUICK_SHAPED')
+
+    assert QuickPath.for_path(shaped, _dense_times(0., 100.), quick={}) is shaped
+
+
+def test_for_path_returns_the_path_when_quickpaths_are_disabled(core_kernels) -> None:
+    """The configured switch turns the optimization off entirely."""
+
+    mars = SpicePath('MARS', 'SSB')
+
+    assert QuickPath.for_path(mars, _dense_times(0., 100.),
+                              quick={'use_quickpaths': False}) is mars
+
+
+def test_for_path_returns_the_path_when_every_time_is_masked(core_kernels) -> None:
+    """With no unmasked time there is no interval to tabulate."""
+
+    mars = SpicePath('MARS', 'SSB')
+    masked = Scalar(_EPOCH + np.arange(0., 100., 0.01), True)
+
+    assert QuickPath.for_path(mars, masked, quick={}) is mars
+
+
+def test_building_a_quickpath_is_reported_as_a_diagnostic(
+        core_kernels, capsys: pytest.CaptureFixture[str]) -> None:
+    """A new QuickPath and an extension of one are both logged."""
+
+    mars = SpicePath('MARS', 'SSB')
+
+    LOGGING.on()
+    LOGGING.quickpath_creation = True
+    try:
+        QuickPath.for_path(mars, _dense_times(0., 100.), quick={})
+        QuickPath.for_path(mars, _dense_times(100., 300.), quick={})
+    finally:
+        LOGGING.quickpath_creation = False
+        LOGGING.off()
+
+    printed = capsys.readouterr().out
+    assert 'New QuickPath for' in printed
+    assert 'Extending QuickPath for' in printed
+
+
+def test_the_quickpath_cache_holds_only_as_many_as_it_is_allowed(core_kernels) -> None:
+    """A new QuickPath displaces the oldest one once the cache is full."""
+
+    mars = SpicePath('MARS', 'SSB')
+    quick = {'quickpath_cache_size': 2}
+
+    for offset in (0., 1.e6, 2.e6, 3.e6):
+        QuickPath.for_path(mars, _dense_times(offset, offset + 100.), quick=quick)
+
+    assert len(mars._quickpaths) == 2
 
 ##########################################################################################

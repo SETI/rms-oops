@@ -88,4 +88,16 @@ def bp(saturn_obs: Snapshot) -> Backplane:
 
     return Backplane(saturn_obs)
 
+
+@pytest.fixture
+def fresh_bp(saturn_obs: Snapshot) -> Backplane:
+    """A Backplane with an empty cache, for the tests that depend on evaluation order.
+
+    Several backplanes fill in a whole family of arrays on the first call, so which
+    branch a call takes depends on what has been evaluated before it. These tests need a
+    Backplane that nothing else has touched.
+    """
+
+    return Backplane(saturn_obs)
+
 ##########################################################################################

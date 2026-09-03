@@ -809,4 +809,57 @@ def one_time_step(cadence):
     assert cadence.tstride_at_tstep(0) == 10
     assert cadence.tstride_at_tstep(0.5) == 10
     assert cadence.tstride_at_tstep(1) == 10
+
+##########################################################################################
+# Remasking without clipping, and the streamlined constructor
+##########################################################################################
+
+def test_a_gapless_metronome_masks_an_out_of_range_time_without_clipping() -> None:
+    """With clip off, a time outside the cadence is masked rather than pulled inside."""
+
+    cad = oops.cadence.Metronome(100., 10., 10., 4, clip=False)
+
+    tstep = cad.tstep_at_time(Scalar([90., 105., 145.]), remask=True)
+
+    assert list(tstep.mask) == [True, False, True]
+    assert tstep[1] == Scalar(0.5)
+
+
+def test_a_gapless_metronome_can_exclude_its_end_time() -> None:
+    """inclusive=False masks the final instant along with everything beyond it."""
+
+    cad = oops.cadence.Metronome(100., 10., 10., 4, clip=False)
+
+    assert not cad.tstep_at_time(Scalar(140.), remask=True).mask
+    assert cad.tstep_at_time(Scalar(140.), remask=True, inclusive=False).mask
+
+
+def test_a_metronome_with_gaps_masks_an_out_of_range_time_without_clipping() -> None:
+    """The same holds when the exposure is shorter than the stride."""
+
+    cad = oops.cadence.Metronome(100., 10., 8., 4, clip=False)
+
+    tstep = cad.tstep_at_time(Scalar([90., 105., 145.]), remask=True)
+
+    assert list(tstep.mask) == [True, False, True]
+
+
+def test_for_array1d_inserts_the_delay_between_the_steps() -> None:
+    """The stride is the exposure plus the delay that follows it."""
+
+    cad = oops.cadence.Metronome.for_array1d(4, 100., 8., interstep_delay=2.)
+
+    assert cad.shape == (4,)
+    assert cad.time == (100., 138.)
+    assert cad.time_range_at_tstep(Scalar(1)) == (Scalar(110.), Scalar(118.))
+
+
+def test_for_array1d_defaults_to_a_gapless_cadence() -> None:
+    """With no delay, the exposures run back to back."""
+
+    cad = oops.cadence.Metronome.for_array1d(4, 100., 10.)
+
+    assert cad.is_continuous
+    assert cad.time == (100., 140.)
+
 ##########################################################################################

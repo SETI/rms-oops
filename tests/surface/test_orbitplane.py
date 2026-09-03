@@ -2,6 +2,7 @@
 # tests/surface/test_orbitplane.py
 ##########################################################################################
 
+import pickle
 from typing import cast
 
 import numpy as np
@@ -10,6 +11,7 @@ import pytest
 from polymath                import Scalar, Vector3
 from oops.constants          import PI, HALFPI, TWOPI, RPD
 from oops.event              import Event
+from oops.frame              import Frame, SpinFrame
 from oops.path               import Path
 from oops.surface.orbitplane import OrbitPlane
 
@@ -412,5 +414,137 @@ def test_to_mean_anomaly_accepts_masked_longitudes() -> None:
 
     partly = orbit.to_mean_anomaly(Scalar([1., 2., 3.], mask=[False, True, False]))
     assert list(partly.mask) == [False, True, False]
+
+##########################################################################################
+# Frame validation, radial limits, the circular shortcuts, and serialization
+##########################################################################################
+
+# A circular orbit of unit radius, with a mean motion of one radian per second
+CIRCULAR = (1., 0., 1.)
+EPOCH = 0.
+
+# The same orbit, given an eccentricity, a pericenter and a precession rate
+ECCENTRIC = (1., 0., 1., 0.1, 0., 0.1)
+
+# Radial limits spanning the circular orbit
+RADII = (0.5, 1.5)
+
+
+def _orbit(elements=CIRCULAR, **kwargs) -> OrbitPlane:
+    """An orbit plane about the SSB in J2000.
+
+    Parameters:
+        elements: The orbital elements.
+        kwargs: Overrides of the remaining constructor arguments.
+
+    Returns:
+        OrbitPlane: The surface.
+    """
+
+    args = {'epoch': EPOCH, 'origin': 'SSB', 'frame': 'J2000'}
+    args.update(kwargs)
+
+    return OrbitPlane(elements, **args)
+
+
+def test_the_frame_of_an_orbit_plane_must_be_inertial() -> None:
+    """A rotating frame has an origin, and an orbit cannot be defined relative to one."""
+
+    spinning = SpinFrame(0., 1.e-6, EPOCH, 2, Frame.J2000, frame_id='TEST_SPINNING')
+
+    with pytest.raises(ValueError, match='must be inertial'):
+        OrbitPlane(CIRCULAR, EPOCH, 'SSB', spinning)
+
+
+def test_radial_limits_mask_the_coordinates_outside_them() -> None:
+    """A radius beyond the limits is masked."""
+
+    orbit = _orbit(radii=RADII)
+    pos = Vector3([(1., 0., 0.), (2., 0., 0.)])
+
+    assert list(orbit.coords_from_vector3(pos)[0].mask) == [False, True]
+
+
+def test_the_unmasked_orbit_plane_drops_the_radial_limits() -> None:
+    """The unmasked counterpart shares the geometry but keeps every radius."""
+
+    orbit = _orbit(radii=RADII)
+    pos = Vector3([(2., 0., 0.)])
+
+    assert orbit.unmasked is not orbit
+    assert orbit.unmasked._radii is None
+    assert not np.any(orbit.unmasked.coords_from_vector3(pos)[0].mask)
+
+
+def test_an_unlimited_orbit_plane_is_its_own_unmasked_surface() -> None:
+    """With no radial limits there is nothing to unmask."""
+
+    orbit = _orbit()
+
+    assert orbit.unmasked is orbit
+
+
+def test_the_unmasked_orbit_plane_is_its_own_unmasked_surface() -> None:
+    """The unmasked counterpart has nothing left to unmask."""
+
+    unmasked = _orbit(radii=RADII).unmasked
+
+    assert unmasked.unmasked is unmasked
+
+
+def test_the_intercept_of_an_orbit_plane_is_the_ring_plane_intercept() -> None:
+    """The geometry is that of the underlying ring plane."""
+
+    orbit = _orbit()
+    obs = Vector3((0., 0., 10.))
+    los = Vector3([(1., 0., -10.)])
+
+    (pos, t) = orbit.intercept(obs, los)
+
+    assert pos == Vector3([(1., 0., 0.)])
+    assert t == Scalar([1.])
+
+
+def test_the_normal_to_an_orbit_plane_is_the_ring_plane_normal() -> None:
+    """The normal is that of the underlying ring plane."""
+
+    orbit = _orbit()
+    pos = Vector3([(1., 0., 0.)])
+
+    assert orbit.normal(pos) == orbit._ringplane.normal(pos)
+
+
+def test_a_circular_orbit_has_no_anomaly_to_convert() -> None:
+    """With no eccentricity, the mean anomaly and the longitude are the same angle."""
+
+    orbit = _orbit()
+    angle = Scalar([0., 1., 2.])
+
+    assert orbit.from_mean_anomaly(angle) == angle
+    assert orbit.to_mean_anomaly(angle) == angle
+
+
+def test_the_anomaly_conversions_invert_each_other() -> None:
+    """With eccentricity, the two conversions are exact inverses."""
+
+    orbit = _orbit(ECCENTRIC, path_id='TEST_ECCENTRIC_ANOMALY')
+    anom = Scalar([0., 1., 2., 3.])
+
+    assert orbit.to_mean_anomaly(orbit.from_mean_anomaly(anom)).vals \
+           == pytest.approx(anom.vals, abs=1.e-12)
+
+
+def test_an_orbit_plane_survives_a_round_trip_through_pickle() -> None:
+    """Unpickling rebuilds the surface from its elements, epoch and radii."""
+
+    orbit = _orbit(radii=RADII)
+    pos = Vector3([(1., 0., 0.1)])
+
+    revived = pickle.loads(pickle.dumps(orbit))
+
+    assert list(revived._elements) == list(orbit._elements)
+    assert list(revived._radii) == list(RADII)
+    assert revived.coords_from_vector3(pos, axes=3) \
+           == orbit.coords_from_vector3(pos, axes=3)
 
 ##########################################################################################

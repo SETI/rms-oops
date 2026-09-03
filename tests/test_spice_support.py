@@ -191,4 +191,34 @@ def test_load_leap_seconds_is_idempotent() -> None:
 
     assert spice_support.LSK_LOADED
 
+def test_frame_id_and_name_from_a_body_id() -> None:
+    """A body ID that is not a frame ID resolves to that body's rotation frame."""
+
+    assert spice_support.frame_id_and_name(499) == (499, 'IAU_MARS')
+
+
+def test_frame_id_and_name_rejects_a_body_id_with_no_frame() -> None:
+    """A spacecraft has no rotation frame defined by the planetary constants.
+
+    New Horizons is a body the Toolkit knows, but no test here furnishes a frame kernel
+    for it, so it has no rotation frame.
+    """
+
+    with pytest.raises(LookupError, match='frame for body -98 is undefined'):
+        spice_support.frame_id_and_name(-98)
+
+
+def test_frame_id_and_name_rejects_a_frame_whose_body_has_no_pole() -> None:
+    """A frame is defined only if the planetary constants give its body a pole."""
+
+    with pytest.raises(LookupError, match='frame "EARTH_BARYCENTER" is undefined'):
+        spice_support.frame_id_and_name('EARTH_BARYCENTER')
+
+
+def test_frame_id_and_name_rejects_a_body_name_with_no_frame() -> None:
+    """A spacecraft named as a string is refused for the same reason."""
+
+    with pytest.raises(LookupError, match='frame for body "NEW HORIZONS" is undefined'):
+        spice_support.frame_id_and_name('NEW HORIZONS')
+
 ##########################################################################################

@@ -703,9 +703,11 @@ def _solve_photon_by_coords(self, link, coords, sign, *, derivs=False, guess=Non
     if not np.any(antimask):
         return _fully_masked_result(self, link, link_key)
 
-    # Shrink the event
+    # Shrink the event. The coordinates are indexed alongside it, so they have to be
+    # shrunk by the same antimask; a shapeless coordinate is left as it is.
     unshrunk_link = link
     link = link.shrink(antimask)
+    coords = tuple(Scalar.as_scalar(coord).shrink(antimask) for coord in coords)
 
     # Define quantities with respect to SSB in J2000
     link_wrt_ssb = link.wrt_ssb(derivs=True, quick=quick)

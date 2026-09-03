@@ -295,4 +295,26 @@ def test_photon_to_coords_light_time_matches_the_distance(planet: Ellipsoid,
 
     assert surface_event.dep_lt.vals[0] == pytest.approx(distance / C, rel=1.e-6)
 
+
+def test_photon_to_coords_drops_the_masked_coordinates_with_the_link(
+                                                            planet: Ellipsoid) -> None:
+    """A partly masked link leaves the coordinates indexed alongside it.
+
+    The solver shrinks the link event to its unmasked elements before iterating, so the
+    coordinates have to be shrunk by the same antimask; the result is unshrunk back to
+    the original shape. With an unmasked link the shrink is a no-op, so only a link
+    carrying a masked element exercises this.
+    """
+
+    observer = Vector3([[1.e6, 0., 1.e5], [1.e6, 0., 1.e5], [1.e6, 2.e5, 1.e5]],
+                       mask=[False, True, False])
+    (reference, _) = planet.photon_to_event(_arrival(observer))
+    coords = planet.coords_from_vector3(reference.pos, axes=2)
+
+    (surface_event, _) = planet.photon_to_coords(_arrival(observer), coords)
+
+    assert surface_event.shape == (3,)
+    assert surface_event.pos.vals[surface_event.pos.antimask] == pytest.approx(
+                            reference.pos.vals[reference.pos.antimask], abs=1.e-3)
+
 ##########################################################################################

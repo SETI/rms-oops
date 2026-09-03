@@ -175,4 +175,40 @@ def test_fittable():
 
     d = D(float)
     assert mutable.freeze(d) is False  # tests TypeError check in freeze()
+
+def test_a_single_parameter_can_be_given_as_a_bare_number() -> None:
+    """A value that is not iterable is wrapped into a one-element tuple."""
+
+    a = A(7)
+
+    assert a.set_params(3.)
+    assert a.params == (3.,)
+
+
+def test_an_empty_sequence_of_parameters_is_refused() -> None:
+    """There is nothing to fit if no values are given."""
+
+    a = A(7)
+
+    with pytest.raises(ValueError, match='missing parameters for A.set_params'):
+        a.set_params(())
+
+
+def test_setting_the_parameters_to_their_current_values_changes_nothing() -> None:
+    """An object that is already at these values reports no change."""
+
+    a = A(7)
+
+    assert not a.set_params((7.,))
+
+
+def test_freeze_reports_whether_it_did_anything() -> None:
+    """Freezing an unfrozen object changes it; freezing it again does not."""
+
+    a = A(7)
+
+    assert a.freeze()
+    assert not a.freeze()
+    assert a.is_frozen
+
 ##########################################################################################

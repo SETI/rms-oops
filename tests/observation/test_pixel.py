@@ -3,10 +3,11 @@
 ##########################################################################################
 
 import numpy as np
+import pytest
 
 from polymath import Scalar, Pair
 
-from oops.cadence     import Metronome
+from oops.cadence     import DualCadence, Metronome
 from oops.fov         import FlatFOV
 from oops.observation import Pixel
 
@@ -313,5 +314,88 @@ def test_pixel_uvt_range_accepts_a_number():
     (uv_min, uv_max, time_min, time_max) = obs.uvt_range(0)
 
     assert uv_min == Pair((0,0))
+
+##########################################################################################
+# Constructor validation, an untimed pixel, subfields, and time_shift
+##########################################################################################
+
+PIXEL_FOV = FlatFOV((0.001, 0.001), (1, 1))
+CADENCE = Metronome(tstart=0., tstride=10., texp=10., steps=5)
+
+
+def _pixel(**kwargs) -> Pixel:
+    """A Pixel observed at five consecutive time steps.
+
+    Parameters:
+        kwargs: Overrides of the default constructor arguments.
+
+    Returns:
+        Pixel: The observation.
+    """
+
+    args = {'axes': ('t',), 'cadence': CADENCE, 'fov': PIXEL_FOV,
+            'path': 'SSB', 'frame': 'J2000'}
+    args.update(kwargs)
+
+    return Pixel(**args)
+
+
+def test_the_fov_must_be_a_single_pixel() -> None:
+    """A Pixel observation sees exactly one pixel."""
+
+    with pytest.raises(ValueError, match=r'FOV must have shape \(1,1\)'):
+        _pixel(fov=FlatFOV((0.001, 0.001), (2, 1)))
+
+
+def test_the_cadence_must_be_one_dimensional() -> None:
+    """The one axis of a Pixel is time, so its cadence has one dimension."""
+
+    two_d = DualCadence(Metronome(tstart=0., tstride=50., texp=50., steps=2), CADENCE)
+
+    with pytest.raises(ValueError, match='requires a 1-D cadence'):
+        _pixel(cadence=two_d)
+
+
+def test_a_pixel_without_a_time_axis_is_shapeless() -> None:
+    """Axes that do not include "t" leave the observation with no time index."""
+
+    obs = _pixel(axes=('a',))
+
+    assert obs.t_axis == -1
+    assert obs.shape == (0,)
+
+
+def test_an_untimed_pixel_spans_the_whole_cadence() -> None:
+    """With no time index, every index covers the pixel and the full time range."""
+
+    obs = _pixel(axes=('a',))
+
+    (uv_min, uv_max, time_min, time_max) = obs.uvt_range(Scalar(0.))
+
+    assert uv_min == Pair((0, 0))
+    assert uv_max == Pair((1, 1))
+    assert time_min == Scalar(0.)
+    assert time_max == Scalar(50.)
+
+
+def test_a_subfield_becomes_an_attribute() -> None:
+    """Optional keywords are inserted as subfields, and so as attributes."""
+
+    obs = _pixel(data=Scalar([1., 2., 3.]))
+
+    assert obs.data == Scalar([1., 2., 3.])
+    assert obs.subfields['data'] == Scalar([1., 2., 3.])
+
+
+def test_time_shift_moves_the_cadence_and_keeps_the_subfields() -> None:
+    """A shifted observation is the same observation at a later time."""
+
+    obs = _pixel(data=Scalar([1., 2., 3.]))
+
+    shifted = obs.time_shift(100.)
+
+    assert shifted.time == (100., 150.)
+    assert shifted.shape == obs.shape
+    assert shifted.data == obs.data
 
 ##########################################################################################

@@ -434,3 +434,55 @@ def test_reshaped_cadence_survives_a_pickle_round_trip() -> None:
     assert restored.time_at_tstep(Pair((1, 2))) == reshaped.time_at_tstep(Pair((1, 2)))
 
 ##########################################################################################
+# Derivatives through a reshape, and the shortcuts of tstep_range_at_time
+##########################################################################################
+
+def test_an_unmasked_derivative_takes_the_mask_of_the_reshaped_index() -> None:
+    """A derivative with no mask of its own inherits the one the reshape produced."""
+
+    cadence = ReshapedCadence(Metronome(100., 10., 10., 6), (2, 3))
+    tstep = Scalar([0., 1.5, 3.])
+    tstep.insert_deriv('t', Scalar([1., 1., 1.]))
+
+    reshaped = cadence._new_tstep_from_old(tstep, derivs=True)
+
+    # The reshape puts the whole rate on the fast axis, which is the last one
+    assert reshaped.derivs['t'] == Pair([(0., 1.), (0., 1.), (0., 1.)])
+    assert not np.any(reshaped.derivs['t'].mask)
+
+
+def test_a_derivative_sharing_the_index_mask_keeps_it() -> None:
+    """A derivative masked exactly like its index inherits the reshaped mask."""
+
+    cadence = ReshapedCadence(Metronome(100., 10., 10., 6), (2, 3))
+    mask = [False, True, False]
+    tstep = Scalar([0., 1.5, 3.], mask)
+    tstep.insert_deriv('t', Scalar([1., 1., 1.], tstep.mask))
+
+    reshaped = cadence._new_tstep_from_old(tstep, derivs=True, remask=True)
+
+    assert list(reshaped.derivs['t'].mask) == mask
+
+
+def test_reshaping_to_the_same_shape_leaves_a_step_range_alone() -> None:
+    """When nothing changes, the range from the wrapped cadence is returned as it is."""
+
+    cadence = ReshapedCadence(Metronome(100., 10., 10., 6), (6,))
+
+    assert cadence.tstep_range_at_time(Scalar(115.)) == (Scalar(1), Scalar(2))
+
+
+def test_flattening_a_two_dimensional_cadence_gives_a_one_dimensional_range() -> None:
+    """A 2-D cadence reshaped to one axis reports a scalar range of steps."""
+
+    slow = Metronome(100., 100., 100., 3)
+    fast = Metronome(0., 10., 10., 10)
+    cadence = ReshapedCadence(oops.cadence.DualCadence(slow, fast), (30,))
+
+    (first, last) = cadence.tstep_range_at_time(Scalar(115.))
+
+    assert first == Scalar(1)
+    assert last == Scalar(2)
+    assert cadence.time_at_tstep(first) == Scalar(110.)
+
+##########################################################################################

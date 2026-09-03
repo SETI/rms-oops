@@ -326,4 +326,37 @@ def test_meshgrid_for_shape_honors_center_uv(fov: FlatFOV) -> None:
 
     assert grid.center_uv == Pair((1., 2.))
 
+def test_a_single_limit_applies_to_both_axes(fov: FlatFOV) -> None:
+    """A number stands in for a pair of identical limits."""
+
+    from_number = Meshgrid.for_fov(fov, limit=8)
+    from_pair = Meshgrid.for_fov(fov, limit=(8, 8))
+
+    assert from_number.shape == from_pair.shape
+    assert from_number.uv == from_pair.uv
+
+
+def test_a_single_origin_applies_to_both_axes(fov: FlatFOV) -> None:
+    """A number stands in for a pair of identical origins."""
+
+    from_number = Meshgrid.for_fov(fov, origin=0.25)
+    from_pair = Meshgrid.for_fov(fov, origin=(0.25, 0.25))
+
+    assert from_number.uv == from_pair.uv
+
+
+@pytest.mark.parametrize('method', ['los', 'center_los'])
+def test_a_line_of_sight_with_derivatives_supplies_the_one_without(method: str,
+                                                                   fov: FlatFOV) -> None:
+    """Asking for derivatives first fills the plain result from the one already built."""
+
+    meshgrid = Meshgrid.for_fov(fov)
+
+    with_derivs = getattr(meshgrid, method + '_w_derivs')(0.)
+    plain = getattr(meshgrid, method)(0.)
+
+    assert not plain.derivs
+    assert plain == with_derivs.wod
+    assert getattr(meshgrid, method)(0.) is plain
+
 ##########################################################################################

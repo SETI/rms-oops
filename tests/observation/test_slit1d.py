@@ -3,8 +3,10 @@
 ##########################################################################################
 
 import numpy as np
+import pytest
 
-from polymath         import Pair, Vector
+from polymath         import Pair, Scalar, Vector
+from oops.cadence     import Metronome
 from oops.observation import Slit1D
 from oops.fov         import FlatFOV
 
@@ -108,4 +110,92 @@ def test_slit1d():
     assert uv_max.to_scalar(1) == 1
     assert time_min == 0.
     assert time_max == 10.
+
+##########################################################################################
+# Constructor validation, a cadence in place of a start time, subfields, and time_shift
+##########################################################################################
+
+SLIT_FOV = FlatFOV((0.001, 0.001), (20, 1))
+
+
+def _slit(**kwargs) -> Slit1D:
+    """A Slit1D along the u-axis of a twenty-pixel slit.
+
+    Parameters:
+        kwargs: Overrides of the default constructor arguments.
+
+    Returns:
+        Slit1D: The observation.
+    """
+
+    args = {'axes': ('u',), 'tstart': 0., 'texp': 10., 'fov': SLIT_FOV,
+            'path': 'SSB', 'frame': 'J2000'}
+    args.update(kwargs)
+
+    return Slit1D(**args)
+
+
+@pytest.mark.parametrize('axes', [('a',), ('u', 'v')], ids=['neither', 'both'])
+def test_the_axes_must_name_exactly_one_spatial_axis(axes: tuple[str, ...]) -> None:
+    """A slit runs along one axis, so exactly one of "u" and "v" appears."""
+
+    with pytest.raises(ValueError, match='axes are incompatible with Slit1D'):
+        _slit(axes=axes)
+
+
+def test_the_cross_slit_axis_of_the_fov_must_be_one_pixel_wide() -> None:
+    """A slit is one pixel across; a wider FOV is not a slit."""
+
+    with pytest.raises(ValueError, match='cross-slit FOV axis must have length 1'):
+        _slit(fov=FlatFOV((0.001, 0.001), (20, 2)))
+
+
+def test_a_slit_along_the_v_axis_runs_the_other_way() -> None:
+    """"v" puts the slit on the v-axis, so the FOV is one pixel wide in u instead."""
+
+    obs = _slit(axes=('v',), fov=FlatFOV((0.001, 0.001), (1, 20)))
+
+    assert obs.u_axis == -1
+    assert obs.v_axis == 0
+    assert tuple(obs.shape) == (20,)
+
+
+def test_a_cadence_can_stand_in_for_the_start_time() -> None:
+    """A one-step Cadence defines both the start time and the exposure."""
+
+    obs = _slit(tstart=Metronome(tstart=5., tstride=20., texp=20., steps=1), texp=None)
+
+    assert obs.time == (5., 25.)
+    assert obs._texp == 20.
+
+
+def test_a_cadence_of_more_than_one_step_is_rejected() -> None:
+    """Every pixel of a Slit1D is exposed at once, so the cadence has one step."""
+
+    cadence = Metronome(tstart=0., tstride=10., texp=10., steps=2)
+
+    with pytest.raises(ValueError, match="cadence must be \\(1,\\)"):
+        _slit(tstart=cadence)
+
+
+def test_a_subfield_becomes_an_attribute() -> None:
+    """Optional keywords are inserted as subfields, and so as attributes."""
+
+    obs = _slit(data=Scalar([1., 2., 3.]))
+
+    assert obs.data == Scalar([1., 2., 3.])
+    assert obs.subfields['data'] == Scalar([1., 2., 3.])
+
+
+def test_time_shift_moves_the_exposure_and_keeps_the_subfields() -> None:
+    """A shifted observation is the same observation at a later time."""
+
+    obs = _slit(data=Scalar([1., 2., 3.]))
+
+    shifted = obs.time_shift(100.)
+
+    assert shifted.time == (100., 110.)
+    assert shifted.shape == obs.shape
+    assert shifted.data == obs.data
+
 ##########################################################################################

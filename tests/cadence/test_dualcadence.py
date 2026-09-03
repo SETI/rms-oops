@@ -2,6 +2,8 @@
 # test/cadence/test_dualcadence.py
 ##########################################################################################
 
+import pickle
+
 import numpy as np
 
 import pytest
@@ -403,5 +405,111 @@ def test_dualcadence_as_continuous_is_epoch_independent() -> None:
                                          short)
     with pytest.raises(ValueError, match='cannot be extended'):
         too_short.as_continuous()
+
+##########################################################################################
+# Constructor validation, serialization, for_array2d, and the continuous shortcut
+##########################################################################################
+
+LONG = oops.cadence.Metronome(100., 100., 100., 3)      # 3 lines, contiguous
+SHORT = oops.cadence.Metronome(0., 10., 10., 10)        # 10 samples per line
+
+
+def test_both_cadences_must_be_one_dimensional() -> None:
+    """A DualCadence pairs one slow axis with one fast axis."""
+
+    nested = oops.cadence.DualCadence(LONG, SHORT)
+
+    with pytest.raises(ValueError, match='long and short cadences must be 1-D'):
+        oops.cadence.DualCadence(nested, SHORT)
+
+
+def test_a_dual_cadence_survives_a_round_trip_through_pickle() -> None:
+    """Unpickling rebuilds the cadence from the two it was built from."""
+
+    cad = oops.cadence.DualCadence(LONG, SHORT)
+
+    revived = pickle.loads(pickle.dumps(cad))
+
+    assert revived.shape == cad.shape
+    assert revived.time == cad.time
+    assert revived.time_at_tstep(Pair((1, 5))) == cad.time_at_tstep(Pair((1, 5)))
+
+
+def test_a_continuous_cadence_tests_the_time_limits_directly() -> None:
+    """With no gaps, a time is outside only if it falls beyond the overall limits."""
+
+    cad = oops.cadence.DualCadence(LONG, SHORT)
+    assert cad.is_continuous
+
+    outside = cad.time_is_outside(Scalar([99., 100., 250., 400., 401.]))
+
+    assert list(outside.vals) == [True, False, False, False, True]
+
+
+def test_the_end_of_a_continuous_cadence_can_be_excluded() -> None:
+    """inclusive=False treats the final instant as outside."""
+
+    cad = oops.cadence.DualCadence(LONG, SHORT)
+    end = Scalar(cad.time[1])
+
+    assert not cad.time_is_outside(end)
+    assert cad.time_is_outside(end, inclusive=False)
+
+
+def test_for_array2d_builds_a_contiguous_raster() -> None:
+    """With no delays, the samples and lines run back to back."""
+
+    cad = oops.cadence.DualCadence.for_array2d(10, 3, 100., 10.)
+
+    assert cad.shape == (3, 10)
+    assert cad.time == (100., 400.)
+    assert cad.is_continuous
+
+
+def test_for_array2d_inserts_the_delays_it_is_given() -> None:
+    """An intersample delay separates the samples and an interline delay the lines."""
+
+    cad = oops.cadence.DualCadence.for_array2d(10, 3, 100., 10., intersample_delay=1.,
+                                               interline_delay=5.)
+
+    assert cad.shape == (3, 10)
+    assert cad.time_range_at_tstep(Pair((0, 0))) == (Scalar(100.), Scalar(110.))
+    assert cad.time_range_at_tstep(Pair((0, 1))) == (Scalar(111.), Scalar(121.))
+    assert cad.time_range_at_tstep(Pair((1, 0))) == (Scalar(214.), Scalar(224.))
+
+
+def test_the_interline_delay_defaults_to_the_intersample_delay() -> None:
+    """Omitting the interline delay makes the gap between lines match the one between
+    samples.
+    """
+
+    with_default = oops.cadence.DualCadence.for_array2d(10, 3, 100., 10.,
+                                                        intersample_delay=1.)
+    explicit = oops.cadence.DualCadence.for_array2d(10, 3, 100., 10.,
+                                                    intersample_delay=1.,
+                                                    interline_delay=1.)
+
+    assert with_default.time == explicit.time
+    assert with_default.time_at_tstep(Pair((2, 9))) \
+           == explicit.time_at_tstep(Pair((2, 9)))
+
+def test_the_stride_back_to_the_previous_step_of_a_two_dimensional_cadence() -> None:
+    """sign=-1 measures the interval since the previous step along each axis."""
+
+    cad = oops.cadence.DualCadence(LONG, SHORT)
+
+    back = cad.tstride_at_tstep(Pair((1, 5)), sign=-1)
+    forward = cad.tstride_at_tstep(Pair((0, 4)), sign=1)
+
+    assert back == forward
+
+
+def test_the_backward_stride_is_clipped_at_the_first_step() -> None:
+    """At index zero there is no previous step, so the first stride is reported."""
+
+    cad = oops.cadence.DualCadence(LONG, SHORT)
+
+    assert cad.tstride_at_tstep(Pair((0, 0)), sign=-1) \
+           == cad.tstride_at_tstep(Pair((0, 0)), sign=1)
 
 ##########################################################################################

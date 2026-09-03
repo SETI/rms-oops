@@ -2,10 +2,13 @@
 # tests/calibration/test_calibration.py: the Calibration abstract base class
 ##########################################################################################
 
+import pickle
+
 import numpy as np
+import pytest
 
 from polymath          import Pair, Scalar
-from oops.calibration  import FlatCalib, NullCalib, Radiance
+from oops.calibration  import FlatCalib, NullCalib, Radiance, RawCounts
 from oops.fov          import FlatFOV
 
 UV = Pair([(1., 1.), (2., 2.)])
@@ -149,5 +152,39 @@ def test_a_null_calibration_leaves_the_dn_alone() -> None:
 
     assert calibration.extended_from_dn(DN, UV) == DN
     assert calibration.dn_from_extended(DN, UV) == DN
+
+##########################################################################################
+# Serialization
+##########################################################################################
+
+FOV = FlatFOV((1.e-4, 1.e-4), (64, 64))
+
+
+def _calibrations() -> dict:
+    """One instance of every Calibration subclass, keyed by name.
+
+    Returns:
+        dict: The calibrations to test.
+    """
+
+    return {
+        'FlatCalib':  FlatCalib(name='IOF', factor=2., baseline=0.5),
+        'NullCalib':  NullCalib(name='DN'),
+        'Radiance':   Radiance(name='I/F', fov=FOV, factor=2., baseline=0.5),
+        'RawCounts':  RawCounts(name='COUNTS', fov=FOV, factor=2., baseline=0.5),
+    }
+
+
+@pytest.mark.parametrize('name', sorted(_calibrations()))
+def test_a_calibration_survives_a_round_trip_through_pickle(name: str) -> None:
+    """Unpickling rebuilds the calibration and reproduces the conversion it defines."""
+
+    calibration = _calibrations()[name]
+
+    restored = pickle.loads(pickle.dumps(calibration))
+
+    assert type(restored) is type(calibration)
+    assert restored.name == calibration.name
+    assert restored.extended_from_dn(DN, UV) == calibration.extended_from_dn(DN, UV)
 
 ##########################################################################################

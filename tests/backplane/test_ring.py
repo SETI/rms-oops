@@ -266,3 +266,197 @@ def test_ring_backplanes_are_cached(bp: Backplane) -> None:
     assert bp.ring_longitude(RING) is bp.ring_longitude(RING)
 
 ##########################################################################################
+# Argument validation, mask inheritance, caching, and the remaining reference options
+##########################################################################################
+
+LIMB = 'SATURN:LIMB'
+MOON = 'MIMAS'
+
+# A ring_radius key restricted to an annulus, so that the arrays derived from it carry a
+# mask that the unrestricted ones do not
+ANNULUS_KEY = ('ring_radius', RING, 80000., 100000.)
+
+# The backplanes that accept a ring_radius key in place of an event key, inheriting its
+# mask
+NESTED_BACKPLANES = ['ring_longitude', 'ring_azimuth', 'ring_elevation',
+                     'ring_incidence_angle', 'ring_emission_angle',
+                     'ring_radial_resolution', 'ring_angular_resolution',
+                     'ring_gradient_angle']
+
+
+@pytest.mark.parametrize('name', NESTED_BACKPLANES)
+def test_a_ring_backplane_inherits_the_mask_of_a_radius_backplane(name: str,
+                                                                  bp: Backplane) -> None:
+    """Given a ring_radius backplane key, the array is remasked to match it."""
+
+    annulus = bp.ring_radius(RING, rmin=80000., rmax=100000.)
+
+    remasked = getattr(bp, name)(ANNULUS_KEY)
+
+    assert remasked.count_masked() == annulus.count_masked()
+    assert getattr(bp, name)(RING).count_masked() < annulus.count_masked()
+
+
+@pytest.mark.parametrize('name', NESTED_BACKPLANES + ['ring_radius',
+                                                      'ring_sub_observer_longitude',
+                                                      'ring_sub_solar_longitude',
+                                                      '_aries_ring_longitude'])
+def test_every_ring_backplane_is_evaluated_once_and_cached(name: str,
+                                                           bp: Backplane) -> None:
+    """A second request returns the array already registered, not a new one."""
+
+    assert getattr(bp, name)(RING) is getattr(bp, name)(RING)
+
+
+def test_ring_longitude_rejects_an_unknown_reference(bp: Backplane) -> None:
+    """The reference must be one of the six the docstring lists."""
+
+    with pytest.raises(ValueError, match="invalid longitude reference: 'noon'"):
+        bp.ring_longitude(RING, reference='noon')
+
+
+def test_ring_azimuth_rejects_an_unknown_direction(bp: Backplane) -> None:
+    """The azimuth is measured toward the observer or the Sun, and nothing else."""
+
+    with pytest.raises(ValueError, match="invalid azimuth direction: 'north'"):
+        bp.ring_azimuth(RING, direction='north')
+
+
+def test_ring_elevation_rejects_an_unknown_direction(bp: Backplane) -> None:
+    """The elevation is measured toward the observer or the Sun, and nothing else."""
+
+    with pytest.raises(ValueError, match="invalid elevation direction: 'north'"):
+        bp.ring_elevation(RING, direction='north')
+
+
+def test_ring_incidence_angle_rejects_an_unknown_pole(bp: Backplane) -> None:
+    """The pole must be one of the four the docstring lists."""
+
+    with pytest.raises(ValueError, match="invalid incidence angle pole: 'south'"):
+        bp.ring_incidence_angle(RING, pole='south')
+
+
+def test_ring_emission_angle_rejects_an_unknown_pole(bp: Backplane) -> None:
+    """The pole must be one of the four the docstring lists."""
+
+    with pytest.raises(ValueError, match="invalid emission angle pole: 'south'"):
+        bp.ring_emission_angle(RING, pole='south')
+
+
+def test_ring_angular_resolution_rejects_unknown_units(bp: Backplane) -> None:
+    """The angular resolution is reported in radians or in kilometers."""
+
+    with pytest.raises(ValueError, match="invalid units: 'deg'"):
+        bp.ring_angular_resolution(RING, units='deg')
+
+
+@pytest.mark.parametrize('name', ['ring_sub_observer_longitude',
+                                  'ring_sub_solar_longitude'])
+def test_a_ring_sub_point_longitude_rejects_an_unknown_reference(name: str,
+                                                                 bp: Backplane) -> None:
+    """The reference must be one of the six the docstring lists."""
+
+    with pytest.raises(ValueError, match="invalid longitude reference: 'noon'"):
+        getattr(bp, name)(RING, reference='noon')
+
+
+@pytest.mark.parametrize('name', ['ring_sub_observer_longitude',
+                                  'ring_sub_solar_longitude'])
+@pytest.mark.parametrize('reference', ['aries', 'node', 'obs', 'oha', 'sun', 'sha'])
+def test_a_ring_sub_point_longitude_accepts_every_reference(name: str, reference: str,
+                                                            bp: Backplane) -> None:
+    """Each reference shifts the zero point of the sub-point longitude."""
+
+    longitude = getattr(bp, name)(RING, reference=reference).vals
+
+    assert 0. <= longitude < TWOPI
+
+
+@pytest.mark.parametrize('name', ['ring_sub_observer_longitude',
+                                  'ring_sub_solar_longitude'])
+def test_a_ring_sub_point_anti_reference_is_half_a_turn_away(name: str,
+                                                             bp: Backplane) -> None:
+    """'oha' is half a turn from 'obs', and 'sha' half a turn from 'sun'."""
+
+    method = getattr(bp, name)
+
+    assert (method(RING, reference='obs').vals
+            - method(RING, reference='oha').vals) % TWOPI \
+        == pytest.approx(np.pi, abs=1.e-9)
+    assert (method(RING, reference='sun').vals
+            - method(RING, reference='sha').vals) % TWOPI \
+        == pytest.approx(np.pi, abs=1.e-9)
+
+
+def test_the_observed_emission_angle_never_exceeds_a_right_angle(bp: Backplane) -> None:
+    """The observed face is the one turned toward the observer, by definition."""
+
+    observed = _unmasked(bp.ring_emission_angle(RING, pole='observed'))
+
+    assert np.all(observed <= HALFPI + 1.e-12)
+    assert np.all(observed >= 0.)
+
+
+def test_the_north_and_prograde_emission_angles_agree_for_a_prograde_ring(
+        bp: Backplane) -> None:
+    """Saturn's rings are prograde, so its north pole is its prograde pole."""
+
+    north = _unmasked(bp.ring_emission_angle(RING, pole='north'))
+    prograde = _unmasked(bp.ring_emission_angle(RING, pole='prograde'))
+
+    assert np.all(north == prograde)
+
+
+def test_saturns_rings_are_prograde(bp: Backplane) -> None:
+    """The sense of the rings comes from the planet named in the event key."""
+
+    assert not bp._ring_is_retrograde(Backplane.standardize_event_key(RING))
+
+
+def test_the_sense_of_a_moons_rings_comes_from_its_parent(bp: Backplane) -> None:
+    """A body with no colon in its name is looked up through its parent planet."""
+
+    assert not bp._ring_is_retrograde(Backplane.standardize_event_key(MOON))
+
+
+def test_ring_shadow_incidence_is_the_angle_at_the_shadowing_ring(bp: Backplane) -> None:
+    """The incidence angle at the surface is the one the ring cast the shadow at."""
+
+    incidence = bp.ring_shadow_incidence(PLANET, RING)
+
+    assert np.all(_unmasked(incidence) >= 0.)
+    assert np.all(_unmasked(incidence) <= HALFPI + 1.e-12)
+    assert bp.ring_shadow_incidence(PLANET, RING) is incidence
+
+
+def test_a_radial_mode_can_be_stacked_on_another(bp: Backplane) -> None:
+    """A radial_mode key names a backplane that another mode can be applied to."""
+
+    first_key = ('radial_mode', ANNULUS_KEY, 2, EPOCH, 500., 0., 1.e-6, 0., 0., 'node')
+    first = bp.radial_mode(ANNULUS_KEY, 2, EPOCH, 500., 0., 1.e-6)
+
+    second = bp.radial_mode(first_key, 3, EPOCH, 200., 0., 1.e-6)
+
+    assert np.all(np.abs(_unmasked(second - first)) <= 200. + 1.e-9)
+    assert bp.radial_mode(first_key, 3, EPOCH, 200., 0., 1.e-6) is second
+
+
+def test_a_radial_mode_carries_the_radius_limits_of_its_backplane(bp: Backplane) -> None:
+    """The rmin and rmax of the underlying ring_radius are applied to the shifted radius.
+    """
+
+    mode = bp.radial_mode(ANNULUS_KEY, 2, EPOCH, 500., 0., 1.e-6)
+    values = _unmasked(mode)
+
+    assert np.all(values >= 80000.)
+    assert np.all(values <= 100000.)
+
+
+def test_a_radial_mode_is_refused_on_a_backplane_that_is_not_a_radius(
+        bp: Backplane) -> None:
+    """A mode shifts a ring radius, so it needs a ring_radius backplane to shift."""
+
+    with pytest.raises(ValueError, match='radial modes only apply to ring_radius'):
+        bp.radial_mode(('limb_altitude', LIMB, None, None), 2, EPOCH, 500., 0., 1.e-6)
+
+##########################################################################################

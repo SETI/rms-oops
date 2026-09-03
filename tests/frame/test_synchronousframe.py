@@ -2,6 +2,7 @@
 # tests/frame/test_synchronousframe.py
 ##########################################################################################
 
+import pickle
 from typing import cast
 
 import numpy as np
@@ -10,6 +11,7 @@ import pytest
 from polymath   import Scalar, Vector3
 from oops       import Body
 from oops.frame import SynchronousFrame
+from oops.path  import Path
 from oops.path.circlepath import CirclePath
 
 
@@ -37,8 +39,6 @@ def _solar_system():
     Body.define_solar_system()
 
 def test_synchronousframe():
-    from oops.path import Path
-
     # Path of Saturn relative to Enceladus
     inward = Path.as_path('SATURN').wrt('ENCELADUS')
     synchro = SynchronousFrame('ENCELADUS', 'SATURN')
@@ -89,5 +89,56 @@ def test_the_axes_follow_the_planet_and_the_angular_momentum(rate, sense) -> Non
         assert _dot(x_axis, toward_planet) == pytest.approx(1., abs=1.e-12)
         assert _dot(z_axis, angular_momentum) == pytest.approx(1., abs=1.e-12)
         assert _dot(y_axis, against_motion) == pytest.approx(1., abs=1.e-12)
+
+def test_the_planet_defaults_to_the_origin_of_the_orbit() -> None:
+    """With no planet named, the body orbits the origin of its own path."""
+
+    orbit = CirclePath(1.e5, 0., 1.e-4, 0., 'SSB', frame='J2000',
+                       path_id='TEST_DEFAULT_ORBIT')
+
+    frame = SynchronousFrame(orbit, frame_id='TEST_DEFAULT_SYNC')
+
+    assert frame._planet_path is Path.as_waypoint('SSB')
+
+
+def test_a_generated_frame_id_names_the_orbiting_body() -> None:
+    """A frame_id of "+" appends "_SYNCHRONOUS" to the ID of the orbiting path."""
+
+    frame = SynchronousFrame('ENCELADUS', 'SATURN', frame_id='+')
+
+    assert frame.frame_id == 'ENCELADUS_SYNCHRONOUS'
+
+
+def test_a_shaped_planet_path_is_rejected() -> None:
+    """The planet has to be one body, because the frame has one z-axis."""
+
+    planet = CirclePath(Scalar([1.e5, 2.e5]), 0., 1.e-4, 0., 'SSB', frame='J2000',
+                        path_id='TEST_SHAPED_PLANET')
+
+    with pytest.raises(ValueError, match='requires a shapeless body path'):
+        SynchronousFrame('ENCELADUS', planet, frame_id='TEST_SHAPED_SYNC')
+
+
+def test_the_description_names_the_planet_when_one_was_given() -> None:
+    """An explicit planet appears in the description; a defaulted one does not."""
+
+    named = SynchronousFrame('ENCELADUS', 'SATURN', frame_id='TEST_SYNC_NAMED')
+    defaulted = SynchronousFrame('ENCELADUS', frame_id='TEST_SYNC_DEFAULTED')
+
+    assert 'SATURN' in named.show(2)
+    assert 'SATURN' not in defaulted.show(2)
+
+
+def test_a_frame_survives_a_round_trip_through_pickle() -> None:
+    """Unpickling rebuilds the frame from its two paths, and yields the same rotation."""
+
+    frame = SynchronousFrame('ENCELADUS', 'SATURN', frame_id='TEST_SYNC_PICKLED')
+    expected = frame.transform_at_time(Scalar(0.)).matrix
+
+    revived = pickle.loads(pickle.dumps(frame))
+
+    assert revived._orbit_path.waypoint is frame._orbit_path.waypoint
+    assert revived._planet_path is frame._planet_path
+    assert revived.transform_at_time(Scalar(0.)).matrix == expected
 
 ##########################################################################################

@@ -3,6 +3,7 @@
 ##########################################################################################
 
 import numpy as np
+import pytest
 
 from polymath         import Pair, Vector, Boolean, Scalar
 from oops.cadence     import DualCadence, Metronome, TDICadence
@@ -1174,4 +1175,160 @@ def test_timedimage():
     assert obs.uvt(( 9,5))[1] == 100.
     assert obs.uvt((9.5,5))[1] == 150.
     assert obs.uvt((10,5))[1] == 200.
+
+##########################################################################################
+# Constructor validation, subfields, time_shift, and the extended-FOV restrictions
+##########################################################################################
+
+IMAGE_FOV = FlatFOV((0.001, 0.001), (10, 20))
+ROWS = Metronome(tstart=0., tstride=1., texp=1., steps=20)
+SLOW = Metronome(tstart=0., tstride=20., texp=20., steps=10)
+
+
+def _timed_image(**kwargs) -> TimedImage:
+    """A TimedImage whose v-axis is swept in time by a 1-D cadence.
+
+    Parameters:
+        kwargs: Overrides of the default constructor arguments.
+
+    Returns:
+        TimedImage: The observation.
+    """
+
+    args = {'axes': ('u', 'vt'), 'cadence': ROWS, 'fov': IMAGE_FOV,
+            'path': 'SSB', 'frame': 'J2000'}
+    args.update(kwargs)
+
+    return TimedImage(**args)
+
+
+@pytest.mark.parametrize('axes', [('u', 'a'), ('u', 'v', 'vt')],
+                         ids=['no-v', 'two-v'])
+def test_the_axes_must_name_one_u_axis_and_one_v_axis(axes: tuple[str, ...]) -> None:
+    """Exactly one axis begins with "u" and one with "v"."""
+
+    with pytest.raises(ValueError, match='invalid axis labels for TimedImage'):
+        _timed_image(axes=axes)
+
+
+def test_the_axis_suffixes_must_form_a_recognized_pair() -> None:
+    """The suffixes say which axis carries time; an unrecognized pair is refused."""
+
+    with pytest.raises(ValueError, match='"ut", "vt"'):
+        _timed_image(axes=('ut', 'vt'))
+
+
+def test_a_one_dimensional_time_axis_requires_a_one_dimensional_cadence() -> None:
+    """One swept axis is driven by one cadence index."""
+
+    with pytest.raises(ValueError, match='requires 1-D cadence'):
+        _timed_image(cadence=DualCadence(SLOW, ROWS))
+
+
+def test_a_two_dimensional_time_axis_requires_a_two_dimensional_cadence() -> None:
+    """Two swept axes are driven by two cadence indices."""
+
+    with pytest.raises(ValueError, match='requires 2-D cadence'):
+        _timed_image(axes=('uslow', 'vfast'), cadence=ROWS)
+
+
+def test_a_cadence_shorter_than_the_swept_axis_is_rejected() -> None:
+    """Every pixel along the swept axis needs a time step of its own."""
+
+    short = Metronome(tstart=0., tstride=1., texp=1., steps=19)
+
+    with pytest.raises(ValueError, match='incompatible shapes'):
+        _timed_image(cadence=short)
+
+
+def test_a_two_dimensional_cadence_must_match_the_slow_axis() -> None:
+    """The slow index runs along its own spatial axis, or over a single step."""
+
+    wrong_slow = DualCadence(Metronome(tstart=0., tstride=20., texp=20., steps=9), ROWS)
+
+    with pytest.raises(ValueError, match='incompatible shapes'):
+        _timed_image(axes=('uslow', 'vfast'), cadence=wrong_slow)
+
+
+def test_a_two_dimensional_cadence_shorter_than_the_fast_axis_is_rejected() -> None:
+    """The fast index needs at least one step per pixel along its axis."""
+
+    short_fast = DualCadence(SLOW, Metronome(tstart=0., tstride=1., texp=1., steps=19))
+
+    with pytest.raises(ValueError, match='incompatible shapes'):
+        _timed_image(axes=('uslow', 'vfast'), cadence=short_fast)
+
+
+def test_the_axes_can_be_named_fast_then_slow() -> None:
+    """"ufast" with "vslow" puts the slow index on the v-axis."""
+
+    obs = TimedImage(('ufast', 'vslow'), DualCadence(SLOW, ROWS),
+                     FlatFOV((0.001, 0.001), (20, 10)), 'SSB', 'J2000')
+
+    assert obs.t_axis == (1, 0)
+    assert obs.shape == (20, 10)
+
+
+def test_a_shape_subfield_replaces_the_derived_shape() -> None:
+    """A "shape" keyword names the array shape outright and is not kept as a subfield."""
+
+    obs = _timed_image(shape=(10, 20, 1))
+
+    assert obs.shape == (10, 20, 1)
+    assert 'shape' not in obs.subfields
+
+
+def test_a_subfield_becomes_an_attribute() -> None:
+    """Optional keywords are inserted as subfields, and so as attributes."""
+
+    obs = _timed_image(data=Scalar([1., 2., 3.]))
+
+    assert obs.data == Scalar([1., 2., 3.])
+    assert obs.subfields['data'] == Scalar([1., 2., 3.])
+
+
+def test_an_exposure_subfield_is_renamed_for_the_internal_snapshot() -> None:
+    """A "texp" subfield would collide with the Snapshot's own argument, so it is
+    renamed.
+    """
+
+    obs = _timed_image(texp=Scalar([1., 2., 3.]))
+
+    assert obs.texp == Scalar([1., 2., 3.])
+    assert obs._snapshot.texp_ == Scalar([1., 2., 3.])
+
+
+def test_time_shift_moves_the_cadence_and_keeps_the_subfields() -> None:
+    """A shifted observation is the same observation at a later time."""
+
+    obs = _timed_image(data=Scalar([1., 2., 3.]))
+
+    shifted = obs.time_shift(100.)
+
+    assert shifted.time == (100., 120.)
+    assert shifted.shape == obs.shape
+    assert shifted.data == obs.data
+
+
+def test_a_cadence_longer_than_the_fov_extends_the_field_of_view() -> None:
+    """More time steps than pixels means the FOV is extended by the cadence."""
+
+    longer = Metronome(tstart=0., tstride=1., texp=1., steps=25)
+
+    obs = _timed_image(cadence=longer)
+
+    assert obs._extended_fov
+    assert obs.shape == (10, 25)
+    assert obs._snapshot is None
+
+
+def test_an_extended_field_of_view_has_no_inventory() -> None:
+    """The inventory works on a static FOV, which an extended one is not."""
+
+    longer = Metronome(tstart=0., tstride=1., texp=1., steps=25)
+    obs = _timed_image(cadence=longer)
+
+    with pytest.raises(NotImplementedError, match='cadence-extended FOV'):
+        obs.inventory(['SATURN'])
+
 ##########################################################################################

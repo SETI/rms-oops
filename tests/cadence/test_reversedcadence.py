@@ -136,4 +136,13 @@ def test_reversedcadence_requires_axis_zero() -> None:
     assert reversed_.as_continuous()._axis == 0
     assert pickle.loads(pickle.dumps(reversed_))._axis == 0
 
+def test_the_cadence_being_reversed_must_be_one_dimensional() -> None:
+    """A ReversedCadence flips one axis, so the cadence it wraps has just the one."""
+
+    fast = oops.cadence.Metronome(0., 10., 10., 10)
+    slow = oops.cadence.Metronome(100., 100., 100., 3)
+
+    with pytest.raises(ValueError, match='must be based on a 1-D cadence'):
+        oops.cadence.ReversedCadence(oops.cadence.DualCadence(slow, fast))
+
 ##########################################################################################

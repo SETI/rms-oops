@@ -201,6 +201,10 @@ class OrbitPlane(Surface):
             self.unmasked = OrbitPlane.__new__(type(self))
             self.unmasked.__dict__ = self.__dict__.copy()
             self.unmasked._radii = None
+            # Every coordinate conversion is delegated to the ring plane, so the
+            # unmasked orbit has to delegate to the unmasked ring plane
+            self.unmasked._ringplane = self._ringplane.unmasked
+            self.unmasked.unmasked = self.unmasked
 
     def __getstate__(self):
         self.refresh()

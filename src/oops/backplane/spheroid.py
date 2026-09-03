@@ -431,8 +431,11 @@ def sub_observer_latitude(self, event_key, lat_type='centric'):
     event = self.get_surface_event(gridless_key)
     dep_ap = event.dep_ap
 
+    # A gridless event is on the body's path rather than on its surface, so the surface
+    # has to be looked up by name
     if lat_type == 'graphic':
-        dep_ap = dep_ap.element_mul(event.surface.unsquash_sq, recursive=self.ALL_DERIVS)
+        surface = Backplane.get_surface(gridless_key[1])
+        dep_ap = dep_ap.element_mul(surface.unsquash_sq, recursive=self.ALL_DERIVS)
 
     latitude = dep_ap.latitude(recursive=self.ALL_DERIVS)
     return self.register_backplane(key, latitude)
@@ -459,8 +462,11 @@ def sub_solar_latitude(self, event_key, lat_type='centric'):
     event = self.get_gridless_event(gridless_key, arrivals=True)
     neg_arr_ap = event.neg_arr_ap
 
+    # A gridless event is on the body's path rather than on its surface, so the surface
+    # has to be looked up by name
     if lat_type == 'graphic':
-        neg_arr_ap = neg_arr_ap.element_mul(event.surface.unsquash_sq,
+        surface = Backplane.get_surface(gridless_key[1])
+        neg_arr_ap = neg_arr_ap.element_mul(surface.unsquash_sq,
                                             recursive=self.ALL_DERIVS)
 
     latitude = neg_arr_ap.latitude(recursive=self.ALL_DERIVS)

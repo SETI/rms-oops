@@ -62,8 +62,12 @@ def emission_angle(self, event_key, apparent=True):
     event = self.get_surface_event(event_key)
     emission = event.emission_angle(apparent=apparent, derivs=self.ALL_DERIVS)
 
+    # A gridless event is on the body's path rather than on its surface, so the surface
+    # has to be looked up by name
+    surface = Backplane.get_surface(event_key[1])
+
     # Ring emission angles are always measured from the lit side normal
-    if event.surface.COORDINATE_TYPE == 'polar':
+    if surface.COORDINATE_TYPE == 'polar':
 
         # Save this as the "prograde" ring emission angle
         ring_key = ('ring_emission_angle', event_key, 'prograde', apparent)

@@ -349,4 +349,69 @@ def test_mixin_version() -> None:
 
     assert fov.version == mutable.version(fov)
 
+def test_set_param_order_can_only_be_called_once() -> None:
+    """The order is part of the object's identity, so it is not redefined."""
+
+    obj = _holder()
+    mutable.set_param_order(obj, ['fov'])
+
+    with pytest.raises(ValueError, match='parameter order was already defined'):
+        mutable.set_param_order(obj, ['fov'])
+
+
+def test_set_param_order_rejects_a_blank_name_on_an_unfittable_object() -> None:
+    """A blank name marks where the object's own parameters go, so it must have some."""
+
+    with pytest.raises(ValueError, match='object is not Fittable'):
+        mutable.set_param_order(_holder(), [''])
+
+
+def test_set_param_order_rejects_an_empty_list_of_names() -> None:
+    """An order that names nothing leaves no parameters to fit."""
+
+    with pytest.raises(ValueError, match='no fittable parameters'):
+        mutable.set_param_order(_holder(), [])
+
+
+def test_a_parameter_order_can_include_the_object_itself() -> None:
+    """A blank name places the object's own parameters among its sub-objects'."""
+
+    obj = OffsetFOV(_fittable(), uv_offset=(3., 4.))
+    mutable.set_param_order(obj, ['fov', ''])
+
+    assert mutable.get_nparams(obj) == 4
+    assert mutable.get_params(obj) == (1., 2., 3., 4.)
+
+    changed = mutable.set_params(obj, (5., 6., 7., 8.))
+
+    assert changed
+    assert mutable.get_params(obj) == (5., 6., 7., 8.)
+    assert obj.fov.uv_offset.vals.tolist() == [5., 6.]
+
+
+def test_the_versions_of_a_holder_name_its_mutable_sub_objects() -> None:
+    """The version dictionary is keyed by the name of each mutable sub-object."""
+
+    obj = _holder()
+
+    assert sorted(mutable._versions(obj)) == sorted(mutable.mutable_names(obj))
+
+
+def test_the_version_of_an_object_that_cannot_record_one_is_zero() -> None:
+    """An object with no attribute dictionary has no version to keep."""
+
+    assert mutable.version(()) == 0
+    assert mutable._increment(()) == 0
+
+
+def test_freezing_reaches_an_object_more_than_one_level_down() -> None:
+    """A Fittable two levels below the object being frozen is frozen too."""
+
+    inner = _fittable()
+    obj = SliceFOV(SliceFOV(inner, (0, 0), (10, 10)), (0, 0), (5, 5))
+
+    assert mutable.freeze(obj)
+    assert mutable.is_frozen(inner)
+    assert not mutable.freeze(obj)
+
 ##########################################################################################

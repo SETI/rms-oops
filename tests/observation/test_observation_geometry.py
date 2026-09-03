@@ -14,10 +14,12 @@ import pytest
 from polymath                          import Scalar, Vector, Vector3
 from oops.backplane                    import Backplane
 from oops.body                         import Body
+from oops.cadence                     import Metronome
+from oops.config                       import LOGGING
 from oops.event                        import Event
 from oops.fov                          import FlatFOV
 from oops.frame                        import Frame, TwoVectorFrame
-from oops.observation                  import Observation, Snapshot
+from oops.observation                  import Observation, Snapshot, TimedImage
 from oops.path                         import Path
 from programs.gold_master.test_support  import TEST_SPICE_PREFIX
 
@@ -423,5 +425,95 @@ def test_expanding_the_field_can_admit_a_body(solar_system: None) -> None:
 
     assert set(tight) <= set(loose)
 
+##########################################################################################
+# uv_from_path on a time-dependent observation
+#
+# Snapshot overrides uv_from_path, because its pixels all share one time. These exercise
+# the iterative solution in the base class, where the pixel found determines the time at
+# which the path is evaluated, which in turn determines the pixel.
+##########################################################################################
+
+@pytest.fixture(scope='module')
+def timed_obs(solar_system: None) -> TimedImage:
+    """A TimedImage of Saturn from Earth, its rows swept in time.
+
+    Returns:
+        TimedImage: The same camera as `obs`, with the v-axis swept by a Metronome, so
+        each row is exposed at a different time.
+    """
+
+    rows = Metronome(tstart=TIME, tstride=TEXP/SHAPE[1], texp=TEXP/SHAPE[1],
+                     steps=SHAPE[1])
+
+    return TimedImage(('u', 'vt'), rows, FlatFOV((PIXEL, PIXEL), SHAPE), 'EARTH',
+                      'TEST_GEOMETRY_CAMERA')
+
+
+def test_uv_from_path_iterates_to_the_body_center(timed_obs: TimedImage) -> None:
+    """The pixel found is inside the field of view, and its own time is consistent."""
+
+    uv = timed_obs.uv_from_path(Body.lookup('SATURN').path)
+
+    assert not timed_obs.uv_is_outside(uv)
+
+    (t0, t1) = timed_obs.time_range_at_uv(uv)
+    again = timed_obs.uv_from_path(Body.lookup('SATURN').path, time=0.5 * (t0 + t1))
+
+    assert again.vals == pytest.approx(uv.vals, abs=0.01)
+
+
+def test_uv_from_path_agrees_with_the_untimed_camera(timed_obs: TimedImage,
+                                                     obs: Snapshot) -> None:
+    """Sweeping the rows moves the body by well under a pixel over this exposure."""
+
+    swept = timed_obs.uv_from_path(Body.lookup('SATURN').path)
+    still = obs.uv_from_path(Body.lookup('SATURN').path)
+
+    assert swept.vals == pytest.approx(still.vals, abs=0.5)
+
+
+def test_uv_from_path_accepts_overridden_convergence_parameters(
+        timed_obs: TimedImage) -> None:
+    """Convergence parameters given here override the configured defaults."""
+
+    uv = timed_obs.uv_from_path(Body.lookup('SATURN').path,
+                                converge={'max_iterations': 12})
+
+    assert uv == timed_obs.uv_from_path(Body.lookup('SATURN').path)
+
+
+def test_uv_from_path_reports_a_solution_that_did_not_converge(
+        timed_obs: TimedImage, capsys: pytest.CaptureFixture[str]) -> None:
+    """Capping the iterations below what is needed leaves a warning behind.
+
+    The pixel is still returned, and is still roughly right, which is what the docstring
+    promises of a solution that stops early.
+    """
+
+    LOGGING.on()
+    try:
+        uv = timed_obs.uv_from_path(Body.lookup('SATURN').path,
+                                    converge={'max_iterations': 1})
+    finally:
+        LOGGING.off()
+
+    assert 'Observation.uv_from_path did not converge' in capsys.readouterr().out
+    assert not timed_obs.uv_is_outside(uv)
+
+def test_uv_from_ra_and_dec_accepts_actual_coordinates(timed_obs: TimedImage) -> None:
+    """apparent=False interprets the direction before stellar aberration is applied.
+
+    The aberration of Earth's motion is tens of arcseconds, which is many pixels at this
+    scale, so the two interpretations of one direction land in different places.
+    """
+
+    event = timed_obs.gridless_event(time=Scalar(timed_obs.midtime))
+    (_, arrival) = Body.lookup('SATURN').path.photon_to_event(event)
+    (ra, dec) = arrival.ra_and_dec(apparent=False)
+
+    uv = timed_obs.uv_from_ra_and_dec(ra, dec, apparent=False)
+
+    assert not bool(timed_obs.uv_is_outside(uv))
+    assert uv != timed_obs.uv_from_ra_and_dec(ra, dec, apparent=True)
 
 ##########################################################################################

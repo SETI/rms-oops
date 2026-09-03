@@ -7,8 +7,9 @@ import pickle
 import numpy as np
 import pytest
 
-from polymath         import Scalar
+from polymath         import Boolean, Scalar
 from oops.backplane   import Backplane
+from oops.config      import LOGGING
 from oops.observation import Snapshot
 
 PLANET = 'SATURN'
@@ -319,5 +320,285 @@ def test_border_backplanes_are_cached(bp: Backplane) -> None:
     key = ('where_intercepted', PLANET)
 
     assert bp.border_inside(key) is bp.border_inside(key)
+
+##########################################################################################
+# The remaining event-key and surface-key conversions
+##########################################################################################
+
+# A ring plane defined as a body in its own right, rather than as the ":RING" surface of
+# a planet. Its own surface is a ring, so it names an intercept the planet's ring shares.
+RING_BODY = 'SATURN_RING_PLANE'
+
+# An eccentric, inclined ring, whose intercept geometry is its own
+ECCENTRIC_RING = 'ALPHA_RING'
+
+
+def test_a_key_naming_two_surfaces_gains_the_sun(solar_system: None) -> None:
+    """A tuple that names no source is understood as dispersed sunlight."""
+
+    assert Backplane.standardize_event_key((PLANET, RING)) \
+           == ('SUN<', 'SATURN', 'SATURN:RING')
+
+
+def test_a_repeated_source_is_dropped(solar_system: None) -> None:
+    """A key that names the Sun twice, as older keys did, names it once."""
+
+    assert Backplane.standardize_event_key(('SUN<', 'SUN', PLANET)) \
+           == ('SUN<', 'SATURN')
+
+
+def test_an_ansa_suffix_is_added_to_a_ring_body(solar_system: None) -> None:
+    """A body whose own surface is a ring accepts the "ANSA" default suffix."""
+
+    assert Backplane.standardize_event_key(RING_BODY, default='ANSA') \
+           == ('SUN<', 'SATURN_RING_PLANE:ANSA')
+
+
+def test_an_empty_key_describes_no_shadowing() -> None:
+    """A key with nothing in it names no surface, so it shadows nothing."""
+
+    assert not Backplane._is_shadowing(())
+
+
+def test_the_ring_of_a_ring_body_is_its_own_unmasked_surface(solar_system: None) -> None:
+    """An uninclined ring on its planet's ring frame shares the planet's ring intercept.
+    """
+
+    assert Backplane.unmasked_surface_key(RING_BODY) == 'SATURN_RING_PLANE:RING'
+
+
+def test_an_eccentric_ring_is_its_own_unmasked_surface(solar_system: None) -> None:
+    """A ring with a non-zero inclination has intercept geometry of its own."""
+
+    assert Backplane.unmasked_surface_key(ECCENTRIC_RING) == ECCENTRIC_RING
+
+
+def test_the_ansa_of_a_ring_body_belongs_to_its_planet(solar_system: None) -> None:
+    """An ansa surface hangs off the planet, so a ring body defers to its parent."""
+
+    assert Backplane.unmasked_surface_key(RING_BODY + ':ANSA') == 'SATURN:ANSA'
+
+
+def test_an_unrecognized_surface_modifier_is_refused(solar_system: None) -> None:
+    """The modifier after the colon must name a surface the Backplane knows."""
+
+    with pytest.raises(KeyError):
+        Backplane.get_surface('SATURN:HALO')
+
+
+##########################################################################################
+# The cached derivative properties
+##########################################################################################
+
+@pytest.mark.parametrize('name', ['dlos_duv', 'dlos_duv1', 'duv_dlos',
+                                  'center_dlos_duv', 'center_duv_dlos'])
+def test_a_derivative_property_is_evaluated_once(name: str, bp: Backplane) -> None:
+    """Each derivative of the pixel geometry is cached on first use."""
+
+    assert getattr(bp, name) is getattr(bp, name)
+
+
+def test_the_orthogonalized_pixel_axes_keep_the_pixel_area(bp: Backplane) -> None:
+    """dlos_duv1 shifts the longer pixel edge to be orthogonal, conserving the area."""
+
+    (dlos_du, dlos_dv) = bp.dlos_duv.extract_denoms()
+    (dlos_du1, dlos_dv1) = bp.dlos_duv1.extract_denoms()
+
+    original = dlos_du.cross(dlos_dv).norm()
+    orthogonal = dlos_du1.cross(dlos_dv1).norm()
+
+    assert np.allclose(original.vals, orthogonal.vals, rtol=1.e-9)
+    assert np.allclose(dlos_du1.dot(dlos_dv1).vals, 0., atol=1.e-20)
+
+
+##########################################################################################
+# register_backplane, get_backplane and evaluate
+##########################################################################################
+
+def test_a_plain_boolean_is_registered_as_a_backplane(bp: Backplane) -> None:
+    """A Python or NumPy bool becomes a shapeless Boolean."""
+
+    registered = bp.register_backplane(('_test_flag',), True)
+
+    assert registered.shape == ()
+    assert bool(registered)
+
+
+def test_a_numpy_array_is_registered_as_a_scalar(bp: Backplane) -> None:
+    """A bare NumPy array becomes a Scalar of the same shape."""
+
+    registered = bp.register_backplane(('_test_array',), np.zeros(bp.shape))
+
+    assert isinstance(registered, Scalar)
+    assert registered.shape == bp.shape
+
+
+def test_a_shapeless_boolean_can_be_expanded_to_the_grid(bp: Backplane) -> None:
+    """With expand, a constant Boolean is broadcast to the shape of the backplane."""
+
+    registered = bp.register_backplane(('_test_expanded_flag',), Boolean(True),
+                                       expand=True)
+
+    assert registered.shape == bp.shape
+    assert np.all(registered.vals)
+
+
+def test_a_shapeless_scalar_can_be_expanded_to_the_grid(bp: Backplane) -> None:
+    """With expand, a constant Scalar is broadcast to the shape of the backplane."""
+
+    registered = bp.register_backplane(('_test_expanded_value',), Scalar(2.5),
+                                       expand=True)
+
+    assert registered.shape == bp.shape
+    assert np.all(registered.vals == 2.5)
+
+
+def test_a_backplane_with_derivatives_is_kept_separately(saturn_obs: Snapshot) -> None:
+    """Asking for derivatives returns the array that still carries them.
+
+    The key has to be the registered one, which names the standardized event key and
+    every argument of the backplane function.
+    """
+
+    backplane = Backplane(saturn_obs)
+    key = ('ring_radius', Backplane.standardize_event_key(RING), None, None)
+
+    with_derivs = backplane.evaluate(key, derivs=True)
+
+    assert with_derivs.derivs
+    assert not backplane.evaluate(key).derivs
+    assert np.all(with_derivs.vals == backplane.evaluate(key).vals)
+
+
+def test_get_backplane_returns_the_version_with_derivatives(
+        saturn_obs: Snapshot) -> None:
+    """The same distinction applies to a direct lookup by key."""
+
+    backplane = Backplane(saturn_obs)
+    key = ('ring_radius', Backplane.standardize_event_key(RING), None, None)
+    backplane.evaluate(key, derivs=True)
+
+    assert backplane.get_backplane(key, derivs=True).derivs
+    assert not backplane.get_backplane(key).derivs
+
+
+def test_evaluate_accepts_a_bare_backplane_name(bp: Backplane) -> None:
+    """A string key names a backplane function that takes no further arguments."""
+
+    assert bp.evaluate('right_ascension') is bp.right_ascension()
+
+
+def test_evaluate_rejects_an_unrecognized_name(bp: Backplane) -> None:
+    """The first item of a backplane key must name a defined backplane function."""
+
+    with pytest.raises(ValueError, match='unrecognized backplane function: not_a_name'):
+        bp.evaluate(('not_a_name', RING))
+
+
+##########################################################################################
+# Surface, gridless and occultation events
+##########################################################################################
+
+def test_an_empty_event_key_gives_the_observer_event(bp: Backplane) -> None:
+    """The empty key, used by the sky backplanes, resolves to the observation itself."""
+
+    event = bp.get_surface_event(())
+
+    assert event.shape == bp.shape
+    assert event.origin is bp.obs.path.waypoint
+
+
+def test_an_occultation_event_is_solved_from_the_source(saturn_obs: Snapshot) -> None:
+    """A ">" source key describes the body occulting that source, seen from the observer.
+    """
+
+    backplane = Backplane(saturn_obs)
+
+    event = backplane.get_surface_event(('SUN>', PLANET))
+
+    assert event.shape == ()
+    assert backplane.get_gridless_event(('SUN>', PLANET)) is not None
+
+
+def test_a_gridless_arrival_is_solved_once_per_source(saturn_obs: Snapshot) -> None:
+    """Two gridless keys naming the same body share the arrival event already solved."""
+
+    backplane = Backplane(saturn_obs)
+
+    first = backplane.get_gridless_event(Backplane.gridless_event_key(PLANET))
+    second = backplane.get_gridless_event(Backplane.gridless_event_key(RING))
+
+    assert first.shape == ()
+    assert second.shape == ()
+
+
+##########################################################################################
+# The inventory antimasks
+##########################################################################################
+
+def test_a_surface_with_a_modifier_has_no_antimask(saturn_obs: Snapshot) -> None:
+    """A name with a colon names a surface the inventory does not describe."""
+
+    backplane = Backplane(saturn_obs, inventory={})
+
+    assert backplane.get_antimask(RING) is True
+
+
+def test_a_body_inside_the_field_is_masked_to_its_own_footprint(
+        saturn_obs: Snapshot) -> None:
+    """The antimask of a body in the inventory covers the pixels it occupies."""
+
+    backplane = Backplane(saturn_obs, inventory={})
+
+    antimask = backplane.get_antimask(PLANET)
+
+    assert antimask.shape == backplane.shape
+    assert np.any(antimask)
+    assert not np.all(antimask)
+
+
+def test_a_body_outside_the_field_has_an_empty_antimask(saturn_obs: Snapshot) -> None:
+    """A body the inventory places outside the field of view is masked entirely."""
+
+    backplane = Backplane(saturn_obs, inventory={})
+
+    assert backplane.get_antimask('JUPITER') is False
+
+
+##########################################################################################
+# Diagnostic and performance logging
+##########################################################################################
+
+def test_reusing_an_intercept_is_reported_as_a_diagnostic(
+        saturn_obs: Snapshot, capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """Two surfaces that share one intercept solve it once, and the reuse is logged."""
+
+    monkeypatch.setattr(Backplane, 'DIAGNOSTICS', True)
+    backplane = Backplane(saturn_obs)
+    backplane.ring_radius(RING)
+    LOGGING.on()
+    try:
+        backplane.ring_radius(RING_BODY)
+    finally:
+        LOGGING.off()
+
+    assert 'INTERCEPT REUSED' in capsys.readouterr().out
+
+
+def test_solving_an_intercept_is_reported_as_a_performance_measurement(
+        saturn_obs: Snapshot, capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """The time taken to solve an intercept is logged when performance logging is on."""
+
+    monkeypatch.setattr(Backplane, 'PERFORMANCE', True)
+    backplane = Backplane(saturn_obs)
+    LOGGING.on()
+    try:
+        backplane.ring_radius(RING)
+    finally:
+        LOGGING.off()
+
+    assert 'INTERCEPT' in capsys.readouterr().out
 
 ##########################################################################################

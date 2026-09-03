@@ -5,8 +5,9 @@
 import numpy as np
 import pytest
 
-from polymath         import Pair, Vector
+from polymath         import Pair, Scalar, Vector
 from oops.body        import Body
+from oops.cadence     import Metronome
 from oops.fov         import FlatFOV
 from oops.frame       import Cmatrix, Frame
 from oops.observation import Snapshot
@@ -230,5 +231,115 @@ def test_inventory_full_pair_valued_entries_have_the_documented_widths() -> None
     assert entry['center_uv'].shape == (2,)
     assert entry['resolution'].shape == (2,)
     assert entry['center'].shape == (3,)
+
+##########################################################################################
+# Constructor validation, subfields, time_shift, and the remaining inventory paths
+##########################################################################################
+
+IMAGE_FOV = FlatFOV((0.001, 0.001), (10, 20))
+
+
+def _snapshot(**kwargs) -> Snapshot:
+    """A Snapshot of a ten-by-twenty image.
+
+    Parameters:
+        kwargs: Overrides of the default constructor arguments.
+
+    Returns:
+        Snapshot: The observation.
+    """
+
+    args = {'axes': ('u', 'v'), 'tstart': 98., 'texp': 2., 'fov': IMAGE_FOV,
+            'path': 'SSB', 'frame': 'J2000'}
+    args.update(kwargs)
+
+    return Snapshot(**args)
+
+
+def test_a_cadence_can_stand_in_for_the_start_time() -> None:
+    """A one-step Cadence defines both the start time and the exposure."""
+
+    obs = _snapshot(tstart=Metronome(tstart=5., tstride=20., texp=20., steps=1),
+                    texp=None)
+
+    assert obs.time == (5., 25.)
+    assert obs._texp == 20.
+
+
+def test_a_cadence_of_more_than_one_step_is_rejected() -> None:
+    """Every pixel of a Snapshot is exposed at once, so the cadence has one step."""
+
+    cadence = Metronome(tstart=0., tstride=10., texp=10., steps=2)
+
+    with pytest.raises(ValueError, match=r'cadence must be \(1,\)'):
+        _snapshot(tstart=cadence)
+
+
+def test_a_subfield_becomes_an_attribute() -> None:
+    """Optional keywords are inserted as subfields, and so as attributes."""
+
+    obs = _snapshot(data=Scalar([1., 2., 3.]))
+
+    assert obs.data == Scalar([1., 2., 3.])
+    assert obs.subfields['data'] == Scalar([1., 2., 3.])
+
+
+def test_time_shift_moves_the_exposure_and_keeps_the_subfields() -> None:
+    """A shifted observation is the same observation at a later time."""
+
+    obs = _snapshot(data=Scalar([1., 2., 3.]))
+
+    shifted = obs.time_shift(100.)
+
+    assert shifted.time == (198., 200.)
+    assert shifted.shape == obs.shape
+    assert shifted.data == obs.data
+
+
+def test_the_inventory_accepts_an_absolute_time() -> None:
+    """A time given outright replaces the one interpolated from tfrac."""
+
+    obs = _snapshot_facing_the_moon()
+
+    at_end = obs.inventory(BODIES, return_type='flags', time=obs.time[1])
+
+    assert list(at_end) == list(obs.inventory(BODIES, return_type='flags', tfrac=1.))
+
+
+# Io passes behind Jupiter as seen from Earth an hour after the start of 2000, and this
+# is the direction of Jupiter's center at that moment.
+OCCULTATION_TIME = 3600.
+JUPITER_RA = 23.872764
+JUPITER_DEC = 8.597127
+
+
+def _snapshot_facing_jupiter() -> Snapshot:
+    """A snapshot from Earth centered on Jupiter while Io is behind it.
+
+    Returns:
+        Snapshot: A 100 by 100 observation whose FOV holds Jupiter, with Io hidden.
+    """
+
+    frame = Cmatrix.from_ra_dec(JUPITER_RA, JUPITER_DEC, 0., 'J2000')
+
+    return Snapshot(('u','v'), OCCULTATION_TIME, 10., FlatFOV((1.e-4, 1.e-4), (100, 100)),
+                    'EARTH', frame)
+
+
+def test_a_body_hidden_behind_another_is_left_out_of_the_inventory() -> None:
+    """A body entirely behind a nearer one is not in the field of view."""
+
+    obs = _snapshot_facing_jupiter()
+
+    assert obs.inventory(['IO', 'JUPITER'], return_type='list') == ['JUPITER']
+
+
+def test_the_hidden_body_is_the_one_that_is_behind() -> None:
+    """The occulting body is still listed, whichever order the two are given in."""
+
+    obs = _snapshot_facing_jupiter()
+
+    assert list(obs.inventory(['IO', 'JUPITER'], return_type='flags')) == [False, True]
+    assert list(obs.inventory(['JUPITER', 'IO'], return_type='flags')) == [True, False]
 
 ##########################################################################################

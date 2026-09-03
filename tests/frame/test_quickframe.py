@@ -2,10 +2,13 @@
 # oops/frame/quickframe.py: Subclass QuickFrame of class Frame
 ##########################################################################################
 
+import pickle
+
 import numpy as np
 import pytest
 
 from polymath   import Matrix3, Quaternion, Scalar, Vector3
+from oops.config import LOGGING
 from oops.frame import (Frame, Cmatrix, Navigation, PosTargFrame, QuickFrame,
                         Rotation, SpiceFrame, SpinFrame, TwoVectorFrame)
 from oops.path  import SpicePath
@@ -312,5 +315,160 @@ def test_unwrap_quaternions_returns_its_input_when_there_is_no_reversal() -> Non
     vals = np.array([[1., 0., 0., 0.], [0.9, 0.1, 0., 0.]])
 
     assert QuickFrame._unwrap_quaternions(vals) is vals
+
+##########################################################################################
+# Serialization, empty inputs, validation, and the creation diagnostics
+##########################################################################################
+
+def test_a_quickframe_survives_a_round_trip_through_pickle(core_kernels) -> None:
+    """By default only the frame and its limits are pickled, and the table is rebuilt."""
+
+    mars = _mars_frame()
+    quick = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+    time = Scalar(_EPOCH + 50.)
+    expected = quick.transform_at_time(time).matrix
+
+    restored = pickle.loads(pickle.dumps(quick))
+
+    assert isinstance(restored, QuickFrame)
+    assert restored.transform_at_time(time).matrix == expected
+
+
+def test_a_quickframe_can_pickle_its_tabulated_details(core_kernels) -> None:
+    """With the flag set, the interpolation table is pickled along with the frame."""
+
+    mars = _mars_frame()
+    quick = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+    time = Scalar(_EPOCH + 50.)
+    expected = quick.transform_at_time(time).matrix
+
+    quick.pickle_quickframe_details = True
+    try:
+        restored = pickle.loads(pickle.dumps(quick))
+    finally:
+        quick.pickle_quickframe_details = False
+
+    assert restored.transform_at_time(time).matrix == expected
+
+
+def test_an_empty_array_of_times_gives_an_identity_transform(core_kernels) -> None:
+    """With no times to evaluate, the matrix is the identity and omega is zero."""
+
+    mars = _mars_frame()
+    quick = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+
+    (matrix, omega) = quick._interpolate_matrix_omega(Scalar(np.zeros((0,))))
+
+    assert matrix.shape == (0,)
+    assert omega.shape == (0,)
+
+
+def test_a_quickframe_can_ignore_the_rotation_vector(core_kernels) -> None:
+    """With the option set, the rotation vector is reported as zero."""
+
+    mars = _mars_frame()
+    quick = QuickFrame(mars, _EPOCH, _EPOCH + 100.,
+                       quick={'ignore_quickframe_omega': True})
+    time = Scalar(_EPOCH + np.arange(10., 90., 0.5))
+
+    assert quick.transform_at_time(time).omega == Vector3.ZERO
+    assert quick.transform_at_time(Scalar(_EPOCH + 50.)).omega == Vector3.ZERO
+
+
+def test_extending_a_quickframe_over_a_covered_interval_does_nothing(
+        core_kernels) -> None:
+    """An interval already inside the table leaves the table unchanged."""
+
+    mars = _mars_frame()
+    quick = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+    before = quick._times.size
+
+    quick.extend(quick._tmin, quick._tmax)
+
+    assert quick._times.size == before
+
+
+def test_a_quickframe_cannot_be_built_on_a_shaped_frame(core_kernels) -> None:
+    """A QuickFrame tabulates one frame, so a shaped frame cannot be quickened."""
+
+    shaped = Rotation(Scalar([0.5, 1.5]), 2, Frame.J2000, frame_id='TEST_QUICK_SHAPED')
+
+    with pytest.raises(ValueError, match=r'shape of QuickFrame must be \(\)'):
+        QuickFrame(shaped, _EPOCH, _EPOCH + 100.)
+
+
+def test_a_quickframe_cannot_be_built_on_another_quickframe(core_kernels) -> None:
+    """Tabulating a tabulation would only add error."""
+
+    mars = _mars_frame()
+    quick = QuickFrame(mars, _EPOCH, _EPOCH + 100.)
+
+    with pytest.raises(ValueError, match='cannot be constructed from another QuickFrame'):
+        QuickFrame(quick, _EPOCH, _EPOCH + 100.)
+
+
+def test_for_frame_rejects_an_unusable_quick_argument(core_kernels) -> None:
+    """The `quick` argument is a dictionary of overrides, None, or False."""
+
+    mars = _mars_frame()
+
+    with pytest.raises(ValueError, match='invalid `quick` input'):
+        QuickFrame.for_frame(mars, _dense_times(0., 100.), quick=17)
+
+
+def test_for_frame_returns_a_shaped_frame_unchanged(core_kernels) -> None:
+    """A shaped frame is returned as it stands rather than tabulated."""
+
+    shaped = Rotation(Scalar([0.5, 1.5]), 2, Frame.J2000,
+                      frame_id='TEST_QUICK_SHAPED_FOR')
+
+    assert QuickFrame.for_frame(shaped, _dense_times(0., 100.), quick={}) is shaped
+
+
+def test_for_frame_treats_a_quick_of_none_as_the_defaults(core_kernels) -> None:
+    """quick=None means the configured defaults, which do build a QuickFrame."""
+
+    mars = _mars_frame()
+
+    assert isinstance(QuickFrame.for_frame(mars, _dense_times(0., 100.), quick=None),
+                      QuickFrame)
+
+
+def test_for_frame_returns_the_frame_when_quickframes_are_disabled(core_kernels) -> None:
+    """The configured switch turns the optimization off entirely."""
+
+    mars = _mars_frame()
+
+    assert QuickFrame.for_frame(mars, _dense_times(0., 100.),
+                                quick={'use_quickframes': False}) is mars
+
+
+def test_building_a_quickframe_is_reported_as_a_diagnostic(
+        core_kernels, capsys: pytest.CaptureFixture[str]) -> None:
+    """A new QuickFrame is logged when the diagnostic is on."""
+
+    mars = _mars_frame()
+
+    LOGGING.on()
+    LOGGING.quickframe_creation = True
+    try:
+        QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+    finally:
+        LOGGING.quickframe_creation = False
+        LOGGING.off()
+
+    assert 'New QuickFrame for' in capsys.readouterr().out
+
+
+def test_the_quickframe_cache_holds_only_as_many_as_it_is_allowed(core_kernels) -> None:
+    """A new QuickFrame displaces the oldest one once the cache is full."""
+
+    mars = _mars_frame()
+    quick = {'quickframe_cache_size': 2}
+
+    for offset in (0., 1.e6, 2.e6, 3.e6):
+        QuickFrame.for_frame(mars, _dense_times(offset, offset + 100.), quick=quick)
+
+    assert len(mars._quickframes) == 2
 
 ##########################################################################################

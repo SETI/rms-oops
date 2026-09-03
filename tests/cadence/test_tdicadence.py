@@ -2,6 +2,8 @@
 # oops/cadence/tdicadence.py: TDICadence subclass of class Cadence
 ##########################################################################################
 
+import pickle
+
 import numpy as np
 import pytest
 
@@ -590,5 +592,36 @@ def test_tdicadence_tstep_at_time_reports_the_first_line() -> None:
     assert cad.time_at_tstep(tstep) == 105.
     assert cad.time_at_tstep(tstep + 5.) == 105.    # and so does every other line
 
+##########################################################################################
+# Constructor validation, serialization, and the continuous shortcut
+##########################################################################################
+
+@pytest.mark.parametrize('tdi_stages', [0, 11], ids=['too-few', 'too-many'])
+def test_the_stages_must_number_between_one_and_the_lines(tdi_stages: int) -> None:
+    """A TDI stage shifts the charge by one line, so there cannot be more than lines."""
+
+    with pytest.raises(ValueError, match='invalid TDICadence inputs'):
+        oops.cadence.TDICadence(10, 100., 10., tdi_stages)
+
+
+def test_a_tdi_cadence_survives_a_round_trip_through_pickle() -> None:
+    """Unpickling rebuilds the cadence from its lines, timing, stages and direction."""
+
+    cad = oops.cadence.TDICadence(10, 100., 10., 2, tdi_sign=1)
+
+    revived = pickle.loads(pickle.dumps(cad))
+
+    assert revived.shape == cad.shape
+    assert revived.time == cad.time
+    assert revived.time_range_at_tstep(Scalar(3)) == cad.time_range_at_tstep(Scalar(3))
+
+
+def test_a_tdi_cadence_is_already_continuous() -> None:
+    """Every line is exposed up to the readout, so there are no gaps to close."""
+
+    cad = oops.cadence.TDICadence(10, 100., 10., 2)
+
+    assert cad.is_continuous
+    assert cad.as_continuous() is cad
 
 ##########################################################################################
