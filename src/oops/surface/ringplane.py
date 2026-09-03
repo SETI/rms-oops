@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/surface/ringplane.py: RingPlane subclass of class Surface
+# oops/surface/ringplane.py
 ##########################################################################################
 
 import numpy as np
@@ -285,7 +285,7 @@ class RingPlane(Surface):
 
         # Mask based on radial limits if necessary
         if self._radii is not None:
-            r_sq = pos.norm_sq(False)
+            r_sq = pos.norm_sq(recursive=derivs)
             mask = (r_sq < self._radii_sq[0]) | (r_sq > self._radii_sq[1])
             if np.any(mask):
                 pos = pos.remask_or(mask)
@@ -324,7 +324,7 @@ class RingPlane(Surface):
 
         # The normal is undefined outside the ring's radial limits
         if self._radii is not None:
-            r_sq = pos.norm_sq(False)
+            r_sq = pos.norm_sq(recursive=derivs)
             mask = (r_sq < self._radii_sq[0]) | (r_sq > self._radii_sq[1])
             if np.any(mask):
                 perp = perp.remask_or(mask)

@@ -67,7 +67,7 @@ def body_id_and_name(arg):
             raise TypeError('path ' + repr(path.path_id) + ' is a '
                             + type(path).__name__ + ', not a SpicePath')
 
-        return (path.spice_target_id, path.spice_target_name)
+        return (path._spice_path_code, path._spice_path_name)
     except KeyError:
         pass
 

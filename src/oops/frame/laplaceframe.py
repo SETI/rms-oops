@@ -66,7 +66,7 @@ class LaplaceFrame(Frame):
 
     def _refresh(self):
         self._orbit_wrt_j2000 = self._orbit._frame.wrt_j2000
-        self._planet_wrt_j2000 = self._planet._frame.wrt_j2000
+        self._planet_wrt_j2000 = self._planet.frame.wrt_j2000
         self._cache = Cache(self._cache_size)
 
     def _wayframe_key(self):

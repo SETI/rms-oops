@@ -47,8 +47,12 @@ class MultiPath(Path):
         self._shape = self._input_paths.shape
         self._paths = np.empty(self._shape, dtype='object')
 
-        self._register(path_id)
+        # The waypoint key is derived from self._paths, which refresh() fills in, so the
+        # paths have to be resolved before this object is registered. Registering first
+        # would give every MultiPath of the same length the same key, and each one would
+        # then share the waypoint of the first one created.
         self.refresh()
+        self._register(path_id)
 
     def _refresh(self):
         for k, path in np.ndenumerate(self._input_paths):

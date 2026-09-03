@@ -297,8 +297,11 @@ class QuickFrame(Frame):
                 qd[3] = self._qdot_splines[3](tflat_max)
                 qdot = Quaternion(qd)
 
+                # A Transform defines omega in the reference frame, so the derivative
+                # is taken through the conjugate quaternion; 2 * qdot / quat would give
+                # the vector in the coordinates of this frame instead.
                 omega_vals = np.empty(tflat.shape + (3,))
-                omega_vals[..., :] = 2. * (qdot / quat).vals[1:4]
+                omega_vals[..., :] = -2. * (quat.reciprocal() * qdot).vals[1:4]
                 omega = Vector3(omega_vals)
 
             elif self._omega_zero:
@@ -337,12 +340,12 @@ class QuickFrame(Frame):
                 qd[:, 1] = self._qdot_splines[1](tflat2.vals)
                 qd[:, 2] = self._qdot_splines[2](tflat2.vals)
                 qd[:, 3] = self._qdot_splines[3](tflat2.vals)
-                qd_x2 = 2. * qd
+                qd_x2 = -2. * qd
 
                 qdot_x2 = Quaternion(qd_x2[0]
                                      + frac[..., np.newaxis] * (qd_x2[1] - qd_x2[0]))
 
-                omega = (qdot_x2 / quat).to_parts()[1]
+                omega = (quat.reciprocal() * qdot_x2).to_parts()[1]
 
             elif self._omega_zero:
                 omega = Vector3.ZERO
@@ -377,7 +380,7 @@ class QuickFrame(Frame):
                 qd[..., 3] = self._qdot_splines[3](tflat.vals)
 
                 qdot = Quaternion(qd)
-                omega = 2. * (qdot / quat).to_parts()[1]
+                omega = -2. * (quat.reciprocal() * qdot).to_parts()[1]
 
             elif self._omega_zero:
                 omega = Vector3.ZERO

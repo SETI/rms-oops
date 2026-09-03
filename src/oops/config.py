@@ -292,6 +292,8 @@ class LOGGING(object):
 
         if LOGGING._file:
             LOGGING._file.close()
+            LOGGING._file = None        # otherwise the next message writes to a
+                                        # closed file
 
         LOGGING.file_path = file_path
         if LOGGING.file_path:

@@ -1623,7 +1623,7 @@ class Event(Oops):
         if LOGGING.event_time_collapse:
             LOGGING.diagnostic('Event.collapse_time()', tmin, tmax - tmin)
 
-        midtime = Scalar((tmin + tmax)/2., collapsed_mask, self._time.units)
+        midtime = Scalar((tmin + tmax)/2., collapsed_mask)
 
         result = self.copy()
         result._time = midtime

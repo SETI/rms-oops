@@ -267,6 +267,29 @@ class SpiceFrame(Frame):
         else:
             raise TypeError(f'invalid SPICE frame: {arg!r}')
 
+    @staticmethod
+    def _omega_from_quaternions(quat, qdot):
+        """The rotation vector implied by a quaternion and its time derivative.
+
+        Parameters:
+            quat (Quaternion): The quaternion of the rotation from the reference frame
+                into this frame, at the time of interest.
+            qdot (array): The time derivative of that quaternion, as four floats.
+
+        Returns:
+            array: The rotation vector of this frame relative to the reference, expressed
+            in the coordinates of the reference frame, as three floats.
+
+        Notes:
+            A Transform defines `omega` in the reference frame, so the derivative is
+            taken through the conjugate quaternion rather than through `quat` itself;
+            `2 * qdot / quat` would give the vector in the coordinates of this frame
+            instead. The sign follows from the direction of the rotation that
+            `Quaternion.as_quaternion` assigns to a rotation matrix.
+        """
+
+        return -2. * (quat.reciprocal() * Quaternion(qdot)).vals[1:4]
+
     ######################################################################################
     # Serialization support
     ######################################################################################
@@ -341,7 +364,7 @@ class SpiceFrame(Frame):
                     spline = UnivariateSpline(times, quats.vals[:,j], k=2, s=0)
                     qdot[j] = spline.derivative(1)(et)
 
-                omega = 2. * (Quaternion(qdot) / quats[1]).vals[1:4]
+                omega = SpiceFrame._omega_from_quaternions(quats[1], qdot)
                 return Transform(mats[1], omega, self, self._reference)
 
         # Use a QuickFrame if warranted
@@ -403,7 +426,7 @@ class SpiceFrame(Frame):
                     spline = UnivariateSpline(times, quats.vals[:, j], k=2, s=0)
                     qdot[j] = spline.derivative(1)(t)
 
-                omega[i] = 2. * (Quaternion(qdot) / quats[1]).vals[1:4]
+                omega[i] = SpiceFrame._omega_from_quaternions(quats[1], qdot)
                 matrix[i] = mats[1]
 
         matrix = Matrix3(matrix, mask=time.mask)

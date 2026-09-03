@@ -80,6 +80,11 @@ class Transform(Oops):
         else:
             self.origin = origin.waypoint
 
+        self._clear_cache()
+
+    def _clear_cache(self):
+        """Discard every value that this Transform derives from its matrix and omega."""
+
         self._filled_shape = None            # filled in only when needed
         self._filled_omega1 = None
         self._filled_matrix_with_deriv = None
@@ -92,7 +97,22 @@ class Transform(Oops):
                 self.origin)
 
     def __setstate__(self, state):
-        self.__init__(*state[:-1], origin=state[-1])
+        (matrix, omega, frame, reference, origin) = state
+
+        # The frame, reference and origin saved in the state are already a wayframe, a
+        # wayframe and a waypoint, so none of them needs the conversion that __init__
+        # performs on user-supplied arguments. Re-running the constructor would look up
+        # the wayframe of each, and a Transform can be restored before the Frame it
+        # refers to when the two belong to the same reference cycle, as they do when a
+        # Frame carries the QuickFrames tabulated from it.
+        self.matrix = matrix
+        self.omega = omega
+        self.is_fixed = (omega == Vector3.ZERO)
+        self.frame = frame
+        self.reference = reference
+        self.origin = origin
+
+        self._clear_cache()
 
     @property
     def shape(self):
