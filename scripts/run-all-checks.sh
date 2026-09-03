@@ -13,7 +13,8 @@
 #   -s, --sequential       Run all requested checks sequentially
 #   -c, --code             Run all code checks (sets each RUN_* code flag true)
 #   -m, --markdown         Run only PyMarkdown (RUN_PYMARKDOWN)
-#   --flake8               Run flake8 only (may combine with other --* flags)
+#   --flake8               Run flake8 only, i.e. the continuation-line checks
+#                          (may combine with other --* flags)
 #   --ruff-check           Run ruff check only
 #   --mypy                 Run mypy only (the tests; src has no annotations)
 #   --pyroma               Run pyroma only
@@ -69,8 +70,9 @@
 #   [tool.ruff.format] records the quote style for anyone running it by hand.
 #
 # Checks (each run separately):
-#   Code:     the three pytest suites, and optionally flake8 (the linter of
-#             record; .flake8 is authoritative), ruff check, and pip-audit.
+#   Code:     the three pytest suites, and optionally ruff check (the linter of
+#             record), flake8 (the continuation-line checks alone), and
+#             pip-audit.
 #
 #             The three suites are separate pytest invocations rather than one
 #             `pytest tests` run so that each keeps its own process, as it had
@@ -386,9 +388,9 @@ run_code_checks() {
 
     if [ "$RUN_FLAKE8" = true ] && [ "$ENABLE_FLAKE8" = true ]; then
         # Ruff is the linter of record. It implements no rule in the E121-E133 range, so
-        # the continuation-line indent checks come from flake8 and nothing else; every
-        # other code flake8 reports is either ruff's job or ignored in .flake8. This is
-        # the same split rms-polymath uses.
+        # the continuation-line indent checks come from flake8 and nothing else. `.flake8`
+        # selects that range on its own, so the flag below only restates it; every other
+        # check is ruff's. This is the same split rms-polymath uses.
         print_info "Running flake8 (continuation-line checks only)..."
         if python -m flake8 --select=E12,E13 src programs tests; then
             print_success "Flake8 passed"

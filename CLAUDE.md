@@ -59,11 +59,15 @@ imports fail because these are unset, say so; do not report it as a code defect.
   dependencies from `-e ".[dev]"` and requires `SPICE_PATH`,
   `SPICE_SQLITE_DB_NAME`, and `OOPS_RESOURCES`. Keep it in step with
   `run-all-checks.sh`.
-- **Ruff is the linter of record**, over the whole repository. It implements no
-  rule in the E121-E133 range, so the continuation-line indent checks come from
-  flake8 and nothing else: the gate is `flake8 --select=E12,E13`, the same split
-  rms-polymath uses. `.flake8` remains authoritative for anyone running the full
-  flake8 by hand, which still reports pre-existing findings in the legacy modules.
+- **Ruff is the linter of record**, over the whole repository, and every check runs
+  there except one. Ruff implements no rule in the E121-E133 range, so the
+  continuation-line indent checks come from flake8 and nothing else: the gate is
+  `flake8 --select=E12,E13`, the same split rms-polymath uses. `.flake8` configures
+  that range and nothing else — it selects E12/E13 itself, so a bare `flake8`
+  reports exactly what the gate reports, and it ignores the codes in that range the
+  column-aligned house style would trip (leaving E123, E125 and E133 enforced).
+  Every other ignore lives in `[tool.ruff.lint]`; do not add non-continuation codes
+  to `.flake8`, because nothing there is ever selected.
 - `ruff format` is deliberately never run. Column-aligned assignments, imports,
   and trailing comments are the house style and the formatter would undo them.
 - mypy covers `tests/` only; `src` carries no annotations by house rule, so

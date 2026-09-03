@@ -1,2 +1,14 @@
 [flake8]
-ignore = E111, E114, E115, E116, E117, E121, E122, E124, E126, E127, E128, E129, E131, E201, E202, E203, E211, E221, E222, E225, E226, E227, E228, E231, E241, E251, E261, E262, E265, E266, E272, E302, E303, E305, E402, E501, E741, W291, W391, W503, W504
+# Ruff is the linter of record for this repository; see [tool.ruff.lint] in
+# pyproject.toml. flake8 runs one job and one job only: the continuation-line indent
+# checks in the E12/E13 range, which ruff implements no rule for. Nothing outside that
+# range belongs in this file, because nothing outside it is ever selected.
+#
+# `select` is set here rather than only on the command line so that a bare `flake8` by
+# hand reports exactly what the gate reports.
+select = E12, E13
+
+# The house style is column-aligned assignments, imports and trailing comments, which
+# produces continuation lines that these particular checks would flag. The ones left
+# enforced are E123, E125 and E133.
+ignore = E121, E122, E124, E126, E127, E128, E129, E131

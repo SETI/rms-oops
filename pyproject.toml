@@ -199,18 +199,17 @@ exclude = [
 quote-style = "single"
 
 [tool.ruff.lint]
-# flake8 is the linter of record for this repository, and `.flake8` is authoritative.
-# The select/ignore pair below mirrors it, so that `ruff check` run by hand reports the
-# same findings. The wider rule set used by rms-polymath (I, UP, B, SIM, C4, A, N, PT,
+# Ruff is the linter of record for this repository: every check runs here except the
+# continuation-line indent range, which ruff implements no rule for and which `.flake8`
+# owns on its own. The wider rule set used by rms-polymath (I, UP, B, SIM, C4, A, N, PT,
 # RUF) is not enabled here: it reports several thousand findings against the legacy
 # modules, which is a cleanup project rather than a gate.
 select = ["E", "F", "W"]
-# These are the codes ignored in .flake8; the comments there explain the house style
-# they protect, which is column-aligned assignments, imports, and trailing comments.
-# The continuation-line codes .flake8 also ignores (E121, E122, E124, E126-E129, E131)
-# are absent because ruff implements no rule in the E121-E133 range; naming one here is
-# an error rather than a no-op. That range is the one pycodestyle family only flake8
-# can report.
+# The house style these protect is column-aligned assignments, imports, and trailing
+# comments. The continuation-line codes (E121, E122, E124, E126-E129, E131) are absent
+# because ruff implements no rule in the E121-E133 range; naming one here is an error
+# rather than a no-op. That range is the one pycodestyle family only flake8 can report,
+# and `.flake8` is where those codes are ignored instead.
 ignore = [
   "E111", "E114", "E115", "E116", "E117",
   "E201", "E202", "E203", "E211", "E221", "E222", "E225", "E226", "E227", "E228",
