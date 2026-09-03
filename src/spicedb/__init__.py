@@ -31,8 +31,7 @@ __all__ = ['lrange', 'KernelInfo', 'kernels_from_filespec', 'set_spice_path',
            'furnish_by_metafile', 'furnish_by_filepath', 'unload_by_name',
            'unload_by_type', 'unload_by_filepath', 'unload_all', 'as_names',
            'furnished_names', 'furnished_basenames', 'used_basenames',
-           'furnish_cassini_kernels', 'furnish_solar_system', 'test_KernelInfo',
-           'test_spicedb']
+           'furnish_cassini_kernels', 'furnish_solar_system']
 
 # For testing and debugging
 DEBUG = False   # If true, no files are furnished.

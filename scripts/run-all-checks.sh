@@ -17,6 +17,7 @@
 #                          (may combine with other --* flags)
 #   --ruff-check           Run ruff check only
 #   --mypy                 Run mypy only (the tests; src has no annotations)
+#   --stubtest             Run stubtest only (the .pyi stubs vs the runtime API)
 #   --pyroma               Run pyroma only
 #   --bandit               Run bandit only
 #   --vulture              Run vulture only
@@ -48,6 +49,7 @@
 #     ENABLE_FLAKE8            continuation-line checks only (default: true)
 #     ENABLE_RUFF_CHECK        the linter of record (default: true)
 #     ENABLE_MYPY              the tests only (default: true)
+#     ENABLE_STUBTEST          .pyi stubs match the runtime API (default: true)
 #     ENABLE_PYROMA            packaging metadata, --min=10 (default: true)
 #     ENABLE_BANDIT            security scan of src (default: true)
 #     ENABLE_VULTURE           dead code in src (default: true)
@@ -104,6 +106,7 @@ PARALLEL=true
 RUN_FLAKE8=false
 RUN_RUFF_CHECK=false
 RUN_MYPY=false
+RUN_STUBTEST=false
 RUN_PYROMA=false
 RUN_BANDIT=false
 RUN_VULTURE=false
@@ -120,6 +123,7 @@ SCOPE_SPECIFIED=false
 : "${ENABLE_FLAKE8:=true}"
 : "${ENABLE_RUFF_CHECK:=true}"
 : "${ENABLE_MYPY:=true}"
+: "${ENABLE_STUBTEST:=true}"
 : "${ENABLE_PYROMA:=true}"
 : "${ENABLE_BANDIT:=true}"
 : "${ENABLE_VULTURE:=true}"
@@ -228,6 +232,7 @@ while [[ $# -gt 0 ]]; do
             RUN_FLAKE8=true
             RUN_RUFF_CHECK=true
             RUN_MYPY=true
+            RUN_STUBTEST=true
             RUN_PYROMA=true
             RUN_BANDIT=true
             RUN_VULTURE=true
@@ -250,6 +255,11 @@ while [[ $# -gt 0 ]]; do
             ;;
         --mypy)
             RUN_MYPY=true
+            SCOPE_SPECIFIED=true
+            shift
+            ;;
+        --stubtest)
+            RUN_STUBTEST=true
             SCOPE_SPECIFIED=true
             shift
             ;;
@@ -320,6 +330,7 @@ if [ "$SCOPE_SPECIFIED" = false ]; then
     RUN_FLAKE8=true
     RUN_RUFF_CHECK=true
     RUN_MYPY=true
+    RUN_STUBTEST=true
     RUN_PYROMA=true
     RUN_BANDIT=true
     RUN_VULTURE=true
@@ -350,6 +361,7 @@ _code_checks_any_scheduled() {
     [ "$RUN_PYTEST_SPICEDB" = true ] && [ "$ENABLE_PYTEST_SPICEDB" = true ] && return 0
     [ "$RUN_PIP_AUDIT" = true ] && [ "$ENABLE_PIP_AUDIT" = true ] && return 0
     [ "$RUN_MYPY" = true ] && [ "$ENABLE_MYPY" = true ] && return 0
+    [ "$RUN_STUBTEST" = true ] && [ "$ENABLE_STUBTEST" = true ] && return 0
     [ "$RUN_PYROMA" = true ] && [ "$ENABLE_PYROMA" = true ] && return 0
     [ "$RUN_BANDIT" = true ] && [ "$ENABLE_BANDIT" = true ] && return 0
     [ "$RUN_VULTURE" = true ] && [ "$ENABLE_VULTURE" = true ] && return 0
@@ -455,6 +467,25 @@ run_code_checks() {
             print_error "Mypy failed"
             failed=true
             failed_checks="${failed_checks}Code - Mypy"$'\n'
+        fi
+    fi
+
+    if [ "$RUN_STUBTEST" = true ] && [ "$ENABLE_STUBTEST" = true ]; then
+        # A stub replaces its module outright for a type checker, so whatever a stub
+        # omits is invisible downstream. stubtest compares each one against the imported
+        # module, which is what keeps them complete. MYPYPATH names src/ because the two
+        # library packages live there and the editable install's import hook is invisible
+        # to mypy. The allowlist holds the handful of leaked loop variables that exist at
+        # run time and are deliberately not published.
+        print_info "Running stubtest (.pyi stubs vs the runtime API)..."
+        if MYPYPATH=src python -m mypy.stubtest oops spicedb programs \
+                --mypy-config-file pyproject.toml \
+                --allowlist stubtest-allowlist.txt; then
+            print_success "Stubtest passed"
+        else
+            print_error "Stubtest failed"
+            failed=true
+            failed_checks="${failed_checks}Code - Stubtest"$'\n'
         fi
     fi
 

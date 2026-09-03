@@ -1,0 +1,21 @@
+# Names that exist at run time but are deliberately absent from the .pyi stubs.
+#
+# Each is a loop variable that leaks out of the `for` statement that built a constant
+# next to it: Python gives a module body and a class body no scope of their own, so the
+# variable survives the loop and becomes an attribute of the module or the class. None of
+# them is API, and publishing them in the stubs would invite downstream code to use them.
+#
+# stubtest compares each stub against the runtime object, so it reports these as missing.
+# Delete an entry here if the source ever stops leaking the name.
+
+# oops/body.py: `for (codes, names) in ALIASES:`
+oops.body.codes
+oops.body.names
+
+# oops/config.py: `for name in LEVELS.keys():`, and the nested `for k in ...` inside it
+oops.config.LOGGING.k
+oops.config.LOGGING.level_val
+oops.config.LOGGING.name
+
+# oops/gravity/oblategravity.py: `for name, value in Gravity.GRAVITY_REGISTRY.items():`
+oops.gravity.oblategravity.value

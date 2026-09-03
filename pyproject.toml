@@ -60,7 +60,8 @@ dev = [
   "bandit[toml]>=1.8",
   "coverage>=7.0",
   "flake8",
-  # mypy checks the tests only; src carries no annotations (see [tool.mypy]).
+  # mypy checks the tests only; src carries no annotations (see [tool.mypy]). It also
+  # supplies stubtest, which checks the .pyi stubs against the imported packages.
   "mypy>=1.0",
   "pip-audit>=2.7",
   "pymarkdownlnt>=0.9.35",
@@ -92,6 +93,12 @@ Issues = "https://github.com/SETI/rms-oops/issues"
 where = ["src", "."]
 include = ["oops*", "spicedb*", "programs*"]
 namespaces = false
+
+[tool.setuptools.package-data]
+# The PEP 561 marker and the .pyi stubs must ship in the wheel, or a downstream type
+# checker ignores both and treats the package as untyped. The "*" key applies to every
+# package the find directive above picks up, subpackages included.
+"*" = ["py.typed", "*.pyi"]
 
 [tool.setuptools_scm]
 local_scheme = "no-local-version"
@@ -157,8 +164,12 @@ exclude = [
 warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
-# oops, spicedb and programs ship no py.typed marker, so mypy cannot import them. The
-# tests exercise them at runtime; this keeps the check on the test code itself.
+# The three packages do ship a py.typed marker and a .pyi stub beside every module, but
+# `mypy_path` deliberately does not name src/, so this run cannot see them and the check
+# stays on the test code itself. Pointing mypy at the stubs here would report the tests'
+# use of private members, which the stubs do not publish: a cleanup project rather than a
+# gate. The stubs are checked instead by stubtest, which sets MYPYPATH itself; see
+# scripts/run-all-checks.sh.
 module = ["oops.*", "spicedb.*", "programs.*", "cspyce.*", "astropy.*", "spicedb",
           "oops"]
 ignore_missing_imports = true

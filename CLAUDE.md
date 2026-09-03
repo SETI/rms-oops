@@ -32,8 +32,8 @@ imports fail because these are unset, say so; do not report it as a code defect.
   Work inside the virtualenv `./scripts/setup-venv.sh` creates, which installs
   `-e ".[dev]"`. Never install into system Python.
 - `scripts/run-all-checks.sh` runs the gates; `-h` lists the flags. A full run is
-  ruff, flake8, mypy, pyroma, bandit, vulture, the three pytest suites, and the
-  Sphinx build. pip-audit and PyMarkdown remain off by default (`ENABLE_*` in the
+  ruff, flake8, mypy, stubtest, pyroma, bandit, vulture, the three pytest suites,
+  and the Sphinx build. pip-audit and PyMarkdown remain off by default (`ENABLE_*` in the
   script): pip-audit reports findings against pinned upstream dependencies this
   repository does not control, and PyMarkdown reports pre-existing findings in the
   Markdown. `.github/workflows/run-lint.yml` runs the same set minus the pytest
@@ -75,7 +75,26 @@ imports fail because these are unset, say so; do not report it as a code defect.
 - `ruff format` is deliberately never run. Column-aligned assignments, imports,
   and trailing comments are the house style and the formatter would undo them.
 - mypy covers `tests/` only; `src` carries no annotations by house rule, so
-  checking it would report their absence rather than any defect.
+  checking it would report their absence rather than any defect. `mypy_path` does
+  not name `src`, so that run does not see the stubs either; pointing it there
+  reports the tests' use of private members, which the stubs do not publish.
+- All three packages ship a PEP 561 `py.typed` marker, so the published type
+  information lives in a `.pyi` stub beside every module. A stub replaces its
+  module outright for a type checker: whatever the stub omits is invisible
+  downstream, so a stub has to cover its module's whole public surface.
+  `stubtest` enforces exactly that and runs in the check script and in CI, so
+  adding, renaming or re-signing any public member means updating its stub in the
+  same change. Signature shapes are exact — every parameter, which are
+  keyword-only, and every default — while the types are `Any` except where they
+  are unambiguous, which is deliberate rather than an omission to fill in blindly.
+  The members bound on at import time need writing out by hand: the ~86 backplane
+  methods `_define_backplane_names` attaches all have to appear in
+  `backplane/__init__.pyi`, as do the photon-solver methods on `Path` and
+  `Surface` and the class constants (`Frame.J2000`, `Path.SSB`,
+  `Transform.IDENTITY`, the `Gravity` bodies) that their modules assign after the
+  class statement. `stubtest-allowlist.txt` holds the few names that exist at run
+  time and are deliberately unpublished; each entry names the `for` statement
+  whose loop variable leaked.
 - The legacy exclusions are recorded in `pyproject.toml`: `ideas/` and the parked,
   uncollected test modules are outside ruff's scope, and `src/oops/hosts/*` and
   `src/spicedb/*` carry per-file ignores.

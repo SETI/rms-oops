@@ -107,8 +107,8 @@ pytest tests/spicedb
 pytest tests
 ```
 
-- To run the full set of quality gates (ruff, flake8, mypy, pyroma, bandit,
-  vulture, the three test suites, and the documentation build):
+- To run the full set of quality gates (ruff, flake8, mypy, stubtest, pyroma,
+  bandit, vulture, the three test suites, and the documentation build):
 
 ```sh
 ./scripts/run-all-checks.sh

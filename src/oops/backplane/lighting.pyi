@@ -1,0 +1,43 @@
+##########################################################################################
+# oops/backplane/lighting.pyi
+##########################################################################################
+"""Type stub for :mod:`oops.backplane.lighting`.
+
+The `src` tree carries no inline annotations, so type information for public symbols is
+published here instead. The stub describes the shape of the API exactly: every public
+name, its parameters, which of them are keyword-only, and which have defaults. Types are
+given where they are unambiguous and are `Any` elsewhere.
+"""
+
+from typing import Any
+
+from oops.backplane import Backplane as Backplane
+
+def incidence_angle(self, event_key: Any, apparent: bool = True) -> Any: ...
+
+def emission_angle(self, event_key: Any, apparent: bool = True) -> Any: ...
+
+def phase_angle(self, event_key: Any, apparent: bool = True) -> Any: ...
+
+def scattering_angle(self, event_key: Any, apparent: bool = True) -> Any: ...
+
+def center_incidence_angle(self, event_key: Any, apparent: bool = True) -> Any: ...
+
+def center_emission_angle(self, event_key: Any, apparent: bool = True) -> Any: ...
+
+def center_phase_angle(self, event_key: Any, apparent: bool = True) -> Any: ...
+
+def center_scattering_angle(self, event_key: Any, apparent: bool = True) -> Any: ...
+
+def mu0(self, event_key: Any, apparent: bool = True) -> Any: ...
+
+def mu(self, event_key: Any, apparent: bool = True) -> Any: ...
+
+def lambert_law(self, event_key: Any) -> Any: ...
+
+def minnaert_law(self, event_key: Any, k: Any, k2: Any = None,
+    clip: float = 0.2) -> Any: ...
+
+def lommel_seeliger_law(self, event_key: Any) -> Any: ...
+
+##########################################################################################
