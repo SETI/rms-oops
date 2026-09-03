@@ -93,4 +93,184 @@ def test_quickpath():
     assert reused is quick
     error = (reused.event_at_time(time, quick=False).pos - exact.pos).norm()
     assert np.max(error.vals) < 1.e-3
+
+
+##########################################################################################
+# QuickPath.for_path: creation, re-use, and extension
+##########################################################################################
+
+_EPOCH = 1.e8
+
+
+def _dense_times(start: float, stop: float) -> Scalar:
+    """Enough closely-spaced times that a QuickPath is worth building."""
+
+    return Scalar(_EPOCH + np.arange(start, stop, 0.01))
+
+
+def test_for_path_builds_a_quickpath_when_it_is_worthwhile(core_kernels) -> None:
+    """A dense set of times justifies the overhead of tabulating the path."""
+
+    mars = SpicePath('MARS', 'SSB')
+    quick = QuickPath.for_path(mars, _dense_times(0., 100.), quick={})
+
+    assert isinstance(quick, QuickPath)
+
+
+def test_for_path_returns_the_path_when_quick_is_false(core_kernels) -> None:
+    """quick=False creates no QuickPath and returns the path itself."""
+
+    mars = SpicePath('MARS', 'SSB')
+
+    assert QuickPath.for_path(mars, _dense_times(0., 100.), quick=False) is mars
+
+
+def test_for_path_accepts_a_tuple_of_time_limits(core_kernels) -> None:
+    """The times may be given simply as (tmin, tmax)."""
+
+    mars = SpicePath('MARS', 'SSB')
+    quick = QuickPath.for_path(mars, (_EPOCH, _EPOCH + 100.), quick={})
+
+    assert isinstance(quick, (QuickPath, SpicePath))
+
+
+def test_for_path_saves_the_quickpath_on_the_path(core_kernels) -> None:
+    """A QuickPath is saved in the list inside path._quickpaths."""
+
+    mars = SpicePath('MARS', 'SSB')
+    quick = QuickPath.for_path(mars, _dense_times(0., 100.), quick={})
+
+    assert quick in mars._quickpaths
+
+
+def test_for_path_reuses_a_covering_quickpath(core_kernels) -> None:
+    """A pre-existing QuickPath that covers the range is returned as it is."""
+
+    mars = SpicePath('MARS', 'SSB')
+    first = QuickPath.for_path(mars, _dense_times(0., 100.), quick={})
+    second = QuickPath.for_path(mars, _dense_times(20., 80.), quick={})
+
+    assert second is first
+    assert len(mars._quickpaths) == 1
+
+
+def test_for_path_extends_a_partially_covering_quickpath(core_kernels) -> None:
+    """A QuickPath covering part of the range is extended rather than duplicated."""
+
+    mars = SpicePath('MARS', 'SSB')
+    first = QuickPath.for_path(mars, _dense_times(0., 100.), quick={})
+    original_end = first._times[-1]
+
+    second = QuickPath.for_path(mars, _dense_times(50., 200.), quick={})
+
+    assert second is first
+    assert len(mars._quickpaths) == 1
+    assert second._times[-1] > original_end
+
+
+def test_for_path_extends_backward(core_kernels) -> None:
+    """Extension works in the earlier direction too."""
+
+    mars = SpicePath('MARS', 'SSB')
+    first = QuickPath.for_path(mars, _dense_times(0., 100.), quick={})
+    original_start = first._times[0]
+
+    first.extend(_EPOCH - 100., _EPOCH + 100.)
+
+    assert first._times[0] < original_start
+
+
+def test_for_path_builds_a_second_quickpath_for_a_distant_time(core_kernels) -> None:
+    """A range nowhere near the first tabulation gets a QuickPath of its own."""
+
+    mars = SpicePath('MARS', 'SSB')
+    first = QuickPath.for_path(mars, _dense_times(0., 100.), quick={})
+    second = QuickPath.for_path(mars, Scalar(5.e8 + np.arange(0., 100., 0.01)), quick={})
+
+    assert second is not first
+    assert len(mars._quickpaths) == 2
+
+
+def test_quickpath_matches_the_path_it_emulates(core_kernels) -> None:
+    """Interpolation reproduces the underlying path to well within a kilometer."""
+
+    np.random.seed(3391)
+    mars = SpicePath('MARS', 'SSB')
+    quick = QuickPath.for_path(mars, _dense_times(0., 100.), quick={})
+
+    times = Scalar(_EPOCH + np.random.rand(50) * 100.)
+    error = abs(quick.event_at_time(times).pos - mars.event_at_time(times).pos).max()
+
+    assert error < 1.e-3
+
+
+def test_quickpath_velocity_matches_the_path(core_kernels) -> None:
+    """The interpolated velocity matches the underlying path as well."""
+
+    np.random.seed(7712)
+    mars = SpicePath('MARS', 'SSB')
+    quick = QuickPath.for_path(mars, _dense_times(0., 100.), quick={})
+
+    times = Scalar(_EPOCH + np.random.rand(50) * 100.)
+    error = abs(quick.event_at_time(times).vel - mars.event_at_time(times).vel).max()
+
+    assert error < 1.e-6
+
+
+def test_extend_widens_the_tabulated_interval(core_kernels) -> None:
+    """extend() re-tabulates the path over the wider interval."""
+
+    mars = SpicePath('MARS', 'SSB')
+    quick = QuickPath.for_path(mars, _dense_times(0., 100.), quick={})
+
+    quick.extend(_EPOCH - 200., _EPOCH + 300.)
+
+    assert quick._times[0] <= _EPOCH - 200.
+    assert quick._times[-1] >= _EPOCH + 300.
+
+
+def test_extend_to_a_narrower_interval_changes_nothing(core_kernels) -> None:
+    """An interval already covered leaves the tabulation alone."""
+
+    mars = SpicePath('MARS', 'SSB')
+    quick = QuickPath.for_path(mars, _dense_times(0., 100.), quick={})
+    before = (quick._times[0], quick._times[-1])
+
+    quick.extend(_EPOCH + 20., _EPOCH + 80.)
+
+    assert (quick._times[0], quick._times[-1]) == before
+
+
+def test_extended_quickpath_is_still_accurate(core_kernels) -> None:
+    """The path is still reproduced accurately over the extended interval."""
+
+    np.random.seed(5150)
+    mars = SpicePath('MARS', 'SSB')
+    quick = QuickPath.for_path(mars, _dense_times(0., 100.), quick={})
+    quick.extend(_EPOCH - 200., _EPOCH + 300.)
+
+    times = Scalar(_EPOCH + np.random.rand(50) * 500. - 200.)
+    error = abs(quick.event_at_time(times).pos - mars.event_at_time(times).pos).max()
+
+    assert error < 1.e-3
+
+
+def test_quickpath_rejects_a_shaped_path(core_kernels) -> None:
+    """A QuickPath can only emulate a path of shape ()."""
+
+    shaped = FixedPath(Vector3([(1.e5, 0., 0.), (0., 2.e5, 0.)]), Path.SSB)
+
+    with pytest.raises(ValueError):
+        QuickPath(shaped, _EPOCH, _EPOCH + 100., QUICK.dictionary)
+
+
+def test_quickpath_rejects_a_quickpath(core_kernels) -> None:
+    """A QuickPath cannot be built on top of another QuickPath."""
+
+    mars = SpicePath('MARS', 'SSB')
+    quick = QuickPath.for_path(mars, _dense_times(0., 100.), quick={})
+
+    with pytest.raises(ValueError):
+        QuickPath(quick, _EPOCH, _EPOCH + 100., QUICK.dictionary)
+
 ##########################################################################################

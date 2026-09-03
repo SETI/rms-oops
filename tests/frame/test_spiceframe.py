@@ -11,10 +11,10 @@ from polymath       import Scalar, Vector3
 from oops.config    import QUICK
 from oops.constants import DPR
 from oops.event     import Event
-from oops.frame     import Frame, SpiceFrame, QuickFrame
+from oops.frame     import Frame, QuickFrame, Rotation, SpiceFrame
 from oops.path      import Path
 from oops.path.spicepath import SpicePath
-from oops.unittester_support import TEST_SPICE_PREFIX
+from programs.gold_master.test_support import TEST_SPICE_PREFIX
 
 
 # Nothing here needs QuickPath or QuickFrame suppressed. The comparisons against
@@ -171,6 +171,11 @@ def test_spiceframe(core_kernels):
     assert xform1.matrix == xform3.matrix
     assert xform3.omega == Vector3.ZERO
 
+    # A Transform defines omega in the reference frame, so a vector perpendicular to it
+    # is a reference-frame vector; seen from the rotating frame it sweeps through
+    # |omega| * dt. Hence matrix.rotate(), which carries a vector from the reference
+    # frame into this one. Each ratio below falls short of one by the O(DT^2) error of a
+    # chord standing in for an arc.
     DT = 0.2
     xform2a = wac2.transform_at_time(TDB-DT, quick=False)
     xform2b = wac2.transform_at_time(TDB+DT, quick=False)
@@ -178,8 +183,8 @@ def test_spiceframe(core_kernels):
     axes = (Vector3.XAXIS, Vector3.YAXIS, Vector3.ZAXIS)
     for i in range(3):
         v = xform2.omega.ucross(axes[i])
-        rotated_time0 = xform2a.matrix.unrotate(v)
-        rotated_time1 = xform2b.matrix.unrotate(v)
+        rotated_time0 = xform2a.matrix.rotate(v)
+        rotated_time1 = xform2b.matrix.rotate(v)
         angle = rotated_time1.sep(rotated_time0)
         ratio = (angle/(2.*DT) / xform2.omega.norm()).vals
         assert ratio == pytest.approx(1., abs=0.5e-9)
@@ -201,8 +206,8 @@ def test_spiceframe(core_kernels):
     axes = (Vector3.XAXIS, Vector3.YAXIS, Vector3.ZAXIS)
     for i in range(3):
         v = xform2.omega.ucross(axes[i])
-        rotated_time0 = xform2a.matrix.unrotate(v)
-        rotated_time1 = xform2b.matrix.unrotate(v)
+        rotated_time0 = xform2a.matrix.rotate(v)
+        rotated_time1 = xform2b.matrix.rotate(v)
         angle = rotated_time1.sep(rotated_time0)
         ratio = angle/(2.*DT) / xform2.omega.norm()
         mask = (angle.vals != 0.)
@@ -220,8 +225,8 @@ def test_spiceframe(core_kernels):
     axes = (Vector3.XAXIS, Vector3.YAXIS, Vector3.ZAXIS)
     for i in range(3):
         v = xform2.omega.ucross(axes[i])
-        rotated_time0 = xform2a.matrix.unrotate(v)
-        rotated_time1 = xform2b.matrix.unrotate(v)
+        rotated_time0 = xform2a.matrix.rotate(v)
+        rotated_time1 = xform2b.matrix.rotate(v)
         angle = rotated_time1.sep(rotated_time0)
         ratio = (angle/(2.*DT) / xform2.omega.norm()).vals
         assert ratio == pytest.approx(1., abs=0.5e-9)
@@ -243,8 +248,8 @@ def test_spiceframe(core_kernels):
     axes = (Vector3.XAXIS, Vector3.YAXIS, Vector3.ZAXIS)
     for i in range(3):
         v = xform2.omega.ucross(axes[i])
-        rotated_time0 = xform2a.matrix.unrotate(v)
-        rotated_time1 = xform2b.matrix.unrotate(v)
+        rotated_time0 = xform2a.matrix.rotate(v)
+        rotated_time1 = xform2b.matrix.rotate(v)
         angle = rotated_time1.sep(rotated_time0)
         ratio = angle/(2.*DT) / xform2.omega.norm()
         mask = (angle.vals != 0.)
@@ -271,8 +276,8 @@ def test_spiceframe(core_kernels):
     axes = (Vector3.XAXIS, Vector3.YAXIS, Vector3.ZAXIS)
     for i in range(3):
         v = xform2.omega.ucross(axes[i])
-        rotated_time0 = xform2a.matrix.unrotate(v)
-        rotated_time1 = xform2b.matrix.unrotate(v)
+        rotated_time0 = xform2a.matrix.rotate(v)
+        rotated_time1 = xform2b.matrix.rotate(v)
         angle = rotated_time1.sep(rotated_time0)
         ratio = angle/(2.*DT) / xform2.omega.norm()
         mask = (angle.vals != 0.)
@@ -406,5 +411,187 @@ def test_resetting_the_caches_empties_the_frame_lookup(core_kernels) -> None:
 
     assert not SpiceFrame._FRAME_LOOKUP
     assert not SpiceFrame._FOR_NAME
+
+
+##########################################################################################
+# Constructing a SpiceFrame
+##########################################################################################
+
+def test_a_frame_can_be_named(core_kernels) -> None:
+    """A SPICE frame name identifies the frame."""
+
+    SpicePath('MARS', 'SSB')
+
+    assert SpiceFrame('IAU_MARS', 'J2000').frame_id == 'IAU_MARS'
+
+
+def test_a_frame_can_be_given_by_its_code(core_kernels) -> None:
+    """A SPICE frame code names the same frame as its string form."""
+
+    SpicePath('MARS', 'SSB')
+    by_name = SpiceFrame('IAU_MARS', 'J2000')
+    by_code = SpiceFrame(cspyce.namfrm('IAU_MARS'), 'J2000', frame_id='mars_by_code')
+
+    time = Scalar(1.e8)
+    assert by_code.transform_at_time(time).matrix == by_name.transform_at_time(time).matrix
+
+
+def test_a_body_name_selects_its_rotation_frame(core_kernels) -> None:
+    """An argument naming a body gives the frame associated with that body."""
+
+    SpicePath('MARS', 'SSB')
+    by_body = SpiceFrame('MARS', 'J2000', frame_id='mars_by_body')
+    by_frame = SpiceFrame('IAU_MARS', 'J2000')
+
+    time = Scalar(1.e8)
+    assert by_body.transform_at_time(time).matrix \
+           == by_frame.transform_at_time(time).matrix
+
+
+def test_an_unrecognized_frame_code_raises(core_kernels) -> None:
+    """An integer that names no frame or body raises IndexError."""
+
+    with pytest.raises(IndexError):
+        SpiceFrame(999999999, frame_id='bad_code')
+
+
+def test_an_unrecognized_frame_name_raises(core_kernels) -> None:
+    """A string that names no frame or body raises KeyError."""
+
+    with pytest.raises(KeyError):
+        SpiceFrame('NOT_A_SPICE_FRAME', frame_id='bad_name')
+
+
+def test_a_frame_must_be_an_integer_or_a_string(core_kernels) -> None:
+    """Anything else raises TypeError."""
+
+    with pytest.raises(TypeError):
+        SpiceFrame(3.14159, frame_id='bad_type')
+
+
+def test_the_reference_must_be_a_spice_frame(core_kernels) -> None:
+    """A reference that is neither a SpiceFrame nor J2000 raises ValueError."""
+
+    SpicePath('MARS', 'SSB')
+    not_spice = Rotation(0.1, 'z', Frame.J2000, frame_id='not_a_spice_frame')
+
+    with pytest.raises(ValueError, match='must be a SpiceFrame or J2000'):
+        SpiceFrame('IAU_MARS', not_spice, frame_id='bad_reference')
+
+
+def test_an_unrecognized_omega_type_raises(core_kernels) -> None:
+    """omega_type must be "tabulated", "numerical", or "zero"."""
+
+    SpicePath('MARS', 'SSB')
+
+    with pytest.raises(ValueError, match='omega_type'):
+        SpiceFrame('IAU_MARS', 'J2000', omega_type='bogus', frame_id='bad_omega')
+
+
+def test_a_spiceframe_is_always_registered(core_kernels) -> None:
+    """SpiceFrames register themselves under the SPICE name by default."""
+
+    SpicePath('MARS', 'SSB')
+    frame = SpiceFrame('IAU_MARS', 'J2000')
+
+    assert frame.is_registered
+    assert Frame.frame_id_exists('IAU_MARS')
+
+
+##########################################################################################
+# The rotation vector
+##########################################################################################
+
+def test_the_tabulated_omega_matches_the_rotation_rate(core_kernels) -> None:
+    """Mars turns once every 24h 37m, so its rotation rate is about 7.09e-5 rad/s."""
+
+    SpicePath('MARS', 'SSB')
+    frame = SpiceFrame('IAU_MARS', 'J2000')
+
+    omega = frame.transform_at_time(Scalar(1.e8)).omega
+
+    assert abs(omega).vals == pytest.approx(7.088e-5, rel=1.e-3)
+
+
+def test_a_zero_omega_frame_does_not_rotate(core_kernels) -> None:
+    """omega_type="zero" ignores the rotation vector."""
+
+    SpicePath('MARS', 'SSB')
+    frame = SpiceFrame('IAU_MARS', 'J2000', omega_type='zero', frame_id='mars_zero')
+
+    assert frame.transform_at_time(Scalar(1.e8)).omega == Vector3.ZERO
+
+
+def test_a_zero_omega_frame_still_rotates_positions(core_kernels) -> None:
+    """Only the velocity term is dropped; the pointing is unchanged."""
+
+    SpicePath('MARS', 'SSB')
+    tabulated = SpiceFrame('IAU_MARS', 'J2000')
+    zeroed = SpiceFrame('IAU_MARS', 'J2000', omega_type='zero', frame_id='mars_zero_2')
+
+    time = Scalar(1.e8)
+    assert zeroed.transform_at_time(time).matrix == tabulated.transform_at_time(time).matrix
+
+
+def test_the_numerical_omega_has_the_tabulated_magnitude(core_kernels) -> None:
+    """Deriving omega by finite differences gives the same rotation rate."""
+
+    SpicePath('MARS', 'SSB')
+    tabulated = SpiceFrame('IAU_MARS', 'J2000')
+    numerical = SpiceFrame('IAU_MARS', 'J2000', omega_type='numerical',
+                           frame_id='mars_numerical')
+
+    time = Scalar(1.e8)
+    assert abs(numerical.transform_at_time(time).omega).vals \
+           == pytest.approx(abs(tabulated.transform_at_time(time).omega).vals, rel=1.e-6)
+
+
+def test_the_numerical_omega_matches_the_tabulated_one(core_kernels) -> None:
+    """Both routes to omega should give the same vector in the reference frame."""
+
+    SpicePath('MARS', 'SSB')
+    tabulated = SpiceFrame('IAU_MARS', 'J2000')
+    numerical = SpiceFrame('IAU_MARS', 'J2000', omega_type='numerical',
+                           frame_id='mars_numerical_2')
+
+    time = Scalar(1.e8)
+    separation = tabulated.transform_at_time(time).omega.sep(
+                        numerical.transform_at_time(time).omega)
+
+    assert separation.vals == pytest.approx(0., abs=1.e-6)
+
+
+def test_the_numerical_omega_is_in_the_reference_frame(core_kernels) -> None:
+    """A Transform defines omega in the reference frame, not in the target frame."""
+
+    SpicePath('MARS', 'SSB')
+    tabulated = SpiceFrame('IAU_MARS', 'J2000')
+    numerical = SpiceFrame('IAU_MARS', 'J2000', omega_type='numerical',
+                           frame_id='mars_numerical_3')
+
+    time = Scalar(1.e8)
+    transform = tabulated.transform_at_time(time)
+    omega = numerical.transform_at_time(time).omega
+
+    # Mars's pole is nowhere near the J2000 pole, so a vector mistakenly left in the
+    # target frame would lie along its z-axis instead
+    assert transform.omega.sep(omega).vals == pytest.approx(0., abs=1.e-6)
+    assert omega.sep(transform.matrix.rotate(omega)).vals > 0.1
+
+
+def test_the_numerical_omega_is_shaped_like_its_times(core_kernels) -> None:
+    """An array of times takes the multi-time branch, which derives omega the same way."""
+
+    SpicePath('MARS', 'SSB')
+    tabulated = SpiceFrame('IAU_MARS', 'J2000')
+    numerical = SpiceFrame('IAU_MARS', 'J2000', omega_type='numerical',
+                           frame_id='mars_numerical_4')
+
+    times = Scalar([1.e8, 1.e8 + 1000., 1.e8 + 2000.])
+    omega = numerical.transform_at_time(times, quick=False).omega
+    expected = tabulated.transform_at_time(times, quick=False).omega
+
+    assert omega.shape == (3,)
+    assert omega.sep(expected).vals == pytest.approx([0., 0., 0.], abs=1.e-6)
 
 ##########################################################################################

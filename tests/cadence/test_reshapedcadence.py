@@ -2,11 +2,14 @@
 # tests/cadence/test_reshapedcadence.py
 ##########################################################################################
 
+import pickle
+
 import numpy as np
 import pytest
 
 from polymath import Scalar, Pair, Vector
 import oops
+from oops.cadence import Metronome, ReshapedCadence
 
 from tests.cadence.test_dualcadence import case_dual_metronome
 
@@ -263,4 +266,171 @@ def test_reshapedcadence():
     assert reshaped.tstep_range_at_time(1106, inclusive=False) == ((24,3), (25,3))
     assert (reshaped.tstep_range_at_time(1106, inclusive=False, remask=True)[0]
             == Pair.MASKED)
+
+
+##########################################################################################
+# Reshaping a 1-D Metronome into a 2-D cadence
+##########################################################################################
+
+TSTART = 0.
+TSTRIDE = 10.
+TEXP = 10.
+STEPS = 12
+
+
+def _metronome() -> Metronome:
+    """A continuous 12-step cadence covering 0 to 120 seconds."""
+
+    return Metronome(tstart=TSTART, tstride=TSTRIDE, texp=TEXP, steps=STEPS)
+
+
+def _reshaped() -> ReshapedCadence:
+    """The same cadence, reshaped to 3 rows of 4 steps."""
+
+    return ReshapedCadence(_metronome(), (3, 4))
+
+
+def test_reshaping_keeps_the_overall_timing() -> None:
+    """The time steps are unchanged; only their indexing differs."""
+
+    reshaped = _reshaped()
+    original = _metronome()
+
+    assert reshaped.shape == (3, 4)
+    assert reshaped.time == original.time
+    assert reshaped.midtime == original.midtime
+    assert reshaped.lasttime == original.lasttime
+
+
+def test_reshaping_keeps_the_continuity_and_uniqueness() -> None:
+    """A reshaped cadence samples the same times, so these properties carry over."""
+
+    reshaped = _reshaped()
+    original = _metronome()
+
+    assert reshaped.is_continuous == original.is_continuous
+    assert reshaped.is_unique == original.is_unique
+
+
+def test_reshaping_keeps_the_time_strides() -> None:
+    """The interval between successive steps is unchanged."""
+
+    reshaped = _reshaped()
+    original = _metronome()
+
+    assert reshaped.min_tstride == original.min_tstride
+    assert reshaped.max_tstride == original.max_tstride
+
+
+@pytest.mark.parametrize('row, col, step', [(0, 0, 0), (0, 3, 3), (1, 2, 6),
+                                            (2, 3, 11)])
+def test_a_two_dimensional_index_selects_the_same_step(row: int, col: int,
+                                                       step: int) -> None:
+    """The new index (row, col) names the old step row * 4 + col."""
+
+    reshaped = _reshaped()
+    original = _metronome()
+
+    assert reshaped.time_at_tstep(Pair((row, col))) \
+           == original.time_at_tstep(Scalar(step))
+
+
+def test_time_range_at_tstep_matches_the_original() -> None:
+    """The exposure of a reshaped step is that of the step it stands for."""
+
+    assert _reshaped().time_range_at_tstep(Pair((1, 2))) \
+           == _metronome().time_range_at_tstep(Scalar(6))
+
+
+def test_tstep_at_time_returns_a_pair() -> None:
+    """A 2-D cadence is indexed by a Pair rather than a Scalar."""
+
+    tstep = _reshaped().tstep_at_time(Scalar(65.))
+
+    assert isinstance(tstep, Pair)
+    assert tstep == Pair((1., 2.5))
+
+
+def test_tstep_at_time_inverts_time_at_tstep() -> None:
+    """Converting a time to an index and back returns the original time."""
+
+    reshaped = _reshaped()
+    time = Scalar(65.)
+
+    assert reshaped.time_at_tstep(reshaped.tstep_at_time(time)) == time
+
+
+def test_tstep_range_at_time_selects_one_step() -> None:
+    """Exactly one step of a continuous, unique cadence is active at a time."""
+
+    (first, last) = _reshaped().tstep_range_at_time(Scalar(65.))
+
+    assert first == Pair((1, 2))
+    assert last == Pair((2, 3))
+
+
+def test_time_is_inside_matches_the_original() -> None:
+    """Reshaping does not change which times the cadence samples."""
+
+    times = Scalar([-1., 0., 65., 120., 121.])
+
+    assert _reshaped().time_is_inside(times) == _metronome().time_is_inside(times)
+
+
+def test_time_shift_moves_the_whole_cadence() -> None:
+    """A time shift moves both ends and keeps the new shape."""
+
+    shifted = _reshaped().time_shift(100.)
+
+    assert shifted.time == (TSTART + 100., TSTART + STEPS * TSTRIDE + 100.)
+    assert shifted.shape == (3, 4)
+
+
+def test_as_continuous_of_an_already_continuous_cadence() -> None:
+    """A continuous cadence stays continuous."""
+
+    assert _reshaped().as_continuous().is_continuous
+
+
+def test_a_gapped_cadence_can_be_forced_continuous() -> None:
+    """as_continuous closes the gaps between the time steps."""
+
+    gapped = ReshapedCadence(Metronome(tstart=0., tstride=10., texp=5., steps=12),
+                             (3, 4))
+
+    assert not gapped.is_continuous
+    assert gapped.as_continuous().is_continuous
+
+
+def test_reshaping_to_one_dimension_is_allowed() -> None:
+    """A 1-D shape is a valid target."""
+
+    assert ReshapedCadence(_metronome(), (STEPS,)).shape == (STEPS,)
+
+
+def test_reshaping_rejects_an_incompatible_size() -> None:
+    """The new shape must hold exactly as many steps as the old one."""
+
+    with pytest.raises(ValueError, match='size and shape are incompatible'):
+        ReshapedCadence(_metronome(), (5, 5))
+
+
+def test_reshaping_rejects_three_dimensions() -> None:
+    """A reshaped cadence may have at most two dimensions."""
+
+    with pytest.raises(ValueError, match='3-D cadences are not supported'):
+        ReshapedCadence(_metronome(), (2, 2, 3))
+
+
+def test_reshaped_cadence_survives_a_pickle_round_trip() -> None:
+    """Pickling restores the underlying cadence and the new shape."""
+
+    reshaped = _reshaped()
+    restored = pickle.loads(pickle.dumps(reshaped))
+
+    assert isinstance(restored, ReshapedCadence)
+    assert restored.shape == reshaped.shape
+    assert restored.time == reshaped.time
+    assert restored.time_at_tstep(Pair((1, 2))) == reshaped.time_at_tstep(Pair((1, 2)))
+
 ##########################################################################################

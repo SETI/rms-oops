@@ -2,11 +2,13 @@
 # oops/frame/frameshift.py: Subclass FrameShift of class Frame
 ##########################################################################################
 
+import pickle
+
 import numpy as np
 import pytest
 
 from polymath   import Scalar, Vector3
-from oops.frame import FrameShift, SpiceFrame
+from oops.frame import Frame, FrameShift, SpiceFrame
 from oops.path  import SpicePath
 
 
@@ -70,4 +72,97 @@ def test_frameshift(core_kernels):
     assert shifted.is_frozen
     with pytest.raises(ValueError, match='frozen'):
         shifted.set_params(np.array([3. * DT]))
+
+
+def test_frameshift_rejects_an_unregistered_frame(core_kernels) -> None:
+    """A frame ID that has not been registered raises KeyError."""
+
+    with pytest.raises(KeyError):
+        FrameShift(10., 'NOT_A_REGISTERED_FRAME')
+
+
+def test_frameshift_is_fittable(core_kernels) -> None:
+    """The time shift is the single fittable parameter."""
+
+    SpicePath('MARS', 'SSB')
+    shifted = FrameShift(10., SpiceFrame('IAU_MARS', 'J2000'))
+
+    assert shifted.params == (10.,)
+    assert shifted.nparams == 1
+    assert not shifted.is_frozen
+
+
+def test_frameshift_set_params_changes_the_shift(core_kernels) -> None:
+    """Fitting the shift moves the frame in time."""
+
+    SpicePath('MARS', 'SSB')
+    shifted = FrameShift(10., SpiceFrame('IAU_MARS', 'J2000'))
+    shifted.set_params((20.,))
+
+    assert shifted.dt == 20.
+
+
+def test_frameshift_freeze_blocks_fitting(core_kernels) -> None:
+    """freeze=True returns an object that can no longer be fitted."""
+
+    SpicePath('MARS', 'SSB')
+    frozen = FrameShift(10., SpiceFrame('IAU_MARS', 'J2000'), freeze=True)
+
+    assert frozen.is_frozen
+    assert frozen.dt == 10.
+
+
+def test_frameshift_of_zero_matches_the_original(core_kernels) -> None:
+    """A zero shift leaves the frame where it was."""
+
+    SpicePath('MARS', 'SSB')
+    mars = SpiceFrame('IAU_MARS', 'J2000')
+    shifted = FrameShift(0., mars)
+    time = Scalar(1.e8)
+
+    assert shifted.transform_at_time(time).matrix == mars.transform_at_time(time).matrix
+
+
+def test_frameshift_tracks_a_linked_shift(core_kernels) -> None:
+    """A linked FrameShift always matches the shift of the object it is linked to."""
+
+    SpicePath('MARS', 'SSB')
+    mars = SpiceFrame('IAU_MARS', 'J2000')
+    source = FrameShift(10., mars, frame_id='linked_source')
+    linked = FrameShift(source, mars, frame_id='linked_follower')
+
+    assert linked.link is source
+    assert linked.dt == 10.
+
+    source.set_params((20.,))
+    linked.refresh()
+    assert linked.dt == 20.
+
+
+def test_frameshift_pickle(core_kernels) -> None:
+    """Pickling restores the shift and the underlying Frame."""
+
+    SpicePath('MARS', 'SSB')
+    mars = SpiceFrame('IAU_MARS', 'J2000')
+    shifted = FrameShift(10., mars)
+    restored = pickle.loads(pickle.dumps(shifted))
+    time = Scalar(1.e8)
+
+    assert isinstance(restored, FrameShift)
+    assert restored.dt == shifted.dt
+    assert restored.transform_at_time(time).matrix \
+           == shifted.transform_at_time(time).matrix
+
+
+def test_frameshift_getstate_roundtrip(core_kernels) -> None:
+    """The state captured by __getstate__ fully restores the object."""
+
+    SpicePath('MARS', 'SSB')
+    shifted = FrameShift(10., SpiceFrame('IAU_MARS', 'J2000'))
+    state = shifted.__getstate__()
+
+    copied = Frame.__new__(FrameShift)
+    copied.__setstate__(state)
+    assert copied.__getstate__() == state
+
 ##########################################################################################

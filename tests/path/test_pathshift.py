@@ -2,10 +2,13 @@
 # oops/path/pathshift.py: Subclass PathShift of class Path
 ##########################################################################################
 
+import pickle
+
 import numpy as np
+import pytest
 
 from polymath   import Scalar
-from oops.path  import PathShift, SpicePath
+from oops.path  import Path, PathShift, SpicePath
 
 
 def test_pathshift(core_kernels):
@@ -58,4 +61,77 @@ def test_pathshift_pools_waypoints_only_once_frozen(core_kernels):
     # ...and freezing an existing one moves it into the same pool
     a.freeze()
     assert a.waypoint is c.waypoint
+
+
+def test_pathshift_auto_generated_path_id(core_kernels) -> None:
+    """A path_id of "+" appends "_SHIFT" to the ID of the shifted Path."""
+
+    mars = SpicePath('MARS', 'SSB')
+    shifted = PathShift(10., mars, path_id='+')
+
+    assert shifted.path_id == 'MARS_SHIFT'
+
+
+def test_pathshift_rejects_an_unregistered_path(core_kernels) -> None:
+    """A path ID that has not been registered raises KeyError."""
+
+    with pytest.raises(KeyError):
+        PathShift(10., 'NOT_A_REGISTERED_PATH')
+
+
+def test_pathshift_is_fittable(core_kernels) -> None:
+    """The time shift is the single fittable parameter."""
+
+    mars = SpicePath('MARS', 'SSB')
+    shifted = PathShift(10., mars)
+
+    assert shifted.params == (10.,)
+    assert shifted.nparams == 1
+    assert not shifted.is_frozen
+
+
+def test_pathshift_freeze_blocks_fitting(core_kernels) -> None:
+    """freeze=True returns an object that can no longer be fitted."""
+
+    mars = SpicePath('MARS', 'SSB')
+    frozen = PathShift(10., mars, freeze=True)
+
+    assert frozen.is_frozen
+    assert frozen.dt == 10.
+
+
+def test_pathshift_of_zero_matches_the_original(core_kernels) -> None:
+    """A zero shift leaves the path where it was."""
+
+    mars = SpicePath('MARS', 'SSB')
+    shifted = PathShift(0., mars)
+    time = Scalar(1.e8)
+
+    assert shifted.event_at_time(time).pos == mars.event_at_time(time).pos
+
+
+def test_pathshift_pickle(core_kernels) -> None:
+    """Pickling restores the shift and the underlying Path."""
+
+    mars = SpicePath('MARS', 'SSB')
+    shifted = PathShift(10., mars)
+    restored = pickle.loads(pickle.dumps(shifted))
+    time = Scalar(1.e8)
+
+    assert isinstance(restored, PathShift)
+    assert restored.dt == shifted.dt
+    assert restored.event_at_time(time).pos == shifted.event_at_time(time).pos
+
+
+def test_pathshift_getstate_roundtrip(core_kernels) -> None:
+    """The state captured by __getstate__ fully restores the object."""
+
+    mars = SpicePath('MARS', 'SSB')
+    shifted = PathShift(10., mars)
+    state = shifted.__getstate__()
+
+    copied = Path.__new__(PathShift)
+    copied.__setstate__(state)
+    assert copied.__getstate__() == state
+
 ##########################################################################################

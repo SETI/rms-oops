@@ -5,7 +5,7 @@
 import numpy as np
 import pytest
 
-from polymath import Pair
+from polymath import Pair, Vector3
 
 from oops.fov       import FlatFOV, OffsetFOV, Platescale, TDIFOV
 from oops.fov.fov_  import FOV
@@ -151,5 +151,173 @@ def test_nearest_uv_keeps_derivatives() -> None:
     uv_pair.insert_deriv('t', Pair([(1., 1.), (1., 1.)]))
 
     assert 't' in _flat().nearest_uv(uv_pair).derivs
+
+
+##########################################################################################
+# Radii, pixel offsets, and the nearest point inside the FOV
+##########################################################################################
+
+def test_outer_radius_circumscribes_the_field() -> None:
+    """The outer radius reaches the corner of the field of view."""
+
+    fov = _flat()
+    corner = fov.los_from_uv(Pair((0., 0.)))
+    center = fov.center_los()
+
+    assert fov.outer_radius == pytest.approx(corner.sep(center).vals, rel=1.e-6)
+
+
+def test_inner_radius_is_enclosed_by_the_field() -> None:
+    """The inner radius reaches the nearest edge, so it is the smaller of the two."""
+
+    fov = _flat()
+
+    assert 0. < fov.inner_radius < fov.outer_radius
+
+
+def test_inner_radius_reaches_the_edge() -> None:
+    """A square FOV's inner radius reaches the midpoint of an edge."""
+
+    fov = _flat()
+    edge = fov.los_from_uv(Pair((0., 32.)))
+
+    assert fov.inner_radius == pytest.approx(edge.sep(fov.center_los()).vals, rel=1.e-6)
+
+
+def test_center_xy_is_the_optic_axis() -> None:
+    """The center of the FOV is where (u,v) equals the line of sight."""
+
+    assert _flat().center_xy() == Pair((0., 0.))
+
+
+def test_center_los_points_along_z() -> None:
+    """The center of a flat FOV looks straight down the Z-axis."""
+
+    assert _flat().center_los() == Vector3((0., 0., 1.))
+
+
+def test_center_dlos_duv_is_the_derivative_at_the_center() -> None:
+    """The matrix carries a (u,v) denominator."""
+
+    derivative = _flat().center_dlos_duv
+
+    assert derivative.denom == (2,)
+
+
+def test_a_time_dependent_fov_needs_a_time_for_its_center() -> None:
+    """center_xy cannot be evaluated without a time when the FOV varies with it."""
+
+    with pytest.raises(NotImplementedError):
+        _tdi().center_xy()
+
+
+def test_a_time_dependent_fov_needs_a_time_for_its_line_of_sight() -> None:
+    """center_los cannot be evaluated without a time when the FOV varies with it."""
+
+    with pytest.raises(NotImplementedError):
+        _tdi().center_los()
+
+
+@pytest.mark.xfail(strict=True, raises=TypeError,
+                   reason='center_dlos_duv passes a time of None straight into the FOV '
+                          'instead of raising NotImplementedError as its docstring and '
+                          'its sibling properties do')
+def test_a_time_dependent_fov_has_no_center_derivative() -> None:
+    """The property takes no time at which to evaluate it."""
+
+    with pytest.raises(NotImplementedError):
+        _tdi().center_dlos_duv
+
+
+def test_a_time_dependent_fov_has_no_outer_radius() -> None:
+    """The property takes no time at which to evaluate it."""
+
+    with pytest.raises(NotImplementedError):
+        _tdi().outer_radius
+
+
+def test_a_time_dependent_fov_has_no_inner_radius() -> None:
+    """The property takes no time at which to evaluate it."""
+
+    with pytest.raises(NotImplementedError):
+        _tdi().inner_radius
+
+
+def test_offset_angles_invert_the_pixel_offset() -> None:
+    """The two conversions are inverses of one another."""
+
+    fov = _flat()
+    duv = Pair((1., 2.))
+
+    restored = fov.offset_duv_from_angles(fov.offset_angles_from_duv(duv))
+
+    assert restored.vals == pytest.approx(duv.vals, abs=1.e-9)
+
+
+def test_offset_angles_scale_with_the_pixel_size() -> None:
+    """A one-pixel offset rotates by about one pixel's worth of angle."""
+
+    fov = _flat()
+    (about_y, about_x) = fov.offset_angles_from_duv(Pair((1., 0.)))
+
+    assert abs(about_y.vals) == pytest.approx(1.e-4, rel=1.e-3)
+    assert about_x.vals == pytest.approx(0., abs=1.e-12)
+
+
+def test_a_zero_offset_gives_zero_angles() -> None:
+    """No displacement means no rotation."""
+
+    (about_y, about_x) = _flat().offset_angles_from_duv(Pair((0., 0.)))
+
+    assert about_y.vals == pytest.approx(0., abs=1.e-15)
+    assert about_x.vals == pytest.approx(0., abs=1.e-15)
+
+
+def test_offset_angles_depend_on_the_origin() -> None:
+    """The angles are measured at a reference location, which defaults to the center."""
+
+    fov = _flat()
+    duv = Pair((1., 2.))
+
+    at_center = fov.offset_angles_from_duv(duv)
+    off_center = fov.offset_angles_from_duv(duv, origin=Pair((5., 5.)))
+
+    assert at_center[0].vals != off_center[0].vals
+
+
+def test_nearest_uv_leaves_an_interior_point_alone() -> None:
+    """A point already inside the FOV is its own nearest point."""
+
+    assert _flat().nearest_uv(Pair((30., 20.))) == Pair((30., 20.))
+
+
+def test_nearest_uv_pulls_an_exterior_point_to_the_edge() -> None:
+    """A point outside is moved to the closest point on the boundary."""
+
+    assert _flat().nearest_uv(Pair((100., 20.))) == Pair((64., 20.))
+
+
+def test_nearest_uv_clamps_both_axes() -> None:
+    """A point beyond a corner is pulled back to that corner."""
+
+    assert _flat().nearest_uv(Pair((-10., 100.))) == Pair((0., 64.))
+
+
+def test_nearest_uv_can_mask_the_exterior_points() -> None:
+    """remask=True masks the points that fell outside the boundary."""
+
+    nearest = _flat().nearest_uv(Pair([(100., 20.), (30., 20.)]), remask=True)
+
+    assert list(nearest.mask) == [True, False]
+
+
+def test_nearest_uv_accepts_any_arraylike() -> None:
+    """A tuple, a list, and an array all describe the same coordinates."""
+
+    fov = _flat()
+    expected = fov.nearest_uv(Pair((30., 20.)))
+
+    for arg in ((30., 20.), [30., 20.], np.array([30., 20.])):
+        assert fov.nearest_uv(arg) == expected
 
 ##########################################################################################

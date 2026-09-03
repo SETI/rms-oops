@@ -2,10 +2,16 @@
 # tests/surface/test_limb.py
 ##########################################################################################
 
-import numpy as np
+import pickle
 
-from polymath          import Scalar, Vector3
-from oops.surface.limb import Limb
+import numpy as np
+import pytest
+
+from polymath              import Scalar, Vector3
+from oops.frame.frame_     import Frame
+from oops.path.path_       import Path
+from oops.surface.limb     import Limb
+from oops.surface.spheroid import Spheroid
 
 
 def test_limb():
@@ -531,5 +537,136 @@ def test_unmasked_limb_carries_no_limits():
     limb = Limb(_spheroid_limb().ground, limits=(0., 1000.))
 
     assert limb.unmasked.limits is None
+
+
+##########################################################################################
+# Limb coordinates, limits, and the ground surface
+##########################################################################################
+
+GROUND_RADII = (6378., 6357.)
+OBSERVER = Vector3((1.e6, 0., 0.))
+
+
+def _limb(limits=None) -> Limb:
+    """A Limb surface on an oblate spheroid centered on the SSB."""
+
+    ground = Spheroid(Path.SSB, Frame.J2000, GROUND_RADII)
+
+    return Limb(ground, limits=limits)
+
+
+def test_limb_reports_its_ground_surface() -> None:
+    """The limb is defined relative to a spheroid or ellipsoid."""
+
+    assert isinstance(_limb().ground, Spheroid)
+
+
+def test_a_limb_without_limits_is_unbounded() -> None:
+    """With no limits, every elevation is allowed."""
+
+    assert _limb().limits is None
+
+
+def test_a_limb_records_its_limits() -> None:
+    """The limits bound the vertical distance from the ground surface."""
+
+    assert _limb(limits=(0., 1000.)).limits == (0., 1000.)
+
+
+def test_the_third_coordinate_is_the_elevation() -> None:
+    """z is the distance above the ground surface, measured along its normal."""
+
+    pos = Vector3((0., 6500., 0.))
+    (_, _, z) = _limb().coords_from_vector3(pos, obs=OBSERVER, axes=3)
+
+    assert z.vals == pytest.approx(6500. - GROUND_RADII[0])
+
+
+def test_the_first_two_coordinates_are_the_ground_point() -> None:
+    """lon and lat locate the point on the surface beneath the limb point."""
+
+    pos = Vector3((0., 6500., 0.))
+    (lon, lat) = _limb().coords_from_vector3(pos, obs=OBSERVER)
+
+    assert lon.vals == pytest.approx(np.pi / 2.)
+    assert lat.vals == pytest.approx(0., abs=1.e-12)
+
+
+def test_coords_and_vector3_are_inverses() -> None:
+    """Converting a position to coordinates and back returns the position."""
+
+    limb = _limb()
+    pos = Vector3((0., 6500., 0.))
+    coords = limb.coords_from_vector3(pos, obs=OBSERVER, axes=3)
+
+    assert limb.vector3_from_coords(coords, obs=OBSERVER).vals \
+           == pytest.approx(pos.vals, abs=1.e-6)
+
+
+def test_coords_can_return_the_converged_coefficient() -> None:
+    """hints=True appends the coefficient p relating the ground point to the position."""
+
+    result = _limb().coords_from_vector3(Vector3((0., 6500., 0.)), obs=OBSERVER,
+                                         axes=3, hints=True)
+
+    assert len(result) == 4
+    assert result[3].vals > 0.
+
+
+def test_coords_can_return_the_groundtrack() -> None:
+    """groundtrack=True appends the point on the ground surface."""
+
+    result = _limb().coords_from_vector3(Vector3((0., 6500., 0.)), obs=OBSERVER,
+                                         axes=3, groundtrack=True)
+
+    assert len(result) == 4
+    assert result[3].vals == pytest.approx([0., GROUND_RADII[0], 0.], abs=1.e-6)
+
+
+def test_an_elevation_above_the_limits_is_masked() -> None:
+    """A z outside the limits is masked."""
+
+    limb = _limb(limits=(0., 1000.))
+    (_, _, z) = limb.coords_from_vector3(Vector3((0., 20000., 0.)), obs=OBSERVER, axes=3)
+
+    assert z.mask
+
+
+def test_an_elevation_within_the_limits_is_kept() -> None:
+    """A z inside the limits is unmasked."""
+
+    limb = _limb(limits=(0., 1000.))
+    (_, _, z) = limb.coords_from_vector3(Vector3((0., 6500., 0.)), obs=OBSERVER, axes=3)
+
+    assert not z.mask
+
+
+def test_the_normal_points_away_from_the_body() -> None:
+    """The normal at a limb point is the outward direction from the ground point."""
+
+    normal = _limb().normal(Vector3((0., 6500., 0.)))
+
+    assert normal.unit().vals == pytest.approx([0., 1., 0.], abs=1.e-9)
+
+
+def test_intercept_lies_on_the_line_of_sight() -> None:
+    """The intercept satisfies intercept = obs + t * los."""
+
+    limb = _limb()
+    los = Vector3((-1., 0.02, 0.))
+    (pos, t) = limb.intercept(OBSERVER, los)
+
+    assert pos.vals == pytest.approx((OBSERVER + los * t).vals, rel=1.e-9)
+
+
+def test_limb_survives_a_pickle_round_trip() -> None:
+    """Pickling restores the ground surface and the limits."""
+
+    limb = _limb(limits=(0., 1000.))
+    restored = pickle.loads(pickle.dumps(limb))
+
+    assert isinstance(restored, Limb)
+    assert restored.limits == limb.limits
+    assert restored.ground.origin == limb.ground.origin
 
 ##########################################################################################

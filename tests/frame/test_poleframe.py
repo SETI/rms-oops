@@ -2,7 +2,10 @@
 # tests/frame/test_poleframe.py
 ##########################################################################################
 
+import pickle
+
 import numpy as np
+import pytest
 
 import cspyce
 
@@ -166,4 +169,114 @@ def test_poleframe(core_kernels):
         # Make sure the X-axis stays in a generally fixed direction
         diffs = node_vecs - node_vecs[0]
         assert diffs.norm().max() < 0.02
+
+
+def _planet_frame() -> SpiceFrame:
+    """The IAU_MARS body-fixed frame, with the Mars path registered alongside it."""
+
+    SpicePath('MARS', 'SSB')
+
+    return SpiceFrame('IAU_MARS', 'J2000')
+
+
+def test_poleframe_rejects_an_unregistered_frame(core_kernels) -> None:
+    """A frame ID that has not been registered raises KeyError."""
+
+    with pytest.raises(KeyError):
+        PoleFrame('NOT_A_REGISTERED_FRAME', Vector3.ZAXIS)
+
+
+def test_poleframe_auto_generated_frame_id(core_kernels) -> None:
+    """A frame_id of "+" appends "_POLE" to the ID of the planet's frame."""
+
+    frame = PoleFrame(_planet_frame(), Vector3.ZAXIS, frame_id='+')
+
+    assert frame.frame_id == 'IAU_MARS_POLE'
+
+
+def test_poleframe_registration(core_kernels) -> None:
+    """A frame_id registers the Frame under that name."""
+
+    PoleFrame(_planet_frame(), Vector3.ZAXIS, frame_id='TEST_POLE_FRAME')
+
+    assert Frame.as_frame('TEST_POLE_FRAME').frame_id == 'TEST_POLE_FRAME'
+
+
+def test_poleframe_retrograde_flips_the_z_axis(core_kernels) -> None:
+    """A retrograde system has its Z-axis reversed."""
+
+    planet = _planet_frame()
+    pole = planet.transform_at_time(0.).matrix.inverse() * Vector3.ZAXIS
+
+    prograde = PoleFrame(planet, pole, retrograde=False)
+    retrograde = PoleFrame(planet, pole, retrograde=True)
+
+    time = Scalar(1.e8)
+    up = prograde.transform_at_time(time).matrix.unrotate(Vector3.ZAXIS)
+    down = retrograde.transform_at_time(time).matrix.unrotate(Vector3.ZAXIS)
+
+    assert up.sep(down).vals == pytest.approx(np.pi, abs=1.e-9)
+
+
+def test_poleframe_transform_is_cached(core_kernels) -> None:
+    """A transform is cached, so asking twice at one time gives the same matrix."""
+
+    frame = PoleFrame(_planet_frame(), Vector3.ZAXIS)
+    time = Scalar(1.e8)
+
+    assert frame.transform_at_time(time).matrix == frame.transform_at_time(time).matrix
+
+
+def test_poleframe_cache_size_may_be_set(core_kernels) -> None:
+    """A small cache still returns the same transforms, just holding fewer of them."""
+
+    planet = _planet_frame()
+    small = PoleFrame(planet, Vector3.ZAXIS, cache_size=2, frame_id='pole_small')
+    large = PoleFrame(planet, Vector3.ZAXIS, cache_size=100, frame_id='pole_large')
+
+    for time in (0., 1000., 2000., 3000., 0.):
+        assert small.transform_at_time(Scalar(time)).matrix \
+               == large.transform_at_time(Scalar(time)).matrix
+
+
+def test_poleframe_accepts_an_array_of_times(core_kernels) -> None:
+    """A shaped time gives a shaped Transform."""
+
+    frame = PoleFrame(_planet_frame(), Vector3.ZAXIS)
+
+    assert frame.transform_at_time(Scalar([0., 1000., 2000.])).shape == (3,)
+
+
+def test_poleframe_rejects_unbroadcastable_shapes(core_kernels) -> None:
+    """A frame and a pole whose shapes cannot be broadcast raise ValueError."""
+
+    planet = _planet_frame()
+    poles = Vector3([(0., 0., 1.), (0., 1., 0.), (1., 0., 0.)])
+    frame = PoleFrame(planet, poles)
+
+    with pytest.raises(ValueError):
+        frame.transform_at_time(Scalar([0., 10.]))
+
+
+def test_poleframe_pickle(core_kernels) -> None:
+    """Pickling restores the planet's frame and the invariable pole."""
+
+    frame = PoleFrame(_planet_frame(), Vector3((0.1, 0.2, 1.)))
+    restored = pickle.loads(pickle.dumps(frame))
+    time = Scalar(1.e8)
+
+    assert isinstance(restored, PoleFrame)
+    assert restored.transform_at_time(time).matrix == frame.transform_at_time(time).matrix
+
+
+def test_poleframe_getstate_roundtrip(core_kernels) -> None:
+    """The state captured by __getstate__ fully restores the object."""
+
+    frame = PoleFrame(_planet_frame(), Vector3((0.1, 0.2, 1.)))
+    state = frame.__getstate__()
+
+    copied = Frame.__new__(PoleFrame)
+    copied.__setstate__(state)
+    assert copied.__getstate__() == state
+
 ##########################################################################################

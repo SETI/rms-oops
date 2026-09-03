@@ -9,11 +9,11 @@ import pytest
 
 from oops.cadence     import DualCadence, Metronome
 from oops.fov         import FlatFOV
-from oops.frame       import Frame
+from oops.frame       import Frame, Navigation
 from oops.observation import (InSitu, Observation, Pixel, RasterSlit1D, Slit1D,
                               Snapshot, TimedImage)
 from oops.path        import Path
-from polymath         import Pair, Scalar
+from polymath         import Matrix3, Pair, Scalar
 
 
 def _observations() -> dict[str, Observation]:
@@ -269,5 +269,366 @@ def test_uv_range_at_tstep_is_not_implemented_for_an_insitu_observation() -> Non
     with pytest.raises(NotImplementedError, match='uv_range_at_tstep'):
         obs.uv_range_at_tstep(0)
 
+
+##########################################################################################
+# The (u,v) and time range helpers of the Observation base class
+##########################################################################################
+
+IMAGE_FOV = FlatFOV((0.001, 0.001), (10, 20))
+
+
+def _snapshot() -> Snapshot:
+    """A Snapshot: two spatial axes and no time-dependence."""
+
+    return Snapshot(('u', 'v'), 0., 10., IMAGE_FOV, 'SSB', 'J2000')
+
+
+def _timed_image() -> TimedImage:
+    """A TimedImage whose v-axis is swept in time by a 1-D cadence."""
+
+    rows = Metronome(tstart=0., tstride=1., texp=1., steps=20)
+
+    return TimedImage(('u', 'vt'), rows, IMAGE_FOV, 'SSB', 'J2000')
+
+
+def _timed_image_2d() -> TimedImage:
+    """A TimedImage whose two spatial axes are swept by a 2-D cadence."""
+
+    slow = Metronome(tstart=0., tstride=20., texp=20., steps=10)
+    fast = Metronome(tstart=0., tstride=1., texp=1., steps=20)
+
+    return TimedImage(('uslow', 'vfast'), DualCadence(slow, fast), IMAGE_FOV,
+                      'SSB', 'J2000')
+
+
+def test_time_and_midtime_come_from_the_cadence() -> None:
+    """The overall time limits and mid-time are inherited from the cadence."""
+
+    obs = _snapshot()
+
+    assert obs.time == (0., 10.)
+    assert obs.midtime == 5.
+
+
+def test_midtime_at_uv_defaults_to_the_middle_of_the_exposure() -> None:
+    """tfrac=0.5 is the mid-time of the pixel's integration."""
+
+    assert _snapshot().midtime_at_uv(Pair((5., 10.))) == Scalar(5.)
+
+
+@pytest.mark.parametrize('tfrac, expected', [(0., 0.), (0.25, 2.5), (1., 10.)])
+def test_midtime_at_uv_honors_tfrac(tfrac: float, expected: float) -> None:
+    """tfrac=0 is the beginning of the exposure and 1 is the end."""
+
+    assert _snapshot().midtime_at_uv(Pair((5., 10.)), tfrac=tfrac) == Scalar(expected)
+
+
+def test_uv_is_outside_marks_coordinates_beyond_the_fov() -> None:
+    """The test is the FOV's, applied to the observation's coordinates."""
+
+    outside = _snapshot().uv_is_outside(Pair([(5., 10.), (50., 10.), (5., 90.)]))
+
+    assert list(outside.vals) == [False, True, True]
+
+
+def test_uv_is_outside_can_exclude_the_upper_corner() -> None:
+    """inclusive=False treats the upper end of each range as outside."""
+
+    obs = _snapshot()
+
+    assert not obs.uv_is_outside(Pair((10., 20.)))
+    assert obs.uv_is_outside(Pair((10., 20.)), inclusive=False)
+
+
+def test_time_range_at_uv_0d_covers_the_whole_cadence() -> None:
+    """With time decoupled from the spatial axes, every pixel spans the exposure."""
+
+    (tmin, tmax) = _snapshot().time_range_at_uv_0d(Pair((5., 10.)))
+
+    assert tmin == Scalar(0.)
+    assert tmax == Scalar(10.)
+
+
+def test_time_range_at_uv_1d_follows_the_spatial_axis() -> None:
+    """With a 1-D cadence, the pixel's time range is that of its row."""
+
+    (tmin, tmax) = _timed_image().time_range_at_uv_1d(Pair((5., 10.)), axis=1)
+
+    assert tmin == Scalar(10.)
+    assert tmax == Scalar(11.)
+
+
+def test_time_range_at_uv_2d_follows_both_axes() -> None:
+    """With a 2-D cadence, both spatial axes select the time step."""
+
+    (tmin, tmax) = _timed_image_2d().time_range_at_uv_2d(Pair((5., 10.)), fast=1)
+
+    assert tmin == Scalar(110.)
+    assert tmax == Scalar(111.)
+
+
+def test_uv_range_at_time_0d_covers_the_whole_fov() -> None:
+    """With time decoupled from the spatial axes, every pixel is observed at once."""
+
+    (uv_min, uv_max) = _snapshot().uv_range_at_time_0d(Scalar(5.), (10, 20))
+
+    assert uv_min == Pair((0, 0))
+    assert uv_max == Pair((10, 20))
+
+
+def test_uv_range_at_time_1d_selects_one_row() -> None:
+    """With a 1-D cadence, only the row being swept is active."""
+
+    (uv_min, uv_max) = _timed_image().uv_range_at_time_1d(Scalar(5.), (10, 20), axis=1)
+
+    assert uv_min == Pair((0, 5))
+    assert uv_max == Pair((10, 6))
+
+
+def test_uv_range_at_time_2d_selects_one_pixel() -> None:
+    """With a 2-D cadence, a single pixel is active at a time."""
+
+    (uv_min, uv_max) = _timed_image_2d().uv_range_at_time_2d(Scalar(25.), (10, 20),
+                                                             slow=0, fast=1)
+
+    assert uv_min == Pair((1, 5))
+    assert uv_max == Pair((2, 6))
+
+
+def test_uv_range_at_tstep_0d_covers_the_whole_fov() -> None:
+    """Every pixel is active at every time step when time is decoupled."""
+
+    (uv_min, uv_max) = _snapshot().uv_range_at_tstep_0d(Scalar(0.), (10, 20))
+
+    assert uv_min == Pair((0, 0))
+    assert uv_max == Pair((10, 20))
+
+
+def test_uv_range_at_tstep_1d_selects_one_row() -> None:
+    """One pixel is active along the cadence axis, the whole FOV along the other."""
+
+    (uv_min, uv_max) = _timed_image().uv_range_at_tstep_1d(Scalar(5.), (10, 20), axis=1)
+
+    assert uv_min == Pair((0, 5))
+    assert uv_max == Pair((10, 6))
+
+
+def test_uv_range_at_tstep_2d_selects_one_pixel() -> None:
+    """Both indices of a 2-D cadence select a single active pixel."""
+
+    (uv_min, uv_max) = _timed_image_2d().uv_range_at_tstep_2d(Pair((1., 5.)), (10, 20),
+                                                              slow=0, fast=1)
+
+    assert uv_min == Pair((1, 5))
+    assert uv_max == Pair((2, 6))
+
+
+def test_uv_range_at_time_agrees_with_the_0d_helper() -> None:
+    """The general entry point dispatches to the helper for this observation."""
+
+    obs = _snapshot()
+
+    assert obs.uv_range_at_time(Scalar(5.)) \
+           == obs.uv_range_at_time_0d(Scalar(5.), obs.uv_shape)
+
+
+##########################################################################################
+# Copies, navigation, subfields, and the SPICE C matrix
+##########################################################################################
+
+def test_copy_is_a_new_object() -> None:
+    """A copy is independent of the original."""
+
+    obs = _snapshot()
+
+    assert obs.copy() is not obs
+
+
+def test_copy_shares_the_canonical_sub_objects() -> None:
+    """The frame, path, FOV and cadence are shared rather than duplicated."""
+
+    obs = _snapshot()
+    copied = obs.copy()
+
+    assert copied.fov is obs.fov
+    assert copied.cadence is obs.cadence
+
+
+def test_copy_gets_its_own_subfield_dictionary() -> None:
+    """A subfield inserted into the copy does not reach the original."""
+
+    obs = _snapshot()
+    copied = obs.copy()
+    copied.insert_subfield('sample', 1)
+
+    assert 'sample' not in obs.subfields
+
+
+def test_navigate_gives_the_copy_a_navigation_frame() -> None:
+    """The re-pointed copy carries a Navigation frame of its own."""
+
+    obs = _snapshot()
+    navigated = obs.navigate((0.001, 0.002))
+
+    assert isinstance(navigated.frame, Navigation)
+
+
+def test_navigate_leaves_the_original_alone() -> None:
+    """Re-pointing the copy does not disturb this observation."""
+
+    obs = _snapshot()
+    frame_before = obs.frame
+    obs.navigate((0.001, 0.002))
+
+    assert obs.frame is frame_before
+
+
+def test_navigate_accepts_three_angles() -> None:
+    """A third angle rotates about the z-axis."""
+
+    navigated = _snapshot().navigate((0.001, 0.002, 0.003))
+
+    assert isinstance(navigated.frame, Navigation)
+
+
+def test_set_frame_replaces_the_frame_in_place() -> None:
+    """set_frame modifies the observation rather than returning a copy."""
+
+    obs = _snapshot()
+    obs.set_frame(Frame.J2000)
+
+    assert obs.frame == Frame.J2000.wayframe
+
+
+def test_insert_and_delete_a_subfield() -> None:
+    """A subfield is readable as an attribute until it is deleted."""
+
+    obs = _snapshot()
+    obs.insert_subfield('sample', 42)
+    assert obs.sample == 42
+
+    obs.delete_subfield('sample')
+    assert 'sample' not in obs.subfields
+
+
+def test_delete_a_missing_subfield_is_harmless() -> None:
+    """Deleting a subfield that is not present does nothing."""
+
+    obs = _snapshot()
+    obs.delete_subfield('never_inserted')
+
+    assert 'never_inserted' not in obs.subfields
+
+
+def test_delete_subfields_removes_them_all() -> None:
+    """delete_subfields empties the dictionary."""
+
+    obs = _snapshot()
+    obs.insert_subfield('a', 1)
+    obs.insert_subfield('b', 2)
+    obs.delete_subfields()
+
+    assert obs.subfields == {}
+
+
+def test_get_spice_cmatrix_requires_spice_to_frame() -> None:
+    """The observation must carry the rotation inserted by its host module."""
+
+    with pytest.raises(AttributeError, match='spice_to_frame'):
+        _snapshot().get_spice_cmatrix()
+
+
+def test_get_spice_cmatrix_defaults_to_the_midtime() -> None:
+    """With neither tstep nor time given, the mid-time of the observation is used."""
+
+    obs = _snapshot()
+    obs.insert_subfield('spice_to_frame', Matrix3.IDENTITY)
+
+    assert obs.get_spice_cmatrix() == obs.get_spice_cmatrix(time=obs.midtime)
+
+
+def test_get_spice_cmatrix_rejects_both_tstep_and_time() -> None:
+    """At most one of tstep and time can be specified."""
+
+    obs = _snapshot()
+    obs.insert_subfield('spice_to_frame', Matrix3.IDENTITY)
+
+    with pytest.raises(ValueError, match='cannot both be specified'):
+        obs.get_spice_cmatrix(tstep=0., time=5.)
+
+
+def test_set_spice_cmatrix_fixes_the_pointing() -> None:
+    """Setting the C matrix leaves the observation with a fixed pointing."""
+
+    obs = _snapshot()
+    obs.insert_subfield('spice_to_frame', Matrix3.IDENTITY)
+    obs.set_spice_cmatrix(Matrix3.IDENTITY)
+
+    assert obs.get_spice_cmatrix() == Matrix3.IDENTITY
+
+
+##########################################################################################
+# meshgrid and timegrid
+##########################################################################################
+
+def test_meshgrid_takes_the_shape_of_the_observation() -> None:
+    """The (u,v) axes are placed where the observation's axis ordering puts them."""
+
+    obs = _snapshot()
+
+    assert obs.meshgrid().shape == tuple(obs.uv_shape)
+
+
+def test_meshgrid_undersamples() -> None:
+    """An undersample of 2 samples every other pixel along each axis."""
+
+    assert _snapshot().meshgrid(undersample=2).shape == (5, 10)
+
+
+def test_meshgrid_oversamples() -> None:
+    """An oversample of 2 creates a 2x2 array of samples inside each pixel."""
+
+    assert _snapshot().meshgrid(oversample=2).shape == (20, 40)
+
+
+def test_meshgrid_honors_the_limit() -> None:
+    """The limit replaces the shape of the FOV as the upper bound."""
+
+    assert _snapshot().meshgrid(limit=(4, 8)).shape == (4, 8)
+
+
+def test_timegrid_of_an_untimed_observation_is_the_midtime() -> None:
+    """With no time-dependence, the default grid is a single mid-exposure time."""
+
+    obs = _snapshot()
+
+    assert obs.timegrid(obs.meshgrid()) == Scalar(obs.midtime)
+
+
+@pytest.mark.parametrize('tfrac_limits, expected', [(0., 0.), (0.25, 2.5), (1., 10.)])
+def test_timegrid_honors_a_single_tfrac_limit(tfrac_limits: float,
+                                              expected: float) -> None:
+    """A single number is interpreted as a pair of identical limits."""
+
+    obs = _snapshot()
+
+    assert obs.timegrid(obs.meshgrid(), tfrac_limits=tfrac_limits) == Scalar(expected)
+
+
+def test_timegrid_oversampling_gives_more_times() -> None:
+    """An oversample above one samples the exposure more finely in time."""
+
+    obs = _snapshot()
+
+    assert obs.timegrid(obs.meshgrid(), oversample=2).shape[0] == 2
+
+
+def test_timegrid_broadcasts_with_a_timed_meshgrid() -> None:
+    """With time coupled to a spatial axis, the grid follows the meshgrid's shape."""
+
+    obs = _timed_image()
+    meshgrid = obs.meshgrid()
+
+    assert obs.timegrid(meshgrid).shape == meshgrid.shape
 
 ##########################################################################################
