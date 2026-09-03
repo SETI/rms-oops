@@ -12,7 +12,7 @@ from oops.config import QUICK
 from oops.frame  import Frame, SpiceFrame
 from oops.path   import (Path, LinkedPath, ReversedPath, RelativePath,
                          RotatedPath, QuickPath, LinearPath, SpicePath)
-from oops.unittester_support import TEST_SPICE_PREFIX
+from programs.gold_master.test_support import TEST_SPICE_PREFIX
 
 
 @pytest.fixture(autouse=True)

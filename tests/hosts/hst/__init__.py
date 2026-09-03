@@ -6,7 +6,7 @@ import pytest
 
 
 def test_hst():
-    from oops.unittester_support import TEST_DATA_PREFIX
+    from programs.gold_master.test_support import TEST_DATA_PREFIX
     import cspyce
     from .acs.hrc import HRC
 

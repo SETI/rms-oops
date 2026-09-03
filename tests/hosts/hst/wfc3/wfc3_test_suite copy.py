@@ -19,7 +19,7 @@ import ..hst as hst
 
 print(oops.Body.BODY_REGISTRY.keys())
 
-from oops.unittester_support import TEST_DATA_PREFIX
+from programs.gold_master.test_support import TEST_DATA_PREFIX
 
 # Below is just a handy routine for illustrative purposes. Cut, paste, ignore.
 PRINT = True

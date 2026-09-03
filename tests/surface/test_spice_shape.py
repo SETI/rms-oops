@@ -10,7 +10,7 @@ from oops.frame.frame_        import Frame
 from oops.path.path_          import Path
 from oops.path.spicepath      import SpicePath
 from oops.surface.spice_shape import spice_shape
-from oops.unittester_support  import TEST_SPICE_PREFIX
+from programs.gold_master.test_support  import TEST_SPICE_PREFIX
 import oops.spice_support as spice
 
 

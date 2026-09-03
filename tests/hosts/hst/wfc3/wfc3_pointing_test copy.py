@@ -7,7 +7,7 @@ import scipy.fftpack as fftpack
 import pylab
 import oops
 import ..hst as hst
-from oops.unittester_support import TEST_DATA_PREFIX
+from programs.gold_master.test_support import TEST_DATA_PREFIX
 
 # A quick-and-dirty image correlation function
 def correlate2d(image, model, normalize=False):

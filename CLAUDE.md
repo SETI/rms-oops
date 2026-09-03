@@ -13,7 +13,11 @@ backplane test framework is `programs/gold_master`, imported as
 `programs.gold_master`; it is a runnable tool rather than part of the `oops` API,
 so it sits outside `src/` and outside the library. Its
 `execute_as_pytest(obsname)` is what a host test calls to compare one standard
-observation against its gold masters.
+observation against its gold masters, and its `test_support` module resolves every
+`$OOPS_*` resource path into a `filecache` prefix (`TEST_DATA_PREFIX`,
+`TEST_SPICE_PREFIX`, `GOLD_MASTER_PREFIX`, `BACKPLANE_OUTPUT_PREFIX`) for both the
+tool and the tests. Nothing under `src/` imports it, which is what keeps the test
+scaffolding out of the published wheel.
 
 ## Environment
 

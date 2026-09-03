@@ -7,11 +7,11 @@ import pytest
 
 from oops.frame import Frame
 from oops.path  import Path
-from oops.unittester_support import TEST_SPICE_PREFIX
+from programs.gold_master.test_support import TEST_SPICE_PREFIX
 
 # Leap seconds, planetary constants, and the planetary ephemeris: the kernels that
 # every test of SPICE-derived geometry needs.
-CORE_KERNELS = ['naif0009.tls', 'pck00010.tpc', 'de421.bsp']
+CORE_KERNELS = ('naif0009.tls', 'pck00010.tpc', 'de421.bsp')
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:

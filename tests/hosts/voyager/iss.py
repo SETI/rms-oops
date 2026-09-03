@@ -8,7 +8,7 @@
 #import unittest
 #import oops.backplane.gold_master as gm
 #
-#from oops.unittester_support            import TEST_DATA_PREFIX
+#from programs.gold_master.test_support            import TEST_DATA_PREFIX
 #
 #
 ##===============================================================================
@@ -68,7 +68,7 @@
 
 # import unittest
 #
-# from oops.unittester_support            import TEST_DATA_PREFIX
+# from programs.gold_master.test_support            import TEST_DATA_PREFIX
 # from oops.backplane.exercise_backplanes import exercise_backplanes
 # from oops.backplane.unittester_support  import Backplane_Settings
 #

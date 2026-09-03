@@ -58,7 +58,7 @@ def test_Juno_SRU():
     import julian
     import oops
     import oops.hosts.juno.sru as sru
-    from oops.unittester_support import TEST_DATA_PREFIX
+    from programs.gold_master.test_support import TEST_DATA_PREFIX
 
     from polymath import Vector3
 

@@ -4,7 +4,7 @@
 import pytest
 import programs.gold_master as gm
 
-from oops.unittester_support import TEST_DATA_PREFIX
+from programs.gold_master.test_support import TEST_DATA_PREFIX
 
 @pytest.fixture(autouse=True)
 def _standard_obs():

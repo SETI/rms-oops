@@ -12,7 +12,7 @@ import oops.constants as constants
 from polymath   import Vector3
 from oops.frame import Frame, SpiceFrame
 from oops.path  import NullPath, Path, SpicePath
-from oops.unittester_support import TEST_SPICE_PREFIX
+from programs.gold_master.test_support import TEST_SPICE_PREFIX
 
 
 @pytest.fixture(autouse=True)

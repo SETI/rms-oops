@@ -8,7 +8,7 @@ class Test_NewHorizons_LORRI(unittest.TestCase):
 
     def runTest(self):
 
-        from oops.unittester_support import TEST_DATA_PREFIX
+        from programs.gold_master.test_support import TEST_DATA_PREFIX
         import cspyce
 
         snapshot = from_file(TEST_DATA_PREFIX /

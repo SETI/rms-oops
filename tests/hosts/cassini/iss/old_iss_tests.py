@@ -6,7 +6,7 @@
 #import unittest
 #import oops.backplane.gold_master as gm
 #
-#from oops.unittester_support    import TEST_DATA_PREFIX
+#from programs.gold_master.test_support    import TEST_DATA_PREFIX
 #
 #
 ##===============================================================================
@@ -15,7 +15,7 @@
 #    #===========================================================================
 #    def runTest(self):
 #
-#        from oops.unittester_support import TEST_DATA_PREFIX
+#        from programs.gold_master.test_support import TEST_DATA_PREFIX
 #
 #        snapshots = from_index(TEST_DATA_PREFIX / 'cassini/ISS/index.lbl')
 #        snapshot = from_file(TEST_DATA_PREFIX / 'cassini/ISS/W1575634136_1.IMG')
@@ -113,7 +113,7 @@
 # import unittest
 # import os.path
 #
-# from oops.unittester_support            import TEST_DATA_PREFIX
+# from programs.gold_master.test_support            import TEST_DATA_PREFIX
 # from oops.backplane.exercise_backplanes import exercise_backplanes
 # from oops.backplane.unittester_support  import Backplane_Settings
 #
@@ -123,7 +123,7 @@
 #
 #     def runTest(self):
 #
-#         from oops.unittester_support import TEST_DATA_PREFIX
+#         from programs.gold_master.test_support import TEST_DATA_PREFIX
 #
 #         snapshots = from_index(TEST_DATA_PREFIX.retrieve(
 #                                             'cassini/ISS/index.lbl'))

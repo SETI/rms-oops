@@ -262,7 +262,7 @@ class Juno(object):
 ### and update it in the repo. See hosts/solar for how to allow a Python module to
 ### locate a file within its own directory path. The kernels can live inside the
 ### OOPS-Resources/SPICE tree, so you can determine the value of "kdir" from the
-### value of (unittester_support.OOPS_RESOURCES_ + 'SPICE/Juno/').
+### value of (test_support.OOPS_RESOURCES + 'SPICE/Juno/').
 ##########################################################################################
 ### Even better, adopt the Cassini module's method of just loading the CKs and SPKs
 ### as they are requested, because there are so many of them. It'll just furnish the
