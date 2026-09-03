@@ -1108,7 +1108,18 @@ class BackplaneTest(object):
                     self.planet_ring_pairs.append(pair)
 
         # Create backplane object plus four with offset meshgrids
-        EPS = 1.e-5
+        #
+        # EPS is the half-step of the central differences that the derivative test suites
+        # compare against the analytic derivatives. Counter-intuitively, it must not be
+        # made much smaller than this. A backplane value carries a floor of roughly 1e-11
+        # relative, left by the iterative photon solver, and a divided difference inflates
+        # that floor by the reciprocal of the step. At EPS = 1.e-5 the floor reaches
+        # 0.07 km/pixel in the Galileo ring distance, eight times that test's own
+        # tolerance, even though the analytic derivative agrees with a well-conditioned
+        # difference to 6e-5 relative. At 1.e-3 the differences clear the floor, and the
+        # truncation error a larger step introduces stays negligible because a central
+        # difference sheds it as the square of the step.
+        EPS = 1.e-3
         self.origins = [(0.5 + self.args.du      , 0.5 + self.args.dv      ),
                         (0.5 + self.args.du - EPS, 0.5 + self.args.dv      ),
                         (0.5 + self.args.du + EPS, 0.5 + self.args.dv      ),
