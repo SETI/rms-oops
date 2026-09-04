@@ -14,9 +14,12 @@ from oops.mutable          import Mutable
 
 
 class Path(Mutable):
-    """A Path is an abstract class that can return an Event (time, position and velocity)
+    """An abstract class returning the position and velocity of a point in space.
+
+    A Path returns an :class:`~oops.Event`, comprising a time, position and velocity,
     given a time or a Scalar of times. The coordinates are specified in a particular
-    Frame and relative to another Path. The method `event_at_time` generates these Events.
+    :class:`~oops.Frame` and relative to another Path. The method
+    :meth:`~oops.Path.event_at_time` generates these Events.
 
     Upon construction, each Path has a "primary definition" relative to its specified,
     pre-existing origin Path and reference Frame. For example, a `KeplerPath` describes an
@@ -24,8 +27,9 @@ class Path(Mutable):
 
     Once a Path is defined, you can calculate Events (defined by a time and state
     vector) relative to different Paths and transform those events between different Paths
-    and Frames. The method `wrt` (for "with respect to") returns a Path object whose
-    `event_at_time` method converts Events between different origins and Frames.
+    and Frames. The method :meth:`~oops.Path.wrt` (for "with respect to") returns a Path
+    object whose :meth:`~oops.Path.event_at_time` method converts Events between different
+    origins and Frames.
 
     For example, suppose `saturn` is a Path defining the center of Saturn, using Saturn's
     rotating Frame. A lightning flash on the surface of Saturn might be described as an
@@ -39,16 +43,17 @@ class Path(Mutable):
     the Cassini camera. In short, Path objects make it easy to convert Events between
     different Paths and Frames.
 
-    Furthermore, the Path methods `photon_to_event` and `photon_from_event` will perform
-    these calculations allowing for the light travel time, position, and stellar
-    aberration for when an Event relative to one Path object is observed relative to
-    another.
+    Furthermore, the Path methods :meth:`~oops.Path.photon_to_event` and
+    :meth:`~oops.Path.photon_from_event` will perform these calculations allowing for the
+    light travel time, position, and stellar aberration for when an Event relative to one
+    Path object is observed relative to another.
 
-    Every Path also has a `waypoint` property, which provides a unique identifier for that
-    Path without regard to its origin or Frame. In the example above, `saturn` and
-    `saturn_wrt_wac` will have the same `waypoint`, meaning that they define Events on the
-    same path, albeit relative to different Paths and Frames. The waypoint can be used in
-    almost any place where the Path itself can be used, so this would also have worked::
+    Every Path also has a :attr:`~oops.Path.waypoint` property, which provides a unique
+    identifier for that Path without regard to its origin or Frame. In the example above,
+    `saturn` and `saturn_wrt_wac` will have the same `waypoint`, meaning that they define
+    Events on the same path, albeit relative to different Paths and Frames. The waypoint
+    can be used in almost any place where the Path itself can be used, so this would also
+    have worked::
 
         saturn_wrt_wac = saturn.waypoint.wrt(cassini_wac.waypoint)
 
@@ -60,10 +65,11 @@ class Path(Mutable):
     using the `is` operator.
 
     Optionally, a Path can be registered under a path ID, which is a string that can be
-    used globally to refer to that Path. You can use the `as_path` method to convert a
-    Path ID to its Path. In most situations, a Path ID can be used in place of a Path. For
-    example, if `saturn` is registered under the name "SATURN" and `cassini_wac` is
-    registered under the name "WAC", then these expressions would also work::
+    used globally to refer to that Path. You can use the :meth:`~oops.Path.as_path` method
+    to convert a Path ID to its Path. In most situations, a Path ID can be used in place
+    of a Path. For example, if `saturn` is registered under the name "SATURN" and
+    `cassini_wac` is registered under the name "WAC", then these expressions would also
+    work::
 
         saturn_wrt_wac = saturn.wrt('WAC')
         saturn_wrt_wac = Path.as_path('SATURN').wrt('WAC')
@@ -117,8 +123,7 @@ class Path(Mutable):
 
     @property
     def pickle_quickpath_details(self):
-        """True if the full tabulation of all QuickPaths is to be included when pickling
-        this Path.
+        """True if all QuickPath tabulations are included when pickling this Path.
         """
         if not hasattr(self, '_pickle_quickpath_details'):
             return PICKLE_CONFIG.quickpath_details
@@ -126,8 +131,7 @@ class Path(Mutable):
 
     @pickle_quickpath_details.setter
     def pickle_quickpath_details(self, value):
-        """Set to True to include the internal tabulations of all QuickPaths when pickling
-        this Path.
+        """Set to True to include all QuickPath tabulations when pickling this Path.
         """
         self._pickle_quickpath_details = bool(value)
 
@@ -249,8 +253,7 @@ class Path(Mutable):
 
     @property
     def stripped_id(self):
-        """The Path ID of this object with any numeric suffix stripped; None if there is
-        no ID.
+        """The Path ID with any numeric suffix stripped; None if there is no ID.
         """
         if not self._path_id:
             return None
@@ -261,8 +264,7 @@ class Path(Mutable):
 
     @property
     def string_id(self):
-        """The ID of this Path if it is registered; otherwise, a unique string derived
-        from its Python id().
+        """The ID of this Path if registered, or a string from its Python `id()`.
         """
         return self._path_id if self._path_id else f'#{id(self)}'
 
@@ -653,9 +655,9 @@ class Path(Mutable):
     def _get_shortcut(self, origin, frame):
         """A Path that directly transforms from the given origin and frame to this Path.
 
-        For most Path subclasses, this returns None. SpicePath overrides this method
-        because the SPICE toolkit can directly link any SpicePath to any other SpicePath,
-        with no intermediate steps required.
+        For most Path subclasses, this returns None. :class:`~oops.path.SpicePath`
+        overrides this method because the SPICE toolkit can directly link any SpicePath to
+        any other SpicePath, with no intermediate steps required.
 
         Parameters:
             origin (Path): The origin Path, which must be a valid waypoint.
@@ -764,8 +766,9 @@ class NullPath(Path):
 
 # This must be a singleton!
 class SSBPath(NullPath):
-    """The class for the Solar System Barycenter Path, relative to which all other Paths
-    are defined.
+    """The Path of the Solar System Barycenter.
+
+    Every other Path is defined relative to this one.
 
     This class must be defined as a singleton.
     """
@@ -800,6 +803,8 @@ class SSBPath(NullPath):
         return SSBPath._SSB
 
     def __init__(self):
+        """Constructor for the SSB Path, which is always the singleton."""
+
         pass
 
     def __reduce__(self):
@@ -816,6 +821,8 @@ class SSBPath(NullPath):
 
     @property
     def string_id(self):
+        """The ID of this Path, always "SSB"."""
+
         return 'SSB'
 
     def _get_shortcut(self, origin, frame):

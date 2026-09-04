@@ -32,81 +32,62 @@ def from_file(filespec, **options):
     samples), where the last two dimensions are spatial. Its timing represents the entire
     set of integrations overall.
 
-    Inputs:
-        filespec        file path to the FITS file.
+    Parameters:
+        filespec (str, Path, or FCPath): File path to the FITS file.
 
-    Options:
-        data            True (the default) to include the data arrays in the returned
-                        TimedImage.
-
-        calibration     True (the default) to include calibration subfields "raw_dn",
-                        "dn_per_s" and "dn_per_s_arcsec_sq", in the Observation. If a
-                        cal_file is specified, then the "i_over_f" subfield is also
-                        provided.
-
-        astrometry      If True, this is equivalent to data=False, calibration=False.
-
-        reference       An optional second JWST Observation. If specified, then this
-                        observation will use a frame defined as an offset from that of the
-                        reference.
-
-        navigation      An optional tuple/list/array of two or three rotation angles to
-                        apply to the frame, yielding a Navigation frame. Use True to
-                        employ a Navigation frame without specifying the angles; this is
-                        equivalent to navigation=(0.,0.). If not specified, None, or
-                        False, a Navigation frame will not be used.
-
-        offset          An optional pair of coordinate offsets (du, dv) in units of pixels
-                        to apply to the FITS-derived geometry in order to align with the
-                        actual image geometry. This is an alternative to specifying the
-                        navigation angles.
-
-        origin          An optional tuple or Pair of coordinate values (u,v) in units of
-                        pixels, which define the location in the FOV where the offset was
-                        determined. If not provided, the offset is assumed to apply at the
-                        center of the FOV.
-
-        frame_suffix    An optional suffix to apply to the name of the observation's
-                        frame; by default, just the file basename is used.
-
-        path_suffix     An optional suffix to apply to the name of JWST's path; by
-                        default, just the file basename is used.
-
-        target          If specified, the name of the target body. Otherwise, the target
-                        body is inferred from the header.
-
-        fast_fov        If True or unspecified, the WCSFOV uses fast inversions using the
-                        inverse WCS parameters. If False, it uses the slow method.
-
-        cal_file        If True or if this is a file path, this indicates that the
-                        observation should inherit the geometry and calibration of an
-                        associated "_cal.fits" file. Default is False. If provided, the
-                        returned observation has a subfield "cal" containing the
-                        calibrated observation.
-
-        cal_factor      The scale factor to pre-scale raw values of DN per second before
-                        inheriting the calibration objects of the cal_file. If not
-                        provided along with cal_file, the value will be derived by linear
-                        regression, comparing the raw and calibrated data.
-
-        baseline        The baseline value in raw DN to subtract from any image layers
-                        that contain the dark current. This is used for the pre-scaling
-                        needed to inherit calibrations from the cal_file. If not provided
-                        along with cal_file, the value will be derived by linear
-                        regression, comparing the raw and calibrated data.
-
-        diffs           True (the default) to replace the data in each group after the
-                        first in the 4-D data array by a successive difference from the
-                        previous group.
-
-        per_second      True to divide all array values by the associated exposure time,
-                        yielding units of DN/s. If False (the default), the data arrays
-                        contain the raw integer DNs.
-
-        groups          True (the default) to in include a subfield "groups" in the
-                        returned object. This is an array of shape (integrations, groups),
-                        in which each element is an individual TimedImage describing one
-                        individual raw image as a 2-D array.
+    Keyword Arguments:
+        data (bool, optional): True (the default) to include the data arrays in the
+            returned TimedImage.
+        calibration (bool, optional): True (the default) to include calibration subfields
+            "raw_dn", "dn_per_s" and "dn_per_s_arcsec_sq", in the Observation. If a
+            cal_file is specified, then the "i_over_f" subfield is also provided.
+        astrometry (bool, optional): If True, this is equivalent to data=False,
+            calibration=False.
+        reference (Observation, optional): An optional second JWST Observation. If
+            specified, then this observation will use a frame defined as an offset from
+            that of the reference.
+        navigation (tuple, list, numpy.ndarray, or bool, optional): An optional
+            tuple/list/array of two or three rotation angles to apply to the frame,
+            yielding a Navigation frame. Use True to employ a Navigation frame without
+            specifying the angles; this is equivalent to navigation=(0.,0.). If not
+            specified, None, or False, a Navigation frame will not be used.
+        offset (tuple or Pair, optional): An optional pair of coordinate offsets (du, dv)
+            in units of pixels to apply to the FITS-derived geometry in order to align
+            with the actual image geometry. This is an alternative to specifying the
+            navigation angles.
+        origin (tuple or Pair, optional): An optional tuple or Pair of coordinate values
+            (u,v) in units of pixels, which define the location in the FOV where the
+            offset was determined. If not provided, the offset is assumed to apply at the
+            center of the FOV.
+        frame_suffix (str, optional): An optional suffix to apply to the name of the
+            observation's frame; by default, just the file basename is used.
+        path_suffix (str, optional): An optional suffix to apply to the name of JWST's
+            path; by default, just the file basename is used.
+        target (str, optional): If specified, the name of the target body. Otherwise, the
+            target body is inferred from the header.
+        fast_fov (bool, optional): If True or unspecified, the WCSFOV uses fast inversions
+            using the inverse WCS parameters. If False, it uses the slow method.
+        cal_file: If True or if this is a file path, this indicates that the observation
+            should inherit the geometry and calibration of an associated "_cal.fits" file.
+            Default is False. If provided, the returned observation has a subfield "cal"
+            containing the calibrated observation.
+        cal_factor: The scale factor to pre-scale raw values of DN per second before
+            inheriting the calibration objects of the cal_file. If not provided along with
+            cal_file, the value will be derived by linear regression, comparing the raw
+            and calibrated data.
+        baseline: The baseline value in raw DN to subtract from any image layers that
+            contain the dark current. This is used for the pre-scaling needed to inherit
+            calibrations from the cal_file. If not provided along with cal_file, the value
+            will be derived by linear regression, comparing the raw and calibrated data.
+        diffs: True (the default) to replace the data in each group after the first in the
+            4-D data array by a successive difference from the previous group.
+        per_second: True to divide all array values by the associated exposure time,
+            yielding units of DN/s. If False (the default), the data arrays contain the
+            raw integer DNs.
+        groups: True (the default) to in include a subfield "groups" in the returned
+            object. This is an array of shape (integrations, groups), in which each
+            element is an individual TimedImage describing one individual raw image as a
+            2-D array.
     """
 
     filespec = FCPath(filespec)
@@ -142,9 +123,19 @@ def from_file(filespec, **options):
 ##########################################################################################
 
 class Uncal(NIRCam):
+    """The functions and properties unique to an uncalibrated NIRCam image."""
 
     @staticmethod
     def from_hdulist(hdulist, **options):
+        """A TimedImage based on the HDUlist of an uncalibrated NIRCam file.
+
+        Parameters:
+            hdulist (list[pyfits.hdu]): The HDU list of the FITS file.
+            **options: The options accepted by `jwst.from_file`.
+
+        Returns:
+            TimedImage: The observation described by the file.
+        """
 
         this = Uncal()
         filespec = this.filespec(hdulist)
@@ -573,8 +564,9 @@ class Uncal(NIRCam):
 
     @staticmethod
     def fit_to_calibrated(raw_hdulist, cal_hdulist, diff_texp, cal_factor=0.):
-        """Solve for the best-fit slope and group-zero offset to match the calibrated
-        image to the raw images in units of DN/second.
+        """The best-fit slope and group-zero offset of the calibrated image.
+
+        The fit matches the calibrated image to the raw images in units of DN/second.
 
         If cal_factor is provided, then it is returned as the slope and only the baseline
         is solved.

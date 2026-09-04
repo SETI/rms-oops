@@ -8,7 +8,7 @@ from oops.surface.spheroid         import Spheroid
 
 
 class CentricSpheroid(Spheroid):
-    """A variant of Spheroid in which latitudes are planetocentric."""
+    """A variant of :class:`~oops.surface.Spheroid` using planetocentric latitudes."""
 
     def coords_from_vector3(self, pos, *, obs=None, time=None, axes=2, derivs=False,
                             hints=None, groundtrack=False):
@@ -54,8 +54,7 @@ class CentricSpheroid(Spheroid):
 
     def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
                             hints=None, groundtrack=False):
-        """The position where a point with the given coordinates falls relative to this
-        surface's origin and frame.
+        """The position at the given surface coordinates.
 
         Parameters:
             coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at

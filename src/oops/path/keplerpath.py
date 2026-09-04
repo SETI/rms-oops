@@ -859,7 +859,7 @@ class KeplerPath(Path, Fittable):
             guess (Scalar, array-like, or float, optional): An initial guess to use as the
                 event time along this Path; otherwise None. Should be provided if the
                 event time was already returned from a similar calculation.
-            antimask (ndarray or bool, optional): A boolean array to be applied to
+            antimask (numpy.ndarray or bool, optional): A boolean array to be applied to
                 event times and positions. Only the indices where antimask=True will be
                 used in the solution.
             quick (dict or bool, optional): A dictionary of parameter values to use as

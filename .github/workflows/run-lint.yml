@@ -72,8 +72,9 @@ jobs:
         run: |
           python -m vulture
 
-      # -W makes a warning fail the build; -E rebuilds from scratch so a cached page
-      # cannot hide one. This step needs no SPICE kernels: conf.py mocks cspyce.
+      # -W makes a warning fail the build; -n reports every cross-reference that
+      # resolves to nothing; -E rebuilds from scratch so a cached page cannot hide one.
+      # This step needs no SPICE kernels: conf.py mocks cspyce.
       - name: Build the documentation
         run: |
-          python -m sphinx -W -E -b html docs docs/_build
+          python -m sphinx -W -n -E -b html docs docs/_build

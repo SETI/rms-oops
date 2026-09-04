@@ -9,8 +9,10 @@ from oops.cadence import Cadence
 
 
 class Instant(Cadence):
-    """A Cadence subclass that represents the timing of an observation as a Scalar time of
-    arbitrary shape.
+    """A cadence representing an observation as a single instant in time.
+
+    A subclass of :class:`~oops.Cadence` that represents the timing of an observation as a
+    Scalar time of arbitrary shape.
 
     Every time step is a single moment rather than an interval, so this cadence has gaps
     between its time steps and samples no time in between. Time steps are indexed by the
@@ -103,9 +105,9 @@ class Instant(Cadence):
             time (Scalar): Times in seconds TDB.
 
         Returns:
-            tuple[ndarray, ndarray]: The raveled index of the first matching time step,
-            zero where a time is not sampled; and a boolean array, True where a time is
-            sampled.
+            tuple[numpy.ndarray, numpy.ndarray]: The raveled index of the first matching
+            time step, zero where a time is not sampled; and a boolean array, True where a
+            time is sampled.
         """
 
         table = np.asarray(self._tdb.vals, dtype='float64').ravel()

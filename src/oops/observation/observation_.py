@@ -17,14 +17,14 @@ from oops.mutable          import Mutable
 
 
 class Observation(Mutable):
-    """An abstract class defining the timing and pointing of the samples that comprise a
-    data array.
+    """An abstract class defining the timing and pointing of a data array's samples.
 
     The axes of an observation are related to up to two spatial axes and one time axis.
-    Spatial axes (u,v) are defined within an FOV (field of view) object. Time is specified
-    as an offset in seconds relative to the start time of the observation. An observation
-    provides methods to convert between the indices of the data array and the coordinates
-    (u,v,t) that define a line of sight at a particular time.
+    Spatial axes `(u,v)` are defined within an :class:`~oops.FOV` object, and the timing
+    is defined by a :class:`~oops.Cadence`. Time is specified as an offset in seconds
+    relative to the start time of the observation. An observation provides methods to
+    convert between the indices of the data array and the coordinates `(u,v,t)` that
+    define a line of sight at a particular time.
 
     When indices have non-integer values, the integer part identifies one "corner" of the
     sample, and the fractional part locates a point within the sample, i.e., part way from
@@ -73,7 +73,7 @@ class Observation(Mutable):
     ######################################################################################
 
     def __init__(self):
-        """A constructor."""
+        """Constructor for an Observation; each subclass defines its own."""
 
         pass
 
@@ -143,8 +143,7 @@ class Observation(Mutable):
                                   'implemented')
 
     def time_range_at_uv_0d(self, uv_pair, *, remask=False):
-        """time_range_at_uv() for some observations in which the spatial and time axes are
-        independent.
+        """The time range at `(u,v)` when the spatial and time axes are independent.
 
         Parameters:
             uv_pair (Pair): Spatial (u,v) data array coordinates, truncated to integers if
@@ -170,7 +169,7 @@ class Observation(Mutable):
         return (time_min, time_max)
 
     def time_range_at_uv_1d(self, uv_pair, *, axis=0, remask=False):
-        """time_range_at_uv() for some observations with a 1-D cadence.
+        """The time range at `(u,v)` for an observation with a 1-D cadence.
 
         Parameters:
             uv_pair (Pair): Spatial (u,v) data array coordinates, truncated to integers if
@@ -197,7 +196,7 @@ class Observation(Mutable):
         return self.cadence.time_range_at_tstep(tstep, remask=remask)
 
     def time_range_at_uv_2d(self, uv_pair, *, fast=1, remask=False):
-        """time_range_at_uv() for some observations with a 2-D cadence.
+        """The time range at `(u,v)` for an observation with a 2-D cadence.
 
         Parameters:
             uv_pair (Pair): Spatial (u,v) data array coordinates, truncated to integers if
@@ -219,8 +218,7 @@ class Observation(Mutable):
             return self.cadence.time_range_at_tstep(uv_pair.swapxy(), remask=remask)
 
     def uv_range_at_time(self, time, *, remask=False):
-        """The `(u,v)` range of spatial pixels in the data array observed at the specified
-        time.
+        """The `(u,v)` range of spatial pixels observed at a specified time.
 
         Parameters:
             time (Scalar): Time values in seconds TDB.
@@ -235,8 +233,7 @@ class Observation(Mutable):
                                   'implemented')
 
     def uv_range_at_time_0d(self, time, uv_shape, *, remask=False):
-        """uv_range_at_time() for an observation in which any time-dependence is decoupled
-        from the spatial axes.
+        """The `(u,v)` range at a time, with time decoupled from the spatial axes.
 
         Parameters:
             time (Scalar): Time values in seconds TDB.
@@ -266,7 +263,7 @@ class Observation(Mutable):
         return (uv_min, uv_min + Pair.as_pair(uv_shape))
 
     def uv_range_at_time_1d(self, time, uv_shape, *, axis=0, remask=False):
-        """uv_range_at_time() for some observations with a 1-D cadence.
+        """The `(u,v)` range at a time, for an observation with a 1-D cadence.
 
         Parameters:
             time (Scalar): Time values in seconds TDB.
@@ -300,7 +297,7 @@ class Observation(Mutable):
         return (uv_min, uv_max)
 
     def uv_range_at_time_2d(self, time, uv_shape, *, slow=0, fast=1, remask=False):
-        """uv_range_at_time() for some observations with a 2-D cadence.
+        """The `(u,v)` range at a time, for an observation with a 2-D cadence.
 
         Parameters:
             time (Scalar): Time values in seconds TDB.
@@ -361,8 +358,7 @@ class Observation(Mutable):
                                   'implemented')
 
     def uv_range_at_tstep_0d(self, tstep, uv_shape, *, remask=False):
-        """uv_range_at_tstep() for an observation in which any time-dependence is
-        decoupled from the spatial axes.
+        """The `(u,v)` range at a time step, with time decoupled from the spatial axes.
 
         Every pixel is active at every time step, so the range always covers the whole
         field of view.
@@ -393,7 +389,7 @@ class Observation(Mutable):
         return (uv_min, uv_max)
 
     def uv_range_at_tstep_1d(self, tstep, uv_shape, *, axis=0, remask=False):
-        """uv_range_at_tstep() for some observations with a 1-D cadence.
+        """The `(u,v)` range at a time step, for an observation with a 1-D cadence.
 
         Parameters:
             tstep (Scalar): Time step index.
@@ -429,7 +425,7 @@ class Observation(Mutable):
         return (uv_min, uv_max)
 
     def uv_range_at_tstep_2d(self, tstep, uv_shape, *, slow=0, fast=1, remask=False):
-        """uv_range_at_tstep() for some observations with a 2-D cadence.
+        """The `(u,v)` range at a time step, for an observation with a 2-D cadence.
 
         Parameters:
             tstep (Pair): Time step index, as (slow, fast).
@@ -498,9 +494,9 @@ class Observation(Mutable):
         inserted into or deleted from either observation without disturbing the other, and
         it carries none of the original's internal record of what has been modified.
 
-        A Fittable sub-object, such as a Navigation frame, is the exception: it is
-        duplicated, so that fitting one observation leaves the other unchanged. The object
-        to which it applies is still shared.
+        A Fittable sub-object, such as a :class:`~oops.frame.Navigation` frame, is the
+        exception: it is duplicated, so that fitting one observation leaves the other
+        unchanged. The object to which it applies is still shared.
 
         Returns:
             Observation: A copy of the object.
@@ -530,8 +526,9 @@ class Observation(Mutable):
         return obs
 
     def navigate(self, angles):
-        """A copy of this Observation object after two or three rotation angles of a
-        Navigation object applied.
+        """A copy of this Observation with a Navigation rotation applied.
+
+        The rotation is defined by two or three rotation angles of a Navigation object.
 
         The copy is created by copy(), so it shares the data array with this observation
         but is given a Navigation frame of its own; re-pointing the copy leaves this
@@ -621,8 +618,10 @@ class Observation(Mutable):
         return self.spice_to_frame.inverse() * xform.matrix
 
     def set_spice_cmatrix(self, matrix):
-        """Set this Observation's frame as a C matrix, using the convention of the SPICE
-        toolkit's C kernel rather than the OOPS convention.
+        """Set this Observation's frame from a SPICE C matrix.
+
+        The matrix uses the convention of the SPICE toolkit's C kernel rather than the
+        OOPS convention.
 
         This replaces the frame outright, so the observation is left with a fixed pointing
         relative to J2000.
@@ -908,11 +907,12 @@ class Observation(Mutable):
 
     @staticmethod
     def scalar_from_indices(indices, axis, *, derivs=True):
-        """Utility to return the selected Scalar from a Scalar or Vector of indices,
-        np.ndarray, or a number.
+        """The selected Scalar from a set of indices.
+
+        The indices can be a Scalar or Vector, a NumPy array, or a number.
 
         Parameters:
-            indices (Scalar, Vector, array, or number): Array indices.
+            indices (Scalar, Vector, numpy.ndarray, or number): Array indices.
             axis (int): The array axis to select; -1 if this axis is not associated with
                 an array index.
             derivs (bool, optional): True to include derivatives in the returned value.
@@ -1188,7 +1188,8 @@ class Observation(Mutable):
                 convergence parameters. The default configuration is defined in config.py.
 
         Returns:
-            (list, array, or dict).
+            list, numpy.ndarray, or dict: The inventory, in the form named by
+            `return_type`.
 
             * If return_type is "list", it returns a list of the names of all the body
               objects that fall at least partially inside the FOV and are not completely
@@ -1238,8 +1239,7 @@ class Observation(Mutable):
     ######################################################################################
 
     def parallel_los(self, parallel, los, *, time=None, derivs=False):
-        """The line of sight in a parallel observation's FOV given a line of sight in this
-        observation.
+        """The line of sight in a parallel observation's FOV.
 
         Parameters:
             parallel (Observation): A parallel observation (same origin and time,
@@ -1265,8 +1265,7 @@ class Observation(Mutable):
         return xform.rotate(los, derivs=derivs)
 
     def parallel_uv(self, parallel, uv, *, time=None, derivs=False):
-        """The `(u,v)` pixel coordinates in a parallel observation's FOV given pixel
-        coordinates in the FOV of this observation.
+        """The `(u,v)` pixel coordinates in a parallel observation's FOV.
 
         Parameters:
             parallel (Observation): A parallel observation (same origin and time,
@@ -1291,8 +1290,7 @@ class Observation(Mutable):
         return parallel.fov.uv_from_los_t(los, time=time, derivs=derivs)
 
     def parallel_offset_angles(self, parallel, angles, *, time=None):
-        """The offset angles in a parallel observation's FOV and frame, given the pointing
-        offset in this observation.
+        """The offset angles in a parallel observation's FOV and frame.
 
         Parameters:
             parallel (Observation): A parallel observation (same origin and time,
@@ -1340,8 +1338,7 @@ class Observation(Mutable):
         return los0_parallel.offset_angles(los1_parallel)
 
     def parallel_offset_duv(self, parallel, duv, *, time=None, origin=None):
-        """The `(u,v)` pixel coordinate offset from the center of a parallel observation's
-        FOV, given a pointing offset for this observation.
+        """The `(u,v)` offset from the center of a parallel observation's FOV.
 
         Parameters:
             parallel (Observation): A parallel observation (same origin and time,

@@ -12,8 +12,9 @@ _TWOPI = 2 * np.pi
 
 
 class OblateGravity(Gravity):
-    """A class describing the gravity field of an oblate planet using an expansion in
-    gravity moments J2, J4, etc.
+    """The gravity field of an oblate planet.
+
+    The field is described by an expansion in the gravity moments J2, J4, etc.
 
     Attributes:
         gm (float): The body's GM in km^3/s^2.
@@ -90,16 +91,17 @@ class OblateGravity(Gravity):
 
     @staticmethod
     def _jseries(coefficients, ratio2):
-        """A series of the form `coefficients[0] * ratio2 + coefficients[1] * ratio2^2
-        + ...`.
+        """The series `coefficients[0] * ratio2 + coefficients[1] * ratio2^2 + ...`.
 
         Parameters:
-            coefficients (array): The series coefficients, in order of increasing power.
-            ratio2 (float or array): The squared ratio of the body radius to the radius
-                of evaluation.
+            coefficients (numpy.ndarray): The series coefficients, in order of increasing
+                power.
+            ratio2 (float or numpy.ndarray): The squared ratio of the body radius to the
+                radius of evaluation.
 
         Returns:
-            float or array: The sum of the series. It is zero if `coefficients` is empty.
+            float or numpy.ndarray: The sum of the series. It is zero if `coefficients` is
+            empty.
         """
 
         return ratio2 * np.polyval(coefficients[::-1], ratio2)
@@ -108,11 +110,11 @@ class OblateGravity(Gravity):
         """The potential energy per unit mass in the equatorial plane.
 
         Parameters:
-            a (float or array): Radius in km.
+            a (float or numpy.ndarray): Radius in km.
 
         Returns:
-            float or array: Potential energy per unit mass in km^2/s^2. The value is
-            negative and approaches zero as `a` increases.
+            float or numpy.ndarray: Potential energy per unit mass in km^2/s^2. The value
+            is negative and approaches zero as `a` increases.
         """
 
         return -self.gm/a * (1. - OblateGravity._jseries(self.potential_jn, self.r2/a**2))
@@ -124,12 +126,13 @@ class OblateGravity(Gravity):
         if the body has at least one gravity harmonic.
 
         Parameters:
-            a (float or array): Semimajor axis in km.
-            e (float or array, optional): Orbital eccentricity; default 0.
-            sin_i (float or array, optional): Sine of the orbital inclination; default 0.
+            a (float or numpy.ndarray): Semimajor axis in km.
+            e (float or numpy.ndarray, optional): Orbital eccentricity; default 0.
+            sin_i (float or numpy.ndarray, optional): Sine of the orbital inclination;
+                default 0.
 
         Returns:
-            float or array: Mean motion in radians/s.
+            float or numpy.ndarray: Mean motion in radians/s.
         """
 
         a2 = a * a
@@ -151,10 +154,10 @@ class OblateGravity(Gravity):
         `kappa` is undefined.
 
         Parameters:
-            a (float or array): Semimajor axis in km.
+            a (float or numpy.ndarray): Semimajor axis in km.
 
         Returns:
-            float or array: The square of the radial oscillation frequency, in
+            float or numpy.ndarray: The square of the radial oscillation frequency, in
             radians^2/s^2.
         """
 
@@ -169,12 +172,13 @@ class OblateGravity(Gravity):
         body has at least one gravity harmonic.
 
         Parameters:
-            a (float or array): Semimajor axis in km.
-            e (float or array, optional): Orbital eccentricity; default 0.
-            sin_i (float or array, optional): Sine of the orbital inclination; default 0.
+            a (float or numpy.ndarray): Semimajor axis in km.
+            e (float or numpy.ndarray, optional): Orbital eccentricity; default 0.
+            sin_i (float or numpy.ndarray, optional): Sine of the orbital inclination;
+                default 0.
 
         Returns:
-            float or array: Radial oscillation frequency in radians/s.
+            float or numpy.ndarray: Radial oscillation frequency in radians/s.
         """
 
         a2 = a * a
@@ -196,12 +200,13 @@ class OblateGravity(Gravity):
         if the body has at least one gravity harmonic.
 
         Parameters:
-            a (float or array): Semimajor axis in km.
-            e (float or array, optional): Orbital eccentricity; default 0.
-            sin_i (float or array, optional): Sine of the orbital inclination; default 0.
+            a (float or numpy.ndarray): Semimajor axis in km.
+            e (float or numpy.ndarray, optional): Orbital eccentricity; default 0.
+            sin_i (float or numpy.ndarray, optional): Sine of the orbital inclination;
+                default 0.
 
         Returns:
-            float or array: Vertical oscillation frequency in radians/s.
+            float or numpy.ndarray: Vertical oscillation frequency in radians/s.
         """
 
         a2 = a * a
@@ -220,12 +225,13 @@ class OblateGravity(Gravity):
         """The radial derivative of the mean motion at a given semimajor axis.
 
         Parameters:
-            a (float or array): Semimajor axis in km.
-            e (float or array, optional): Orbital eccentricity; default 0.
-            sin_i (float or array, optional): Sine of the orbital inclination; default 0.
+            a (float or numpy.ndarray): Semimajor axis in km.
+            e (float or numpy.ndarray, optional): Orbital eccentricity; default 0.
+            sin_i (float or numpy.ndarray, optional): Sine of the orbital inclination;
+                default 0.
 
         Returns:
-            float or array: Derivative of the mean motion in radians/s/km.
+            float or numpy.ndarray: Derivative of the mean motion in radians/s/km.
         """
 
         a2 = a * a
@@ -242,16 +248,16 @@ class OblateGravity(Gravity):
         return domega1
 
     def dkappa_da(self, a, *, e=0., sin_i=0.):
-        """The radial derivative of the radial oscillation frequency at a given semimajor
-        axis.
+        """The radial derivative of the radial oscillation frequency.
 
         Parameters:
-            a (float or array): Semimajor axis in km.
-            e (float or array, optional): Orbital eccentricity; default 0.
-            sin_i (float or array, optional): Sine of the orbital inclination; default 0.
+            a (float or numpy.ndarray): Semimajor axis in km.
+            e (float or numpy.ndarray, optional): Orbital eccentricity; default 0.
+            sin_i (float or numpy.ndarray, optional): Sine of the orbital inclination;
+                default 0.
 
         Returns:
-            float or array: Derivative of the radial oscillation frequency in
+            float or numpy.ndarray: Derivative of the radial oscillation frequency in
             radians/s/km.
         """
 
@@ -269,16 +275,16 @@ class OblateGravity(Gravity):
         return dkappa1
 
     def dnu_da(self, a, *, e=0., sin_i=0.):
-        """The radial derivative of the vertical oscillation frequency at a given
-        semimajor axis.
+        """The radial derivative of the vertical oscillation frequency.
 
         Parameters:
-            a (float or array): Semimajor axis in km.
-            e (float or array, optional): Orbital eccentricity; default 0.
-            sin_i (float or array, optional): Sine of the orbital inclination; default 0.
+            a (float or numpy.ndarray): Semimajor axis in km.
+            e (float or numpy.ndarray, optional): Orbital eccentricity; default 0.
+            sin_i (float or numpy.ndarray, optional): Sine of the orbital inclination;
+                default 0.
 
         Returns:
-            float or array: Derivative of the vertical oscillation frequency in
+            float or numpy.ndarray: Derivative of the vertical oscillation frequency in
             radians/s/km.
         """
 
@@ -304,15 +310,16 @@ class OblateGravity(Gravity):
         cancellation of the coefficients, but only for a circular, equatorial orbit.
 
         Parameters:
-            a (float or array): Semimajor axis in km.
+            a (float or numpy.ndarray): Semimajor axis in km.
             factors (tuple): Three coefficients, applied to the mean motion, the radial
                 oscillation frequency, and the vertical oscillation frequency in that
                 order.
-            e (float or array, optional): Orbital eccentricity; default 0.
-            sin_i (float or array, optional): Sine of the orbital inclination; default 0.
+            e (float or numpy.ndarray, optional): Orbital eccentricity; default 0.
+            sin_i (float or numpy.ndarray, optional): Sine of the orbital inclination;
+                default 0.
 
         Returns:
-            float or array: The frequency combination in radians/s.
+            float or numpy.ndarray: The frequency combination in radians/s.
         """
 
         # Shortcut for nonzero e or i, to be refined later
@@ -425,19 +432,21 @@ class OblateGravity(Gravity):
     def dcombo_da(self, a, factors, *, e=0., sin_i=0.):
         """The radial derivative of a linear combination of the orbital frequencies.
 
-        Unlike `combo`, this method does not guarantee full precision if the coefficients
-        cancel to first or second order.
+        Unlike :meth:`~oops.Gravity.combo`, this method does not guarantee full precision
+        if the coefficients cancel to first or second order.
 
         Parameters:
-            a (float or array): Semimajor axis in km.
+            a (float or numpy.ndarray): Semimajor axis in km.
             factors (tuple): Three coefficients, applied to the mean motion, the radial
                 oscillation frequency, and the vertical oscillation frequency in that
                 order.
-            e (float or array, optional): Orbital eccentricity; default 0.
-            sin_i (float or array, optional): Sine of the orbital inclination; default 0.
+            e (float or numpy.ndarray, optional): Orbital eccentricity; default 0.
+            sin_i (float or numpy.ndarray, optional): Sine of the orbital inclination;
+                default 0.
 
         Returns:
-            float or array: The derivative of the frequency combination in radians/s/km.
+            float or numpy.ndarray: The derivative of the frequency combination in
+            radians/s/km.
         """
 
         sum_values = 0.
@@ -452,24 +461,24 @@ class OblateGravity(Gravity):
         return sum_values
 
     def solve_a(self, freq, factors=(1,0,0), *, e=0., sin_i=0.):
-        """The semimajor axis at which a combination of the orbital frequencies takes a
-        given value.
+        """The semimajor axis at which a frequency combination takes a given value.
 
         The solution is via Newton's method, starting from an analytic estimate and
         stopping after at most twenty iterations or as soon as the iteration ceases to
         converge.
 
         Parameters:
-            freq (float or array): The desired value of the frequency combination, in
-                radians/s.
+            freq (float or numpy.ndarray): The desired value of the frequency combination,
+                in radians/s.
             factors (tuple, optional): Three coefficients, applied to the mean motion, the
                 radial oscillation frequency, and the vertical oscillation frequency in
                 that order; default (1,0,0), meaning the mean motion alone.
-            e (float or array, optional): Orbital eccentricity; default 0.
-            sin_i (float or array, optional): Sine of the orbital inclination; default 0.
+            e (float or numpy.ndarray, optional): Orbital eccentricity; default 0.
+            sin_i (float or numpy.ndarray, optional): Sine of the orbital inclination;
+                default 0.
 
         Returns:
-            float or array: Semimajor axis in km, such that
+            float or numpy.ndarray: Semimajor axis in km, such that
             `combo(a, factors, e=e, sin_i=sin_i)` equals `freq`.
         """
 
@@ -537,12 +546,13 @@ class OblateGravity(Gravity):
         """The mean motion at semimajor axis `a`. Identical to `omega(a)`.
 
         Parameters:
-            a (float or array): Semimajor axis in km.
-            e (float or array, optional): Orbital eccentricity; default 0.
-            sin_i (float or array, optional): Sine of the orbital inclination; default 0.
+            a (float or numpy.ndarray): Semimajor axis in km.
+            e (float or numpy.ndarray, optional): Orbital eccentricity; default 0.
+            sin_i (float or numpy.ndarray, optional): Sine of the orbital inclination;
+                default 0.
 
         Returns:
-            float or array: Mean motion in radians/s.
+            float or numpy.ndarray: Mean motion in radians/s.
         """
 
         return self.omega(a, e=e, sin_i=sin_i)
@@ -551,128 +561,140 @@ class OblateGravity(Gravity):
         """The mean motion at semimajor axis `a`. Identical to `omega(a)`.
 
         Parameters:
-            a (float or array): Semimajor axis in km.
-            e (float or array, optional): Orbital eccentricity; default 0.
-            sin_i (float or array, optional): Sine of the orbital inclination; default 0.
+            a (float or numpy.ndarray): Semimajor axis in km.
+            e (float or numpy.ndarray, optional): Orbital eccentricity; default 0.
+            sin_i (float or numpy.ndarray, optional): Sine of the orbital inclination;
+                default 0.
 
         Returns:
-            float or array: Mean motion in radians/s.
+            float or numpy.ndarray: Mean motion in radians/s.
         """
 
         return self.omega(a, e=e, sin_i=sin_i)
 
     def dperi_dt(self, a, *, e=0., sin_i=0.):
-        """The pericenter precession rate at semimajor axis `a`. Identical to
-        `combo(a, (1,-1,0))`.
+        """The pericenter precession rate at semimajor axis `a`.
+
+        Identical to `combo(a, (1,-1,0))`.
 
         Parameters:
-            a (float or array): Semimajor axis in km.
-            e (float or array, optional): Orbital eccentricity; default 0.
-            sin_i (float or array, optional): Sine of the orbital inclination; default 0.
+            a (float or numpy.ndarray): Semimajor axis in km.
+            e (float or numpy.ndarray, optional): Orbital eccentricity; default 0.
+            sin_i (float or numpy.ndarray, optional): Sine of the orbital inclination;
+                default 0.
 
         Returns:
-            float or array: Pericenter precession rate in radians/s, positive for a
-            prograde orbit about an oblate body.
+            float or numpy.ndarray: Pericenter precession rate in radians/s, positive for
+            a prograde orbit about an oblate body.
         """
 
         return self.combo(a, (1,-1,0), e=e, sin_i=sin_i)
 
     def dnode_dt(self, a, *, e=0., sin_i=0.):
-        """The nodal regression rate (negative) at semimajor axis `a`. Identical to
-        `combo(a, (1,0,-1))`.
+        """The nodal regression rate (negative) at semimajor axis `a`.
+
+        Identical to `combo(a, (1,0,-1))`.
 
         Parameters:
-            a (float or array): Semimajor axis in km.
-            e (float or array, optional): Orbital eccentricity; default 0.
-            sin_i (float or array, optional): Sine of the orbital inclination; default 0.
+            a (float or numpy.ndarray): Semimajor axis in km.
+            e (float or numpy.ndarray, optional): Orbital eccentricity; default 0.
+            sin_i (float or numpy.ndarray, optional): Sine of the orbital inclination;
+                default 0.
 
         Returns:
-            float or array: Nodal regression rate in radians/s, negative for a prograde
-            orbit about an oblate body.
+            float or numpy.ndarray: Nodal regression rate in radians/s, negative for a
+            prograde orbit about an oblate body.
         """
 
         return self.combo(a, (1,0,-1), e=e, sin_i=sin_i)
 
     def d_dmean_dt_da(self, a, *, e=0., sin_i=0.):
-        """The radial derivative of the mean motion at semimajor axis `a`. Identical to
-        `domega_da(a)`.
+        """The radial derivative of the mean motion at semimajor axis `a`.
+
+        Identical to `domega_da(a)`.
 
         Parameters:
-            a (float or array): Semimajor axis in km.
-            e (float or array, optional): Orbital eccentricity; default 0.
-            sin_i (float or array, optional): Sine of the orbital inclination; default 0.
+            a (float or numpy.ndarray): Semimajor axis in km.
+            e (float or numpy.ndarray, optional): Orbital eccentricity; default 0.
+            sin_i (float or numpy.ndarray, optional): Sine of the orbital inclination;
+                default 0.
 
         Returns:
-            float or array: Derivative of the mean motion in radians/s/km.
+            float or numpy.ndarray: Derivative of the mean motion in radians/s/km.
         """
 
         return self.domega_da(a, e=e, sin_i=sin_i)
 
     def d_dperi_dt_da(self, a, *, e=0., sin_i=0.):
-        """The radial derivative of the pericenter precession rate at semimajor axis `a`.
+        """The radial derivative of the pericenter precession rate.
+
         Identical to `dcombo_da(a, (1,-1,0))`.
 
         Parameters:
-            a (float or array): Semimajor axis in km.
-            e (float or array, optional): Orbital eccentricity; default 0.
-            sin_i (float or array, optional): Sine of the orbital inclination; default 0.
+            a (float or numpy.ndarray): Semimajor axis in km.
+            e (float or numpy.ndarray, optional): Orbital eccentricity; default 0.
+            sin_i (float or numpy.ndarray, optional): Sine of the orbital inclination;
+                default 0.
 
         Returns:
-            float or array: Derivative of the pericenter precession rate in radians/s/km.
+            float or numpy.ndarray: Derivative of the pericenter precession rate in
+            radians/s/km.
         """
 
         return self.dcombo_da(a, (1,-1,0), e=e, sin_i=sin_i)
 
     def d_dnode_dt_da(self, a, *, e=0., sin_i=0.):
-        """The radial derivative of the nodal regression rate (negative) at semimajor
-        axis `a`. Identical to `dcombo_da(a, (1,0,-1))`.
+        """The radial derivative of the nodal regression rate (negative).
+
+        Identical to `dcombo_da(a, (1,0,-1))`.
 
         Parameters:
-            a (float or array): Semimajor axis in km.
-            e (float or array, optional): Orbital eccentricity; default 0.
-            sin_i (float or array, optional): Sine of the orbital inclination; default 0.
+            a (float or numpy.ndarray): Semimajor axis in km.
+            e (float or numpy.ndarray, optional): Orbital eccentricity; default 0.
+            sin_i (float or numpy.ndarray, optional): Sine of the orbital inclination;
+                default 0.
 
         Returns:
-            float or array: Derivative of the nodal regression rate in radians/s/km.
+            float or numpy.ndarray: Derivative of the nodal regression rate in
+            radians/s/km.
         """
 
         return self.dcombo_da(a, (1,0,-1), e=e, sin_i=sin_i)
 
     def ilr_pattern(self, n, m, *, p=1):
-        """The pattern speed of the `m:m-p` inner Lindblad resonance, given the mean
-        motion `n` of the perturber.
+        """The pattern speed of the `m:m-p` inner Lindblad resonance.
 
         The value returned is `n + kappa(a) * p/m`, where `a` is the semimajor axis at
         which the mean motion equals `n`. An inner Lindblad resonance always has a pattern
         speed faster than `n`.
 
         Parameters:
-            n (float or array): Mean motion of the perturber in radians/s.
+            n (float or numpy.ndarray): Mean motion of the perturber in radians/s.
             m (int): The first index of the resonance, for which the resonance is named.
             p (int, optional): The order of the resonance; default 1.
 
         Returns:
-            float or array: The pattern speed in radians/s, always greater than `n`.
+            float or numpy.ndarray: The pattern speed in radians/s, always greater than
+            `n`.
         """
 
         a = self.solve_a(n, (1,0,0))
         return n + self.kappa(a) * p/m
 
     def olr_pattern(self, n, m, *, p=1):
-        """The pattern speed of the `m:m+p` outer Lindblad resonance, given the mean
-        motion `n` of the perturber.
+        """The pattern speed of the `m:m+p` outer Lindblad resonance.
 
         The value returned is `n - kappa(a) * p/(m+p)`, where `a` is the semimajor axis at
         which the mean motion equals `n`. An outer Lindblad resonance always has a pattern
         speed slower than `n`.
 
         Parameters:
-            n (float or array): Mean motion of the perturber in radians/s.
+            n (float or numpy.ndarray): Mean motion of the perturber in radians/s.
             m (int): The first index of the resonance, for which the resonance is named.
             p (int, optional): The order of the resonance; default 1.
 
         Returns:
-            float or array: The pattern speed in radians/s, always less than `n`.
+            float or numpy.ndarray: The pattern speed in radians/s, always less than `n`.
         """
 
         a = self.solve_a(n, (1,0,0))
@@ -699,10 +721,10 @@ class OblateGravity(Gravity):
                 that of the central body; default 0.
 
         Returns:
-            tuple[array, array]: The position and the velocity, each an array of shape
-            `(..., 3)`, where the leading axes are the broadcast shape of the elements.
-            Position is in km and velocity is in km/s, in the equatorial frame of the
-            central body.
+            tuple[numpy.ndarray, numpy.ndarray]: The position and the velocity, each an
+            array of shape `(..., 3)`, where the leading axes are the broadcast shape of
+            the elements. Position is in km and velocity is in km/s, in the equatorial
+            frame of the central body.
         """
 
         gm = self.gm + body_gm
@@ -781,8 +803,8 @@ class OblateGravity(Gravity):
         elliptical orbits only.
 
         Parameters:
-            pos (array): Position in km, as an array of shape `(..., 3)`.
-            vel (array): Velocity in km/s, as an array of shape `(..., 3)`. It is
+            pos (numpy.ndarray): Position in km, as an array of shape `(..., 3)`.
+            vel (numpy.ndarray): Velocity in km/s, as an array of shape `(..., 3)`. It is
                 broadcast to the shape of `pos`.
             body_gm (float, optional): The GM of the orbiting body in km^3/s^2, added to
                 that of the central body; default 0.
@@ -893,10 +915,10 @@ class OblateGravity(Gravity):
                 that of the central body; default 0.
 
         Returns:
-            tuple[array, array]: The position and the velocity, each an array of shape
-            `(..., 3)`, where the leading axes are the broadcast shape of the elements.
-            Position is in km and velocity is in km/s, in the equatorial frame of the
-            central body.
+            tuple[numpy.ndarray, numpy.ndarray]: The position and the velocity, each an
+            array of shape `(..., 3)`, where the leading axes are the broadcast shape of
+            the elements. Position is in km and velocity is in km/s, in the equatorial
+            frame of the central body.
         """
 
         (a, e, inc, mean_lon, long_peri, long_node) = elements
@@ -968,8 +990,8 @@ class OblateGravity(Gravity):
         divergence.
 
         Parameters:
-            pos (array): Position in km, as an array of shape `(..., 3)`.
-            vel (array): Velocity in km/s, as an array of shape `(..., 3)`. It is
+            pos (numpy.ndarray): Position in km, as an array of shape `(..., 3)`.
+            vel (numpy.ndarray): Velocity in km/s, as an array of shape `(..., 3)`. It is
                 broadcast to the shape of `pos`.
             body_gm (float, optional): The GM of the orbiting body in km^3/s^2, added to
                 that of the central body; default 0.
@@ -1068,9 +1090,9 @@ class OblateGravity(Gravity):
         From Renner & Sicardy (2006), equations 14-21.
 
         Parameters:
-            a (float or array): Semimajor axis in km.
-            e (float or array): Orbital eccentricity.
-            inc (float or array): Orbital inclination in radians.
+            a (float or numpy.ndarray): Semimajor axis in km.
+            e (float or numpy.ndarray): Orbital eccentricity.
+            inc (float or numpy.ndarray): Orbital inclination in radians.
             body_gm (float, optional): The GM of the orbiting body in km^3/s^2, added to
                 that of the central body; default 0.
 
@@ -1127,26 +1149,28 @@ class OblateGravity(Gravity):
         are zero.
 
         Parameters:
-            r (array): Cylindrical radius in km.
-            L (array): Cylindrical longitude in radians.
-            z (array): Vertical distance from the equatorial plane in km.
-            rdot (array): Rate of change of `r` in km/s.
-            Ldot (array): Rate of change of `L` in radians/s.
-            zdot (array): Rate of change of `z` in km/s.
-            rc (array or float): Short-period correction to `r` in km.
-            Lc (array or float): Short-period correction to `L` in radians.
-            zc (array or float): Short-period correction to `z` in km.
-            rdotc (array or float): Short-period correction to `rdot` in km/s.
-            Ldotc (array or float): Short-period correction to `Ldot` in radians/s.
-            zdotc (array or float): Short-period correction to `zdot` in km/s.
-            n (array): Mean motion in radians/s.
-            kappa (array): Radial oscillation frequency in radians/s.
-            nu (array): Vertical oscillation frequency in radians/s.
-            eta2 (array): The frequency `eta` squared, in radians^2/s^2.
-            chi2 (array): The frequency `chi` squared, in radians^2/s^2.
-            alpha1 (array): The frequency combination `(2*nu + kappa)/3` in radians/s.
-            alpha2 (array): The frequency combination `2*nu - kappa` in radians/s.
-            alphasq (array): The product of `alpha1` and `alpha2`.
+            r (numpy.ndarray): Cylindrical radius in km.
+            L (numpy.ndarray): Cylindrical longitude in radians.
+            z (numpy.ndarray): Vertical distance from the equatorial plane in km.
+            rdot (numpy.ndarray): Rate of change of `r` in km/s.
+            Ldot (numpy.ndarray): Rate of change of `L` in radians/s.
+            zdot (numpy.ndarray): Rate of change of `z` in km/s.
+            rc (numpy.ndarray or float): Short-period correction to `r` in km.
+            Lc (numpy.ndarray or float): Short-period correction to `L` in radians.
+            zc (numpy.ndarray or float): Short-period correction to `z` in km.
+            rdotc (numpy.ndarray or float): Short-period correction to `rdot` in km/s.
+            Ldotc (numpy.ndarray or float): Short-period correction to `Ldot` in
+                radians/s.
+            zdotc (numpy.ndarray or float): Short-period correction to `zdot` in km/s.
+            n (numpy.ndarray): Mean motion in radians/s.
+            kappa (numpy.ndarray): Radial oscillation frequency in radians/s.
+            nu (numpy.ndarray): Vertical oscillation frequency in radians/s.
+            eta2 (numpy.ndarray): The frequency `eta` squared, in radians^2/s^2.
+            chi2 (numpy.ndarray): The frequency `chi` squared, in radians^2/s^2.
+            alpha1 (numpy.ndarray): The frequency combination `(2*nu + kappa)/3` in
+                radians/s.
+            alpha2 (numpy.ndarray): The frequency combination `2*nu - kappa` in radians/s.
+            alphasq (numpy.ndarray): The product of `alpha1` and `alpha2`.
 
         Returns:
             tuple: The twelve values `(a, e, inc, long_peri, long_node, lam, rc, Lc, zc,
@@ -1218,11 +1242,11 @@ class OblateGravity(Gravity):
         """The arctangent of `y/x`, in the range 0 to 2*pi rather than -pi to pi.
 
         Parameters:
-            y (float or array): The numerator.
-            x (float or array): The denominator.
+            y (float or numpy.ndarray): The numerator.
+            x (float or numpy.ndarray): The denominator.
 
         Returns:
-            float or array: The angle in radians, within the range 0 to 2*pi.
+            float or numpy.ndarray: The angle in radians, within the range 0 to 2*pi.
         """
 
         return np.arctan2(y, x) % _TWOPI

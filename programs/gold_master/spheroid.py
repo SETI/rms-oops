@@ -1,8 +1,10 @@
 ##########################################################################################
 # programs/gold_master/spheroid.py
 ##########################################################################################
-"""Gold master tests of the surface coordinate backplanes of a spheroidal or ellipsoidal
-body: longitude, latitude, and the sub-observer and sub-solar points.
+"""Gold master tests of the surface coordinate backplanes.
+
+The backplanes describe a spheroidal or ellipsoidal body: longitude, latitude, and the
+sub-observer and sub-solar points.
 """
 
 import numpy as np

@@ -9,8 +9,7 @@ from oops.frame.spinframe import SpinFrame
 
 
 class InclinedFrame(Frame):
-    """A Frame subclass describing a Frame that is inclined to the equator of another
-    Frame.
+    """A Frame inclined to the equator of another Frame.
 
     It is defined by an inclination, a node at epoch, and a nodal regression rate. This
     Frame is oriented to be "nearly inertial," meaning that a longitude in the new Frame
@@ -149,8 +148,10 @@ class InclinedFrame(Frame):
         return xform
 
     def node_at_time(self, time, *, quick=False):
-        """Angle from the reference Frame's X-axis, along its X-Y plane, to the ascending
-        node of this Frame's X-Y plane.
+        """The angle from the reference Frame's X-axis to this Frame's ascending node.
+
+        The angle is measured within the X-Y plane of the reference frame, to the
+        ascending node of this Frame's X-Y plane.
 
         Values always fall between 0 and 2*pi.
 

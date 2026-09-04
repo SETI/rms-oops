@@ -1,6 +1,7 @@
 ##########################################################################################
 # oops/cadence/__init__.py
 ##########################################################################################
+"""Cadence classes, which define the timing of the samples of an observation."""
 
 from oops.cadence.cadence_        import Cadence
 from oops.cadence.dualcadence     import DualCadence

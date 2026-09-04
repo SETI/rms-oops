@@ -14,8 +14,9 @@ from oops.transform import Transform
 
 
 class QuickFrame(Frame):
-    """A Frame subclass that returns Transform objects based on interpolation of another
-    Frame within a specified time window.
+    """A Frame that interpolates the Transforms of another Frame.
+
+    The interpolation is tabulated within a specified time window.
     """
 
     def __init__(self, frame, tmin, tmax, quick=None):
@@ -116,8 +117,7 @@ class QuickFrame(Frame):
         self._spline_setup()
 
     def _spline_setup(self):
-        """Set up the internal tabulation to be interpolated, based on `_times` and
-        `_xforms`.
+        """Set up the internal tabulation to be interpolated.
         """
 
         KIND = 3
@@ -163,12 +163,12 @@ class QuickFrame(Frame):
         flipped, where necessary, into the same hemisphere as its predecessor.
 
         Parameters:
-            vals (array): The tabulated quaternion values, with shape (steps,4).
+            vals (numpy.ndarray): The tabulated quaternion values, with shape (steps,4).
 
         Returns:
-            array: Values of shape (steps,4) describing the same rotations, but without
-            sign reversals between successive samples. The input array is returned if it
-            contains no reversals.
+            numpy.ndarray: Values of shape (steps,4) describing the same rotations, but
+            without sign reversals between successive samples. The input array is returned
+            if it contains no reversals.
         """
 
         signs = np.where(np.sum(vals[:-1] * vals[1:], axis=-1) < 0., -1., 1.)

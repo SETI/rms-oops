@@ -264,8 +264,9 @@ def ring_azimuth(self, event_key, direction='obs', apparent=True):
 
 
 def ring_elevation(self, event_key, direction='obs', pole='prograde', apparent=True):
-    """Angle from the ring plane to the photon direction, evaluated at the ring intercept
-    point.
+    """The angle from the ring plane to the photon direction.
+
+    It is evaluated at the ring intercept point.
 
     It is equivalent to (PI/2 - emission) if direction == 'obs', (PI/2 - incidence) if
     direction == 'sun'.

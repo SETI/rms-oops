@@ -15,8 +15,10 @@ EPSILON = sys.float_info.epsilon / 2.   # actual machine precision
 
 
 class BarrelFOV(FOV):
-    """Subclass of FOV that describes a field of view in which the distortion is described
-    by a 1-D polynomial in distance from the image center.
+    """A field of view with radially symmetric ("barrel") distortion.
+
+    A subclass of :class:`~oops.FOV` in which the distortion is described by a 1-D
+    polynomial in distance from the image center.
     """
 
     # True to print convergence steps in _solve_ratio()
@@ -38,7 +40,7 @@ class BarrelFOV(FOV):
             uv_shape (tuple, Pair, int, or float): The size of the field of view in
                 pixels. This number can be non-integral if the detector is not composed of
                 a rectangular array of pixels.
-            coefft_xy_from_uv (ndarray, optional): The polynomial coefficient array
+            coefft_xy_from_uv (numpy.ndarray, optional): The polynomial coefficient array
                 describing the radial distortion from `(u,v)` to `(x,y)`. It is a function
                 of `r`, defined as::
 
@@ -52,7 +54,7 @@ class BarrelFOV(FOV):
                 the linear term, which is typically ~ 1. In other words,
                 `coefft_xy_from_uv[i]` is the coefficient on `r**(i+1)`. If this input is
                 None, the distortion polynomial for `uv_from_xy` is inverted.
-            coefft_uv_from_xy (ndarray, optional): The polynomial coefficient array
+            coefft_uv_from_xy (numpy.ndarray, optional): The polynomial coefficient array
                 describing the radial distortion scale factor from `(x,y)` to `(u,v)`. It
                 is a function of `r`, defined as::
 
@@ -140,8 +142,7 @@ class BarrelFOV(FOV):
         self.freeze()
 
     def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The `(x,y)` camera frame coordinates given the FOV coordinates `(u,v)` at the
-        specified time.
+        """The camera coordinates `(x,y)` at FOV coordinates `(u,v)` and a given time.
 
         Parameters:
             uv_pair (Pair): `(u,v)` coordinates in this FOV.
@@ -179,8 +180,7 @@ class BarrelFOV(FOV):
         return flat_xy * true_over_flat
 
     def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The `(u,v)` FOV coordinates given the `(x,y)` camera frame coordinates at the
-        specified time.
+        """The FOV coordinates `(u,v)` at camera coordinates `(x,y)` and a given time.
 
         Parameters:
             xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.
@@ -237,10 +237,10 @@ class BarrelFOV(FOV):
 
         Parameters:
             r (Scalar): The points at which to evaluate the polynomial.
-            coefft (ndarray): The coefficient array defining the polynomial, with the
-                leading zero-valued constant term omitted.
-            dcoefft (ndarray): The coefficients of the derivative of the ratio, i.e.,
-                `coefft * [0,1,2,...]`.
+            coefft (numpy.ndarray): The coefficient array defining the polynomial, with
+                the leading zero-valued constant term omitted.
+            dcoefft (numpy.ndarray): The coefficients of the derivative of the ratio,
+                i.e., `coefft * [0,1,2,...]`.
             derivs (bool, optional): True to include the derivatives embedded in `r` in
                 the result.
             d_dr (bool, optional): If True, the returned quantity is a tuple
@@ -293,9 +293,9 @@ class BarrelFOV(FOV):
         Parameters:
             f (Scalar): The values of the polynomial.
             r_guess (Scalar): Initial guess at the values of `r`.
-            coefft (ndarray): Coefficient array defining the polynomial, with the leading
-                zero-valued constant term omitted.
-            dcoefft (ndarray): The coefficients of the derivative of the ratio
+            coefft (numpy.ndarray): Coefficient array defining the polynomial, with the
+                leading zero-valued constant term omitted.
+            dcoefft (numpy.ndarray): The coefficients of the derivative of the ratio
                 `polynomial(r) / r`, i.e., `coefft * [0,1,2,...]`.
             derivs (bool, optional): True to include the derivatives embedded in `f` in
                 the result.

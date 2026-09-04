@@ -34,55 +34,45 @@ READ_PATTERNS = {   # (number averaged, stride)
 def from_file(filespec, **options):
     """A TimedImage object based on a given JWST/NIRCam file.
 
-    Inputs:
-        filespec        path to the FITS file.
+    Parameters:
+        filespec (str, Path, or FCPath): Path to the FITS file.
 
-    Options:
-        data            True (the default) to include the data arrays in the returned
-                        observation. If this is an uncalibrated image, the "data" subfield
-                        is a 4-D array with shape (integrations, groups, rows, samples),
-                        where the last two dimensions are spatial. Otherwise, "data" is a
-                        2-D array and the subfields "error" and "quality" are also
-                        included.
-
-        calibration     True (the default) to include a calibration subfields. Subfield
-                        "i_over_f" is included for calibrated images and for uncalibrated
-                        images if cal_file is True. For uncalibrated images, subfields
-                        "raw_dn", "dn_per_s" and "dn_per_s_arcsec_sq" are also included.
-
-        astrometry      If True, this is equivalent to data=False, calibration=False.
-
-        reference       An optional second JWST Observation. If specified, then this
-                        observation will use a frame defined as an offset from that of the
-                        reference.
-
-        navigation      An optional tuple/list/array of two or three rotation angles to
-                        apply to the frame, yielding a Navigation frame. Use True to
-                        employ a Navigation frame without specifying the angles; this is
-                        equivalent to navigation=(0.,0.). If not specified, None, or
-                        False, a Navigation frame will not be used.
-
-        offset          An optional pair of coordinate offsets (du, dv) in units of pixels
-                        to apply to the FITS-derived geometry in order to align with the
-                        actual image geometry. This is an alternative to specifying the
-                        navigation angles.
-
-        origin          An optional tuple or Pair of coordinate values (u,v) in units of
-                        pixels, which define the location in the FOV where the offset was
-                        determined. If not provided, the offset is assumed to apply at the
-                        center of the FOV.
-
-        frame_suffix    An optional suffix to apply to the name of the observation's
-                        frame; by default, just the file basename is used.
-
-        path_suffix     An optional suffix to apply to the name of JWST's path; by
-                        default, just the file basename is used.
-
-        target          If specified, the name of the target body. Otherwise, the target
-                        body is inferred from the header.
-
-        fast_fov        If True or unspecified, the WCSFOV uses fast inversions using the
-                        inverse WCS parameters. If False, it uses the slow method.
+    Keyword Arguments:
+        data (bool, optional): True (the default) to include the data arrays in the
+            returned observation. If this is an uncalibrated image, the "data" subfield is
+            a 4-D array with shape (integrations, groups, rows, samples), where the last
+            two dimensions are spatial. Otherwise, "data" is a 2-D array and the subfields
+            "error" and "quality" are also included.
+        calibration (bool, optional): True (the default) to include a calibration
+            subfields. Subfield "i_over_f" is included for calibrated images and for
+            uncalibrated images if cal_file is True. For uncalibrated images, subfields
+            "raw_dn", "dn_per_s" and "dn_per_s_arcsec_sq" are also included.
+        astrometry (bool, optional): If True, this is equivalent to data=False,
+            calibration=False.
+        reference (Observation, optional): An optional second JWST Observation. If
+            specified, then this observation will use a frame defined as an offset from
+            that of the reference.
+        navigation (tuple, list, numpy.ndarray, or bool, optional): An optional
+            tuple/list/array of two or three rotation angles to apply to the frame,
+            yielding a Navigation frame. Use True to employ a Navigation frame without
+            specifying the angles; this is equivalent to navigation=(0.,0.). If not
+            specified, None, or False, a Navigation frame will not be used.
+        offset (tuple or Pair, optional): An optional pair of coordinate offsets (du, dv)
+            in units of pixels to apply to the FITS-derived geometry in order to align
+            with the actual image geometry. This is an alternative to specifying the
+            navigation angles.
+        origin (tuple or Pair, optional): An optional tuple or Pair of coordinate values
+            (u,v) in units of pixels, which define the location in the FOV where the
+            offset was determined. If not provided, the offset is assumed to apply at the
+            center of the FOV.
+        frame_suffix (str, optional): An optional suffix to apply to the name of the
+            observation's frame; by default, just the file basename is used.
+        path_suffix (str, optional): An optional suffix to apply to the name of JWST's
+            path; by default, just the file basename is used.
+        target (str, optional): If specified, the name of the target body. Otherwise, the
+            target body is inferred from the header.
+        fast_fov (bool, optional): If True or unspecified, the WCSFOV uses fast inversions
+            using the inverse WCS parameters. If False, it uses the slow method.
 
     See help(nircam.uncal.from_file) for the additional options related to _uncal.fits.
     """
@@ -146,8 +136,9 @@ class NIRCam(JWST):
         return subfields
 
     def filter_bandpass(self, hdulist, **options):
-        """Read the filter file for this detector/filter combination, and return
-        the bandpass as a Tabulation.
+        """The bandpass of this detector/filter combination, as a Tabulation.
+
+        It is read from the filter file.
         """
 
         header = hdulist[0].header
@@ -160,8 +151,9 @@ class NIRCam(JWST):
 
     @staticmethod
     def from_hdulist(hdulist, **options):
-        """An TimedImage object based on the HDUlist from a JWST FITS data file, plus
-        additional options.
+        """A TimedImage based on the HDUlist from a JWST FITS data file.
+
+        Additional options are accepted.
 
         See from_file help for the additional options.
         """

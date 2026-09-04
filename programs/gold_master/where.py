@@ -1,8 +1,9 @@
 ##########################################################################################
 # programs/gold_master/where.py
 ##########################################################################################
-"""Gold master tests of the boolean backplanes, which identify the pixels satisfying a
-geometric or lighting condition.
+"""Gold master tests of the boolean backplanes.
+
+These backplanes identify the pixels satisfying a geometric or lighting condition.
 """
 
 from polymath         import Scalar

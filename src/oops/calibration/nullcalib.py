@@ -90,8 +90,7 @@ class NullCalib(Calibration):
         return Scalar.as_scalar(value)
 
     def prescale(self, factor, baseline=0., *, name=''):
-        """A version of this Calibration in which image DNs are re-scaled before the
-        calibration is applied.
+        """A version of this Calibration with image DNs re-scaled beforehand.
 
         Parameters:
             factor (Scalar): Scale factor to apply to DN values.

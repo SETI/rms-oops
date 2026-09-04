@@ -9,8 +9,7 @@ from oops.calibration.flatcalib import FlatCalib
 
 
 class Radiance(FlatCalib):
-    """A Calibration subclass for an image array in units of radiance within a distorted
-    FOV.
+    """A calibration for an image array in units of radiance within a distorted FOV.
 
     Radiance values are always scaled to the pixel area, so a uniform source will appear
     as an array of uniform values.
@@ -88,8 +87,7 @@ class Radiance(FlatCalib):
         return dn
 
     def prescale(self, factor, baseline=0., *, name=''):
-        """A version of this Calibration in which image DNs are re-scaled before the
-        calibration is applied.
+        """A version of this Calibration with image DNs re-scaled beforehand.
 
         Parameters:
             factor (Scalar): Scale factor to apply to DN values.

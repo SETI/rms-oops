@@ -13,8 +13,10 @@ from oops.path              import Path
 
 
 class RasterSlit1D(Observation):
-    """A subclass of Observation consisting of a 1-D observation in which the one
-    dimension is constructed by sweeping a single pixel along a slit.
+    """A 1-D observation made by sweeping a single pixel along a slit.
+
+    A subclass of :class:`~oops.Observation` whose one dimension is constructed by that
+    sweep.
 
     The FOV describes the 1-D slit.
     """
@@ -206,8 +208,7 @@ class RasterSlit1D(Observation):
         return self.cadence.time_range_at_tstep(tstep, remask=remask)
 
     def uv_range_at_time(self, time, *, remask=False):
-        """The `(u,v)` range of spatial pixels in the data array observed at the specified
-        time.
+        """The `(u,v)` range of spatial pixels observed at a specified time.
 
         Because the slit is swept out one sample at a time, this range describes a single
         pixel.

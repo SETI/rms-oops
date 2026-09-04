@@ -9,8 +9,7 @@ from oops.backplane import Backplane
 
 
 def border_above(self, backplane_key, value):
-    """The locus of pixels at or above a specified value and adjacent to a pixel
-    below it.
+    """The locus of pixels at or above a value and adjacent to a pixel below it.
 
     These pixels are the inner edge of the region, not a ring of pixels around it.
 
@@ -23,8 +22,7 @@ def border_above(self, backplane_key, value):
 
 
 def border_below(self, backplane_key, value):
-    """The locus of pixels at or below a specified value and adjacent to a pixel
-    above it.
+    """The locus of pixels at or below a value and adjacent to a pixel above it.
 
     These pixels are the inner edge of the region, not a ring of pixels around it.
 

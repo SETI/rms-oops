@@ -13,10 +13,12 @@ from oops.gravity.oblategravity import OblateGravity
 
 
 class RingPlane(Surface):
-    """A subclass of Surface describing a flat surface in the (x,y) plane, in which the
-    optional velocity field is defined by circular Keplerian motion about the center
-    point. Coordinates are cylindrical (radius, longitude, elevation), with an optional
-    offset in elevation from the equatorial (z=0) plane.
+    """A flat surface in the (x,y) plane with optional Keplerian motion.
+
+    A subclass of :class:`~oops.Surface` in which the optional velocity field is defined
+    by circular Keplerian motion about the center point. Coordinates are cylindrical
+    (radius, longitude, elevation), with an optional offset in elevation from the
+    equatorial (z=0) plane.
 
     Optional modes can be used to apply sinusoidal offset patterns in the radial
     coordinate.
@@ -190,8 +192,7 @@ class RingPlane(Surface):
 
     def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
                             hints=None):
-        """The position where a point with the given coordinates falls relative to this
-        surface's origin and frame.
+        """The position at the given surface coordinates.
 
         Parameters:
             coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at or
@@ -398,8 +399,7 @@ class RingPlane(Surface):
     ######################################################################################
 
     def _mode_offset(self, lon, time, *, derivs=False, rates=False):
-        """Sum of the modes as a local radial offset from the mean epicyclic radius to
-        the actual radius.
+        """The sum of the modes as a radial offset from the mean epicyclic radius.
 
         Parameters:
             lon (Scalar): Longitude in radians of the intercept point.

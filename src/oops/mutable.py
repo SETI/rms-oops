@@ -8,8 +8,8 @@ modified in-place by making a call to the function `set_params`. The mutable API
 to manage updates to objects that are either Fittable or might contain a Fittable
 sub-object (recursively).
 
-Any object that is a subclass of Fittable or might itself depend on a Fittable object is
-considered "mutable".
+Any object that is a subclass of :class:`~oops.Fittable` or might itself depend on a
+Fittable object is considered "mutable".
 
 The following functions are defined:
 
@@ -18,7 +18,7 @@ The following functions are defined:
   function after an object or any of the sub-objects might have been modified.
 * `freeze`: Freeze the given object, preventing any further changes to it or any of its
   sub-objects.
-* `is_fittable`: True if the given object is a subclass of Fittable.
+* `is_fittable`: True if the given object is a subclass of :class:`~oops.Fittable`.
 * `is_mutable`: True if the given object is mutable. An object is mutable if it is
   Fittable or if it depends on any mutable sub-objects (recursively).
 * `is_frozen`: True if the given object is frozen or otherwise immutable.
@@ -28,25 +28,23 @@ The following functions are defined:
 * `version`: An integer that starts at zero and increases whenever this object or one of
   its sub-objects changes.
 
-Programming Notes
------------------
+Notes:
+    Information about the Fittable or mutable state of all objects is maintained by a set
+    of added attributes, which are all prefixed "_FITTABLE" or "_MUTABLE". These
+    attributes are managed internally and should not be touched by the programmer.
 
-Information about the Fittable or mutable state of all objects is maintained by a set of
-added attributes, which are all prefixed "_FITTABLE" or "_MUTABLE". These attributes are
-managed internally and should not be touched by the programmer.
+    If an object could potentially depend on one or more mutable sub-objects, then it may
+    be necessary to define this method::
 
-If an object could potentially depend on one or more mutable sub-objects, then it may be
-necessary to define this method::
+        _refresh(self)
 
-    _refresh(self)
+    which updates any internal attributes that might become "stale" if they depend on a
+    sub-object that was modified. In addition, the method::
 
-which updates any internal attributes that might become "stale" if they depend on a
-sub-object that was modified. In addition, the method::
+        _freeze(self)
 
-    _freeze(self)
-
-can be used to carry out any special actions that must take place when the object is
-frozen.
+    can be used to carry out any special actions that must take place when the object is
+    frozen.
 """
 
 from collections import namedtuple
@@ -76,8 +74,9 @@ _IMMUTABLE_OBJECTS = set()  # for objects with __dict__ that can't have attribut
 
 
 def refresh(obj: Any, /) -> bool:
-    """Update any internally cached information if the given object or any of its
-    sub-objects has been modified.
+    """Update the internally cached information of a possibly modified object.
+
+    The object is refreshed if it, or any of its sub-objects, has been modified.
 
     Use this call to ensure that an object is fully self-consistent, not containing any
     stale information.
@@ -89,7 +88,7 @@ def refresh(obj: Any, /) -> bool:
         obj: Object to be refreshed if necessary.
 
     Returns:
-        True if the given object was modified as a result of this call.
+        bool: True if the given object was modified as a result of this call.
     """
 
     # memo[0] indicates whether the given object has changed; initially set to False
@@ -97,8 +96,9 @@ def refresh(obj: Any, /) -> bool:
 
 
 def _refresh_internal(obj: Any, /, memo: dict, info_memo: dict) -> bool:
-    """Update any internally cached information if the given object or any of its
-    sub-objects has been modified.
+    """Update the internally cached information of a possibly modified object.
+
+    The object is refreshed if it, or any of its sub-objects, has been modified.
 
     This is the internal, recursive implementation of `refresh`.
 
@@ -108,7 +108,7 @@ def _refresh_internal(obj: Any, /, memo: dict, info_memo: dict) -> bool:
         info_memo: `memo` input to `_get_info`.
 
     Returns:
-        True if the given object was modified as a result of this call.
+        bool: True if the given object was modified as a result of this call.
     """
 
     # Check memo; prevent infinite recursion
@@ -165,8 +165,9 @@ def _refresh_internal(obj: Any, /, memo: dict, info_memo: dict) -> bool:
 
 
 def needs_refresh(obj: Any, /) -> bool:
-    """True if any internally cached information of the given object or any of its
-    sub-objects needs to be refreshed.
+    """True if the internally cached information of an object needs refreshing.
+
+    The object needs refreshing if it, or any of its sub-objects, has been modified.
 
     If the given object and all Fittable sub-object(s) are already up to date, this
     function returns False.
@@ -175,7 +176,7 @@ def needs_refresh(obj: Any, /) -> bool:
         obj: Object to test.
 
     Returns:
-        True if the given object needs to be refreshed.
+        bool: True if the given object needs to be refreshed.
     """
 
     return _needs_refresh_internal(obj, info_memo={})
@@ -183,8 +184,9 @@ def needs_refresh(obj: Any, /) -> bool:
 
 def _needs_refresh_internal(obj: Any, info_memo: dict,
                             visited: set | None = None) -> bool:
-    """True if any internally cached information of the given object or any of its
-    sub-objects needs to be refreshed.
+    """True if the internally cached information of an object needs refreshing.
+
+    The object needs refreshing if it, or any of its sub-objects, has been modified.
 
     This is the internal, recursive implementation.
 
@@ -195,7 +197,7 @@ def _needs_refresh_internal(obj: Any, info_memo: dict,
             objects refer to one another or to themselves.
 
     Returns:
-        True if the given object needs to be refreshed.
+        bool: True if the given object needs to be refreshed.
     """
 
     if visited is None:
@@ -237,7 +239,7 @@ def freeze(obj: Any, /) -> bool:
         obj: The object to freeze.
 
     Returns:
-        True if the given object was frozen as a result of this call; False if it is
+        bool: True if the given object was frozen as a result of this call; False if it is
         immutable or was already frozen.
     """
 
@@ -257,7 +259,7 @@ def _freeze_internal(obj: Any, /, memo: dict, info_memo: dict) -> bool:
         info_memo: `memo` input to `_get_info`.
 
     Returns:
-        True if the given object was frozen as a result of this call; False if it is
+        bool: True if the given object was frozen as a result of this call; False if it is
         immutable or was already frozen.
     """
 
@@ -297,8 +299,9 @@ def _freeze_internal(obj: Any, /, memo: dict, info_memo: dict) -> bool:
 ##########################################################################################
 
 def set_param_order(obj: Any, names: list[str]) -> None:
-    """Define the order of the parameters for an object that might contain Fittable
-    sub-objects.
+    """Define the order of the parameters of an object.
+
+    The object might contain :class:`~oops.Fittable` sub-objects.
 
     Parameters:
         obj: The object.
@@ -340,15 +343,16 @@ def set_param_order(obj: Any, names: list[str]) -> None:
 
 
 def get_param_order(obj: Any) -> list[str]:
-    """Get the order of the parameters for an object that might contain Fittable
-    sub-objects.
+    """The order of the parameters of an object.
+
+    The object might contain :class:`~oops.Fittable` sub-objects.
 
     Parameters:
         obj: The object.
 
     Returns:
-        The names of the parameters in the order they are applied, which is empty if the
-        object has no parameters.
+        list[str]: The names of the parameters in the order they are applied, which is
+        empty if the object has no parameters.
     """
 
     if hasattr(obj, '_MUTABLE_param_names'):
@@ -364,7 +368,7 @@ def get_nparams(obj: Any) -> int:
         obj: The object.
 
     Returns:
-        The number of parameters, which is zero if the object has none.
+        int: The number of parameters, which is zero if the object has none.
     """
 
     if hasattr(obj, '_MUTABLE_nparams'):
@@ -384,7 +388,7 @@ def set_params(obj: Any, params: Any) -> bool:
         params: Parameter values to apply.
 
     Returns:
-        True if the given object has changed as a result of this function call.
+        bool: True if the given object has changed as a result of this function call.
 
     Raises:
         ValueError: If the number of parameters is incorrect or the object is frozen.
@@ -444,7 +448,8 @@ def get_params(obj: Any) -> tuple[float, ...]:
         obj: The object.
 
     Returns:
-        The tuple of parameter values, which is empty if the object has no parameters.
+        tuple[float, ...]: The tuple of parameter values, which is empty if the object has
+        no parameters.
     """
 
     if hasattr(obj, '_MUTABLE_param_names'):
@@ -460,8 +465,10 @@ def get_params(obj: Any) -> tuple[float, ...]:
 ##########################################################################################
 
 def _get_info(obj: Any, /, memo: dict | None = None) -> _Info:
-    """The tuple (is_fittable, is_mutable, is_frozen, mutable_names, unfrozen_names,
-    versions).
+    """The tuple describing the Fittable and mutable state of an object.
+
+    Its items are `(is_fittable, is_mutable, is_frozen, mutable_names, unfrozen_names,
+    versions)`.
 
     Parameters:
         obj: The object to test.
@@ -469,8 +476,8 @@ def _get_info(obj: Any, /, memo: dict | None = None) -> _Info:
             for the named subobject.
 
     Returns:
-        (`is_fittable`, `is_mutable`, `is_frozen`, `mutable_names`, `unfrozen_names`,
-        `versions`) where:
+        _Info: (`is_fittable`, `is_mutable`, `is_frozen`, `mutable_names`,
+        `unfrozen_names`, `versions`) where:
 
         * `is_fittable`: True if `obj` is Fittable.
         * `is_mutable`: True either if the `obj` is Fittable or if it contains any
@@ -551,7 +558,7 @@ def is_fittable(obj: Any, /) -> bool:
         obj: The object.
 
     Returns:
-        True if `obj` is Fittable.
+        bool: True if `obj` is Fittable.
     """
 
     return _get_info(obj).is_fittable
@@ -567,7 +574,7 @@ def is_mutable(obj: Any, /) -> bool:
         obj: The object.
 
     Returns:
-        True if `obj` is mutable.
+        bool: True if `obj` is mutable.
     """
 
     return _get_info(obj).is_mutable
@@ -580,7 +587,7 @@ def is_frozen(obj: Any, /) -> bool:
         obj: The object.
 
     Returns:
-        True if `obj` is frozen or immutable.
+        bool: True if `obj` is frozen or immutable.
     """
 
     return _get_info(obj).is_frozen
@@ -593,7 +600,7 @@ def mutable_names(obj: Any, /) -> list[str]:
         obj: The object.
 
     Returns:
-        List of the names of the mutable sub-objects of the given object.
+        list[str]: List of the names of the mutable sub-objects of the given object.
     """
 
     return _get_info(obj).mutable_names
@@ -606,15 +613,14 @@ def unfrozen_names(obj: Any, /) -> list[str]:
         obj: The object.
 
     Returns:
-        List of the names of the un-frozen sub-objects of the given object.
+        list[str]: List of the names of the un-frozen sub-objects of the given object.
     """
 
     return _get_info(obj).unfrozen_names
 
 
 def _versions(obj: Any, /) -> dict[str, int]:
-    """Dictionary of the version number of each mutable sub-object at the time of last
-    refresh.
+    """A dictionary of each mutable sub-object's version at the last refresh.
 
     If the current version of any sub-object is greater than the version found in this
     dictionary, the object must be refreshed.
@@ -626,8 +632,8 @@ def _versions(obj: Any, /) -> dict[str, int]:
         obj: The object.
 
     Returns:
-        Dictionary keyed by the name of each mutable sub-object, returning the version of
-        that object at the time of last refresh.
+        dict[str, int]: Dictionary keyed by the name of each mutable sub-object, returning
+        the version of that object at the time of last refresh.
     """
 
     return _get_info(obj).versions
@@ -640,8 +646,8 @@ def version(obj: Any, /) -> int:
         obj: The object.
 
     Returns:
-        The version number, which starts at zero and is incremented each time the object
-        or one of its sub-objects is modified.
+        int: The version number, which starts at zero and is incremented each time the
+        object or one of its sub-objects is modified.
     """
 
     if hasattr(obj, '_MUTABLE_version'):
@@ -665,7 +671,7 @@ def _increment(obj: Any, /) -> int:
         obj: The object.
 
     Returns:
-        The new version number, or 0 if the given object cannot be mutable.
+        int: The new version number, or 0 if the given object cannot be mutable.
     """
 
     if hasattr(obj, '_MUTABLE_version'):
@@ -714,8 +720,9 @@ class Mutable(Oops):
     """
 
     def refresh(self) -> bool:
-        """Update any internally cached information if this object or any of its
-        sub-objects has been modified.
+        """Update the internally cached information of this object.
+
+        The object is refreshed if it, or any of its sub-objects, has been modified.
 
         Use this call to ensure that an object is fully self-consistent, not containing
         any stale information.
@@ -724,20 +731,21 @@ class Mutable(Oops):
         object is not changed.
 
         Returns:
-            True if the given object was modified as a result of this call.
+            bool: True if the given object was modified as a result of this call.
         """
 
         return refresh(self)
 
     def _needs_refresh(self) -> bool:
-        """True if any internally cached information of this object or any of its
-        sub-objects needs to be refreshed.
+        """True if the internally cached information of this object needs refreshing.
+
+        The object needs refreshing if it, or any of its sub-objects, has been modified.
 
         If the given object and all Fittable sub-object(s) are already up to date, this
         function returns False.
 
         Returns:
-            (bool): True if the given object needs to be refreshed.
+            bool: True if the given object needs to be refreshed.
         """
 
         return needs_refresh(self)
@@ -748,8 +756,8 @@ class Mutable(Oops):
         A frozen object can no longer be modified.
 
         Returns:
-            True if the given object was frozen as a result of this call; False if it is
-            immutable or was already frozen.
+            bool: True if the given object was frozen as a result of this call; False if
+            it is immutable or was already frozen.
         """
 
         return freeze(self)
@@ -774,8 +782,7 @@ class Mutable(Oops):
         return mutable_names(self)
 
     def _unfrozen_names(self) -> list[str]:
-        """The list of names of the mutable sub-objects of this object that are not
-        currently frozen.
+        """The names of this object's mutable sub-objects that are not frozen.
         """
 
         return unfrozen_names(self)

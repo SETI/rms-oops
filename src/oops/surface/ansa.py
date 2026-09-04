@@ -13,7 +13,9 @@ from oops.surface.ringplane import RingPlane
 
 
 class Ansa(Surface):
-    """The locus of points where a radius vector from the pole of the Z-axis is
+    """A virtual surface tracing the ansa of a ring system.
+
+    The Ansa is the locus of points where a radius vector from the pole of the Z-axis is
     perpendicular to the line of sight.
 
     This provides a convenient coordinate system for describing rings when viewed nearly
@@ -81,7 +83,7 @@ class Ansa(Surface):
 
     @property
     def ringplane(self):
-        """The RingPlane surface with which this ansa surface is associated.
+        """The :class:`~oops.surface.RingPlane` with which this surface is associated.
 
         Returns:
             RingPlane: The equatorial plane defining the ansa geometry.
@@ -103,8 +105,7 @@ class Ansa(Surface):
 
     @staticmethod
     def for_ringplane(ringplane):
-        """Construct an Ansa Surface associated with a given RingPlane, ignoring any
-        modes.
+        """The Ansa associated with a :class:`~oops.surface.RingPlane`, ignoring modes.
 
         Parameters:
             ringplane (RingPlane): The RingPlane relative to which this Ansa Surface is
@@ -215,8 +216,7 @@ class Ansa(Surface):
 
     def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
                             hints=None):
-        """The position where a point with the given coordinates falls relative to this
-        surface's origin and frame.
+        """The position at the given surface coordinates.
 
         Parameters:
             coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at

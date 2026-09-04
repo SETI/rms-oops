@@ -33,6 +33,17 @@ SPICE_TO_FRAME = oops.Matrix3([[ 1, 0, 0],
 ##########################################################################################
 
 def radec_from_uv(u, v, header):
+    """The right ascension and declination at FITS pixel coordinates `(u,v)`.
+
+    Parameters:
+        u (float or numpy.ndarray): The FITS horizontal pixel coordinate.
+        v (float or numpy.ndarray): The FITS vertical pixel coordinate.
+        header (dict): The FITS header, which provides the WCS parameters.
+
+    Returns:
+        tuple: The right ascension and declination in degrees.
+    """
+
     dx = u - header['CRPIX1']
     dy = v - header['CRPIX2']
 
@@ -56,6 +67,17 @@ def radec_from_uv(u, v, header):
     return (ra, dec)
 
 def uv_from_radec(ra, dec, header):
+    """The FITS pixel coordinates `(u,v)` at a right ascension and declination.
+
+    Parameters:
+        ra (float or numpy.ndarray): The right ascension in degrees.
+        dec (float or numpy.ndarray): The declination in degrees.
+        header (dict): The FITS header, which provides the WCS parameters.
+
+    Returns:
+        tuple: The FITS horizontal and vertical pixel coordinates.
+    """
+
     dra = ra - header['CRVAL1']
     ddec = dec - header['CRVAL2']
 
@@ -90,6 +112,16 @@ def uv_from_radec(ra, dec, header):
     return (u,v)
 
 def to_xms(x):
+    """An angle or time in degrees or hours, converted to sexagesimal.
+
+    Parameters:
+        x (float): The value to convert.
+
+    Returns:
+        tuple: The whole units, whole minutes, and remaining seconds. The sign is carried
+        by the first item.
+    """
+
     if x < 0.:
         x_sign = -1
         x = -x
@@ -123,23 +155,18 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
     If parameters["solar_range"] is specified, it overrides the distance from
     the Sun to the target body (in AU) for calibration purposes.
 
-    Inputs:
-        geom        'spice'     to use a SPICE SPK for the geometry;
-                    'fits'      to read the geoemtry info from the header.
-        pointing    'spice'     to use a SPICE CK for the pointing;
-                    'fits'      to use the pointing info in the FITS header;
-                    'fitsapp'   to use the pointing info in the FITS header, but
-                                to treat it as apparent pointing rather than
-                                pointing in the SSB frame.
-                    'fits90'    to use the pointing info in the FITS header but
-                                add a 90 degree rotation; this is needed to
-                                correct an error in the first PDS delivery of
-                                the data set.
-        fov_type    'fast'      to use a separate numerically inverted
-                                polynomial FOV for camera distortion;
-                    'slow'      to invert the polynomial FOV using Newton's
-                                method;
-                    'flat'      to use a flat FOV model.
+    Parameters:
+        geom (str, optional): 'spice' to use a SPICE SPK for the geometry; 'fits' to read
+            the geoemtry info from the header.
+        pointing (str, optional): 'spice' to use a SPICE CK for the pointing; 'fits' to
+            use the pointing info in the FITS header; 'fitsapp' to use the pointing info
+            in the FITS header, but to treat it as apparent pointing rather than pointing
+            in the SSB frame. 'fits90' to use the pointing info in the FITS header but add
+            a 90 degree rotation; this is needed to correct an error in the first PDS
+            delivery of the data set.
+        fov_type (str, optional): 'fast' to use a separate numerically inverted polynomial
+            FOV for camera distortion; 'slow' to invert the polynomial FOV using Newton's
+            method; 'flat' to use a flat FOV model.
     """
 
     assert geom in {'spice', 'fits'}
@@ -352,15 +379,12 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
     return snapshot
 
 def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
-    """A list of Snapshot objects, one for each row in a supplemental index
-    file.
+    """A list of Snapshot objects, one for each row in a supplemental index file.
 
-    Inputs:
-        fov_type    'fast'      to use a separate numerically inverted
-                                polynomial FOV for camera distortion;
-                    'slow'      to invert the polynomial FOV using Newton's
-                                method;
-                    'flat'      to use a flat FOV model.
+    Parameters:
+        fov_type (str, optional): 'fast' to use a separate numerically inverted polynomial
+            FOV for camera distortion; 'slow' to invert the polynomial FOV using Newton's
+            method; 'flat' to use a flat FOV model.
     """
 
     LORRI.initialize(asof=asof, meta=meta)

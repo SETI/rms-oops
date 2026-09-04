@@ -36,11 +36,33 @@ templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 source_suffix = ['.rst', '.md']
 
+# The docstrings wrap parameter names and short expressions such as `(u,v)` in single
+# backticks. Without this, docutils would render each one as a title reference, in
+# italics; `literal` renders them as inline code, which is what they are. An API symbol
+# that should link to its own entry carries an explicit role instead.
+default_role = 'literal'
+
 # -- Options for HTML output -------------------------------------------------
 
 html_theme = 'sphinx_rtd_theme'
 add_module_names = False
 autodoc_typehints_format = 'short'
+
+# Applied to every autodoc directive, so that each page names only what differs. A
+# directive that sets one of these options overrides the default for that option alone.
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'bysource',
+    'show-inheritance': True,
+    'exclude-members': '__dict__, __hash__, __module__, __weakref__, __annotations__',
+}
+
+# Every class documents its constructor arguments in the `__init__` docstring, not in the
+# class docstring. With autodoc's default, 'class', that block is dropped and the reader
+# sees a signature whose parameters are never explained; 'both' appends the constructor
+# docstring to the class description, under the signature autodoc already derives from
+# `__init__`.
+autoclass_content = 'both'
 
 # Importing oops furnishes SPICE kernels and reads the resource tree named by
 # OOPS_RESOURCES, which a documentation builder does not have. These are mocked so that
@@ -75,6 +97,33 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
 }
+
+# Nitpicky mode resolves every type named in a `Parameters:` or `Returns:` block. These
+# names have no target to resolve to, so each one is listed here rather than silenced
+# globally. Never add a symbol this package owns; give it an API-reference entry instead.
+nitpick_ignore = [
+    # Napoleon appends ", optional" to the type of an optional parameter. It marks the
+    # parameter, not a type, so there is nothing for it to link to.
+    ('py:class', 'optional'),
+    # Informal type names used by `polymath`, whose docstrings are rendered here because
+    # `oops` re-exports its classes. They name a concept, not a class.
+    ('py:class', 'array-like'),
+    ('py:class', 'convertible'),
+    ('py:class', 'number'),
+    ('py:class', 'scalar'),
+    ('py:class', 'vector-like'),
+    # `polymath` internals that its own docstrings mention but do not publish.
+    ('py:class', 'QubeNDIterator'),
+    ('py:class', 'Unit'),
+    # `filecache.FCPath`, which has no Sphinx inventory to link to.
+    ('py:class', 'FCPath'),
+]
+
+# The arithmetic docstrings of `polymath.Qube` cross-reference its operator methods, which
+# are not part of the rendered surface here.
+nitpick_ignore_regex = [
+    (r'py:meth', r'Qube\.__\w+__'),
+]
 
 myst_enable_extensions = ['colon_fence', 'deflist']
 

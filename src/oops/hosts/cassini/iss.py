@@ -31,25 +31,19 @@ CMATRIX_ROTATION = oops.Matrix3([[-1,0,0],[0,-1,0],[0,0,1]])
 
 def from_file(filespec, *, fast_distortion=True,
               return_all_planets=False, frame=None, navigation=False, **kwargs):
-    """A general, static method to return a Snapshot object based on a given
-    Cassini ISS image file.
+    """A Snapshot object based on a given Cassini ISS image file.
 
-    Inputs:
-        filespec            The full path to a Cassini ISS file or its PDS label.
-
-        fast_distortion     True to use a pre-inverted polynomial;
-                            False to use a dynamically solved polynomial;
-                            None to use a FlatFOV.
-
-        return_all_planets  Include kernels for all planets not just
-                            Jupiter or Saturn.
-
-        frame               An alternative Frame object to use for this
-                            Observation; default is to use the SPICE C kernel
-                            frame for Cassini.
-
-        navigation          True to wrap the frame inside a Navigation frame
-                            to make it Fittable.
+    Parameters:
+        filespec (str, Path, or FCPath): The full path to a Cassini ISS file or its PDS
+            label.
+        fast_distortion (bool or None, optional): True to use a pre-inverted polynomial;
+            False to use a dynamically solved polynomial; None to use a FlatFOV.
+        return_all_planets (bool, optional): Include kernels for all planets not just
+            Jupiter or Saturn.
+        frame (Frame, optional): An alternative Frame object to use for this Observation;
+            default is to use the SPICE C kernel frame for Cassini.
+        navigation (bool, optional): True to wrap the frame inside a Navigation frame to
+            make it Fittable.
     """
 
     ISS.initialize()    # Define everything the first time through; use defaults
@@ -135,18 +129,15 @@ def from_index(filespec, fast_distortion=True, return_all_planets=False,
                navigation=False, **kwargs):
     """A static method to return a list of Snapshot objects.
 
-    Inputs:
-        filespec            The full path to a Cassini ISS file or its PDS label.
-
-        fast_distortion     True to use a pre-inverted polynomial;
-                            False to use a dynamically solved polynomial;
-                            None to use a FlatFOV.
-
-        return_all_planets  Include kernels for all planets not just
-                            Jupiter or Saturn.
-
-        navigation          True to wrap the frame inside a Navigation frame
-                            to make it Fittable.
+    Parameters:
+        filespec (str, Path, or FCPath): The full path to a Cassini ISS file or its PDS
+            label.
+        fast_distortion (bool or None, optional): True to use a pre-inverted polynomial;
+            False to use a dynamically solved polynomial; None to use a FlatFOV.
+        return_all_planets (bool, optional): Include kernels for all planets not just
+            Jupiter or Saturn.
+        navigation (bool, optional): True to wrap the frame inside a Navigation frame to
+            make it Fittable.
     """
     ISS.initialize()    # Define everything the first time through
     ISS.define_camera_frames()          # use the SPICE-derived pointing

@@ -7,9 +7,11 @@ from oops.cadence import Cadence
 
 
 class TDICadence(Cadence):
-    """A Cadence subclass defining the integration intervals of lines in a TDI ("Time
-    Delay and Integration") camera. The tstep index matches the line index in the TDI
-    detector.
+    """A cadence for the lines of a TDI camera.
+
+    A subclass of :class:`~oops.Cadence` defining the integration intervals of lines in a
+    TDI ("Time Delay and Integration") camera. The tstep index matches the line index in
+    the TDI detector.
     """
 
     def __init__(self, lines, tstart, tdi_texp, tdi_stages, tdi_sign=-1):

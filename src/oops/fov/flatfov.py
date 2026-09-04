@@ -9,8 +9,10 @@ from oops.fov import FOV
 
 
 class FlatFOV(FOV):
-    """FOV subclass that describes a field of view that is free of distortion,
-    implementing an exact pinhole ("gnomonic") camera model.
+    """A field of view free of distortion.
+
+    A subclass of :class:`~oops.FOV` implementing an exact pinhole ("gnomonic") camera
+    model.
     """
 
     def __init__(self, uv_scale, uv_shape, *, uv_los=None, uv_area=None):
@@ -66,8 +68,7 @@ class FlatFOV(FOV):
         self.freeze()
 
     def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The `(x,y)` camera frame coordinates given the FOV coordinates `(u,v)` at the
-        specified time.
+        """The camera coordinates `(x,y)` at FOV coordinates `(u,v)` and a given time.
 
         Parameters:
             uv_pair (Pair): `(u,v)` coordinates in this FOV.

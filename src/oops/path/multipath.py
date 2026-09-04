@@ -59,8 +59,7 @@ class MultiPath(Path):
             self._paths[k] = path.wrt(self._origin, self._frame)
 
     def __getitem__(self, i):
-        """Support for indexing, returning the selected Path if `i` is an integer, or a
-        new MultiPath if `i` is a numeric range."""
+        """The Path or MultiPath selected by an index or a numeric range."""
         paths = self._paths[i]
         if np.shape(paths) == ():
             return paths
@@ -145,10 +144,10 @@ class MultiPath(Path):
     def quick_path(self, time, *, quick=None):
         """A MultiPath of the QuickPaths that approximate this MultiPath's Paths.
 
-        A QuickPath operates by sampling the given Path and then setting up an
-        interpolation grid to evaluate in its place. It can substantially speed up
-        performance when the same Path must be evaluated many times, e.g., for every pixel
-        of an image.
+        A :class:`~oops.path.QuickPath` operates by sampling the given Path and then
+        setting up an interpolation grid to evaluate in its place. It can substantially
+        speed up performance when the same Path must be evaluated many times, e.g., for
+        every pixel of an image.
 
         Parameters:
             time (Scalar): The time(s) at which this path is to be evaluated.

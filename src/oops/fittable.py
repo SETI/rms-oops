@@ -13,62 +13,63 @@ class Fittable(Oops):
     """The Fittable interface enables any class to be used within a fitting procedure.
 
     Most OOPS objects are static, but objects that subclass Fittable can be modified
-    in-place via a call to the method `set_params`. This is primarily used when fitting
-    unknown values such as pointing corrections, time shifts, plate scales, or orbital
-    elements.
+    in-place via a call to the method :meth:`~oops.Fittable.set_params`. This is primarily
+    used when fitting unknown values such as pointing corrections, time shifts, plate
+    scales, or orbital elements.
 
     The following methods are defined for all Fittable objects:
 
-    * `set_params`: Updates the parameter values for this object and refreshes it.
-    * `refresh`: Makes sure this object is internally consistent.
-    * `freeze`: Freeze this object, preventing any further changes to it or any of its
-      sub-objects.
+    * :meth:`~oops.Fittable.set_params`: Updates the parameter values for this object and
+      refreshes it.
+    * :meth:`~oops.Fittable.refresh`: Makes sure this object is internally consistent.
+    * :meth:`~oops.Fittable.freeze`: Freeze this object, preventing any further changes to
+      it or any of its sub-objects.
 
     The following properties are always defined:
 
     * `params`: The current tuple of parameter values.
     * `nparams`: The number of required parameters.
-    * `is_frozen`: True if this object (including all of its sub-objects) has been frozen.
-    * `version`: An integer that starts at zero and increases whenever this object or one
-      of its sub-objects changes.
+    * :attr:`~oops.Fittable.is_frozen`: True if this object, including all of its
+      sub-objects, has been frozen.
+    * :attr:`~oops.Fittable.version`: An integer that starts at zero and increases
+      whenever this object or one of its sub-objects changes.
 
-    Programming Notes
-    -----------------
+    Notes:
+        Many OOPS objects are not themselves Fittable, but may have a sub-object (or
+        sub-sub-object, etc.) that is Fittable. Such objects are described as "mutable"
+        and are addressed using the `mutable` API.
 
-    Note that many OOPS objects are not themselves Fittable, but may have a sub-object (or
-    sub-sub-object, etc.) that is Fittable. Such objects are described as "mutable" and
-    are addressed using the `mutable` API.
+        Information about the Fittable state of all objects is maintained by a set of
+        added attributes, which are all prefixed "_FITTABLE" or "_MUTABLE". These
+        attributes are managed internally and should not be touched by the programmer.
 
-    Information about the Fittable state of all objects is maintained by a set of added
-    attributes, which are all prefixed "_FITTABLE" or "_MUTABLE". These attributes are
-    managed internally and should not be touched by the programmer.
+        The programmer must define these as attributes or properties of a Fittable
+        object:
 
-    The programmer must define these as attributes or properties of a Fittable object:
+        * `params`: The current tuple of parameter values.
+        * `nparams`: The number of required parameters.
 
-    * params: The current tuple of parameter values.
-    * nparams: The number of required parameters.
+        This method must also be defined::
 
-    This method must also be defined::
+            _set_params(self, params)
 
-        _set_params(self, params)
+        where `params` is a scalar, tuple, list, or array of one or more floating-point
+        values that are used to update the object. The function
+        :meth:`~oops.Fittable.set_params` of the public API uses this function.
 
-    where `params` is a scalar, tuple, list, or array of one or more floating-point values
-    that are used to update the object. The function `set_params` of the public API uses
-    this function.
+        If the Fittable object maintains cached information internally, it must also have
+        this method::
 
-    If the Fittable object maintains cached information internally, it must also have this
-    method::
+            _refresh(self)
 
-        _refresh(self)
+        which updates any internal attributes based on the currently defined parameters
+        (along with the current values of any internal sub-objects that might also be
+        Fittable or mutable). In addition, the method::
 
-    which updates any internal attributes based on the currently defined parameters (along
-    with the current values of any internal sub-objects that might also be Fittable or
-    mutable). In addition, the method::
+            _freeze(self)
 
-        _freeze(self)
-
-    can be used to carry out any special actions that must take place if the object is
-    frozen.
+        can be used to carry out any special actions that must take place if the object
+        is frozen.
     """
 
     @property
@@ -96,7 +97,7 @@ class Fittable(Oops):
             params: Parameter value or values to be applied to this object.
 
         Returns:
-            True if this object has changed as a result of this function call.
+            bool: True if this object has changed as a result of this function call.
 
         Raises:
             ValueError: If the number of parameters is incorrect or the object is frozen.
@@ -139,7 +140,7 @@ class Fittable(Oops):
         not changed and the function returns False.
 
         Returns:
-            True if this object was modified as a result of this call.
+            bool: True if this object was modified as a result of this call.
         """
 
         return Fittable._MUTABLE.refresh(self)
@@ -149,9 +150,9 @@ class Fittable(Oops):
 
         The copy begins with the same parameter values as this object, but the two can be
         fitted separately; changing one has no effect on the other. Any object to which
-        this one applies, such as the reference frame of a Navigation or the FOV of a
-        Platescale, is shared with the copy rather than duplicated. The copy is not
-        registered under an ID.
+        this one applies, such as the reference frame of a :class:`~oops.frame.Navigation`
+        or the FOV of a :class:`~oops.fov.Platescale`, is shared with the copy rather than
+        duplicated. The copy is not registered under an ID.
 
         This implementation reconstructs the object from the constructor arguments
         returned by `__getstate__`, dropping the trailing ID of a registered Frame or
@@ -177,7 +178,7 @@ class Fittable(Oops):
         A frozen object can no longer be modified.
 
         Returns:
-            True if this object was frozen as a result of this call; False if it was
+            bool: True if this object was frozen as a result of this call; False if it was
             already frozen or immutable.
         """
 

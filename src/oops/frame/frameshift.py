@@ -74,8 +74,7 @@ class FrameShift(Frame, Fittable):
         return self._link
 
     def _source(self):
-        """The original source of the time shift if this object is linked to another;
-        otherwise, self.
+        """The original source of the time shift, or self if there is none.
         """
         return self._link and self._link._source() or self
 

@@ -7,10 +7,10 @@ from oops.fov import FOV
 
 
 class SliceFOV(FOV):
-    """A subclass of FOV in which only a slice of another FOV's (u,v) array is used, but
-    the geometry is unchanged.
+    """A field of view using only a slice of another FOV's `(u,v)` array.
 
-    This differs from a Subarray in that the optic axis is not modified.
+    The geometry of the underlying FOV is unchanged. This differs from a
+    :class:`~oops.fov.Subarray` in that the optic axis is not modified.
     """
 
     def __init__(self, fov, origin, shape):
@@ -41,8 +41,7 @@ class SliceFOV(FOV):
         self.freeze()
 
     def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The `(x,y)` camera frame coordinates given the FOV coordinates `(u,v)` at the
-        specified time.
+        """The camera coordinates `(x,y)` at FOV coordinates `(u,v)` and a given time.
 
         Parameters:
             uv_pair (Pair): `(u,v)` coordinates in this FOV.
@@ -63,8 +62,7 @@ class SliceFOV(FOV):
                                     derivs=derivs, remask=remask, **kwargs)
 
     def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The `(u,v)` FOV coordinates given the `(x,y)` camera frame coordinates at the
-        specified time.
+        """The FOV coordinates `(u,v)` at camera coordinates `(x,y)` and a given time.
 
         Parameters:
             xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.

@@ -1,6 +1,27 @@
 ##########################################################################################
 # oops/__init__.py
 ##########################################################################################
+"""An observation-geometry library for planetary science.
+
+`oops` models instruments, spacecraft trajectories, and target bodies, and computes
+per-pixel geometry ("backplanes") for real observations. It is built on SPICE, through
+`cspyce`, and on the `polymath` array types.
+
+The library is organized around a handful of abstract classes, each with a subpackage of
+concrete implementations: :class:`~oops.Path` for the motion of a point in space,
+:class:`~oops.Frame` for the orientation of a coordinate frame, :class:`~oops.Surface` for
+a 2-D body surface, :class:`~oops.FOV` for the geometry of a field of view,
+:class:`~oops.Cadence` for the timing of an observation, :class:`~oops.Calibration` for
+the relationship between data numbers and physical units, :class:`~oops.Gravity` for the
+gravity field of a planet, and :class:`~oops.Observation` for an instrument's data array.
+:class:`~oops.Body` ties a target to its path, frame, surface and gravity;
+:class:`~oops.Event` describes a photon arriving at or departing from a point in
+spacetime; and :class:`~oops.Backplane` computes the geometry of every pixel of an
+Observation.
+
+Geometric values are `polymath` objects, not NumPy arrays, and all quantities are in km,
+seconds TDB, and radians.
+"""
 
 import cspyce
 import cspyce.aliases

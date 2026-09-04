@@ -22,8 +22,8 @@ def photon_to_event(self, arrival, *, derivs=False, guess=None, antimask=None, q
         guess (Scalar, array-like, or float, optional): An initial guess to use as the
             event time along this Path; otherwise None. Should be provided if the event
             time was already returned from a similar calculation.
-        antimask (ndarray or bool, optional): A boolean array to be applied to event times
-            and positions. Only the indices where antimask=True will be used in the
+        antimask (numpy.ndarray or bool, optional): A boolean array to be applied to event
+            times and positions. Only the indices where antimask=True will be used in the
             solution.
         quick (dict or bool, optional): A dictionary of parameter values to use as
             overrides to the configured default QuickPath and QuickFrame parameters. Use
@@ -77,8 +77,8 @@ def photon_from_event(self, departure, *, derivs=False, guess=None, antimask=Non
         guess (Scalar, array-like, or float, optional): An initial guess to use as the
             event time along this Path; otherwise None. Should be provided if the event
             time was already returned from a similar calculation.
-        antimask (ndarray or bool, optional): A boolean array to be applied to event times
-            and positions. Only the indices where antimask=True will be used in the
+        antimask (numpy.ndarray or bool, optional): A boolean array to be applied to event
+            times and positions. Only the indices where antimask=True will be used in the
             solution.
         quick (dict or bool, optional): A dictionary of parameter values to use as
             overrides to the configured default QuickPath and QuickFrame parameters. Use
@@ -134,8 +134,8 @@ def _solve_photon(self, link, sign, *, derivs=False, guess=None, antimask=None,
         guess (Scalar, array-like, or float, optional): An initial guess to use as the
             event time along this Path; otherwise None. Should be provided if the event
             time was already returned from a similar calculation.
-        antimask (ndarray or bool, optional): A boolean array to be applied to event times
-            and positions. Only the indices where antimask=True will be used in the
+        antimask (numpy.ndarray or bool, optional): A boolean array to be applied to event
+            times and positions. Only the indices where antimask=True will be used in the
             solution.
         quick (dict or bool, optional): A dictionary of parameter values to use as
             overrides to the configured default QuickPath and QuickFrame parameters. Use

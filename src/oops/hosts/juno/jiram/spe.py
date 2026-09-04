@@ -19,19 +19,15 @@ from filecache import FCPath
 ####       other host modules.
 def from_file(filespec, label, fast_distortion=True,
                                return_all_planets=False, **parameters):
-    """A general, static method to return a Snapshot object based on a given
-    JIRAM image or spectrum file.
+    """A Snapshot object based on a given JIRAM image or spectrum file.
 
-    Inputs:
-        filespec            The full path to a Juno JIRAM spectral file or its
-                            PDS label.
-
-        fast_distortion     True to use a pre-inverted polynomial;
-                            False to use a dynamically solved polynomial;
-                            None to use a FlatFOV.
-
-        return_all_planets  Include kernels for all planets not just
-                            Jupiter or Saturn.
+    Parameters:
+        filespec (str, Path, or FCPath): The full path to a Juno JIRAM spectral file or
+            its PDS label.
+        fast_distortion (bool or None, optional): True to use a pre-inverted polynomial;
+            False to use a dynamically solved polynomial; None to use a FlatFOV.
+        return_all_planets (bool, optional): Include kernels for all planets not just
+            Jupiter or Saturn.
     """
 
     filespec = FCPath(filespec)
@@ -82,10 +78,8 @@ def _load_data(filespec, label, meta):
         meta (object): Image Metadata object.
 
     Returns:
-        (spectra), where:
-
-        * `spectra` (array-like): A Numpy array containing the individual spectra in
-          wavelength order (spectrum #, sample).
+        numpy.ndarray: The individual spectra in wavelength order, with axes
+        (spectrum #, sample).
     """
 
     # Read data
@@ -105,9 +99,13 @@ class _Metadata(object):
             label (dict): The label dictionary.
 
         Attributes:
-            nlines          A Numpy array containing the data in axis order (line,
-            sample). nsamples        The time sampling array in (line, sample) axis order,
-            or None if no time backplane is found in the file.
+            nlines (int): Number of rows in the spectral table.
+            nsamples (int): Number of columns in the spectral table.
+            exposure (float): Exposure duration in seconds.
+            tstart (float): Observation start time in seconds TDB.
+            tstop (float): Observation stop time in seconds TDB.
+            target (str): Target name.
+            fov (FOV): The field of view of one slit.
         """
 
         # dimensions

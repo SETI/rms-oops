@@ -1,6 +1,7 @@
 ##########################################################################################
 # oops/calibration/__init__.py
 ##########################################################################################
+"""Calibration classes, which relate data numbers to physical quantities."""
 
 from oops.calibration.calibration_ import Calibration
 from oops.calibration.flatcalib    import FlatCalib

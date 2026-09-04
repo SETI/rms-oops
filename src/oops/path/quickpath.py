@@ -14,8 +14,7 @@ from oops.path.path_ import Path
 
 
 class QuickPath(Path):
-    """A Path subclass that returns positions and velocities by interpolating another
-    Path.
+    """A Path that interpolates the positions and velocities of another Path.
     """
 
     def __init__(self, path, tmin, tmax, quickdict):
@@ -93,8 +92,7 @@ class QuickPath(Path):
         self._spline_setup()
 
     def _spline_setup(self):
-        """Set up the internal tabulation to be interpolated, based on `_times` and
-        `_events`.
+        """Set up the internal tabulation to be interpolated.
         """
 
         KIND = 3

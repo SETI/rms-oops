@@ -12,22 +12,26 @@ from oops.transform import Transform
 
 
 class Frame(Mutable):
-    """A Frame is an abstract class that can return a Transform (rotation matrix and
-    optional spin vector) given a time or Scalar of times. This Transform converts from a
+    """An abstract class returning the orientation of a coordinate frame in space.
+
+    A Frame returns a :class:`~oops.Transform`, comprising a rotation matrix and an
+    optional spin vector, given a time or Scalar of times. This Transform converts from a
     specified "reference" frame to this frame's coordinates. The methods
-    `transform_at_time` and `transform_at_time_if_possible` generate these Transforms.
+    :meth:`~oops.Frame.transform_at_time` and
+    :meth:`~oops.Frame.transform_at_time_if_possible` generate these Transforms.
 
     Upon construction, each Frame has a "primary definition" relative to its specified,
-    pre-existing reference Frame. For example, a `SpinFrame` describes how to transform
-    from its reference Frame to a new Frame that is spinning at a fixed rate relative to
-    the specified origin. You might use a SpinFrame to define the rotation of a planet
-    relative to that planet's center.
+    pre-existing reference Frame. For example, a :class:`~oops.frame.SpinFrame` describes
+    how to transform from its reference Frame to a new Frame that is spinning at a fixed
+    rate relative to the specified origin. You might use a SpinFrame to define the
+    rotation of a planet relative to that planet's center.
 
     Once a Frame is defined, you can calculate Transforms from any other Frame to this
-    one. The method `wrt` (for "with respect to") lets you specify any reference Frame
-    and it returns a new Frame object whose `transform_at_time` method will return this
-    alternative Transform. Internally, OOPS determines the sequence of steps that are
-    required to connect any Frame to any other Frame.
+    one. The method :meth:`~oops.Frame.wrt` (for "with respect to") lets you specify any
+    reference Frame and it returns a new Frame object whose
+    :meth:`~oops.Frame.transform_at_time` method will return this alternative Transform.
+    Internally, OOPS determines the sequence of steps that are required to connect any
+    Frame to any other Frame.
 
     For example, suppose `enceladus_iau` is a SpinFrame defining the rotation of Enceladus
     relative to its center. In addition, suppose `cassini_wac` is a Frame defining the
@@ -39,11 +43,11 @@ class Frame(Mutable):
     of Enceladus, and relative to the center of Enceladus, to a new vector defining a line
     of sight in the Cassini camera's field of view.
 
-    Every Frame also has a `wayframe` property, which provides a unique identifier for
-    that Frame without regard to its reference or definition. In the example above,
-    `wac_wrt_enceladus` and `cassini_wac` will have the same `wayframe`, meaning that they
-    transform to the same Frame. The wayframe can be used in almost any place where the
-    Frame itself can be used, so this would also have worked::
+    Every Frame also has a :attr:`~oops.Frame.wayframe` property, which provides a unique
+    identifier for that Frame without regard to its reference or definition. In the
+    example above, `wac_wrt_enceladus` and `cassini_wac` will have the same `wayframe`,
+    meaning that they transform to the same Frame. The wayframe can be used in almost any
+    place where the Frame itself can be used, so this would also have worked::
 
         wac_wrt_enceladus = cassini_wac.wayframe.wrt(enceladus_iau.wayframe)
 
@@ -55,11 +59,11 @@ class Frame(Mutable):
     using the `is` operator.
 
     Optionally, a Frame can be registered under a Frame ID, which is a string that can be
-    used globally to refer to that Frame. You can use the `as_frame` method to convert a
-    Frame ID to a Frame. In most situations, a Frame ID can be used in place of a Frame.
-    For example, if `enceladus_iau` is registered under the name "ENCELADUS" and
-    `cassini_wac` is registered under the name "WAC", then these expressions would also
-    work::
+    used globally to refer to that Frame. You can use the :meth:`~oops.Frame.as_frame`
+    method to convert a Frame ID to a Frame. In most situations, a Frame ID can be used in
+    place of a Frame. For example, if `enceladus_iau` is registered under the name
+    "ENCELADUS" and `cassini_wac` is registered under the name "WAC", then these
+    expressions would also work::
 
         wac_wrt_enceladus = cassini_wac.wrt('ENCELADUS')
         wac_wrt_enceladus = Frame.as_frame('WAC').wrt('ENCELADUS')
@@ -74,8 +78,8 @@ class Frame(Mutable):
         frame_id (str or None): The optional ID string for this Frame. Once registered, a
             Frame can be referenced globally by its Frame ID.
         reference (Frame): The Frame from which this Frame transforms. The
-            `transform_at_time` method will always return a Transform that converts from
-            the reference Frame to this Frame.
+            :meth:`~oops.Frame.transform_at_time` method will always return a Transform
+            that converts from the reference Frame to this Frame.
         primary (Frame): The primary definition of this Frame.
         wayframe (Frame): A Frame object that uniquely identifies this frame, irrespective
             of any particular reference. Under most circumstances, this is the Frame's
@@ -83,8 +87,8 @@ class Frame(Mutable):
         origin (Path or None): A Path object that uniquely identifies the origin relative
             to which this Frame is defined. For inertial Frames, this can be None.
         shape (tuple): The shape of the Frame object. This is the shape of the Transform
-            object returned by `transform_at_time` when it is called with a single time
-            value.
+            object returned by :meth:`~oops.Frame.transform_at_time` when it is called
+            with a single time value.
     """
 
     _Event = None               # Filled in by oops/__init__.py
@@ -112,8 +116,7 @@ class Frame(Mutable):
 
     @property
     def pickle_quickframe_details(self):
-        """True if the full tabulation of all QuickFrames is to be included when pickling
-        this Frame.
+        """True if all QuickFrame tabulations are included when pickling this Frame.
         """
         if not hasattr(self, '_pickle_quickframe_details'):
             return PICKLE_CONFIG.quickframe_details
@@ -121,8 +124,7 @@ class Frame(Mutable):
 
     @pickle_quickframe_details.setter
     def pickle_quickframe_details(self, value):
-        """Set to True to include the internal tabulations of all QuickFrames when
-        pickling this Frame.
+        """Set to True to include all QuickFrame tabulations when pickling this Frame.
         """
         self._pickle_quickframe_details = bool(value)
 
@@ -167,16 +169,17 @@ class Frame(Mutable):
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
-        Unlike method `transform_at_time`, this variant tolerates times that raise cspyce
-        errors. If `time` is 1-D, this method returns a new time Scalar along with the new
-        Transform, where both objects skip over the times at which the transform could not
-        be evaluated. If `time` has more than one dimension, the cspyce error is still
-        raised.
+        Unlike :meth:`~oops.Frame.transform_at_time`, this variant tolerates times that
+        raise cspyce errors. If `time` is 1-D, this method returns a new time Scalar along
+        with the new Transform, where both objects skip over the times at which the
+        transform could not be evaluated. If `time` has more than one dimension, the
+        cspyce error is still raised.
 
         The default behavior is to assume that all times are valid. As a result, this
-        method calls `transform_at_time` and also returns the given time Scalar. This
-        behavior is overridden by SpiceFrame, where occasional short gaps in a C-kernel
-        can be tolerated as long as a QuickFrame can interpolate across them.
+        method calls :meth:`~oops.Frame.transform_at_time` and also returns the given time
+        Scalar. This behavior is overridden by :class:`~oops.frame.SpiceFrame`, where
+        occasional short gaps in a C-kernel can be tolerated as long as a
+        :class:`~oops.frame.QuickFrame` can interpolate across them.
 
         Parameters:
             time (Scalar): The time in seconds TDB.
@@ -198,8 +201,10 @@ class Frame(Mutable):
         return (time, self.transform_at_time(time, quick=quick))
 
     def node_at_time(self, time, *, quick=None):
-        """Angle from the reference Frame's X-axis, along its X-Y plane, to the ascending
-        node of this Frame's X-Y plane.
+        """The angle from the reference Frame's X-axis to this Frame's ascending node.
+
+        The angle is measured within the X-Y plane of the reference frame, to the
+        ascending node of this Frame's X-Y plane.
 
         Values always fall between 0 and 2*pi.
 
@@ -305,8 +310,7 @@ class Frame(Mutable):
 
     @property
     def stripped_id(self):
-        """The frame ID of this object with any numeric suffix stripped; None if there is
-        no ID.
+        """The frame ID with any numeric suffix stripped; None if there is no ID.
         """
         if not self._frame_id:
             return None
@@ -317,8 +321,7 @@ class Frame(Mutable):
 
     @property
     def string_id(self):
-        """The ID of this Frame if it is registered; otherwise, a unique string derived
-        from its Python id().
+        """The ID of this Frame if registered, or a string from its Python `id()`.
         """
         return self._frame_id if self._frame_id else f'#{id(self)}'
 
@@ -594,9 +597,9 @@ class Frame(Mutable):
     def _get_shortcut(self, reference):
         """A Frame that directly transforms from the given reference to this Frame.
 
-        For most Frame subclasses, this returns None. SpiceFrame overrides this method
-        because the SPICE toolkit can directly link any SpiceFrame to any other
-        SpiceFrame, with no intermediate steps required.
+        For most Frame subclasses, this returns None. :class:`~oops.frame.SpiceFrame`
+        overrides this method because the SPICE toolkit can directly link any SpiceFrame
+        to any other SpiceFrame, with no intermediate steps required.
 
         Parameters:
             reference (Frame): The reference Frame, which must be a valid wayframe.
@@ -747,6 +750,8 @@ class J2000Frame(NullFrame):
         return J2000Frame._J2000
 
     def __init__(self):
+        """Constructor for the J2000 Frame, which is always the singleton."""
+
         pass
 
     def __reduce__(self):
@@ -763,6 +768,8 @@ class J2000Frame(NullFrame):
 
     @property
     def string_id(self):
+        """The ID of this Frame, always "J2000"."""
+
         return 'J2000'
 
     def _get_shortcut(self, reference):
@@ -872,11 +879,11 @@ class LinkedFrame(Frame):
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
-        Unlike method `transform_at_time`, this variant tolerates times that raise cspyce
-        errors. If `time` is 1-D, this method returns a new time Scalar along with the new
-        Transform, where both objects skip over the times at which the transform could not
-        be evaluated. If `time` has more than one dimension, the cspyce error is still
-        raised.
+        Unlike :meth:`~oops.Frame.transform_at_time`, this variant tolerates times that
+        raise cspyce errors. If `time` is 1-D, this method returns a new time Scalar along
+        with the new Transform, where both objects skip over the times at which the
+        transform could not be evaluated. If `time` has more than one dimension, the
+        cspyce error is still raised.
 
         Parameters:
             time (Scalar): The time in seconds TDB.
@@ -964,11 +971,11 @@ class ReversedFrame(Frame):
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
-        Unlike method `transform_at_time`, this variant tolerates times that raise cspyce
-        errors. If `time` is 1-D, this method returns a new time Scalar along with the new
-        Transform, where both objects skip over the times at which the transform could not
-        be evaluated. If `time` has more than one dimension, the cspyce error is still
-        raised.
+        Unlike :meth:`~oops.Frame.transform_at_time`, this variant tolerates times that
+        raise cspyce errors. If `time` is 1-D, this method returns a new time Scalar along
+        with the new Transform, where both objects skip over the times at which the
+        transform could not be evaluated. If `time` has more than one dimension, the
+        cspyce error is still raised.
 
         Parameters:
             time (Scalar): The time in seconds TDB.

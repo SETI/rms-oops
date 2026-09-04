@@ -1,6 +1,7 @@
 ##########################################################################################
 # oops/fov/__init__.py
 ##########################################################################################
+"""FOV classes, which define the geometry of a field of view."""
 
 from oops.fov.fov_          import FOV
 from oops.fov.barrelfov     import BarrelFOV

@@ -1,6 +1,7 @@
 ##########################################################################################
 # oops/path/__init__.py
 ##########################################################################################
+"""Path classes, which define the motion of a point in space."""
 
 from oops.path.path_           import (Path, NullPath, SSBPath, LinkedPath,
                                        RelativePath, ReversedPath, RotatedPath)

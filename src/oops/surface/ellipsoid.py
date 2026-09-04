@@ -34,9 +34,10 @@ _EXCLUSION_FACTOR = 0.5     # This is `g` in the above discussion
 
 
 class Ellipsoid(Surface):
-    """An ellipsoidal surface centered on the given path and fixed with respect to the
-    given frame. The short radius of the ellipsoid is oriented along the Z-axis of the
-    frame and the long radius is along the X-axis.
+    """An ellipsoidal surface centered on a path and fixed within a frame.
+
+    The short radius of the ellipsoid is oriented along the Z-axis of the frame and the
+    long radius is along the X-axis.
 
     The coordinates defining the surface grid are `(longitude, latitude)`. Both are based
     on the assumption that a spherical body has been "squashed" along the Y- and Z-axes.
@@ -114,7 +115,7 @@ class Ellipsoid(Surface):
         """The three radii of the ellipsoid in km, from longest to shortest.
 
         Returns:
-            ndarray: The (a, b, c) radii, in km.
+            numpy.ndarray: The (a, b, c) radii, in km.
         """
 
         return self._radii
@@ -212,8 +213,7 @@ class Ellipsoid(Surface):
 
     def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
                             hints=None, groundtrack=False):
-        """The position where a point with the given coordinates falls relative to this
-        surface's origin and frame.
+        """The position at the given surface coordinates.
 
         Parameters:
             coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at
@@ -653,8 +653,7 @@ class Ellipsoid(Surface):
         return results
 
     def _apply_exclusion(self, pos):
-        """The given positions, with those too close to the center of the Surface
-        excluded.
+        """The given positions, with those too close to the center excluded.
 
         Used by `intercept_normal_to`, where the math is poorly behaved close to the
         center. Positions inside the exclusion zone are masked, and their magnitudes are

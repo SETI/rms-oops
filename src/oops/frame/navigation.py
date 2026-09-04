@@ -11,8 +11,9 @@ from oops.transform import Transform
 
 
 class Navigation(Frame, Fittable):
-    """A Frame subclass describing a fittable, fixed offset from another frame, defined by
-    two or three rotation angles.
+    """A fittable, fixed rotational offset from another frame.
+
+    The offset is defined by two or three rotation angles.
     """
 
     _WAYFRAMES = {}
@@ -91,8 +92,7 @@ class Navigation(Frame, Fittable):
         return self._link
 
     def _source(self):
-        """The original source of the rotation angles if this object is linked to another;
-        otherwise, self.
+        """The original source of the rotation angles, or self if there is none.
         """
         return self._link._source() if self._link else self
 

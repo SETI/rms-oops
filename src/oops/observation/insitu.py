@@ -12,8 +12,10 @@ from oops.path            import Path
 
 
 class InSitu(Observation):
-    """A subclass of Observation that has timing and path information, but no attributes
-    related to pointing or incoming photon direction.
+    """An Observation with timing and path information but no pointing.
+
+    A subclass of :class:`~oops.Observation` with no attributes related to pointing or to
+    the direction of an incoming photon.
 
     It can be useful for describing in situ measurements. InSitu observations can also be
     used to evaluate gridless backplanes, which do not require directional information.

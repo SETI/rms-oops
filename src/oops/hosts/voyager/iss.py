@@ -19,8 +19,7 @@ from filecache import FCPath
 ##########################################################################################
 def from_file(filespec, astrometry=False, action='error', method='strict',
               parameters=None):
-    """A general, static method to return a Snapshot object based on a given Voyager ISS
-    image file or its label.
+    """A Snapshot object based on a given Voyager ISS image file or its label.
 
     Parameters:
         filespec (str or FCPath): Name of the image file or its PDS3 label.
@@ -198,8 +197,9 @@ def from_file(filespec, astrometry=False, action='error', method='strict',
 
 def from_index(filespec, geomed=False, action='ignore', omit=True,
                parameters={}):
-    """A static method to return a list of Snapshot objects, one for each row in an ISS
-    index file. The filespec refers to the label of the index file.
+    """A list of Snapshot objects, one for each row in an ISS index file.
+
+    The filespec refers to the label of the index file.
 
     Parameters:
         filespec (str or FCPath): Name of the index file or its PDS3 label.

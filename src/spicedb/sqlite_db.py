@@ -36,7 +36,7 @@ def query(sql_string):
         sql_string (str): A string containing the complete SQL query.
 
     Returns:
-        (tuple): A tuple, where:
+        tuple: A tuple, where:
 
         * `table` (list): A list of lists containing the rows and columns of results
           returned by the query.

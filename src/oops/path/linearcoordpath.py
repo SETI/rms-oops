@@ -8,8 +8,7 @@ from oops.path.path_ import Path
 
 
 class LinearCoordPath(Path):
-    """A Path subclass defined by coordinates changing linearly on a specified
-    Surface.
+    """A Path whose coordinates change linearly on a specified Surface.
     """
 
     _WAYPOINTS = {}

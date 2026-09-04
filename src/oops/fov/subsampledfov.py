@@ -41,8 +41,7 @@ class SubsampledFOV(FOV):
         self.freeze()
 
     def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The `(x,y)` camera frame coordinates given the FOV coordinates `(u,v)` at the
-        specified time.
+        """The camera coordinates `(x,y)` at FOV coordinates `(u,v)` and a given time.
 
         Parameters:
             uv_pair (Pair): `(u,v)` coordinates in this FOV.
@@ -65,8 +64,7 @@ class SubsampledFOV(FOV):
                                     **kwargs)
 
     def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The `(u,v)` FOV coordinates given the `(x,y)` camera frame coordinates at the
-        specified time.
+        """The FOV coordinates `(u,v)` at camera coordinates `(x,y)` and a given time.
 
         Parameters:
             xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.

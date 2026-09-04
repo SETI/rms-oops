@@ -16,10 +16,10 @@ class LaplaceFrame(Frame):
     the orbit on the orbit's defined reference plane.
 
     As an example, use the Kepler Path of Triton, which is defined relative to Neptune's
-    PoleFrame, to construct tilted Laplace Planes for each of Neptune's inner satellites.
-    Note, however, that the tilt angles should be negative because Triton is retrograde,
-    and therefore its orbital ascending node is the descending node for the orbits of the
-    inner moons.
+    :class:`~oops.frame.PoleFrame`, to construct tilted Laplace Planes for each of
+    Neptune's inner satellites. Note, however, that the tilt angles should be negative
+    because Triton is retrograde, and therefore its orbital ascending node is the
+    descending node for the orbits of the inner moons.
     """
 
     _WAYFRAMES = {}

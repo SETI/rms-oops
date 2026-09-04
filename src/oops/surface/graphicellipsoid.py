@@ -9,8 +9,10 @@ from oops.surface.ellipsoid import Ellipsoid
 
 
 class GraphicEllipsoid(Ellipsoid):
-    """A variant of Ellipsoid in which latitudes and longitudes are planetographic,
-    meaning that their direction is defined by the local surface normal.
+    """An :class:`~oops.surface.Ellipsoid` using planetographic coordinates.
+
+    Planetographic coordinates are those whose direction is defined by the local surface
+    normal.
 
     Note that planetographic longitude differs from conventional (planetocentric)
     longitude for triaxial ellipsoids, and is an unconventional choice. Use method
@@ -86,8 +88,7 @@ class GraphicEllipsoid(Ellipsoid):
 
     def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
                             hints=None, groundtrack=False):
-        """The position where a point with the given coordinates falls relative to this
-        surface's origin and frame.
+        """The position at the given surface coordinates.
 
         Parameters:
             coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at

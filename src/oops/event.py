@@ -99,7 +99,7 @@ class Event(Oops):
             prop_name (str): Name of the property.
 
         Returns:
-            The property's value, evaluated as though it had been read directly.
+            Any: The property's value, evaluated as though it had been read directly.
         """
 
         return Event.__dict__[prop_name].fget(self)
@@ -357,8 +357,9 @@ class Event(Oops):
             self._ssb._shape = None
 
     def _refresh(self):
-        """Remove all internal information; needed for Events that involve Fittable
-        objects.
+        """Remove all internal information.
+
+        This is needed for Events that involve Fittable objects.
         """
 
         self._ssb = None
@@ -847,8 +848,7 @@ class Event(Oops):
     ######################################################################################
 
     def _apply_this_func(self, func, *args):
-        """A new event in which the given function has been applied to every
-        attribute.
+        """A new event with the given function applied to every attribute.
 
         Parameters:
             func (callable): Function to apply to each Qube attribute of this Event.
@@ -954,8 +954,9 @@ class Event(Oops):
         return result
 
     def without_derivs(self):
-        """A shallow copy of this Event without any derivatives except time. Unlike the
-        .wod property, this version does not cache the result.
+        """A shallow copy of this Event without any derivatives except time.
+
+        Unlike the `wod` property, this version does not cache the result.
         """
 
         def remove_derivs(arg):
@@ -1059,8 +1060,9 @@ class Event(Oops):
     ######################################################################################
 
     def with_time_derivs(self):
-        """A clone of this event containing unit time derivatives d_dt in the
-        frame of the event.
+        """A clone of this event containing unit time derivatives `d_dt`.
+
+        The derivatives are expressed in the frame of the event.
 
         Note that the time derivatives of the line of sight are always included
         automatically, based on the time-dependence of the transform to J2000.

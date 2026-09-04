@@ -16,8 +16,7 @@ from oops.path.multipath      import MultiPath
 
 
 class Snapshot(Observation):
-    """A Snapshot is an Observation consisting of a 2-D image made up of pixels all
-    exposed at the same time.
+    """An Observation consisting of a 2-D image exposed at a single time.
     """
 
     _INVENTORY_IMPLEMENTED = True
@@ -201,8 +200,7 @@ class Snapshot(Observation):
         return (Scalar(self.cadence.time[0]), Scalar(self.cadence.time[1]))
 
     def uv_range_at_time(self, time, *, remask=False):
-        """The `(u,v)` range of spatial pixels in the data array observed at the specified
-        time.
+        """The `(u,v)` range of spatial pixels observed at a specified time.
 
         Every pixel of a Snapshot is exposed at the same time, so this range always covers
         the whole FOV.
@@ -386,7 +384,8 @@ class Snapshot(Observation):
                 convergence parameters. The default configuration is defined in config.py.
 
         Returns:
-            (list, array, or dict).
+            list, numpy.ndarray, or dict: The inventory, in the form named by
+            `return_type`.
 
             * If return_type is "list", it returns a list of the names of all the body
               objects that fall at least partially inside the FOV and are not completely

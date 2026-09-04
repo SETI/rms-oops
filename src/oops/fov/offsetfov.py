@@ -8,8 +8,10 @@ from oops.fov      import FOV
 
 
 class OffsetFOV(FOV, Fittable):
-    """FOV subclass in which the line of sight has been shifted relative to another FOV.
-    This is typically used for image navigation and pointing corrections.
+    """A field of view whose line of sight is shifted relative to another.
+
+    A subclass of :class:`~oops.FOV` typically used for image navigation and pointing
+    corrections.
     """
 
     def __init__(self, fov, uv_offset=None, xy_offset=None):
@@ -97,8 +99,7 @@ class OffsetFOV(FOV, Fittable):
     ######################################################################################
 
     def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The `(x,y)` camera frame coordinates given the FOV coordinates `(u,v)` at the
-        specified time.
+        """The camera coordinates `(x,y)` at FOV coordinates `(u,v)` and a given time.
 
         Parameters:
             uv_pair (Pair): `(u,v)` coordinates in this FOV.
@@ -121,8 +122,7 @@ class OffsetFOV(FOV, Fittable):
         return old_xy - self.xy_offset
 
     def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The `(u,v)` FOV coordinates given the `(x,y)` camera frame coordinates at the
-        specified time.
+        """The FOV coordinates `(u,v)` at camera coordinates `(x,y)` and a given time.
 
         Parameters:
             xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.

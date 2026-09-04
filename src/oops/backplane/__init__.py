@@ -19,9 +19,10 @@ __all__ = ['Backplane']
 
 
 class Backplane(Mutable):
-    """Class that supports the generation and manipulation of sets of backplanes with a
-    particular Observation.
+    """A generator of backplane arrays for a particular Observation.
 
+    A backplane is an array of geometry values, one per pixel of an
+    :class:`~oops.Observation`: a distance, an angle, a surface coordinate, and so on.
     Intermediate results are cached to speed up calculations.
     """
 
@@ -75,10 +76,11 @@ class Backplane(Mutable):
             `event_key`, in which case "SUN<" is assumed as the source.
 
             In dispersed illumination, each backplane has spatial dimensions that are
-            defined by the Meshgrid. Photons leave the source in all directions, and some
-            of those that intercept the surface are reflected toward the detector. The
-            detector selects the photons it receives based on its lines of sight. The
-            event is defined as the moment the photons hit the surface and are reflected.
+            defined by the :class:`~oops.Meshgrid`. Photons leave the source in all
+            directions, and some of those that intercept the surface are reflected toward
+            the detector. The detector selects the photons it receives based on its lines
+            of sight. The event is defined as the moment the photons hit the surface and
+            are reflected.
 
             In occultation illumination, backplanes have no spatial dimensions. Photons
             leave the source along a direct line of sight to the detector, and the event
@@ -89,7 +91,7 @@ class Backplane(Mutable):
             spatial dimensions, but can be used to answer such questions as "what is the
             sub-solar latitude on Saturn?" or "where is Enceladus in this image?"
 
-            Examples:
+            For example:
 
                 * `('SUN<', 'SATURN:RING')` could describe a 2-D image of Saturn's rings.
                 * `('SUN>', 'SATURN:RING')` could describe a solar occultation profile of
@@ -253,8 +255,9 @@ class Backplane(Mutable):
 
     @property
     def dlos_duv(self):
-        """The derivative of the line of sight with respect to (u,v), evaluated at each
-        pixel of the meshgrid and cached on first use.
+        """The derivative of the line of sight with respect to `(u,v)`.
+
+        It is evaluated at each pixel of the meshgrid and cached on first use.
         """
 
         if not hasattr(self, '_dlos_duv'):
@@ -264,11 +267,12 @@ class Backplane(Mutable):
 
     @property
     def dlos_duv1(self):
-        """The derivative of the line of sight with respect to (u1,v1), where (u1,v1)
-        match (u,v) but have been forced to be orthogonal. This is done by leaving the
-        lesser pixel size alone, and shifting the greater pixel edge to be orthogonal
-        while conserving the pixel area. This is a better pair to use for determining
-        spatial resolution.
+        """The derivative of the line of sight with respect to `(u1,v1)`.
+
+        The coordinates `(u1,v1)` match `(u,v)` but have been forced to be orthogonal.
+        This is done by leaving the lesser pixel size alone, and shifting the greater
+        pixel edge to be orthogonal while conserving the pixel area. This is a better pair
+        to use for determining spatial resolution.
         """
 
         if hasattr(self, '_dlos_duv1'):
@@ -297,8 +301,10 @@ class Backplane(Mutable):
 
     @property
     def duv_dlos(self):
-        """The derivative of (u,v) with respect to the line of sight, evaluated at each
-        pixel of the meshgrid and cached on first use. This is the inverse of `dlos_duv`.
+        """The derivative of `(u,v)` with respect to the line of sight.
+
+        It is evaluated at each pixel of the meshgrid and cached on first use. This is the
+        inverse of :attr:`~oops.Backplane.dlos_duv`.
         """
 
         if not hasattr(self, '_duv_dlos'):
@@ -308,8 +314,10 @@ class Backplane(Mutable):
 
     @property
     def center_dlos_duv(self):
-        """The derivative of the line of sight with respect to (u,v) at the center of the
-        field of view, cached on first use. This is what the gridless backplanes use.
+        """The derivative of the line of sight with respect to `(u,v)` at the center.
+
+        The derivative is evaluated at the center of the field of view and cached on first
+        use. This is what the gridless backplanes use.
         """
 
         if not hasattr(self, '_center_dlos_duv'):
@@ -319,8 +327,10 @@ class Backplane(Mutable):
 
     @property
     def center_duv_dlos(self):
-        """The derivative of (u,v) with respect to the line of sight at the center of the
-        field of view, cached on first use. This is the inverse of `center_dlos_duv`.
+        """The derivative of `(u,v)` with respect to the line of sight at the center.
+
+        The derivative is evaluated at the center of the field of view and cached on first
+        use. This is the inverse of :attr:`~oops.Backplane.center_dlos_duv`.
         """
 
         if not hasattr(self, '_center_duv_dlos'):
@@ -436,8 +446,9 @@ class Backplane(Mutable):
 
     @staticmethod
     def _is_gridless(event_key):
-        """True if this key describes path-based illumination, which has no spatial
-        dimensions.
+        """True if this key describes path-based illumination.
+
+        Path-based illumination has no spatial dimensions.
 
         Parameters:
             event_key (tuple): A standardized event key.
@@ -638,7 +649,8 @@ class Backplane(Mutable):
     @functools.lru_cache(maxsize=100)
     def unmasked_surface_key(surface_key):
         """The unmasked surface key associated with a given surface key.
-        Example: SATURN_MAIN_RINGS -> SATURN:RING.
+
+        For example, `SATURN_MAIN_RINGS` maps to `SATURN:RING`.
 
         If the surface has no associated unmasked surface, the same surface key is
         returned.
@@ -849,8 +861,8 @@ class Backplane(Mutable):
             surface_key (str): The surface key.
 
         Returns:
-            ndarray or bool: A boolean array that is True inside the bounding box, or
-            True if no inventory is in use and the whole meshgrid must be considered.
+            numpy.ndarray or bool: A boolean array that is True inside the bounding box,
+            or True if no inventory is in use and the whole meshgrid must be considered.
         """
 
         # Return from the antimask cache if present
@@ -1078,8 +1090,10 @@ class Backplane(Mutable):
             self.surface_events[False][event_key] = event.wod
 
     def get_gridless_event(self, event_key, derivs=False, arrivals=False):
-        """The gridless event associated with this event key, even if the event key
-        refers to dispersed or occultation lighting.
+        """The gridless event associated with this event key.
+
+        The event is returned even if the event key refers to dispersed or occultation
+        lighting.
 
         Parameters:
             event_key (str or tuple): The event key, which is converted to its
@@ -1110,7 +1124,7 @@ class Backplane(Mutable):
 
         Parameters:
             key (tuple): The standardized backplane key under which to file the array.
-            backplane (Qube, ndarray, or bool): The array to register.
+            backplane (Qube, numpy.ndarray, or bool): The array to register.
             expand (bool, optional): True to broadcast a single value to the shape of the
                 backplane; default False.
             derivs (bool, optional): True to return the array with its derivatives
@@ -1213,8 +1227,9 @@ class Backplane(Mutable):
     CALLABLES = set()
 
     def evaluate(self, backplane_key, derivs=False):
-        """Evaluate the backplane array based on the given "backplane_key". A
-        `backplane_key` takes the form of a tuple::
+        """The backplane array defined by the given backplane key.
+
+        A `backplane_key` takes the form of a tuple::
 
             (function_name, event_key, ...)
 

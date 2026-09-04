@@ -1,6 +1,7 @@
 ##########################################################################################
 # oops/surface/__init__.py
 ##########################################################################################
+"""Surface classes, which define a 2-D surface that moves and rotates in space."""
 
 from oops.surface.surface_         import Surface
 from oops.surface.ansa             import Ansa

@@ -565,10 +565,13 @@ run_docs_checks() {
     source "$VENV/bin/activate"
 
     # -W turns every warning into an error, so a broken reference or an unparseable
-    # docstring fails the build rather than scrolling past. -E rebuilds from scratch, so
-    # a stale cache cannot hide a warning that a previous run already reported.
+    # docstring fails the build rather than scrolling past. -n adds nitpicky mode, which
+    # reports every cross-reference and parameter type that resolves to nothing; the
+    # handful with no target to resolve to are listed in `nitpick_ignore` in docs/conf.py.
+    # -E rebuilds from scratch, so a stale cache cannot hide a warning that a previous run
+    # already reported.
     print_info "Building the documentation..."
-    if python -m sphinx -W -E -b html docs docs/_build; then
+    if python -m sphinx -W -n -E -b html docs docs/_build; then
         print_success "Documentation build passed"
         deactivate 2>/dev/null || true
         return 0

@@ -18,6 +18,8 @@ import warnings
 ##########################################################################################
 
 class QUICK(object):
+    """Default parameters for QuickPath and QuickFrame interpolation."""
+
     flag = True                 # Defines the default behavior as quick=True or
                                 # quick=False.
 
@@ -65,6 +67,8 @@ class QUICK(object):
 # For Path._solve_photon()
 
 class PATH_PHOTONS(object):
+    """Convergence parameters for the Path photon solver."""
+
     max_iterations = 4          # Maximum number of iterations.
     dlt_precision = 3.e-7       # Iterations stops when every change in light
                                 # travel time from one iteration to the next
@@ -84,6 +88,8 @@ class PATH_PHOTONS(object):
 # For Surface._solve_photon_by_los()
 
 class SURFACE_PHOTONS(object):
+    """Convergence parameters for the Surface photon solver."""
+
     max_iterations = 6          # Maximum number of iterations.
     dlt_precision = 3.e-7       # See PATH_PHOTONS for more info.
     dlt_limit = 10.             # See PATH_PHOTONS for more info.
@@ -102,6 +108,8 @@ class SURFACE_PHOTONS(object):
 ##########################################################################################
 
 class EVENT_CONFIG(object):
+    """Precision parameters for Event times."""
+
     collapse_threshold = 3.     # When an event returned by a calculation spans
                                 # a range of times smaller than this threshold,
                                 # the time field is converted to a single value.
@@ -119,6 +127,8 @@ LOG_FORMATTER = logging.Formatter(LOG_FORMAT, datefmt=LOG_DATEFMT)
 LOGGING_STACK = []
 
 class LOGGING(object):
+    """Switches controlling what the library logs."""
+
     prefix = '   '                  # Prefix in front of a log message
     quickpath_creation = False      # Log the creation of QuickPaths
     quickframe_creation = False     # Log the creation of QuickFrames
@@ -613,6 +623,8 @@ LOGGING.push()      # At initialization, put the default settings onto the stack
 ##########################################################################################
 
 class PICKLE_CONFIG(object):
+    """Switches controlling how much internal detail is pickled."""
+
     quickpath_details = True    # Save the internals of a QuickPath
     quickframe_details = True   # Save the internals of a QuickFrame
     backplane_events = True     # Save the events dictionary inside backplanes
@@ -622,6 +634,8 @@ class PICKLE_CONFIG(object):
 ##########################################################################################
 
 class AREA_FACTOR(object):
+    """Switch selecting the definition used by :meth:`~oops.FOV.area_factor`."""
+
     old = False     # True to use old area factors, which have a small error due
                     # to the fact that off-axis lines of sight in an FOV are
                     # not quite unit length.

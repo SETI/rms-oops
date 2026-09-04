@@ -23,22 +23,17 @@ RATIONALE_RE = re.compile(r' *INS-61504_DISTORTION_Y = ([\d\.]+)')
 
 def from_file(filespec, fast_distortion=True,
               return_all_planets=False, snap=False, method='strict', **parameters):
-    """A general, static method to return a Pushframe object based on a given
-    JUNOCAM image file.
+    """A Pushframe based on a given JUNOCAM image file.
 
-    Inputs:
-        filespec            Path to input file.
-
-        fast_distortion     True to use a pre-inverted polynomial;
-                            False to use a dynamically solved polynomial;
-                            None to use a FlatFOV.
-
-        return_all_planets  Include kernels for all planets not just
-                            Jupiter or Saturn.
-
-        snap                True to model the image as a Snapshot rather than as
-                            a TimedImage.
-        method              Label reading method to be passed to Pds3Label.
+    Parameters:
+        filespec (str, Path, or FCPath): Path to input file.
+        fast_distortion (bool or None, optional): True to use a pre-inverted polynomial;
+            False to use a dynamically solved polynomial; None to use a FlatFOV.
+        return_all_planets (bool, optional): Include kernels for all planets not just
+            Jupiter or Saturn.
+        snap (bool, optional): True to model the image as a Snapshot rather than as a
+            TimedImage.
+        method (str, optional): Label reading method to be passed to Pds3Label.
     """
     JUNOCAM.initialize()    # Define everything the first time through; use
                             # defaults unless initialize() is called explicitly.
@@ -112,11 +107,11 @@ def _load_data(filespec, label, meta):
         meta (object): Image _Metadata object.
 
     Returns:
-        (tuple): (framelets, framelet_labels), where:
+        tuple: (framelets, framelet_labels), where:
 
-        * `framelets` (array-like): A Numpy array containing the individual frames in axis
-          order (line, sample, framelet #). framelet_labels List of labels for each
-          framelet.
+        * `framelets` (numpy.ndarray): The individual frames in axis order (line,
+          sample, framelet #).
+        * `framelet_labels` (list): The label of each framelet.
     """
 
     # Read data
@@ -158,9 +153,23 @@ class _Metadata(object):
             label (dict): The label dictionary.
 
         Attributes:
-            nlines          A Numpy array containing the data in axis order (line,
-            sample). nsamples        The time sampling array in (line, sample) axis order,
-            or None if no time backplane is found in the file. nframelets
+            nlines (int): Number of lines in the composite image.
+            nsamples (int): Number of samples per line.
+            frlines (int): Number of lines in each framelet.
+            nframelets (int): Number of framelets in the composite image.
+            exposure (float): Exposure duration in seconds.
+            filter (list): Names of the filters, in framelet order.
+            tinter (float): Interframe delay in seconds.
+            tinter0 (float): Interframe delay as given in the label, in seconds.
+            tstart (float): Image start time in seconds TDB.
+            tstart0 (float): Image start time as given in the label, in seconds TDB.
+            tstop (float): Image stop time in seconds TDB.
+            tdi_stages (int): Number of time-delay integration stages.
+            tdi_texp (float): Exposure duration of one TDI stage, in seconds.
+            target (str): Target name.
+            delta (float): The correction applied to the interframe delay.
+            bias (float): The correction applied to the image start time.
+            fov (FOV): The field of view of one framelet.
         """
 
         # image dimensions
@@ -254,15 +263,17 @@ class _Metadata(object):
         return
 
     def update_cy(self, label, cy):
-        """Look at label RATIONALE_DESC for a correction to DISTORTION_Y for some methane
-        images.
+        """Look for a DISTORTION_Y correction in the label.
+
+        The label field `RATIONALE_DESC` carries a correction to `DISTORTION_Y` for some
+        methane images.
 
         Parameters:
             label (dict): The label dictionary.
             cy: Uncorrected cy value.
 
         Returns:
-            (tuple): A tuple, where:
+            tuple: A tuple, where:
 
             * `cy`: Corrected cy value.
         """
@@ -281,8 +292,9 @@ class JUNOCAM(object):
 
     @staticmethod
     def initialize(asof=None, **kwargs):
-        """Initialize key information about the JUNOCAM instrument; fill in key
-        information about the WAC and NAC.
+        """Initialize key information about the JUNOCAM instrument.
+
+        Key information about the WAC and NAC is filled in.
 
         Must be called first. After the first call, later calls to this function are
         ignored.

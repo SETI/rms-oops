@@ -22,7 +22,9 @@ _ANOMALY_PRECISION = 1.e-14         # radians
 
 
 class OrbitPlane(Surface):
-    """A subclass of the Surface class describing a flat surface sharing its geometric
+    """A flat surface sharing the center and tilt of an orbiting body.
+
+    A subclass of :class:`~oops.Surface` describing a flat surface sharing its geometric
     center and tilt with a body on an eccentric and/or inclined orbit. The orbit is
     described as a circle offset from the center of the planet by a distance `ae`; this
     approximation is only accurate to first order in eccentricity.
@@ -250,8 +252,7 @@ class OrbitPlane(Surface):
 
     def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
                             hints=None):
-        """The position where a point with the given coordinates falls relative to this
-        Surface's origin and frame.
+        """The position at the given surface coordinates.
 
         Parameters:
             coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at or

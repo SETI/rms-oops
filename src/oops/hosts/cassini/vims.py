@@ -190,8 +190,7 @@ BAND_BIN_CENTER_FMT = pdsparser.Pds3Label("""\
 ##########################################################################################
 
 def from_file(filespec, data=True, method='strict'):
-    """A general, static method to return a pair of Observation objects based on a given
-    Cassini VIMS data file or label file.
+    """A pair of Observations based on a Cassini VIMS data or label file.
 
     Parameters:
         filespec (str or FCPath): The full path to a VIMS cube file or its PDS label.
@@ -201,7 +200,7 @@ def from_file(filespec, data=True, method='strict'):
         method (str, optional): Label reading method to be passed to Pds3Label.
 
     Returns:
-        (tuple): (vis, ir), where:
+        tuple: (vis, ir), where:
 
         * `vis`: The VIS observation, or None if the VIS channel was inactive.
         * `ir`: The IR observation, or None if the IR channel was inactive.
@@ -615,10 +614,9 @@ def _load_data_and_times(filespec, label):
         label (dict): The label dictionary.
 
     Returns:
-        (tuple): (data, times), where:
+        tuple: (data, times), where:
 
-        * `data` (array-like): A Numpy array containing the data in axis order (line,
-          sample, band).
+        * `data` (numpy.ndarray): The data in axis order (line, sample, band).
         * `times`: The time sampling array in (line, sample) axis order, or None if no
           time backplane is found in the file.
 
@@ -778,8 +776,10 @@ def _load_data_and_times(filespec, label):
     return (data, times)
 
 def meshgrid_and_times(obs, oversample=6, extend=1.5):
-    """A meshgrid object and time array that oversamples and extends the dimensions of the
-    field of view of a VIMS observation.
+    """A Meshgrid and time array oversampling a VIMS field of view.
+
+    The meshgrid oversamples and extends the dimensions of the field of view of a VIMS
+    observation.
 
     Parameters:
         obs: The VIMS observation object to for which to generate a meshgrid and a
@@ -790,7 +790,7 @@ def meshgrid_and_times(obs, oversample=6, extend=1.5):
             the oversampled pixel.
 
     Returns:
-        (tuple): (mesgrid, time)
+        tuple: (mesgrid, time)
     """
 
     shrinkage = {('IR',  'NORMAL'): (1,1),

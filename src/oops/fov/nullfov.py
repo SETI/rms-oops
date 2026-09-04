@@ -7,8 +7,7 @@ from oops.fov import FOV
 
 
 class NullFOV(FOV):
-    """A subclass of FOV that describes an instrument with no field of view, e.g., an in
-    situ instrument.
+    """A field of view of zero extent, as for an in situ instrument.
     """
 
     def __init__(self):
@@ -26,8 +25,7 @@ class NullFOV(FOV):
         self.__init__()
 
     def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The `(x,y)` camera frame coordinates given the FOV coordinates `(u,v)` at the
-        specified time.
+        """The camera coordinates `(x,y)` at FOV coordinates `(u,v)` and a given time.
 
         Parameters:
             uv_pair (Pair): `(u,v)` coordinates in this FOV.
@@ -47,8 +45,7 @@ class NullFOV(FOV):
         return Pair.ZEROS
 
     def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The `(u,v)` FOV coordinates given the `(x,y)` camera frame coordinates at the
-        specified time.
+        """The FOV coordinates `(u,v)` at camera coordinates `(x,y)` and a given time.
 
         Parameters:
             xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.
@@ -92,7 +89,7 @@ class NullFOV(FOV):
     def los_from_xy(self, xy_pair, *, derivs=False):
         """The unit line-of-sight vector for camera coordinates `(x,y)`.
 
-        Note that this vector points in the direction _opposite_ to the path of arriving
+        Note that this vector points in the direction *opposite* to the path of arriving
         photons.
 
         Parameters:
@@ -128,7 +125,7 @@ class NullFOV(FOV):
         """The line of sight vector given FOV coordinates `(u,v)` at the specified time.
 
         The los points in the direction specified by coordinate Pair `(u,v)`. Note that
-        this is the direction _opposite_ to that of the arriving photon.
+        this is the direction *opposite* to that of the arriving photon.
 
         Parameters:
             uv_pair (Pair): `(u,v)` coordinates in this FOV.
@@ -150,7 +147,7 @@ class NullFOV(FOV):
         """The FOV coordinates `(u,v)` given a line of sight vector at the specified time.
 
         The los points in the direction specified by coordinate Pair `(u,v)`. Note that
-        this is the direction _opposite_ to that of the arriving photon.
+        this is the direction *opposite* to that of the arriving photon.
 
         Parameters:
             los (Vector3): Direction of the line of sight in the FOV's frame.

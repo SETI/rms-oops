@@ -11,11 +11,11 @@ from oops.oops import Oops
 
 
 class Meshgrid(Oops):
-    """An arbitrary array of coordinate pairs within a Field of View.
+    """An arbitrary array of coordinate pairs within a field of view.
 
     A Meshgrid caches information about the line of sight and various derivatives,
-    preventing the need for repeated calls to the FOV functions when the same field of
-    view describes multiple images.
+    preventing the need for repeated calls to the :class:`~oops.FOV` methods when the same
+    field of view describes multiple images.
 
     Attributes:
         fov (FOV): The field of view that this Meshgrid samples.
@@ -389,8 +389,7 @@ class Meshgrid(Oops):
         return uv
 
     def duv_dlos(self, time=None):
-        """The partial derivatives of the `(u,v)` coordinates with respect to the line of
-        sight.
+        """The partial derivatives of `(u,v)` with respect to the line of sight.
 
         Parameters:
             time (Scalar, optional): Absolute time in seconds TDB; None if the FOV does
@@ -485,8 +484,7 @@ class Meshgrid(Oops):
         return self.center_los_w_derivs(time).d_duv
 
     def center_uv_w_derivs(self, time=None):
-        """The central `(u,v)` coordinates, with derivatives with respect to the line of
-        sight.
+        """The central `(u,v)` coordinates, with line-of-sight derivatives.
 
         Parameters:
             time (Scalar, optional): Absolute time in seconds TDB; None if the FOV does
@@ -514,8 +512,7 @@ class Meshgrid(Oops):
         return uv
 
     def center_duv_dlos(self, time=None):
-        """The partial derivatives of the central `(u,v)` coordinates with respect to the
-        line of sight.
+        """The derivatives of the central `(u,v)` with respect to the line of sight.
 
         Parameters:
             time (Scalar, optional): Absolute time in seconds TDB; None if the FOV does

@@ -1,8 +1,10 @@
 ##########################################################################################
 # programs/gold_master/ring.py: Ring backplanes
 ##########################################################################################
-"""Gold master tests of the ring backplanes: radius, longitude, azimuth, elevation, and
-the ring lighting angles under each pole convention.
+"""Gold master tests of the ring backplanes.
+
+The backplanes are radius, longitude, azimuth, elevation, and the ring lighting angles
+under each pole convention.
 """
 
 import numpy as np

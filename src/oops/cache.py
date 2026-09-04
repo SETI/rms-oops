@@ -9,15 +9,16 @@ from oops.oops import Oops
 
 
 class Cache(Oops):
-    """Class that can be indexed like a dictionary, where `maxsize` items are preserved.
-    When the size of the cache exceeds `maxsize` by ~ 10%, the least-recently accessed
+    """A dictionary-like cache preserving a fixed number of items.
+
+    When the size of the cache exceeds `maxsize` by about 10%, the least-recently accessed
     items are deleted.
 
     Indexing a Cache using a key that is not present, or has been deleted, returns None.
     A KeyError is never raised.
 
     Dictionary keys can include mutable items, which are converted to immutable. The class
-    method `clean_key` performs this conversion.
+    method :meth:`~oops.Cache.clean_key` performs this conversion.
     """
 
     # These are filled in by oops/__init__.py to avoid circular imports

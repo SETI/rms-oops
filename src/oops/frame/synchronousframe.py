@@ -8,9 +8,10 @@ from oops.transform import Transform
 
 
 class SynchronousFrame(Frame):
-    """A Frame subclass describing a body that always keeps its x-axis pointed toward a
-    central planet, with its z-axis along the angular momentum of the orbit. That leaves
-    the y-axis in the negative direction of motion. It is centered on the body.
+    """A Frame keeping a body's x-axis pointed toward a central planet.
+
+    The z-axis lies along the angular momentum of the orbit. That leaves the y-axis in the
+    negative direction of motion. The frame is centered on the body.
 
     Note that this Frame is tied to the orbital longitude of the body, so it will
     (incorrectly) rotate at a slightly non-uniform rate if the orbit has eccentricity.

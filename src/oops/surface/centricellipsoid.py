@@ -9,7 +9,7 @@ from oops.surface.ellipsoid import Ellipsoid
 
 
 class CentricEllipsoid(Ellipsoid):
-    """A variant of Ellipsoid in which latitudes and longitudes are planetocentric."""
+    """A variant of :class:`~oops.surface.Ellipsoid` using planetocentric coordinates."""
 
     def coords_from_vector3(self, pos, *, obs=None, time=None, axes=2, derivs=False,
                             hints=None, groundtrack=False):
@@ -79,8 +79,7 @@ class CentricEllipsoid(Ellipsoid):
 
     def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
                             hints=None, groundtrack=False):
-        """The position where a point with the given coordinates falls relative to this
-        surface's origin and frame.
+        """The position at the given surface coordinates.
 
         Parameters:
             coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at

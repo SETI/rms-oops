@@ -9,9 +9,10 @@ from oops.transform import Transform
 
 
 class RingFrame(Frame):
-    """A Frame subclass describing a non-rotating frame centered on the Z-axis of another
-    frame, but oriented with the X-axis fixed along the ascending node of the equator
-    within the reference frame.
+    """A non-rotating Frame centered on the Z-axis of another frame.
+
+    The X-axis is fixed along the ascending node of the equator within the reference
+    frame.
     """
 
     _WAYFRAMES = {}
@@ -212,8 +213,10 @@ class RingFrame(Frame):
         return transform
 
     def node_at_time(self, time, *, quick=None):
-        """Angle from the reference Frame's X-axis, along its X-Y plane, to the ascending
-        node of this Frame's X-Y plane.
+        """The angle from the reference Frame's X-axis to this Frame's ascending node.
+
+        The angle is measured within the X-Y plane of the reference frame, to the
+        ascending node of this Frame's X-Y plane.
 
         Values always fall between 0 and 2*pi.
 

@@ -129,7 +129,7 @@ class SpiceFrame(Frame):
     def _fill_spice_info(self, spice_frame, reference):
         """Fill in this object's SPICE codes and names, plus the origin and reference.
 
-        Used by both SpiceFrame and SpiceType1Frame.
+        Used by both SpiceFrame and :class:`~oops.frame.SpiceType1Frame`.
 
         Parameters:
             spice_frame (str or int): The name, frame code, body name, or body code as
@@ -274,11 +274,11 @@ class SpiceFrame(Frame):
         Parameters:
             quat (Quaternion): The quaternion of the rotation from the reference frame
                 into this frame, at the time of interest.
-            qdot (array): The time derivative of that quaternion, as four floats.
+            qdot (numpy.ndarray): The time derivative of that quaternion, as four floats.
 
         Returns:
-            array: The rotation vector of this frame relative to the reference, expressed
-            in the coordinates of the reference frame, as three floats.
+            numpy.ndarray: The rotation vector of this frame relative to the reference,
+            expressed in the coordinates of the reference frame, as three floats.
 
         Notes:
             A Transform defines `omega` in the reference frame, so the derivative is

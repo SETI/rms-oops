@@ -112,8 +112,7 @@ class Surface(Mutable):
 
     def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
                             hints=None):
-        """The position where a point with the given coordinates falls relative to this
-        Surface's origin and frame.
+        """The position at the given surface coordinates.
 
         Parameters:
             coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at or
@@ -401,8 +400,7 @@ class Surface(Mutable):
         return event
 
     def event_at_coords(self, time, coords, *, obs=None, derivs=False):
-        """An Event constructed from a time and coordinates in this Surface's internal
-        coordinate system.
+        """An Event at the given time and surface coordinates.
 
         Parameters:
             time (Scalar): Time in seconds TDB.

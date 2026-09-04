@@ -85,8 +85,7 @@ class Rotation(Frame, Fittable):
         return self._angle
 
     def _source(self):
-        """The original source of the rotation angle if this object is linked to another;
-        otherwise, self.
+        """The original source of the rotation angle, or self if there is none.
         """
         return self._link._source() if self._link else self
 

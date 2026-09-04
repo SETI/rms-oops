@@ -12,8 +12,10 @@ from oops.path        import Path
 
 
 class Pixel(Observation):
-    """A subclass of Observation consisting of one or more measurements obtained from a
-    single rectangular pixel.
+    """An Observation of measurements from a single rectangular pixel.
+
+    A subclass of :class:`~oops.Observation` consisting of one or more measurements
+    obtained from that pixel.
 
     Generalization to other FOV shapes is TODO.
     """
@@ -171,8 +173,7 @@ class Pixel(Observation):
         return self.time_range_at_uv_0d(uv_pair, remask=remask)
 
     def uv_range_at_time(self, time, *, remask=False):
-        """The `(u,v)` range of spatial pixels in the data array observed at the specified
-        time.
+        """The `(u,v)` range of spatial pixels observed at a specified time.
 
         For a Pixel observation, the `(u,v)` range is always (0,0) to (1,1). The time is
         largely ignored, although it is expected to fall within the time limits of the

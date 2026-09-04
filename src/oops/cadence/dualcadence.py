@@ -295,8 +295,7 @@ class DualCadence(Cadence):
     @staticmethod
     def for_array2d(samples, lines, tstart, texp, intersample_delay=0.,
                     interline_delay=None):
-        """Alternative constructor for a DualCadence involving two Metronome classes, with
-        streamlined input.
+        """A DualCadence built from two :class:`~oops.cadence.Metronome` objects.
 
         Parameters:
             samples (int): Number of samples (along fast axis).

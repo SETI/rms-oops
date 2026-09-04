@@ -30,9 +30,9 @@ def photon_to_event(self, arrival, *, derivs=False, guess=None, antimask=None, q
         guess (Scalar, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
-        antimask (ndarray or bool, optional): A boolean filter to be applied to event
-            times and positions. Only the indices where antimask=True will be used in the
-            solution.
+        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+            event times and positions. Only the indices where antimask=True will be used
+            in the solution.
         quick (dict, optional): To override the configured default parameters for
             QuickPaths and QuickFrames; False to disable the use of QuickPaths and
             QuickFrames. The default configuration is defined in config.py.
@@ -86,9 +86,9 @@ def photon_from_event(self, departure, *, derivs=False, guess=None, antimask=Non
         guess (Scalar, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
-        antimask (ndarray or bool, optional): A boolean filter to be applied to event
-            times and positions. Only the indices where antimask=True will be used in the
-            solution.
+        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+            event times and positions. Only the indices where antimask=True will be used
+            in the solution.
         quick (dict, optional): To override the configured default parameters for
             QuickPaths and QuickFrames; False to disable the use of QuickPaths and
             QuickFrames. The default configuration is defined in config.py.
@@ -144,9 +144,9 @@ def _solve_photon_by_los(self, link, sign, *, derivs=False, guess=None, antimask
         guess (Scalar, optional): An initial guess to use as the event time for the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
-        antimask (ndarray or bool, optional): A boolean filter to be applied to event
-            times and positions. Only the indices where antimask=True will be used in the
-            solution.
+        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+            event times and positions. Only the indices where antimask=True will be used
+            in the solution.
         quick (dict, optional): To override the configured default parameters for
             QuickPaths and QuickFrames; False to disable the use of QuickPaths and
             QuickFrames. The default configuration is defined in config.py.
@@ -477,8 +477,7 @@ def _fully_masked_result(self, link, link_key, coords=False):
 
 def photon_to_coords(self, arrival, coords, *, derivs=False, guess=None, antimask=None,
                      quick=None, converge=None):
-    """Photon departure event at the specified surface coordinates, given the arrival
-    event.
+    """Photon departure event at the specified surface coordinates.
 
     Parameters:
         arrival (Event): The event of a photon's arrival.
@@ -490,9 +489,9 @@ def photon_to_coords(self, arrival, coords, *, derivs=False, guess=None, antimas
         guess (Scalar, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
-        antimask (ndarray or bool, optional): A boolean filter to be applied to event
-            times and positions. Only the indices where antimask=True will be used in the
-            solution.
+        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+            event times and positions. Only the indices where antimask=True will be used
+            in the solution.
         quick (dict, optional): To override the configured default parameters for
             QuickPaths and QuickFrames; False to disable the use of QuickPaths and
             QuickFrames. The default configuration is defined in config.py.
@@ -536,8 +535,7 @@ def photon_to_coords(self, arrival, coords, *, derivs=False, guess=None, antimas
 
 def photon_from_coords(self, departure, coords, *, derivs=False, guess=None,
                        antimask=None, quick=None, converge=None):
-    """Photon arrival event at the specified surface coordinates, given the departure
-    event.
+    """Photon arrival event at the specified surface coordinates.
 
     Parameters:
         departure (Event): The event of a photon's departure.
@@ -549,9 +547,9 @@ def photon_from_coords(self, departure, coords, *, derivs=False, guess=None,
         guess (Scalar, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
-        antimask (ndarray or bool, optional): A boolean filter to be applied to event
-            times and positions. Only the indices where antimask=True will be used in the
-            solution.
+        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+            event times and positions. Only the indices where antimask=True will be used
+            in the solution.
         quick (dict, optional): To override the configured default parameters for
             QuickPaths and QuickFrames; False to disable the use of QuickPaths and
             QuickFrames. The default configuration is defined in config.py.
@@ -610,9 +608,9 @@ def _solve_photon_by_coords(self, link, coords, sign, *, derivs=False, guess=Non
         guess (Scalar, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
-        antimask (ndarray or bool, optional): A boolean filter to be applied to event
-            times and positions. Only the indices where antimask=True will be used in the
-            solution.
+        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+            event times and positions. Only the indices where antimask=True will be used
+            in the solution.
         quick (dict, optional): To override the configured default parameters for
             QuickPaths and QuickFrames; False to disable the use of QuickPaths and
             QuickFrames. The default configuration is defined in config.py.
@@ -857,8 +855,10 @@ def _solve_photon_by_coords(self, link, coords, sign, *, derivs=False, guess=Non
 
 def photon_normal_to_event(self, arrival, *, derivs=False, guess=None, antimask=None,
                            quick=None, converge=None):
-    """Photon departure from this surface, given the arrival event and the requirement
-    that the photon left along the surface normal.
+    """Photon departure from this surface along the surface normal.
+
+    The arrival event is given; the departing photon is required to have left along the
+    normal to the surface.
 
     This can be used to solve for the sub-observer point on a surface.
 
@@ -870,9 +870,9 @@ def photon_normal_to_event(self, arrival, *, derivs=False, guess=None, antimask=
         guess (Scalar, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
-        antimask (ndarray or bool, optional): A boolean filter to be applied to event
-            times and positions. Only the indices where antimask=True will be used in the
-            solution.
+        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+            event times and positions. Only the indices where antimask=True will be used
+            in the solution.
         quick (dict, optional): To override the configured default parameters for
             QuickPaths and QuickFrames; False to disable the use of QuickPaths and
             QuickFrames. The default configuration is defined in config.py.
@@ -918,8 +918,10 @@ def photon_normal_to_event(self, arrival, *, derivs=False, guess=None, antimask=
 
 def photon_event_to_normal(self, departure, *, derivs=False, guess=None, antimask=None,
                            quick=None, converge=None):
-    """Photon arrival at this surface, given the departure event and the requirement that
-    the photon arrived along the surface normal.
+    """Photon arrival at this surface along the surface normal.
+
+    The departure event is given; the arriving photon is required to have arrived along
+    the normal to the surface.
 
     Parameters:
         departure (Event): The event of a photon's departure.
@@ -929,9 +931,9 @@ def photon_event_to_normal(self, departure, *, derivs=False, guess=None, antimas
         guess (Scalar, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
-        antimask (ndarray or bool, optional): A boolean filter to be applied to event
-            times and positions. Only the indices where antimask=True will be used in the
-            solution.
+        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+            event times and positions. Only the indices where antimask=True will be used
+            in the solution.
         quick (dict, optional): To override the configured default parameters for
             QuickPaths and QuickFrames; False to disable the use of QuickPaths and
             QuickFrames. The default configuration is defined in config.py.
@@ -977,8 +979,10 @@ def photon_event_to_normal(self, departure, *, derivs=False, guess=None, antimas
 
 def _solve_photon_event_normal(self, link, sign, *, derivs=False, guess=None,
                                antimask=None, quick=None, converge=None):
-    """Solve for the surface intercept event based on a remote photon event and the
-    requirement that the apparent photon path be normal to the surface.
+    """The surface intercept event of a photon normal to the surface.
+
+    The event is solved from a remote photon event and the requirement that the apparent
+    photon path be normal to the surface.
 
     Parameters:
         link (Event): The link event of a photon's arrival or departure.
@@ -992,9 +996,9 @@ def _solve_photon_event_normal(self, link, sign, *, derivs=False, guess=None,
         guess (Scalar, optional): An initial guess to use as the event time for the
             surface; otherwise None. Should only be used if the event time was already
             returned from a similar calculation.
-        antimask (ndarray or bool, optional): A boolean filter to be applied to event
-            times and positions. Only the indices where antimask=True will be used in the
-            solution.
+        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+            event times and positions. Only the indices where antimask=True will be used
+            in the solution.
         quick (dict, optional): To override the configured default parameters for
             QuickPaths and QuickFrames; False to disable the use of QuickPaths and
             QuickFrames. The default configuration is defined in config.py.
@@ -1257,8 +1261,10 @@ def _solve_photon_event_normal(self, link, sign, *, derivs=False, guess=None,
 
 def photon_path_to_normal(self, time, path, *, derivs=False, guess=None, antimask=None,
                           quick=None, converge=None):
-    """Photon departure event from a remote path, given the requirement that the photon
-    arrive at this surface at the specified time along a surface normal.
+    """Photon departure event from a remote path, normal to this surface.
+
+    The photon is required to arrive at this surface at the specified time, along a
+    surface normal.
 
     This can be used to solve for the sub-solar point on a surface.
 
@@ -1270,9 +1276,9 @@ def photon_path_to_normal(self, time, path, *, derivs=False, guess=None, antimas
         guess (Scalar, optional): An initial guess to use as the event time at the
             remote path; otherwise None. Should be used if the event time was already
             returned from a similar calculation.
-        antimask (ndarray or bool, optional): A boolean filter to be applied to event
-            times and positions. Only the indices where antimask=True will be used in the
-            solution.
+        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+            event times and positions. Only the indices where antimask=True will be used
+            in the solution.
         quick (dict, optional): To override the configured default parameters for
             QuickPaths and QuickFrames; False to disable the use of QuickPaths and
             QuickFrames. The default configuration is defined in config.py.
@@ -1320,8 +1326,10 @@ def photon_path_to_normal(self, time, path, *, derivs=False, guess=None, antimas
 
 def photon_normal_to_path(self, time, path, *, derivs=False, guess=None, antimask=None,
                           quick=None, converge=None):
-    """Photon arrival event at a remote path, given the requirement that the photon
-    departed this surface at the specified time along a surface normal.
+    """Photon arrival event at a remote path, normal to this surface.
+
+    The photon is required to have departed this surface at the specified time, along a
+    surface normal.
 
     Parameters:
         time (Scalar): The time of the photon event at the surface, in seconds TDB.
@@ -1331,9 +1339,9 @@ def photon_normal_to_path(self, time, path, *, derivs=False, guess=None, antimas
         guess (Scalar, optional): An initial guess to use as the event time at the
             remote path; otherwise None. Should be used if the event time was already
             returned from a similar calculation.
-        antimask (ndarray or bool, optional): A boolean filter to be applied to event
-            times and positions. Only the indices where antimask=True will be used in the
-            solution.
+        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+            event times and positions. Only the indices where antimask=True will be used
+            in the solution.
         quick (dict, optional): To override the configured default parameters for
             QuickPaths and QuickFrames; False to disable the use of QuickPaths and
             QuickFrames. The default configuration is defined in config.py.
@@ -1395,9 +1403,9 @@ def _solve_photon_path_normal(self, time, path, sign, *, derivs=False, guess=Non
         guess (Scalar, optional): An initial guess to use as the event time for the path;
             otherwise None. Should only be used if the event time was already returned
             from a similar calculation.
-        antimask (ndarray or bool, optional): A boolean filter to be applied to event
-            times and positions. Only the indices where antimask=True will be used in the
-            solution.
+        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+            event times and positions. Only the indices where antimask=True will be used
+            in the solution.
         quick (dict, optional): To override the configured default parameters for
             QuickPaths and QuickFrames; False to disable the use of QuickPaths and
             QuickFrames. The default configuration is defined in config.py.

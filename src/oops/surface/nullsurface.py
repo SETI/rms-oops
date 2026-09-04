@@ -9,8 +9,10 @@ from oops.surface.surface_ import Surface
 
 
 class NullSurface(Surface):
-    """A subclass of Surface describing an infinitesimal surface centered on the
-    specified path and using the specified coordinate frame.
+    """An infinitesimal surface centered on a path and using a given frame.
+
+    A subclass of :class:`~oops.Surface` whose coordinates are the rectangular
+    coordinates `(x,y,z)` relative to its origin and frame.
     """
 
     COORDINATE_TYPE = 'rectangular'
@@ -85,8 +87,7 @@ class NullSurface(Surface):
 
     def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
                             hints=None):
-        """The position where a point with the given coordinates falls relative to this
-        surface's origin and frame.
+        """The position at the given surface coordinates.
 
         Parameters:
             coords (tuple): Two or three Scalars defining coordinates at or near this

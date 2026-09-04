@@ -11,6 +11,15 @@ the ``polymath`` array types.
    :caption: API reference:
 
    oops
+   oops_cadence
+   oops_calibration
+   oops_fov
+   oops_frame
+   oops_gravity
+   oops_lightsource
+   oops_observation
+   oops_path
+   oops_surface
    spicedb
 
 Indices and tables

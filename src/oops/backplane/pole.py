@@ -51,8 +51,10 @@ def pole_clock_angle(self, event_key):
 
 
 def pole_position_angle(self, event_key):
-    """Projected angle of a body's pole vector on the sky, measured from celestial north
-    toward celestial east (i.e., counterclockwise on the sky).
+    """The projected angle of a body's pole vector on the sky.
+
+    The angle is measured from celestial north toward celestial east, that is,
+    counterclockwise on the sky.
 
     This is the complement of the clock angle, in radians.
 

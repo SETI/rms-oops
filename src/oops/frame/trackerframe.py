@@ -9,8 +9,9 @@ from oops.transform import Transform
 
 
 class TrackerFrame(Frame):
-    """A Frame subclass that ensures, via a small rotation, that a designated target path
-    will remain in a fixed direction.
+    """A Frame that holds a designated target path in a fixed direction.
+
+    The frame applies a small rotation to another frame to achieve this.
 
     The primary use of this frame is for observing moving targets with HST. Normally, HST
     images of the same target, obtained during the same visit and orbit, will have a

@@ -7,7 +7,7 @@ from oops.mutable import Mutable
 
 
 class Cadence(Mutable):
-    """Cadence is an abstract class that defines the timing of an observation.
+    """An abstract class defining the timing of an observation.
 
     Attributes:
         time (tuple): The start time and end time of the observation overall, in seconds

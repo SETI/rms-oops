@@ -17,17 +17,14 @@ from filecache import FCPath
 ##########################################################################################
 
 def from_file(filespec, return_all_planets=False, method='strict', **parameters):
-    """A general, static method to return a Snapshot object based on a given
-    Juno SRU EDR image file.
+    """A Snapshot object based on a given Juno SRU EDR image file.
 
-    Inputs:
-        filespec            The full path to a Juno SRU FITS image file or its
-                            detached PDS label.
-
-        return_all_planets  Include kernels for all planets not just
-                            Jupiter or Saturn.
-
-        method              Label reading method to be passed to Pds3Label.
+    Parameters:
+        filespec (str, Path, or FCPath): The full path to a Juno SRU FITS image file or
+            its detached PDS label.
+        return_all_planets (bool, optional): Include kernels for all planets not just
+            Jupiter or Saturn.
+        method (str, optional): Label reading method to be passed to Pds3Label.
     """
     SRU.initialize()    # Define everything the first time through; use
                         # defaults unless initialize() is called explicitly.
@@ -85,9 +82,10 @@ def _load_data(datspec, meta):
         meta (object): Image Metadata object.
 
     Returns:
-        A Numpy array containing the data in axis order (line, sample), where lines
-            and samples correspond to the CCD rows and columns defined in the SIS. Dummy
-            pixels (rows 510-511, columns 0-1) and any pixels not downlinked contain zero.
+        numpy.ndarray: The data in axis order (line, sample), where lines and samples
+        correspond to the CCD rows and columns defined in the SIS.
+        Dummy pixels (rows 510-511, columns 0-1) and any pixels not downlinked contain
+        zero.
     """
     local_path = datspec.retrieve()
     with pyfits.open(local_path) as hdulist:
@@ -110,12 +108,15 @@ class _Metadata(object):
             label (dict): The label dictionary.
 
         Attributes:
-            nlines          Number of lines (CCD rows). nsamples        Number of samples
-            per line (CCD columns). exposure        Exposure duration in seconds. tstart
-            Image start time in seconds TDB. tstop           Image stop time in seconds
-            TDB. unit            SRU unit number, 1 or 2. tdi_on          True if
-            time-delay integration was used to compensate for the spacecraft spin. target
-            Target name.
+            nlines (int): Number of lines (CCD rows).
+            nsamples (int): Number of samples per line (CCD columns).
+            exposure (float): Exposure duration in seconds.
+            tstart (float): Image start time in seconds TDB.
+            tstop (float): Image stop time in seconds TDB.
+            unit (int): SRU unit number, 1 or 2.
+            tdi_on (bool): True if time-delay integration was used to compensate for the
+                spacecraft spin.
+            target (str): Target name.
         """
 
         # Image dimensions
@@ -234,7 +235,7 @@ class SRU(object):
                 TDB; normally the image start time.
 
         Returns:
-            An unregistered, per-observation Frame object.
+            Frame: An unregistered, per-observation Frame object.
         """
         spice_frame = 'JUNO_SRU' + str(unit)
         if unit not in SRU.spice_frames:

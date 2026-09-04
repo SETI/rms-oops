@@ -304,8 +304,7 @@ class TimedImage(Observation):
                                             remask=remask)
 
     def uv_range_at_time(self, time, *, remask=False):
-        """The `(u,v)` range of spatial pixels in the data array observed at the specified
-        time.
+        """The `(u,v)` range of spatial pixels observed at a specified time.
 
         Parameters:
             time (Scalar): Time values in seconds TDB.
@@ -377,7 +376,7 @@ class TimedImage(Observation):
             **kwargs: The remaining keyword options of Snapshot.inventory(), which see.
 
         Returns:
-            (list, array, or dict): As described in Snapshot.inventory().
+            list, numpy.ndarray, or dict: As described in Snapshot.inventory().
 
         Raises:
             NotImplementedError: If the cadence extends this observation beyond the shape

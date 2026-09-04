@@ -10,8 +10,10 @@ from oops.transform import Transform
 
 
 class PosTargFrame(Frame):
-    """A Frame subclass describing a fixed rotation about the X and Y axes, so the Z-axis
-    of another frame falls at a slightly different position in this frame.
+    """A Frame defined by a fixed rotation about the X and Y axes.
+
+    The rotation places the Z-axis of another frame at a slightly different position in
+    this frame.
     """
 
     _WAYFRAMES = {}

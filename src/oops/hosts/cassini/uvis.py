@@ -21,8 +21,7 @@ DEBUG = False       # True to assert that the data array must have null
 ##########################################################################################
 
 def from_file(filespec, data=True, enclose=False, method='strict', **parameters):
-    """A general, static method to return one or more Observation subclass objects based
-    on a label for a given Cassini UVIS file.
+    """One or more Observations based on the label of a Cassini UVIS file.
 
     Parameters:
         filespec (str or FCPath): The full path to the PDS label of a UVIS data file.
@@ -367,6 +366,16 @@ def get_spectrum(filespec, tstart, label, data):
     return obs
 
 def load_data(filespec, body, dtype):
+    """The contents of a UVIS data file as a NumPy array.
+
+    Parameters:
+        filespec (str, Path, or FCPath): Path to the label file.
+        body (str): Basename of the data file, as named in the label.
+        dtype (numpy.dtype): The data type of the values in the file.
+
+    Returns:
+        numpy.ndarray: The values read from the file.
+    """
 
     data_filespec = FCPath(filespec).with_name(body)
 
@@ -499,8 +508,7 @@ class UVIS(object):
 
     @staticmethod
     def reset():
-        """Resets the internal Cassini UVIS parameters. Can be useful for
-        debugging.
+        """Resets the internal Cassini UVIS parameters. Can be useful for debugging.
         """
 
         UVIS.instrument_kernel = None

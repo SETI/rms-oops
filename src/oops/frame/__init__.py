@@ -1,6 +1,7 @@
 ##########################################################################################
 # oops/frame/__init__.py
 ##########################################################################################
+"""Frame classes, which define the orientation of a coordinate frame in space."""
 
 from oops.frame.frame_           import (Frame, NullFrame, J2000Frame, LinkedFrame,
                                          ReversedFrame)

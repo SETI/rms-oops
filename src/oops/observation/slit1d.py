@@ -13,8 +13,10 @@ from oops.path                import Path
 
 
 class Slit1D(Observation):
-    """A subclass of Observation consisting of a 1-D slit measurement with no
-    time-dependence. However, it may still have additional axes (e.g., bands).
+    """A 1-D slit measurement with no time-dependence.
+
+    A subclass of :class:`~oops.Observation` that may still have additional axes, such as
+    bands.
     """
 
     def __init__(self, axes, tstart, texp, fov, path, frame, **subfields):
@@ -203,8 +205,7 @@ class Slit1D(Observation):
         return self.time_range_at_uv_0d(uv_pair, remask=remask)
 
     def uv_range_at_time(self, time, *, remask=False):
-        """The `(u,v)` range of spatial pixels in the data array observed at the specified
-        time.
+        """The `(u,v)` range of spatial pixels observed at a specified time.
 
         A Slit1D observation has no time-dependence, so the entire slit is observed at
         every time within the limits of the observation.

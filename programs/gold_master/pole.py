@@ -1,8 +1,10 @@
 ##########################################################################################
 # programs/gold_master/pole.py
 ##########################################################################################
-"""Gold master tests of the backplanes describing the projected direction of a body's
-north pole in the sky plane.
+"""Gold master tests of the pole backplanes.
+
+These backplanes describe the projected direction of a body's north pole in the sky
+plane.
 """
 
 from programs.gold_master import register_test_suite

@@ -11,8 +11,10 @@ from oops.surface.surface_ import Surface
 
 
 class Limb(Surface):
-    """The locus of points where a surface normal from a spheroid or ellipsoid is
-    perpendicular to the line of sight.
+    """A virtual surface tracing the limb of a spheroid or ellipsoid.
+
+    The Limb is the locus of points where a surface normal from the spheroid or ellipsoid
+    is perpendicular to the line of sight.
 
     This provides a convenient coordinate system for describing cloud features on the limb
     of a body.
@@ -178,8 +180,7 @@ class Limb(Surface):
 
     def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
                             hints=None, groundtrack=False):
-        """The position where a point with the given coordinates falls relative to this
-        surface's origin and frame.
+        """The position at the given surface coordinates.
 
         Parameters:
             coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at
@@ -381,8 +382,7 @@ class Limb(Surface):
     ######################################################################################
 
     def clock_from_groundtrack(self, track, obs, *, derivs=False, hints=None):
-        """The angle measured clockwise from the projected pole to the groundtrack's
-        surface normal.
+        """The clock angle from the projected pole to the groundtrack's normal.
 
         Parameters:
             track (Vector3): Positions at or near the ellipsoid's surface relative to the

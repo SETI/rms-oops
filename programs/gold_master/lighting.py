@@ -1,8 +1,9 @@
 ##########################################################################################
 # programs/gold_master/lighting.py
 ##########################################################################################
-"""Gold master tests of the lighting geometry backplanes and of the photometric surface
-laws derived from them.
+"""Gold master tests of the lighting geometry backplanes.
+
+The tests also cover the photometric surface laws derived from those backplanes.
 """
 
 import numpy as np

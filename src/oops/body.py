@@ -132,6 +132,8 @@ for (codes, names) in ALIASES:
 
 # Sometimes you really just want a list, not an iterator
 def lrange(*args):
+    """A list of the integers in the given range."""
+
     return list(range(*args))
 
 #### Mars
@@ -230,9 +232,11 @@ _INERTIALS = ['B1950', 'GALACTIC', 'ECLIPJ2000']
 ##########################################################################################
 
 class Body(Oops):
-    """Defines the properties and relationships of solar system bodies.
+    """The properties and relationships of a solar system body.
 
-    Bodies include planets, dwarf planets, satellites and rings.
+    Bodies include planets, dwarf planets, satellites and rings. A Body ties a target to
+    its :class:`~oops.Path`, its :class:`~oops.Frame`, its :class:`~oops.Surface`, and its
+    :class:`~oops.Gravity` field.
 
     Attributes:
         name (str): The name of this body.
@@ -506,6 +510,8 @@ class Body(Oops):
 
     @property
     def children(self):
+        """The Body objects that are the immediate children of this Body."""
+
         return [Body.BODY_REGISTRY[name] for name in self.child_names]
 
     def select_children(self, include_all=None, include_any=None,
@@ -833,8 +839,7 @@ class Body(Oops):
 
     def photon_to_event(self, event, derivs=False, guess=None, antimask=None, quick=None,
                         converge=None):
-        """The photon departure event from the center of this body, matching the given
-        arrival event.
+        """The photon departure event from the center of this body.
 
         This delegates to `self.path.photon_to_event`. It lets a Body and a LightSource
         serve interchangeably as a source of illumination.
@@ -846,8 +851,8 @@ class Body(Oops):
             guess (Scalar, optional): An initial guess to use as the event time along the
                 path; otherwise None. Should only be used if the event time was already
                 returned from a similar calculation.
-            antimask (ndarray or bool, optional): If not None, this is a boolean array to
-                be applied to event times and positions. Only the indices where
+            antimask (numpy.ndarray or bool, optional): If not None, this is a boolean
+                array to be applied to event times and positions. Only the indices where
                 antimask=True will be used in the solution.
             quick (dict or bool, optional): To override the configured default parameters
                 for QuickPaths and QuickFrames; False to disable the use of QuickPaths

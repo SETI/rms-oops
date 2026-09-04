@@ -15,8 +15,7 @@ EPSILON = sys.float_info.epsilon/2.         # actual machine precision
 
 
 class PolynomialFOV(FOV):
-    """Subclass of FOV that describes a field of view in which the distortion is described
-    by a 2-D polynomial.
+    """A field of view whose distortion is described by a 2-D polynomial.
 
     This is the approach used by the Space Telescope Science Institute to describe the
     Hubble instrument fields of view. A PolynomialFOV has no dependence on the optional
@@ -151,8 +150,7 @@ class PolynomialFOV(FOV):
         self.freeze()
 
     def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The `(x,y)` camera frame coordinates given the FOV coordinates `(u,v)` at the
-        specified time.
+        """The camera coordinates `(x,y)` at FOV coordinates `(u,v)` and a given time.
 
         Parameters:
             uv_pair (Pair): `(u,v)` coordinates in this FOV.
@@ -198,8 +196,7 @@ class PolynomialFOV(FOV):
         return xy
 
     def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The `(u,v)` FOV coordinates given the `(x,y)` camera frame coordinates at the
-        specified time.
+        """The FOV coordinates `(u,v)` at camera coordinates `(x,y)` and a given time.
 
         Parameters:
             xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.

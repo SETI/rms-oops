@@ -15,9 +15,9 @@ class Sequence(Cadence):
         """Constructor for a Sequence.
 
         Parameters:
-            tlist (Scalar, list, or 1-D array): The start times of the time steps, in
+            tlist (Scalar, list, or numpy.ndarray): The start times of the time steps, in
                 seconds TDB.
-            texp (float, list, or 1-D array): The exposure time in seconds associated
+            texp (float, list, or numpy.ndarray): The exposure time in seconds associated
                 with each step. This can be shorter than the time interval due to readout
                 times, etc. It could also potentially be longer. The value can be:
 

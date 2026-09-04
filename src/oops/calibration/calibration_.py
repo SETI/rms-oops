@@ -9,8 +9,7 @@ from oops.oops import Oops
 
 
 class Calibration(Oops):
-    """Calibration is an abstract class defining a relationship between the numeric values
-    in an image array and physical quantities.
+    """An abstract class relating image array values to physical quantities.
 
     Attributes:
         name (str): The name of the quantity that this Calibration converts to.
@@ -90,8 +89,7 @@ class Calibration(Oops):
                                   'implemented')
 
     def prescale(self, factor, baseline=0., *, name=''):
-        """A version of this Calibration in which image DNs are re-scaled before the
-        calibration is applied.
+        """A version of this Calibration with image DNs re-scaled beforehand.
 
         Parameters:
             factor (Scalar): Scale factor to apply to DN values.
@@ -173,8 +171,8 @@ class Calibration(Oops):
     def _prescaled_args(self, factor, baseline=0., *, name=''):
         """The name, factor and baseline of a pre-scaled version of this Calibration.
 
-        This performs the algebra shared by every `prescale` implementation. The caller
-        supplies the results to its own constructor.
+        This performs the algebra shared by every :meth:`~oops.Calibration.prescale`
+        implementation. The caller supplies the results to its own constructor.
 
         Parameters:
             factor (Scalar): Scale factor to apply to DN values.

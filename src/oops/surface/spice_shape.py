@@ -11,8 +11,10 @@ from oops.surface.spheroid  import Spheroid
 
 
 def spice_shape(spice_id, frame=None, default_radii=None):
-    """Construct a Spheroid or Ellipsoid defining the shape and orientation of a body
-    defined in the SPICE toolkit.
+    """The Spheroid or Ellipsoid describing the shape of a body defined in SPICE.
+
+    The returned surface is a :class:`~oops.surface.Spheroid` if the body's two equatorial
+    radii are equal, and an :class:`~oops.surface.Ellipsoid` otherwise.
 
     Parameters:
         spice_id (str or int): The SPICE body name or integer code.

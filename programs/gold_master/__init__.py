@@ -1,95 +1,96 @@
 ##########################################################################################
 # programs/gold_master/__init__.py
 ##########################################################################################
-"""\
-################################################################################
-# How to use with pytest for a host or instrument...
-################################################################################
-# Case 1: A single test
-####################################
+"""The gold master backplane test framework.
 
-import programs.gold_master as gm
+This package compares the backplanes computed for a standard observation against a stored
+set of gold masters. It runs either under pytest, through `execute_as_pytest`, or as a
+command-line program, through `execute_as_command`.
 
-def test_<your test name>():
+**Using it with pytest: a single test**
 
-    # Define the default observation
+::
+
+    import programs.gold_master as gm
+
+    def test_<your test name>():
+
+        # Define the default observation
+        gm.define_default_obs(
+                obspath = 'file path inside the test_data directory',
+                index   = (index to apply to result of from_file, or None),
+                planets = ['SATURN'],               # for example
+                moons   = ['ENCELADUS'],            # for example
+                rings   = ['SATURN_MAIN_RINGS'],    # for example, optional
+                kwargs  = {})                       # other from_file inputs
+
+        # Change any other default parameters, at least this one...
+        gm.set_default_args(module='oops.hosts.xxx.yyy', ...)
+
+        gm.execute_as_pytest()
+
+**Using it with pytest: multiple tests**
+
+::
+
+    import pytest
+    import programs.gold_master as gm
+
+    @pytest.fixture(autouse=True)
+    def _standard_obs():
+
+        # Define the standard observations
+        gm.define_standard_obs('obs1',
+                obspath = 'file path inside the test_data directory',
+                index   = (index to apply to result of from_file, or None),
+                planets = ['SATURN'],               # for example
+                moons   = ['ENCELADUS'],            # for example
+                rings   = ['SATURN_MAIN_RINGS'],    # for example, optional
+                kwargs  = {})                       # other from_file inputs
+
+        gm.define_standard_obs('obs2', ...)
+
+        gm.define_standard_obs('obs3', ...)
+
+        # Change any other default parameters, at least this one...
+        gm.set_default_args(module='oops.hosts.xxx.yyy', ...)
+
+    def test_1():
+        gm.execute_as_pytest('obs1')
+
+    def test_2():
+        gm.execute_as_pytest('obs2')
+
+    def test_3():
+        gm.execute_as_pytest('obs3')
+
+**Writing a gold master tester program dedicated to an instrument**
+
+::
+
+    import os
+    import programs.gold_master as gm
+
+    # Define the default observation and any number of others for testing;
+    # note that the selection can be overridden on the command line.
+
     gm.define_default_obs(
-            obspath = 'file path inside the test_data directory',
-            index   = (index to apply to result of from_file, or None),
-            planets = ['SATURN'],               # for example
-            moons   = ['ENCELADUS'],            # for example
-            rings   = ['SATURN_MAIN_RINGS'],    # for example, optional
-            kwargs  = {})                       # other from_file inputs
+                obspath = 'file path inside the test_data directory',
+                index   = (index to apply to result of from_file, or None),
+                planets = ['SATURN'],               # for example
+                moons   = ['ENCELADUS'],            # for example
+                rings   = ['SATURN_MAIN_RINGS'],    # for example, optional
+                kwargs  = {})                       # other from_file inputs
+    gm.define_standard_obs('test2', ...)
+    gm.define_standard_obs('test3', ...)
 
     # Change any other default parameters, at least this one...
     gm.set_default_args(module='oops.hosts.xxx.yyy', ...)
 
-    gm.execute_as_pytest()
+    if __name__ == '__main__':
+        gm.execute_as_command()
 
-####################################
-# Case 2: Multiple tests
-####################################
-
-import pytest
-import programs.gold_master as gm
-
-@pytest.fixture(autouse=True)
-def _standard_obs():
-
-    # Define the standard observations
-    gm.define_standard_obs('obs1',
-            obspath = 'file path inside the test_data directory',
-            index   = (index to apply to result of from_file, or None),
-            planets = ['SATURN'],               # for example
-            moons   = ['ENCELADUS'],            # for example
-            rings   = ['SATURN_MAIN_RINGS'],    # for example, optional
-            kwargs  = {})                       # other from_file inputs
-
-    gm.define_standard_obs('obs2', ...)
-
-    gm.define_standard_obs('obs3', ...)
-
-    # Change any other default parameters, at least this one...
-    gm.set_default_args(module='oops.hosts.xxx.yyy', ...)
-
-def test_1():
-    gm.execute_as_pytest('obs1')
-
-def test_2():
-    gm.execute_as_pytest('obs2')
-
-def test_3():
-    gm.execute_as_pytest('obs3')
-
-################################################################################
-# How to have a gold master tester program dedicated to an instrument...
-################################################################################
-
-import os
-import programs.gold_master as gm
-
-# Define the default observation and any number of others for testing;
-# note that the selection can be overridden on the command line.
-
-gm.define_default_obs(
-            obspath = 'file path inside the test_data directory',
-            index   = (index to apply to result of from_file, or None),
-            planets = ['SATURN'],               # for example
-            moons   = ['ENCELADUS'],            # for example
-            rings   = ['SATURN_MAIN_RINGS'],    # for example, optional
-            kwargs  = {})                       # other from_file inputs
-gm.define_standard_obs('test2', ...)
-gm.define_standard_obs('test3', ...)
-
-# Change any other default parameters, at least this one...
-gm.set_default_args(module='oops.hosts.xxx.yyy', ...)
-
-if __name__ == '__main__':
-    gm.execute_as_command()
-
-################################################################################
-# Log file format
-################################################################################
+**Log file format**
 
 A single record of the log file has this format::
 
@@ -416,8 +417,7 @@ def override(title, value, names=None):
 ##########################################################################################
 
 def execute_as_command():
-    """Parse command-line arguments for gold master testing of one or more backplanes and
-    then run the tests.
+    """Run the gold master tests named by the command-line arguments.
 
     A "Namespace" object is returned, containing all of the command line attributes, plus:
 
@@ -965,7 +965,7 @@ class _BackplaneComparison(object):
             method (str): Name of the comparison method, e.g., 'mod360'.
             operator (str): Comparison operator.
             radius (float): Allowed offset distance in pixels.
-            mask (ndarray, optional): Mask to exclude pixels from comparison.
+            mask (numpy.ndarray, optional): Mask to exclude pixels from comparison.
             pickle_path (str): Path to the pickle file, if any.
             max_diff1 (float): The largest difference between unmasked pixels of array and
                 master, initially.
@@ -1044,8 +1044,7 @@ SUMMARY_COMMENT = """\
 """
 
 class BackplaneTest(object):
-    """Class for managing information about the gold master tests of a specific
-    observation.
+    """The gold master tests of a specific observation.
     """
 
     def __init__(self, obs, planets, moons, rings, overrides, args, suffix=''):
@@ -1441,8 +1440,9 @@ class BackplaneTest(object):
             radius (float, optional): Radius of a circle, in pixels, within which to
                 check for a possible spatial shift of the values or the mask; default 0.
                 The value is rounded down, so a radius below 1 indicates no shift.
-            mask (bool or array, optional): Mask to apply; masked areas are excluded from
-                the comparison. Default is False, meaning nothing is excluded.
+            mask (bool or numpy.ndarray, optional): Mask to apply; masked areas are
+                excluded from the comparison. Default is False, meaning nothing is
+                excluded.
 
         Raises:
             ValueError: If `method` or `operator` is unrecognized, if a nonzero `radius`
@@ -1496,8 +1496,9 @@ class BackplaneTest(object):
             radius (float, optional): Radius of a circle, in pixels, within which to
                 check for a possible spatial shift of the values or the mask; default 0.
                 The value is rounded down, so a radius below 1 indicates no shift.
-            mask (bool or array, optional): Mask to apply; masked areas are excluded from
-                the comparison. Default is False, meaning nothing is excluded.
+            mask (bool or numpy.ndarray, optional): Mask to apply; masked areas are
+                excluded from the comparison. Default is False, meaning nothing is
+                excluded.
 
         Raises:
             ValueError: If `method` or `operator` is unrecognized, if a nonzero `radius`
@@ -1917,7 +1918,7 @@ class BackplaneTest(object):
             method (str): Comparison method, one of "", "mod360", "degrees", or "border".
             operator (str): Comparison operator, one of "=", ">", ">=", "<", or "<=".
             radius (float): Radius in pixels within which to check for a spatial shift.
-            mask (bool or array): Mask to apply; masked areas are excluded.
+            mask (bool or numpy.ndarray): Mask to apply; masked areas are excluded.
 
         Returns:
             tuple: (array, comparison), where `array` is the validated array, converted to
@@ -2259,7 +2260,7 @@ class BackplaneTest(object):
                 radius below 1 yields a single pixel.
 
         Returns:
-            ndarray: A square boolean array that is True inside the circle.
+            numpy.ndarray: A square boolean array that is True inside the circle.
         """
 
         rounded = int(radius // 1)      # rounded down
@@ -2341,7 +2342,7 @@ class BackplaneTest(object):
         as black, and is zoomed by the factor given on the command line.
 
         Parameters:
-            array (Qube or ndarray): Backplane array to save.
+            array (Qube or numpy.ndarray): Backplane array to save.
             browse_path (FCPath): Path of the file to write. Its suffix determines the
                 image format.
         """
@@ -2411,7 +2412,7 @@ class BackplaneTest(object):
             browse_path (FCPath): Path of the image file to read.
 
         Returns:
-            ndarray: The image as a 2-D array of unsigned bytes.
+            numpy.ndarray: The image as a 2-D array of unsigned bytes.
         """
 
         local_path = browse_path.retrieve()

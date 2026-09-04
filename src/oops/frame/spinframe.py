@@ -10,8 +10,7 @@ from oops.transform import Transform
 
 
 class SpinFrame(Frame):
-    """A Frame subclass describing a Frame in uniform rotation about one axis of another
-    Frame.
+    """A Frame in uniform rotation about one axis of another Frame.
 
     It can be created without a `frame_id`, in which case it is left unregistered and can
     therefore be used as a component of another Frame.

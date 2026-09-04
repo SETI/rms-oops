@@ -22,19 +22,18 @@ __all__ = ['from_file', 'from_index', 'initialize', 'Metadata', 'SSI']
 ##########################################################################################
 def from_file(filespec,
               return_all_planets=False, full_fov=False, method='strict', **parameters):
-    """A general, static method to return a Snapshot object based on a given
-    Galileo SSI image file.  By default, only the valid image region is
-    returned.
+    """A Snapshot object based on a given Galileo SSI image file.
 
-    Inputs:
-        filespec            The full path to a Galileo SSI file or its PDS label.
+    By default, only the valid image region is returned.
 
-        return_all_planets  Include kernels for all planets not just
-                            Jupiter or Saturn.
-
-        full_fov:           If True, the full image is returned with a mask
-                            describing the regions with no data.
-        method:             Label reading method to be passed to Pds3Label.
+    Parameters:
+        filespec (str, Path, or FCPath): The full path to a Galileo SSI file or its PDS
+            label.
+        return_all_planets (bool, optional): Include kernels for all planets not just
+            Jupiter or Saturn.
+        full_fov (bool, optional): If True, the full image is returned with a mask
+            describing the regions with no data.
+        method (str, optional): Label reading method to be passed to Pds3Label.
     """
 
     SSI.initialize()    # Define everything the first time through; use defaults
@@ -181,6 +180,7 @@ def initialize(planets=None, asof=None,
 
 
 class Metadata(object):
+    """The metadata of a Galileo SSI image, derived from its label."""
 
     def __init__(self, meta_dict):
         """Use the label or index dict to assemble the image metadata."""
@@ -236,7 +236,7 @@ class Metadata(object):
             full_fov (bool, optional): If True, the image is not trimmed.
 
         Returns:
-            Data array trimmed to the data window.
+            numpy.ndarray: Data array trimmed to the data window.
         """
         if full_fov:
             return data
@@ -257,8 +257,8 @@ class Metadata(object):
             full_fov (bool, optional): If False, the FOV is cropped to the dimensions
                 given by the cutout window.
 
-        Attributes:
-            FOV object.
+        Returns:
+            FOV: The field of view of this image.
         """
 
         # Get FOV

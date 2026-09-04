@@ -9,13 +9,12 @@ from oops.transform import Transform
 
 
 class PoleFrame(Frame):
-    """A Frame subclass describing a non-rotating frame centered on the Z-axis of a body's
-    pole vector.
+    """A non-rotating Frame centered on the Z-axis of a body's pole vector.
 
-    This differs from RingFrame in that the pole may precess around a separate, invariable
-    pole for the system. Because of this behavior, the reference longitude is defined as
-    the ascending node of the invariable plane rather than as the ascending node of the
-    ring plane. This frame is recommended for Neptune in particular.
+    This differs from :class:`~oops.frame.RingFrame` in that the pole may precess around a
+    separate, invariable pole for the system. Because of this behavior, the reference
+    longitude is defined as the ascending node of the invariable plane rather than as the
+    ascending node of the ring plane. This frame is recommended for Neptune in particular.
     """
 
     _WAYFRAMES = {}
@@ -59,7 +58,8 @@ class PoleFrame(Frame):
 
         self._aries = bool(aries)
         if self._aries:
-            # The ascending node of the invariable plane falls 90 degrees ahead of the pole's RA
+            # The ascending node of the invariable plane falls 90 degrees ahead of the
+            # pole's RA
             self._invariable_node_lon = ra + Scalar.HALFPI
         else:
             self._invariable_node_lon = 0.
@@ -186,8 +186,10 @@ class PoleFrame(Frame):
         return xform
 
     def node_at_time(self, time, *, quick=None):
-        """Angle from the reference Frame's X-axis, along its X-Y plane, to the ascending
-        node of this Frame's X-Y plane.
+        """The angle from the reference Frame's X-axis to this Frame's ascending node.
+
+        The angle is measured within the X-Y plane of the reference frame, to the
+        ascending node of this Frame's X-Y plane.
 
         Values always fall between 0 and 2*pi.
 

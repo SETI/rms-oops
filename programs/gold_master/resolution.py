@@ -1,8 +1,9 @@
 ##########################################################################################
 # programs/gold_master/resolution.py
 ##########################################################################################
-"""Gold master tests of the surface resolution backplanes, which describe the projected
-size of a pixel at the surface.
+"""Gold master tests of the surface resolution backplanes.
+
+These backplanes describe the projected size of a pixel at the surface.
 """
 
 from programs.gold_master import register_test_suite

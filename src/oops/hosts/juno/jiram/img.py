@@ -20,19 +20,15 @@ from filecache import FCPath
 ####       other host modules.
 def from_file(filespec, label, fast_distortion=True,
                                return_all_planets=False, **parameters):
-    """A general, static method to return a Snapshot object based on a given
-    JIRAM image or spectrum file.
+    """A Snapshot object based on a given JIRAM image or spectrum file.
 
-    Inputs:
-        filespec            The full path to a Juno JIRAM image file or its
-                            PDS label.
-
-        fast_distortion     True to use a pre-inverted polynomial;
-                            False to use a dynamically solved polynomial;
-                            None to use a FlatFOV.
-
-        return_all_planets  Include kernels for all planets not just
-                            Jupiter or Saturn.
+    Parameters:
+        filespec (str, Path, or FCPath): The full path to a Juno JIRAM image file or its
+            PDS label.
+        fast_distortion (bool or None, optional): True to use a pre-inverted polynomial;
+            False to use a dynamically solved polynomial; None to use a FlatFOV.
+        return_all_planets (bool, optional): Include kernels for all planets not just
+            Jupiter or Saturn.
     """
 
     filespec = FCPath(filespec)
@@ -75,11 +71,11 @@ def _load_data(filespec, label, meta):
         meta (object): Image Metadata object.
 
     Returns:
-        (tuple): (framelets, framelet_labels), where:
+        tuple: (framelets, framelet_labels), where:
 
-        * `framelets` (array-like): A Numpy array containing the individual frames in axis
-          order (line, sample, framelet #). framelet_labels List of labels for each
-          framelet.
+        * `framelets` (numpy.ndarray): The individual frames in axis order (line,
+          sample, framelet #).
+        * `framelet_labels` (list): The label of each framelet.
     """
 
     # Read data
@@ -124,9 +120,19 @@ class _Metadata(object):
             label (dict): The label dictionary.
 
         Attributes:
-            nlines          A Numpy array containing the data in axis order (line,
-            sample). nsamples        The time sampling array in (line, sample) axis order,
-            or None if no time backplane is found in the file. nframelets
+            nlines (int): Number of lines in the composite image.
+            nsamples (int): Number of samples per line.
+            frlines (int): Number of lines in each framelet.
+            nframelets (int): Number of framelets in the composite image.
+            size (list): The `(samples, lines)` shape of one framelet.
+            exposure (float): Exposure duration in seconds.
+            filter (str): Name of the filter.
+            tstart (float): Image start time in seconds TDB.
+            tstop (float): Image stop time in seconds TDB.
+            target (str): Target name.
+            fov (FOV): The field of view of one framelet.
+            instc (int): The SPICE instrument ID.
+            filter_frame (str): The name of the frame of the filter.
         """
 
         # image dimensions
@@ -230,12 +236,10 @@ class IMG(object):
 
     @staticmethod
     def reset():
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         """Reset the internal IMG parameters.
 
         Can be useful for debugging.
         """
-        #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         IMG.initialized = False
 
         JIRAM.reset()

@@ -1,6 +1,7 @@
 ##########################################################################################
 # oops/observation/__init__.py
 ##########################################################################################
+"""Observation classes, which define the timing and pointing of a data array."""
 
 from oops.observation.observation_ import Observation
 from oops.observation.insitu       import InSitu

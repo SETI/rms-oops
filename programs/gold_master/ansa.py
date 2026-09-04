@@ -1,8 +1,10 @@
 ##########################################################################################
 # programs/gold_master/ansa.py
 ##########################################################################################
-"""Gold master tests of the ansa backplanes, which describe a ring plane as seen edge-on
-at the ring's projected extremities.
+"""Gold master tests of the ansa backplanes.
+
+The ansa backplanes describe a ring plane as seen edge-on at the ring's projected
+extremities.
 """
 
 import numpy as np

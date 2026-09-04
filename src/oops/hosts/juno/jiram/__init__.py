@@ -16,13 +16,12 @@ __all__ = ['from_file', 'JIRAM']
 # Standard class methods
 ##########################################################################################
 def from_file(filespec, return_all_planets=False, method='strict', **parameters):
-    """A general, static method to return a Snapshot object based on a given
-    JIRAM image or spectrum file.
+    """A Snapshot object based on a given JIRAM image or spectrum file.
 
-    Inputs:
-        return_all_planets  Include kernels for all planets not just
-                            Jupiter or Saturn.
-        method              Label reading method to be passed to Pds3Label.
+    Parameters:
+        return_all_planets (bool, optional): Include kernels for all planets not just
+            Jupiter or Saturn.
+        method (str, optional): Label reading method to be passed to Pds3Label.
     """
     JIRAM.initialize()    # Define everything the first time through; use
                           # defaults unless initialize() is called explicitly.
@@ -67,9 +66,8 @@ class _Metadata(object):
             label (dict): The label dictionary.
 
         Attributes:
-            nlines          A Numpy array containing the data in axis order (line,
-            sample). nsamples        The time sampling array in (line, sample) axis order,
-            or None if no time backplane is found in the file. nframelets
+            tstart (float): Image start time in seconds TDB.
+            tstop (float): Image stop time in seconds TDB.
         """
 
         # Default timing for unprocessed frame
@@ -91,16 +89,18 @@ class JIRAM(object):
 
     @staticmethod
     def initialize(asof=None, **kwargs):
-        """Initialize key information about the JIRAM instrument; fill in key information
-        about the WAC and NAC.
+        """Initialize key information about the JIRAM instrument.
+
+        Key information about the WAC and NAC is filled in.
 
         Must be called first. After the first call, later calls to this function are
         ignored.
 
         Parameters:
             asof (str, optional): Only use SPICE kernels that existed before this date;
-                None to ignore. kwargs:     Arguments for juno.initialize() and
-                Body.define_solar_system()
+                None to ignore.
+            **kwargs: Arguments for `juno.initialize()` and
+                :meth:`~oops.Body.define_solar_system`.
         """
 
         # Quick exit after first call

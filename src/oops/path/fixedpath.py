@@ -9,8 +9,7 @@ from oops.path.path_   import Path
 
 
 class FixedPath(Path):
-    """A Path subclass describing fixed coordinates relative to another Path and
-    Frame.
+    """A Path at fixed coordinates relative to another Path and Frame.
     """
 
     _WAYPOINTS = {}

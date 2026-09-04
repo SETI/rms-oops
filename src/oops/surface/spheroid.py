@@ -10,8 +10,9 @@ from oops.surface.ellipsoid import Ellipsoid
 
 
 class Spheroid(Ellipsoid):
-    """A spheroidal surface centered on the given path and fixed with respect to the given
-    frame. The short radius of the spheroid is oriented along the Z-axis of the frame.
+    """A spheroidal surface centered on a path and fixed within a frame.
+
+    The short radius of the spheroid is oriented along the Z-axis of the frame.
 
     The coordinates defining the surface grid are (longitude, latitude), based on the
     assumption that a spherical body has been "squashed" along the Z-axis. The latitude

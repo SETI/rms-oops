@@ -1,8 +1,10 @@
 ##########################################################################################
 # programs/gold_master/limb.py
 ##########################################################################################
-"""Gold master tests of the limb backplanes, which describe the atmosphere along a body's
-limb rather than the body's solid surface.
+"""Gold master tests of the limb backplanes.
+
+The limb backplanes describe the atmosphere along a body's limb rather than the body's
+solid surface.
 """
 
 import numpy as np

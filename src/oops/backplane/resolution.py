@@ -77,8 +77,9 @@ def finest_resolution(self, event_key):
 
 
 def coarsest_resolution(self, event_key):
-    """Projected spatial resolution in km/pixel in the worst direction at the intercept
-    point.
+    """The projected spatial resolution in the worst direction, in km/pixel.
+
+    It is evaluated at the intercept point.
 
     Parameters:
         event_key (str or tuple): Key defining the surface event.

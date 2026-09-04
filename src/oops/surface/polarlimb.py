@@ -10,8 +10,10 @@ from oops.surface.limb import Limb
 
 
 class PolarLimb(Limb):
-    """The locus of points where a surface normal from a spheroid or ellipsoid is
-    perpendicular to the line of sight.
+    """A limb surface using polar coordinates about the projected pole.
+
+    The PolarLimb is the locus of points where a surface normal from a spheroid or
+    ellipsoid is perpendicular to the line of sight.
 
     This provides a convenient coordinate system for describing cloud features on the limb
     of a body. The coordinates of PolarLimb are (z, clock, d), where:
@@ -100,8 +102,7 @@ class PolarLimb(Limb):
 
     def vector3_from_coords(self, coords, *, obs=None, time=None, derivs=False,
                             hints=None, groundtrack=False):
-        """The position where a point with the given coordinates falls relative to this
-        surface's origin and frame.
+        """The position at the given surface coordinates.
 
         Parameters:
             coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at
