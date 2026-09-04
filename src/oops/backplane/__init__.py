@@ -104,8 +104,15 @@ class Backplane(Mutable):
                     ('SUN<', 'MIMAS', 'SATURN:RING')
 
                 describes the surface event at Mimas, subject to the constraint that the
-                photons subsequently reflected off of Saturn and arrived at the detector;
-                it can be used to determine how Mimas shadows the rings.
+                photons subsequently reflected off of Saturn's rings before they arrived
+                at the detector; it can be used to determine how Mimas shadows the rings.
+                It is interpreted by first solving for the event_key::
+
+                    ('SUN<', 'SATURN:RING') ,
+
+                which defines intercept events on Saturn's rings. Then it takes the lines
+                of sight from the events at the Sun to the events at Saturn's rings and
+                uses them to define intercept events on Mimas.
         """
 
         self.obs = obs
@@ -474,11 +481,20 @@ class Backplane(Mutable):
         Returns:
             tuple: The standardized key with its light source marked as path-based. An
             empty key is returned unchanged.
+
+        Raises:
+            ValueError: If the key describes shadowing, which a path-based event cannot.
         """
 
         event_key = Backplane.standardize_event_key(event_key, default=default)
         if not event_key:
             return event_key
+
+        # A path-based event has no spatial extent, so nothing can shadow it. The length
+        # check in standardize_event_key says the same thing, but it runs before the
+        # light source is rewritten below, so it would not see this key as gridless.
+        if Backplane._is_shadowing(event_key):
+            raise ValueError('illegal gridless event key: ' + repr(event_key))
 
         return (event_key[0][:-1] + '-',) + event_key[1:]
 
@@ -778,7 +794,7 @@ class Backplane(Mutable):
 
         # Save the departure event if any
         if departure is not None and event_key not in self.surface_events[True]:
-            surface = Backplane.get_surface(event_key[-1])
+            surface = Backplane.get_surface(event_key[1])
             departure = departure.wrt(surface.origin, surface.frame)
             self.surface_events[True ][event_key] = departure
             self.surface_events[False][event_key] = departure.wod
@@ -1051,9 +1067,10 @@ class Backplane(Mutable):
         derivs = derivs or self.ALL_DERIVS
         self.surface_events[derivs][event_key] = event
 
-        # Save the antimask
+        # Save the antimask. A shadowing event is masked by the surface downstream of it
+        # rather than by its own bounding box, so its antimask is not filed at all.
         if Backplane._is_dispersed(event_key) and not Backplane._is_shadowing(event_key):
-            surface_key = event_key[-1]
+            surface_key = event_key[1]
             if surface_key not in self.antimasks:
                 self.antimasks[surface_key] = event.antimask
 

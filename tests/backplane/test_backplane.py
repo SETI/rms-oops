@@ -71,6 +71,12 @@ def test_a_shadowing_key_carries_three_items() -> None:
     assert Backplane._is_shadowing(key)
 
 
+def test_a_two_item_key_is_not_shadowing() -> None:
+    """Shadowing needs the extra surface; two items name no shadow."""
+
+    assert not Backplane._is_shadowing(Backplane.standardize_event_key(RING))
+
+
 def test_dispersed_illumination_rejects_a_key_of_four_items() -> None:
     """Dispersed illumination takes two or three items, never more."""
 
@@ -128,6 +134,17 @@ def test_gridless_event_key_leaves_an_empty_key_alone() -> None:
     """An empty key is returned unchanged."""
 
     assert Backplane.gridless_event_key(()) == ()
+
+
+def test_gridless_event_key_rejects_a_shadowing_key() -> None:
+    """A path-based event has no spatial extent, so nothing can shadow it.
+
+    The length rule in standardize_event_key says the same, but it runs before the light
+    source is rewritten, so it does not catch a shadowing key on the way through.
+    """
+
+    with pytest.raises(ValueError, match='illegal gridless event key'):
+        Backplane.gridless_event_key(('SUN<', 'MIMAS', RING))
 
 
 ##########################################################################################
