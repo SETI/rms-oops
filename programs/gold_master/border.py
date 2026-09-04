@@ -1,9 +1,8 @@
 ##########################################################################################
 # programs/gold_master/border.py
 ##########################################################################################
-
-"""Gold master tests of the border backplanes, which identify the pixels along the edge
-of a mask or along a boundary in the values of another backplane.
+"""Gold master tests of the border backplanes, which identify the pixels along the edge of
+a mask or along a boundary in the values of another backplane.
 """
 
 from programs.gold_master import register_test_suite

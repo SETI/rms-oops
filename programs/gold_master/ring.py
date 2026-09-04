@@ -1,7 +1,6 @@
 ##########################################################################################
 # programs/gold_master/ring.py: Ring backplanes
 ##########################################################################################
-
 """Gold master tests of the ring backplanes: radius, longitude, azimuth, elevation, and
 the ring lighting angles under each pole convention.
 """

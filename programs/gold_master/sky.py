@@ -1,7 +1,6 @@
 ##########################################################################################
 # programs/gold_master/sky.py: Sky plane (celestial coordinates) backplanes
 ##########################################################################################
-
 """Gold master tests of the sky plane backplanes, which give the celestial coordinates
 and orientation of each line of sight.
 """

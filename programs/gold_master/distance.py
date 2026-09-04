@@ -1,9 +1,7 @@
 ##########################################################################################
 # programs/gold_master/distance.py
 ##########################################################################################
-
-"""Gold master tests of the distance, light time, and event time backplanes.
-"""
+"""Gold master tests of the distance, light time, and event time backplanes."""
 
 import numpy as np
 

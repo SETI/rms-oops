@@ -1,7 +1,6 @@
 ##########################################################################################
 # programs/gold_master/ansa.py
 ##########################################################################################
-
 """Gold master tests of the ansa backplanes, which describe a ring plane as seen edge-on
 at the ring's projected extremities.
 """

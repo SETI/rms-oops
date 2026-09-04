@@ -58,16 +58,16 @@ class Backplane(Mutable):
 
             Each intercepted surface is defined by a surface key string, one of:
 
-                * body_name      for the default surface of a body;
-                * body_name:RING for the ring surface associated with a body;
-                * body_name:ANSA for the ansa surface associated with a body;
-                * body_name:LIMB for the limb surface associated with a body.
+                * `body_name`      for the default surface of a body;
+                * `body_name:RING` for the ring surface associated with a body;
+                * `body_name:ANSA` for the ansa surface associated with a body;
+                * `body_name:LIMB` for the limb surface associated with a body.
 
             The light source is defined by a source key string of the form:
 
-                * body_name< for dispersed illumination;
-                * body_name> for occultation illumination;
-                * body_name- for path-based illumination.
+                * `body_name<` for dispersed illumination;
+                * `body_name>` for occultation illumination;
+                * `body_name-` for path-based illumination.
 
             These strings are not case-sensitive.
 
@@ -555,7 +555,7 @@ class Backplane(Mutable):
 
         else:
             raise ValueError('illegal backplane key type: ' +
-                              type(backplane_key).__name__)
+                             type(backplane_key).__name__)
 
         return backplane_key
 
@@ -1016,8 +1016,7 @@ class Backplane(Mutable):
         if intercept_key in self.intercepts[derivs]:
             event = self.intercepts[derivs][intercept_key]
             if self.DIAGNOSTICS:
-                LOGGING.diagnostic('INTERCEPT REUSED', event_key,
-                                   'derivs=%s' % derivs)
+                LOGGING.diagnostic('INTERCEPT REUSED', event_key, f'derivs={derivs}')
 
         else:
             now = datetime.datetime.now()
@@ -1025,8 +1024,8 @@ class Backplane(Mutable):
                                                      derivs=derivs)[0]
             if self.PERFORMANCE:
                 elapsed = (datetime.datetime.now() - now).total_seconds()
-                LOGGING.performance('INTERCEPT %6.3f' % elapsed, event_key,
-                                    'derivs=%s' % derivs)
+                LOGGING.performance(f'INTERCEPT {elapsed:6.3f}', event_key,
+                                    f'derivs={derivs}')
 
             # Save in the intercepts dictionary
             self.intercepts[derivs][intercept_key] = event

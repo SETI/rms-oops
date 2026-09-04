@@ -198,7 +198,7 @@ class DiskSource(LightSource):
         # Make sure this one is un-shaped
         if lightsource.shape != ():
             del Body.BODY_REGISTRY[lightsource.name]
-            raise ValueError('DiskSource source must have shape (): ' +
+            raise ValueError('DiskSource source must have shape (), not ' +
                              str(lightsource.shape))
 
         # At this point, the LightSource internals are filled in and valid

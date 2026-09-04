@@ -43,24 +43,18 @@ import oops.spice_support as spice
 import oops.config        as config
 import oops.mutable       as mutable
 
-from oops.constants import C, C_INVERSE, RPD, DPR, SPR, RPS, SPD, AU, \
-                           PI, TWOPI, HALFPI
+from oops.constants import C, C_INVERSE, RPD, DPR, SPR, RPS, SPD, AU, PI, TWOPI, HALFPI
 
-from polymath import Boolean, Matrix, Matrix3, Pair, Quaternion, Qube, Scalar, \
-                     Vector, Vector3
+from polymath import (Boolean, Matrix, Matrix3, Pair, Quaternion, Qube, Scalar, Vector,
+                      Vector3)
 
-__all__ = ['cadence', 'calibration', 'fov', 'gravity', 'frame', 'observation',
-           'path', 'surface', 'obs',
-           'backplane', 'body', 'cache', 'event', 'fittable', 'meshgrid',
-           'transform',
-           'Cadence', 'Calibration', 'FOV', 'Gravity', 'Frame', 'Observation',
-           'Path', 'Surface',
-           'Backplane', 'Body', 'Cache', 'Event', 'Fittable', 'Meshgrid',
-           'Transform',
-           'constants', 'spice', 'config', 'mutable',
-           'C', 'C_INVERSE', 'RPD', 'DPR', 'SPR', 'RPS', 'SPD', 'AU',
-           'PI', 'TWOPI', 'HALFPI',
-           'Boolean', 'Matrix', 'Matrix3', 'Pair', 'Quaternion', 'Qube',
+__all__ = ['cadence', 'calibration', 'fov', 'gravity', 'frame', 'observation', 'path',
+           'surface', 'obs', 'backplane', 'body', 'cache', 'event', 'fittable',
+           'meshgrid', 'transform', 'Cadence', 'Calibration', 'FOV', 'Gravity', 'Frame',
+           'Observation', 'Path', 'Surface', 'Backplane', 'Body', 'Cache', 'Event',
+           'Fittable', 'Meshgrid', 'Transform', 'constants', 'spice', 'config', 'mutable',
+           'C', 'C_INVERSE', 'RPD', 'DPR', 'SPR', 'RPS', 'SPD', 'AU', 'PI', 'TWOPI',
+           'HALFPI', 'Boolean', 'Matrix', 'Matrix3', 'Pair', 'Quaternion', 'Qube',
            'Scalar', 'Vector', 'Vector3']
 
 try:
@@ -71,9 +65,9 @@ except ImportError:
 ##########################################################################################
 # The hierarchy of imports is:
 #   Body, Surface, Path, Gravity, Event, Frame, Transform
-# Each class can reference classes later in the list, but any reference to a
-# class earlier in the list requires this approach. Cache and Fittable sit outside that
-# hierarchy and are filled in here for the same reason.
+# Each class can reference classes later in the list, but any reference to a class earlier
+# in the list requires this approach. Cache and Fittable sit outside that hierarchy and
+# are filled in here for the same reason.
 ##########################################################################################
 
 Transform._Frame = frame.Frame

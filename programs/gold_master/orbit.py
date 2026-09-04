@@ -1,7 +1,6 @@
 ##########################################################################################
 # programs/gold_master/orbit.py
 ##########################################################################################
-
 """Gold master tests of the orbit longitude backplane, which describes a moon's position
 within its own orbit about its primary.
 """

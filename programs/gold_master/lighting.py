@@ -1,7 +1,6 @@
 ##########################################################################################
 # programs/gold_master/lighting.py
 ##########################################################################################
-
 """Gold master tests of the lighting geometry backplanes and of the photometric surface
 laws derived from them.
 """

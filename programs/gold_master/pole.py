@@ -1,7 +1,6 @@
 ##########################################################################################
 # programs/gold_master/pole.py
 ##########################################################################################
-
 """Gold master tests of the backplanes describing the projected direction of a body's
 north pole in the sky plane.
 """
