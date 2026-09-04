@@ -45,8 +45,9 @@ def from_file(filespec,
     # Load the PDS label
     label = pdsparser.Pds3Label(filespec, method=method).as_dict()
 
-    # Load the data array
-    vic = vicar.VicarImage.from_file(filespec)
+    # Load the data array. A few GO_0002/RAW_CAL files have a stray non-ASCII
+    # byte in the BARC label value, which strict VICAR parsing rejects (#219).
+    vic = vicar.VicarImage.from_file(filespec, strict=False)
     vicar_dict = vic.as_dict()
 
     # Get image metadata
