@@ -5,7 +5,7 @@
 import re
 
 from polymath       import Matrix3, Qube, Scalar, Vector3
-from oops.cache     import Cache
+from oops._cache    import _Cache
 from oops.config    import PICKLE_CONFIG
 from oops.mutable   import Mutable
 from oops.transform import Transform
@@ -379,7 +379,7 @@ class Frame(Mutable):
         # can still be fitted, so two Frames that agree now might not agree later.
         # _reregister() adds it to the pool once it has been frozen.
         if hasattr(type(self), '_WAYFRAMES'):
-            self._key = Cache.clean_key(self._wayframe_key())
+            self._key = _Cache.clean_key(self._wayframe_key())
             if self._is_frozen():
                 self._wayframe = self._WAYFRAMES.setdefault(self._key, self)
             else:
@@ -450,7 +450,7 @@ class Frame(Mutable):
             del self._WAYFRAMES[self._key]
 
         # Add the definition to the cache under the new key
-        self._key = Cache.clean_key(self._wayframe_key())
+        self._key = _Cache.clean_key(self._wayframe_key())
         self._wayframe = self._WAYFRAMES.setdefault(self._key, self)
 
     @staticmethod

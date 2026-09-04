@@ -44,13 +44,13 @@ def photon_to_event(self, arrival, *, derivs=False, guess=None, antimask=None, q
               prevents the divergence of the solution in some cases.
 
     Returns:
-        tuple[Event, Event]: (`path_event`, `arrival_event`).
+        tuple: (`path_event`, `arrival_event`):
 
-        * `path_event`: The Event on this Path that matches the light travel time to
-          `arrival`. This Event always has position (0,0,0) on the Path, and it holds the
+        * `path_event` (Event): The Event on this Path that matches the light travel time
+          to `arrival`. This always has position (0,0,0) on the Path, and it holds the
           departing photon's line of sight and light travel time.
-        * `arrival_event`: A copy of the given `arrival` Event, with the photon's arriving
-          line of sight and light travel time filled in.
+        * `arrival_event` (Event): A copy of `arrival`, with the photon's arriving line of
+          sight and light travel time filled in.
 
     Notes:
         These subfields are defined in the returned Events:
@@ -99,13 +99,13 @@ def photon_from_event(self, departure, *, derivs=False, guess=None, antimask=Non
               prevents the divergence of the solution in some cases.
 
     Returns:
-        tuple[Event, Event]: (`path_event`, `departure_event`).
+        tuple: (`path_event`, `departure_event`):
 
-        * `path_event`: The Event on this Path that matches the light travel time from
-          `departure`. This Event always has position (0,0,0) on the Path, and it holds
-          the arriving photon's line of sight and light travel time.
-        * `departure_event`: A copy of the given `departure` Event, with the photon's
-          departing line of sight and light travel time filled in.
+        * `path_event` (Event): The Event on this Path that matches the light travel time
+          from `departure`. This always has position (0,0,0) on the Path, and it holds the
+          arriving photon's line of sight and light travel time.
+        * `departure_event` (Event): A copy of `departure`, with the photon's departing
+          line of sight and light travel time filled in.
 
     Notes:
         These subfields are defined in the returned Events:

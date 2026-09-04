@@ -4,6 +4,7 @@
 
 import cspyce
 import pytest
+from filecache import FCPath
 
 from oops.frame import Frame
 from oops.path  import Path
@@ -12,6 +13,16 @@ from programs.gold_master.test_support import TEST_SPICE_PREFIX
 # Leap seconds, planetary constants, and the planetary ephemeris: the kernels that
 # every test of SPICE-derived geometry needs.
 CORE_KERNELS = ('naif0009.tls', 'pck00010.tpc', 'de421.bsp')
+
+# test_support resolves the prefix to None when neither $OOPS_RESOURCES nor
+# $OOPS_TEST_DATA_PATH names a test data tree. Every test that reads a kernel needs one,
+# so the precondition is checked once here: an unconfigured environment then fails at
+# collection, naming what is missing, instead of raising AttributeError on None inside
+# whichever test happened to run first. Tests import this narrowed name rather than the
+# optional one that test_support publishes.
+assert TEST_SPICE_PREFIX is not None, (
+    'The oops test suite needs $OOPS_RESOURCES or $OOPS_TEST_DATA_PATH to be set')
+SPICE_PREFIX: FCPath = TEST_SPICE_PREFIX
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -54,7 +65,7 @@ def core_kernels():
     one test module registers cannot be found by another.
     """
 
-    for path in TEST_SPICE_PREFIX.retrieve(CORE_KERNELS):
+    for path in SPICE_PREFIX.retrieve(CORE_KERNELS):
         cspyce.furnsh(path)
     Path._reset_caches()
     Frame._reset_caches()

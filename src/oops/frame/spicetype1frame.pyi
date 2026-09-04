@@ -11,7 +11,7 @@ given where they are unambiguous and are `Any` elsewhere.
 
 from typing import Any
 
-from oops.cache import Cache as Cache
+from oops._cache import _Cache as _Cache
 from oops.frame import (Frame as Frame, J2000Frame as J2000Frame,
                         LinkedFrame as LinkedFrame)
 from oops.frame.spiceframe import SpiceFrame as SpiceFrame

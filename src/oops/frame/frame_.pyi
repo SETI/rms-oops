@@ -11,7 +11,7 @@ given where they are unambiguous and are `Any` elsewhere.
 
 from typing import Any
 
-from oops.cache import Cache as Cache
+from oops._cache import _Cache as _Cache
 from oops.config import PICKLE_CONFIG as PICKLE_CONFIG
 from oops.mutable import Mutable as Mutable
 from oops.transform import Transform as Transform

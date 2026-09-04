@@ -1,5 +1,5 @@
 ##########################################################################################
-# oops/cache.py
+# oops/_cache.py
 ##########################################################################################
 
 import numpy as np
@@ -8,17 +8,17 @@ from polymath  import Qube
 from oops.oops import Oops
 
 
-class Cache(Oops):
+class _Cache(Oops):
     """A dictionary-like cache preserving a fixed number of items.
 
     When the size of the cache exceeds `maxsize` by about 10%, the least-recently accessed
     items are deleted.
 
-    Indexing a Cache using a key that is not present, or has been deleted, returns None.
+    Indexing a _Cache using a key that is not present, or has been deleted, returns None.
     A KeyError is never raised.
 
     Dictionary keys can include mutable items, which are converted to immutable. The class
-    method :meth:`~oops.Cache.clean_key` performs this conversion.
+    method `clean_key` performs this conversion.
     """
 
     # These are filled in by oops/__init__.py to avoid circular imports
@@ -26,11 +26,11 @@ class Cache(Oops):
     _Path = None
 
     def __init__(self, maxsize=100):
-        """Constructor for a Cache.
+        """Constructor for a _Cache.
 
         Parameters:
             maxsize (int, optional): The rough limit on the number of items stored in the
-                Cache. When this value is exceeded by ~ 10%, the number of elements is
+                _Cache. When this value is exceeded by ~ 10%, the number of elements is
                 reduced back to `maxsize` by removing the items accessed least recently.
         """
 
@@ -41,7 +41,7 @@ class Cache(Oops):
         self._counter = 0
 
     def __len__(self):
-        """The number of items currently in this Cache."""
+        """The number of items currently in this _Cache."""
         return len(self._dict)
 
     @staticmethod
@@ -71,10 +71,10 @@ class Cache(Oops):
                         return (item.shape,
                                 tuple(clean_item(x) for x in item.ravel()))
                     return (item.shape, tuple(item.ravel()))
-                case Cache._Path():
-                    return Cache._Path.as_primary_path(item)
-                case Cache._Frame():
-                    return Cache._Frame.as_primary_frame(item)
+                case _Cache._Path():
+                    return _Cache._Path.as_primary_path(item)
+                case _Cache._Frame():
+                    return _Cache._Frame.as_primary_frame(item)
                 case x if hasattr(x, '__data__'):
                     # Keyed by identity, because hashing the object's own data buffer
                     # would cost more than the lookup saves. An id() is unique only among
@@ -89,10 +89,10 @@ class Cache(Oops):
         return clean_item(key)
 
     def __contains__(self, key):
-        """True if the given key is currently in the Cache."""
+        """True if the given key is currently in the _Cache."""
 
         if self._maxsize:
-            key = Cache.clean_key(key)
+            key = _Cache.clean_key(key)
             if key in self._dict:
                 self._counter += 1
                 self._dict[key][0] = self._counter
@@ -106,7 +106,7 @@ class Cache(Oops):
         """
 
         if self._maxsize:
-            key = Cache.clean_key(key)
+            key = _Cache.clean_key(key)
             if key in self._dict:
                 self._counter += 1
                 count_key_value = self._dict[key]
@@ -122,7 +122,7 @@ class Cache(Oops):
         """
 
         if self._maxsize:
-            key = Cache.clean_key(key)
+            key = _Cache.clean_key(key)
             self._counter += 1
             self._dict[key] = [self._counter, key, value]
 

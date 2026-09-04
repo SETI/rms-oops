@@ -40,7 +40,8 @@ source_suffix = ['.rst', '.md']
 # backticks. Without this, docutils would render each one as a title reference, in
 # italics; `literal` renders them as inline code, which is what they are. An API symbol
 # that should link to its own entry carries an explicit role instead.
-default_role = 'literal'
+# default_role = 'literal'
+default_role = 'strong'
 
 # -- Options for HTML output -------------------------------------------------
 

@@ -9,12 +9,21 @@ name, its parameters, which of them are keyword-only, and which have defaults. T
 given where they are unambiguous and are `Any` elsewhere.
 """
 
+from collections import defaultdict
 from typing import Any
 
 __all__ = ['set_default_obs', 'define_standard_obs', 'set_default_args', 'override',
            'module_dirname', 'set_gold_master_path', 'execute_as_command',
            'execute_as_pytest', 'run_tests', 'register_test_suite', 'get_test_suite',
            'BackplaneTest']
+
+# The module-level registries that the functions above read and write. They are not in
+# `__all__`, because they are not part of the star-import API, but they are module
+# attributes at run time and the framework's own tests save and restore them.
+STANDARD_OBS_INFO: dict[str, Any]
+DEFAULTS: dict[str, Any]
+TEST_OVERRIDES: defaultdict[str, dict[str, Any]]
+TEST_SUITES: dict[str, Any]
 
 def module_dirname(module: Any) -> Any: ...
 

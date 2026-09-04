@@ -21,9 +21,8 @@ from oops.fov                          import FlatFOV
 from oops.frame                        import Frame, TwoVectorFrame
 from oops.observation                  import Observation, Snapshot, TimedImage
 from oops.path                         import Path
-from programs.gold_master.test_support  import TEST_SPICE_PREFIX
 
-from tests.conftest import CORE_KERNELS
+from tests.conftest import CORE_KERNELS, SPICE_PREFIX
 
 # A time within the interval the test kernels cover, and a synthetic camera pointed
 # straight at Saturn from Earth. Saturn subtends about 9.1e-5 radians here, so this
@@ -38,7 +37,7 @@ SHAPE = (40, 40)
 def solar_system() -> Iterator[None]:
     """The bodies of the solar system over the interval the test kernels cover."""
 
-    for path in cast(list[FilePath], TEST_SPICE_PREFIX.retrieve(CORE_KERNELS)):
+    for path in cast(list[FilePath], SPICE_PREFIX.retrieve(CORE_KERNELS)):
         cspyce.furnsh(path)
 
     Path._reset_caches()
@@ -158,7 +157,7 @@ def test_gridless_event_sits_on_the_observer_path(obs: Snapshot) -> None:
 
 
 ##########################################################################################
-# scalar_from_indices
+# _scalar_from_indices
 ##########################################################################################
 
 def test_scalar_from_indices_selects_one_axis() -> None:
@@ -166,27 +165,27 @@ def test_scalar_from_indices_selects_one_axis() -> None:
 
     indices = Vector([[1., 2.]])
 
-    assert Observation.scalar_from_indices(indices, 0) == Scalar([1.])
-    assert Observation.scalar_from_indices(indices, 1) == Scalar([2.])
+    assert Observation._scalar_from_indices(indices, 0) == Scalar([1.])
+    assert Observation._scalar_from_indices(indices, 1) == Scalar([2.])
 
 
 def test_scalar_from_indices_returns_none_for_a_missing_axis() -> None:
     """A negative axis is not associated with an array index."""
 
-    assert Observation.scalar_from_indices(Vector([[1., 2.]]), -1) is None
+    assert Observation._scalar_from_indices(Vector([[1., 2.]]), -1) is None
 
 
 def test_scalar_from_indices_accepts_a_bare_number() -> None:
     """A single number is the index along axis zero."""
 
-    assert Observation.scalar_from_indices(3., 0) == Scalar(3.)
+    assert Observation._scalar_from_indices(3., 0) == Scalar(3.)
 
 
 def test_scalar_from_indices_rejects_a_number_on_another_axis() -> None:
     """A single number has no axis but the first."""
 
     with pytest.raises(IndexError):
-        Observation.scalar_from_indices(3., 1)
+        Observation._scalar_from_indices(3., 1)
 
 
 ##########################################################################################

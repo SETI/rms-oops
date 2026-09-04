@@ -28,11 +28,11 @@ def ring_radius(self, event_key, rmin=None, rmax=None):
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key, default='RING')
     key = ('ring_radius', event_key, rmin, rmax)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     default_key = ('ring_radius', event_key, None, None)
-    if default_key not in self.backplanes:
+    if default_key not in self._backplanes:
         self._fill_ring_intercepts(event_key)
 
     radius = self.get_backplane(default_key)
@@ -84,12 +84,12 @@ def ring_longitude(self, event_key, reference='node'):
         raise ValueError('invalid longitude reference: ' + repr(reference))
 
     # If this backplane array is already defined, return it
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     # If it is not found with reference='node', fill in those backplanes
     default_key = ('ring_longitude', event_key, 'node')
-    if default_key not in self.backplanes:
+    if default_key not in self._backplanes:
         self._fill_ring_intercepts(event_key)
 
     # Now apply the reference longitude
@@ -140,7 +140,7 @@ def radial_mode(self, backplane_key, cycles, epoch, amp, peri0, speed, a0=0., dp
     key = ('radial_mode', backplane_key, cycles, epoch, amp, peri0, speed, a0, dperi_da,
                           reference)
 
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     # Get original longitude, radius, and event time, ignoring modes
@@ -204,7 +204,7 @@ def _aries_ring_longitude(self, event_key):
     event_key = Backplane.gridless_event_key(event_key, default='RING')
     key = ('_aries_ring_longitude', event_key)
 
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     event = self.get_gridless_event(event_key)
@@ -246,7 +246,7 @@ def ring_azimuth(self, event_key, direction='obs', apparent=True):
         return self._remasked_backplane(key, backplane_key)
 
     # If this backplane array is already defined, return it
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     if direction == 'obs':
@@ -256,8 +256,8 @@ def ring_azimuth(self, event_key, direction='obs', apparent=True):
         event = self.get_surface_event(event_key, arrivals=True)
         photon_los = event.neg_arr_ap if apparent else event.neg_arr
 
-    photon_angle = photon_los.longitude(recursive=self.ALL_DERIVS)
-    radius_angle = event.pos.longitude(recursive=self.ALL_DERIVS)
+    photon_angle = photon_los.longitude(recursive=self._ALL_DERIVS)
+    radius_angle = event.pos.longitude(recursive=self._ALL_DERIVS)
     azimuth = (radius_angle - photon_angle) % Scalar.TWOPI
 
     return self.register_backplane(key, azimuth)
@@ -308,7 +308,7 @@ def ring_elevation(self, event_key, direction='obs', pole='prograde', apparent=T
         return self._remasked_backplane(key, backplane_key)
 
     # If this backplane array is already defined, return it
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     # "unsigned" is the one option not explicitly supported by ring_incidence or
@@ -381,7 +381,7 @@ def ring_incidence_angle(self, event_key, pole='sunward', apparent=True):
         return self._remasked_backplane(key, backplane_key)
 
     # If this backplane array is already defined, return it
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     # See lighting.py for the standard definitions of incidence and emission.
@@ -450,7 +450,7 @@ def ring_emission_angle(self, event_key, pole='sunward', apparent=True):
         return self._remasked_backplane(key, backplane_key)
 
     # If this backplane array is already defined, return it
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     # See lighting.py for the standard definitions of incidence and emission.
@@ -503,12 +503,12 @@ def ring_sub_observer_longitude(self, event_key, reference='node'):
     gridless_key = Backplane.gridless_event_key(event_key, default='RING')
     key0 = ('ring_sub_observer_longitude', gridless_key)
     key = key0 + (reference,)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     # Generate longitude values
     default_key = key0 + ('node',)
-    if default_key in self.backplanes:
+    if default_key in self._backplanes:
         longitude = self.get_backplane(default_key)
     else:
         longitude = self._sub_observer_longitude(gridless_key)
@@ -556,12 +556,12 @@ def ring_sub_solar_longitude(self, event_key, reference='node'):
     gridless_key = Backplane.gridless_event_key(event_key, default='RING')
     key0 = ('ring_sub_solar_longitude', gridless_key)
     key = key0 + (reference,)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     # If it is not found with reference='node', fill in those backplanes
     default_key = key0 + ('node',)
-    if default_key in self.backplanes:
+    if default_key in self._backplanes:
         longitude = self.get_backplane(default_key)
     else:
         longitude = self._sub_solar_longitude(gridless_key)
@@ -653,7 +653,7 @@ def ring_radial_resolution(self, event_key):
     if backplane_key:
         return self._remasked_backplane(key, backplane_key)
 
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     event = self.get_surface_event(event_key, derivs=True)
@@ -691,7 +691,7 @@ def ring_angular_resolution(self, event_key, units="rad"):
         return self._remasked_backplane(key, backplane_key)
 
     # If this backplane array is already defined, return it
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     event = self.get_surface_event(event_key, derivs=True)
@@ -729,7 +729,7 @@ def ring_gradient_angle(self, event_key):
         return self._remasked_backplane(key, backplane_key)
 
     # If this backplane array is already defined, return it
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     event = self.get_surface_event(event_key, derivs=True)
@@ -762,7 +762,7 @@ def ring_shadow_radius(self, event_key, ring_surface_key):
     ring_surface_key = ring_surface_key.upper()
 
     key = ('ring_shadow_radius', event_key, ring_surface_key)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     # Make sure the surface event is already defined
@@ -793,7 +793,7 @@ def ring_shadow_incidence(self, event_key, ring_surface_key):
     ring_surface_key = ring_surface_key.upper()
 
     key = ('ring_shadow_incidence', event_key, ring_surface_key)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     # Make sure the surface event is already defined
@@ -804,7 +804,7 @@ def ring_shadow_incidence(self, event_key, ring_surface_key):
     ring_event = self.get_surface_event(ring_event_key)
 
     # The departure vectors are defined in the ring event, but not the arrivals
-    emission = ring_event.emission_angle(apparent=True, derivs=self.ALL_DERIVS)
+    emission = ring_event.emission_angle(apparent=True, derivs=self._ALL_DERIVS)
     incidence = Scalar.HALFPI - (Scalar.HALFPI - emission).abs()
 
     return self.register_backplane(key, incidence)
@@ -826,7 +826,7 @@ def ring_radius_in_front(self, event_key, ring_surface_key):
     ring_surface_key = ring_surface_key.upper()
 
     key = ('ring_radius_in_front', event_key, ring_surface_key)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     ring_event_key = event_key[:1] + (ring_surface_key,)

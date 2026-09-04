@@ -16,9 +16,8 @@ from oops.fov                          import FlatFOV
 from oops.frame                        import Frame, TwoVectorFrame
 from oops.observation                  import Snapshot
 from oops.path                         import Path
-from programs.gold_master.test_support  import TEST_SPICE_PREFIX
 
-from tests.conftest import CORE_KERNELS
+from tests.conftest import CORE_KERNELS, SPICE_PREFIX
 
 # A time within the interval the test kernels cover, and an exposure short enough that
 # nothing moves appreciably during it.
@@ -42,7 +41,7 @@ def solar_system() -> Iterator[None]:
     a later lookup by ID would return their replacements instead.
     """
 
-    for path in cast(list[FilePath], TEST_SPICE_PREFIX.retrieve(CORE_KERNELS)):
+    for path in cast(list[FilePath], SPICE_PREFIX.retrieve(CORE_KERNELS)):
         cspyce.furnsh(path)
 
     Path._reset_caches()

@@ -32,7 +32,7 @@ def test_declination_stays_within_the_poles(bp: Backplane) -> None:
 def test_right_ascension_has_the_shape_of_the_meshgrid(bp: Backplane) -> None:
     """A sky backplane is evaluated at every sample of the meshgrid."""
 
-    assert bp.right_ascension().shape == bp.shape
+    assert bp.right_ascension().shape == bp._shape
 
 
 def test_right_ascension_varies_across_the_field(bp: Backplane) -> None:
@@ -80,7 +80,7 @@ def test_celestial_north_angle_is_an_angle(bp: Backplane) -> None:
 
     angle = bp.celestial_north_angle()
 
-    assert angle.shape == bp.shape
+    assert angle.shape == bp._shape
     assert np.all(np.abs(angle.vals) <= TWOPI)
 
 

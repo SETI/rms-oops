@@ -6,7 +6,7 @@ import numpy as np
 import cspyce
 
 from polymath              import Matrix3, Scalar, Vector3
-from oops.cache            import Cache
+from oops._cache           import _Cache
 from oops.frame            import Frame, J2000Frame, LinkedFrame
 from oops.frame.spiceframe import SpiceFrame
 from oops.transform        import Transform
@@ -110,7 +110,7 @@ class SpiceType1Frame(SpiceFrame):
         self._time_tolerance = self._tick_tolerance / ticks_per_sec
 
     def _refresh(self):
-        self._cache = Cache(self._cache_size)   # saves result for multiple single times
+        self._cache = _Cache(self._cache_size)   # saves result for multiple single times
 
         self._cached_transform = None           # saves result for one shaped time
         self._cached_time = None

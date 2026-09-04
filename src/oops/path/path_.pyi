@@ -13,7 +13,7 @@ from typing import Any
 
 from ._photon_solver import (photon_from_event as photon_from_event,
                              photon_to_event as photon_to_event)
-from oops.cache import Cache as Cache
+from oops._cache import _Cache as _Cache
 from oops.config import PICKLE_CONFIG as PICKLE_CONFIG
 from oops.event import Event as Event
 from oops.frame.frame_ import Frame as Frame, J2000Frame as J2000Frame

@@ -21,7 +21,7 @@ def pole_clock_angle(self, event_key):
     gridless_key = Backplane.gridless_event_key(event_key)
 
     key = ('pole_clock_angle', gridless_key)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     event = self.get_surface_event(gridless_key)
@@ -45,7 +45,7 @@ def pole_clock_angle(self, event_key):
     pole = rotmat * pole_j2000
 
     # Convert the X and Y components of the rotated pole into an angle
-    clock_angle = pole.longitude(recursive=self.ALL_DERIVS)
+    clock_angle = pole.longitude(recursive=self._ALL_DERIVS)
 
     return self.register_backplane(key, clock_angle)
 
@@ -66,7 +66,7 @@ def pole_position_angle(self, event_key):
     gridless_key = Backplane.gridless_event_key(event_key)
 
     key = ('pole_position_angle', gridless_key)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     clock = self.pole_clock_angle(gridless_key)

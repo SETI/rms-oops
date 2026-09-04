@@ -26,9 +26,9 @@ class Backplane(Mutable):
     Intermediate results are cached to speed up calculations.
     """
 
-    DIAGNOSTICS = False     # set True to log diagnostics
-    PERFORMANCE = False     # set True to log timings of surface calculations
-    ALL_DERIVS = False      # set True to force derivatives on in every calculation
+    _DIAGNOSTICS = False    # set True to log diagnostics
+    _PERFORMANCE = False    # set True to log timings of surface calculations
+    _ALL_DERIVS = False     # set True to force derivatives on in every calculation
 
     def __init__(self, obs, meshgrid=None, time=None, *, inventory=None,
                  inventory_border=0):
@@ -137,7 +137,7 @@ class Backplane(Mutable):
         else:
             self.inventory = None
 
-        self.inventory_border = inventory_border
+        self._inventory_border = inventory_border
 
         self.refresh()
 
@@ -150,36 +150,36 @@ class Backplane(Mutable):
         """
 
         if self._input_time is None:
-            self.time = self.obs.timegrid(self.meshgrid)
+            self._time = self.obs.timegrid(self.meshgrid)
         else:
-            self.time = Scalar.as_scalar(self._input_time)
+            self._time = Scalar.as_scalar(self._input_time)
 
         # For some cases, times are all equal. If so, collapse the times.
-        dt = self.time - self.obs.midtime
+        dt = self._time - self.obs.midtime
         if abs(dt).max() < 1.e-3:   # simplifies cases with jitter in time tags
-            self.time = Scalar(self.obs.midtime)
+            self._time = Scalar(self.obs.midtime)
 
         # Define events
-        self.obs_event = self.obs.event_at_grid(self.meshgrid, time=self.time)
-        self.shape = self.obs_event.shape
+        self._obs_event = self.obs.event_at_grid(self.meshgrid, time=self._time)
+        self._shape = self._obs_event.shape
 
         # dict[derivs] = event
-        self.obs_events = {
-            False: self.obs_event.wod,
-            True : self.obs_event.with_los_derivs()
+        self._obs_events = {
+            False: self._obs_event.wod,
+            True : self._obs_event.with_los_derivs()
         }
 
-        self.obs_gridless_event = self.obs.gridless_event(self.meshgrid, time=self.time)
+        self._obs_gridless_event = self.obs.gridless_event(self.meshgrid, time=self._time)
 
         # The surface_events dictionary comes in two versions, with and without
         # derivatives with respect to los and time.
-        self.surface_events = {
+        self._surface_events = {
             False: {},
             True : {}
         }
 
         # Gridless/occultation events of photon paths arriving at the detector
-        self.gridless_arrivals = {}
+        self._gridless_arrivals = {}
 
         # The backplanes dictionary holds every backplane that has been calculated. This
         # includes boolean backplanes, aka masks. A backplane is keyed by (name of
@@ -193,11 +193,11 @@ class Backplane(Mutable):
         # the calling function. For example, ('latitude', ('SATURN',), 'graphic') is the
         # key for the backplane of planetographic latitudes at Saturn.
 
-        self.backplanes = {}
-        self.backplanes_with_derivs = {}    # used by ALL_DERIVS option
+        self._backplanes = {}
+        self._backplanes_with_derivs = {}    # used by _ALL_DERIVS option
 
         # Antimasks of surfaces, keyed by surface key.
-        self.antimasks = {}
+        self._antimasks = {}
 
         # We save unmasked surface intercept events based on the intercept_key of the
         # surface. This avoids the re-calculating of intercept events when the only change
@@ -205,7 +205,7 @@ class Backplane(Mutable):
         # each surface_key (after the first item, which is the light source name) is
         # replaced by the unmasked surface intercept key.
 
-        self.intercepts = {
+        self._intercepts = {
             False: {},
             True : {},
         }
@@ -228,9 +228,9 @@ class Backplane(Mutable):
             four caches described above.
         """
 
-        return (self.obs, self._input_meshgrid, self.time, self._input_inventory,
-                self.inventory_border, self.surface_events, self.gridless_arrivals,
-                self.antimasks, self.intercepts)
+        return (self.obs, self._input_meshgrid, self._time, self._input_inventory,
+                self._inventory_border, self._surface_events, self._gridless_arrivals,
+                self._antimasks, self._intercepts)
 
     def __setstate__(self, state):
         """Restore this Backplane and the event caches saved with it.
@@ -244,10 +244,10 @@ class Backplane(Mutable):
 
         self.__init__(obs, meshgrid, time, inventory=inventory,
                       inventory_border=inventory_border)
-        self.surface_events = surface_events
-        self.gridless_arrivals = gridless_arrivals
-        self.antimasks = antimasks
-        self.intercepts = intercepts
+        self._surface_events = surface_events
+        self._gridless_arrivals = gridless_arrivals
+        self._antimasks = antimasks
+        self._intercepts = intercepts
 
     ######################################################################################
     # Resolution properties
@@ -261,7 +261,7 @@ class Backplane(Mutable):
         """
 
         if not hasattr(self, '_dlos_duv'):
-            self._dlos_duv = self.meshgrid.dlos_duv(self.time)
+            self._dlos_duv = self.meshgrid.dlos_duv(self._time)
 
         return self._dlos_duv
 
@@ -308,7 +308,7 @@ class Backplane(Mutable):
         """
 
         if not hasattr(self, '_duv_dlos'):
-            self._duv_dlos = self.meshgrid.duv_dlos(self.time)
+            self._duv_dlos = self.meshgrid.duv_dlos(self._time)
 
         return self._duv_dlos
 
@@ -321,7 +321,7 @@ class Backplane(Mutable):
         """
 
         if not hasattr(self, '_center_dlos_duv'):
-            self._center_dlos_duv = self.meshgrid.center_dlos_duv(self.time)
+            self._center_dlos_duv = self.meshgrid.center_dlos_duv(self._time)
 
         return self._center_dlos_duv
 
@@ -334,7 +334,7 @@ class Backplane(Mutable):
         """
 
         if not hasattr(self, '_center_duv_dlos'):
-            self._center_duv_dlos = self.meshgrid.center_duv_dlos(self.time)
+            self._center_duv_dlos = self.meshgrid.center_duv_dlos(self._time)
 
         return self._center_duv_dlos
 
@@ -531,7 +531,7 @@ class Backplane(Mutable):
             if hasattr(backplane_key, 'key'):
                 return backplane_key.key
 
-            for key, value in self.backplanes.items():
+            for key, value in self._backplanes.items():
                 if value is backplane_key:
                     return key
 
@@ -593,7 +593,7 @@ class Backplane(Mutable):
         """
 
         if not names:
-            names = Backplane.CALLABLES
+            names = Backplane._CALLABLES
 
         backplane_key = event_key
         uses_backplane_key = False
@@ -610,7 +610,7 @@ class Backplane(Mutable):
 
     @staticmethod
     @functools.lru_cache(maxsize=100)
-    def get_body_and_modifier(surface_key):
+    def _get_body_and_modifier(surface_key):
         """A body object and modifier based on the given surface key.
 
         The string is normally a registered body ID (case insensitive), but it can be
@@ -647,7 +647,7 @@ class Backplane(Mutable):
 
     @staticmethod
     @functools.lru_cache(maxsize=100)
-    def unmasked_surface_key(surface_key):
+    def _unmasked_surface_key(surface_key):
         """The unmasked surface key associated with a given surface key.
 
         For example, `SATURN_MAIN_RINGS` maps to `SATURN:RING`.
@@ -663,7 +663,7 @@ class Backplane(Mutable):
             so allows an intercept event to be reused.
         """
 
-        (body, modifier) = Backplane.get_body_and_modifier(surface_key)
+        (body, modifier) = Backplane._get_body_and_modifier(surface_key)
 
         # If this is an ansa surface, make sure the parent is a planet, not ring
         if modifier == 'ANSA':
@@ -707,7 +707,7 @@ class Backplane(Mutable):
 
     @staticmethod
     @functools.lru_cache(maxsize=100)
-    def unmasked_event_key(event_key):
+    def _unmasked_event_key(event_key):
         """The unmasked event key associated with a given event key.
 
         Every surface key it names is replaced by its unmasked counterpart.
@@ -723,13 +723,13 @@ class Backplane(Mutable):
 
         new_key = [event_key[0]]
         for surface_key in event_key[1:]:
-            new_key.append(Backplane.unmasked_surface_key(surface_key))
+            new_key.append(Backplane._unmasked_surface_key(surface_key))
 
         return tuple(new_key)
 
     @staticmethod
     @functools.lru_cache(maxsize=100)
-    def intercept_dict_key(event_key):
+    def _intercept_dict_key(event_key):
         """The key into the intercepts dictionary for a given event key.
 
         Every surface key it names is replaced by that surface's own intercept key, so
@@ -763,22 +763,22 @@ class Backplane(Mutable):
                 dispersed illumination and a gridless event otherwise.
             derivs (bool, optional): True for an event carrying its line-of-sight
                 derivatives; False to strip them. Default is False, although the
-                `ALL_DERIVS` class attribute forces them on.
+                `_ALL_DERIVS` class attribute forces them on.
 
         Returns:
             Event: The observer event. It is read-only and shared, so it must not be
             modified in place.
         """
 
-        derivs = derivs or self.ALL_DERIVS
+        derivs = derivs or self._ALL_DERIVS
 
         # Gridded events always carry the same arrival vectors
         if Backplane._is_dispersed(event_key):
-            return self.obs_events[derivs]
+            return self._obs_events[derivs]
 
         # For others, check the target-based cache first
-        if event_key in self.gridless_arrivals:
-            event = self.gridless_arrivals[event_key]
+        if event_key in self._gridless_arrivals:
+            event = self._gridless_arrivals[event_key]
             return (event if derivs else event.wod)
 
         # Occultation events depend on the source
@@ -789,27 +789,27 @@ class Backplane(Mutable):
             source_key = event_key[-1]
 
         # Check the cache
-        if source_key in self.gridless_arrivals:
-            arrival = self.gridless_arrivals[source_key]
+        if source_key in self._gridless_arrivals:
+            arrival = self._gridless_arrivals[source_key]
             departure = None
 
         # Otherwise, solve
         else:
-            source = Backplane.get_body_and_modifier(source_key)[0]
+            source = Backplane._get_body_and_modifier(source_key)[0]
             (departure,
-             arrival) = source.photon_to_event(self.obs_gridless_event,
+             arrival) = source.photon_to_event(self._obs_gridless_event,
                                                derivs=True)
-            self.gridless_arrivals[source_key] = arrival
+            self._gridless_arrivals[source_key] = arrival
 
         # Save in the arrivals dictionary for next time
-        self.gridless_arrivals[event_key] = arrival
+        self._gridless_arrivals[event_key] = arrival
 
         # Save the departure event if any
-        if departure is not None and event_key not in self.surface_events[True]:
+        if departure is not None and event_key not in self._surface_events[True]:
             surface = Backplane.get_surface(event_key[1])
             departure = departure.wrt(surface.origin, surface.frame)
-            self.surface_events[True ][event_key] = departure
-            self.surface_events[False][event_key] = departure.wod
+            self._surface_events[True ][event_key] = departure
+            self._surface_events[False][event_key] = departure.wod
 
         return arrival
 
@@ -829,7 +829,7 @@ class Backplane(Mutable):
             ValueError: If the key carries a modifier that is not recognized.
         """
 
-        (body, modifier) = Backplane.get_body_and_modifier(surface_key)
+        (body, modifier) = Backplane._get_body_and_modifier(surface_key)
 
         if modifier is None:
             return body.surface
@@ -866,8 +866,8 @@ class Backplane(Mutable):
         """
 
         # Return from the antimask cache if present
-        if surface_key in self.antimasks:
-            return self.antimasks[surface_key]
+        if surface_key in self._antimasks:
+            return self._antimasks[surface_key]
 
         # If the inventory is disabled, we're done
         if self.inventory is None:
@@ -885,18 +885,18 @@ class Backplane(Mutable):
 
         # If it is absent from the inventory now, it's not in the image
         if body_name not in self.inventory:
-            self.antimasks[body_name] = False
+            self._antimasks[body_name] = False
             return False
 
         body_dict = self.inventory[body_name]
         if not body_dict['inside']:
-            self.antimasks[body_name] = False
+            self._antimasks[body_name] = False
             return False
 
-        u_min = body_dict['u_min'] - self.inventory_border
-        u_max = body_dict['u_max'] + self.inventory_border
-        v_min = body_dict['v_min'] - self.inventory_border
-        v_max = body_dict['v_max'] + self.inventory_border
+        u_min = body_dict['u_min'] - self._inventory_border
+        u_max = body_dict['u_max'] + self._inventory_border
+        v_min = body_dict['v_min'] - self._inventory_border
+        v_max = body_dict['v_max'] + self._inventory_border
 
         antimask = np.ones(self.meshgrid.shape, dtype='bool')
         antimask[self.meshgrid.uv.values[...,0] <  u_min] = False
@@ -904,7 +904,7 @@ class Backplane(Mutable):
         antimask[self.meshgrid.uv.values[...,1] <  v_min] = False
         antimask[self.meshgrid.uv.values[...,1] >= v_max] = False
 
-        self.antimasks[body_name] = antimask
+        self._antimasks[body_name] = antimask
         return antimask
 
     def get_surface_event(self, event_key, derivs=False, arrivals=False):
@@ -918,7 +918,7 @@ class Backplane(Mutable):
                 the observer event, which is what the sky backplanes use.
             derivs (bool, optional): True for an event carrying its time and line-of-sight
                 derivatives; False to strip them. Default is False, although the
-                `ALL_DERIVS` class attribute forces them on.
+                `_ALL_DERIVS` class attribute forces them on.
             arrivals (bool, optional): True for an event that also carries the vectors of
                 photons arriving from the Sun, which the lighting backplanes require;
                 False otherwise. Default is False.
@@ -929,7 +929,7 @@ class Backplane(Mutable):
             modified in place.
         """
 
-        derivs = derivs or self.ALL_DERIVS
+        derivs = derivs or self._ALL_DERIVS
 
         # Handle the empty event key (used for sky coordinates) quickly
         event_key = Backplane.standardize_event_key(event_key)
@@ -937,8 +937,8 @@ class Backplane(Mutable):
             return self.get_obs_event(event_key, derivs)
 
         # Retrieve the event from the cache if it is available
-        if event_key in self.surface_events[derivs]:
-            event = self.surface_events[derivs][event_key]
+        if event_key in self._surface_events[derivs]:
+            event = self._surface_events[derivs][event_key]
 
             # Fill in the arrivals if needed
             if arrivals and not event.has_arrivals():
@@ -952,7 +952,7 @@ class Backplane(Mutable):
             # Fill in the perpendicular if needed
             if event.perp is None:
                 event.perp = Vector3.ZAXIS
-                self.surface_events[derivs][event_key] = event
+                self._surface_events[derivs][event_key] = event
 
             return event
 
@@ -983,10 +983,10 @@ class Backplane(Mutable):
         if is_gridless:
             # If gridless, the call to get_obs_event above filled in the event,
             # but fill in the perpendicular if necessary
-            event = self.surface_events[derivs][event_key]
+            event = self._surface_events[derivs][event_key]
             if event.perp is None:
                 event.perp = Vector3.ZAXIS
-                self.surface_events[derivs][event_key] = event
+                self._surface_events[derivs][event_key] = event
 
         else:   # is_dispersed or is_occultation
             event = self._get_los_event(event_key, detection, derivs)
@@ -1022,27 +1022,27 @@ class Backplane(Mutable):
             antimask = None
 
         # Update the intercept dictionary if necessary
-        intercept_key = Backplane.intercept_dict_key(event_key)
-        unmasked_event_key = Backplane.unmasked_event_key(event_key)
+        intercept_key = Backplane._intercept_dict_key(event_key)
+        unmasked_event_key = Backplane._unmasked_event_key(event_key)
 
-        if intercept_key in self.intercepts[derivs]:
-            event = self.intercepts[derivs][intercept_key]
-            if self.DIAGNOSTICS:
+        if intercept_key in self._intercepts[derivs]:
+            event = self._intercepts[derivs][intercept_key]
+            if self._DIAGNOSTICS:
                 LOGGING.diagnostic('INTERCEPT REUSED', event_key, f'derivs={derivs}')
 
         else:
             now = datetime.datetime.now()
             event = surface.unmasked.photon_to_event(detection, antimask=antimask,
                                                      derivs=derivs)[0]
-            if self.PERFORMANCE:
+            if self._PERFORMANCE:
                 elapsed = (datetime.datetime.now() - now).total_seconds()
                 LOGGING.performance(f'INTERCEPT {elapsed:6.3f}', event_key,
                                     f'derivs={derivs}')
 
             # Save in the intercepts dictionary
-            self.intercepts[derivs][intercept_key] = event
+            self._intercepts[derivs][intercept_key] = event
             if derivs:
-                self.intercepts[False][intercept_key] = event.wod
+                self._intercepts[False][intercept_key] = event.wod
 
             # Also save the unmasked event in the surface dictionary
             self._save_event(unmasked_event_key, event, surface=surface, derivs=derivs)
@@ -1069,25 +1069,25 @@ class Backplane(Mutable):
             derivs (bool): True if the event carries its derivatives.
         """
 
-        body = Backplane.get_body_and_modifier(event_key[1])[0]
+        body = Backplane._get_body_and_modifier(event_key[1])[0]
         event.insert_subfield('body', body)
         event.insert_subfield('event_key', event_key)
         event.insert_subfield('surface', surface)
 
         # Save the event
-        derivs = derivs or self.ALL_DERIVS
-        self.surface_events[derivs][event_key] = event
+        derivs = derivs or self._ALL_DERIVS
+        self._surface_events[derivs][event_key] = event
 
         # Save the antimask. A shadowing event is masked by the surface downstream of it
         # rather than by its own bounding box, so its antimask is not filed at all.
         if Backplane._is_dispersed(event_key) and not Backplane._is_shadowing(event_key):
             surface_key = event_key[1]
-            if surface_key not in self.antimasks:
-                self.antimasks[surface_key] = event.antimask
+            if surface_key not in self._antimasks:
+                self._antimasks[surface_key] = event.antimask
 
         # Save the without-derivs version if necessary
         if derivs:
-            self.surface_events[False][event_key] = event.wod
+            self._surface_events[False][event_key] = event.wod
 
     def get_gridless_event(self, event_key, derivs=False, arrivals=False):
         """The gridless event associated with this event key.
@@ -1107,7 +1107,7 @@ class Backplane(Mutable):
             Event: The gridless event, which has no spatial dimensions.
         """
 
-        derivs = derivs or self.ALL_DERIVS
+        derivs = derivs or self._ALL_DERIVS
 
         gridless_key = self.gridless_event_key(event_key)
         return self.get_surface_event(gridless_key, derivs=derivs, arrivals=arrivals)
@@ -1145,25 +1145,25 @@ class Backplane(Mutable):
         backplane = backplane.collapse_mask()
 
         # Under some circumstances a derived backplane can be a scalar
-        if expand and backplane.shape == () and self.shape != ():
+        if expand and backplane.shape == () and self._shape != ():
             if isinstance(backplane, Boolean):
-                vals = np.empty(self.shape, dtype='bool')
+                vals = np.empty(self._shape, dtype='bool')
                 vals[...] = backplane.vals
                 backplane = Boolean(vals, backplane.mask)
             else:
-                vals = np.empty(self.shape, dtype='float')
+                vals = np.empty(self._shape, dtype='float')
                 vals[...] = backplane.vals
                 backplane = Scalar(vals, backplane.mask)
 
         # For reference, we add the key as an attribute of each backplane object
         backplane.add_attr('key', key)
         backplane = backplane.as_readonly(recursive=True)
-        self.backplanes[key] = backplane.wod
+        self._backplanes[key] = backplane.wod
 
         if backplane.derivs:
-            self.backplanes_with_derivs[key] = backplane
+            self._backplanes_with_derivs[key] = backplane
 
-        if derivs or self.ALL_DERIVS:
+        if derivs or self._ALL_DERIVS:
             return backplane
         else:
             return backplane.wod
@@ -1181,7 +1181,7 @@ class Backplane(Mutable):
             Qube: The remasked, registered array.
         """
 
-        derivs = derivs or self.ALL_DERIVS
+        derivs = derivs or self._ALL_DERIVS
 
         array = self.evaluate(key, derivs=derivs)
         mask = self.evaluate(backplane_key).mask
@@ -1207,10 +1207,10 @@ class Backplane(Mutable):
             KeyError: If no backplane has been registered under this key.
         """
 
-        if (derivs or self.ALL_DERIVS) and key in self.backplanes_with_derivs:
-            return self.backplanes_with_derivs[key]
+        if (derivs or self._ALL_DERIVS) and key in self._backplanes_with_derivs:
+            return self._backplanes_with_derivs[key]
 
-        return self.backplanes[key]
+        return self._backplanes[key]
 
     ######################################################################################
     # Method to access a backplane or mask by key
@@ -1224,7 +1224,7 @@ class Backplane(Mutable):
     # Here we keep track of all the function names that generate backplanes. For security,
     # we disallow evaluate() to access any function not in this list.
 
-    CALLABLES = set()
+    _CALLABLES = set()
 
     def evaluate(self, backplane_key, derivs=False):
         """The backplane array defined by the given backplane key.
@@ -1251,15 +1251,15 @@ class Backplane(Mutable):
             backplane_key = (backplane_key,)
 
         func = backplane_key[0]
-        if func not in Backplane.CALLABLES:
+        if func not in Backplane._CALLABLES:
             raise ValueError('unrecognized backplane function: ' + func)
 
         # Evaluate...
         backplane = Backplane.__dict__[func].__call__(self, *backplane_key[1:])
 
-        derivs = derivs or self.ALL_DERIVS
-        if derivs and backplane_key in self.backplanes_with_derivs:
-            backplane = self.backplanes_with_derivs[backplane_key]
+        derivs = derivs or self._ALL_DERIVS
+        if derivs and backplane_key in self._backplanes_with_derivs:
+            backplane = self._backplanes_with_derivs[backplane_key]
 
         return backplane
 
@@ -1284,6 +1284,6 @@ class Backplane(Mutable):
                 # If it does not start with underscore, save it in the set of
                 # callables.
                 if key[0] != '_':
-                    Backplane.CALLABLES.add(key)
+                    Backplane._CALLABLES.add(key)
 
 ##########################################################################################

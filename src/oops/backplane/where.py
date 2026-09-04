@@ -19,7 +19,7 @@ def where_intercepted(self, event_key):
     self.refresh()
     event_key  = Backplane.standardize_event_key(event_key)
     key = ('where_intercepted', event_key)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     event = self.get_surface_event(event_key)
@@ -101,7 +101,7 @@ def _where_inside_or_outside_shadow(self, event_key, surface_key, tvl, inside):
     else:
         key = ('where_outside_shadow', event_key, surface_key, tvl)
 
-    if key not in self.backplanes:
+    if key not in self._backplanes:
 
         # First body is un-shadowed if its incoming photons do not intercept the shadow
         # body. The shadow event will inherit the first event's mask.
@@ -192,7 +192,7 @@ def _where_in_front_or_in_back(self, event_key, surface_key, tvl, in_front):
     else:
         key = ('where_in_back', event_key, surface_key, tvl)
 
-    if key not in self.backplanes:
+    if key not in self._backplanes:
 
         # First body is in front if it is closer than the second. Both bodies
         # must be intercepted.
@@ -271,7 +271,7 @@ def _where_sunward_or_antisunward(self, event_key, tvl, sunward):
     else:
         key = ('where_antisunward', event_key, tvl)
 
-    if key not in self.backplanes:
+    if key not in self._backplanes:
 
         # This is slightly different for rings vs. planets.
         surface = Backplane.get_surface(event_key[-1])
@@ -375,7 +375,7 @@ def _where_inside_or_outside(self, event_key, surface_key, tvl, inside):
     else:
         key = ('where_outside', event_key, surface_key, tvl)
 
-    if key not in self.backplanes:
+    if key not in self._backplanes:
 
         # Check positions with respect to the surface interior
         surface = Backplane.get_surface(surface_key)
@@ -383,7 +383,7 @@ def _where_inside_or_outside(self, event_key, surface_key, tvl, inside):
         if surface.HAS_INTERIOR:
             surface_pos = event.wrt(surface.origin, surface.frame).pos
             is_inside = surface.position_is_inside(surface_pos, obs=self.obs,
-                                                                time=self.time)
+                                                                time=self._time)
             result = (is_inside == inside)
         else:
             result = Boolean(not inside).broadcast_to(event.shape)
@@ -420,7 +420,7 @@ def where_below(self, backplane_key, value, tvl=False):
     value = value.vals if isinstance(value, Scalar) else value
     key = ('where_below', backplane_key, value, tvl)
 
-    if key not in self.backplanes:
+    if key not in self._backplanes:
         backplane = self.evaluate(backplane_key)
         tvl_result = backplane.tvl_le(value)
 
@@ -453,7 +453,7 @@ def where_above(self, backplane_key, value, tvl=False):
     value = value.vals if isinstance(value, Scalar) else value
     key = ('where_above', backplane_key, value, tvl)
 
-    if key not in self.backplanes:
+    if key not in self._backplanes:
         backplane = self.evaluate(backplane_key)
         tvl_result = backplane.tvl_ge(value)
 
@@ -488,7 +488,7 @@ def where_between(self, backplane_key, low, high, tvl=False):
     high = high.vals if isinstance(high, Scalar) else high
     key = ('where_between', backplane_key, low, high, tvl)
 
-    if key not in self.backplanes:
+    if key not in self._backplanes:
         backplane = self.evaluate(backplane_key)
         tvl_result = backplane.tvl_ge(low) & backplane.tvl_le(high)
 
@@ -518,7 +518,7 @@ def where_not(self, backplane_key, tvl=False):
     backplane_key = self.standardize_backplane_key(backplane_key)
     key = ('where_not', backplane_key, tvl)
 
-    if key not in self.backplanes:
+    if key not in self._backplanes:
         backplane = self.evaluate(backplane_key)
         tvl_result = backplane.logical_not()
 
@@ -546,7 +546,7 @@ def where_any(self, *backplane_keys, tvl=False):
 
     self.refresh()
     key = ('where_any',) + backplane_keys + (tvl,)
-    if key not in self.backplanes:
+    if key not in self._backplanes:
         tvl_result = self.evaluate(backplane_keys[0]).copy()
         for next_mask in backplane_keys[1:]:
             tvl_result |= self.evaluate(next_mask)
@@ -575,7 +575,7 @@ def where_all(self, *backplane_keys, tvl=False):
 
     self.refresh()
     key = ('where_all',) + backplane_keys + (tvl,)
-    if key not in self.backplanes:
+    if key not in self._backplanes:
         tvl_result = self.evaluate(backplane_keys[0]).copy()
         for next_mask in backplane_keys[1:]:
             tvl_result &= self.evaluate(next_mask)

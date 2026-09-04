@@ -48,7 +48,7 @@ def border_atop(self, backplane_key, value):
     self.refresh()
     backplane_key = self.standardize_backplane_key(backplane_key)
     key = ('border_atop', backplane_key, value)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     absval = self.evaluate(backplane_key) - value
@@ -89,7 +89,7 @@ def _border_above_or_below(self, sign, backplane_key, value):
     else:
         key = ('border_below', backplane_key, value)
 
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     backplane = sign * (self.evaluate(backplane_key) - value)
@@ -153,7 +153,7 @@ def _border_outside_or_inside(self, backplane_key, is_inside=True):
     else:
         key = ('border_outside', backplane_key)
 
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     backplane = self.evaluate(backplane_key)

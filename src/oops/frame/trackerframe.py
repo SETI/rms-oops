@@ -3,7 +3,7 @@
 ##########################################################################################
 
 from polymath       import Qube, Scalar, Vector3, Matrix3
-from oops.cache     import Cache
+from oops._cache    import _Cache
 from oops.frame     import Frame
 from oops.transform import Transform
 
@@ -84,7 +84,7 @@ class TrackerFrame(Frame):
         # Convert the matrix to three axis vectors
         self._reference_rows = Vector3(self._reference_xform.matrix.vals)
 
-        self._cache = Cache(self._cache_size)
+        self._cache = _Cache(self._cache_size)
 
     def _wayframe_key(self):
         return (self._fixed_frame, self._target_path, self._observer_path, self._epoch)

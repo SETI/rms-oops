@@ -38,12 +38,12 @@ class TimedImage(Observation):
                 time of each pixel.
             fov (FOV): (field-of-view) object, which describes the field of view including
                 any spatial distortion and possible time-dependence. It maps between
-                spatial coordinates (u,v) and instrument coordinates (x,y).
+                spatial coordinates *(u,v)* and instrument coordinates *(x,y)*.
             path (Path): The path waypoint co-located with the instrument.
             frame (Frame): The wayframe of a coordinate frame fixed to the optics of the
-                instrument. This frame should have its Z-axis pointing outward near the
-                center of the line of sight, with the X-axis pointing rightward and the
-                Y-axis pointing downward.
+                instrument. This frame should have its *z*-axis pointing outward near the
+                center of the line of sight, with the *x*-axis pointing rightward and the
+                *y*-axis pointing downward.
             subfields (dict): All of the optional attributes. Additional subfields may be
                 included as needed. The subfield `shape` overrides the shape derived from
                 the FOV and the cadence.
@@ -172,7 +172,7 @@ class TimedImage(Observation):
         self.freeze()
 
     def uvt(self, indices, *, remask=False, derivs=True):
-        """Coordinates `(u,v)` and time `t` for indices into the data array.
+        """Coordinates *(u,v)* and time *t* for indices into the data array.
 
         This method supports non-integer index values.
 
@@ -182,9 +182,8 @@ class TimedImage(Observation):
             derivs (bool, optional): True to include derivatives in the returned values.
 
         Returns:
-            tuple[Pair, Scalar]: `(uv, time)`, where `uv` defines the values of `(u,v)`
-            within the FOV that are associated with the array indices and `time` defines
-            the time in seconds TDB associated with the array indices.
+            tuple[Pair, Scalar]: The *(u,v)* location and the time in seconds TDB
+            associated with the array `indices`.
         """
 
         indices = Vector.as_vector(indices, recursive=derivs)
@@ -227,20 +226,16 @@ class TimedImage(Observation):
         return (uv, time)
 
     def uvt_range(self, indices, *, remask=False):
-        """Ranges of `(u,v)` spatial coordinates and time for integer array indices.
+        """Ranges of *(u,v)* spatial coordinates and time for integer array indices.
 
         Parameters:
             indices (Scalar or Vector): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
-            tuple[Pair, Pair, Scalar, Scalar]: `(uv_min, uv_max, time_min, time_max)`,
-            where:
-
-            * `uv_min`: The minimum values of (u,v) associated with the pixel.
-            * `uv_max`: The maximum values of (u,v).
-            * `time_min`: The minimum time associated with the pixel, in seconds TDB.
-            * `time_max`: The maximum time value.
+            tuple[Pair, Pair, Scalar, Scalar]: The lower and upper *(u,v)* corners of the
+            detector, followed by the earliest and latest time TDB, associated with the
+            given array `indices`.
         """
 
         indices = Vector.as_vector(indices, recursive=False)
@@ -282,50 +277,50 @@ class TimedImage(Observation):
         return (uv_min, uv_min + Pair.INT11, time_min, time_max)
 
     def time_range_at_uv(self, uv_pair, *, remask=False):
-        """The start and stop times of the specified spatial pixel `(u,v)`.
+        """The start and stop times of the specified spatial pixel *(u,v)*.
 
-        The times are those of the cadence, evaluated at the `(u,v)` index or indices that
+        The times are those of the cadence, evaluated at the *(u,v)* index or indices that
         carry the time-dependence.
 
         Parameters:
-            uv_pair (Pair): Spatial (u,v) data array coordinates, truncated to integers if
-                necessary.
+            uv_pair (Pair): Spatial *(u,v)* data array coordinates, truncated to integers
+                if necessary.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
-            tuple[Scalar, Scalar]: Scalars of the start time and stop time of each `(u,v)`
-            pair, as seconds TDB.
+            tuple[Scalar, Scalar]: The start time and stop time in seconds TDB for each
+            `uv_pair`.
         """
 
         if self._time_is_1d:
-            return self.time_range_at_uv_1d(uv_pair, axis=self._t_uv_axis, remask=remask)
+            return self._time_range_at_uv_1d(uv_pair, axis=self._t_uv_axis, remask=remask)
         else:
-            return self.time_range_at_uv_2d(uv_pair, fast=self._fast_t_uv_axis,
-                                            remask=remask)
+            return self._time_range_at_uv_2d(uv_pair, fast=self._fast_t_uv_axis,
+                                             remask=remask)
 
     def uv_range_at_time(self, time, *, remask=False):
-        """The `(u,v)` range of spatial pixels observed at a specified time.
+        """The *(u,v)* range of spatial pixels observed at a specified time.
 
         Parameters:
             time (Scalar): Time values in seconds TDB.
             remask (bool, optional): True to mask values outside the time limits.
 
         Returns:
-            tuple[Pair, Pair]: `(uv_min, uv_max)`, where `uv_min` is the lower corner of
-            the `(u,v)` rectangle observed and `uv_max` is the upper corner.
+            tuple[Pair, Pair]: The lower (inclusive) and upper (exclusive) corners of the
+            observed *(u,v)* rectangle at `time`.
         """
 
         if self._time_is_1d:
-            return self.uv_range_at_time_1d(time, self.uv_shape,
-                                            axis=self._t_uv_axis, remask=remask)
+            return self._uv_range_at_time_1d(time, self.uv_shape,
+                                             axis=self._t_uv_axis, remask=remask)
         else:
-            return self.uv_range_at_time_2d(time, self.uv_shape,
-                                            slow=(1-self._fast_t_uv_axis),
-                                            fast=self._fast_t_uv_axis,
-                                            remask=remask)
+            return self._uv_range_at_time_2d(time, self.uv_shape,
+                                             slow=(1-self._fast_t_uv_axis),
+                                             fast=self._fast_t_uv_axis,
+                                             remask=remask)
 
     def uv_range_at_tstep(self, tstep, *, remask=False):
-        """The range of spatial `(u,v)` pixels active at a particular time step.
+        """The range of spatial *(u,v)* pixels active at a particular time step.
 
         One line of the image is active at each time step if the cadence is 1-D; one
         pixel is active if it is 2-D.
@@ -336,19 +331,18 @@ class TimedImage(Observation):
             remask (bool, optional): True to mask time steps outside the cadence.
 
         Returns:
-            tuple[Pair, Pair]: `(uv_min, uv_max)`, where `uv_min` is the lower corner of
-            the `(u,v)` rectangle active at this time step and `uv_max` is the upper
-            corner, exclusive.
+            tuple[Pair, Pair]: The lower (inclusive) and upper (exclusive) corners of the
+            observed *(u,v)* rectangle at `tstep`.
         """
 
         if self._time_is_1d:
-            return self.uv_range_at_tstep_1d(tstep, self.uv_shape,
-                                             axis=self._t_uv_axis, remask=remask)
+            return self._uv_range_at_tstep_1d(tstep, self.uv_shape, axis=self._t_uv_axis,
+                                              remask=remask)
         else:
-            return self.uv_range_at_tstep_2d(tstep, self.uv_shape,
-                                             slow=(1-self._fast_t_uv_axis),
-                                             fast=self._fast_t_uv_axis,
-                                             remask=remask)
+            return self._uv_range_at_tstep_2d(tstep, self.uv_shape,
+                                              slow=(1-self._fast_t_uv_axis),
+                                              fast=self._fast_t_uv_axis,
+                                              remask=remask)
 
     def time_shift(self, dtime):
         """A copy of the observation object with a time-shift.

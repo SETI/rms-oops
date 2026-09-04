@@ -1153,7 +1153,7 @@ class BackplaneTest(object):
         # Select the primary meshgrid and backplane
         self.meshgrid = self.meshgrids[0]
         self.backplane = self.backplanes[0]
-        self.backplane.ALL_DERIVS = True
+        self.backplane._ALL_DERIVS = True
 
         # Determine file paths. The gold master and output trees share one layout, so a
         # directory of generated backplanes can serve as the masters of a later run.
@@ -1204,8 +1204,8 @@ class BackplaneTest(object):
 
         # Set up diagnostics and performance logging
         oops.Backplane.CONVERGENCE = self.args.convergence
-        oops.Backplane.DIAGNOSTICS = self.args.diagnostics
-        oops.Backplane.PERFORMANCE = self.args.performance
+        oops.Backplane._DIAGNOSTICS = self.args.diagnostics
+        oops.Backplane._PERFORMANCE = self.args.performance
 
         # Re-initialize the comparison tracking
         self.gold_summary_ = None
@@ -1319,34 +1319,34 @@ class BackplaneTest(object):
 
                     for i in (False, True):
                         LOGGING.diagnostic('\nSurface Events, derivs=%s' % i)
-                        keys = list(bp.surface_events[i].keys())
+                        keys = list(bp._surface_events[i].keys())
                         keys.sort()
                         for key in keys:
-                            sum = np.sum(bp.surface_events[i][key].mask)
+                            sum = np.sum(bp._surface_events[i][key].mask)
                             LOGGING.diagnostic('   ', key, sum)
 
                     for i in (False, True):
                         LOGGING.diagnostic('\nIntercepts, derivs=%s' % i)
-                        keys = list(bp.intercepts[i].keys())
+                        keys = list(bp._intercepts[i].keys())
                         keys.sort(key=BackplaneTest._sort_key)
                         for key in keys:
-                            sum = np.sum(bp.intercepts[i][key].mask)
+                            sum = np.sum(bp._intercepts[i][key].mask)
                             LOGGING.diagnostic('   ', key, sum)
 
                     LOGGING.diagnostic('\nGridless arrivals')
-                    keys = list(bp.gridless_arrivals.keys())
+                    keys = list(bp._gridless_arrivals.keys())
                     keys.sort(key=BackplaneTest._sort_key)
                     for key in keys:
-                        sum = np.sum(bp.gridless_arrivals[key].mask)
+                        sum = np.sum(bp._gridless_arrivals[key].mask)
                         LOGGING.diagnostic('   ', key, sum)
 
                     LOGGING.diagnostic('\nBackplanes')
-                    keys = list(bp.backplanes.keys())
+                    keys = list(bp._backplanes.keys())
                     keys.sort(key=BackplaneTest._sort_key)
                     for key in keys:
-                        sum = np.sum(bp.backplanes[key].mask)
-                        if key in bp.backplanes_with_derivs:
-                            derivs = bp.backplanes_with_derivs[key].derivs
+                        sum = np.sum(bp._backplanes[key].mask)
+                        if key in bp._backplanes_with_derivs:
+                            derivs = bp._backplanes_with_derivs[key].derivs
                             flag = ' '
                             if 't' in derivs:
                                 if 'los' in derivs:
@@ -1360,10 +1360,10 @@ class BackplaneTest(object):
                         LOGGING.diagnostic('   %s%s' % (flag, key), sum)
 
                     LOGGING.diagnostic('\nAntimasks')
-                    keys = list(bp.antimasks.keys())
+                    keys = list(bp._antimasks.keys())
                     keys.sort()
                     for key in keys:
-                        antimask = bp.antimasks[key]
+                        antimask = bp._antimasks[key]
                         info = ('array' if isinstance(antimask, np.ndarray)
                                         else str(antimask))
                         LOGGING.diagnostic('   ', key, '(%s)' % info)

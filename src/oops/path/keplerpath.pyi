@@ -11,7 +11,7 @@ given where they are unambiguous and are `Any` elsewhere.
 
 from typing import Any
 
-from oops.cache import Cache as Cache
+from oops._cache import _Cache as _Cache
 from oops.event import Event as Event
 from oops.fittable import Fittable as Fittable
 from oops.frame.frame_ import Frame as Frame

@@ -28,7 +28,7 @@ def limb_altitude(self, event_key, zmin=None, zmax=None, scaled=False):
     event_key = Backplane.standardize_event_key(event_key, default='LIMB')
 
     if scaled:
-        body = self.get_body_and_modifier(event_key[-1])[0]
+        body = self._get_body_and_modifier(event_key[-1])[0]
         radius = body.surface.radii.max()
         if zmin is not None:
             zmin = zmin * radius
@@ -36,11 +36,11 @@ def limb_altitude(self, event_key, zmin=None, zmax=None, scaled=False):
             zmax = zmax * radius
 
     key = ('limb_altitude', event_key, zmin, zmax)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     default_key = ('limb_altitude', event_key, None, None)
-    if default_key not in self.backplanes:
+    if default_key not in self._backplanes:
         self._fill_limb_intercepts(event_key)
 
     altitude = self.get_backplane(default_key)
@@ -124,7 +124,7 @@ def limb_longitude(self, event_key, reference='iau', direction='west', minimum=0
         return self._remasked_backplane(key, backplane_key)
 
     # If this backplane array is already defined, return it
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     # Use the default longitude method
@@ -156,7 +156,7 @@ def limb_latitude(self, event_key, lat_type='centric'):
         return self._remasked_backplane(key, backplane_key)
 
     # If this backplane array is already defined, return it
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     # Use the default latitude method
@@ -184,16 +184,16 @@ def limb_clock_angle(self, event_key):
         return self._remasked_backplane(key, backplane_key)
 
     # If this backplane array is already defined, return it
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     surface = Backplane.get_surface(event_key[1])
     event = self.get_surface_event(event_key)
 
     polar_surface = PolarLimb(surface.ground, limits=surface.limits)
-    event = polar_surface.apply_coords_to_event(event, obs=self.obs_event,
+    event = polar_surface.apply_coords_to_event(event, obs=self._obs_event,
                                                        axes=2,
-                                                       derivs=self.ALL_DERIVS)
+                                                       derivs=self._ALL_DERIVS)
     clock_angle = event.coord2
 
     return self.register_backplane(key, clock_angle)

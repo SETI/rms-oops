@@ -51,7 +51,7 @@ Surface     = oops.surface.Surface
 
 from oops.backplane import Backplane
 from oops.body      import Body
-from oops.cache     import Cache
+from oops._cache    import _Cache
 from oops.event     import Event
 from oops.fittable  import Fittable
 from oops.meshgrid  import Meshgrid
@@ -70,9 +70,9 @@ from polymath import (Boolean, Matrix, Matrix3, Pair, Quaternion, Qube, Scalar, 
                       Vector3)
 
 __all__ = ['cadence', 'calibration', 'fov', 'gravity', 'frame', 'observation', 'path',
-           'surface', 'obs', 'backplane', 'body', 'cache', 'event', 'fittable',
+           'surface', 'obs', 'backplane', 'body', 'event', 'fittable',
            'meshgrid', 'transform', 'Cadence', 'Calibration', 'FOV', 'Gravity', 'Frame',
-           'Observation', 'Path', 'Surface', 'Backplane', 'Body', 'Cache', 'Event',
+           'Observation', 'Path', 'Surface', 'Backplane', 'Body', 'Event',
            'Fittable', 'Meshgrid', 'Transform', 'constants', 'spice', 'config', 'mutable',
            'C', 'C_INVERSE', 'RPD', 'DPR', 'SPR', 'RPS', 'SPD', 'AU', 'PI', 'TWOPI',
            'HALFPI', 'Boolean', 'Matrix', 'Matrix3', 'Pair', 'Quaternion', 'Qube',
@@ -87,7 +87,7 @@ except ImportError:
 # The hierarchy of imports is:
 #   Body, Surface, Path, Gravity, Event, Frame, Transform
 # Each class can reference classes later in the list, but any reference to a class earlier
-# in the list requires this approach. Cache and Fittable sit outside that hierarchy and
+# in the list requires this approach. _Cache and Fittable sit outside that hierarchy and
 # are filled in here for the same reason.
 ##########################################################################################
 
@@ -98,8 +98,8 @@ Transform.IDENTITY = Transform(Matrix3.IDENTITY,
                                frame.Frame.J2000,
                                origin=path.Path.SSB)
 
-Cache._Frame = Frame
-Cache._Path = Path
+_Cache._Frame = Frame
+_Cache._Path = Path
 
 Frame._Event = Event
 Frame._Path = Path

@@ -23,7 +23,7 @@ def resolution(self, event_key, axis='u'):
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('resolution', event_key, axis)
-    if key not in self.backplanes:
+    if key not in self._backplanes:
         distance = self.distance(event_key)
         (dlos_du, dlos_dv) = self.dlos_duv.extract_denoms()
         self.register_backplane(key[:-1] + ('u',), distance * dlos_du.norm())
@@ -49,7 +49,7 @@ def center_resolution(self, event_key, axis='u'):
     self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
     key = ('center_resolution', gridless_key, axis)
-    if key not in self.backplanes:
+    if key not in self._backplanes:
         distance = self.center_distance(gridless_key)
         (dlos_du, dlos_dv) = self.center_dlos_duv.extract_denoms()
         self.register_backplane(key[:-1] + ('u',), distance * dlos_du.norm())
@@ -70,7 +70,7 @@ def finest_resolution(self, event_key):
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('finest_resolution', event_key)
-    if key not in self.backplanes:
+    if key not in self._backplanes:
         self._fill_surface_resolution(event_key)
 
     return self.get_backplane(key)
@@ -88,7 +88,7 @@ def coarsest_resolution(self, event_key):
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('coarsest_resolution', event_key)
-    if key not in self.backplanes:
+    if key not in self._backplanes:
         self._fill_surface_resolution(event_key)
 
     return self.get_backplane(key)

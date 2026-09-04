@@ -78,7 +78,7 @@ def test_event_time_precedes_the_observation(bp: Backplane) -> None:
 def test_distance_has_the_shape_of_the_meshgrid(bp: Backplane) -> None:
     """A surface backplane is evaluated at every sample of the meshgrid."""
 
-    assert bp.distance(PLANET).shape == bp.shape
+    assert bp.distance(PLANET).shape == bp._shape
 
 
 def test_distance_is_masked_off_the_surface(bp: Backplane) -> None:

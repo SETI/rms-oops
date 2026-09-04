@@ -5,7 +5,7 @@
 import re
 
 from polymath              import Qube, Vector3
-from oops.cache            import Cache
+from oops._cache           import _Cache
 from oops.config           import PICKLE_CONFIG
 from oops.event            import Event
 from oops.frame.frame_     import Frame, J2000Frame
@@ -22,8 +22,9 @@ class Path(Mutable):
     :meth:`~oops.Path.event_at_time` generates these Events.
 
     Upon construction, each Path has a "primary definition" relative to its specified,
-    pre-existing origin Path and reference Frame. For example, a `KeplerPath` describes an
-    orbit relative to the Path and Frame of a central planet.
+    pre-existing origin Path and reference Frame. For example, a
+    :class:`~oops.path.KeplerPath` describes an orbit relative to the Path and Frame of a
+    central planet.
 
     Once a Path is defined, you can calculate Events (defined by a time and state
     vector) relative to different Paths and transform those events between different Paths
@@ -31,11 +32,11 @@ class Path(Mutable):
     object whose :meth:`~oops.Path.event_at_time` method converts Events between different
     origins and Frames.
 
-    For example, suppose `saturn` is a Path defining the center of Saturn, using Saturn's
-    rotating Frame. A lightning flash on the surface of Saturn might be described as an
-    Event relative to the center of Saturn and in Saturn's Frame. In addition, suppose
-    `cassini_wac` is a Path defining the position of the Cassini spacecraft, using the
-    Frame of its wide-angle camera. Then the Path defined by::
+    For example, suppose ``saturn`` is a Path defining the center of Saturn, using
+    Saturn's rotating Frame. A lightning flash on the surface of Saturn might be described
+    as an Event relative to the center of Saturn and in Saturn's Frame. In addition,
+    suppose ``cassini_wac`` is a Path defining the position of the Cassini spacecraft,
+    using the Frame of its wide-angle camera. Then the Path defined by::
 
         saturn_wrt_wac = saturn.wrt(cassini_wac)
 
@@ -50,10 +51,10 @@ class Path(Mutable):
 
     Every Path also has a :attr:`~oops.Path.waypoint` property, which provides a unique
     identifier for that Path without regard to its origin or Frame. In the example above,
-    `saturn` and `saturn_wrt_wac` will have the same `waypoint`, meaning that they define
-    Events on the same path, albeit relative to different Paths and Frames. The waypoint
-    can be used in almost any place where the Path itself can be used, so this would also
-    have worked::
+    ``saturn`` and ``saturn_wrt_wac`` will have the same `waypoint`, meaning that they
+    define Events on the same path, albeit relative to different Paths and Frames. The
+    waypoint can be used in almost any place where the Path itself can be used, so this
+    would also have worked::
 
         saturn_wrt_wac = saturn.waypoint.wrt(cassini_wac.waypoint)
 
@@ -67,8 +68,8 @@ class Path(Mutable):
     Optionally, a Path can be registered under a path ID, which is a string that can be
     used globally to refer to that Path. You can use the :meth:`~oops.Path.as_path` method
     to convert a Path ID to its Path. In most situations, a Path ID can be used in place
-    of a Path. For example, if `saturn` is registered under the name "SATURN" and
-    `cassini_wac` is registered under the name "WAC", then these expressions would also
+    of a Path. For example, if ``saturn`` is registered under the name "SATURN" and
+    ``cassini_wac`` is registered under the name "WAC", then these expressions would also
     work::
 
         saturn_wrt_wac = saturn.wrt('WAC')
@@ -86,17 +87,18 @@ class Path(Mutable):
         stripped_id (str or None): The Path ID with any numeric suffix stripped; None if
             this Path is not registered.
         string_id (str): The Path ID if this Path is registered; otherwise, a unique
-            string derived from its Python id().
+            string derived from its Python ``id()``.
         is_registered (bool): True if this Path is registered.
         origin (Path): The Path relative to which state vectors are defined.
         frame (Frame): The Frame used by coordinates that are returned by this Path's
-            `event_at_time` method.
+            :meth:`~oops.Path.event_at_time` method.
         primary (Path): The primary definition of this Path.
         waypoint (Path): A Path object that uniquely identifies this path, irrespective of
             any particular origin and frame. Under most circumstances, this is the Path's
             primary definition.
         shape (tuple): The shape of the Path object. This is the shape of the Event
-            object returned by `event_at_time` when it is called with a single time value.
+            object returned by :meth:`~oops.Path.event_at_time` when it is called with a
+            single time value.
         wrt_ssb (Path): This Path relative to the Solar System Barycenter and J2000.
     """
 
@@ -320,7 +322,7 @@ class Path(Mutable):
         # can still be fitted, so two Paths that agree now might not agree later.
         # _reregister() adds it to the pool once it has been frozen.
         if hasattr(type(self), '_WAYPOINTS'):
-            self._key = Cache.clean_key(self._waypoint_key())
+            self._key = _Cache.clean_key(self._waypoint_key())
             if self._is_frozen():
                 self._waypoint = self._WAYPOINTS.setdefault(self._key, self)
             else:
@@ -393,7 +395,7 @@ class Path(Mutable):
             del self._WAYPOINTS[self._key]
 
         # Add the definition to the cache under the new key
-        self._key = Cache.clean_key(self._waypoint_key())
+        self._key = _Cache.clean_key(self._waypoint_key())
         self._waypoint = self._WAYPOINTS.setdefault(self._key, self)
 
     @staticmethod

@@ -30,14 +30,14 @@ class Pixel(Observation):
             cadence (Cadence): A 1-D Cadence object defining the start time and duration
                 of each consecutive measurement.
             fov (FOV): (field-of-view) object, which describes the field of view including
-                any spatial distortion. It maps between spatial coordinates (u,v) and
-                instrument coordinates (x,y). For a Pixel object, the FOV must have shape
-                (1,1).
+                any spatial distortion. It maps between spatial coordinates *(u,v)* and
+                instrument coordinates *(x,y)*. For a Pixel object, the FOV must have
+                shape (1,1).
             path (Path): The path waypoint co-located with the instrument.
             frame (Frame): The wayframe of a coordinate frame fixed to the optics of the
-                instrument. This frame should have its Z-axis pointing outward near the
-                center of the line of sight, with the X-axis pointing rightward and the
-                Y-axis pointing downward.
+                instrument. This frame should have its *z*-axis pointing outward near the
+                center of the line of sight, with the *x*-axis pointing rightward and the
+                *y*-axis pointing downward.
             subfields (dict): All of the optional attributes. Additional subfields may be
                 included as needed.
 
@@ -94,7 +94,7 @@ class Pixel(Observation):
         self.freeze()
 
     def uvt(self, indices, *, remask=False, derivs=True):
-        """Coordinates `(u,v)` and time `t` for indices into the data array.
+        """Coordinates *(u,v)* and time *t* for indices into the data array.
 
         This method supports non-integer index values.
 
@@ -104,19 +104,18 @@ class Pixel(Observation):
             derivs (bool, optional): True to include derivatives in the returned values.
 
         Returns:
-            tuple[Pair, Scalar]: `(uv, time)`, where `uv` defines the values of `(u,v)`
-            within the FOV that are associated with the array indices and `time` defines
-            the time in seconds TDB associated with the array indices.
+            tuple[Pair, Scalar]: The *(u,v)* location and the time in seconds TDB
+            associated with the array `indices`.
         """
 
         # Works for a 1-D index or a multi-D index
-        tstep = Observation.scalar_from_indices(indices, self.t_axis, derivs=derivs)
+        tstep = Observation._scalar_from_indices(indices, self.t_axis, derivs=derivs)
 
         if tstep is None:       # if t_axis < 0
-            # `indices` need not be a polymath object; scalar_from_indices also accepts a
+            # `indices` need not be a polymath object; _scalar_from_indices also accepts a
             # list, an array, or a number, so the shape has to come from the same
             # conversion rather than from the argument itself
-            shape = Observation.scalar_from_indices(indices, 0, derivs=False).shape
+            shape = Observation._scalar_from_indices(indices, 0, derivs=False).shape
             uv = Pair.filled(shape, 0.5)
             return (uv, Scalar(self.cadence.midtime))
 
@@ -125,20 +124,16 @@ class Pixel(Observation):
         return (uv, time)
 
     def uvt_range(self, indices, *, remask=False):
-        """Ranges of `(u,v)` spatial coordinates and time for integer array indices.
+        """Ranges of *(u,v)* spatial coordinates and time for integer array indices.
 
         Parameters:
             indices (Scalar or Vector): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
-            tuple[Pair, Pair, Scalar, Scalar]: `(uv_min, uv_max, time_min, time_max)`,
-            where:
-
-            * `uv_min`: The minimum values of (u,v) associated with the pixel.
-            * `uv_max`: The maximum values of (u,v).
-            * `time_min`: The minimum time associated with the pixel, in seconds TDB.
-            * `time_max`: The maximum time value.
+            tuple[Pair, Pair, Scalar, Scalar]: The lower and upper *(u,v)* corners of the
+            detector, followed by the earliest and latest time TDB, associated with the
+            given array `indices`.
         """
 
         if self.t_axis < 0:
@@ -146,7 +141,7 @@ class Pixel(Observation):
                     Scalar(self.cadence.time[0]), Scalar(self.cadence.time[1]))
 
         # Works for a 1-D index or a multi-D index
-        tstep = Observation.scalar_from_indices(indices, self.t_axis)
+        tstep = Observation._scalar_from_indices(indices, self.t_axis)
         (time_min, time_max) = self.cadence.time_range_at_tstep(tstep, remask=remask)
 
         # uv pair; time_min carries the shape of the converted indices
@@ -155,27 +150,27 @@ class Pixel(Observation):
         return (uv_min, uv_min + self.fov.uv_shape, time_min, time_max)
 
     def time_range_at_uv(self, uv_pair, *, remask=False):
-        """The start and stop times of the specified spatial pixel `(u,v)`.
+        """The start and stop times of the specified spatial pixel *(u,v)*.
 
         A Pixel observation has no spatial axes, so the input is largely ignored, although
         it is expected to fall between 0 and 1 inclusive.
 
         Parameters:
-            uv_pair (Pair): Spatial (u,v) data array coordinates, truncated to integers if
-                necessary.
+            uv_pair (Pair): Spatial *(u,v)* data array coordinates, truncated to integers
+                if necessary.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
-            tuple[Scalar, Scalar]: Scalars of the start time and stop time of each `(u,v)`
-            pair, as seconds TDB.
+            tuple[Scalar, Scalar]: The start time and stop time in seconds TDB for each
+            `uv_pair`.
         """
 
-        return self.time_range_at_uv_0d(uv_pair, remask=remask)
+        return self._time_range_at_uv_0d(uv_pair, remask=remask)
 
     def uv_range_at_time(self, time, *, remask=False):
-        """The `(u,v)` range of spatial pixels observed at a specified time.
+        """The *(u,v)* range of spatial pixels observed at a specified time.
 
-        For a Pixel observation, the `(u,v)` range is always (0,0) to (1,1). The time is
+        For a Pixel observation, the *(u,v)* range is always (0,0) to (1,1). The time is
         largely ignored, although it is expected to fall within the time limits of the
         observation and is masked if `remask` is True.
 
@@ -184,15 +179,15 @@ class Pixel(Observation):
             remask (bool, optional): True to mask values outside the time limits.
 
         Returns:
-            tuple[Pair, Pair]: `(uv_min, uv_max)`, where `uv_min` is the lower corner of
-            the `(u,v)` rectangle observed and `uv_max` is the upper corner.
+            tuple[Pair, Pair]: The lower (inclusive) and upper (exclusive) corners of the
+            observed *(u,v)* rectangle at `time`.
         """
 
-        return Observation.uv_range_at_time_0d(self, time, uv_shape=self.uv_shape,
-                                               remask=remask)
+        return Observation._uv_range_at_time_0d(self, time, uv_shape=self.uv_shape,
+                                                remask=remask)
 
     def uv_range_at_tstep(self, tstep, *, remask=False):
-        """The range of spatial `(u,v)` pixels active at a particular time step.
+        """The range of spatial *(u,v)* pixels active at a particular time step.
 
         A Pixel observation has a single pixel, so the range always covers it.
 
@@ -201,13 +196,12 @@ class Pixel(Observation):
             remask (bool, optional): True to mask time steps outside the cadence.
 
         Returns:
-            tuple[Pair, Pair]: `(uv_min, uv_max)`, where `uv_min` is the lower corner of
-            the `(u,v)` rectangle active at this time step and `uv_max` is the upper
-            corner, exclusive.
+            tuple[Pair, Pair]: The lower (inclusive) and upper (exclusive) corners of the
+            observed *(u,v)* rectangle at `tstep`.
         """
 
-        return Observation.uv_range_at_tstep_0d(self, tstep, uv_shape=self.uv_shape,
-                                                remask=remask)
+        return Observation._uv_range_at_tstep_0d(self, tstep, uv_shape=self.uv_shape,
+                                                 remask=remask)
 
     def time_shift(self, dtime):
         """A copy of the observation object with a time-shift.
@@ -275,7 +269,9 @@ class Pixel(Observation):
                 if None, the times are returned with one value per sample of the cadence
                 and no additional axes.
             tfrac (Scalar, optional): Scalar of fractional times during the exposure,
-                where tfrac=0 at the beginning and 1 at the end. Default is 0.5.
+                where 0 refers to the beginning and 1 refers to the end of each sample's
+                integration interval. The default is 0.5, referring to the midtime of each
+                sample in the `meshgrid`.
             time (Scalar, optional): Optional Scalar of absolute time in seconds. If
                 specified, `tfrac` is ignored.
             shapeless (bool, optional): True to return a shapeless event, referring to the

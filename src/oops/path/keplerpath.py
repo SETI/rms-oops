@@ -5,7 +5,7 @@
 import numpy as np
 
 from polymath          import Scalar, Vector3, Matrix3
-from oops.cache        import Cache
+from oops._cache       import _Cache
 from oops.event        import Event
 from oops.fittable     import Fittable
 from oops.frame.frame_ import Frame
@@ -118,7 +118,7 @@ class KeplerPath(Path, Fittable):
         self._center = self._planet.path
         self._gravity = self._planet.gravity
         self._epoch = float(epoch)
-        self._events = Cache()
+        self._events = _Cache()
 
         if observer is None:
             self._observer = None

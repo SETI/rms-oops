@@ -49,8 +49,8 @@ class Snapshot(Observation):
     def uv_from_coords(self, surface: Any, coords: Any, *, tfrac: float = 0.5,
         time: Any = None, underside: bool = False, derivs: bool = False,
         quick: Any = None, converge: Any = None) -> Any: ...
-    def inventory(self, bodies: Any, *, tfrac: float = 0.5, time: Any = None,
-        expand: float = 0.0, cache: bool = True, return_type: str = 'list',
-        fov: Any = None, quick: Any = None, converge: Any = None) -> Any: ...
+    def inventory(self, bodies: Any, *, tfrac: Any = None, time: Any = None,
+        expand: float = 0.0, return_type: str = 'list', fov: Any = None,
+        quick: Any = None, converge: Any = None) -> Any: ...
 
 ##########################################################################################

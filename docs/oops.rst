@@ -23,8 +23,6 @@ order. The concrete subclasses of each abstract base are documented on their own
 
 .. autoclass:: oops.Body
 
-.. autoclass:: oops.Cache
-
 .. autoclass:: oops.Cadence
 
 .. autoclass:: oops.Calibration

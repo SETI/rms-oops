@@ -3,7 +3,7 @@
 ##########################################################################################
 
 from polymath       import Matrix3, Qube, Scalar, Vector3
-from oops.cache     import Cache
+from oops._cache    import _Cache
 from oops.frame     import Frame
 from oops.transform import Transform
 
@@ -75,7 +75,7 @@ class RingFrame(Frame):
 
     def _refresh(self):
         self._planet_wrt_j2000 = self._planet_frame.wrt(Frame.J2000)
-        self._cache = Cache(self._cache_size)
+        self._cache = _Cache(self._cache_size)
         self._transform = None
         self._node = None
 

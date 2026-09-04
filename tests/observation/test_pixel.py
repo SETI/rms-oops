@@ -267,7 +267,7 @@ def test_pixel_gridless_event_without_a_meshgrid_is_shapeless():
 
 
 def test_pixel_uvt_accepts_a_number_without_a_time_axis():
-    """`scalar_from_indices` accepts a number, so `uvt` must too."""
+    """`_scalar_from_indices` accepts a number, so `uvt` must too."""
 
     fov = FlatFOV((0.001,0.001), (1,1))
     cadence = Metronome(tstart=0., tstride=10., texp=10., steps=4)

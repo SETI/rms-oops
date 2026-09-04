@@ -344,7 +344,7 @@ def test_uv_is_outside_can_exclude_the_upper_corner() -> None:
 def test_time_range_at_uv_0d_covers_the_whole_cadence() -> None:
     """With time decoupled from the spatial axes, every pixel spans the exposure."""
 
-    (tmin, tmax) = _snapshot().time_range_at_uv_0d(Pair((5., 10.)))
+    (tmin, tmax) = _snapshot()._time_range_at_uv_0d(Pair((5., 10.)))
 
     assert tmin == Scalar(0.)
     assert tmax == Scalar(10.)
@@ -353,7 +353,7 @@ def test_time_range_at_uv_0d_covers_the_whole_cadence() -> None:
 def test_time_range_at_uv_1d_follows_the_spatial_axis() -> None:
     """With a 1-D cadence, the pixel's time range is that of its row."""
 
-    (tmin, tmax) = _timed_image().time_range_at_uv_1d(Pair((5., 10.)), axis=1)
+    (tmin, tmax) = _timed_image()._time_range_at_uv_1d(Pair((5., 10.)), axis=1)
 
     assert tmin == Scalar(10.)
     assert tmax == Scalar(11.)
@@ -362,7 +362,7 @@ def test_time_range_at_uv_1d_follows_the_spatial_axis() -> None:
 def test_time_range_at_uv_2d_follows_both_axes() -> None:
     """With a 2-D cadence, both spatial axes select the time step."""
 
-    (tmin, tmax) = _timed_image_2d().time_range_at_uv_2d(Pair((5., 10.)), fast=1)
+    (tmin, tmax) = _timed_image_2d()._time_range_at_uv_2d(Pair((5., 10.)), fast=1)
 
     assert tmin == Scalar(110.)
     assert tmax == Scalar(111.)
@@ -371,7 +371,7 @@ def test_time_range_at_uv_2d_follows_both_axes() -> None:
 def test_uv_range_at_time_0d_covers_the_whole_fov() -> None:
     """With time decoupled from the spatial axes, every pixel is observed at once."""
 
-    (uv_min, uv_max) = _snapshot().uv_range_at_time_0d(Scalar(5.), (10, 20))
+    (uv_min, uv_max) = _snapshot()._uv_range_at_time_0d(Scalar(5.), (10, 20))
 
     assert uv_min == Pair((0, 0))
     assert uv_max == Pair((10, 20))
@@ -380,7 +380,7 @@ def test_uv_range_at_time_0d_covers_the_whole_fov() -> None:
 def test_uv_range_at_time_1d_selects_one_row() -> None:
     """With a 1-D cadence, only the row being swept is active."""
 
-    (uv_min, uv_max) = _timed_image().uv_range_at_time_1d(Scalar(5.), (10, 20), axis=1)
+    (uv_min, uv_max) = _timed_image()._uv_range_at_time_1d(Scalar(5.), (10, 20), axis=1)
 
     assert uv_min == Pair((0, 5))
     assert uv_max == Pair((10, 6))
@@ -389,7 +389,7 @@ def test_uv_range_at_time_1d_selects_one_row() -> None:
 def test_uv_range_at_time_2d_selects_one_pixel() -> None:
     """With a 2-D cadence, a single pixel is active at a time."""
 
-    (uv_min, uv_max) = _timed_image_2d().uv_range_at_time_2d(Scalar(25.), (10, 20),
+    (uv_min, uv_max) = _timed_image_2d()._uv_range_at_time_2d(Scalar(25.), (10, 20),
                                                              slow=0, fast=1)
 
     assert uv_min == Pair((1, 5))
@@ -399,7 +399,7 @@ def test_uv_range_at_time_2d_selects_one_pixel() -> None:
 def test_uv_range_at_tstep_0d_covers_the_whole_fov() -> None:
     """Every pixel is active at every time step when time is decoupled."""
 
-    (uv_min, uv_max) = _snapshot().uv_range_at_tstep_0d(Scalar(0.), (10, 20))
+    (uv_min, uv_max) = _snapshot()._uv_range_at_tstep_0d(Scalar(0.), (10, 20))
 
     assert uv_min == Pair((0, 0))
     assert uv_max == Pair((10, 20))
@@ -408,7 +408,7 @@ def test_uv_range_at_tstep_0d_covers_the_whole_fov() -> None:
 def test_uv_range_at_tstep_1d_selects_one_row() -> None:
     """One pixel is active along the cadence axis, the whole FOV along the other."""
 
-    (uv_min, uv_max) = _timed_image().uv_range_at_tstep_1d(Scalar(5.), (10, 20), axis=1)
+    (uv_min, uv_max) = _timed_image()._uv_range_at_tstep_1d(Scalar(5.), (10, 20), axis=1)
 
     assert uv_min == Pair((0, 5))
     assert uv_max == Pair((10, 6))
@@ -417,7 +417,7 @@ def test_uv_range_at_tstep_1d_selects_one_row() -> None:
 def test_uv_range_at_tstep_2d_selects_one_pixel() -> None:
     """Both indices of a 2-D cadence select a single active pixel."""
 
-    (uv_min, uv_max) = _timed_image_2d().uv_range_at_tstep_2d(Pair((1., 5.)), (10, 20),
+    (uv_min, uv_max) = _timed_image_2d()._uv_range_at_tstep_2d(Pair((1., 5.)), (10, 20),
                                                               slow=0, fast=1)
 
     assert uv_min == Pair((1, 5))
@@ -430,7 +430,7 @@ def test_uv_range_at_time_agrees_with_the_0d_helper() -> None:
     obs = _snapshot()
 
     assert obs.uv_range_at_time(Scalar(5.)) \
-           == obs.uv_range_at_time_0d(Scalar(5.), obs.uv_shape)
+           == obs._uv_range_at_time_0d(Scalar(5.), obs.uv_shape)
 
 
 ##########################################################################################
@@ -637,7 +637,7 @@ def test_uv_range_at_time_0d_masks_a_time_outside_the_cadence() -> None:
 
     obs = _snapshot()
 
-    (uv_min, uv_max) = obs.uv_range_at_time_0d(Scalar([5., 50.]), (10, 20), remask=True)
+    (uv_min, uv_max) = obs._uv_range_at_time_0d(Scalar([5., 50.]), (10, 20), remask=True)
 
     assert list(uv_min.mask) == [False, True]
     assert list(uv_max.mask) == [False, True]
@@ -650,7 +650,7 @@ def test_uv_range_at_time_0d_stays_shapeless_when_nothing_is_masked() -> None:
 
     obs = _snapshot()
 
-    (uv_min, uv_max) = obs.uv_range_at_time_0d(Scalar([2., 8.]), (10, 20), remask=True)
+    (uv_min, uv_max) = obs._uv_range_at_time_0d(Scalar([2., 8.]), (10, 20), remask=True)
 
     assert uv_min == Pair((0, 0))
     assert uv_max == Pair((10, 20))
@@ -662,8 +662,8 @@ def test_uv_range_at_time_1d_falls_back_to_the_0d_helper() -> None:
 
     obs = _timed_image()
 
-    assert obs.uv_range_at_time_1d(Scalar(5.), (10, 20), axis=-1) \
-           == obs.uv_range_at_time_0d(Scalar(5.), (10, 20))
+    assert obs._uv_range_at_time_1d(Scalar(5.), (10, 20), axis=-1) \
+           == obs._uv_range_at_time_0d(Scalar(5.), (10, 20))
 
 
 def test_uv_range_at_time_2d_swaps_the_axes_when_the_slow_index_is_v() -> None:
@@ -671,7 +671,7 @@ def test_uv_range_at_time_2d_swaps_the_axes_when_the_slow_index_is_v() -> None:
 
     obs = _timed_image_2d()
 
-    (uv_min, uv_max) = obs.uv_range_at_time_2d(Scalar(25.), (20, 10), slow=1, fast=0)
+    (uv_min, uv_max) = obs._uv_range_at_time_2d(Scalar(25.), (20, 10), slow=1, fast=0)
 
     assert uv_min == Pair((5, 1))
     assert uv_max == Pair((6, 2))
@@ -682,7 +682,7 @@ def test_uv_range_at_time_2d_spans_an_axis_no_cadence_index_sweeps() -> None:
 
     obs = _timed_image_2d()
 
-    (uv_min, uv_max) = obs.uv_range_at_time_2d(Scalar(25.), (10, 20), slow=-1, fast=1)
+    (uv_min, uv_max) = obs._uv_range_at_time_2d(Scalar(25.), (10, 20), slow=-1, fast=1)
 
     assert uv_min == Pair((0, 5))
     assert uv_max == Pair((10, 6))
@@ -693,7 +693,7 @@ def test_uv_range_at_time_2d_spans_the_fov_when_neither_index_sweeps_it() -> Non
 
     obs = _timed_image_2d()
 
-    (uv_min, uv_max) = obs.uv_range_at_time_2d(Scalar(25.), (10, 20), slow=-1, fast=-1)
+    (uv_min, uv_max) = obs._uv_range_at_time_2d(Scalar(25.), (10, 20), slow=-1, fast=-1)
 
     assert uv_min == Pair((0, 0))
     assert uv_max == Pair((10, 20))
@@ -704,7 +704,7 @@ def test_uv_range_at_tstep_0d_masks_a_step_outside_the_cadence() -> None:
 
     obs = _snapshot()
 
-    (uv_min, uv_max) = obs.uv_range_at_tstep_0d(Scalar([0., -1.]), (10, 20), remask=True)
+    (uv_min, uv_max) = obs._uv_range_at_tstep_0d(Scalar([0., -1.]), (10, 20), remask=True)
 
     assert list(uv_min.mask) == [False, True]
     assert list(uv_max.mask) == [False, True]
@@ -717,7 +717,7 @@ def test_uv_range_at_tstep_0d_expands_a_masked_step_without_remask() -> None:
 
     obs = _snapshot()
 
-    (uv_min, uv_max) = obs.uv_range_at_tstep_0d(Scalar([0., 1.], [False, True]),
+    (uv_min, uv_max) = obs._uv_range_at_tstep_0d(Scalar([0., 1.], [False, True]),
                                                 (10, 20))
 
     assert list(uv_min.mask) == [False, True]
@@ -729,8 +729,8 @@ def test_uv_range_at_tstep_1d_falls_back_to_the_0d_helper() -> None:
 
     obs = _timed_image()
 
-    assert obs.uv_range_at_tstep_1d(Scalar(5.), (10, 20), axis=-1) \
-           == obs.uv_range_at_tstep_0d(Scalar(5.), (10, 20))
+    assert obs._uv_range_at_tstep_1d(Scalar(5.), (10, 20), axis=-1) \
+           == obs._uv_range_at_tstep_0d(Scalar(5.), (10, 20))
 
 
 def test_uv_range_at_tstep_2d_swaps_the_axes_when_the_slow_index_is_v() -> None:
@@ -738,7 +738,7 @@ def test_uv_range_at_tstep_2d_swaps_the_axes_when_the_slow_index_is_v() -> None:
 
     obs = _timed_image_2d()
 
-    (uv_min, uv_max) = obs.uv_range_at_tstep_2d(Pair((1., 5.)), (20, 10),
+    (uv_min, uv_max) = obs._uv_range_at_tstep_2d(Pair((1., 5.)), (20, 10),
                                                 slow=1, fast=0)
 
     assert uv_min == Pair((5, 1))
@@ -750,7 +750,7 @@ def test_uv_range_at_tstep_2d_spans_an_axis_no_cadence_index_sweeps() -> None:
 
     obs = _timed_image_2d()
 
-    (uv_min, uv_max) = obs.uv_range_at_tstep_2d(Pair((1., 5.)), (10, 20),
+    (uv_min, uv_max) = obs._uv_range_at_tstep_2d(Pair((1., 5.)), (10, 20),
                                                 slow=-1, fast=1)
 
     assert uv_min == Pair((0, 5))
@@ -762,7 +762,7 @@ def test_uv_range_at_tstep_2d_spans_the_fov_when_neither_index_sweeps_it() -> No
 
     obs = _timed_image_2d()
 
-    (uv_min, uv_max) = obs.uv_range_at_tstep_2d(Pair((1., 5.)), (10, 20),
+    (uv_min, uv_max) = obs._uv_range_at_tstep_2d(Pair((1., 5.)), (10, 20),
                                                 slow=-1, fast=-1)
 
     assert uv_min == Pair((0, 0))
@@ -888,7 +888,7 @@ def test_scalar_from_indices_selects_an_axis_of_an_array() -> None:
 
     indices = np.array([[1., 2.], [3., 4.]])
 
-    assert Observation.scalar_from_indices(indices, 1) == Scalar([2., 4.])
+    assert Observation._scalar_from_indices(indices, 1) == Scalar([2., 4.])
 
 
 def test_scalar_from_indices_passes_a_narrow_array_through() -> None:
@@ -896,7 +896,7 @@ def test_scalar_from_indices_passes_a_narrow_array_through() -> None:
 
     indices = np.array([[1.], [2.]])
 
-    assert Observation.scalar_from_indices(indices, 1) == Scalar([[1.], [2.]])
+    assert Observation._scalar_from_indices(indices, 1) == Scalar([[1.], [2.]])
 
 
 def test_parallel_los_is_unchanged_between_identical_frames() -> None:
@@ -952,7 +952,7 @@ def test_time_range_at_uv_0d_masks_a_pixel_outside_the_fov() -> None:
 
     obs = _snapshot()
 
-    (tmin, tmax) = obs.time_range_at_uv_0d(Pair([(5., 10.), (50., 10.)]), remask=True)
+    (tmin, tmax) = obs._time_range_at_uv_0d(Pair([(5., 10.), (50., 10.)]), remask=True)
 
     assert list(tmin.mask) == [False, True]
     assert list(tmax.mask) == [False, True]
@@ -964,7 +964,7 @@ def test_uv_range_at_time_2d_spans_only_the_axis_the_fast_index_misses() -> None
 
     obs = _timed_image_2d()
 
-    (uv_min, uv_max) = obs.uv_range_at_time_2d(Scalar(25.), (10, 20), slow=0, fast=-1)
+    (uv_min, uv_max) = obs._uv_range_at_time_2d(Scalar(25.), (10, 20), slow=0, fast=-1)
 
     assert uv_min == Pair((1, 0))
     assert uv_max == Pair((2, 20))
@@ -975,7 +975,7 @@ def test_uv_range_at_tstep_2d_spans_only_the_axis_the_fast_index_misses() -> Non
 
     obs = _timed_image_2d()
 
-    (uv_min, uv_max) = obs.uv_range_at_tstep_2d(Pair((1., 5.)), (10, 20),
+    (uv_min, uv_max) = obs._uv_range_at_tstep_2d(Pair((1., 5.)), (10, 20),
                                                 slow=0, fast=-1)
 
     assert uv_min == Pair((1, 0))

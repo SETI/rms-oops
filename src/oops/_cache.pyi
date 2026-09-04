@@ -1,7 +1,7 @@
 ##########################################################################################
-# oops/cache.pyi
+# oops/_cache.pyi
 ##########################################################################################
-"""Type stub for :mod:`oops.cache`.
+"""Type stub for :mod:`oops._cache`.
 
 The `src` tree carries no inline annotations, so type information for public symbols is
 published here instead. The stub describes the shape of the API exactly: every public
@@ -13,7 +13,7 @@ from typing import Any
 
 from oops.oops import Oops as Oops
 
-class Cache(Oops):
+class _Cache(Oops):
     def __init__(self, maxsize: int = 100) -> None: ...
     def __len__(self) -> int: ...
     @staticmethod

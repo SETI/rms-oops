@@ -33,13 +33,13 @@ def orbit_longitude(self, event_key, reference='obs', planet=None):
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     if planet is None:
-        (body,_) = self.get_body_and_modifier(event_key[1])
+        (body,_) = self._get_body_and_modifier(event_key[1])
         planet = body.parent.name
 
     # Look up under the reference
     key0 = ('orbit_longitude', event_key)
     key = key0 + (reference, planet)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     # Get the event
@@ -74,7 +74,7 @@ def orbit_longitude(self, event_key, reference='obs', planet=None):
 
     # Locate the reference direction in this frame
     reference_wrt_orbit = matrix.rotate(reference_dir)
-    ref_lon_wrt_orbit = reference_wrt_orbit.longitude(recursive=self.ALL_DERIVS)
+    ref_lon_wrt_orbit = reference_wrt_orbit.longitude(recursive=self._ALL_DERIVS)
 
     # Convert to an orbit with respect to the reference direction
     orbit_lon_wrt_ref = (-ref_lon_wrt_orbit) % Scalar.TWOPI

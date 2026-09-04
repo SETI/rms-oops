@@ -4,6 +4,8 @@
 
 import pickle
 from collections.abc import Iterator
+from pathlib import Path as FilePath
+from typing import cast
 
 import cspyce
 import numpy as np
@@ -16,10 +18,9 @@ from oops.gravity           import Gravity
 from oops.path              import Path
 from oops.surface.ansa      import Ansa
 from oops.surface.ringplane import RingPlane
-from programs.gold_master.test_support import TEST_SPICE_PREFIX
 
 from oops.constants import PI, HALFPI
-from tests.conftest import CORE_KERNELS
+from tests.conftest import CORE_KERNELS, SPICE_PREFIX
 
 
 def test_ansa():
@@ -170,7 +171,7 @@ def _solar_system() -> Iterator[None]:
     Defining them is expensive, so one definition serves the whole module.
     """
 
-    for path in TEST_SPICE_PREFIX.retrieve(CORE_KERNELS):
+    for path in cast(list[FilePath], SPICE_PREFIX.retrieve(CORE_KERNELS)):
         cspyce.furnsh(path)
 
     Path._reset_caches()

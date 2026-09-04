@@ -10,15 +10,17 @@ import warnings
 
 ##########################################################################################
 # QuickPath and QuickFrame default parameters
-#
-# Disable the use of QuickPaths/Frames on an individual basis by calling the function with
-# quick=False. The default set of parameters will be used whenever quick=True. If a
-# function is called with quick as a dictionary, then any values in the dictionary
-# override these defaults and the merged dictionary of parameters is used.
 ##########################################################################################
 
 class QUICK(object):
-    """Default parameters for QuickPath and QuickFrame interpolation."""
+    """Default parameters for :class:`~oops.path.QuickPath` and
+    :class:`~oops.frame.QuickFrame` interpolation.
+
+    These are the default parameters. Any of these parameters can be overridden on a
+    one-time basis by calling a function with `quick` as an input dictionary containing
+    temporary replacement values. Use `quick = False` to temporarily disable the use of
+    QuickPaths and QuickFrames.
+    """
 
     flag = True                 # Defines the default behavior as quick=True or
                                 # quick=False.

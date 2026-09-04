@@ -42,29 +42,29 @@ def longitude(self, event_key, reference='iau', direction='west',
     event_key = Backplane.standardize_event_key(event_key)
     key0 = ('longitude', event_key)
     key = key0 + (reference, direction, minimum, lon_type)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     # If it is not found with default keys, fill in those backplanes
     # Note that longitudes default to eastward for right-handed
     # coordinates.
     key_default = key0 + ('iau', 'east', 0, 'squashed')
-    if key_default not in self.backplanes:
+    if key_default not in self._backplanes:
         self._fill_surface_intercepts(event_key)
 
     # Fill in the required longitude type if necessary
     key_typed = key0 + ('iau', 'east', 0, lon_type)
-    if key_typed in self.backplanes:
+    if key_typed in self._backplanes:
         longitude = self.get_backplane(key_typed)
     else:
         lon_squashed = self.get_backplane(key_default)
         surface = Backplane.get_surface(event_key[1])
 
         if lon_type == 'centric':
-            longitude = surface.lon_to_centric(lon_squashed, derivs=self.ALL_DERIVS)
+            longitude = surface.lon_to_centric(lon_squashed, derivs=self._ALL_DERIVS)
             longitude = self.register_backplane(key_typed, longitude)
         else:
-            longitude = surface.lon_to_graphic(lon_squashed, derivs=self.ALL_DERIVS)
+            longitude = surface.lon_to_graphic(lon_squashed, derivs=self._ALL_DERIVS)
             longitude = self.register_backplane(key_typed, longitude)
 
     # Define the longitude relative to the reference value
@@ -110,12 +110,12 @@ def latitude(self, event_key, lat_type='centric'):
     event_key = Backplane.standardize_event_key(event_key)
     key0 = ('latitude', event_key)
     key = key0 + (lat_type,)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     # If it is not found with default keys, fill in those backplanes
     key_default = key0 + ('squashed',)
-    if key_default not in self.backplanes:
+    if key_default not in self._backplanes:
         self._fill_surface_intercepts(event_key)
 
     # Fill in the values for this key
@@ -130,9 +130,9 @@ def latitude(self, event_key, lat_type='centric'):
     longitude = self.get_backplane(lon_key)
 
     if lat_type == 'centric':
-        latitude = surface.lat_to_centric(latitude, longitude, derivs=self.ALL_DERIVS)
+        latitude = surface.lat_to_centric(latitude, longitude, derivs=self._ALL_DERIVS)
     else:
-        latitude = surface.lat_to_graphic(latitude, longitude, derivs=self.ALL_DERIVS)
+        latitude = surface.lat_to_graphic(latitude, longitude, derivs=self._ALL_DERIVS)
 
     return self.register_backplane(key, latitude)
 
@@ -185,11 +185,11 @@ def _sub_observer_longitude(self, event_key):
     gridless_key = Backplane.gridless_event_key(event_key)
     key = ('_sub_observer_longitude', gridless_key)
 
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     event = self.get_surface_event(gridless_key)
-    longitude = event.dep_ap.longitude(recursive=self.ALL_DERIVS)
+    longitude = event.dep_ap.longitude(recursive=self._ALL_DERIVS)
         # Use the apparent departure direction seen at the body center
     return self.register_backplane(key, longitude)
 
@@ -206,11 +206,11 @@ def _sub_observer_latitude(self, event_key):
     gridless_key = Backplane.gridless_event_key(event_key)
     key = ('_sub_observer_latitude', gridless_key)
 
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     event = self.get_surface_event(gridless_key)
-    latitude = event.dep_ap.latitude(recursive=self.ALL_DERIVS)
+    latitude = event.dep_ap.latitude(recursive=self._ALL_DERIVS)
         # Use the apparent departure direction seen at the body center
     return self.register_backplane(key, latitude)
 
@@ -228,11 +228,11 @@ def _sub_solar_longitude(self, event_key):
     gridless_key = Backplane.gridless_event_key(event_key)
     key = ('_sub_solar_longitude', gridless_key)
 
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     event = self.get_surface_event(gridless_key, arrivals=True)
-    longitude = event.neg_arr_ap.longitude(recursive=self.ALL_DERIVS)
+    longitude = event.neg_arr_ap.longitude(recursive=self._ALL_DERIVS)
         # Use the (negative) apparent arrival direction seen at the body center
     return self.register_backplane(key, longitude)
 
@@ -250,11 +250,11 @@ def _sub_solar_latitude(self, event_key):
     gridless_key = Backplane.gridless_event_key(event_key)
     key = ('_sub_solar_latitude', gridless_key)
 
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     event = self.get_surface_event(gridless_key, arrivals=True)
-    latitude = event.neg_arr_ap.latitude(recursive=self.ALL_DERIVS)
+    latitude = event.neg_arr_ap.latitude(recursive=self._ALL_DERIVS)
         # Use the (negative) apparent arrival direction seen at the body center
     return self.register_backplane(key, latitude)
 
@@ -289,11 +289,11 @@ def sub_observer_longitude(self, event_key, reference='iau', direction='west',
 
     key0 = ('sub_observer_longitude', gridless_key)
     key = key0 + (reference, direction, minimum)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     key_default = key0 + ('iau', 'east', 0)
-    if key_default in self.backplanes:
+    if key_default in self._backplanes:
         longitude = self.get_backplane(key_default)
     else:
         longitude = self._sub_observer_longitude(gridless_key)
@@ -332,11 +332,11 @@ def sub_solar_longitude(self, event_key, reference='iau', direction='west', mini
 
     key0 = ('sub_solar_longitude', gridless_key)
     key = key0 + (reference, direction, minimum)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     key_default = key0 + ('iau', 'east', 0)
-    if key_default in self.backplanes:
+    if key_default in self._backplanes:
         longitude = self.get_backplane(key_default)
     else:
         longitude = self._sub_solar_longitude(gridless_key)
@@ -425,7 +425,7 @@ def sub_observer_latitude(self, event_key, lat_type='centric'):
     self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
     key = ('sub_observer_latitude', gridless_key, lat_type)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     event = self.get_surface_event(gridless_key)
@@ -435,9 +435,9 @@ def sub_observer_latitude(self, event_key, lat_type='centric'):
     # has to be looked up by name
     if lat_type == 'graphic':
         surface = Backplane.get_surface(gridless_key[1])
-        dep_ap = dep_ap.element_mul(surface.unsquash_sq, recursive=self.ALL_DERIVS)
+        dep_ap = dep_ap.element_mul(surface.unsquash_sq, recursive=self._ALL_DERIVS)
 
-    latitude = dep_ap.latitude(recursive=self.ALL_DERIVS)
+    latitude = dep_ap.latitude(recursive=self._ALL_DERIVS)
     return self.register_backplane(key, latitude)
 
 
@@ -456,7 +456,7 @@ def sub_solar_latitude(self, event_key, lat_type='centric'):
     self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
     key = ('sub_solar_latitude', gridless_key, lat_type)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     event = self.get_gridless_event(gridless_key, arrivals=True)
@@ -467,9 +467,9 @@ def sub_solar_latitude(self, event_key, lat_type='centric'):
     if lat_type == 'graphic':
         surface = Backplane.get_surface(gridless_key[1])
         neg_arr_ap = neg_arr_ap.element_mul(surface.unsquash_sq,
-                                            recursive=self.ALL_DERIVS)
+                                            recursive=self._ALL_DERIVS)
 
-    latitude = neg_arr_ap.latitude(recursive=self.ALL_DERIVS)
+    latitude = neg_arr_ap.latitude(recursive=self._ALL_DERIVS)
     return self.register_backplane(key, latitude)
 
 ##########################################################################################

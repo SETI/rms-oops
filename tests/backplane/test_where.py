@@ -16,7 +16,7 @@ def test_where_intercepted_marks_the_disk(bp: Backplane) -> None:
 
     intercepted = bp.where_intercepted(PLANET)
 
-    assert intercepted.shape == bp.shape
+    assert intercepted.shape == bp._shape
     assert 0 < np.sum(intercepted.vals) < intercepted.size
 
 

@@ -155,9 +155,9 @@ class Calibration(Oops):
             uv_pair (Pair): `(u,v)` pixel coordinates in the image.
 
         Returns:
-            tuple[Pair, Scalar, Scalar]: The pixel coordinates converted to a Pair,
-            followed by the factor and the baseline, each shaped to broadcast against
-            those coordinates.
+            tuple[Pair, Scalar, Scalar]: The `(u,v)` pixel coordinates converted to a
+            Pair, followed by the factor and the baseline, each shaped to broadcast
+            against those coordinates.
         """
 
         uv_pair = Pair.as_pair(uv_pair)

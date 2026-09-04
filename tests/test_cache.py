@@ -3,14 +3,14 @@
 ##########################################################################################
 
 import numpy as np
-from oops.cache import Cache
+from oops._cache import _Cache
 from oops.frame import Rotation
 from oops.path  import LinearPath
 from polymath   import Scalar, Vector
 
 
 def test_clean_key():
-    clean_key = Cache.clean_key
+    clean_key = _Cache.clean_key
 
     key = 1
     assert clean_key(key) == 1
@@ -83,7 +83,7 @@ def test_clean_key():
     {clean_key(key)}            # a set literal: TypeError if the key is unhashable
 
 def test_clean_key_is_recursive():
-    clean_key = Cache.clean_key
+    clean_key = _Cache.clean_key
 
     scalars = (Scalar(2.718), Scalar(3.14))
     cleaned = (('Scalar', (), 2.718, False), ('Scalar', (), 3.14, False))
@@ -116,7 +116,7 @@ def test_clean_key_is_recursive():
     assert clean_key(((path,), (frame,))) == ((clean_key(path),), (clean_key(frame),))
 
 def test_Cache():
-    cache = Cache()
+    cache = _Cache()
     assert cache._maxsize == 100
     assert cache._extras == 10
     assert cache._limit == 110
@@ -144,14 +144,14 @@ def test_Cache():
     assert 12 in cache
 
     # maxsize = 0
-    cache = Cache(maxsize=0)
+    cache = _Cache(maxsize=0)
     assert len(cache) == 0
     cache['pi'] = 3.14
     assert len(cache) == 0
     assert cache['pi'] is None
 
     # maxsize = 2
-    cache = Cache(maxsize=2)
+    cache = _Cache(maxsize=2)
     assert cache._maxsize == 2
     assert cache._extras == 3
     assert cache._limit == 5

@@ -427,7 +427,7 @@ def test_a_limb_backplane_inherits_the_mask_of_an_altitude_backplane(
 def test_scaled_limb_limits_are_fractions_of_the_body_radius(bp: Backplane) -> None:
     """With scaled=True the limits are multiples of the body's largest radius."""
 
-    radius = bp.get_body_and_modifier(LIMB)[0].surface.radii.max()
+    radius = bp._get_body_and_modifier(LIMB)[0].surface.radii.max()
 
     scaled = bp.limb_altitude(LIMB, zmin=LIMB_ZMIN, zmax=LIMB_ZMAX_SCALED, scaled=True)
     absolute = bp.limb_altitude(LIMB, zmin=LIMB_ZMIN, zmax=LIMB_ZMAX_SCALED * radius)

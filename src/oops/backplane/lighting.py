@@ -18,11 +18,11 @@ def incidence_angle(self, event_key, apparent=True):
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('incidence_angle', event_key, apparent)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     event = self.get_surface_event(event_key, arrivals=True)
-    incidence = event.incidence_angle(apparent=apparent, derivs=self.ALL_DERIVS)
+    incidence = event.incidence_angle(apparent=apparent, derivs=self._ALL_DERIVS)
 
     # Ring incidence angles should always be 0 to pi/2
     if event.surface.COORDINATE_TYPE == 'polar':
@@ -56,11 +56,11 @@ def emission_angle(self, event_key, apparent=True):
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('emission_angle', event_key, apparent)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     event = self.get_surface_event(event_key)
-    emission = event.emission_angle(apparent=apparent, derivs=self.ALL_DERIVS)
+    emission = event.emission_angle(apparent=apparent, derivs=self._ALL_DERIVS)
 
     # A gridless event is on the body's path rather than on its surface, so the surface
     # has to be looked up by name
@@ -97,11 +97,11 @@ def phase_angle(self, event_key, apparent=True):
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('phase_angle', event_key, apparent)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     event = self.get_surface_event(event_key, arrivals=True)
-    phase = event.phase_angle(apparent=apparent, derivs=self.ALL_DERIVS)
+    phase = event.phase_angle(apparent=apparent, derivs=self._ALL_DERIVS)
     return self.register_backplane(key, phase)
 
 
@@ -117,7 +117,7 @@ def scattering_angle(self, event_key, apparent=True):
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('scattering_angle', event_key, apparent)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     phase = self.phase_angle(event_key, apparent=apparent)
@@ -196,7 +196,7 @@ def mu0(self, event_key, apparent=True):
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('mu0', event_key, apparent)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     incidence = self.incidence_angle(event_key, apparent=apparent)
@@ -215,7 +215,7 @@ def mu(self, event_key, apparent=True):
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('mu', event_key, apparent)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     emission = self.emission_angle(event_key, apparent=apparent)
@@ -232,7 +232,7 @@ def lambert_law(self, event_key):
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('lambert_law', event_key)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     lambert_law = self.mu0(event_key, apparent=True)
@@ -259,7 +259,7 @@ def minnaert_law(self, event_key, k, k2=None, clip=0.2):
         k2 = k - 1
     key = ('minnaert_law', event_key, k, k2, clip)
 
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     mu0 = self.mu0(event_key, apparent=True)
@@ -279,7 +279,7 @@ def lommel_seeliger_law(self, event_key):
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     key = ('lommel_seeliger_law', event_key)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     mu0 = self.mu0(event_key, apparent=True)

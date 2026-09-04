@@ -32,12 +32,12 @@ def ansa_radius(self, event_key, radius_type='positive', rmax=None):
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key, default='ANSA')
     key = ('ansa_radius', event_key, radius_type, rmax)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     # Make sure the default is available
     key_default = ('ansa_radius', event_key, 'right', None)
-    if key_default not in self.backplanes:
+    if key_default not in self._backplanes:
         self._fill_ansa_intercepts(event_key)
 
     # Get the unmasked backplane array
@@ -78,7 +78,7 @@ def ansa_altitude(self, event_key):
         return self._remasked_backplane(key, backplane_key)
 
     # If this backplane array is already defined, return it
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     self._fill_ansa_intercepts(event_key)
@@ -115,12 +115,12 @@ def ansa_longitude(self, event_key, reference='node'):
         return self._remasked_backplane(key, backplane_key)
 
     # If this backplane array is already defined, return it
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     # If it is not found with reference J2000, fill in those backplanes
     key_node = ('ansa_longitude', event_key, 'node')
-    if key_node not in self.backplanes:
+    if key_node not in self._backplanes:
         self._fill_ansa_longitudes(event_key)
 
     # Now apply the reference longitude
@@ -190,7 +190,7 @@ def _fill_ansa_longitudes(self, event_key):
 
     # Get the longitude in the associated ring plane
     lon = event.surface.ringplane.coords_from_vector3(event.state, axes=2,
-                                                      derivs=self.ALL_DERIVS)[1]
+                                                      derivs=self._ALL_DERIVS)[1]
     self.register_backplane(('ansa_longitude', event_key, 'node'), lon)
 
 
@@ -213,7 +213,7 @@ def ansa_radial_resolution(self, event_key):
         return self._remasked_backplane(key, backplane_key)
 
     # If this backplane array is already defined, return it
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     event = self.get_surface_event(event_key, derivs=True)
@@ -247,7 +247,7 @@ def ansa_vertical_resolution(self, event_key):
         return self._remasked_backplane(key, backplane_key)
 
     # If this backplane array is already defined, return it
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     event = self.get_surface_event(event_key, derivs=True)

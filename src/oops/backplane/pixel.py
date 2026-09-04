@@ -31,7 +31,7 @@ def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
     gridless_key = Backplane.gridless_event_key(event_key)
 
     key = ('body_diameter_in_pixels', gridless_key, radius, axis)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     # compute apparent distance
@@ -39,7 +39,7 @@ def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
     distance = event.dep_lt * C
 
     # compute apparent enclosing radius
-    (body, mod) = Backplane.get_body_and_modifier(gridless_key[1])
+    (body, mod) = Backplane._get_body_and_modifier(gridless_key[1])
     if radius==0:
         radius = body.radius
 
@@ -72,7 +72,7 @@ def center_coordinate(self, event_key, axis="u"):
     gridless_key = Backplane.gridless_event_key(event_key)
 
     key = ('center_coordinate', gridless_key, axis)
-    if key in self.backplanes:
+    if key in self._backplanes:
         return self.get_backplane(key)
 
     body = Body.lookup(gridless_key[1])

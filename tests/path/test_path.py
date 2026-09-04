@@ -14,12 +14,12 @@ from oops.event  import Event
 from oops.frame  import Frame, SpiceFrame
 from oops.path   import (Path, LinkedPath, NullPath, ReversedPath, RelativePath,
                          RotatedPath, QuickPath, LinearPath, SpicePath)
-from programs.gold_master.test_support import TEST_SPICE_PREFIX
+from tests.conftest import SPICE_PREFIX
 
 
 @pytest.fixture(autouse=True)
 def _ephemeris_kernel():
-    cspyce.furnsh(TEST_SPICE_PREFIX.retrieve('de421.bsp'))
+    cspyce.furnsh(SPICE_PREFIX.retrieve('de421.bsp'))
     Path._reset_caches()
     Frame._reset_caches()
 
@@ -182,7 +182,7 @@ PATH_NAMES = ['NullPath', 'LinkedPath', 'RelativePath', 'ReversedPath', 'Rotated
 def test_a_linking_path_survives_a_round_trip_through_pickle(name: str) -> None:
     """Unpickling rebuilds the path and reproduces the event it defines."""
 
-    cspyce.furnsh(TEST_SPICE_PREFIX.retrieve('pck00010.tpc'))
+    cspyce.furnsh(SPICE_PREFIX.retrieve('pck00010.tpc'))
     path = _linked_paths()[name]
     expected = path.event_at_time(TIME).pos
 
@@ -224,7 +224,7 @@ def test_a_relative_path_requires_a_common_origin() -> None:
 def test_a_relative_path_rotates_into_the_frame_of_the_new_origin() -> None:
     """When the two paths use different frames, the result is rotated into one."""
 
-    cspyce.furnsh(TEST_SPICE_PREFIX.retrieve('pck00010.tpc'))
+    cspyce.furnsh(SPICE_PREFIX.retrieve('pck00010.tpc'))
     sun = SpicePath('SUN', 'SSB')
     rotated = SpicePath('EARTH', 'SSB', SpiceFrame('IAU_EARTH'))
 
@@ -247,7 +247,7 @@ def test_subtracting_an_event_needs_a_common_origin() -> None:
 def test_subtracting_an_event_needs_a_common_frame() -> None:
     """The event has to be expressed in the same frame as this path."""
 
-    cspyce.furnsh(TEST_SPICE_PREFIX.retrieve('pck00010.tpc'))
+    cspyce.furnsh(SPICE_PREFIX.retrieve('pck00010.tpc'))
     sun = SpicePath('SUN', 'SSB')
     event = Event(Scalar(0.), Vector3((1., 0., 0.)), 'SSB', SpiceFrame('IAU_EARTH'))
 
@@ -279,7 +279,7 @@ def test_adding_an_event_needs_it_to_start_at_this_path() -> None:
 def test_adding_an_event_needs_a_common_frame() -> None:
     """The event has to be expressed in the same frame as this path."""
 
-    cspyce.furnsh(TEST_SPICE_PREFIX.retrieve('pck00010.tpc'))
+    cspyce.furnsh(SPICE_PREFIX.retrieve('pck00010.tpc'))
     sun = SpicePath('SUN', 'SSB')
     event = Event(Scalar(0.), Vector3((1., 0., 0.)), sun, SpiceFrame('IAU_EARTH'))
 
@@ -290,7 +290,7 @@ def test_adding_an_event_needs_a_common_frame() -> None:
 def test_a_path_in_another_frame_alone_is_a_rotated_path() -> None:
     """With the origin unchanged, only a rotation into the new frame is needed."""
 
-    cspyce.furnsh(TEST_SPICE_PREFIX.retrieve('pck00010.tpc'))
+    cspyce.furnsh(SPICE_PREFIX.retrieve('pck00010.tpc'))
     fixed = LinearPath((Vector3((1.e5, 0., 0.)), Vector3.ZERO), 0., 'SSB',
                        path_id='TEST_ROTATED_SELF')
 
@@ -305,7 +305,7 @@ def test_a_path_in_another_frame_alone_is_a_rotated_path() -> None:
 def test_a_description_names_the_frame_when_it_is_not_the_origin_frame() -> None:
     """A path in a frame of its own reports that frame in brackets."""
 
-    cspyce.furnsh(TEST_SPICE_PREFIX.retrieve('pck00010.tpc'))
+    cspyce.furnsh(SPICE_PREFIX.retrieve('pck00010.tpc'))
     path = SpicePath('SUN', 'EARTH', SpiceFrame('IAU_EARTH'), path_id='TEST_ROTATED_SUN')
 
     assert str(path) == 'SpicePath([TEST_ROTATED_SUN-EARTH]/IAU_EARTH)'

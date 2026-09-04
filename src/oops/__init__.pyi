@@ -15,7 +15,6 @@ the same way, because importing one binds it as an attribute of `oops` itself.
 
 import oops.backplane as backplane
 import oops.body as body
-import oops.cache as cache
 import oops.cadence as cadence
 import oops.calibration as calibration
 import oops.config as config
@@ -36,7 +35,7 @@ import oops.transform as transform
 
 from oops.backplane import Backplane as Backplane
 from oops.body import Body as Body
-from oops.cache import Cache as Cache
+from oops._cache import _Cache as _Cache
 from oops.cadence import Cadence as Cadence
 from oops.calibration import Calibration as Calibration
 from oops.constants import (AU as AU, C as C, C_INVERSE as C_INVERSE, DPR as DPR,
@@ -57,9 +56,9 @@ from polymath import (Boolean as Boolean, Matrix as Matrix, Matrix3 as Matrix3,
                       Scalar as Scalar, Vector as Vector, Vector3 as Vector3)
 
 __all__ = ['cadence', 'calibration', 'fov', 'gravity', 'frame', 'observation', 'path',
-           'surface', 'obs', 'backplane', 'body', 'cache', 'event', 'fittable',
+           'surface', 'obs', 'backplane', 'body', 'event', 'fittable',
            'meshgrid', 'transform', 'Cadence', 'Calibration', 'FOV', 'Gravity', 'Frame',
-           'Observation', 'Path', 'Surface', 'Backplane', 'Body', 'Cache', 'Event',
+           'Observation', 'Path', 'Surface', 'Backplane', 'Body', 'Event',
            'Fittable', 'Meshgrid', 'Transform', 'constants', 'spice', 'config', 'mutable',
            'C', 'C_INVERSE', 'RPD', 'DPR', 'SPR', 'RPS', 'SPD', 'AU', 'PI', 'TWOPI',
            'HALFPI', 'Boolean', 'Matrix', 'Matrix3', 'Pair', 'Quaternion', 'Qube',
