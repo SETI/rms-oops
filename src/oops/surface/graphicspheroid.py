@@ -26,10 +26,10 @@ class GraphicSpheroid(Spheroid):
             derivs (bool, optional): True to propagate any derivatives inside pos and obs
                 into the returned coordinates.
             hints (Scalar, optional): Optionally, the value of the coefficient `p` such
-                that `ground + p * normal(ground) = pos`, for the ground point on the body
-                surface. If it is not None, the converged value of `p` is appended to the
-                returned tuple; use `hints=True` if you lack an initial value but require
-                the new value to be returned.
+                that ``ground + p * normal(ground) = pos``, for the ground point on the
+                body surface. If it is not None, the converged value of `p` is appended to
+                the returned tuple; use `hints=True` if you lack an initial value but
+                require the new value to be returned.
             groundtrack (bool, optional): True to append the intercept point on the
                 surface to the returned tuple.
 
@@ -42,7 +42,7 @@ class GraphicSpheroid(Spheroid):
               axes == 3.
             * `p` (Scalar): The converged coefficient; included if the input value of
               `hints` is not None.
-            * `track` (Vector3): Intercept point on the surface (where z == 0); included
+            * `track` (Vector3): Intercept point on the surface (where *z == 0*); included
               if `groundtrack` is True.
         """
 
@@ -81,7 +81,7 @@ class GraphicSpheroid(Spheroid):
             * `pos` (Vector3): Points defined by the coordinates, relative to this
               surface's origin and frame.
             * `hints` (Any): The input value of `hints`, included if it is not None.
-            * `track` (Vector3): Intercept point on the surface (where z == 0); included
+            * `track` (Vector3): Intercept point on the surface (where *z == 0*); included
               if `groundtrack` is True.
         """
 

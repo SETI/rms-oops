@@ -31,11 +31,13 @@ def photon_to_event(self, arrival, *, derivs=False, guess=None, antimask=None, q
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
-            event times and positions. Only the indices where antimask=True will be used
+            event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict, optional): To override the configured default parameters for
-            QuickPaths and QuickFrames; False to disable the use of QuickPaths and
-            QuickFrames. The default configuration is defined in config.py.
+        quick (dict or bool, optional): A dictionary of parameter values to use as
+            overrides to the configured default :class:`~oops.path.QuickPath` and
+            :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
+            QuickPaths and QuickFrames. The default quick dictionary is defined in
+            config.py.
         converge (dict, optional): Parameters to override the configured default
             convergence parameters. The default configuration is defined in config.py.
             Convergence parameters are as follows:
@@ -87,11 +89,13 @@ def photon_from_event(self, departure, *, derivs=False, guess=None, antimask=Non
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
-            event times and positions. Only the indices where antimask=True will be used
+            event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict, optional): To override the configured default parameters for
-            QuickPaths and QuickFrames; False to disable the use of QuickPaths and
-            QuickFrames. The default configuration is defined in config.py.
+        quick (dict or bool, optional): A dictionary of parameter values to use as
+            overrides to the configured default :class:`~oops.path.QuickPath` and
+            :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
+            QuickPaths and QuickFrames. The default quick dictionary is defined in
+            config.py.
         converge (dict, optional): Parameters to override the configured default
             convergence parameters. The default configuration is defined in config.py.
             Convergence parameters are as follows:
@@ -145,11 +149,13 @@ def _solve_photon_by_los(self, link, sign, *, derivs=False, guess=None, antimask
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
-            event times and positions. Only the indices where antimask=True will be used
+            event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict, optional): To override the configured default parameters for
-            QuickPaths and QuickFrames; False to disable the use of QuickPaths and
-            QuickFrames. The default configuration is defined in config.py.
+        quick (dict or bool, optional): A dictionary of parameter values to use as
+            overrides to the configured default :class:`~oops.path.QuickPath` and
+            :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
+            QuickPaths and QuickFrames. The default quick dictionary is defined in
+            config.py.
         converge (dict, optional): Parameters to override the configured default
             convergence parameters. The default configuration is defined in config.py.
             Convergence parameters are as follows:
@@ -490,11 +496,13 @@ def photon_to_coords(self, arrival, coords, *, derivs=False, guess=None, antimas
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
-            event times and positions. Only the indices where antimask=True will be used
+            event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict, optional): To override the configured default parameters for
-            QuickPaths and QuickFrames; False to disable the use of QuickPaths and
-            QuickFrames. The default configuration is defined in config.py.
+        quick (dict or bool, optional): A dictionary of parameter values to use as
+            overrides to the configured default :class:`~oops.path.QuickPath` and
+            :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
+            QuickPaths and QuickFrames. The default quick dictionary is defined in
+            config.py.
         converge (dict, optional): Parameters to override the configured default
             convergence parameters. The default configuration is defined in config.py.
             Convergence parameters are as follows:
@@ -548,11 +556,13 @@ def photon_from_coords(self, departure, coords, *, derivs=False, guess=None,
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
-            event times and positions. Only the indices where antimask=True will be used
+            event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict, optional): To override the configured default parameters for
-            QuickPaths and QuickFrames; False to disable the use of QuickPaths and
-            QuickFrames. The default configuration is defined in config.py.
+        quick (dict or bool, optional): A dictionary of parameter values to use as
+            overrides to the configured default :class:`~oops.path.QuickPath` and
+            :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
+            QuickPaths and QuickFrames. The default quick dictionary is defined in
+            config.py.
         converge (dict, optional): Parameters to override the configured default
             convergence parameters. The default configuration is defined in config.py.
             Convergence parameters are as follows:
@@ -609,11 +619,13 @@ def _solve_photon_by_coords(self, link, coords, sign, *, derivs=False, guess=Non
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
-            event times and positions. Only the indices where antimask=True will be used
+            event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict, optional): To override the configured default parameters for
-            QuickPaths and QuickFrames; False to disable the use of QuickPaths and
-            QuickFrames. The default configuration is defined in config.py.
+        quick (dict or bool, optional): A dictionary of parameter values to use as
+            overrides to the configured default :class:`~oops.path.QuickPath` and
+            :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
+            QuickPaths and QuickFrames. The default quick dictionary is defined in
+            config.py.
         converge (dict, optional): Parameters to override the configured default
             convergence parameters. The default configuration is defined in config.py.
             Convergence parameters are as follows:
@@ -871,11 +883,13 @@ def photon_normal_to_event(self, arrival, *, derivs=False, guess=None, antimask=
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
-            event times and positions. Only the indices where antimask=True will be used
+            event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict, optional): To override the configured default parameters for
-            QuickPaths and QuickFrames; False to disable the use of QuickPaths and
-            QuickFrames. The default configuration is defined in config.py.
+        quick (dict or bool, optional): A dictionary of parameter values to use as
+            overrides to the configured default :class:`~oops.path.QuickPath` and
+            :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
+            QuickPaths and QuickFrames. The default quick dictionary is defined in
+            config.py.
         converge (dict, optional): Parameters to override the configured default
             convergence parameters. The default configuration is defined in config.py.
             Convergence parameters are as follows:
@@ -932,11 +946,13 @@ def photon_event_to_normal(self, departure, *, derivs=False, guess=None, antimas
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
-            event times and positions. Only the indices where antimask=True will be used
+            event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict, optional): To override the configured default parameters for
-            QuickPaths and QuickFrames; False to disable the use of QuickPaths and
-            QuickFrames. The default configuration is defined in config.py.
+        quick (dict or bool, optional): A dictionary of parameter values to use as
+            overrides to the configured default :class:`~oops.path.QuickPath` and
+            :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
+            QuickPaths and QuickFrames. The default quick dictionary is defined in
+            config.py.
         converge (dict, optional): Parameters to override the configured default
             convergence parameters. The default configuration is defined in config.py.
             Convergence parameters are as follows:
@@ -997,11 +1013,13 @@ def _solve_photon_event_normal(self, link, sign, *, derivs=False, guess=None,
             surface; otherwise None. Should only be used if the event time was already
             returned from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
-            event times and positions. Only the indices where antimask=True will be used
+            event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict, optional): To override the configured default parameters for
-            QuickPaths and QuickFrames; False to disable the use of QuickPaths and
-            QuickFrames. The default configuration is defined in config.py.
+        quick (dict or bool, optional): A dictionary of parameter values to use as
+            overrides to the configured default :class:`~oops.path.QuickPath` and
+            :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
+            QuickPaths and QuickFrames. The default quick dictionary is defined in
+            config.py.
         converge (dict, optional): Parameters to override the configured default
             convergence parameters. The default configuration is defined in config.py.
             Convergence parameters are as follows:
@@ -1277,11 +1295,13 @@ def photon_path_to_normal(self, time, path, *, derivs=False, guess=None, antimas
             remote path; otherwise None. Should be used if the event time was already
             returned from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
-            event times and positions. Only the indices where antimask=True will be used
+            event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict, optional): To override the configured default parameters for
-            QuickPaths and QuickFrames; False to disable the use of QuickPaths and
-            QuickFrames. The default configuration is defined in config.py.
+        quick (dict or bool, optional): A dictionary of parameter values to use as
+            overrides to the configured default :class:`~oops.path.QuickPath` and
+            :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
+            QuickPaths and QuickFrames. The default quick dictionary is defined in
+            config.py.
         converge (dict, optional): Parameters to override the configured default
             convergence parameters. The default configuration is defined in config.py.
             Convergence parameters are as follows:
@@ -1340,11 +1360,13 @@ def photon_normal_to_path(self, time, path, *, derivs=False, guess=None, antimas
             remote path; otherwise None. Should be used if the event time was already
             returned from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
-            event times and positions. Only the indices where antimask=True will be used
+            event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict, optional): To override the configured default parameters for
-            QuickPaths and QuickFrames; False to disable the use of QuickPaths and
-            QuickFrames. The default configuration is defined in config.py.
+        quick (dict or bool, optional): A dictionary of parameter values to use as
+            overrides to the configured default :class:`~oops.path.QuickPath` and
+            :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
+            QuickPaths and QuickFrames. The default quick dictionary is defined in
+            config.py.
         converge (dict, optional): Parameters to override the configured default
             convergence parameters. The default configuration is defined in config.py.
             Convergence parameters are as follows:
@@ -1404,11 +1426,13 @@ def _solve_photon_path_normal(self, time, path, sign, *, derivs=False, guess=Non
             otherwise None. Should only be used if the event time was already returned
             from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
-            event times and positions. Only the indices where antimask=True will be used
+            event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict, optional): To override the configured default parameters for
-            QuickPaths and QuickFrames; False to disable the use of QuickPaths and
-            QuickFrames. The default configuration is defined in config.py.
+        quick (dict or bool, optional): A dictionary of parameter values to use as
+            overrides to the configured default :class:`~oops.path.QuickPath` and
+            :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
+            QuickPaths and QuickFrames. The default quick dictionary is defined in
+            config.py.
         converge (dict, optional): Parameters to override the configured default
             convergence parameters. The default configuration is defined in config.py.
             Convergence parameters are as follows:

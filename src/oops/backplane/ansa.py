@@ -63,8 +63,8 @@ def ansa_altitude(self, event_key):
     """Elevation of the ring ansa intercept point in the image.
 
     Parameters:
-        event_key (str or tuple): Key defining the ansa surface event. Alternatively, a
-            ansa_radius backplane key, in which case this backplane inherits the mask of
+        event_key (str or tuple): Key defining the ansa surface event. Alternatively, an
+            `ansa_radius` backplane key, in which case this backplane inherits the mask of
             the given backplane array.
     """
 
@@ -89,8 +89,8 @@ def ansa_longitude(self, event_key, reference='node'):
     """Longitude of the ansa intercept point in the image.
 
     Parameters:
-        event_key (str or tuple): Key defining the ansa surface event. Alternatively, a
-            ansa_radius backplane key, in which case this backplane inherits the mask of
+        event_key (str or tuple): Key defining the ansa surface event. Alternatively, an
+            `ansa_radius` backplane key, in which case this backplane inherits the mask of
             the given backplane array.
         reference (str, optional): Defines the location of zero longitude:
 
@@ -198,8 +198,8 @@ def ansa_radial_resolution(self, event_key):
     """Projected radial resolution in km/pixel at the ring ansa intercept.
 
     Parameters:
-        event_key (str or tuple): Key defining the ansa surface event. Alternatively, a
-            ansa_radius backplane key, in which case this backplane inherits the mask of
+        event_key (str or tuple): Key defining the ansa surface event. Alternatively, an
+            `ansa_radius` backplane key, in which case this backplane inherits the mask of
             the given backplane array.
     """
 
@@ -232,8 +232,8 @@ def ansa_vertical_resolution(self, event_key):
     """Projected vertical resolution in km/pixel at the ring ansa intercept.
 
     Parameters:
-        event_key (str or tuple): Key defining the ansa surface event. Alternatively, a
-            ansa_radius backplane key, in which case this backplane inherits the mask of
+        event_key (str or tuple): Key defining the ansa surface event. Alternatively, an
+            `ansa_radius` backplane key, in which case this backplane inherits the mask of
             the given backplane array.
     """
 

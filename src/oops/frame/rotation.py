@@ -24,8 +24,8 @@ class Rotation(Frame, Fittable):
                 radians, which can be multidimensional. Alternatively, if another Rotation
                 is given, this object's rotation angle will always match that of the
                 argument.
-            axis (int or str): The rotation axis: 0, "x", or "X" for x; 1, "y", or "Y"
-                for y; 2, "z", or "Z" for z.
+            axis (int or str): The rotation axis: 0, "x", or "X" for *x*; 1, "y", or "Y"
+                for *y*; 2, "z", or "Z" for *z*.
             reference (Frame or str): The Frame or the ID of the Frame relative to which
                 this rotation is defined.
             freeze (bool, optional): True to return a frozen object; False to leave it
@@ -177,10 +177,7 @@ class Rotation(Frame, Fittable):
 
         Parameters:
             time (Scalar): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames. Ignored by
-                class Rotation.
+            quick (dict or bool, optional): Ignored by class Rotation.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the

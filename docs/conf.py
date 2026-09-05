@@ -7,8 +7,13 @@ import importlib.metadata
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath('../src'))
-sys.path.insert(0, os.path.abspath('..'))      # for `programs.gold_master`
+# Anchored to this file rather than to the working directory, so that autodoc imports the
+# same tree whether the build runs from docs/ (as the Makefile does) or from the
+# repository root (as the check script and CI do).
+_REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+sys.path.insert(0, os.path.join(_REPO, 'src'))
+sys.path.insert(0, _REPO)                      # for `programs.gold_master`
 
 # -- Project information -----------------------------------------------------
 
@@ -36,11 +41,12 @@ templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 source_suffix = ['.rst', '.md']
 
-# The docstrings wrap parameter names and short expressions such as `(u,v)` in single
-# backticks. Without this, docutils would render each one as a title reference, in
-# italics; `literal` renders them as inline code, which is what they are. An API symbol
-# that should link to its own entry carries an explicit role instead.
-# default_role = 'literal'
+# The docstrings wrap variable names in single backticks. Napoleon renders the name of
+# each entry in a `Parameters:` block in bold, so the default role must be `strong` for a
+# mention of that same name in the surrounding prose to match it. Double backticks mark
+# code expressions, and italics mark math symbols that are not variable names, such as
+# *x*-axis. An API symbol that should link to its own entry carries an explicit role
+# instead.
 default_role = 'strong'
 
 # -- Options for HTML output -------------------------------------------------
@@ -113,6 +119,9 @@ nitpick_ignore = [
     ('py:class', 'number'),
     ('py:class', 'scalar'),
     ('py:class', 'vector-like'),
+    # `programs.gold_master` types a callback parameter as "function", which names a
+    # concept rather than a class.
+    ('py:class', 'function'),
     # `polymath` internals that its own docstrings mention but do not publish.
     ('py:class', 'QubeNDIterator'),
     ('py:class', 'Unit'),

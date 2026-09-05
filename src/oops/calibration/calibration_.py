@@ -33,7 +33,7 @@ class Calibration(Oops):
 
         Parameters:
             dn (Scalar): Un-calibrated image array values at the given pixel coordinates.
-            uv_pair (Pair): Associated `(u,v)` pixel coordinates in the image. Note that
+            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
                 `dn` and `uv_pair` will be casted to the same shape.
 
         Returns:
@@ -48,7 +48,7 @@ class Calibration(Oops):
 
         Parameters:
             value (Scalar): Calibrated values at the given pixel coordinates.
-            uv_pair (Pair): Associated `(u,v)` pixel coordinates in the image. Note that
+            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
                 `value` and `uv_pair` will be casted to the same shape.
 
         Returns:
@@ -63,7 +63,7 @@ class Calibration(Oops):
 
         Parameters:
             dn (Scalar): Un-calibrated image array values at the given pixel coordinates.
-            uv_pair (Pair): Associated `(u,v)` pixel coordinates in the image. Note that
+            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
                 `dn` and `uv_pair` will be casted to the same shape.
 
         Returns:
@@ -78,7 +78,7 @@ class Calibration(Oops):
 
         Parameters:
             value (Scalar): Calibrated values at the given pixel coordinates.
-            uv_pair (Pair): Associated `(u,v)` pixel coordinates in the image. Note that
+            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
                 `value` and `uv_pair` will be casted to the same shape.
 
         Returns:
@@ -115,7 +115,7 @@ class Calibration(Oops):
 
         Parameters:
             dn (Scalar): Un-calibrated image array values at the given pixel coordinates.
-            uv_pair (Pair): Associated `(u,v)` pixel coordinates in the image. Note that
+            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
                 `dn` and `uv_pair` will be casted to the same shape.
 
         Returns:
@@ -131,7 +131,7 @@ class Calibration(Oops):
 
         Parameters:
             value (Scalar): Calibrated values at the given pixel coordinates.
-            uv_pair (Pair): Associated `(u,v)` pixel coordinates in the image. Note that
+            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
                 `value` and `uv_pair` will be casted to the same shape.
 
         Returns:
@@ -152,10 +152,10 @@ class Calibration(Oops):
         two can be combined.
 
         Parameters:
-            uv_pair (Pair): `(u,v)` pixel coordinates in the image.
+            uv_pair (Pair): *(u,v)* pixel coordinates in the image.
 
         Returns:
-            tuple[Pair, Scalar, Scalar]: The `(u,v)` pixel coordinates converted to a
+            tuple[Pair, Scalar, Scalar]: The *(u,v)* pixel coordinates converted to a
             Pair, followed by the factor and the baseline, each shaped to broadcast
             against those coordinates.
         """
@@ -204,7 +204,7 @@ class Calibration(Oops):
         or an area map.
 
         Parameters:
-            uv_pair (Pair): `(u,v)` indices into the image.
+            uv_pair (Pair): *(u,v)* indices into the image.
 
         Returns:
             Scalar: Area factors.

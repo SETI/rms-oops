@@ -15,7 +15,7 @@ class GapFOV(FOV):
     def __init__(self, fov, uv_size):
         """Constructor for a GapFOV.
 
-        Pixels in the new FOV have the same origins as in the given FOV, but their `(u,v)`
+        Pixels in the new FOV have the same origins as in the given FOV, but their *(u,v)*
         extent is reduced.
 
         Parameters:
@@ -53,20 +53,20 @@ class GapFOV(FOV):
         self.freeze()
 
     def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The camera coordinates `(x,y)` at FOV coordinates `(u,v)` and a given time.
+        """The camera coordinates *(x,y)* at FOV coordinates *(u,v)* and a given time.
 
         Parameters:
-            uv_pair (Pair): `(u,v)` coordinates in this FOV.
+            uv_pair (Pair): *(u,v)* coordinates in this FOV.
             time (Scalar, optional): Absolute time in seconds TDB.
-            derivs (bool, optional): If True, any derivatives in `(u,v)` get propagated
-                into the returned `(x,y)` coordinates.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
+                into the returned *(x,y)* coordinates.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: The transformed `(x,y)` coordinates in the camera's frame.
+            Pair: The transformed *(x,y)* coordinates in the camera's frame.
         """
 
         uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
@@ -78,20 +78,20 @@ class GapFOV(FOV):
                                                                   **kwargs)
 
     def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The FOV coordinates `(u,v)` at camera coordinates `(x,y)` and a given time.
+        """The FOV coordinates *(u,v)* at camera coordinates *(x,y)* and a given time.
 
         Parameters:
-            xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.
+            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
             time (Scalar, optional): Absolute time in seconds TDB.
-            derivs (bool, optional): If True, any derivatives in `(x,y)` get propagated
-                into the returned `(u,v)` coordinates.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
+                into the returned *(u,v)* coordinates.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: The computed `(u,v)` FOV coordinates, with the same shape as xy_pair.
+            Pair: The computed *(u,v)* FOV coordinates, with the same shape as `xy_pair`.
         """
 
         xy_pair = Pair.as_pair(xy_pair, recursive=derivs)

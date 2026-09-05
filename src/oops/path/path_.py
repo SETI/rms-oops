@@ -96,9 +96,9 @@ class Path(Mutable):
         waypoint (Path): A Path object that uniquely identifies this path, irrespective of
             any particular origin and frame. Under most circumstances, this is the Path's
             primary definition.
-        shape (tuple): The shape of the Path object. This is the shape of the Event
-            object returned by :meth:`~oops.Path.event_at_time` when it is called with a
-            single time value.
+        shape (tuple[int, ...]): The shape of the Path object. This is the shape of the
+            Event object returned by :meth:`~oops.Path.event_at_time` when it is called
+            with a single time value.
         wrt_ssb (Path): This Path relative to the Solar System Barycenter and J2000.
     """
 
@@ -154,8 +154,10 @@ class Path(Mutable):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Event: The Event object containing (at least) the time, position, and velocity
@@ -489,8 +491,10 @@ class Path(Mutable):
                 returned Event. The specific derivatives included will depend on the Path
                 subclass and those within the given Event.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Event: The given `event` relative to this Path.
@@ -530,8 +534,10 @@ class Path(Mutable):
                 subclass and those within the given Event. Time derivatives are always
                 retained.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Event: The given `event` relative to the origin of this Path.
@@ -672,7 +678,8 @@ class Path(Mutable):
         return None
 
     def quick_path(self, time, *, quick=None):
-        """A QuickPath that approximates this Path for the given range of times.
+        """A :class:`~oops.path.QuickPath` that approximates this Path for the given range
+        of times.
 
         A QuickPath operates by sampling the given Path and then setting up an
         interpolation grid to evaluate in its place. It can substantially speed up
@@ -685,10 +692,11 @@ class Path(Mutable):
 
         Parameters:
             time (Scalar): The time(s) at which this path is to be evaluated.
-            quick (dict or bool, optional): If False, no QuickPath is created and `self`
-                is returned; if a dictionary, then the values provided override the values
-                in the default dictionary QUICK.dictionary, and the merged dictionary is
-                used.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Path: A QuickPath that approximates this Path for the given range of times but
@@ -755,8 +763,10 @@ class NullPath(Path):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Event: The Event object containing (at least) the time, position, and velocity
@@ -909,8 +919,10 @@ class LinkedPath(Path):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Event: The Event object containing (at least) the time, position, and velocity
@@ -991,8 +1003,10 @@ class RelativePath(Path):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Event: The Event object containing (at least) the time, position, and velocity
@@ -1051,8 +1065,10 @@ class ReversedPath(Path):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Event: The Event object containing (at least) the time, position, and velocity
@@ -1116,8 +1132,10 @@ class RotatedPath(Path):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Event: The Event object containing (at least) the time, position, and velocity

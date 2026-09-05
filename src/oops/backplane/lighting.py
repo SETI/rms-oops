@@ -127,7 +127,7 @@ def scattering_angle(self, event_key, apparent=True):
 def center_incidence_angle(self, event_key, apparent=True):
     """Gridless incidence angle of the arriving photons at the body's central path.
 
-    This uses the z-axis of the body's frame to define the local normal.
+    This uses the *z*-axis of the body's frame to define the local normal.
 
     Parameters:
         event_key (str or tuple): Key defining the event on the body's path.
@@ -143,7 +143,7 @@ def center_incidence_angle(self, event_key, apparent=True):
 def center_emission_angle(self, event_key, apparent=True):
     """Gridless emission angle of the departing photons at the body's central path.
 
-    This uses the z-axis of the body's frame to define the local normal.
+    This uses the *z*-axis of the body's frame to define the local normal.
 
     Parameters:
         event_key (str or tuple): Key defining the event on the body's path.

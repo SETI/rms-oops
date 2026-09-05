@@ -9,7 +9,7 @@ from oops.transform import Transform
 
 
 class PoleFrame(Frame):
-    """A non-rotating Frame centered on the Z-axis of a body's pole vector.
+    """A non-rotating Frame centered on the *z*-axis of a body's pole vector.
 
     This differs from :class:`~oops.frame.RingFrame` in that the pole may precess around a
     separate, invariable pole for the system. Because of this behavior, the reference
@@ -29,7 +29,7 @@ class PoleFrame(Frame):
                 of the central planet.
             pole (Vector3 or array-like): The invariable pole of the system, around which
                 the planet's pole precesses.
-            retrograde (bool, optional): True to flip the sign of the Z-axis. Necessary
+            retrograde (bool, optional): True to flip the sign of the *z*-axis. Necessary
                 for retrograde systems like Uranus.
             aries (bool, optional): True to measure longitudes from the First Point of
                 Aries; False to measure them from the ascending node of the invariable
@@ -126,8 +126,10 @@ class PoleFrame(Frame):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the
@@ -186,10 +188,10 @@ class PoleFrame(Frame):
         return xform
 
     def node_at_time(self, time, *, quick=None):
-        """The angle from the reference Frame's X-axis to this Frame's ascending node.
+        """The angle from the reference Frame's *x*-axis to this Frame's ascending node.
 
-        The angle is measured within the X-Y plane of the reference frame, to the
-        ascending node of this Frame's X-Y plane.
+        The angle is measured within the *x*-*y* plane of the reference frame, to the
+        ascending node of this Frame's *x*-*y* plane.
 
         Values always fall between 0 and 2*pi.
 
@@ -200,8 +202,8 @@ class PoleFrame(Frame):
                 Use False to disable the use of QuickPaths and QuickFrames.
 
         Returns:
-            Scalar: At the specified times, the angle from the reference Frame's X-axis,
-            along its X-Y plane, to the ascending node of this Frame's X-Y plane.
+            Scalar: At the specified times, the angle from the reference Frame's *x*-axis,
+            along its *x*-*y* plane, to the ascending node of this Frame's *x*-*y* plane.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.

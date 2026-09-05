@@ -20,6 +20,8 @@ class SpinFrame(Frame):
     # _USE_QUICKFRAMES is False because rotation might be rapid and the calculation is
     # already fairly quick.
 
+    _XYZDICT = {'X': 0, 'Y': 1, 'Z': 2, 'x': 0, 'y': 1, 'z': 2, 0: 0, 1: 1, 2: 2}
+
     def __init__(self, offset, rate, epoch, axis, reference, *, frame_id=None):
         """Constructor for a SpinFrame.
 
@@ -29,7 +31,8 @@ class SpinFrame(Frame):
             rate (Scalar, array-like, or float): The rotation rate in radians/second.
             epoch (Scalar, array-like, or float): The time in seconds TDB at which
                 `offset` applies.
-            axis (int): The rotation axis: 0 for x, 1 for y, 2 for z.
+            axis (int or str): The rotation axis: 0, "x", or "X" for *x*; 1, "y", or "Y"
+                for *y*; 2, "z", or "Z" for *z*.
             reference (Frame or str): The Frame or the ID of the Frame relative to which
                 this rotation is defined.
             frame_id (str, optional): The ID under which to register this Frame; None to
@@ -43,7 +46,8 @@ class SpinFrame(Frame):
             `reference`.
 
         Raises:
-            KeyError: If `reference` is an ID string that has not been registered.
+            KeyError: If `reference` is an ID string that has not been registered, or if
+                `axis` has a disallowed value.
             ValueError: If `offset`, `rate`, `epoch`, and `reference` cannot be
                 broadcasted to the same shape.
         """
@@ -52,7 +56,7 @@ class SpinFrame(Frame):
         self._rate = Scalar.as_scalar(rate).wod.as_readonly()
         self._epoch = Scalar.as_scalar(epoch).wod.as_readonly()
 
-        self._axis2 = axis
+        self._axis2 = SpinFrame._XYZDICT[axis]
         self._axis0 = (self._axis2 + 1) % 3
         self._axis1 = (self._axis2 + 2) % 3
 
@@ -110,10 +114,7 @@ class SpinFrame(Frame):
 
         Parameters:
             time (Scalar): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames. Ignored for
-                class SpinFrame.
+            quick (dict or bool, optional): Ignored for class SpinFrame.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the

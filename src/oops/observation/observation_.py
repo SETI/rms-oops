@@ -681,7 +681,7 @@ class Observation(Mutable):
             Boolean: True where the *(u,v)* coordinate falls outside the FOV.
         """
 
-        # Interpret the *(u,v)* coordinates
+        # Interpret the (u,v) coordinates
         uv_pair = Pair.as_pair(uv_pair, recursive=False)
         (u,v) = uv_pair.to_scalars()
 
@@ -995,7 +995,7 @@ class Observation(Mutable):
             obs_time = time
             iters = 1
 
-        # Iterate until *(u,v)* has converged
+        # Iterate until (u,v) has converged
         uv = None
         for count in range(iters):
 
@@ -1214,32 +1214,32 @@ class Observation(Mutable):
               whether or not that body falls inside the FOV. Each dictionary entry is
               itself a dictionary containing data about the body in the FOV:
 
-                - `"name"` (str): The body name.
-                - `"inside"` (bool): True if the body is unobscured inside the FOV.
-                - `"center_uv"` (ndarray): The *(u,v)* coordinates of the center
+                - "name" (str): The body name.
+                - "inside" (bool): True if the body is unobscured inside the FOV.
+                - "center_uv" (ndarray): The *(u,v)* coordinates of the center
                   point, as two floats.
-                - `"center"` (ndarray): The direction of the center point, as three
+                - "center" (ndarray): The direction of the center point, as three
                   floats.
-                - `"range"` (float): The distance in km.
-                - `"outer_radius"` (float): The outer radius of the body in km.
-                - `"inner_radius"` (float): The inner radius of the body in km.
-                - `"resolution"` (ndarray): The resolution in the *(u,v)* directions
+                - "range" (float): The distance in km.
+                - "outer_radius" (float): The outer radius of the body in km.
+                - "inner_radius" (float): The inner radius of the body in km.
+                - "resolution" (ndarray): The resolution in the *(u,v)* directions
                   at the given range, as two floats.
-                - `"u_min"` (int): The minimum `u` value covered by the body, clipped to
+                - "u_min" (int): The minimum `u` value covered by the body, clipped to
                   the FOV boundaries.
-                - `"u_max"` (int): The maximum `u` value covered by the body, clipped to
+                - "u_max" (int): The maximum `u` value covered by the body, clipped to
                   the FOV boundaries.
-                - `"v_min"` (int): The minimum `v` value covered by the body, clipped to
+                - "v_min" (int): The minimum `v` value covered by the body, clipped to
                   the FOV boundaries.
-                - `"v_max"` (int): The maximum `v` value covered by the body, clipped to
+                - "v_max" (int): The maximum `v` value covered by the body, clipped to
                   the FOV boundaries.
-                - `"u_min_unclipped"` (int): Same as "u_min", but not clipped.
-                - `"u_max_unclipped"` (int): Same as "u_max", but not clipped.
-                - `"v_min_unclipped"` (int): Same as "v_min", but not clipped.
-                - `"v_max_unclipped"` (int): Same as "v_max", but not clipped.
-                - `"u_pixel_size"` (float): The diameter of the body in pixels in units of
+                - "u_min_unclipped" (int): Same as "u_min", but not clipped.
+                - "u_max_unclipped" (int): Same as "u_max", but not clipped.
+                - "v_min_unclipped" (int): Same as "v_min", but not clipped.
+                - "v_max_unclipped" (int): Same as "v_max", but not clipped.
+                - "u_pixel_size" (float): The diameter of the body in pixels in units of
                   the *u* pixels.
-                - `"v_pixel_size"` (float): The diameter of the body in pixels in units of
+                - "v_pixel_size" (float): The diameter of the body in pixels in units of
                   the *v* pixels.
 
         Raises:

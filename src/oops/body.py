@@ -861,7 +861,7 @@ class Body(Oops):
                 convergence parameters. The default configuration is defined in config.py.
 
         Returns:
-            tuple[Event, Event]: (`path_event`, `arrival_event`).
+            tuple[Event, Event]: `(path_event, arrival_event)`.
 
             * `path_event`: The Event at the center of this body that matches the light
               travel time to `event`. It carries the departing photon's line of sight
@@ -887,7 +887,25 @@ class Body(Oops):
         defined within the spicedb library.
 
         Parameters:
-            Return: An ordered list of SPICE kernel names.
+            start_time (str, optional): The start time of the interval the SPK kernels
+                must cover, as a date string or in seconds TDB; None to ignore the time
+                limits of the kernels.
+            stop_time (str, optional): The stop time of that interval, in the same form as
+                `start_time`.
+            asof (str, optional): An optional earlier date for which values should be
+                returned, so that a calculation can be repeated with the kernels that were
+                current at that time.
+            **args: Additional keyword options:
+
+                * `planets` (int or tuple): The planet number 1-9, or a tuple of planet
+                  numbers, to define; the default is all nine.
+                * `irregulars` (bool): True to include the irregular moons of Jupiter,
+                  Saturn, Uranus and Neptune; default True.
+                * `mst_pck` (bool): True to furnish the MST PCK for the Saturn system;
+                  default True.
+
+        Returns:
+            list: The names of the SPICE kernels furnished, in the order they were loaded.
         """
 
         names = []
@@ -1421,26 +1439,31 @@ class Body(Oops):
     @staticmethod
     def define_ring(parent_name, ring_name, radii, keywords, retrograde=False,
                     barycenter_name=None, pole=None, is_standard=False):
-        """Define and return the body object associate with a ring around another body.
+        """Define and return the body object associated with a ring around another body.
 
         A single radius value is used to define the outer limit of rings. Note that a ring
         has limits but a defined ring plane does not.
 
         Parameters:
-            parent_name: The name of the central planet for the ring surface.
-            ring_name: The name of the surface.
-            radii: If this is a tuple with two values, these are the radial limits of
-                the ring; if it is a scalar, then the ring plane has no defined radial
-                limits, but the radius attribute of the body will be set to this value; if
-                None, then the radius attribute of the body will be set to zero.
+            parent_name (str): The name of the central planet for the ring surface.
+            ring_name (str): The name of the surface.
+            radii (tuple, float, or None): If this is a tuple with two values, these are
+                the radial limits of the ring; if it is a scalar, then the ring plane has
+                no defined radial limits, but the radius attribute of the body will be set
+                to this value; if None, then the radius attribute of the body will be set
+                to zero.
             keywords (list): Keywords under which this surface is to be registered. Every
                 ring is also registered under its own name and under the keyword 'RING'.
             retrograde (bool, optional): True if the ring is retrograde relative to the
-                central planet's IAU-defined pole. barycenter_name the name of the ring's
-                barycenter if this is not the same as the name of the central planet.
-            pole (optional): If not None, this is the pole of the invariable plane. It
-                will be used to define the ring_frame as a PoleFrame instead of a
-                RingFrame.
+                central planet's IAU-defined pole.
+            barycenter_name (str, optional): The name of the ring's barycenter if this is
+                not the same as the name of the central planet.
+            pole (Vector3, optional): If not None, this is the pole of the invariable
+                plane. It will be used to define the ring_frame as a
+                :class:`~oops.frame.PoleFrame` instead of a
+                :class:`~oops.frame.RingFrame`.
+            is_standard (bool, optional): True to include this ring among the standard
+                bodies of the solar system.
         """
 
         # If the ring body already exists, skip it

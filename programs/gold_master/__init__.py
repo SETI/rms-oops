@@ -98,10 +98,10 @@ A single record of the log file has this format::
 
 where:
 
-    * `<time>`    is the local time to the level of ms.
-    * `<level>`   is one of "DEBUG", "INFO", "WARNING", "ERROR", "FATAL".
-    * `<suite>`   is the name of the test suite, e.g., "ring".
-    * `<message>` is a descriptive message.
+    * **<time>**    is the local time to the level of ms.
+    * **<level>**   is one of "DEBUG", "INFO", "WARNING", "ERROR", "FATAL".
+    * **<suite>**   is the name of the test suite, e.g., "ring".
+    * **<message>** is a descriptive message.
 
 For comparison tests, the message has the following format::
 
@@ -112,7 +112,7 @@ For comparison tests, the message has the following format::
 
 where:
 
-    * `<status>` is one of:
+    * **<status>** is one of:
 
         - "Success" if the test passed;
         - "Value mismatch" if the values disagree by more than the limit, but
@@ -121,23 +121,23 @@ where:
           agreement;
         - "Value/mask mismatch" if both the values and the mask disagree.
 
-    * `<title>` is the title of the test.
-    * `<minval>` is the minumium value in the array.
-    * `<maxval>` is the maxumium value in the array.
-    * `<diff1>` is the maximum discrepancy among the unmasked values.
-    * `<diff2>` is the maximum discrepancy after we have expanded the comparison
+    * **<title>** is the title of the test.
+    * **<minval>** is the minimum value in the array.
+    * **<maxval>** is the maximum value in the array.
+    * **<diff1>** is the maximum discrepancy among the unmasked values.
+    * **<diff2>** is the maximum discrepancy after we have expanded the comparison
       to include neighboring pixels, as defined by the specified radius.
-    * `<limit>` is the specified discrepancy limit of the test.
-    * `<offset>` is the offset distance required to bring value
+    * **<limit>** is the specified discrepancy limit of the test.
+    * **<offset>** is the offset distance required to bring value
       discrepancies below the limit, or to resolve any mask discrepancies.
-    * `<radius>` is the specified upper limit on an offset.
-    * `<count1>` is the number of discrepant pixels before allowing for an
+    * **<radius>** is the specified upper limit on an offset.
+    * **<count1>** is the number of discrepant pixels before allowing for an
       offset.
-    * `<count2>` is the number of discrepant pixels that cannot be accommodated
+    * **<count2>** is the number of discrepant pixels that cannot be accommodated
       by an offset.
-    * `<pixels>` is the total number of pixels tested.
+    * **<pixels>** is the total number of pixels tested.
 
-Note that `<diff2>` and `<count2>` are not listed if not offset is required.
+Note that **<diff2>** and **<count2>** are not listed if no offset is required.
 Also, note that the offset values are not listed in this case.
 """
 
@@ -200,13 +200,13 @@ def set_gold_master_path(path):
     subsequent test, whether run from the command line or under pytest.
 
     The directory must have the same layout as the default one: the files for one
-    observation are found in `<path>/<mission>.<instrument>/<basename>`, such as
+    observation are found in "<path>/<mission>.<instrument>/<basename>", such as
     "cassini.iss/W1573721822_1", where the directory name comes from `module_dirname` and
-    `<basename>` is the stem of the observation's file path.
+    "<basename>" is the stem of the observation's file path.
 
     Parameters:
         path (str): Directory containing the gold master files. It may name a cloud
-            resource such as gs://rms-oops-resources/gold_master.
+            resource such as "gs://rms-oops-resources/gold_master".
     """
 
     global GOLD_MASTER_PREFIX
@@ -333,7 +333,7 @@ def set_default_args(**options):
         rings (str or list[str], optional): Name(s) of the ring(s) to use if this run
             does not employ a standard observation.
         module (str): Name of the module containing the `from_file` method, e.g.,
-            "`hosts.cassini.iss`".
+            "hosts.cassini.iss".
         task (str, optional): Name of the default test to perform, one of "preview",
             "compare", and "adopt"; default is "compare".
         tolerance (float, optional): Factor to apply to the defined error allowances for
@@ -695,7 +695,7 @@ def _clean_up_args(args):
     """Clean up arguments given in the command line.
 
     Parameters:
-        args (Namespace): The parsed command-line arguments, modified in place.
+        args (argparse.Namespace): The parsed command-line arguments, modified in place.
 
     Returns:
         Namespace: The same object, with the module, observation, planet, moon, ring, and
@@ -820,7 +820,7 @@ def run_tests(args):
     """Run all the gold master tests.
 
     Parameters:
-        args (Namespace): The cleaned-up command-line arguments identifying the
+        args (argparse.Namespace): The cleaned-up command-line arguments identifying the
             observations to test and the tests to perform.
 
     Raises:
@@ -2130,8 +2130,8 @@ class BackplaneTest(object):
                 - "Value/mask mismatch" if both the values and the mask disagree.
 
             * `<title>` is the title of the test.
-            * `<minval>` is the minumium value in the array.
-            * `<maxval>` is the maxumium value in the array.
+            * `<minval>` is the minimum value in the array.
+            * `<maxval>` is the maximum value in the array.
             * `<diff1>` is the maximum discrepancy among the unmasked values.
             * `<diff2>` is the maximum discrepancy after we have expanded the comparison
               to include neighboring pixels, as defined by the specified radius.

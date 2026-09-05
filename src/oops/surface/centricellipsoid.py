@@ -43,7 +43,7 @@ class CentricEllipsoid(Ellipsoid):
               `axes` == 3.
             * `p` (Scalar): The converged coefficient; included if the input value of
               `hints` is not None.
-            * `track` (Vector3): Intercept point on the surface (where z == 0); included
+            * `track` (Vector3): Intercept point on the surface (where *z == 0*); included
               if `groundtrack` is True.
         """
 
@@ -108,7 +108,7 @@ class CentricEllipsoid(Ellipsoid):
             * `pos` (Vector3): Points defined by the coordinates, relative to this
               surface's origin and frame.
             * `hints` (Any): The input value of `hints`, included if it is not None.
-            * `track` (Vector3): Intercept point on the surface (where z == 0); included
+            * `track` (Vector3): Intercept point on the surface (where *z == 0*); included
               if `groundtrack` is True.
         """
 

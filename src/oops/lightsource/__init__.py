@@ -126,11 +126,24 @@ class LightSource(Oops):
             antimask (numpy.ndarray or bool, optional): If not None, this is a boolean
                 array to be applied to event times and positions. Only the indices where
                 antimask=True will be used in the solution.
-            quick (dict, optional): To override the configured default parameters for
-                QuickPaths and QuickFrames; False to disable the use of QuickPaths and
-                QuickFrames. The default configuration is defined in config.py.
-            converge (dict, optional): Parameters to override the configured default
-                convergence parameters. The default configuration is defined in config.py.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
+            converge (dict, optional): A dictionary of parameters to override the
+                configured default path convergence parameters. The default configuration
+                is defined in config.py. Convergence parameters are as follows:
+
+                * `max_iterations` (int): The maximum number of iterations of Newton's
+                  method to perform. It should almost never need to be > 6.
+                * `dlt_precision` (float): Iteration stops when the largest change in
+                  light travel time between one iteration and the next falls below this
+                  threshold (in seconds).
+                * `dlt_limit` (float): The maximum allowed absolute value of the change in
+                  light travel time from the nominal range calculated initially. Changes
+                  in light travel with absolute values larger than this limit are clipped.
+                  This prevents the divergence of the solution in some cases.
 
         Returns:
             tuple[Event or None, Event]: (`departure_event`, `arrival_event`).

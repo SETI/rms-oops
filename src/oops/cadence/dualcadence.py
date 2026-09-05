@@ -81,7 +81,7 @@ class DualCadence(Cadence):
                 Cadence; False to exclude it.
 
         Returns:
-            Scalar: Time in seconds TDB.
+            Scalar: Time in seconds TDB at `tstep`.
         """
 
         tstep = Pair.as_pair(tstep, recursive=derivs)
@@ -112,8 +112,8 @@ class DualCadence(Cadence):
                 index == shape) into the previous time step.
 
         Returns:
-            tuple[Scalar, Scalar]: The minimum and maximum times associated with the index
-            values, in seconds TDB.
+            tuple[Scalar, Scalar]: The minimum and maximum times associated with `tstep`,
+            in seconds TDB.
         """
 
         tstep = Pair.as_pair(tstep, recursive=False)

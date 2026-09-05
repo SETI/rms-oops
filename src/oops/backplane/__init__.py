@@ -49,7 +49,7 @@ class Backplane(Mutable):
                 surrounding each body as determined by the inventory.
 
         Notes:
-            Every backplane array method takes an "event_key" as its first input. This is
+            Every backplane array method takes an `event_key` as its first input. This is
             normally indicated by a tuple of two items::
 
                 (source_key, surface_key)
@@ -57,23 +57,24 @@ class Backplane(Mutable):
             where the first item is the source of the lighting (usually the Sun) and the
             second is the surface for which geometry is needed.
 
-            Each intercepted surface is defined by a surface key string, one of:
+            Each intercepted surface is defined by a `surface_key` string, one of:
 
-                * `body_name`      for the default surface of a body;
-                * `body_name:RING` for the ring surface associated with a body;
-                * `body_name:ANSA` for the ansa surface associated with a body;
-                * `body_name:LIMB` for the limb surface associated with a body.
+                * ``"name"``      for the default surface of a body;
+                * ``"name:RING"`` for the ring surface associated with a body;
+                * ``"name:ANSA"`` for the ansa surface associated with a body;
+                * ``"name:LIMB"`` for the limb surface associated with a body.
 
-            The light source is defined by a source key string of the form:
+            where ``name`` is replaced by a body's name. These strings are not
+            case-sensitive.
 
-                * `body_name<` for dispersed illumination;
-                * `body_name>` for occultation illumination;
-                * `body_name-` for path-based illumination.
+            The light source is defined by a `source_key` string, one of:
 
-            These strings are not case-sensitive.
+                * ``"name<"`` for dispersed illumination;
+                * ``"name>"`` for occultation illumination;
+                * ``"name-"`` for path-based illumination.
 
-            As a shortcut, you can specify a surface_key string alone in place of an
-            `event_key`, in which case "SUN<" is assumed as the source.
+            As a shortcut, you can specify a `surface_key` string alone in place of an
+            `event_key`, in which case ``"SUN<"`` is assumed as the source.
 
             In dispersed illumination, each backplane has spatial dimensions that are
             defined by the :class:`~oops.Meshgrid`. Photons leave the source in all
@@ -84,7 +85,8 @@ class Backplane(Mutable):
 
             In occultation illumination, backplanes have no spatial dimensions. Photons
             leave the source along a direct line of sight to the detector, and the event
-            is defined as the time and location where the photons intercept the surface.
+            is defined as the time and location where the photons intercept a surface that
+            sits between the light source and the detector.
 
             In path-based illumination, the photon follows one or more straight-line
             paths between the origin points of the surfaces. The backplanes have no
@@ -93,24 +95,25 @@ class Backplane(Mutable):
 
             For example:
 
-                * `('SUN<', 'SATURN:RING')` could describe a 2-D image of Saturn's rings.
-                * `('SUN>', 'SATURN:RING')` could describe a solar occultation profile of
-                  Saturn's rings.
-                * `('SUN-', 'SATURN:RING')` defines the direction of the center of
+                * ``("SUN<", "SATURN:RING")`` could describe a 2-D image of Saturn's
+                  rings.
+                * ``("SUN>", "SATURN:RING")`` could describe a solar occultation profile
+                  of Saturn's rings.
+                * ``("SUN-", "SATURN:RING")`` defines the direction of the center of
                   Saturn's rings (which is also the center of Saturn).
 
                 Most of the time, an event key only contains two items as in the examples
                 above. However, shadowing can be defined by inserting one additional
-                surface key after 'SUN<'. For example,::
+                surface key after ``"SUN<"``. For example,::
 
-                    ('SUN<', 'MIMAS', 'SATURN:RING')
+                    ("SUN<", "MIMAS", "SATURN:RING")
 
                 describes the surface event at Mimas, subject to the constraint that the
                 photons subsequently reflected off of Saturn's rings before they arrived
                 at the detector; it can be used to determine how Mimas shadows the rings.
                 It is interpreted by first solving for the event_key::
 
-                    ('SUN<', 'SATURN:RING') ,
+                    ("SUN<", "SATURN:RING") ,
 
                 which defines intercept events on Saturn's rings. Then it takes the lines
                 of sight from the events at the Sun to the events at Saturn's rings and
@@ -255,7 +258,7 @@ class Backplane(Mutable):
 
     @property
     def dlos_duv(self):
-        """The derivative of the line of sight with respect to `(u,v)`.
+        """The derivative of the line of sight with respect to *(u,v)*.
 
         It is evaluated at each pixel of the meshgrid and cached on first use.
         """
@@ -267,9 +270,9 @@ class Backplane(Mutable):
 
     @property
     def dlos_duv1(self):
-        """The derivative of the line of sight with respect to `(u1,v1)`.
+        """The derivative of the line of sight with respect to *(u1,v1)*.
 
-        The coordinates `(u1,v1)` match `(u,v)` but have been forced to be orthogonal.
+        The coordinates *(u1,v1)* match *(u,v)* but have been forced to be orthogonal.
         This is done by leaving the lesser pixel size alone, and shifting the greater
         pixel edge to be orthogonal while conserving the pixel area. This is a better pair
         to use for determining spatial resolution.
@@ -301,7 +304,7 @@ class Backplane(Mutable):
 
     @property
     def duv_dlos(self):
-        """The derivative of `(u,v)` with respect to the line of sight.
+        """The derivative of *(u,v)* with respect to the line of sight.
 
         It is evaluated at each pixel of the meshgrid and cached on first use. This is the
         inverse of :attr:`~oops.Backplane.dlos_duv`.
@@ -314,7 +317,7 @@ class Backplane(Mutable):
 
     @property
     def center_dlos_duv(self):
-        """The derivative of the line of sight with respect to `(u,v)` at the center.
+        """The derivative of the line of sight with respect to *(u,v)* at the center.
 
         The derivative is evaluated at the center of the field of view and cached on first
         use. This is what the gridless backplanes use.
@@ -327,7 +330,7 @@ class Backplane(Mutable):
 
     @property
     def center_duv_dlos(self):
-        """The derivative of `(u,v)` with respect to the line of sight at the center.
+        """The derivative of *(u,v)* with respect to the line of sight at the center.
 
         The derivative is evaluated at the center of the field of view and cached on first
         use. This is the inverse of :attr:`~oops.Backplane.center_dlos_duv`.
@@ -491,7 +494,7 @@ class Backplane(Mutable):
 
         Returns:
             tuple: The standardized key with its light source marked as path-based. An
-            empty key is returned unchanged.
+            empty `event_key` is returned unchanged.
 
         Raises:
             ValueError: If the key describes shadowing, which a path-based event cannot.
@@ -650,7 +653,7 @@ class Backplane(Mutable):
     def _unmasked_surface_key(surface_key):
         """The unmasked surface key associated with a given surface key.
 
-        For example, `SATURN_MAIN_RINGS` maps to `SATURN:RING`.
+        For example, "SATURN_MAIN_RINGS" maps to "SATURN:RING".
 
         If the surface has no associated unmasked surface, the same surface key is
         returned.
@@ -1273,7 +1276,7 @@ class Backplane(Mutable):
         that does not begin with an underscore is also recorded as a callable backplane.
 
         Parameters:
-            globals_dict (dict): The module's `globals().copy()`.
+            globals_dict (dict): The module's ``globals().copy()``.
         """
 
         for key, value in globals_dict.items():

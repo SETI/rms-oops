@@ -19,13 +19,13 @@ class Meshgrid(Oops):
 
     Attributes:
         fov (FOV): The field of view that this Meshgrid samples.
-        uv (Pair): The `(u,v)` coordinates of the samples, without derivatives.
-        uv_w_duv_duv (Pair): The same `(u,v)` coordinates, carrying the identity
-            derivative `d(u,v)/d(u,v)`.
-        center_uv (Pair): The `(u,v)` coordinates of the center of the meshgrid.
+        uv (Pair): The *(u,v)* coordinates of the samples, without derivatives.
+        uv_w_duv_duv (Pair): The same *(u,v)* coordinates, carrying the identity
+            derivative *d(u,v)/d(u,v)*.
+        center_uv (Pair): The *(u,v)* coordinates of the center of the meshgrid.
         center_uv_w_duv_duv (Pair): The center coordinates, carrying the identity
-            derivative `d(u,v)/d(u,v)`.
-        shape (tuple[int, ...]): The shape of the array of `(u,v)` coordinates.
+            derivative *d(u,v)/d(u,v)*.
+        shape (tuple[int, ...]): The shape of the array of *(u,v)* coordinates.
 
     Lines of sight and their derivatives are obtained from methods rather than
     attributes, because each one depends on the time at which the FOV is sampled. Every
@@ -37,9 +37,9 @@ class Meshgrid(Oops):
 
         Parameters:
             fov (FOV): The associated FOV object.
-            uv_pair (Pair): Object of arbitrary shape, representing (u,v) coordinates
+            uv_pair (Pair): Object of arbitrary shape, representing *(u,v)* coordinates
                 within a field of view.
-            center_uv (Pair, optional): `(u,v)` coordinates of the center of the meshgrid;
+            center_uv (Pair, optional): *(u,v)* coordinates of the center of the meshgrid;
                 default is the mean of all the `uv_pair` values.
             fov_kwargs (dict, optional): Parameters passed to the FOV methods,
                 containing parameters that might affect the properties of the FOV.
@@ -94,7 +94,7 @@ class Meshgrid(Oops):
             limit (Pair, optional): A single value, tuple or Pair defining the upper
                 limits of the meshgrid. By default, this is the shape of the FOV.
             swap (bool, optional): True to swap the order of the indices in the meshgrid,
-                (v,u) instead of (u,v).
+                (v,u) instead of *(u,v)*.
             fov_kwargs (dict, optional): Parameters passed to the FOV methods,
                 containing parameters that might affect the properties of the FOV.
 
@@ -143,10 +143,10 @@ class Meshgrid(Oops):
             fov (FOV): FOV object.
             shape (tuple): Overall shape to which this Meshgrid must broadcast.
             u_axis (int, optional): Location of the u axis within the shape; -1 if there
-                is no u-axis, in which case the meshgrid has a single sample along u.
+                is no *u*-axis, in which case the meshgrid has a single sample along u.
             v_axis (int, optional): Location of the v axis within the shape; -1 if there
-                is no v-axis, in which case the meshgrid has a single sample along v.
-            origin (Pair, optional): A single value, tuple or Pair defining the `(u,v)`
+                is no *v*-axis, in which case the meshgrid has a single sample along v.
+            origin (Pair, optional): A single value, tuple or Pair defining the *(u,v)*
                 origin of the grid. Default is to place the first sample in the middle of
                 the first pixel (after allowing for the under- or oversampling).
             undersample (Pair, optional): A single value, tuple or Pair defining the
@@ -155,11 +155,11 @@ class Meshgrid(Oops):
             oversample (Pair, optional): A single value, tuple or Pair defining the
                 magnitude of over-sampling to be performed. For example, a value of 2
                 would create a 2x2 array of samples inside each pixel.
-            limit (Pair, optional): A single value, tuple or Pair defining the `(u,v)`
+            limit (Pair, optional): A single value, tuple or Pair defining the *(u,v)*
                 upper limits of the meshgrid. By default, this is the shape of the FOV.
-            center_uv (optional): A single value, tuple or Pair defining the `(u,v)`
-                center of the FOV. Default is to place this point at the center of the
-                specified grid of points.
+            center_uv (Pair or tuple[float, float], optional): The *(u,v)* center of the
+                FOV. Default is to place this point at the center of the specified grid of
+                points.
             fov_kwargs (dict, optional): Parameters passed to the FOV methods,
                 containing parameters that might affect the properties of the FOV.
 
@@ -284,7 +284,7 @@ class Meshgrid(Oops):
         return False
 
     def los_w_derivs(self, time=None):
-        """The unit lines of sight, with derivatives with respect to `(u,v)`.
+        """The unit lines of sight, with derivatives with respect to *(u,v)*.
 
         Parameters:
             time (Scalar, optional): Absolute time in seconds TDB; None if the FOV does
@@ -349,26 +349,26 @@ class Meshgrid(Oops):
         return result
 
     def dlos_duv(self, time=None):
-        """The partial derivatives of the lines of sight with respect to `(u,v)`.
+        """The partial derivatives of the lines of sight with respect to *(u,v)*.
 
         Parameters:
             time (Scalar, optional): Absolute time in seconds TDB; None if the FOV does
                 not depend on time.
 
         Returns:
-            Vector3: The derivatives `dlos/d(u,v)`, with `(u,v)` as the denominator.
+            Vector3: The derivatives *dlos/d(u,v)*, with *(u,v)* as the denominator.
         """
         return self.los_w_derivs(time).d_duv
 
     def uv_w_derivs(self, time=None):
-        """The `(u,v)` coordinates, with derivatives with respect to the line of sight.
+        """The *(u,v)* coordinates, with derivatives with respect to the line of sight.
 
         Parameters:
             time (Scalar, optional): Absolute time in seconds TDB; None if the FOV does
                 not depend on time.
 
         Returns:
-            Pair: The `(u,v)` coordinates, carrying the derivative `d_dlos`.
+            Pair: The *(u,v)* coordinates, carrying the derivative `d_dlos`.
         """
 
         # Return from internal dictionary if present
@@ -389,14 +389,14 @@ class Meshgrid(Oops):
         return uv
 
     def duv_dlos(self, time=None):
-        """The partial derivatives of `(u,v)` with respect to the line of sight.
+        """The partial derivatives of *(u,v)* with respect to the line of sight.
 
         Parameters:
             time (Scalar, optional): Absolute time in seconds TDB; None if the FOV does
                 not depend on time.
 
         Returns:
-            Pair: The derivatives `d(u,v)/dlos`, with the line of sight as the
+            Pair: The derivatives *d(u,v)/dlos*, with the line of sight as the
             denominator.
         """
         return self.uv_w_derivs(time).d_dlos
@@ -406,7 +406,7 @@ class Meshgrid(Oops):
     ######################################################################################
 
     def center_los_w_derivs(self, time=None):
-        """The unit line of sight at the center, with derivatives with respect to `(u,v)`.
+        """The unit line of sight at the center, with derivatives with respect to *(u,v)*.
 
         Parameters:
             time (Scalar, optional): Absolute time in seconds TDB; None if the FOV does
@@ -471,27 +471,27 @@ class Meshgrid(Oops):
         return los_
 
     def center_dlos_duv(self, time=None):
-        """The partial derivatives of the central line of sight with respect to `(u,v)`.
+        """The partial derivatives of the central line of sight with respect to *(u,v)*.
 
         Parameters:
             time (Scalar, optional): Absolute time in seconds TDB; None if the FOV does
                 not depend on time.
 
         Returns:
-            Vector3: The derivatives `dlos/d(u,v)` at the center, with `(u,v)` as the
+            Vector3: The derivatives *dlos/d(u,v)* at the center, with *(u,v)* as the
             denominator.
         """
         return self.center_los_w_derivs(time).d_duv
 
     def center_uv_w_derivs(self, time=None):
-        """The central `(u,v)` coordinates, with line-of-sight derivatives.
+        """The central *(u,v)* coordinates, with line-of-sight derivatives.
 
         Parameters:
             time (Scalar, optional): Absolute time in seconds TDB; None if the FOV does
                 not depend on time.
 
         Returns:
-            Pair: The central `(u,v)` coordinates, carrying the derivative `d_dlos`.
+            Pair: The central *(u,v)* coordinates, carrying the derivative `d_dlos`.
         """
 
         # Return from internal dictionary if present
@@ -512,14 +512,14 @@ class Meshgrid(Oops):
         return uv
 
     def center_duv_dlos(self, time=None):
-        """The derivatives of the central `(u,v)` with respect to the line of sight.
+        """The derivatives of the central *(u,v)* with respect to the line of sight.
 
         Parameters:
             time (Scalar, optional): Absolute time in seconds TDB; None if the FOV does
                 not depend on time.
 
         Returns:
-            Pair: The derivatives `d(u,v)/dlos` at the center, with the line of sight
+            Pair: The derivatives *d(u,v)/dlos* at the center, with the line of sight
             as the denominator.
         """
         return self.center_uv_w_derivs(time).d_dlos

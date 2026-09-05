@@ -46,7 +46,7 @@ class Cadence(Mutable):
                 Cadence; False to exclude it.
 
         Returns:
-            Scalar: Time in seconds TDB.
+            Scalar: Time in seconds TDB at `tstep`.
         """
 
         raise NotImplementedError(f'{type(self).__name__}.time_at_tstep is not '
@@ -67,8 +67,8 @@ class Cadence(Mutable):
                 index == shape) into the previous time step.
 
         Returns:
-            tuple[Scalar, Scalar]: The minimum and maximum times associated with the
-            index values, in seconds TDB.
+            tuple[Scalar, Scalar]: The minimum and maximum times associated with `tstep`,
+            in seconds TDB.
         """
 
         raise NotImplementedError(f'{type(self).__name__}.time_range_at_tstep is not '

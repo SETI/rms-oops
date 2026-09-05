@@ -7,7 +7,7 @@ Defines the locations of the test data, the SPICE kernels, the gold master files
 directory to which newly generated backplane arrays are written, based on the environment
 variables `OOPS_RESOURCES`, `OOPS_TEST_DATA_PATH`, `OOPS_GOLD_MASTER_PATH`, and
 `OOPS_BACKPLANE_OUTPUT_PATH`. Any of these may name a cloud resource such as
-`gs://rms-oops-resources/gold_master`.
+"gs://rms-oops-resources/gold_master".
 """
 
 import os

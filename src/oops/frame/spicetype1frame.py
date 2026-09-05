@@ -147,8 +147,10 @@ class SpiceType1Frame(SpiceFrame):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the
@@ -227,17 +229,19 @@ class SpiceType1Frame(SpiceFrame):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
-            tuple[Scalar, Transform]: (`valid_time`, `transform`):
+            tuple: `(valid_time, transform)`:
 
-            * `valid_time` identifies the time(s) at which `transform` has been provided;
-              this may be a subset of the input times, because it omits the times at which
-              the Transform could not be evaluated.
-            * `transform` is the Transform defined at `valid_time`. It rotates vectors
-              from the reference frame to this frame.
+            * `valid_time` (Scalar) identifies the time(s) at which `transform` has been
+              provided; this may be a subset of the input times, because it omits the
+              times at which the Transform could not be evaluated.
+            * `transform` (Transform) is the Transform defined at `valid_time`. It rotates
+              vectors from the reference frame to this frame.
 
         Raises:
             OSError: If `time` is multidimensional and any single time is out of range for

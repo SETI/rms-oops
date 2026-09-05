@@ -13,7 +13,7 @@ from oops.gravity.oblategravity import OblateGravity
 
 
 class RingPlane(Surface):
-    """A flat surface in the (x,y) plane with optional Keplerian motion.
+    """A flat surface in the *(x,y)* plane with optional Keplerian motion.
 
     A subclass of :class:`~oops.Surface` in which the optional velocity field is defined
     by circular Keplerian motion about the center point. Coordinates are cylindrical
@@ -39,7 +39,7 @@ class RingPlane(Surface):
             origin (Path or str): The Path or the ID of the Path defining the motion of
                 the center of the ring plane.
             frame (Frame or str): The Frame or the ID of the Frame in which the ring
-                plane is the `(x,y)` plane (where `z = 0`).
+                plane is the *(x,y)* plane (where ``z = 0``).
             radii (tuple[float, float], optional): The nominal inner and outer radii of
                 the ring, in km; None for a ring with no radial limits.
             gravity (Gravity, optional): Gravity model of the central body, used to define
@@ -269,7 +269,7 @@ class RingPlane(Surface):
 
             * `pos` (Vector3): Intercept points on the Surface relative to this surface's
               origin and frame, in km.
-            * `t` (Scalar): Such that `intercept = obs + t * los`.
+            * `t` (Scalar): Such that ``intercept = obs + t * los``.
             * `hints` (Any): The input value of `hints`, included if it is not None.
         """
 
@@ -306,7 +306,7 @@ class RingPlane(Surface):
             obs (Vector3, optional): Observer position relative to this Surface's origin
                 and frame; ignored for this Surface subclass.
             time (Scalar, optional): Time at which to evaluate the Surface; ignored here.
-            derivs (bool, optional): True to propagate any derivatives of pos into the
+            derivs (bool, optional): True to propagate any derivatives of `pos` into the
                 returned normal vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
                 call to the next; unused by this Surface subclass. If it is not None,

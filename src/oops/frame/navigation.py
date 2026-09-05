@@ -23,9 +23,9 @@ class Navigation(Frame, Fittable):
 
         Parameters:
             arg (array-like or Navigation): Two or three angles of rotation in radians.
-                The order of the rotations is about the y, x, and (optionally) z axes.
-                These angles rotate a vector in the reference frame into this frame.
-                Alternatively, specify another Navigation object and this object will be
+                The order of the rotations is about the *y*, *x*, and (optionally) *z*
+                axes. These angles rotate a vector in the reference frame into this frame.
+                Alternatively, specify another `Navigation` object and this object will be
                 linked to that one, meaning that the rotation angles will always match.
             reference (Frame or str): The Frame or the ID of the Frame relative to which
                 this navigation applies.
@@ -166,7 +166,7 @@ class Navigation(Frame, Fittable):
 
         Parameters:
             angle (float): The angle of rotation in radians.
-            axis (int): The axis of rotation: 0 for x, 1 for y, 2 for z.
+            axis (int): The axis of rotation: 0 for *x*, 1 for *y*, 2 for *z*.
 
         Returns:
             Matrix3: The 3x3 matrix describing this rotation.
@@ -197,10 +197,7 @@ class Navigation(Frame, Fittable):
 
         Parameters:
             time (Scalar): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames. Ignored by
-                class Navigation.
+            quick (dict or bool, optional): Ignored by class Navigation.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the

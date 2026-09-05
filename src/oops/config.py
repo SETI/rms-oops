@@ -18,7 +18,7 @@ class QUICK(object):
 
     These are the default parameters. Any of these parameters can be overridden on a
     one-time basis by calling a function with `quick` as an input dictionary containing
-    temporary replacement values. Use `quick = False` to temporarily disable the use of
+    temporary replacement values. Use ``quick = False`` to temporarily disable the use of
     QuickPaths and QuickFrames.
     """
 

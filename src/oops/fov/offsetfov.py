@@ -19,12 +19,12 @@ class OffsetFOV(FOV, Fittable):
 
         Parameters:
             fov (FOV): The FOV object relative to which this FOV is shifted.
-            uv_offset (Pair, optional): The offset in `(u,v)` coordinates; the line of
-                sight of this FOV falls at `fov.uv_los - uv_offset`. At most one of
+            uv_offset (Pair, optional): The offset in *(u,v)* coordinates; the line of
+                sight of this FOV falls at ``fov.uv_los - uv_offset``. At most one of
                 `uv_offset` and `xy_offset` can be specified; if neither is given, the
                 offset is zero.
-            xy_offset (Pair, optional): The same offset expressed in `(x,y)` coordinates;
-                the `(x,y)` values returned by this FOV are those of `fov` minus
+            xy_offset (Pair, optional): The same offset expressed in *(x,y)* coordinates;
+                the *(x,y)* values returned by this FOV are those of `fov` minus
                 `xy_offset`.
 
         Raises:
@@ -66,7 +66,7 @@ class OffsetFOV(FOV, Fittable):
     nparams = 2
 
     def _set_params(self, params):
-        """Redefine the `(u,v)` offsets of this OffsetFOV."""
+        """Redefine the *(u,v)* offsets of this OffsetFOV."""
 
         self.uv_offset = Pair.as_pair(params)
         self.xy_offset = self.fov.xy_from_uv(self.uv_offset + self.fov.uv_los)
@@ -74,7 +74,7 @@ class OffsetFOV(FOV, Fittable):
 
     @property
     def params(self):
-        """The fitted parameters, the `(u,v)` offset as a tuple of two floats."""
+        """The fitted parameters, the *(u,v)* offset as a tuple of two floats."""
 
         return tuple(self.uv_offset.vals)
 
@@ -99,21 +99,21 @@ class OffsetFOV(FOV, Fittable):
     ######################################################################################
 
     def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The camera coordinates `(x,y)` at FOV coordinates `(u,v)` and a given time.
+        """The camera coordinates *(x,y)* at FOV coordinates *(u,v)* and a given time.
 
         Parameters:
-            uv_pair (Pair): `(u,v)` coordinates in this FOV.
+            uv_pair (Pair): *(u,v)* coordinates in this FOV.
             time (Scalar, optional): Absolute time in seconds TDB.
-            derivs (bool, optional): If True, any derivatives in `(u,v)` get propagated
-                into the returned `(x,y)` coordinates.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
+                into the returned *(x,y)* coordinates.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: The transformed `(x,y)` coordinates in the camera's frame, with the same
-                shape as uv_pair.
+            Pair: The transformed *(x,y)* coordinates in the camera's frame, with the same
+            shape as `uv_pair`.
         """
 
         uv_pair = Pair.as_pair(uv_pair, recursive=derivs)
@@ -122,20 +122,20 @@ class OffsetFOV(FOV, Fittable):
         return old_xy - self.xy_offset
 
     def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The FOV coordinates `(u,v)` at camera coordinates `(x,y)` and a given time.
+        """The FOV coordinates *(u,v)* at camera coordinates *(x,y)* and a given time.
 
         Parameters:
-            xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.
+            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
             time (Scalar, optional): Absolute time in seconds TDB.
-            derivs (bool, optional): If True, any derivatives in `(x,y)` get propagated
-                into the returned `(u,v)` coordinates.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
+                into the returned *(u,v)* coordinates.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: The computed `(u,v)` FOV coordinates, with the same shape as xy_pair.
+            Pair: The computed *(u,v)* FOV coordinates, with the same shape as `xy_pair`.
         """
 
         xy_pair = Pair.as_pair(xy_pair, recursive=derivs)

@@ -25,11 +25,11 @@ class TwoVectorFrame(Frame):
                 this Frame is defined.
             vector1 (Vector3 or array-like): A vector describing an axis.
             axis1 (int or str): The axis defined by the first vector: 0, "x", or "X" for
-                x; 1, "y", or "Y" for y; 2, "z", or "Z" for z.
+                *x*; 1, "y", or "Y" for *y*; 2, "z", or "Z" for *z*.
             vector2 (Vector3 or array-like): A vector which, along with `vector1`, defines
                 the half-plane in which a second axis falls.
             axis2 (int or str): The axis defined by the second vector: 0, "x", or "X" for
-                x; 1, "y", or "Y" for y; 2, "z", or "Z" for z.
+                *x*; 1, "y", or "Y" for *y*; 2, "z", or "Z" for *z*.
             frame_id (str, optional): The ID under which to register this Frame; None to
                 leave this Frame unregistered.
 
@@ -98,10 +98,7 @@ class TwoVectorFrame(Frame):
 
         Parameters:
             time (Scalar): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames. Ignored by
-                class TwoVectorFrame.
+            quick (dict or bool, optional): Ignored by class TwoVectorFrame.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the
@@ -116,23 +113,20 @@ class TwoVectorFrame(Frame):
         return self._transform
 
     def node_at_time(self, time, *, quick=False):
-        """The angle from the reference Frame's X-axis to this Frame's ascending node.
+        """The angle from the reference Frame's *x*-axis to this Frame's ascending node.
 
-        The angle is measured within the X-Y plane of the reference frame, to the
-        ascending node of this Frame's X-Y plane.
+        The angle is measured within the *xy* plane of the reference frame, to the
+        ascending node of this Frame's *xy* plane.
 
         Values always fall between 0 and 2*pi.
 
         Parameters:
             time (Scalar): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames. Ignored by
-                class TwoVectorFrame.
+            quick (dict or bool, optional): Ignored by class TwoVectorFrame.
 
         Returns:
-            Scalar: At the specified times, the angle from the reference Frame's X-axis,
-            along its X-Y plane, to the ascending node of this Frame's X-Y plane.
+            Scalar: At the specified times, the angle from the reference Frame's *x*-axis,
+            along its *xy* plane, to the ascending node of this Frame's *xy* plane.
 
         Notes:
             A TwoVectorFrame is a fixed Frame, so its node relative to the `reference`

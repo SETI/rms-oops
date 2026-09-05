@@ -33,9 +33,9 @@ class Frame(Mutable):
     Internally, OOPS determines the sequence of steps that are required to connect any
     Frame to any other Frame.
 
-    For example, suppose `enceladus_iau` is a SpinFrame defining the rotation of Enceladus
-    relative to its center. In addition, suppose `cassini_wac` is a Frame defining the
-    orientation of the Cassini Wide Angle Camera. Then the Frame defined by::
+    For example, suppose ``enceladus_iau`` is a SpinFrame defining the rotation of
+    Enceladus relative to its center. In addition, suppose ``cassini_wac`` is a Frame
+    defining the orientation of the Cassini Wide Angle Camera. Then the Frame defined by::
 
         wac_wrt_enceladus = cassini_wac.wrt(enceladus_iau)
 
@@ -45,9 +45,9 @@ class Frame(Mutable):
 
     Every Frame also has a :attr:`~oops.Frame.wayframe` property, which provides a unique
     identifier for that Frame without regard to its reference or definition. In the
-    example above, `wac_wrt_enceladus` and `cassini_wac` will have the same `wayframe`,
-    meaning that they transform to the same Frame. The wayframe can be used in almost any
-    place where the Frame itself can be used, so this would also have worked::
+    example above, ``wac_wrt_enceladus`` and ``cassini_wac`` will have the same
+    `wayframe`, meaning that they transform to the same Frame. The wayframe can be used in
+    almost any place where the Frame itself can be used, so this would also have worked::
 
         wac_wrt_enceladus = cassini_wac.wayframe.wrt(enceladus_iau.wayframe)
 
@@ -61,8 +61,8 @@ class Frame(Mutable):
     Optionally, a Frame can be registered under a Frame ID, which is a string that can be
     used globally to refer to that Frame. You can use the :meth:`~oops.Frame.as_frame`
     method to convert a Frame ID to a Frame. In most situations, a Frame ID can be used in
-    place of a Frame. For example, if `enceladus_iau` is registered under the name
-    "ENCELADUS" and `cassini_wac` is registered under the name "WAC", then these
+    place of a Frame. For example, if ``enceladus_iau`` is registered under the name
+    "ENCELADUS" and ``cassini_wac`` is registered under the name "WAC", then these
     expressions would also work::
 
         wac_wrt_enceladus = cassini_wac.wrt('ENCELADUS')
@@ -86,9 +86,9 @@ class Frame(Mutable):
             primary definition.
         origin (Path or None): A Path object that uniquely identifies the origin relative
             to which this Frame is defined. For inertial Frames, this can be None.
-        shape (tuple): The shape of the Frame object. This is the shape of the Transform
-            object returned by :meth:`~oops.Frame.transform_at_time` when it is called
-            with a single time value.
+        shape (tuple[int, ...]): The shape of the Frame object. This is the shape of the
+            Transform object returned by :meth:`~oops.Frame.transform_at_time` when it is
+            called with a single time value.
     """
 
     _Event = None               # Filled in by oops/__init__.py
@@ -148,8 +148,10 @@ class Frame(Mutable):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the
@@ -184,39 +186,43 @@ class Frame(Mutable):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
-            tuple[Scalar, Transform]: (`newtimes`, `transform`):
+            tuple[Scalar, Transform]: `(valid_time, transform)`:
 
-            * `newtimes` identifies the time(s) at which `transform` has been provided;
-              this may be a subset of the input times, because it omits the times at which
-              the Transform could not be evaluated.
-            * `transform` is the Transform defined at `newtimes`. It rotates vectors from
-              the reference frame to this frame.
+            * `valid_time` (Scalar) identifies the time(s) at which `transform` has been
+              provided; this may be a subset of the input times, because it omits the
+              times at which the Transform could not be evaluated.
+            * `transform` (Transform) is the Transform defined at `valid_time`. It rotates
+              vectors from the reference frame to this frame.
         """
 
         time = Scalar.as_scalar(time)
         return (time, self.transform_at_time(time, quick=quick))
 
     def node_at_time(self, time, *, quick=None):
-        """The angle from the reference Frame's X-axis to this Frame's ascending node.
+        """The angle from the reference Frame's *x*-axis to this Frame's ascending node.
 
-        The angle is measured within the X-Y plane of the reference frame, to the
-        ascending node of this Frame's X-Y plane.
+        The angle is measured within the *x*-*y* plane of the reference frame, to the
+        ascending node of this Frame's *x*-*y* plane.
 
         Values always fall between 0 and 2*pi.
 
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
-            Scalar: At the specified times, the angle from the reference Frame's X-axis,
-            along its X-Y plane, to the ascending node of this Frame's X-Y plane.
+            Scalar: At the specified times, the angle from the reference Frame's *x*-axis,
+            along its *x*-*y* plane, to the ascending node of this Frame's *x*-*y* plane.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.
@@ -625,12 +631,13 @@ class Frame(Mutable):
 
         Parameters:
             time (Scalar or tuple): The set of times at which the frame is to be
-                evaluated. This can simply be a tuple (`tmin`, `tmax`) defining the
+                evaluated. This can simply be a tuple *(t_min, t_max)* defining the
                 beginning and end times.
-            quick (dict or bool, optional): If False, no QuickFrame is created and `self`
-                is returned; if a dictionary, then the values provided override the values
-                in the default dictionary QUICK.dictionary, and the merged dictionary is
-                used.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Frame: A QuickFrame that approximates this Frame for the given range of times
@@ -697,8 +704,10 @@ class NullFrame(Frame):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the
@@ -857,8 +866,10 @@ class LinkedFrame(Frame):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the
@@ -888,17 +899,19 @@ class LinkedFrame(Frame):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
-            tuple[Scalar, Transform]: (`newtimes`, `transform`):
+            tuple[Scalar, Transform]: `(valid_time, transform)`:
 
-            * `newtimes` identifies the time(s) at which `transform` has been provided;
-              this may be a subset of the input times, because it omits the times at which
-              the Transform could not be evaluated.
-            * `transform` is the Transform defined at `newtimes`. It rotates vectors from
-              the reference frame to this frame.
+            * `valid_time` (Scalar) identifies the time(s) at which `transform` has been
+              provided; this may be a subset of the input times, because it omits the
+              times at which the Transform could not be evaluated.
+            * `transform` (Transform) is the Transform defined at `valid_time`. It rotates
+              vectors from the reference frame to this frame.
         """
 
         (time1, parent) = self._parent.transform_at_time_if_possible(time, quick=quick)
@@ -951,8 +964,10 @@ class ReversedFrame(Frame):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the
@@ -980,17 +995,19 @@ class ReversedFrame(Frame):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
-            tuple[Scalar, Transform]: (`newtimes`, `transform`):
+            tuple[Scalar, Transform]: `(valid_time, transform)`:
 
-            * `newtimes` identifies the time(s) at which `transform` has been provided;
-              this may be a subset of the input times, because it omits the times at which
-              the Transform could not be evaluated.
-            * `transform` is the Transform defined at `newtimes`. It rotates vectors from
-              the reference frame to this frame.
+            * `valid_time` (Scalar) identifies the time(s) at which `transform` has been
+              provided; this may be a subset of the input times, because it omits the
+              times at which the Transform could not be evaluated.
+            * `transform` (Transform) is the Transform defined at `valid_time`. It rotates
+              vectors from the reference frame to this frame.
         """
 
         (time, xform) = self._frame.transform_at_time_if_possible(time, quick=quick)

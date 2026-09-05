@@ -49,7 +49,7 @@ class FlatCalib(Calibration):
 
         Parameters:
             dn (Scalar): Un-calibrated image array values at the given pixel coordinates.
-            uv_pair (Pair): Associated `(u,v)` pixel coordinates in the image. Note that
+            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
                 `dn` and `uv_pair` will be casted to the same shape.
 
         Returns:
@@ -68,7 +68,7 @@ class FlatCalib(Calibration):
 
         Parameters:
             value (Scalar): Calibrated values at the given pixel coordinates.
-            uv_pair (Pair): Associated `(u,v)` pixel coordinates in the image. Note that
+            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
                 `value` and `uv_pair` will be casted to the same shape.
 
         Returns:
@@ -87,7 +87,7 @@ class FlatCalib(Calibration):
 
         Parameters:
             dn (Scalar): Un-calibrated image array values at the given pixel coordinates.
-            uv_pair (Pair): Associated `(u,v)` pixel coordinates in the image. Note that
+            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
                 `dn` and `uv_pair` will be casted to the same shape.
 
         Returns:
@@ -106,7 +106,7 @@ class FlatCalib(Calibration):
 
         Parameters:
             value (Scalar): Calibrated values at the given pixel coordinates.
-            uv_pair (Pair): Associated `(u,v)` pixel coordinates in the image. Note that
+            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
                 `value` and `uv_pair` will be casted to the same shape.
 
         Returns:

@@ -11,7 +11,7 @@ from oops.path.path_   import Path
 class CirclePath(Path):
     """A Path subclass describing uniform circular motion about another Path.
 
-    The orientation of the circle is defined by the z-axis of the given Frame.
+    The orientation of the circle is defined by the *z*-axis of the given Frame.
     """
 
     _WAYPOINTS = {}
@@ -20,9 +20,9 @@ class CirclePath(Path):
         """Constructor for a CirclePath.
 
         Parameters:
-            radius (Scalar, array-like, or float): Radius of the path, km.
-            lon (Scalar, array-like, or float): Longitude of the path at epoch, measured
-                from the x-axis of the frame, toward the y-axis, in radians.
+            radius (Scalar): Radius of the path, km.
+            lon (Scalar): Longitude of the path at epoch, measured from the *x*-axis of
+                the frame, toward the *y*-axis, in radians.
             rate (Scalar, array-like, or float): Rate of circular motion, radians/second.
             epoch (Scalar, array-like, or float): The time TDB relative to which all
                 orbital elements are defined.
@@ -99,8 +99,10 @@ class CirclePath(Path):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Event: The Event object containing (at least) the time, position, and velocity

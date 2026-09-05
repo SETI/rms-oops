@@ -121,7 +121,7 @@ class TimeShift(Cadence, Fittable):
                 Cadence; False to exclude it.
 
         Returns:
-            Scalar: Time in seconds TDB.
+            Scalar: Time in seconds TDB at `tstep`.
         """
 
         return (self._cadence.time_at_tstep(tstep=tstep, remask=remask, derivs=derivs,
@@ -143,8 +143,8 @@ class TimeShift(Cadence, Fittable):
                 index == shape) into the previous time step.
 
         Returns:
-            tuple[Scalar, Scalar]: The minimum and maximum times associated with the index
-            values, in seconds TDB.
+            tuple[Scalar, Scalar]: The minimum and maximum times associated with `tstep`,
+            in seconds TDB.
         """
 
         times = self._cadence.time_range_at_tstep(tstep, remask=remask,

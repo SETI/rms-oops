@@ -27,8 +27,11 @@ class QuickFrame(Frame):
                 will emulate.
             tmin (float): The earliest time to tabulate in this QuickFrame.
             tmax (float): The latest time to tabulate in this QuickFrame.
-            quick (dict, optional): A dictionary containing overrides of any of the
-                default values in the default dictionary QUICK.dictionary.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Raises:
             KeyError: If `frame` is an ID string that has not been registered.
@@ -157,16 +160,16 @@ class QuickFrame(Frame):
     def _unwrap_quaternions(vals):
         """The given quaternion values, made continuous in sign.
 
-        Quaternions q and -q describe the same rotation, so the values tabulated for a
+        Quaternions *q* and *-q* describe the same rotation, so the values tabulated for a
         sequence of times can reverse sign abruptly, typically where the rotation angle
         passes pi. The splines cannot represent such a discontinuity, so each sample is
         flipped, where necessary, into the same hemisphere as its predecessor.
 
         Parameters:
-            vals (numpy.ndarray): The tabulated quaternion values, with shape (steps,4).
+            vals (numpy.ndarray): The tabulated quaternion values, with shape `(steps,4)`.
 
         Returns:
-            numpy.ndarray: Values of shape (steps,4) describing the same rotations, but
+            numpy.ndarray: Values of shape `(steps,4)` describing the same rotations, but
             without sign reversals between successive samples. The input array is returned
             if it contains no reversals.
         """
@@ -218,8 +221,10 @@ class QuickFrame(Frame):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the
@@ -241,8 +246,7 @@ class QuickFrame(Frame):
                 points if the time interval is below this value.
 
         Returns:
-            tuple[Matrix3, Vector3]: (`matrix`, `omega`), where `matrix` is the 3x3
-            rotation matrix and `omega` is the rotation vector, if any.
+            tuple[Matrix3, Vector3]: The 3x3 rotation matrix and the rotation vector.
         """
 
         if collapse_threshold is None:
@@ -297,9 +301,9 @@ class QuickFrame(Frame):
                 qd[3] = self._qdot_splines[3](tflat_max)
                 qdot = Quaternion(qd)
 
-                # A Transform defines omega in the reference frame, so the derivative
-                # is taken through the conjugate quaternion; 2 * qdot / quat would give
-                # the vector in the coordinates of this frame instead.
+                # A Transform defines omega in the reference frame, so the derivative is
+                # taken through the conjugate quaternion; 2 * qdot / quat would give the
+                # vector in the coordinates of this frame instead.
                 omega_vals = np.empty(tflat.shape + (3,))
                 omega_vals[..., :] = -2. * (quat.reciprocal() * qdot).vals[1:4]
                 omega = Vector3(omega_vals)
@@ -494,10 +498,11 @@ class QuickFrame(Frame):
             time (Scalar or tuple): The set of times at which the frame is to be
                 evaluated. This can simply be a tuple (`tmin`, `tmax`) defining the
                 beginning and end times.
-            quick (dict or bool, optional): If False, no QuickFrame is created and
-                `frame` is returned; if a dictionary, then the values provided override
-                the values in the default dictionary QUICK.dictionary, and the merged
-                dictionary is used.
+            quick (dict or bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Frame: A QuickFrame that approximates `frame` for the given range of times but

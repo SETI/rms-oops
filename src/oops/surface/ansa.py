@@ -15,15 +15,15 @@ from oops.surface.ringplane import RingPlane
 class Ansa(Surface):
     """A virtual surface tracing the ansa of a ring system.
 
-    The Ansa is the locus of points where a radius vector from the pole of the Z-axis is
+    The Ansa is the locus of points where a radius vector from the pole of the *z*-axis is
     perpendicular to the line of sight.
 
     This provides a convenient coordinate system for describing rings when viewed nearly
     edge-on. The coordinates are `(r, z, theta)`, where:
 
-    * `r` (Scalar): Radial distance from the Z-axis, positive on the "right" side if Z
-      points "up", negative on the left side.
-    * `z` (Scalar): Vertical distance from the (x,y) plane.
+    * `r` (Scalar): Radial distance from the body's *Z*-axis, positive on the "right" side
+      if *Z* points "up", negative on the left side.
+    * `z` (Scalar): Vertical distance from the *(x,y)* plane.
     * `theta` (Scalar): Angular distance from the ansa, positive further away from the
       observer and negative closer.
     """
@@ -41,7 +41,7 @@ class Ansa(Surface):
             origin (Path or str): The Path or the ID of the Path defining the motion of
                 the center of the ring system.
             frame (Frame or str): The Frame or the ID of the Frame in which the ring plane
-                is the (x,y) plane (where z == 0).
+                is the *(x,y)* plane (where *z == 0*).
             gravity (Gravity, optional): The Gravity object used to define the orbital
                 velocities relative to the Surface.
             ringplane (RingPlane, optional): A RingPlane associated with this Ansa
@@ -108,8 +108,8 @@ class Ansa(Surface):
         """The Ansa associated with a :class:`~oops.surface.RingPlane`, ignoring modes.
 
         Parameters:
-            ringplane (RingPlane): The RingPlane relative to which this Ansa Surface is
-                to be defined.
+            ringplane (RingPlane): The RingPlane relative to which this Ansa Surface is to
+                be defined.
 
         Returns:
             Ansa: The Ansa Surface sharing the origin, frame, gravity, and radii of the
@@ -151,7 +151,7 @@ class Ansa(Surface):
                 and frame.
             time (Scalar, optional): Time at which to evaluate the Surface.
             axes (int, optional): 2 or 3, indicating whether to return the first two
-                coordinates (rad, z) or all three (rad, z, theta) as Scalars.
+                coordinates (rad, z) or all three `(rad, z, theta)` as Scalars.
             derivs (bool, optional): True to propagate any derivatives inside pos and obs
                 into the returned coordinates.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -330,7 +330,7 @@ class Ansa(Surface):
 
             * `pos` (Vector3): Intercept points on the Surface relative to this surface's
               origin and frame, in km.
-            * `t` (Scalar): Value such that `intercept = obs + t * los`.
+            * `t` (Scalar): Value such that ``intercept = obs + t * los``.
             * `hints` (Any): The input value of `hints`, included if it is not None.
         """
 
@@ -367,7 +367,7 @@ class Ansa(Surface):
             obs (Vector3, optional): Observer position relative to this Surface's origin
                 and frame; ignored when determining the normal to an ansa.
             time (Scalar, optional): Time at which to evaluate the Surface.
-            derivs (bool, optional): True to propagate any derivatives of pos into the
+            derivs (bool, optional): True to propagate any derivatives of `pos` into the
                 returned normal vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
                 call to the next; unused by this Surface subclass. If it is not None,

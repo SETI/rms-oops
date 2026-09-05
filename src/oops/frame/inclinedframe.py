@@ -26,16 +26,13 @@ class InclinedFrame(Frame):
         """Constructor for an InclinedFrame.
 
         Parameters:
-            inc (Scalar, array-like, or float): The inclination angle in radians.
-            node (Scalar, array-like, or float): The longitude of the ascending node at
-                `epoch`, in radians.
-            rate (Scalar, array-like, or float): The rate of nodal precession in
-                radians/second.
-            epoch (Scalar, array-like, or float): The time in seconds TDB at which `node`
-                applies.
-            despin (bool, optional): True for a nearly inertial Frame, in which the x- and
-                y-axes vary as little as possible while the z-axis rotates; False for a
-                Frame in which the x-axis is tied to the ascending node.
+            inc (Scalar): The inclination angle in radians.
+            node (Scalar): The longitude of the ascending node at `epoch`, in radians.
+            rate (Scalar): The rate of nodal precession in radians/second.
+            epoch (Scalar): The time in seconds TDB at which `node` applies.
+            despin (bool, optional): True for a nearly inertial Frame, in which the *x*-
+                and *y*-axes vary as little as possible while the *z*-axis rotates; False
+                for a Frame in which the *x*-axis is tied to the ascending node.
             reference (Frame or str, optional): The Frame or the ID of the Frame
                 describing the central planet of the inclined plane; None for J2000.
             frame_id (str, optional): The ID under which to register this Frame; None to
@@ -126,10 +123,7 @@ class InclinedFrame(Frame):
 
         Parameters:
             time (Scalar): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames. Ignored by
-                class InclinedFrame.
+            quick (dict or bool, optional): Ignored by class InclinedFrame.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the
@@ -148,23 +142,20 @@ class InclinedFrame(Frame):
         return xform
 
     def node_at_time(self, time, *, quick=False):
-        """The angle from the reference Frame's X-axis to this Frame's ascending node.
+        """The angle from the reference Frame's *x*-axis to this Frame's ascending node.
 
-        The angle is measured within the X-Y plane of the reference frame, to the
-        ascending node of this Frame's X-Y plane.
+        The angle is measured within the *xy* plane of the reference frame, to the
+        ascending node of this Frame's *xy* plane.
 
         Values always fall between 0 and 2*pi.
 
         Parameters:
             time (Scalar): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames. Ignored by
-                class InclinedFrame.
+            quick (dict or bool, optional): Ignored by class InclinedFrame.
 
         Returns:
-            Scalar: At the specified times, the angle from the reference Frame's X-axis,
-            along its X-Y plane, to the ascending node of this Frame's X-Y plane.
+            Scalar: At the specified times, the angle from the reference Frame's *x*-axis,
+            along its *xy* plane, to the ascending node of this Frame's *xy* plane.
 
         Raises:
             ValueError: If the shapes of `time` and this object cannot be broadcasted.

@@ -72,7 +72,7 @@ class Metronome(Cadence):
                 Cadence; False to exclude it.
 
         Returns:
-            Scalar: Time in seconds TDB.
+            Scalar: Time in seconds TDB at `tstep`.
         """
 
         tstep = Scalar.as_scalar(tstep, recursive=derivs)
@@ -109,8 +109,8 @@ class Metronome(Cadence):
                 index == shape) into the previous time step.
 
         Returns:
-            tuple[Scalar, Scalar]: The minimum and maximum times associated with the index
-            values, in seconds TDB.
+            tuple[Scalar, Scalar]: The minimum and maximum times associated with `tstep`,
+            in seconds TDB.
         """
 
         tstep = Scalar.as_scalar(tstep, recursive=False)

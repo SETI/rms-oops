@@ -8,10 +8,10 @@ from oops.transform import Transform
 
 
 class SynchronousFrame(Frame):
-    """A Frame keeping a body's x-axis pointed toward a central planet.
+    """A Frame keeping a body's *x*-axis pointed toward a central planet.
 
-    The z-axis lies along the angular momentum of the orbit. That leaves the y-axis in the
-    negative direction of motion. The frame is centered on the body.
+    The *z*-axis lies along the angular momentum of the orbit. That leaves the *y*-axis in
+    the negative direction of motion. The frame is centered on the body.
 
     Note that this Frame is tied to the orbital longitude of the body, so it will
     (incorrectly) rotate at a slightly non-uniform rate if the orbit has eccentricity.
@@ -100,8 +100,10 @@ class SynchronousFrame(Frame):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the

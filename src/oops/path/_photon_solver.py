@@ -19,16 +19,17 @@ def photon_to_event(self, arrival, *, derivs=False, guess=None, antimask=None, q
         arrival (Event): The Event of a photon's arrival.
         derivs (bool, optional): True to propagate derivatives of the `arrival` position
             into the returned Events. The time derivative is always retained.
-        guess (Scalar, array-like, or float, optional): An initial guess to use as the
-            event time along this Path; otherwise None. Should be provided if the event
-            time was already returned from a similar calculation.
+        guess (Scalar, optional): An initial guess to use as the event time along this
+            Path; otherwise None. Should be provided if the event time was already
+            returned from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean array to be applied to event
             times and positions. Only the indices where antimask=True will be used in the
             solution.
         quick (dict or bool, optional): A dictionary of parameter values to use as
-            overrides to the configured default QuickPath and QuickFrame parameters. Use
-            False to disable the use of QuickPaths and QuickFrames. The default quick
-            dictionary is defined in config.py.
+            overrides to the configured default :class:`~oops.path.QuickPath` and
+            :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
+            QuickPaths and QuickFrames. The default quick dictionary is defined in
+            config.py.
         converge (dict, optional): A dictionary of parameters to override the configured
             default convergence parameters. The default configuration is defined in
             config.py. Convergence parameters are as follows:
@@ -44,13 +45,13 @@ def photon_to_event(self, arrival, *, derivs=False, guess=None, antimask=None, q
               prevents the divergence of the solution in some cases.
 
     Returns:
-        tuple: (`path_event`, `arrival_event`):
+        tuple[Event, Event]: `(path_event, arrival_event)`:
 
-        * `path_event` (Event): The Event on this Path that matches the light travel time
-          to `arrival`. This always has position (0,0,0) on the Path, and it holds the
+        * `path_event`: The Event on this Path that matches the light travel time to
+          `arrival`. This always has position (0,0,0) on the Path, and it holds the
           departing photon's line of sight and light travel time.
-        * `arrival_event` (Event): A copy of `arrival`, with the photon's arriving line of
-          sight and light travel time filled in.
+        * `arrival_event`: A copy of `arrival`, with the photon's arriving line of sight
+          and light travel time filled in.
 
     Notes:
         These subfields are defined in the returned Events:
@@ -74,16 +75,17 @@ def photon_from_event(self, departure, *, derivs=False, guess=None, antimask=Non
         departure (Event): The Event of a photon's departure.
         derivs (bool, optional): True to propagate derivatives of the `departure` position
             into the returned Events. The time derivative is always retained.
-        guess (Scalar, array-like, or float, optional): An initial guess to use as the
-            event time along this Path; otherwise None. Should be provided if the event
-            time was already returned from a similar calculation.
+        guess (Scalar, optional): An initial guess to use as the event time along this
+            Path; otherwise None. Should be provided if the event time was already
+            returned from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean array to be applied to event
             times and positions. Only the indices where antimask=True will be used in the
             solution.
         quick (dict or bool, optional): A dictionary of parameter values to use as
-            overrides to the configured default QuickPath and QuickFrame parameters. Use
-            False to disable the use of QuickPaths and QuickFrames. The default quick
-            dictionary is defined in config.py.
+            overrides to the configured default :class:`~oops.path.QuickPath` and
+            :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
+            QuickPaths and QuickFrames. The default quick dictionary is defined in
+            config.py.
         converge (dict, optional): A dictionary of parameters to override the configured
             default convergence parameters. The default configuration is defined in
             config.py. Convergence parameters are as follows:
@@ -99,13 +101,13 @@ def photon_from_event(self, departure, *, derivs=False, guess=None, antimask=Non
               prevents the divergence of the solution in some cases.
 
     Returns:
-        tuple: (`path_event`, `departure_event`):
+        tuple[Event, Event]: `(path_event, departure_event)`:
 
-        * `path_event` (Event): The Event on this Path that matches the light travel time
-          from `departure`. This always has position (0,0,0) on the Path, and it holds the
+        * `path_event`: The Event on this Path that matches the light travel time from
+          `departure`. This always has position (0,0,0) on the Path, and it holds the
           arriving photon's line of sight and light travel time.
-        * `departure_event` (Event): A copy of `departure`, with the photon's departing
-          line of sight and light travel time filled in.
+        * `departure_event`: A copy of `departure`, with the photon's departing line of
+          sight and light travel time filled in.
 
     Notes:
         These subfields are defined in the returned Events:
@@ -131,16 +133,17 @@ def _solve_photon(self, link, sign, *, derivs=False, guess=None, antimask=None,
             to photons arriving at this Path after departing from the Event.
         derivs (bool, optional): True to propagate derivatives of the link position into
             the returned event. The time derivative is always retained.
-        guess (Scalar, array-like, or float, optional): An initial guess to use as the
-            event time along this Path; otherwise None. Should be provided if the event
-            time was already returned from a similar calculation.
+        guess (Scalar, optional): An initial guess to use as the event time along this
+            Path; otherwise None. Should be provided if the event time was already
+            returned from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean array to be applied to event
             times and positions. Only the indices where antimask=True will be used in the
             solution.
         quick (dict or bool, optional): A dictionary of parameter values to use as
-            overrides to the configured default QuickPath and QuickFrame parameters. Use
-            False to disable the use of QuickPaths and QuickFrames. The default quick
-            dictionary is defined in config.py.
+            overrides to the configured default :class:`~oops.path.QuickPath` and
+            :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
+            QuickPaths and QuickFrames. The default quick dictionary is defined in
+            config.py.
         converge (dict, optional): A dictionary of parameters to override the configured
             default convergence parameters. The default configuration is defined in
             config.py. Convergence parameters are as follows:
@@ -156,12 +159,12 @@ def _solve_photon(self, link, sign, *, derivs=False, guess=None, antimask=None,
               prevents the divergence of the solution in some cases.
 
     Returns:
-        tuple[Event, Event]: (`path_event`, `link_event`).
+        tuple[Event, Event]: `(path_event, link_event)`:
 
-        * `path_event`: The Event on this Path that matches the light travel time from the
-          `link` event. This Event always has position (0,0,0) on the Path.
-        * `link_event`: A copy of the given `link` Event, with the photon arrival or
-          departure line of sight and light travel time filled in.
+        * `path_event`: The Event on this Path that matches the light travel time to or
+          from `link`. This always has position (0,0,0) on the Path.
+        * `link_event`: A copy of `link`, with the photon arrival or departure line
+          of sight and light travel time filled in.
 
     Notes:
         These subfields are defined in the returned Events:

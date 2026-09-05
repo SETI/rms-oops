@@ -12,10 +12,10 @@ from oops.surface.ellipsoid import Ellipsoid
 class Spheroid(Ellipsoid):
     """A spheroidal surface centered on a path and fixed within a frame.
 
-    The short radius of the spheroid is oriented along the Z-axis of the frame.
+    The short radius of the spheroid is oriented along the *z*-axis of the frame.
 
     The coordinates defining the surface grid are (longitude, latitude), based on the
-    assumption that a spherical body has been "squashed" along the Z-axis. The latitude
+    assumption that a spherical body has been "squashed" along the *z*-axis. The latitude
     defined in this manner is neither planetocentric nor planetographic; functions are
     provided to perform the conversion to either choice. Longitudes are measured in a
     right-handed manner, increasing toward the east; values range from 0 to 2*pi.
@@ -33,7 +33,7 @@ class Spheroid(Ellipsoid):
             origin (Path or str): The Path or the ID of the Path defining the center of
                 the spheroid.
             frame (Frame or str): The Frame or the ID of the Frame in which the
-                spheroid is fixed, with the short radius along the Z-axis.
+                spheroid is fixed, with the short radius along the *z*-axis.
             radii (tuple[float, ...]): `(a, c)` or `(a, a, c)`, the long and short radii
                 of the spheroid, in km.
         """
@@ -63,12 +63,9 @@ class Spheroid(Ellipsoid):
             derivs (bool, optional): True to propagate derivatives in pos into the
                 returned intercepts.
             guess (Scalar, optional): Optional initial guess at coefficient `p` such
-                that::
-
-                    intercept + p * normal(intercept) = pos.
-
-                Use `guess=True` for the converged value of `p` to be returned even if an
-                initial guess is unavailable.
+                that ``intercept + p * normal(intercept) = pos``. Use `guess=True` for
+                the converged value of `p` to be returned even if an initial guess is
+                unavailable.
             hints (Any, optional): Any data that might be useful to carry over from one
                 call to the next; unused by this Surface subclass. If it is not None,
                 its value is appended to the returned tuple.
@@ -79,7 +76,7 @@ class Spheroid(Ellipsoid):
             * `intercept` (Vector3): Surface intercept points relative to this surface's
               origin and frame, in km. Where no intercept exists, values are masked.
             * `p` (Scalar): The converged solution such that
-              `intercept + p * normal(intercept) = pos`; included if the input value of
+              ``intercept + p * normal(intercept) = pos``; included if the input value of
               `guess` is not None.
             * `hints` (Any): The input value of `hints`, included if it is not None.
         """

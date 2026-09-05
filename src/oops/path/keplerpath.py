@@ -296,7 +296,7 @@ class KeplerPath(Path, Fittable):
     def _xyz_planet(self, time, partials=False):
         """Body position and velocity relative to the planet, in planet's frame.
 
-        Results are returned in an inertial frame where the Z-axis is aligned with the
+        Results are returned in an inertial frame where the *z*-axis is aligned with the
         planet's rotation pole. Optionally, it also returns the partial derivatives of the
         position vector with respect to the orbital elements, on the assumption that
         all orbital elements are independent. The coordinates are only accurate to
@@ -752,8 +752,10 @@ class KeplerPath(Path, Fittable):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
             partials (bool, optional): True to include the derivatives of position with
                 respect to the orbital elements.
 
@@ -856,19 +858,20 @@ class KeplerPath(Path, Fittable):
             arrival (Event): The Event of a photon's arrival.
             derivs (bool, optional): True to propagate derivatives of the `arrival`
                 position into the returned Events. The time derivative is always retained.
-            guess (Scalar, array-like, or float, optional): An initial guess to use as the
-                event time along this Path; otherwise None. Should be provided if the
-                event time was already returned from a similar calculation.
+            guess (Scalar, optional): An initial guess to use as the event time along this
+                Path; otherwise None. Should be provided if the event time was already
+                returned from a similar calculation.
             antimask (numpy.ndarray or bool, optional): A boolean array to be applied to
                 event times and positions. Only the indices where antimask=True will be
                 used in the solution.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames. The default
-                quick dictionary is defined in config.py.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
             converge (dict, optional): A dictionary of parameters to override the
-                configured default convergence parameters. The default configuration
-                is defined in config.py. Convergence parameters are as follows:
+                configured default convergence parameters. The default configuration is
+                defined in config.py. Convergence parameters are as follows:
 
                 * `max_iterations` (int): The maximum number of iterations of Newton's
                   method to perform. It should almost never need to be > 6.
@@ -879,17 +882,18 @@ class KeplerPath(Path, Fittable):
                   light travel time from the nominal range calculated initially. Changes
                   in light travel with absolute values larger than this limit are clipped.
                   This prevents the divergence of the solution in some cases.
-            partials (bool, optional): True to include the partial derivatives of the
-                returned Events relative to the orbital elements.
+
+            partials (bool, optional): True to include the derivatives of position
+                with respect to the orbital elements.
 
         Returns:
-            tuple[Event, Event]: (`path_event`, `arrival_event`).
+            tuple: `(path_event, arrival_event)`:
 
-            * `path_event`: The Event on this Path that matches the light travel time to
-              `arrival`. This Event always has position (0,0,0) on the Path, and it
+            * `path_event` (Event): The Event on this Path that matches the light travel
+              time to `arrival`. This always has position (0,0,0) on the Path, and it
               holds the departing photon's line of sight and light travel time.
-            * `arrival_event`: A copy of the given `arrival` Event, with the photon's
-              arriving line of sight and light travel time filled in.
+            * `arrival_event` (Event): A copy of `arrival`, with the photon's arriving
+              line of sight and light travel time filled in.
 
         Notes:
             These subfields are defined in the returned Events:
@@ -897,7 +901,7 @@ class KeplerPath(Path, Fittable):
             * In `path_event`, `dep` (Vector3) is the direction of the outgoing photon
               from this Path and `dep_lt` (Scalar) is the positive light travel time to
               `arrival_event`.
-            * In `arrival_event`: `arr` (Vector3) is the direction of the incoming photon
+            * In `arrival_event`, `arr` (Vector3) is the direction of the incoming photon
               and `arr_lt` (Scalar) is the negative light travel time from `path_event`.
         """
 

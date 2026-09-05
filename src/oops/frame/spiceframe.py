@@ -198,7 +198,7 @@ class SpiceFrame(Frame):
                 in the SPICE toolkit.
 
         Returns:
-            tuple[int, str]: (`spice_code`, `spice_name`) as defined within the SPICE
+            tuple[int, str]: `(spice_code, spice_name)` as defined within the SPICE
             Toolkit.
 
         Raises:
@@ -211,9 +211,9 @@ class SpiceFrame(Frame):
             TypeError: If `arg` is not an integer or string.
         """
 
-        # A trapped cspyce error is suppressed with `from None`; its traceback ends
-        # inside the SWIG wrapper and its message names the C signature rather than the
-        # input, so it adds nothing the caller can act on.
+        # A trapped cspyce error is suppressed with `from None`; its traceback ends inside
+        # the SWIG wrapper and its message names the C signature rather than the input, so
+        # it adds nothing the caller can act on.
 
         # Interpret an integer input
         if isinstance(arg, numbers.Integral):
@@ -283,9 +283,9 @@ class SpiceFrame(Frame):
         Notes:
             A Transform defines `omega` in the reference frame, so the derivative is
             taken through the conjugate quaternion rather than through `quat` itself;
-            `2 * qdot / quat` would give the vector in the coordinates of this frame
+            ``2 * qdot / quat`` would give the vector in the coordinates of this frame
             instead. The sign follows from the direction of the rotation that
-            `Quaternion.as_quaternion` assigns to a rotation matrix.
+            ``Quaternion.as_quaternion`` assigns to a rotation matrix.
         """
 
         return -2. * (quat.reciprocal() * Quaternion(qdot)).vals[1:4]
@@ -318,8 +318,10 @@ class SpiceFrame(Frame):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the
@@ -447,17 +449,19 @@ class SpiceFrame(Frame):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
-            tuple[Scalar, Transform]: (`valid_time`, `transform`):
+            tuple[Scalar, Transform]: `(valid_time, transform)`:
 
-            * `valid_time` identifies the time(s) at which `transform` has been provided;
-              this may be a subset of the input times, because it omits the times at which
-              the Transform could not be evaluated.
-            * `transform` is the Transform defined at `valid_time`. It rotates vectors
-              from the reference frame to this frame.
+            * `valid_time` (Scalar) identifies the time(s) at which `transform` has been
+              provided; this may be a subset of the input times, because it omits the
+              times at which the Transform could not be evaluated.
+            * `transform` (Transform) is the Transform defined at `valid_time`. It rotates
+              vectors from the reference frame to this frame.
 
         Raises:
             RuntimeError: If `time` is multidimensional and any single time is out of

@@ -17,7 +17,8 @@ class CoordPath(Path):
 
         Parameters:
             surface (Surface): The surface to which the coordinates refer.
-            coords (tuple): 2 or 3 Scalars defining the coordinates on the surface.
+            coords (tuple[Scalar, ...]): 2 or 3 Scalars defining the coordinates on the
+                surface.
             obs (Path or str, optional): The Path or the ID of the Path of the observer,
                 required if `surface` is "virtual".
             path_id (str, optional): The ID under which to register this Path; None to
@@ -95,8 +96,10 @@ class CoordPath(Path):
         Parameters:
             time (Scalar): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames.
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
 
         Returns:
             Event: The Event object containing (at least) the time, position, and velocity

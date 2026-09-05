@@ -118,10 +118,10 @@ class Limb(Surface):
             derivs (bool, optional): True to propagate any derivatives inside pos and obs
                 into the returned coordinates.
             hints (Scalar, optional): Optionally, the value of the coefficient `p` such
-                that `ground + p * normal(ground) = pos`, for the ground point associated
-                with the position. If it is not None, the converged value of `p` is
-                appended to the returned tuple; use `hints=True` if you lack an initial
-                value but require the new value to be returned.
+                that ``ground + p * normal(ground) = pos``, for the ground point
+                associated with the position. If it is not None, the converged value of
+                `p` is appended to the returned tuple; use `hints=True` if you lack an
+                initial value but require the new value to be returned.
             groundtrack (bool, optional): True to append the intercept point on the
                 surface to the returned tuple.
 
@@ -243,11 +243,11 @@ class Limb(Surface):
                 into the returned intercept point.
             guess (Scalar, optional): Unused.
             hints (Scalar, optional): Optional initial guess at the coefficient `p` such
-                that `ground + p * normal(ground) = limb_intercept`, for the ground point
-                on the body surface associated with the limb intercept point being sought.
-                If it is not None, the converged value is appended to the returned tuple;
-                use `hints=True` if you lack an initial guess but require the converged
-                value of `p` to be returned.
+                that ``ground + p * normal(ground) = limb_intercept``, for the ground
+                point on the body surface associated with the limb intercept point being
+                sought. If it is not None, the converged value is appended to the returned
+                tuple; use `hints=True` if you lack an initial guess but require the
+                converged value of `p` to be returned.
             groundtrack (bool, optional): True to append the associated body surface
                 points to the returned results.
 
@@ -256,7 +256,7 @@ class Limb(Surface):
 
             * `pos` (Vector3): Intercept points on the Surface relative to this surface's
               origin and frame, in km.
-            * `t` (Scalar): Value such that `intercept = obs + t * los`.
+            * `t` (Scalar): Value such that ``intercept = obs + t * los``.
             * `p` (Scalar): The converged solution such that::
 
                 ground + p * normal(ground) = limb_intercept;
@@ -363,7 +363,7 @@ class Limb(Surface):
                 and frame; ignored for this Surface subclass.
             time (Scalar, optional): Time at which to evaluate the Surface; ignored for
                 this Surface subclass.
-            derivs (bool, optional): True to propagate any derivatives of pos into the
+            derivs (bool, optional): True to propagate any derivatives of `pos` into the
                 returned normal vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
                 call to the next; unused by this Surface subclass. If it is not None,
@@ -463,7 +463,7 @@ class Limb(Surface):
             derivs (bool, optional): True to propagate derivatives of pos and obs into the
                 returned values.
             hints (Scalar, optional): Optional value of the coefficient `p` such that
-                `ground + p * normal(ground) = pos`. If it is not None, the value of `p`
+                ``ground + p * normal(ground) = pos``. If it is not None, the value of `p`
                 is appended to the returned tuple; use `hints=True` if you lack an initial
                 value but require the new value to be returned.
             groundtrack (bool, optional): True to append the associated groundtrack points

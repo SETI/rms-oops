@@ -77,4 +77,4 @@ jobs:
       # This step needs no SPICE kernels: conf.py mocks cspyce.
       - name: Build the documentation
         run: |
-          python -m sphinx -W -n -E -b html docs docs/_build
+          python -m sphinx -W -n -E -b html docs docs/_build/html

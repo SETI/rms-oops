@@ -12,7 +12,7 @@ class NullSurface(Surface):
     """An infinitesimal surface centered on a path and using a given frame.
 
     A subclass of :class:`~oops.Surface` whose coordinates are the rectangular
-    coordinates `(x,y,z)` relative to its origin and frame.
+    coordinates *(x,y,z)* relative to its origin and frame.
     """
 
     COORDINATE_TYPE = 'rectangular'
@@ -27,7 +27,7 @@ class NullSurface(Surface):
             origin (Path or str): The Path or the ID of the Path defining the motion of
                 the center of the ring plane.
             frame (Frame or str): The Frame or the ID of the Frame in which this
-                Surface's "normal" is defined by the z-axis.
+                Surface's "normal" is defined by the *z*-axis.
         """
 
         self.origin = Path.as_waypoint(origin)
@@ -49,7 +49,7 @@ class NullSurface(Surface):
                             hints=None):
         """Surface coordinates associated with a position vector.
 
-        For NullSurface, the coordinates are simply the (x,y,z) rectangular coordinates
+        For NullSurface, the coordinates are simply the *(x,y,z)* rectangular coordinates
         relative to the surface's origin and frame.
 
         Parameters:
@@ -91,7 +91,7 @@ class NullSurface(Surface):
 
         Parameters:
             coords (tuple): Two or three Scalars defining coordinates at or near this
-                surface. These are the (x,y,z) rectangular coordinates relative to the
+                surface. These are the *(x,y,z)* rectangular coordinates relative to the
                 surface's origin and frame. They can have different shapes, but must be
                 broadcastable to a common shape.
             obs (Vector3, optional): Observer position relative to this Surface's origin
@@ -157,7 +157,7 @@ class NullSurface(Surface):
 
             * `pos` (Vector3): Intercept points on the Surface relative to this surface's
               origin and frame, in km.
-            * `t` (Scalar): Such that `intercept = obs + t * los`.
+            * `t` (Scalar): Such that ``intercept = obs + t * los``.
             * `hints` (Any): The input value of `hints`, included if it is not None.
         """
 
@@ -186,7 +186,7 @@ class NullSurface(Surface):
                 and frame; ignored for this Surface subclass.
             time (Scalar, optional): Time at which to evaluate the Surface; ignored for
                 this Surface subclass.
-            derivs (bool, optional): True to propagate any derivatives of pos into the
+            derivs (bool, optional): True to propagate any derivatives of `pos` into the
                 returned normal vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
                 call to the next; unused by this Surface subclass. If it is not None,

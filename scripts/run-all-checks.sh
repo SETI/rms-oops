@@ -571,7 +571,7 @@ run_docs_checks() {
     # -E rebuilds from scratch, so a stale cache cannot hide a warning that a previous run
     # already reported.
     print_info "Building the documentation..."
-    if python -m sphinx -W -n -E -b html docs docs/_build; then
+    if python -m sphinx -W -n -E -b html docs docs/_build/html; then
         print_success "Documentation build passed"
         deactivate 2>/dev/null || true
         return 0

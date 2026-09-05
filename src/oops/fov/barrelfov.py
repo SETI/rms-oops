@@ -29,55 +29,56 @@ class BarrelFOV(FOV):
         """Constructor for a BarrelFOV.
 
         Parameters:
-            uv_scale (float, tuple, or Pair): The ratios `dx/du` and `dy/dv` at the
-                center of the FOV. For example, if `(u,v)` are in units of arcseconds,
+            uv_scale (Pair or tuple[float, float]): The ratios *dx/du* and *dy/dv* at the
+                center of the FOV. For example, if *(u,v)* are in units of arcseconds,
                 then::
 
                     uv_scale = Pair((pi/180/3600.,pi/180/3600.))
 
                 Use the sign of the second element to define the direction of increasing
-                `v`: negative for up, positive for down.
-            uv_shape (tuple, Pair, int, or float): The size of the field of view in
-                pixels. This number can be non-integral if the detector is not composed of
-                a rectangular array of pixels.
+                *v*: negative for up, positive for down.
+            uv_shape (Pair or tuple[int, int]): The size of the field of view in pixels.
+                This number can be non-integral if the detector is not composed of a
+                rectangular array of pixels.
             coefft_xy_from_uv (numpy.ndarray, optional): The polynomial coefficient array
-                describing the radial distortion from `(u,v)` to `(x,y)`. It is a function
-                of `r`, defined as::
+                describing the radial distortion from *(u,v)* to *(x,y)*. It is a function
+                of *r*, defined as::
 
                     r = sqrt(((u-uv_los[0]) * uv_scale[0])**2 +
                              ((v-uv_los[1]) * uv_scale[1])**2)
 
-                In other words, `r` is in units of radians and measures the distance from
-                the center of the FOV if there were no distortion. The polynomial `f(r)`
+                In other words, *r* is in units of radians and measures the distance from
+                the center of the FOV if there were no distortion. The polynomial *f(r)*
                 returns the distorted distance given the un-distorted distance. Because
                 this polynomial cannot have a constant term, the coefficients begin with
                 the linear term, which is typically ~ 1. In other words,
-                `coefft_xy_from_uv[i]` is the coefficient on `r**(i+1)`. If this input is
-                None, the distortion polynomial for `uv_from_xy` is inverted.
+                ``coefft_xy_from_uv[i]`` is the coefficient on ``r**(i+1)``. If this input
+                is None, the distortion polynomial for ``uv_from_xy`` is inverted.
             coefft_uv_from_xy (numpy.ndarray, optional): The polynomial coefficient array
-                describing the radial distortion scale factor from `(x,y)` to `(u,v)`. It
-                is a function of `r`, defined as::
+                describing the radial distortion scale factor from *(x,y)* to *(u,v)*. It
+                is a function of *r*, defined as::
 
                     r = sqrt(x**2 + y**2),
 
-                in units of radians. The array has shape `(order,)` under the assumption
-                that there can be no constant term, so `coefft_uv_from_xy[i]` is the
-                coefficient on `r**(i+1)`. The first coefficient is typically ~ 1,
+                in units of radians. The array has shape ``(order,)`` under the assumption
+                that there can be no constant term, so ``coefft_uv_from_xy[i]`` is the
+                coefficient on ``r**(i+1)``. The first coefficient is typically ~ 1,
                 implying no distortion at the center of the FOV. If None, the distortion
-                polynomial for `xy_from_uv` is inverted.
-            uv_los (float, tuple, or Pair, optional): The `(u,v)` coordinates of the
+                polynomial for ``xy_from_uv`` is inverted.
+            uv_los (Pair or tuple[float, float], optional): The *(u,v)* coordinates of the
                 nominal line of sight. By default, this is the midpoint of the rectangle,
-                i.e., `uv_shape/2`.
+                i.e., ``uv_shape/2``.
             uv_area (float, optional): The nominal area of a pixel in steradians after
                 distortion has been removed.
             iters (int, optional): The number of iterations of Newton's method to use when
                 inverting the distortion polynomial.
             fast (bool, optional): If True and both sets of coefficients are provided, the
                 polynomials will be used in both directions, meaning that the conversions
-                `xy_from_uv` and `uv_from_xy` might be inconsistent, although probably at
-                the sub-pixel level. If False, then `uv_from_xy` is refined further using
-                one or two steps of Newton's method, which provides consistency at the
-                level of machine precision, but `uv_from_xy` will be somewhat slower.
+                ``xy_from_uv`` and ``uv_from_xy`` might be inconsistent, although probably
+                at the sub-pixel level. If False, then ``uv_from_xy`` is refined further
+                using one or two steps of Newton's method, which provides consistency at
+                the level of machine precision, but ``uv_from_xy`` will be somewhat
+                slower.
         """
 
         self.coefft_xy_from_uv = None
@@ -142,20 +143,20 @@ class BarrelFOV(FOV):
         self.freeze()
 
     def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The camera coordinates `(x,y)` at FOV coordinates `(u,v)` and a given time.
+        """The camera coordinates *(x,y)* at FOV coordinates *(u,v)* and a given time.
 
         Parameters:
-            uv_pair (Pair): `(u,v)` coordinates in this FOV.
+            uv_pair (Pair): *(u,v)* coordinates in this FOV.
             time (Scalar, optional): Absolute time in seconds TDB. Ignored by BarrelFOV.
-            derivs (bool, optional): If True, any derivatives in `(u,v)` get propagated
-                into the returned `(x,y)` coordinates.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
+                into the returned *(x,y)* coordinates.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: The transformed `(x,y)` coordinates in the camera's frame.
+            Pair: The transformed *(x,y)* coordinates in the camera's frame.
         """
 
         # Convert to xy using flat FOV model
@@ -180,20 +181,20 @@ class BarrelFOV(FOV):
         return flat_xy * true_over_flat
 
     def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The FOV coordinates `(u,v)` at camera coordinates `(x,y)` and a given time.
+        """The FOV coordinates *(u,v)* at camera coordinates *(x,y)* and a given time.
 
         Parameters:
-            xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.
+            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
             time (Scalar, optional): Absolute time in seconds TDB. Ignored by BarrelFOV.
-            derivs (bool, optional): If True, any derivatives in `(x,y)` get propagated
-                into the returned `(u,v)` coordinates.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
+                into the returned *(u,v)* coordinates.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: The computed `(u,v)` FOV coordinates, with the same shape as `xy_pair`.
+            Pair: The computed *(u,v)* FOV coordinates, with the same shape as `xy_pair`.
         """
 
         true_xy = Pair.as_pair(xy_pair, recursive=derivs)
@@ -230,27 +231,27 @@ class BarrelFOV(FOV):
 
     @staticmethod
     def _eval_ratio(r, coefft, dcoefft, *, derivs=False, d_dr=False):
-        """Compute the ratio polynomial(r) / r.
+        """Compute the ratio ``polynomial(r) / r``.
 
         By returning the ratio instead of the polynomial value directly, it is easier to
-        handle `r = polynomial(r) = 0`.
+        handle ``r = polynomial(r) = 0``.
 
         Parameters:
             r (Scalar): The points at which to evaluate the polynomial.
             coefft (numpy.ndarray): The coefficient array defining the polynomial, with
                 the leading zero-valued constant term omitted.
             dcoefft (numpy.ndarray): The coefficients of the derivative of the ratio,
-                i.e., `coefft * [0,1,2,...]`.
+                i.e., ``coefft * [0,1,2,...]``.
             derivs (bool, optional): True to include the derivatives embedded in `r` in
                 the result.
             d_dr (bool, optional): If True, the returned quantity is a tuple
-                `(ratio, dratio/dr)`; otherwise, only `ratio` is returned.
+                `(ratio, dratio_dr)`; otherwise, only `ratio` is returned.
 
         Returns:
-            Scalar or tuple[Scalar, Scalar]: Either `ratio` or `(ratio, dratio_dr)`,
-            depending on the input value of `d_dr`.
+            Scalar or tuple: Either `ratio` or `(ratio, dratio_dr)`, depending on the
+            input value of `d_dr`.
 
-            * `ratio` (Scalar): The value of `polynomial(r) / r`.
+            * `ratio` (Scalar): The value of ``polynomial(r) / r``.
             * `dratio_dr` (Scalar): The derivative of `ratio` with respect to `r`.
         """
 
@@ -286,9 +287,11 @@ class BarrelFOV(FOV):
 
     @staticmethod
     def _solve_ratio(f, r_guess, coefft, dcoefft, *, derivs=False, iters=8, precision=0.):
-        """Invert a 1-D polynomial to find `r` where `polynomial(r) = f`, returning `r/f`.
+        """Invert a 1-D polynomial to find `r` where ``polynomial(r) = f``, returning
+        *r/f*.
 
-        Using the ratio `r/f` instead of `r` itself makes it easier to handle `r = f = 0`.
+        Using the ratio *r/f* instead of `r` itself makes it easier to handle
+        ``r = f = 0``.
 
         Parameters:
             f (Scalar): The values of the polynomial.
@@ -296,7 +299,7 @@ class BarrelFOV(FOV):
             coefft (numpy.ndarray): Coefficient array defining the polynomial, with the
                 leading zero-valued constant term omitted.
             dcoefft (numpy.ndarray): The coefficients of the derivative of the ratio
-                `polynomial(r) / r`, i.e., `coefft * [0,1,2,...]`.
+                ``polynomial(r) / r``, i.e., ``coefft * [0,1,2,...]``.
             derivs (bool, optional): True to include the derivatives embedded in `f` in
                 the result.
             iters (int, optional): The maximum number of iterations of Newton's method.
@@ -305,7 +308,7 @@ class BarrelFOV(FOV):
                 will require one extra iteration.
 
         Returns:
-            Scalar: The ratio `r/f`, where `r` is the value at which the polynomial
+            Scalar: The ratio *r/f*, where `r` is the value at which the polynomial
             evaluates to `f`.
         """
 

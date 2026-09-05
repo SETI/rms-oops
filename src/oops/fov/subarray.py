@@ -18,11 +18,11 @@ class Subarray(FOV):
         Parameters:
             fov (FOV): Object within which this subarray is defined.
             new_los (tuple or Pair): The location of the subarray's line of sight in the
-                `(u,v)` coordinates of the original FOV.
+                *(u,v)* coordinates of the original FOV.
             uv_shape (float, tuple, or Pair): The new size of the field of view in pixels.
-            uv_los (float, tuple, or Pair, optional): The `(u,v)` coordinates of the new
+            uv_los (float, tuple, or Pair, optional): The *(u,v)* coordinates of the new
                 line of sight. By default, this is the midpoint of the rectangle, i.e.,
-                `uv_shape/2`.
+                ``uv_shape/2``.
         """
 
         self.fov = fov
@@ -56,21 +56,21 @@ class Subarray(FOV):
         self.freeze()
 
     def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The camera coordinates `(x,y)` at FOV coordinates `(u,v)` and a given time.
+        """The camera coordinates *(x,y)* at FOV coordinates *(u,v)* and a given time.
 
         Parameters:
-            uv_pair (Pair): `(u,v)` coordinates in this FOV.
+            uv_pair (Pair): *(u,v)* coordinates in this FOV.
             time (Scalar, optional): Absolute time in seconds TDB.
-            derivs (bool, optional): If True, any derivatives in `(u,v)` get propagated
-                into the returned `(x,y)` coordinates.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
+                into the returned *(x,y)* coordinates.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: The transformed `(x,y)` coordinates in the camera's frame, with the same
-                shape as uv_pair.
+            Pair: The transformed *(x,y)* coordinates in the camera's frame, with the same
+            shape as uv_pair.
         """
 
         old_xy = self.fov.xy_from_uvt(self.new_origin_in_old_uv + uv_pair,
@@ -79,20 +79,20 @@ class Subarray(FOV):
         return old_xy - self.new_los_wrt_old_xy
 
     def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The FOV coordinates `(u,v)` at camera coordinates `(x,y)` and a given time.
+        """The FOV coordinates *(u,v)* at camera coordinates *(x,y)* and a given time.
 
         Parameters:
-            xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.
+            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
             time (Scalar, optional): Absolute time in seconds TDB.
-            derivs (bool, optional): If True, any derivatives in `(x,y)` get propagated
-                into the returned `(u,v)` coordinates.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
+                into the returned *(u,v)* coordinates.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: The computed `(u,v)` FOV coordinates, with the same shape as xy_pair.
+            Pair: The computed *(u,v)* FOV coordinates, with the same shape as `xy_pair`.
         """
 
         old_uv = self.fov.uv_from_xyt(self.new_los_wrt_old_xy + xy_pair,

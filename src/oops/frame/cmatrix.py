@@ -14,8 +14,8 @@ class Cmatrix(Frame):
     """A Frame subclass in which the Frame is defined by a fixed rotation matrix.
 
     Most commonly, it rotates J2000 coordinates into the frame of a camera, in which the
-    Z-axis points along the optic axis, the X-axis points rightward, and the Y-axis points
-    downward.
+    *z*-axis points along the optic axis, the *x*-axis points rightward, and the *y*-axis
+    points downward.
     """
 
     _WAYFRAMES = {}
@@ -24,8 +24,8 @@ class Cmatrix(Frame):
         """Constructor for a Cmatrix.
 
         Parameters:
-            cmatrix (Matrix3 or array-like): The 3x3 rotation matrix that rotates
-                coordinates from `reference` into this Frame.
+            cmatrix (Matrix3): The 3x3 rotation matrix that rotates coordinates from
+                `reference` into this Frame.
             reference (Frame or str, optional): The Frame or the ID of the Frame relative
                 to which this Frame is defined; None for J2000.
             frame_id (str, optional): The ID under which to register this Frame; None to
@@ -92,12 +92,10 @@ class Cmatrix(Frame):
         """Construct a Cmatrix from RA, dec, and celestial north clock angles.
 
         Parameters:
-            ra (Scalar, array-like, or float): The right ascension of the optic axis in
-                degrees.
-            dec (Scalar, array-like, or float): The declination of the optic axis in
-                degrees.
-            clock (Scalar, array-like, or float): The angle of celestial north in degrees,
-                measured clockwise from the "up" direction in the observation.
+            ra (Scalar): The right ascension of the optic axis in degrees.
+            dec (Scalar): The declination of the optic axis in degrees.
+            clock (Scalar): The angle of celestial north in degrees, measured clockwise
+                from the "up" direction in the observation.
             reference (Frame or str, optional): The Frame or the ID of the Frame
                 relative to which this Frame is defined; None for J2000.
             frame_id (str, optional): The ID under which to register this Frame; None to
@@ -158,10 +156,7 @@ class Cmatrix(Frame):
 
         Parameters:
             time (Scalar): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames. Ignored by
-                class Cmatrix.
+            quick (dict or bool, optional): Ignored by class Cmatrix.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the

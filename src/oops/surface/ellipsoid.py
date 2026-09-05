@@ -36,8 +36,8 @@ _EXCLUSION_FACTOR = 0.5     # This is `g` in the above discussion
 class Ellipsoid(Surface):
     """An ellipsoidal surface centered on a path and fixed within a frame.
 
-    The short radius of the ellipsoid is oriented along the Z-axis of the frame and the
-    long radius is along the X-axis.
+    The short radius of the ellipsoid is oriented along the *z*-axis of the frame and the
+    long radius is along the *x*-axis.
 
     The coordinates defining the surface grid are `(longitude, latitude)`. Both are based
     on the assumption that a spherical body has been "squashed" along the Y- and Z-axes.
@@ -67,7 +67,7 @@ class Ellipsoid(Surface):
                 the ellipsoid.
             frame (Frame or str): The Frame or the ID of the Frame in which the
                 ellipsoid is fixed, with the shortest radius of the ellipsoid along the
-                Z-axis and the longest radius along the X-axis.
+                *z*-axis and the longest radius along the *x*-axis.
             radii (tuple[float, float, float]): `(a, b, c)`, the radii from longest to
                 shortest, in km.
         """
@@ -159,9 +159,9 @@ class Ellipsoid(Surface):
             derivs (bool, optional): True to propagate any derivatives inside pos and obs
                 into the returned coordinates.
             hints (Scalar, optional): Optionally, the value of the coefficient `p` such
-                that `ground + p * normal(ground) = pos`. If it is not None, the converged
-                value of `p` is appended to the returned tuple; use `hints=True` if you
-                lack an initial value but require the new value to be returned.
+                that ``ground + p * normal(ground) = pos``. If it is not None, the
+                converged value of `p` is appended to the returned tuple; use `hints=True`
+                if you lack an initial value but require the new value to be returned.
             groundtrack (bool, optional): True to append the intercept point on the
                 surface to the returned tuple.
 
@@ -174,7 +174,7 @@ class Ellipsoid(Surface):
               `axes` == 3.
             * `p` (Scalar): The converged coefficient; included if the input value of
               `hints` is not None.
-            * `track` (Vector3): Intercept point on the surface (where z == 0); included
+            * `track` (Vector3): Intercept point on the surface (where *z == 0*); included
               if `groundtrack` is True.
         """
 
@@ -242,7 +242,7 @@ class Ellipsoid(Surface):
             * `pos` (Vector3): Points defined by the coordinates, relative to this
               surface's origin and frame.
             * `hints` (Any): The input value of `hints`, included if it is not None.
-            * `track` (Vector3): Intercept point on the surface (where z == 0); included
+            * `track` (Vector3): Intercept point on the surface (where *z == 0*); included
               if `groundtrack` is True.
         """
 
@@ -319,7 +319,7 @@ class Ellipsoid(Surface):
 
             * `pos` (Vector3): Intercept points on the Surface relative to this surface's
               origin and frame, in km.
-            * `t` (Scalar): Such that `intercept = obs + t * los`.
+            * `t` (Scalar): Such that ``intercept = obs + t * los``.
             * `hints` (Any): The input value of `hints`, included if it is not None.
 
         Raises:
@@ -404,7 +404,7 @@ class Ellipsoid(Surface):
                 and frame; ignored for this Surface subclass.
             time (Scalar, optional): Time at which to evaluate the Surface; ignored for
                 this Surface subclass.
-            derivs (bool, optional): True to propagate any derivatives of pos into the
+            derivs (bool, optional): True to propagate any derivatives of `pos` into the
                 returned normal vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
                 call to the next; unused by this Surface subclass. If it is not None,
@@ -473,7 +473,7 @@ class Ellipsoid(Surface):
             derivs (bool, optional): True to propagate derivatives in pos into the
                 returned intercepts.
             guess (Scalar, optional): Optional initial guess at coefficient `p` such that
-                `intercept + p * normal(intercept) = pos`. Use `guess=True` for the
+                ``intercept + p * normal(intercept) = pos``. Use `guess=True` for the
                 converged value of `p` to be returned even if an initial guess is
                 unavailable.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -486,8 +486,8 @@ class Ellipsoid(Surface):
             * `intercept` (Vector3): Surface intercept points relative to this surface's
               origin and frame, in km. Where no intercept exists, values are masked.
             * `p` (Scalar): The converged solution such that
-              `intercept + p * normal(intercept) = pos`; included if the input value of
-              `guess` is not None.
+              ``intercept + p * normal(intercept) = pos``; included if the input value
+              of `guess` is not None.
             * `hints` (Any): The input value of `hints`, included if it is not None.
         """
 

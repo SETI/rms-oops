@@ -140,8 +140,7 @@ class Instant(Cadence):
                 of this Cadence; False to exclude it.
 
         Returns:
-            Scalar: Time in seconds TDB, masked where the time step is masked and where
-            the time step it selects is masked.
+            Scalar: Time in seconds TDB at `tstep`.
         """
 
         if not self.shape:
@@ -165,8 +164,8 @@ class Instant(Cadence):
                 of the cadence, so the largest index needs no shift.
 
         Returns:
-            tuple[Scalar, Scalar]: The minimum and maximum times associated with the
-            index values, in seconds TDB. The two are equal.
+            tuple[Scalar, Scalar]: The minimum and maximum times associated with `tstep`,
+            in seconds TDB.
         """
 
         time = self.time_at_tstep(tstep, remask=remask, inclusive=inclusive)

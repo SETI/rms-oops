@@ -33,31 +33,33 @@ class PolynomialFOV(FOV):
             uv_shape (float, tuple, or Pair): The size of the field of view in pixels.
                 This number can be non-integral if the detector is not composed of a
                 rectangular array of pixels.
-            coefft_xy_from_uv (array-like, optional): The coefficient array of the
-                polynomial to convert `(u,v)` to `(x,y)`. The array has shape
-                `(order+1, order+1, 2)`, where `coefft[i,j,0]` is the coefficient on
-                `u**i * v**j` yielding `x(u,v)`, and `coefft[i,j,1]` is the coefficient
-                yielding `y(u,v)`. If None, then the polynomial for `uv_from_xy` is
-                inverted.
-            coefft_uv_from_xy (array-like, optional): The coefficient array of the
-                polynomial to convert `(x,y)` to `(u,v)`. The array has shape
-                `(order+1, order+1, 2)`, where `coefft[i,j,0]` is the coefficient on
-                `x**i * y**j` yielding `u(x,y)`, and `coefft[i,j,1]` is the coefficient
-                yielding `v(x,y)`. If None, then the polynomial for `xy_from_uv` is
-                inverted.
-            uv_los (float, tuple, or Pair, optional): The `(u,v)` coordinates of the
+            coefft_xy_from_uv (numpy.ndarray, optional): The coefficient array of the
+                polynomial to convert ``(u,v)`` to ``(x,y)``. The array has shape
+                ``(order+1, order+1, 2)``, where ``coefft[i,j,0]`` is the coefficient on
+                ``u**i * v**j``, yielding ``x(u,v)``, and ``coefft[i,j,1]`` is the
+                coefficient yielding ``y(u,v)``. If None, then the polynomial for
+                :meth:`~oops.FOV.uv_from_xy` is inverted.
+            coefft_uv_from_xy (numpy.ndarray, optional): The coefficient array of the
+                polynomial to convert ``(x,y)`` to ``(u,v)``. The array has shape
+                ``(order+1, order+1, 2)``, where ``coefft[i,j,0]`` is the coefficient on
+                ``x**i * y**j`` yielding ``u(x,y)``, and ``coefft[i,j,1]`` is the
+                coefficient yielding ``v(x,y)``. If None, then the polynomial for
+                :meth:`~oops.FOV.xy_from_uv` is inverted.
+            uv_los (float, tuple, or Pair, optional): The *(u,v)* coordinates of the
                 nominal line of sight. By default, this is the midpoint of the rectangle,
-                i.e., `uv_shape/2`.
+                i.e., ``uv_shape/2``.
             uv_area (float, optional): The nominal area of a pixel in steradians after
                 distortion has been removed.
-            iters (int, optional): The number of iterations of Newton's method to use when
-                inverting the polynomial.
+            iters (int, optional): The maximum number of iterations of Newton's method to
+                use when inverting the polynomial.
             fast (bool, optional): If True and both sets of coefficients are provided, the
                 polynomials will be used in both directions, meaning that the conversions
-                `xy_from_uv` and `uv_from_xy` might be inconsistent, although probably at
-                the sub-pixel level. If False, then `uv_from_xy` is refined further using
-                one or two steps of Newton's method, which provides consistency at the
-                level of machine precision, but `uv_from_xy` will be slightly slower.
+                :meth:`~oops.FOV.xy_from_uv` and
+                :meth:`~oops.FOV.uv_from_xy` might be inconsistent, although
+                probably at the sub-pixel level. If False, then
+                :meth:`~oops.FOV.uv_from_xy` is refined further using one or two
+                steps of Newton's method. This provides consistency at the level of
+                machine precision, but will be slightly slower.
         """
 
         # Prepare coefficients
@@ -150,22 +152,22 @@ class PolynomialFOV(FOV):
         self.freeze()
 
     def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The camera coordinates `(x,y)` at FOV coordinates `(u,v)` and a given time.
+        """The camera coordinates *(x,y)* at FOV coordinates *(u,v)* and a given time.
 
         Parameters:
-            uv_pair (Pair): `(u,v)` coordinates in this FOV.
+            uv_pair (Pair): *(u,v)* coordinates in this FOV.
             time (Scalar, optional): Absolute time in seconds TDB. Ignored by
                 PolynomialFOV.
-            derivs (bool, optional): If True, any derivatives in `(u,v)` get propagated
-                into the returned `(x,y)` coordinates.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
+                into the returned *(x,y)* coordinates.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: The transformed `(x,y)` coordinates in the camera's frame, with the same
-                shape as `uv_pair`.
+            Pair: The transformed *(x,y)* coordinates in the camera's frame, with the same
+            shape as `uv_pair`.
         """
 
         # Mask if necessary
@@ -196,21 +198,21 @@ class PolynomialFOV(FOV):
         return xy
 
     def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The FOV coordinates `(u,v)` at camera coordinates `(x,y)` and a given time.
+        """The FOV coordinates *(u,v)* at camera coordinates *(x,y)* and a given time.
 
         Parameters:
-            xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.
+            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
             time (Scalar, optional): Absolute time in seconds TDB. Ignored by
                 PolynomialFOV.
-            derivs (bool, optional): If True, any derivatives in `(x,y)` get propagated
-                into the returned `(u,v)` coordinates.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
+                into the returned *(u,v)* coordinates.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: The computed `(u,v)` FOV coordinates, with the same shape as `xy_pair`.
+            Pair: The computed *(u,v)* FOV coordinates, with the same shape as `xy_pair`.
         """
 
         xy_pair = Pair.as_pair(xy_pair, recursive=derivs)
@@ -270,14 +272,14 @@ class PolynomialFOV(FOV):
             derivs (bool, optional): If True, derivatives are computed and included in the
                 returned result.
             d_dpq (bool, optional): If True, the returned quantity is a tuple
-                `(ab, dab/dpq)`; otherwise, only `(a,b)` is returned.
+                `(ab, dab_dpq)`; otherwise, only `(a,b)` is returned.
 
         Returns:
-            Pair or tuple[Pair, Pair]: Either `(a,b)` or `((a,b), d(a,b)_d(p,q))`,
-            depending on the input value of `d_dpq`.
+            Pair or tuple[Pair, Pair]: Either `ab` or `(ab, dab_dpq)`, depending on the
+            input value of `d_dpq`.
 
-            * `ab` (Pair): The value of the polynomial.
-            * `dab_dpq` (Pair): The derivative of `(a,b)` with respect to `(p,q)`.
+            * `ab`: The value of the polynomial.
+            * `dab_dpq`: The derivative of `(a,b)` with respect to `(p,q)`.
         """
 
         pq = Pair.as_pair(pq, recursive=derivs)

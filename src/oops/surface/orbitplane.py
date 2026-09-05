@@ -304,7 +304,7 @@ class OrbitPlane(Surface):
 
             * `pos` (Vector3): Intercept points on the Surface relative to its origin
               and frame, in km.
-            * `t` (Scalar): Value such that `intercept = obs + t * los`.
+            * `t` (Scalar): Value such that ``intercept = obs + t * los``.
             * `hints` (Any): The input value of `hints`, included if it is not None.
         """
 
@@ -430,8 +430,8 @@ class OrbitPlane(Surface):
 
         Raises:
             ValueError: If the iteration does not converge. The derivative of
-                `lon = anom + 2e sin(anom)` is `1 + 2e cos(anom)`, which approaches zero
-                as the eccentricity approaches 0.5, so the iteration becomes
+                ``lon = anom + 2e sin(anom)`` is ``1 + 2e cos(anom)``, which approaches
+                zero as the eccentricity approaches 0.5, so the iteration becomes
                 ill-conditioned near that value and fails at and beyond it. Such an orbit
                 is outside the range this first-order model describes.
         """

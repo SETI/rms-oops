@@ -16,7 +16,7 @@ class GraphicEllipsoid(Ellipsoid):
 
     Note that planetographic longitude differs from conventional (planetocentric)
     longitude for triaxial ellipsoids, and is an unconventional choice. Use method
-    `lon_to_centric()` if you wish to convert it to centric longitude.
+    :meth:`lon_to_centric` if you wish to convert it to centric longitude.
     """
 
     def coords_from_vector3(self, pos, *, obs=None, time=None, axes=2, derivs=False,
@@ -51,7 +51,7 @@ class GraphicEllipsoid(Ellipsoid):
               `axes` == 3.
             * `p` (Scalar): The converged coefficient; included if the input value of
               `hints` is not None.
-            * `track` (Vector3): Intercept point on the surface (where z == 0); included
+            * `track` (Vector3): Intercept point on the surface (where *z == 0*); included
               if `groundtrack` is True.
         """
 
@@ -117,7 +117,7 @@ class GraphicEllipsoid(Ellipsoid):
             * `pos` (Vector3): Points defined by the coordinates, relative to this
               surface's origin and frame.
             * `hints` (Any): The input value of `hints`, included if it is not None.
-            * `track` (Vector3): Intercept point on the surface (where z == 0); included
+            * `track` (Vector3): Intercept point on the surface (where *z == 0*); included
               if `groundtrack` is True.
         """
 

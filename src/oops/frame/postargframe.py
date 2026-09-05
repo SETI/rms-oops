@@ -10,9 +10,9 @@ from oops.transform import Transform
 
 
 class PosTargFrame(Frame):
-    """A Frame defined by a fixed rotation about the X and Y axes.
+    """A Frame defined by a fixed rotation about the *x* and *y* axes.
 
-    The rotation places the Z-axis of another frame at a slightly different position in
+    The rotation places the *z*-axis of another frame at a slightly different position in
     this frame.
     """
 
@@ -22,10 +22,10 @@ class PosTargFrame(Frame):
         """Constructor for a PosTargFrame.
 
         Parameters:
-            xpos (float): The X-position, in radians, at which the `reference` Frame's
-                Z-axis falls within this Frame.
-            ypos (float): The Y-position, in radians, at which the `reference` Frame's
-                Z-axis falls within this Frame.
+            xpos (float): The *x*-position, in radians, at which the `reference` Frame's
+                *z*-axis falls within this Frame.
+            ypos (float): The *y*-position, in radians, at which the `reference` Frame's
+                *z*-axis falls within this Frame.
             reference (Frame or str): The Frame or the ID of the Frame relative to which
                 this Frame is defined.
             frame_id (str, optional): The ID under which to register this Frame; None to
@@ -102,10 +102,7 @@ class PosTargFrame(Frame):
 
         Parameters:
             time (Scalar): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
-                overrides to the configured default QuickPath and QuickFrame parameters.
-                Use False to disable the use of QuickPaths and QuickFrames. Ignored by
-                class PosTargFrame.
+            quick (dict or bool, optional): Ignored by class PosTargFrame.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the

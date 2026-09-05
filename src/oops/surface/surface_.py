@@ -39,9 +39,9 @@ class Surface(Mutable):
         COORDINATE_ABBREVS (tuple[str, str, str]): Short abbreviations for the three
             coordinates.
         COORDINATE_RANGES (tuple[tuple[float or None, float or None], ...]): Numeric
-            ranges for the three components: `(None, None)` for no limits, `(0, None)` for
-            non-negative, `(0, 2*pi)` for a cyclic angle, or any other pair of floats to
-            define the specific limits of the range.
+            ranges for the three components: ``(None, None)`` for no limits, ``(0, None)``
+            for non-negative, ``(0, 2*pi)`` for a cyclic angle, or any other pair of
+            floats to define the specific limits of the range.
     """
 
     # Default attributes; override as needed
@@ -103,8 +103,8 @@ class Surface(Mutable):
                 the new value to be returned.
 
         Returns:
-            tuple: Two or three Scalar coordinate values depending on the input value of
-            `axes`, optionally followed by `hints`.
+            tuple[Scalar, ...]: Two or three coordinate values depending on the input
+            value of `axes`, optionally followed by `hints`.
         """
 
         raise NotImplementedError(f'{type(self).__name__}.coords_from_vector3 is not '
@@ -154,8 +154,8 @@ class Surface(Mutable):
                 ignored otherwise.
             derivs (bool, optional): True to propagate any derivatives inside `obs` and
                 `los` into the returned intercept point.
-            guess (Scalar, optional): Optional initial guess at the coefficient `t` such
-                that `intercept = obs + t * los`.
+            guess (Scalar, optional): Optional initial guess at the coefficient *t* such
+                that ``intercept = obs + t * los``.
             hints (Any, optional): Any data that might be useful to carry over from one
                 call to the next. If not None, `hints` values are appended to the returned
                 tuple. Use `hints=True` if you lack an initial value but require the new
@@ -166,7 +166,7 @@ class Surface(Mutable):
 
             * `pos` (Vector3): Intercept points on the Surface relative to its origin
               and frame, in km.
-            * `t` (Scalar): Value such that `intercept = obs + t * los`.
+            * `t` (Scalar): Value such that ``intercept = obs + t * los``.
             * `hints` (Any): Latest version of the `hints` values to be fed into a
               subsequent call. If the subclass does not use hints, the input value of
               `hints` is included if it is not None.
@@ -248,13 +248,14 @@ class Surface(Mutable):
                 have two intercept points; ignored otherwise.
             derivs (bool, optional): True to propagate derivatives in `pos` and `obs` into
                 the returned intercept points.
-            guess (Scalar, optional): Optional initial guess at the coefficient `p` such
-                that `intercept + p * normal(intercept) = pos`. If provided, the converged
-                value of `p` is included in the returned results; use `guess=True` to
-                include this in the return even if an initial guess is not available.
+            guess (Scalar, optional): Optional initial guess at the coefficient *p* such
+                that ``intercept + p * normal(intercept) = pos``. If provided, the
+                converged value of *p* is included in the returned results; use
+                ``guess=True`` to include this in the return even if an initial guess is
+                not available.
             hints (Any, optional): Any data that might be useful to carry over from one
                 call to the next. If not None, `hints` values are appended to the returned
-                tuple. Use `hints=True` if you lack an initial value but require the new
+                tuple. Use ``hints=True`` if you lack an initial value but require the new
                 value to be returned.
 
         Returns:
@@ -263,12 +264,10 @@ class Surface(Mutable):
 
             * `intercept` (Vector3): The Surface intercept points, in km. Where no
               solution exists, values are masked.
-            * `p` (Scalar): The converged solution where::
-
-                 intercept + p * normal(intercept) = pos
-
-              This is included if `guess` is not None. For subclasses that do not use a
-              guess, the input value of `guess` is returned.
+            * `p` (Scalar): The converged solution where
+              ``intercept + p * normal(intercept) = pos``. This is included if `guess`
+              is not None. For subclasses that do not use a guess, the input value of
+              `guess` is returned.
             * `hints` (Any): Latest version of any hint values; included if the input
               value of `hints` is not None. For Surface subclasses that do not use hints,
               the input value of `hints` is returned.
@@ -447,8 +446,8 @@ class Surface(Mutable):
 
         Parameters:
             dpos_duv (Vector3): A Vector3 with denominator shape (2,), defining the
-                partial derivatives `d(x,y,z)/d(u,v)`, where `(x,y,z)` are the 3-D
-                coordinates of a point on the surface and `(u,v)` are pixel coordinates.
+                partial derivatives *d(x,y,z)/d(u,v)*, where *(x,y,z)* are the 3-D
+                coordinates of a point on the surface and *(u,v)* are pixel coordinates.
 
         Returns:
             tuple[Scalar, Scalar]: `(res_min, res_max)`, where `res_min` contains
@@ -457,8 +456,8 @@ class Surface(Mutable):
             coarsest spatial resolution.
 
         Notes:
-            For the best solution, the derivatives should be adjusted such that the u-axis
-            and the v-axis are locally perpendicular. See the source code of
+            For the best solution, the derivatives should be adjusted such that the
+            *u*-axis and the *v*-axis are locally perpendicular. See the source code of
             Backplane.dlos_duv1 in backplane/__init__.py for details.
         """
 
@@ -470,8 +469,8 @@ class Surface(Mutable):
 
         Parameters:
             dpos_duv (Vector3): A Vector3 with denominator shape (2,), defining the
-                partial derivatives `d(x,y,z)/d(u,v)`, where `(x,y,z)` are the 3-D
-                coordinates of a point on the surface and `(u,v)` are pixel coordinates.
+                partial derivatives *d(x,y,z)/d(u,v)*, where *(x,y,z)* are the 3-D
+                coordinates of a point on the surface and *(u,v)* are pixel coordinates.
             _unittest (bool, optional): True to return `(dpos_du_prime, dpos_dv_prime)`
                 instead of `(res_min, res_max)`. This supports unit tests to confirm that
                 the dot product of these two vectors is small.

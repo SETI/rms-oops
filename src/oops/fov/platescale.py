@@ -72,20 +72,20 @@ class Platescale(FOV, Fittable):
     ######################################################################################
 
     def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The `(x,y)` camera frame coordinates given FOV coordinates `(u,v)`.
+        """The *(x,y)* camera frame coordinates given FOV coordinates *(u,v)*.
 
         Parameters:
-            uv_pair (Pair): `(u,v)` coordinates in this FOV.
+            uv_pair (Pair): *(u,v)* coordinates in this FOV.
             time (Scalar, optional): Absolute time in seconds TDB.
-            derivs (bool, optional): If True, any derivatives in `(u,v)` get propagated
-                into the returned `(x,y)` coordinates.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
+                into the returned *(x,y)* coordinates.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: `(x,y)` coordinates in the FOV's frame.
+            Pair: *(x,y)* coordinates in the FOV's frame.
         """
 
         xy_pair = self.fov.xy_from_uvt(uv_pair, time=time, derivs=derivs, remask=remask,
@@ -93,20 +93,20 @@ class Platescale(FOV, Fittable):
         return xy_pair * self.factor
 
     def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The `(u,v)` FOV coordinates given `(x,y)` camera frame coordinates.
+        """The *(u,v)* FOV coordinates given *(x,y)* camera frame coordinates.
 
         Parameters:
-            xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.
+            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
             time (Scalar, optional): Absolute time in seconds TDB.
-            derivs (bool, optional): If True, any derivatives in `(x,y)` get propagated
-                into the returned `(u,v)` coordinates.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
+                into the returned *(u,v)* coordinates.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: `(u,v)` pixel coordinates in the FOV.
+            Pair: *(u,v)* pixel coordinates in the FOV.
         """
 
         xy_pair = Pair.as_pair(xy_pair)

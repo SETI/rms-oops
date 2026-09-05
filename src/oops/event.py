@@ -735,7 +735,8 @@ class Event(Oops):
         would block any later assignment.
 
         Returns:
-            Vector3: The surface velocity, or `Vector3.ZERO` if none was assigned.
+            Vector3: The surface velocity, or a single zero-valued vector if none was
+            assigned.
         """
 
         if self._vflat is None:

@@ -13,25 +13,25 @@ class FOV(Mutable):
     """An abstract class describing the geometry of a field of view.
 
     The properties of an FOV are defined within a fixed coordinate frame, with the
-    positive Z axis oriented near the center of the line of sight. The x and y axes are
-    effectively in the plane of the FOV, with the x-axis oriented horizontally and the
-    y-axis pointed downward. The values for (x,y) are implemented using a "pinhole camera"
-    or "gnomonic" model, in which the z-component has unit length. Therefore, near the
-    center of the field of view, the units of x and y are radians. However, the scale
-    shifts at greater x and y, because the magnitude of the vector is
-    sqrt(1 + x**2 + y**2).
+    positive *z*-axis oriented near the center of the line of sight. The *x* and *y* axes
+    are effectively in the plane of the FOV, with the *x*-axis oriented horizontally and
+    the *y*-axis pointed downward. The values for *(x,y)* are implemented using a "pinhole
+    camera" or "gnomonic" model, in which the *z*-component has unit length. Therefore,
+    near the center of the field of view, the units of *x* and *y* are radians. However,
+    the scale shifts at greater *x* and *y*, because the magnitude of the vector is
+    ``sqrt(1 + x**2 + y**2)``.
 
-    The FOV converts between the actual line of sight vector (x,y,z) and an internal
+    The FOV converts between the actual line of sight vector *(x,y,z)* and an internal
     coordinate system (ICS) that typically defines a pixel grid. It also accommodates any
-    spatial distortion of the field of view. The ICS coordinates (u,v) are linear with the
-    grid of pixels and, typically, a unit step in (u,v) shifts the position by one pixel.
-    The u-axis points rightward in the default display orientation of a data array, and
-    the v-axis points either upward or downward.
+    spatial distortion of the field of view. The ICS coordinates *(u,v)* are linear with
+    the grid of pixels and, typically, a unit step in *(u,v)* shifts the position by one
+    pixel. The *u*-axis points rightward in the default display orientation of a data
+    array, and the *v*-axis points either upward or downward.
 
-    Although ICS coordinates (u,v) are defined here in units of pixels, the FOV concept
+    Although ICS coordinates *(u,v)* are defined here in units of pixels, the FOV concept
     can be used to describe an arbitrary field of view, consisting of detectors of
-    arbitrary shape. In this case, (u,v) are simply a convenient set of coordinates to use
-    in a frame that describes the layout of detectors on the focal plane of the
+    arbitrary shape. In this case, *(u,v)* are simply a convenient set of coordinates to
+    use in a frame that describes the layout of detectors on the focal plane of the
     instrument.
 
     The class also allows for the possibility that the field of view has additional
@@ -39,9 +39,9 @@ class FOV(Mutable):
     through these methods and into the subclass methods.
 
     Attributes:
-        uv_los (Pair): The `(u,v)` coordinates of the nominal line of sight.
-        uv_scale (Pair): The approximate ratios `dx/du` and `dy/dv`. For example, if
-            `(u,v)` are in units of arcseconds, then `uv_scale` is::
+        uv_los (Pair): The *(u,v)* coordinates of the nominal line of sight.
+        uv_scale (Pair): The approximate ratios *dx/du* and *dy/dv*. For example, if
+            *(u,v)* are in units of arcseconds, then `uv_scale` is::
 
                 Pair((pi/180/3600., pi/180/3600.)).
 
@@ -50,7 +50,7 @@ class FOV(Mutable):
             `uv_scale[0]` must *always* be positive.
         uv_shape (Pair): The size of the field of view in pixels. This number can be
             non-integral if the detector is not composed of a rectangular array of pixels.
-        uv_area (float): The nominal area of a region defined by unit steps in `(u,v)`,
+        uv_area (float): The nominal area of a region defined by unit steps in *(u,v)*,
             e.g., the size of a pixel in steradians.
     """
 
@@ -77,39 +77,39 @@ class FOV(Mutable):
     ######################################################################################
 
     def xy_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The camera coordinates `(x,y)` at FOV coordinates `(u,v)` and a given time.
+        """The camera coordinates *(x,y)* at FOV coordinates *(u,v)* and a given time.
 
         Parameters:
-            uv_pair (Pair): `(u,v)` coordinates in this FOV.
+            uv_pair (Pair): *(u,v)* coordinates in this FOV.
             time (Scalar, optional): Absolute time in seconds TDB.
-            derivs (bool, optional): If True, any derivatives in `(u,v)` get propagated
-                into the returned `(x,y)` coordinates.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
+                into the returned *(x,y)* coordinates.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: The transformed `(x,y)` coordinates in the FOV's frame.
+            Pair: The transformed *(x,y)* coordinates in the FOV's frame.
         """
 
         raise NotImplementedError(type(self).__name__ + '.xy_from_uvt is not implemented')
 
     def uv_from_xyt(self, xy_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The FOV coordinates `(u,v)` at camera coordinates `(x,y)` and a given time.
+        """The FOV coordinates *(u,v)* at camera coordinates *(x,y)* and a given time.
 
         Parameters:
-            xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.
+            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
             time (Scalar, optional): Absolute time in seconds TDB.
-            derivs (bool, optional): If True, any derivatives in `(x,y)` get propagated
-                into the returned `(u,v)` coordinates.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
+                into the returned *(u,v)* coordinates.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: The computed `(u,v)` coordinates in the FOV.
+            Pair: The computed *(u,v)* coordinates in the FOV.
         """
 
         raise NotImplementedError(type(self).__name__ + '.uv_from_xyt is not implemented')
@@ -119,22 +119,22 @@ class FOV(Mutable):
     ######################################################################################
 
     def xy_from_uv(self, uv_pair, *, derivs=False, remask=False, **kwargs):
-        """The camera coordinates `(x,y)` at FOV coordinates `(u,v)`, ignoring time.
+        """The camera coordinates *(x,y)* at FOV coordinates *(u,v)*, ignoring time.
 
         This is the time-independent form of :meth:`~oops.FOV.xy_from_uvt`, available
         only for an FOV whose `IS_TIME_INDEPENDENT` attribute is True.
 
         Parameters:
-            uv_pair (Pair): `(u,v)` coordinates in this FOV.
-            derivs (bool, optional): If True, any derivatives in `(u,v)` get propagated
-                into the returned `(x,y)` coordinates.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            uv_pair (Pair): *(u,v)* coordinates in this FOV.
+            derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
+                into the returned *(x,y)* coordinates.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: The transformed `(x,y)` coordinates in the FOV's frame.
+            Pair: The transformed *(x,y)* coordinates in the FOV's frame.
 
         Raises:
             NotImplementedError: If this FOV is time-dependent.
@@ -147,22 +147,22 @@ class FOV(Mutable):
         return self.xy_from_uvt(uv_pair, derivs=derivs, remask=remask, **kwargs)
 
     def uv_from_xy(self, xy_pair, *, derivs=False, remask=False, **kwargs):
-        """The FOV coordinates `(u,v)` at camera coordinates `(x,y)`, ignoring time.
+        """The FOV coordinates *(u,v)* at camera coordinates *(x,y)*, ignoring time.
 
         This is the time-independent form of :meth:`~oops.FOV.uv_from_xyt`, available
         only for an FOV whose `IS_TIME_INDEPENDENT` attribute is True.
 
         Parameters:
-            xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.
-            derivs (bool, optional): If True, any derivatives in `(x,y)` get propagated
-                into the returned `(u,v)` Pair.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
+            derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
+                into the returned *(u,v)* Pair.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: The computed `(u,v)` coordinates in the FOV.
+            Pair: The computed *(u,v)* coordinates in the FOV.
 
         Raises:
             NotImplementedError: If this FOV is time-dependent.
@@ -175,23 +175,23 @@ class FOV(Mutable):
         return self.uv_from_xyt(xy_pair, derivs=derivs, remask=remask, **kwargs)
 
     def area_factor(self, uv_pair, time=None, *, remask=False, **kwargs):
-        """The relative area of a pixel or other sensor at `(u,v)` and a given time.
+        """The relative area of a pixel or other sensor at *(u,v)* and a given time.
 
         The returned value is proportional to the solid angle subtended by a unit step in
-        `(u,v)`, divided by the nominal pixel area `uv_area`. It is therefore unitless,
+        *(u,v)*, divided by the nominal pixel area `uv_area`. It is therefore unitless,
         and it is one wherever a pixel subtends the nominal solid angle. Any dependence on
         time is expected to be very small.
 
         Parameters:
-            uv_pair (Pair, numpy.ndarray, or tuple): `(u,v)` coordinates in the FOV.
+            uv_pair (Pair, numpy.ndarray, or tuple): *(u,v)* coordinates in the FOV.
             time (Scalar, optional): Absolute time in seconds TDB.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Scalar: Relative area of the pixel at FOV coordinates `(u,v)`.
+            Scalar: Relative area of the pixel at FOV coordinates *(u,v)*.
         """
 
         # Prepare for the partial derivatives
@@ -249,15 +249,15 @@ class FOV(Mutable):
                       xy_pair.mask)
 
     def los_from_xy(self, xy_pair, *, derivs=False):
-        """The unit line-of-sight vector for camera coordinates `(x,y)`.
+        """The unit line-of-sight vector for camera coordinates *(x,y)*.
 
-        The conversion assumes a pinhole camera model, in which the z-component of the
+        The conversion assumes a pinhole camera model, in which the *z*-component of the
         line of sight has unit length. Note that this vector points in the direction
         *opposite* to the path of arriving photons.
 
         Parameters:
-            xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.
-            derivs (bool, optional): True to propagate any derivatives of `(x,y)` forward
+            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
+            derivs (bool, optional): True to propagate any derivatives of *(x,y)* forward
                 into the returned line-of-sight vector.
 
         Returns:
@@ -273,9 +273,9 @@ class FOV(Mutable):
         return Vector3.from_scalars(x,y,1.).unit(recursive=derivs)
 
     def xy_from_los(self, los, *, derivs=False):
-        """Camera frame coordinates `(x,y)` given a line of sight.
+        """Camera frame coordinates *(x,y)* given a line of sight.
 
-        Lines of sight point outward from the camera, near the Z-axis, and are therefore
+        Lines of sight point outward from the camera, near the *z*-axis, and are therefore
         opposite to the direction in which a photon is moving. The length of the vector is
         ignored.
 
@@ -285,7 +285,7 @@ class FOV(Mutable):
                 returned coordinates.
 
         Returns:
-            Pair: `(x,y)` coordinates in the FOV's frame.
+            Pair: *(x,y)* coordinates in the FOV's frame.
         """
 
         # Scale to z=1 and then convert to Pair
@@ -296,17 +296,17 @@ class FOV(Mutable):
         return los.to_pair((0,1))
 
     def los_from_uvt(self, uv_pair, time=None, *, derivs=False, remask=False, **kwargs):
-        """The unit line of sight at FOV coordinates `(u,v)` and a given time.
+        """The unit line of sight at FOV coordinates *(u,v)* and a given time.
 
         Note that the line of sight points in the direction *opposite* to that of the
         arriving photons.
 
         Parameters:
-            uv_pair (Pair): `(u,v)` coordinates in this FOV.
+            uv_pair (Pair): *(u,v)* coordinates in this FOV.
             time (Scalar, optional): Absolute time in seconds TDB.
-            derivs (bool, optional): True to propagate any derivatives of `(u,v)` into the
+            derivs (bool, optional): True to propagate any derivatives of *(u,v)* into the
                 returned line of sight.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
@@ -320,17 +320,17 @@ class FOV(Mutable):
         return self.los_from_xy(xy_pair, derivs=derivs)
 
     def los_from_uv(self, uv_pair, *, derivs=False, remask=False, **kwargs):
-        """The unit line of sight at FOV coordinates `(u,v)`, ignoring time.
+        """The unit line of sight at FOV coordinates *(u,v)*, ignoring time.
 
         This is the time-independent form of :meth:`~oops.FOV.los_from_uvt`, available
         only for an FOV whose `IS_TIME_INDEPENDENT` attribute is True. Note that the line
         of sight points in the direction *opposite* to that of the arriving photons.
 
         Parameters:
-            uv_pair (Pair, numpy.ndarray, or tuple): `(u,v)` coordinates in the FOV.
-            derivs (bool, optional): True to propagate any derivatives of `(u,v)` into the
+            uv_pair (Pair, numpy.ndarray, or tuple): *(u,v)* coordinates in the FOV.
+            derivs (bool, optional): True to propagate any derivatives of *(u,v)* into the
                 returned line of sight.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
@@ -346,7 +346,7 @@ class FOV(Mutable):
         return self.los_from_xy(xy_pair, derivs=derivs)
 
     def uv_from_los_t(self, los, time=None, *, derivs=False, remask=False, **kwargs):
-        """The FOV coordinates `(u,v)` of a line of sight at a given time.
+        """The FOV coordinates *(u,v)* of a line of sight at a given time.
 
         Note that `los` points in the direction *opposite* to that of the arriving photon.
 
@@ -354,14 +354,14 @@ class FOV(Mutable):
             los (Vector3): The line of sight in the FOV's frame.
             time (Scalar, optional): Absolute time in seconds TDB.
             derivs (bool, optional): True to propagate any derivatives of `los` into the
-                returned `(u,v)` coordinates.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+                returned *(u,v)* coordinates.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: `(u,v)` coordinates in the FOV.
+            Pair: *(u,v)* coordinates in the FOV.
         """
 
         xy_pair = self.xy_from_los(los, derivs=derivs)
@@ -369,7 +369,7 @@ class FOV(Mutable):
                                 **kwargs)
 
     def uv_from_los(self, los, *, derivs=False, remask=False, **kwargs):
-        """The FOV coordinates `(u,v)` of a line of sight, ignoring time.
+        """The FOV coordinates *(u,v)* of a line of sight, ignoring time.
 
         This is the time-independent form of :meth:`~oops.FOV.uv_from_los_t`, available
         only for an FOV whose `IS_TIME_INDEPENDENT` attribute is True. Note that `los`
@@ -378,14 +378,14 @@ class FOV(Mutable):
         Parameters:
             los (Vector3): Direction of the line of sight in the FOV's frame.
             derivs (bool, optional): True to propagate any derivatives of `los` into the
-                returned `(u,v)` coordinates.
-            remask (bool, optional): True to mask `(u,v)` coordinates outside the field of
+                returned *(u,v)* coordinates.
+            remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
         Returns:
-            Pair: `(u,v)` coordinates in the FOV.
+            Pair: *(u,v)* coordinates in the FOV.
 
         Raises:
             NotImplementedError: If this FOV is time-dependent.
@@ -398,14 +398,14 @@ class FOV(Mutable):
         return self.uv_from_los_t(los, derivs=derivs, remask=remask, **kwargs)
 
     def offset_angles_from_duv(self, duv, *, time=None, origin=None):
-        """The rotation angles defined by a `(u,v)` pixel offset in an FOV.
+        """The rotation angles defined by a *(u,v)* pixel offset in an FOV.
 
         Parameters:
-            duv (Pair): `(u,v)` pixel offsets. These define the coordinates of a feature
+            duv (Pair): *(u,v)* pixel offsets. These define the coordinates of a feature
                 in a Navigation frame as offsets from that same feature in the reference
                 frame.
             time (Scalar, optional): Absolute time in seconds TDB.
-            origin (Pair, optional): The `(u,v)` coordinates of the reference location at
+            origin (Pair, optional): The *(u,v)* coordinates of the reference location at
                 which this offset is determined. By default, this is the center of the
                 FOV.
 
@@ -428,19 +428,19 @@ class FOV(Mutable):
         return los0.offset_angles(los1)
 
     def offset_duv_from_angles(self, angles, *, time=None, origin=None):
-        """The pixel offset `(u,v)` produced by a pair of rotation angles.
+        """The pixel offset *(u,v)* produced by a pair of rotation angles.
 
         Parameters:
             angles (tuple[Scalar, Scalar]): Two offset angles in radians. The first
-                rotation is about the Y axis of this FOV's frame and the second is about
-                the X axis.
+                rotation is about the *y*-axis of this FOV's frame and the second is
+                about the *x*-axis.
             time (Scalar, optional): Absolute time in seconds TDB.
-            origin (Pair, optional): The `(u,v)` coordinates of the reference location at
+            origin (Pair, optional): The *(u,v)* coordinates of the reference location at
                 which this offset is determined. By default, this is the center of the
                 FOV.
 
         Returns:
-            Pair: The `(u,v)` pixel offset.
+            Pair: The *(u,v)* pixel offset.
         """
 
         # Locate the origin and the reference LOS vector
@@ -467,11 +467,11 @@ class FOV(Mutable):
         """A Boolean mask identifying coordinates outside the FOV.
 
         Parameters:
-            uv_pair (Pair): `(u,v)` coordinates in this FOV.
+            uv_pair (Pair): *(u,v)* coordinates in this FOV.
             time (Scalar, optional): Absolute time in seconds TDB.
-            uv_min (Pair, optional): The lower `(u,v)` corner of the area observed in the
+            uv_min (Pair, optional): The lower *(u,v)* corner of the area observed in the
                 FOV; None for the full FOV.
-            uv_max (Pair, optional): The upper `(u,v)` corner of the area observed in the
+            uv_max (Pair, optional): The upper *(u,v)* corner of the area observed in the
                 FOV; None for the full FOV.
             inclusive (bool, optional): True to interpret coordinate values at the upper
                 end of each range as inside the FOV; False to interpret them as outside.
@@ -504,12 +504,12 @@ class FOV(Mutable):
         """A Boolean mask identifying coordinates outside the FOV along one axis.
 
         Parameters:
-            uv_pair (Pair): `(u,v)` coordinates in this FOV.
+            uv_pair (Pair): *(u,v)* coordinates in this FOV.
             uv_index (int): 0 to test u-coordinates; 1 to test v-coordinates.
-            uv_min (Pair, optional): The lower `(u,v)` corner of the area observed in the
+            uv_min (Pair, optional): The lower *(u,v)* corner of the area observed in the
                 FOV, of which only the element selected by `uv_index` is used; None for
                 the full FOV.
-            uv_max (Pair, optional): The upper `(u,v)` corner of the area observed in the
+            uv_max (Pair, optional): The upper *(u,v)* corner of the area observed in the
                 FOV, of which only the element selected by `uv_index` is used; None for
                 the full FOV.
             inclusive (bool, optional): True to interpret coordinate values at the upper
@@ -540,13 +540,13 @@ class FOV(Mutable):
         """A Boolean mask identifying coordinates outside the FOV.
 
         Parameters:
-            xy_pair (Pair): `(x,y)` coordinates in this FOV, assuming `z = 1`.
+            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
             time (Scalar, optional): Absolute time in seconds TDB.
             inclusive (bool, optional): True to interpret coordinate values at the upper
                 end of each range as inside the FOV; False to interpret them as outside.
-            uv_min (Pair, optional): The lower `(u,v)` corner of the area observed in the
+            uv_min (Pair, optional): The lower *(u,v)* corner of the area observed in the
                 FOV; None for the full FOV.
-            uv_max (Pair, optional): The upper `(u,v)` corner of the area observed in the
+            uv_max (Pair, optional): The upper *(u,v)* corner of the area observed in the
                 FOV; None for the full FOV.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
@@ -568,9 +568,9 @@ class FOV(Mutable):
             time (Scalar, optional): Absolute time in seconds TDB.
             inclusive (bool, optional): True to interpret coordinates at the upper end of
                 each range as inside the FOV; False to interpret them as outside.
-            uv_min (Pair, optional): The lower `(u,v)` corner of the area observed in the
+            uv_min (Pair, optional): The lower *(u,v)* corner of the area observed in the
                 FOV; None for the full FOV.
-            uv_max (Pair, optional): The upper `(u,v)` corner of the area observed in the
+            uv_max (Pair, optional): The upper *(u,v)* corner of the area observed in the
                 FOV; None for the full FOV.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
@@ -584,15 +584,15 @@ class FOV(Mutable):
                                   inclusive=inclusive, **kwargs)
 
     def nearest_uv(self, uv_pair, *, remask=False):
-        """The closest `(u,v)` coordinates inside the FOV.
+        """The closest *(u,v)* coordinates inside the FOV.
 
         Parameters:
-            uv_pair (Pair, tuple, list, or numpy.ndarray): `(u,v)` coordinates in this
+            uv_pair (Pair, tuple, list, or numpy.ndarray): *(u,v)* coordinates in this
                 FOV.
             remask (bool, optional): True to mask the points outside the FOV's boundary.
 
         Returns:
-            Pair: Nearest `(u,v)` coordinates to `uv_pair`. Derivatives are carried
+            Pair: Nearest *(u,v)* coordinates to `uv_pair`. Derivatives are carried
             through unless `remask` is True.
         """
 
@@ -614,7 +614,7 @@ class FOV(Mutable):
     ######################################################################################
 
     def max_inversion_error(self, steps=30):
-        """The largest error in pixels from a round trip `(u,v) -> (x,y) -> (u,v)`.
+        """The largest error in pixels from a round trip *(u,v) -> (x,y) -> (u,v)*.
 
         The FOV is sampled on a uniform grid, and each sample is converted by
         :meth:`~oops.FOV.xy_from_uvt` and back by :meth:`~oops.FOV.uv_from_xyt`.
@@ -623,7 +623,7 @@ class FOV(Mutable):
             steps (int, optional): The number of samples per axis.
 
         Returns:
-            float: The largest error in `(u,v) -> (x,y) -> (u,v)` at the sampled points.
+            float: The largest error in *(u,v) -> (x,y) -> (u,v)* at the sampled points.
         """
 
         # Sample the FOV uniformly along each axis
@@ -651,7 +651,7 @@ class FOV(Mutable):
             time (Scalar, optional): Absolute time in seconds TDB.
 
         Returns:
-            Pair: `(x,y)` coordinates of the FOV center.
+            Pair: *(x,y)* coordinates of the FOV center.
 
         Raises:
             NotImplementedError: If this FOV is time-dependent and no `time` is given.
@@ -695,10 +695,10 @@ class FOV(Mutable):
 
     @property
     def center_dlos_duv(self):
-        """The line of sight derivative matrix `dlos/d(u,v)` at the FOV center.
+        """The line of sight derivative matrix *dlos/d(u,v)* at the FOV center.
 
         Returns:
-            Vector3: `dlos/d(u,v)`, a Vector3 with a `(u,v)` denominator.
+            Vector3: *dlos/d(u,v)*, a Vector3 with a *(u,v)* denominator.
 
         Raises:
             NotImplementedError: If this FOV is time-dependent, because this property
@@ -761,13 +761,13 @@ class FOV(Mutable):
         return self._inner_radius_filled
 
     def corner00_xy(self, time=None):
-        """The `(x,y)` coordinates where `(u,v) = (0,0)`.
+        """The *(x,y)* coordinates where *(u,v) = (0,0)*.
 
         Parameters:
             time (Scalar, optional): Absolute time in seconds TDB.
 
         Returns:
-            Pair: The `(x,y)` coordinates.
+            Pair: The *(x,y)* coordinates.
 
         Raises:
             NotImplementedError: If this FOV is time-dependent and no `time` is given.
@@ -785,13 +785,13 @@ class FOV(Mutable):
         return self._corner00_filled
 
     def corner01_xy(self, time=None):
-        """The `(x,y)` coordinates where `(u,v) = (0,v_max)`.
+        """The *(x,y)* coordinates where *(u,v) = (0,v_max)*.
 
         Parameters:
             time (Scalar, optional): Absolute time in seconds TDB.
 
         Returns:
-            Pair: The `(x,y)` coordinates.
+            Pair: The *(x,y)* coordinates.
 
         Raises:
             NotImplementedError: If this FOV is time-dependent and no `time` is given.
@@ -809,13 +809,13 @@ class FOV(Mutable):
         return self._corner01_filled
 
     def corner10_xy(self, time=None):
-        """The `(x,y)` coordinates where `(u,v) = (u_max,0)`.
+        """The *(x,y)* coordinates where *(u,v) = (u_max,0)*.
 
         Parameters:
             time (Scalar, optional): Absolute time in seconds TDB.
 
         Returns:
-            Pair: The `(x,y)` coordinates.
+            Pair: The *(x,y)* coordinates.
 
         Raises:
             NotImplementedError: If this FOV is time-dependent and no `time` is given.
@@ -833,13 +833,13 @@ class FOV(Mutable):
         return self._corner10_filled
 
     def corner11_xy(self, time=None):
-        """The `(x,y)` coordinates where `(u,v) = (u_max,v_max)`.
+        """The *(x,y)* coordinates where *(u,v) = (u_max,v_max)*.
 
         Parameters:
             time (Scalar, optional): Absolute time in seconds TDB.
 
         Returns:
-            Pair: The `(x,y)` coordinates.
+            Pair: The *(x,y)* coordinates.
 
         Raises:
             NotImplementedError: If this FOV is time-dependent and no `time` is given.
