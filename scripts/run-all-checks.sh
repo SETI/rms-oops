@@ -475,12 +475,14 @@ run_code_checks() {
         # omits is invisible downstream. stubtest compares each one against the imported
         # module, which is what keeps them complete. MYPYPATH names src/ because the two
         # library packages live there and the editable install's import hook is invisible
-        # to mypy. The allowlist holds the handful of leaked loop variables that exist at
-        # run time and are deliberately not published.
+        # to mypy. --ignore-missing-stub is needed because only the package stubs exist:
+        # the modules below each package are read from source instead. The allowlist holds
+        # the names that live only in the stubs or only at run time.
         print_info "Running stubtest (.pyi stubs vs the runtime API)..."
         if MYPYPATH=src python -m mypy.stubtest oops spicedb programs \
                 --mypy-config-file pyproject.toml \
-                --allowlist stubtest-allowlist.txt; then
+                --allowlist stubtest-allowlist.txt \
+                --ignore-missing-stub; then
             print_success "Stubtest passed"
         else
             print_error "Stubtest failed"

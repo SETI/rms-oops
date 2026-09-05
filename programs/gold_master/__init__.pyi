@@ -4,40 +4,49 @@
 """Type stub for :mod:`programs.gold_master`.
 
 The `src` tree carries no inline annotations, so type information for public symbols is
-published here instead. The stub describes the shape of the API exactly: every public
-name, its parameters, which of them are keyword-only, and which have defaults. Types are
-given where they are unambiguous and are `Any` elsewhere.
+published here instead. Only package stubs exist, so a name is annotated when it is
+imported from the package that exports it and not when it is imported from the module
+that defines it. The stub describes the shape of the API exactly: every public name, its
+parameters, which of them are keyword-only, and which have defaults. Types are given
+where they are unambiguous and are `Any` elsewhere.
 """
 
-from collections import defaultdict
 from typing import Any
+from filecache import FCPath as FCPath, FileCache
+from oops import Observation as Observation, Path as Path
+from collections.abc import Callable
+from numpy import ndarray, number
+from polymath import Qube
+from collections import defaultdict
+
+# Parameters documented as a polymath type are passed through `as_scalar` and its
+# siblings, so each accepts the class, a number, or a nested sequence of numbers.
+# `str` is excluded deliberately: no polymath constructor accepts one.
+_Numeric = float | number | list['_Numeric'] | tuple['_Numeric', ...]
+QubeLike = Qube | ndarray | _Numeric
 
 __all__ = ['set_default_obs', 'define_standard_obs', 'set_default_args', 'override',
            'module_dirname', 'set_gold_master_path', 'execute_as_command',
            'execute_as_pytest', 'run_tests', 'register_test_suite', 'get_test_suite',
            'BackplaneTest']
 
-# The module-level registries that the functions above read and write. They are not in
-# `__all__`, because they are not part of the star-import API, but they are module
-# attributes at run time and the framework's own tests save and restore them.
-STANDARD_OBS_INFO: dict[str, Any]
-DEFAULTS: dict[str, Any]
-TEST_OVERRIDES: defaultdict[str, dict[str, Any]]
-TEST_SUITES: dict[str, Any]
+def set_default_obs(obspath: Path | str, index: int | tuple[int] | None,
+    planets: str | list, moons: str | list | tuple = (), rings: str | list | tuple = (),
+    kwargs: dict | None = None) -> None: ...
 
-def module_dirname(module: Any) -> Any: ...
-
-def set_gold_master_path(path: Any) -> None: ...
-
-def set_default_obs(obspath: Any, index: Any, planets: Any, moons: Any = (),
-    rings: Any = (), kwargs: Any = None) -> None: ...
-
-def define_standard_obs(obsname: Any, obspath: Any, index: Any = None, *,
-    planets: Any = (), moons: Any = (), rings: Any = (), kwargs: Any = None) -> None: ...
+def define_standard_obs(obsname: str, obspath: Path | str,
+    index: int | tuple[int] | None = None, *, planets: str | list | tuple = (),
+    moons: str | list | tuple = (), rings: str | list | tuple = (),
+    kwargs: dict | None = None) -> None: ...
 
 def set_default_args(**options: Any) -> None: ...
 
-def override(title: Any, value: Any, names: Any = None) -> None: ...
+def override(title: str, value: float | None,
+    names: str | list | None = None) -> None: ...
+
+def module_dirname(module: str) -> str: ...
+
+def set_gold_master_path(path: str) -> None: ...
 
 def execute_as_command() -> None: ...
 
@@ -45,34 +54,10 @@ def execute_as_pytest(obsname: str = 'default') -> None: ...
 
 def run_tests(args: Any) -> None: ...
 
-def register_test_suite(name: Any, func: Any) -> None: ...
+def register_test_suite(name: str, func: Callable) -> None: ...
 
-def get_test_suite(name: Any) -> Any: ...
+def get_test_suite(name: str) -> Callable: ...
 
-class _BackplaneComparison:
-    STATUS_LEVEL: Any
-    title: str
-    suite: str
-    limit: float
-    method: str
-    operator: str
-    radius: float
-    mask: bool
-    pickle_path: str
-    status: str
-    max_diff1: float
-    diff_errors1: int
-    mask_errors1: int
-    distance: float
-    max_diff2: float
-    diff_errors2: int
-    mask_errors2: int
-    pixels: int
-    def __init__(self, **kwargs: Any) -> None: ...
-    @property
-    def logging_level(self) -> Any: ...
-    @staticmethod
-    def set_no_gold_master_status(is_ok: bool = False) -> None: ...
 class BackplaneTest:
     obs: Any
     overrides: Any
@@ -110,19 +95,39 @@ class BackplaneTest:
     results: Any
     header: Any
     print_header: Any
-    def __init__(self, obs: Any, planets: Any, moons: Any, rings: Any, overrides: Any,
-        args: Any, suffix: str = '') -> None: ...
+    def __init__(self, obs: Observation, planets: list, moons: list, rings: list,
+        overrides: dict, args: Any, suffix: str = '') -> None: ...
     def run_tests(self) -> None: ...
-    def compare(self, array: Any, master: Any, title: Any, limit: float = 0.0,
-        method: str = '', operator: str = '=', radius: float = 0.0,
+    def compare(self, array: QubeLike, master: QubeLike | float, title: str,
+        limit: float = 0.0, method: str = '', operator: str = '=', radius: float = 0.0,
         mask: bool = False) -> None: ...
-    def gmtest(self, array: Any, title: Any, limit: float = 0.0, method: str = '',
+    def gmtest(self, array: QubeLike, title: str, limit: float = 0.0, method: str = '',
         operator: str = '=', radius: float = 0.0, mask: bool = False) -> None: ...
-    def save_browse(self, array: Any, browse_path: Any) -> None: ...
+    def save_browse(self, array: QubeLike | ndarray, browse_path: FCPath) -> None: ...
     @staticmethod
-    def read_browse(browse_path: Any) -> Any: ...
+    def read_browse(browse_path: FCPath) -> ndarray: ...
     @property
-    def gold_summary(self) -> Any: ...
-    def write_summary(self, outdir: Any) -> Any: ...
+    def gold_summary(self) -> dict: ...
+    def write_summary(self, outdir: FCPath) -> FCPath: ...
+
+BACKPLANE_OUTPUT_PREFIX: FCPath
+
+DEFAULTS: dict[str, Any]
+
+GOLD_MASTER_PREFIX: FCPath | None
+
+OOPS_BACKPLANE_OUTPUT_PATH: str
+
+OOPS_GOLD_MASTER_PATH: str | None
+
+STANDARD_OBS_INFO: dict[str, Any]
+
+TEST_DATA_FILECACHE: FileCache
+
+TEST_DATA_PREFIX: FCPath | None
+
+TEST_OVERRIDES: defaultdict[str, dict[str, Any]]
+
+TEST_SUITES: dict[str, Any]
 
 ##########################################################################################

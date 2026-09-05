@@ -1,21 +1,69 @@
-# Names that exist at run time but are deliberately absent from the .pyi stubs.
+# Names that exist at run time but cannot be described by a package stub.
 #
-# Each is a loop variable that leaks out of the `for` statement that built a constant
-# next to it: Python gives a module body and a class body no scope of their own, so the
-# variable survives the loop and becomes an attribute of the module or the class. None of
-# them is API, and publishing them in the stubs would invite downstream code to use them.
+# Only package stubs exist: `oops/frame/__init__.pyi` describes `oops.frame`, and no stub
+# describes `oops.frame.frame_`. stubtest still walks every module below a package and
+# compares it against what mypy reads from the source, so the entries below are names the
+# source cannot describe on its own.
 #
-# stubtest compares each stub against the runtime object, so it reports these as missing.
-# Delete an entry here if the source ever stops leaking the name.
+# The cross-class attributes are the circular-import workaround documented in CLAUDE.md:
+# `oops/__init__.py` assigns them after every module is loaded, so the source shows the
+# `None` placeholder while the run-time value is the injected class.
+oops._cache._Cache._Frame
+oops._cache._Cache._Path
+oops.event.Event._Path
+oops.event.Event.SSB
+oops.frame.frame_.Frame._Event
+oops.frame.frame_.Frame._Path
+oops.frame.frame_.Frame._QuickFrame
+oops.frame.frame_.Frame._SpicePath
+oops.frame.frame_.J2000Frame._J2000
+oops.path.path_.Path._Body
+oops.path.path_.Path._QuickPath
+oops.path.path_.SSBPath._SSB
+oops.surface.surface_.Surface._Body
+oops.transform.Transform._Frame
 
-# oops/body.py: `for (codes, names) in ALIASES:`
-oops.body.codes
-oops.body.names
+# Module-level constants built by calling a constructor, so the source infers the class as
+# its defining module sees it rather than as the package stub exports it.
+oops.hosts.cassini.vims.IR_FULL_FOV
+oops.hosts.cassini.vims.VIS_FULL_FOV
+oops.hosts.newhorizons.lorri.LORRI.instrument_kernel
 
-# oops/config.py: `for name in LEVELS.keys():`, and the nested `for k in ...` inside it
-oops.config.LOGGING.k
-oops.config.LOGGING.level_val
-oops.config.LOGGING.name
-
-# oops/gravity/oblategravity.py: `for name, value in Gravity.GRAVITY_REGISTRY.items():`
-oops.gravity.oblategravity.value
+# Type aliases that exist only in the stubs. A parameter documented as a
+# polymath type is passed through `as_scalar` or one of its siblings, so it
+# accepts the class or anything convertible to it; these aliases name that
+# union. They are annotations, not run-time API.
+oops.backplane.ScalarLike
+oops.cadence.PairLike
+oops.cadence.ScalarLike
+oops.calibration.PairLike
+oops.calibration.ScalarLike
+oops.fov.PairLike
+oops.fov.ScalarLike
+oops.fov.Vector3Like
+oops.frame.Matrix3Like
+oops.frame.ScalarLike
+oops.hosts.juno.jiram.ScalarLike
+oops.hosts.juno.sru.ScalarLike
+oops.lightsource.ScalarLike
+oops.Matrix3Like
+oops.observation.Matrix3Like
+oops.observation.PairLike
+oops.observation.ScalarLike
+oops.observation.Vector3Like
+oops.observation.VectorLike
+oops.PairLike
+oops.path.ScalarLike
+oops.path.Vector3Like
+oops.ScalarLike
+oops.surface.ScalarLike
+oops.surface.Vector3Like
+oops.Vector3Like
+programs.gold_master.QubeLike
+oops.BooleanLike
+oops.VectorLike
+oops.backplane.QubeLike
+oops.frame.Vector3Like
+oops.lightsource.PairLike
+oops.lightsource.Vector3Like
+oops.hosts.hst.Tabulation

@@ -4,17 +4,90 @@
 """Type stub for :mod:`oops.calibration`.
 
 The `src` tree carries no inline annotations, so type information for public symbols is
-published here instead. The stub describes the shape of the API exactly: every public
-name, its parameters, which of them are keyword-only, and which have defaults. Types are
-given where they are unambiguous and are `Any` elsewhere.
+published here instead. Only package stubs exist, so a name is annotated when it is
+imported from the package that exports it and not when it is imported from the module
+that defines it. The stub describes the shape of the API exactly: every public name, its
+parameters, which of them are keyword-only, and which have defaults. Types are given
+where they are unambiguous and are `Any` elsewhere.
 """
 
-from oops.calibration.calibration_ import Calibration as Calibration
-from oops.calibration.flatcalib import FlatCalib as FlatCalib
-from oops.calibration.nullcalib import NullCalib as NullCalib
-from oops.calibration.radiance import Radiance as Radiance
-from oops.calibration.rawcounts import RawCounts as RawCounts
+from typing import Any
+from oops import FOV as FOV
+from numpy import ndarray, number
+from polymath import Pair, Scalar
+from oops.oops import Oops as Oops
+
+# Parameters documented as a polymath type are passed through `as_scalar` and its
+# siblings, so each accepts the class, a number, or a nested sequence of numbers.
+# `str` is excluded deliberately: no polymath constructor accepts one.
+_Numeric = float | number | list['_Numeric'] | tuple['_Numeric', ...]
+PairLike = Pair | ndarray | _Numeric
+ScalarLike = Scalar | ndarray | _Numeric
 
 __all__ = ['Calibration', 'FlatCalib', 'NullCalib', 'Radiance', 'RawCounts']
+
+class Calibration(Oops):
+    def extended_from_dn(self, dn: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def dn_from_extended(self, value: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def point_from_dn(self, dn: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def dn_from_point(self, value: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def prescale(self, factor: ScalarLike, baseline: float = 0.0, *,
+        name: str = '') -> Calibration: ...
+    def value_from_dn(self, dn: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def dn_from_value(self, value: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def area_factor(self, uv_pair: PairLike) -> Scalar: ...
+
+class FlatCalib(Calibration):
+    name: Any
+    has_baseline: Any
+    shape: Any
+    fov: Any
+    def __init__(self, name: str, factor: ScalarLike, baseline: float = 0.0,
+        fov: FOV | None = None) -> None: ...
+    def extended_from_dn(self, dn: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def dn_from_extended(self, value: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def point_from_dn(self, dn: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def dn_from_point(self, value: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def prescale(self, factor: ScalarLike, baseline: float = 0.0, *,
+        name: str = '') -> Calibration: ...
+
+class NullCalib(Calibration):
+    name: Any
+    factor: Any
+    baseline: Any
+    has_baseline: bool
+    fov: Any
+    shape: Any
+    def __init__(self, name: str) -> None: ...
+    def extended_from_dn(self, dn: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def dn_from_extended(self, value: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def point_from_dn(self, dn: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def dn_from_point(self, value: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def prescale(self, factor: ScalarLike, baseline: float = 0.0, *,
+        name: str = '') -> Calibration: ...
+
+class Radiance(FlatCalib):
+    name: Any
+    fov: Any
+    has_baseline: Any
+    shape: Any
+    def __init__(self, name: str, fov: FOV, factor: ScalarLike,
+        baseline: float = 0.0) -> None: ...
+    def point_from_dn(self, dn: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def dn_from_point(self, value: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def prescale(self, factor: ScalarLike, baseline: float = 0.0, *,
+        name: str = '') -> Calibration: ...
+
+class RawCounts(FlatCalib):
+    name: Any
+    fov: Any
+    has_baseline: Any
+    shape: Any
+    def __init__(self, name: str, fov: FOV, factor: ScalarLike,
+        baseline: float = 0.0) -> None: ...
+    def extended_from_dn(self, dn: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def dn_from_extended(self, value: ScalarLike, uv_pair: PairLike) -> Scalar: ...
+    def prescale(self, factor: ScalarLike, baseline: float = 0.0, *,
+        name: str = '') -> Calibration: ...
 
 ##########################################################################################

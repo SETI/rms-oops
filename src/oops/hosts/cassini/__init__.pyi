@@ -4,9 +4,11 @@
 """Type stub for :mod:`oops.hosts.cassini`.
 
 The `src` tree carries no inline annotations, so type information for public symbols is
-published here instead. The stub describes the shape of the API exactly: every public
-name, its parameters, which of them are keyword-only, and which have defaults. Types are
-given where they are unambiguous and are `Any` elsewhere.
+published here instead. Only package stubs exist, so a name is annotated when it is
+imported from the package that exports it and not when it is imported from the module
+that defines it. The stub describes the shape of the API exactly: every public name, its
+parameters, which of them are keyword-only, and which have defaults. Types are given
+where they are unambiguous and are `Any` elsewhere.
 """
 
 from typing import Any
@@ -30,9 +32,9 @@ class Cassini:
     loaded_instruments: Any
     initialized: bool
     @staticmethod
-    def initialize(ck: str = 'reconstructed', planets: Any = None, asof: Any = None,
-        spk: str = 'reconstructed', gapfill: bool = True, mst_pck: bool = True,
-        irregulars: bool = True) -> None: ...
+    def initialize(ck: str = 'reconstructed', planets: list | None = None,
+        asof: str | None = None, spk: str = 'reconstructed', gapfill: bool = True,
+        mst_pck: bool = True, irregulars: bool = True) -> None: ...
     @staticmethod
     def reset() -> None: ...
     @staticmethod
@@ -44,18 +46,19 @@ class Cassini:
     @staticmethod
     def load_spks(t0: Any, t1: Any) -> None: ...
     @staticmethod
-    def load_kernels(t0: Any, t1: Any, loaded: Any, lists: Any,
-        kernel_dict: Any) -> None: ...
+    def load_kernels(t0: float, t1: float, loaded: set, lists: list,
+        kernel_dict: dict) -> None: ...
     @staticmethod
     def initialize_kernels(kernels: Any, lists: Any) -> None: ...
     @staticmethod
-    def load_instruments(instruments: Any = [], asof: Any = None) -> None: ...
+    def load_instruments(instruments: Any = [], asof: str | None = None) -> None: ...
     @staticmethod
-    def spice_instrument_kernel(inst: Any, asof: Any = None) -> Any: ...
+    def spice_instrument_kernel(inst: str | list | tuple,
+        asof: str | None = None) -> tuple: ...
     @staticmethod
-    def spice_frames_kernel(asof: Any = None) -> Any: ...
+    def spice_frames_kernel(asof: str | None = None) -> tuple: ...
     @staticmethod
-    def used_kernels(time: Any, inst: Any, return_all_planets: bool = False,
-        ck: bool = True) -> Any: ...
+    def used_kernels(time: Any, inst: str | list | tuple,
+        return_all_planets: bool = False, ck: bool = True) -> Any: ...
 
 ##########################################################################################

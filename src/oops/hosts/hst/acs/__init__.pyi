@@ -4,14 +4,15 @@
 """Type stub for :mod:`oops.hosts.hst.acs`.
 
 The `src` tree carries no inline annotations, so type information for public symbols is
-published here instead. The stub describes the shape of the API exactly: every public
-name, its parameters, which of them are keyword-only, and which have defaults. Types are
-given where they are unambiguous and are `Any` elsewhere.
+published here instead. Only package stubs exist, so a name is annotated when it is
+imported from the package that exports it and not when it is imported from the module
+that defines it. The stub describes the shape of the API exactly: every public name, its
+parameters, which of them are keyword-only, and which have defaults. Types are given
+where they are unambiguous and are `Any` elsewhere.
 """
 
 from typing import Any
-
-from .. import HST
+from oops.hosts.hst import HST as HST
 
 __all__ = ['from_file', 'ACS']
 

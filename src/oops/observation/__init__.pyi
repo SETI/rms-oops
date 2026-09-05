@@ -4,20 +4,278 @@
 """Type stub for :mod:`oops.observation`.
 
 The `src` tree carries no inline annotations, so type information for public symbols is
-published here instead. The stub describes the shape of the API exactly: every public
-name, its parameters, which of them are keyword-only, and which have defaults. Types are
-given where they are unambiguous and are `Any` elsewhere.
+published here instead. Only package stubs exist, so a name is annotated when it is
+imported from the package that exports it and not when it is imported from the module
+that defines it. The stub describes the shape of the API exactly: every public name, its
+parameters, which of them are keyword-only, and which have defaults. Types are given
+where they are unambiguous and are `Any` elsewhere.
 """
 
-from oops.observation.insitu import InSitu as InSitu
-from oops.observation.observation_ import Observation as Observation
-from oops.observation.pixel import Pixel as Pixel
-from oops.observation.rasterslit1d import RasterSlit1D as RasterSlit1D
-from oops.observation.slit1d import Slit1D as Slit1D
-from oops.observation.snapshot import Snapshot as Snapshot
-from oops.observation.timedimage import TimedImage as TimedImage
+from typing import Any
+from oops import (Cadence as Cadence, Event as Event, FOV as FOV, Frame as Frame,
+                  Meshgrid as Meshgrid, Path as Path, Surface as Surface)
+from numpy import ndarray, number
+from polymath import Boolean, Matrix3, Pair, Scalar, Vector, Vector3
+from oops.mutable import Mutable as Mutable
+
+# Parameters documented as a polymath type are passed through `as_scalar` and its
+# siblings, so each accepts the class, a number, or a nested sequence of numbers.
+# `str` is excluded deliberately: no polymath constructor accepts one.
+_Numeric = float | number | list['_Numeric'] | tuple['_Numeric', ...]
+Matrix3Like = Matrix3 | ndarray | _Numeric
+PairLike = Pair | ndarray | _Numeric
+ScalarLike = Scalar | ndarray | _Numeric
+Vector3Like = Vector3 | ndarray | _Numeric
+VectorLike = Vector | ndarray | _Numeric
 
 __all__ = ['Observation', 'InSitu', 'Pixel', 'RasterSlit1D', 'Slit1D', 'Snapshot',
            'TimedImage']
+
+class Observation(Mutable):
+    def __init__(self) -> None: ...
+    @property
+    def time(self) -> Any: ...
+    @property
+    def midtime(self) -> Any: ...
+    def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
+        derivs: bool = True) -> tuple[Pair, Scalar]: ...
+    def uvt_range(self, indices: ScalarLike | VectorLike, *,
+        remask: bool = False) -> tuple[Pair, Pair, Scalar, Scalar]: ...
+    def time_range_at_uv(self, uv_pair: PairLike, *,
+        remask: bool = False) -> tuple[Scalar, Scalar]: ...
+    def _time_range_at_uv_0d(self, uv_pair: PairLike, *,
+        remask: bool = False) -> tuple[Scalar, Scalar]: ...
+    def _time_range_at_uv_1d(self, uv_pair: PairLike, *, axis: int = 0,
+        remask: bool = False) -> tuple[Scalar, Scalar]: ...
+    def _time_range_at_uv_2d(self, uv_pair: PairLike, *, fast: int = 1,
+        remask: bool = False) -> tuple[Scalar, Scalar]: ...
+    def uv_range_at_time(self, time: ScalarLike, *,
+        remask: bool = False) -> tuple[Pair, Pair]: ...
+    def _uv_range_at_time_0d(self, time: ScalarLike, uv_shape: tuple | PairLike, *,
+        remask: bool = False) -> tuple[Pair, Pair]: ...
+    def _uv_range_at_time_1d(self, time: ScalarLike, uv_shape: tuple, *, axis: int = 0,
+        remask: bool = False) -> tuple[Pair, Pair]: ...
+    def _uv_range_at_time_2d(self, time: ScalarLike, uv_shape: tuple, *, slow: int = 0,
+        fast: int = 1, remask: bool = False) -> tuple[Pair, Pair]: ...
+    def uv_range_at_tstep(self, tstep: ScalarLike | PairLike, *,
+        remask: bool = False) -> tuple[Pair, Pair]: ...
+    def _uv_range_at_tstep_0d(self, tstep: ScalarLike, uv_shape: tuple | PairLike, *,
+        remask: bool = False) -> tuple[Pair, Pair]: ...
+    def _uv_range_at_tstep_1d(self, tstep: ScalarLike, uv_shape: tuple, *, axis: int = 0,
+        remask: bool = False) -> tuple[Pair, Pair]: ...
+    def _uv_range_at_tstep_2d(self, tstep: PairLike, uv_shape: tuple, *, slow: int = 0,
+        fast: int = 1, remask: bool = False) -> tuple[Pair, Pair]: ...
+    def time_shift(self, dtime: float) -> Observation: ...
+    def copy(self) -> Observation: ...
+    def navigate(self, angles: tuple | list) -> Observation: ...
+    frame: Any
+    def set_frame(self, frame: Frame) -> None: ...
+    def get_spice_cmatrix(self, tstep: float | ScalarLike | None = None, *,
+        time: float | ScalarLike | None = None) -> Matrix3: ...
+    def set_spice_cmatrix(self, matrix: Matrix3Like) -> None: ...
+    def insert_subfield(self, key: str, value: Any) -> None: ...
+    def delete_subfield(self, key: str) -> None: ...
+    def delete_subfields(self) -> None: ...
+    def uv_is_outside(self, uv_pair: PairLike, *, inclusive: bool = True) -> Boolean: ...
+    def midtime_at_uv(self, uv: PairLike, *, tfrac: float = 0.5) -> Scalar: ...
+    def meshgrid(self, origin: PairLike | None = None, *, undersample: int = 1,
+        oversample: int = 1, limit: PairLike | None = None,
+        center_uv: PairLike | None = None,
+        fov_kwargs: dict | None = None) -> Meshgrid: ...
+    def timegrid(self, meshgrid: Meshgrid, *, oversample: int = 1,
+        tfrac_limits: tuple = (0, 1)) -> Scalar: ...
+    def event_at_grid(self, meshgrid: Meshgrid | None = None, *, tfrac: float = 0.5,
+        time: ScalarLike | None = None) -> Event: ...
+    def gridless_event(self, meshgrid: Meshgrid | None = None, *, tfrac: float = 0.5,
+        time: ScalarLike | None = None, shapeless: bool = False) -> Event: ...
+    @staticmethod
+    def _scalar_from_indices(indices: Any, axis: int, *,
+        derivs: bool = True) -> Scalar: ...
+    def uv_from_ra_and_dec(self, ra: ScalarLike, dec: ScalarLike, *, tfrac: float = 0.5,
+        time: ScalarLike | None = None, apparent: bool = True, derivs: bool = False,
+        iters: int = 2, quick: dict | None = None) -> Pair: ...
+    def uv_from_path(self, path: Path, *, tfrac: float = 0.5,
+        time: ScalarLike | None = None, derivs: bool = False,
+        guess: ScalarLike | None = None, quick: dict | None = None,
+        converge: dict | None = None) -> Pair: ...
+    def uv_from_coords(self, surface: Surface, coords: tuple, *, tfrac: float = 0.5,
+        time: ScalarLike | None = None, underside: bool = False, derivs: bool = False,
+        quick: dict | None = None, converge: dict | None = None) -> Pair: ...
+    def inventory(self, bodies: list, *, tfrac: ScalarLike | None = None,
+        time: ScalarLike | None = None, expand: float = 0.0, return_type: str = 'list',
+        fov: FOV | None = None, quick: dict | None = None,
+        converge: dict | None = None) -> list | ndarray | dict: ...
+    def parallel_los(self, parallel: Observation, los: Vector3Like, *,
+        time: ScalarLike | None = None, derivs: bool = False) -> Vector3: ...
+    def parallel_uv(self, parallel: Observation, uv: PairLike, *,
+        time: ScalarLike | None = None, derivs: bool = False) -> Pair: ...
+    def parallel_offset_angles(self, parallel: Observation, angles: tuple | list, *,
+        time: ScalarLike | None = None) -> tuple[Scalar, Scalar]: ...
+    def parallel_offset_duv(self, parallel: Observation, duv: PairLike, *,
+        time: ScalarLike | None = None, origin: PairLike | None = None) -> Pair: ...
+
+class InSitu(Observation):
+    path: Any
+    frame: Any
+    fov: Any
+    cadence: Any
+    u_axis: int
+    v_axis: int
+    swap_uv: bool
+    uv_shape: Any
+    shape: Any
+    t_axis: Any
+    subfields: Any
+    def __init__(self, cadence: Cadence, path: Path, **subfields: dict) -> None: ...
+    def time_shift(self, dtime: float) -> Observation: ...
+
+class Pixel(Observation):
+    path: Any
+    frame: Any
+    fov: Any
+    uv_shape: Any
+    u_axis: int
+    v_axis: int
+    swap_uv: bool
+    t_axis: Any
+    cadence: Any
+    shape: Any
+    subfields: Any
+    def __init__(self, axes: list | tuple, cadence: Cadence, fov: FOV, path: Path,
+        frame: Frame, **subfields: dict) -> None: ...
+    def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
+        derivs: bool = True) -> tuple[Pair, Scalar]: ...
+    def uvt_range(self, indices: ScalarLike | VectorLike, *,
+        remask: bool = False) -> tuple[Pair, Pair, Scalar, Scalar]: ...
+    def time_range_at_uv(self, uv_pair: PairLike, *,
+        remask: bool = False) -> tuple[Scalar, Scalar]: ...
+    def uv_range_at_time(self, time: ScalarLike, *,
+        remask: bool = False) -> tuple[Pair, Pair]: ...
+    def uv_range_at_tstep(self,  # type: ignore[override]
+        tstep: ScalarLike, *, remask: bool = False) -> tuple[Pair, Pair]: ...
+    def time_shift(self, dtime: float) -> Observation: ...
+    def event_at_grid(self, meshgrid: Meshgrid | None = None, *, tfrac: float = 0.5,
+        time: ScalarLike | None = None) -> Event: ...
+    def gridless_event(self, meshgrid: Meshgrid | None = None, *, tfrac: float = 0.5,
+        time: ScalarLike | None = None, shapeless: bool = False) -> Event: ...
+
+class RasterSlit1D(Observation):
+    path: Any
+    frame: Any
+    fov: Any
+    shape: Any
+    u_axis: Any
+    v_axis: int
+    t_axis: Any
+    uv_shape: Any
+    swap_uv: bool
+    cadence: Any
+    subfields: Any
+    def __init__(self, axes: list | tuple, cadence: Cadence, fov: FOV, path: Path,
+        frame: Frame, **subfields: dict) -> None: ...
+    def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
+        derivs: bool = True) -> tuple[Pair, Scalar]: ...
+    def uvt_range(self, indices: ScalarLike | VectorLike, *,
+        remask: bool = False) -> tuple[Pair, Pair, Scalar, Scalar]: ...
+    def time_range_at_uv(self, uv_pair: PairLike, *,
+        remask: bool = False) -> tuple[Scalar, Scalar]: ...
+    def uv_range_at_time(self, time: ScalarLike, *,
+        remask: bool = False) -> tuple[Pair, Pair]: ...
+    def uv_range_at_tstep(self,  # type: ignore[override]
+        tstep: ScalarLike, *, remask: bool = False) -> tuple[Pair, Pair]: ...
+    def time_shift(self, dtime: float) -> Observation: ...
+
+class Slit1D(Observation):
+    path: Any
+    frame: Any
+    fov: Any
+    uv_shape: Any
+    shape: Any
+    u_axis: Any
+    v_axis: int
+    swap_uv: bool
+    t_axis: int
+    cadence: Any
+    subfields: Any
+    def __init__(self, axes: list | tuple, tstart: float, texp: float, fov: FOV,
+        path: Path, frame: Frame, **subfields: dict) -> None: ...
+    def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
+        derivs: bool = True) -> tuple[Pair, Scalar]: ...
+    def uvt_range(self, indices: ScalarLike | VectorLike, *,
+        remask: bool = False) -> tuple[Pair, Pair, Scalar, Scalar]: ...
+    def time_range_at_uv(self, uv_pair: PairLike, *,
+        remask: bool = False) -> tuple[Scalar, Scalar]: ...
+    def uv_range_at_time(self, time: ScalarLike, *,
+        remask: bool = False) -> tuple[Pair, Pair]: ...
+    def uv_range_at_tstep(self,  # type: ignore[override]
+        tstep: ScalarLike, *, remask: bool = False) -> tuple[Pair, Pair]: ...
+    def time_shift(self, dtime: float) -> Observation: ...
+
+class Snapshot(Observation):
+    path: Any
+    frame: Any
+    fov: Any
+    uv_shape: Any
+    u_axis: Any
+    v_axis: Any
+    swap_uv: Any
+    t_axis: int
+    shape: Any
+    cadence: Any
+    subfields: Any
+    def __init__(self, axes: list | tuple, tstart: float, texp: float, fov: FOV,
+        path: Path, frame: Frame, **subfields: dict) -> None: ...
+    def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
+        derivs: bool = True) -> tuple[Pair, Scalar]: ...
+    def uvt_range(self, indices: ScalarLike | VectorLike, *,
+        remask: bool = False) -> tuple[Pair, Pair, Scalar, Scalar]: ...
+    def uv_range_at_tstep(self,  # type: ignore[override]
+        tstep: ScalarLike, *, remask: bool = False) -> tuple[Pair, Pair]: ...
+    def time_range_at_uv(self, uv_pair: PairLike, *,
+        remask: bool = False) -> tuple[Scalar, Scalar]: ...
+    def uv_range_at_time(self, time: ScalarLike, *,
+        remask: bool = False) -> tuple[Pair, Pair]: ...
+    def time_shift(self, dtime: float) -> Observation: ...
+    def uv_from_ra_and_dec(self, ra: ScalarLike, dec: ScalarLike, *, tfrac: float = 0.5,
+        time: ScalarLike | None = None, apparent: bool = True, derivs: bool = False,
+        iters: int = 2, quick: dict | None = None) -> Pair: ...
+    def uv_from_path(self, path: Path, *, tfrac: float = 0.5,
+        time: ScalarLike | None = None, derivs: bool = False,
+        guess: ScalarLike | None = None, quick: dict | None = None,
+        converge: dict | None = None) -> Pair: ...
+    def uv_from_coords(self, surface: Surface, coords: tuple, *, tfrac: float = 0.5,
+        time: ScalarLike | None = None, underside: bool = False, derivs: bool = False,
+        quick: dict | None = None, converge: dict | None = None) -> Pair: ...
+    def inventory(self, bodies: list, *, tfrac: ScalarLike | None = None,
+        time: ScalarLike | None = None, expand: float = 0.0, return_type: str = 'list',
+        fov: FOV | None = None, quick: dict | None = None,
+        converge: dict | None = None) -> list | ndarray | dict: ...
+
+class TimedImage(Observation):
+    path: Any
+    frame: Any
+    fov: Any
+    u_axis: Any
+    v_axis: Any
+    t_axis: Any
+    swap_uv: Any
+    cadence: Any
+    shape: Any
+    uv_shape: Any
+    subfields: Any
+    def __init__(self, axes: list | tuple, cadence: Cadence, fov: FOV, path: Path,
+        frame: Frame, **subfields: dict) -> None: ...
+    def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
+        derivs: bool = True) -> tuple[Pair, Scalar]: ...
+    def uvt_range(self, indices: ScalarLike | VectorLike, *,
+        remask: bool = False) -> tuple[Pair, Pair, Scalar, Scalar]: ...
+    def time_range_at_uv(self, uv_pair: PairLike, *,
+        remask: bool = False) -> tuple[Scalar, Scalar]: ...
+    def uv_range_at_time(self, time: ScalarLike, *,
+        remask: bool = False) -> tuple[Pair, Pair]: ...
+    def uv_range_at_tstep(self, tstep: ScalarLike | PairLike, *,
+        remask: bool = False) -> tuple[Pair, Pair]: ...
+    def time_shift(self, dtime: float) -> Observation: ...
+    def inventory(self, bodies: list, **kwargs: Any) -> list | ndarray | dict: ...
 
 ##########################################################################################

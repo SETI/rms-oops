@@ -164,15 +164,21 @@ exclude = [
 warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
-# The three packages do ship a py.typed marker and a .pyi stub beside every module, but
-# `mypy_path` deliberately does not name src/, so this run cannot see them and the check
-# stays on the test code itself. Pointing mypy at the stubs here would report the tests'
+# The three packages do ship a py.typed marker and a package stub, but `mypy_path`
+# deliberately does not name src/, so this run cannot see them and the check stays on the
+# test code itself. Pointing mypy at the stubs here would report the tests'
 # use of private members, which the stubs do not publish: a cleanup project rather than a
 # gate. The stubs are checked instead by stubtest, which sets MYPYPATH itself; see
 # scripts/run-all-checks.sh.
 module = ["oops.*", "spicedb.*", "programs.*", "cspyce.*", "astropy.*", "spicedb",
           "oops"]
 ignore_missing_imports = true
+# Only the package stubs exist, so stubtest's mypy build reads the unannotated sources
+# for every module below a package. These codes report that absence rather than any
+# defect; the stub-versus-runtime comparison stubtest exists for is unaffected.
+disable_error_code = ["attr-defined", "var-annotated", "assignment", "operator",
+                      "index", "misc", "has-type", "import-untyped",
+                      "import-not-found"]
 
 [tool.bandit]
 # The library is the target; the tests are not shipped.

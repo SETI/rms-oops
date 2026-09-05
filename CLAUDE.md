@@ -78,23 +78,33 @@ imports fail because these are unset, say so; do not report it as a code defect.
   checking it would report their absence rather than any defect. `mypy_path` does
   not name `src`, so that run does not see the stubs either; pointing it there
   reports the tests' use of private members, which the stubs do not publish.
-- All three packages ship a PEP 561 `py.typed` marker, so the published type
-  information lives in a `.pyi` stub beside every module. A stub replaces its
-  module outright for a type checker: whatever the stub omits is invisible
-  downstream, so a stub has to cover its module's whole public surface.
-  `stubtest` enforces exactly that and runs in the check script and in CI, so
-  adding, renaming or re-signing any public member means updating its stub in the
-  same change. Signature shapes are exact — every parameter, which are
-  keyword-only, and every default — while the types are `Any` except where they
-  are unambiguous, which is deliberate rather than an omission to fill in blindly.
-  The members bound on at import time need writing out by hand: the ~86 backplane
-  methods `_define_backplane_names` attaches all have to appear in
+- All three packages ship a PEP 561 `py.typed` marker, one per top-level package
+  (`src/oops`, `src/spicedb`, `programs`); a marker at the package root covers the
+  whole tree, so subpackages do not carry their own. The published type information
+  lives in one `.pyi` per directory, `__init__.pyi`, and nowhere else. A name is
+  therefore annotated when it is imported from the package that exports it, as in
+  `from oops.frame import SpiceFrame`, and not when it is imported from the module
+  that defines it: the latter falls back to the unannotated source. Each package
+  stub declares its classes outright rather than re-exporting them, because a
+  re-export would resolve back to that source.
+- A stub replaces its module outright for a type checker, so whatever it omits is
+  invisible downstream and adding, renaming or re-signing any public member means
+  updating `__init__.pyi` in the same change. `stubtest` enforces this and runs in
+  the check script and in CI with `--ignore-missing-stub`, since the modules below
+  each package no longer have stubs of their own. The members bound on at import
+  time need writing out by hand: the ~86 backplane methods
+  `_define_backplane_names` attaches all have to appear in
   `backplane/__init__.pyi`, as do the photon-solver methods on `Path` and
   `Surface` and the class constants (`Frame.J2000`, `Path.SSB`,
   `Transform.IDENTITY`, the `Gravity` bodies) that their modules assign after the
-  class statement. `stubtest-allowlist.txt` holds the few names that exist at run
-  time and are deliberately unpublished; each entry names the `for` statement
-  whose loop variable leaked.
+  class statement.
+- Types come from the docstrings. A parameter documented as a polymath type takes
+  the matching `ScalarLike`, `PairLike`, `Vector3Like` alias, because the body
+  passes it through `as_scalar` or a sibling and so accepts the class, a number, or
+  a nested sequence of numbers; a return takes the exact class. `Any` remains only
+  where the docstring gives no type. `stubtest-allowlist.txt` holds the names that
+  exist only in the stubs (those aliases) or only at run time (the cross-class
+  attributes injected to break circular imports).
 - The legacy exclusions are recorded in `pyproject.toml`: `ideas/` and the parked,
   uncollected test modules are outside ruff's scope, and `src/oops/hosts/*` and
   `src/spicedb/*` carry per-file ignores.

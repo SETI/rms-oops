@@ -394,8 +394,8 @@ def override(title, value, names=None):
     Parameters:
         title (str): The exact title of a test, e.g., "JUPITER:RING incidence angle, ring
             minus center (deg)".
-        value (float): The revised comparison value, or None to suppress the test
-            entirely.
+        value (float or None): The revised comparison value, or None to suppress the
+            test entirely.
         names (str or list[str], optional): Name(s) of one or more standard observations;
             None to apply to all standard observations.
     """
