@@ -53,8 +53,8 @@ class FOV(Mutable):
         remask: bool = False, **kwargs: Any) -> Pair: ...
     def offset_angles_from_duv(self, duv: PairLike, *, time: ScalarLike | None = None,
         origin: PairLike | None = None) -> tuple[Scalar, Scalar]: ...
-    def offset_duv_from_angles(self, angles: tuple, *, time: ScalarLike | None = None,
-        origin: PairLike | None = None) -> Pair: ...
+    def offset_duv_from_angles(self, angles: tuple[ScalarLike, ScalarLike] | tuple, *,
+        time: ScalarLike | None = None, origin: PairLike | None = None) -> Pair: ...
     def uv_is_outside(self, uv_pair: PairLike, time: ScalarLike | None = None, *,
         uv_min: PairLike | None = None, uv_max: PairLike | None = None,
         inclusive: bool = True) -> Boolean: ...
@@ -100,9 +100,11 @@ class BarrelFOV(FOV):
     uv_area: Any
     uv_precision: Any
     xy_precision: Any
-    def __init__(self, uv_scale: PairLike | tuple, uv_shape: PairLike | tuple, *,
+    def __init__(self, uv_scale: PairLike | tuple[float, float] | tuple,
+        uv_shape: PairLike | tuple[int, int] | tuple, *,
         coefft_xy_from_uv: ndarray | None = None,
-        coefft_uv_from_xy: ndarray | None = None, uv_los: PairLike | tuple | None = None,
+        coefft_uv_from_xy: ndarray | None = None,
+        uv_los: PairLike | tuple[float, float] | tuple | None = None,
         uv_area: float | None = None, iters: int = 8, fast: bool = True) -> None: ...
     def xy_from_uvt(self, uv_pair: PairLike, time: ScalarLike | None = None, *,
         derivs: bool = False, remask: bool = False, **kwargs: Any) -> Pair: ...
@@ -118,7 +120,8 @@ class FlatFOV(FOV):
     duv_dxy: Any
     def __init__(self, uv_scale: PairLike | float | tuple[float, float],
         uv_shape: PairLike | int | tuple[int, int], *,
-        uv_los: PairLike | tuple | None = None, uv_area: float | None = None) -> None: ...
+        uv_los: PairLike | tuple[float, float] | tuple | None = None,
+        uv_area: float | None = None) -> None: ...
     def xy_from_uvt(self, uv_pair: PairLike, time: ScalarLike | None = None, *,
         derivs: bool = False, remask: bool = False, **kwargs: Any) -> Pair: ...
     def uv_from_xyt(self, xy_pair: PairLike, time: ScalarLike | None = None, *,

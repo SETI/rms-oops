@@ -2038,8 +2038,9 @@ class Event(Oops):
             quick (dict, optional): To override the configured default parameters for
                 QuickPaths and QuickFrames; False to disable the use of QuickPaths and
                 QuickFrames. The default configuration is defined in config.py.
-            frame (Frame, optional): Coordinate frame for RA and dec. Default is J2000.
-                Use None to use the frame of this event.
+            frame (Frame, str, or None, optional): Coordinate frame for RA and dec,
+                or its registered ID. Default is "J2000"; use None for the frame of
+                this event.
         """
 
         # Validate the inputs

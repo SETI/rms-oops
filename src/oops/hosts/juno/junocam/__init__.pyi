@@ -17,7 +17,7 @@ from oops import Path as Path
 
 __all__ = ['from_file', 'JUNOCAM']
 
-def from_file(filespec: str | Path | FCPath, fast_distortion: bool = True,
+def from_file(filespec: str | Path | FCPath, fast_distortion: bool | None = True,
     return_all_planets: bool = False, snap: bool = False, method: str = 'strict',
     **parameters: Any) -> Any: ...
 

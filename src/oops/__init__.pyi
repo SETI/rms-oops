@@ -337,7 +337,7 @@ class Event(Oops):
         quick: dict | None = None) -> Any: ...
     def ra_and_dec(self, apparent: bool = False, *, derivs: bool = False,
         subfield: str = 'arr', quick: dict | None = None,
-        frame: str = 'J2000') -> Any: ...
+        frame: Frame | str | None = 'J2000') -> Any: ...
 
 class Fittable(Oops):
     @property
@@ -359,16 +359,17 @@ class Meshgrid(Oops):
     def __init__(self, fov: FOV, uv_pair: PairLike, center_uv: PairLike | None = None, *,
         fov_kwargs: dict | None = None) -> None: ...
     @staticmethod
-    def for_fov(fov: FOV, origin: PairLike | None = None, undersample: int = 1,
-        oversample: int = 1, limit: PairLike | None = None, swap: bool = False,
+    def for_fov(fov: FOV, origin: PairLike | None = None, undersample: PairLike = 1,
+        oversample: PairLike = 1, limit: PairLike | None = None, swap: bool = False,
         fov_kwargs: dict | None = None) -> Meshgrid: ...
     @staticmethod
     def for_fov_center(fov: FOV, origin: PairLike | None = None,
         fov_kwargs: dict | None = None) -> Meshgrid: ...
     @staticmethod
     def for_shape(fov: FOV, shape: tuple, u_axis: int = -1, v_axis: int = -1,
-        origin: PairLike | None = None, undersample: int = 1, oversample: int = 1,
-        limit: PairLike | None = None, center_uv: PairLike | tuple | None = None,
+        origin: PairLike | None = None, undersample: PairLike = 1,
+        oversample: PairLike = 1, limit: PairLike | None = None,
+        center_uv: PairLike | tuple[float, float] | tuple | None = None,
         fov_kwargs: dict | None = None) -> Meshgrid: ...
     def los_w_derivs(self, time: ScalarLike | None = None) -> Vector3: ...
     def los(self, time: ScalarLike | None = None) -> Vector3: ...

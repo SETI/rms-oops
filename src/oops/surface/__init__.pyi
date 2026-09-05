@@ -40,9 +40,9 @@ class Surface(Mutable):
     def coords_from_vector3(self, pos: Vector3Like, *, obs: Vector3Like | None = None,
         time: ScalarLike | None = None, axes: int = 2, derivs: bool = False,
         hints: Any = None) -> tuple[Scalar, ...]: ...
-    def vector3_from_coords(self, coords: tuple, *, obs: Vector3Like | None = None,
-        time: ScalarLike | None = None, derivs: bool = False,
-        hints: Any = None) -> Vector3 | tuple[Vector3, Any]: ...
+    def vector3_from_coords(self, coords: tuple[ScalarLike, ...] | tuple, *,
+        obs: Vector3Like | None = None, time: ScalarLike | None = None,
+        derivs: bool = False, hints: Any = None) -> Vector3 | tuple[Vector3, Any]: ...
     def intercept(self, obs: Vector3Like, los: Vector3Like, *,
         time: ScalarLike | None = None, direction: str = 'dep', derivs: bool = False,
         guess: ScalarLike | None = None,
@@ -67,7 +67,7 @@ class Surface(Mutable):
         derivs: bool = False) -> tuple[Scalar, ...]: ...
     def apply_coords_to_event(self, event: Event, *, obs: Event | None = None,
         axes: int = 3, derivs: bool = True) -> Event: ...
-    def event_at_coords(self, time: ScalarLike, coords: tuple, *,
+    def event_at_coords(self, time: ScalarLike, coords: tuple[ScalarLike, ...] | tuple, *,
         obs: Vector3Like | None = None, derivs: bool = False) -> Event: ...
     @staticmethod
     def resolution(dpos_duv: Vector3Like) -> tuple[Scalar, Scalar]: ...
@@ -75,7 +75,8 @@ class Surface(Mutable):
         guess: ScalarLike | None = None, antimask: ndarray | bool | None = None,
         quick: dict | bool | None = None,
         converge: dict | None = None) -> tuple[Event, Event]: ...
-    def photon_from_coords(self, departure: Event, coords: tuple, *, derivs: bool = False,
+    def photon_from_coords(self, departure: Event,
+        coords: tuple[ScalarLike, ...] | tuple, *, derivs: bool = False,
         guess: ScalarLike | None = None, antimask: ndarray | bool | None = None,
         quick: dict | bool | None = None,
         converge: dict | None = None) -> tuple[Event, Event]: ...
@@ -95,9 +96,9 @@ class Surface(Mutable):
         guess: ScalarLike | None = None, antimask: ndarray | bool | None = None,
         quick: dict | bool | None = None,
         converge: dict | None = None) -> tuple[Event, Event]: ...
-    def photon_to_coords(self, arrival: Event, coords: tuple, *, derivs: bool = False,
-        guess: ScalarLike | None = None, antimask: ndarray | bool | None = None,
-        quick: dict | bool | None = None,
+    def photon_to_coords(self, arrival: Event, coords: tuple[ScalarLike, ...] | tuple, *,
+        derivs: bool = False, guess: ScalarLike | None = None,
+        antimask: ndarray | bool | None = None, quick: dict | bool | None = None,
         converge: dict | None = None) -> tuple[Event, Event]: ...
     def photon_to_event(self, arrival: Event, *, derivs: bool = False,
         guess: ScalarLike | None = None, antimask: ndarray | bool | None = None,
@@ -116,7 +117,7 @@ class Ansa(Surface):
     intercept_key: Any
     def __init__(self, origin: Path | str, frame: Frame | str, *,
         gravity: Gravity | None = None, ringplane: RingPlane | None = None,
-        radii: tuple | None = None) -> None: ...
+        radii: tuple[float, float] | tuple | None = None) -> None: ...
     @property
     def ringplane(self) -> RingPlane: ...
     @staticmethod
@@ -126,9 +127,9 @@ class Ansa(Surface):
     def coords_from_vector3(self, pos: Vector3Like, *, obs: Vector3Like | None = None,
         time: ScalarLike | None = None, axes: int = 2, derivs: bool = False,
         hints: Any = None) -> tuple[Scalar, ...]: ...
-    def vector3_from_coords(self, coords: tuple, *, obs: Vector3Like | None = None,
-        time: ScalarLike | None = None, derivs: bool = False,
-        hints: Any = None) -> Vector3 | tuple[Vector3, Any]: ...
+    def vector3_from_coords(self, coords: tuple[ScalarLike, ...] | tuple, *,
+        obs: Vector3Like | None = None, time: ScalarLike | None = None,
+        derivs: bool = False, hints: Any = None) -> Vector3 | tuple[Vector3, Any]: ...
     def intercept(self, obs: Vector3Like, los: Vector3Like, *,
         time: ScalarLike | None = None, direction: str = 'dep', derivs: bool = False,
         guess: ScalarLike | None = None,
@@ -141,8 +142,9 @@ class CentricEllipsoid(Ellipsoid):
     def coords_from_vector3(self, pos: Vector3Like, *, obs: Vector3Like | None = None,
         time: ScalarLike | None = None, axes: int = 2, derivs: bool = False,
         hints: ScalarLike | None = None, groundtrack: bool = False) -> tuple: ...
-    def vector3_from_coords(self, coords: tuple, *, obs: Vector3Like | None = None,
-        time: ScalarLike | None = None, derivs: bool = False, hints: Any = None,
+    def vector3_from_coords(self, coords: tuple[ScalarLike, ...] | tuple, *,
+        obs: Vector3Like | None = None, time: ScalarLike | None = None,
+        derivs: bool = False, hints: Any = None,
         groundtrack: bool = False) -> Vector3 | tuple: ...
     def lon_to_centric(self, lon: ScalarLike, *, derivs: bool = False) -> Scalar: ...
     def lon_from_centric(self, lon: ScalarLike, *, derivs: bool = False) -> Scalar: ...
@@ -161,8 +163,9 @@ class CentricSpheroid(Spheroid):
     def coords_from_vector3(self, pos: Vector3Like, *, obs: Vector3Like | None = None,
         time: ScalarLike | None = None, axes: int = 2, derivs: bool = False,
         hints: ScalarLike | None = None, groundtrack: bool = False) -> tuple: ...
-    def vector3_from_coords(self, coords: tuple, *, obs: Vector3Like | None = None,
-        time: ScalarLike | None = None, derivs: bool = False, hints: Any = None,
+    def vector3_from_coords(self, coords: tuple[ScalarLike, ...] | tuple, *,
+        obs: Vector3Like | None = None, time: ScalarLike | None = None,
+        derivs: bool = False, hints: Any = None,
         groundtrack: bool = False) -> Vector3 | tuple: ...
     def lat_to_centric(self, lat: ScalarLike, lon: ScalarLike | None = None, *,
         derivs: bool = False) -> Scalar: ...
@@ -184,7 +187,8 @@ class Ellipsoid(Surface):
     frame: Any
     unmasked: Any
     intercept_key: Any
-    def __init__(self, origin: Path | str, frame: Frame | str, radii: tuple) -> None: ...
+    def __init__(self, origin: Path | str, frame: Frame | str,
+        radii: tuple[float, float, float] | tuple) -> None: ...
     @property
     def radii(self) -> ndarray: ...
     @property
@@ -193,8 +197,9 @@ class Ellipsoid(Surface):
         time: ScalarLike | None = None, axes: int = 2, derivs: bool = False,
         hints: ScalarLike | None = None,
         groundtrack: bool = False) -> tuple[Scalar, ...]: ...
-    def vector3_from_coords(self, coords: tuple, *, obs: Vector3Like | None = None,
-        time: ScalarLike | None = None, derivs: bool = False, hints: Any = None,
+    def vector3_from_coords(self, coords: tuple[ScalarLike, ...] | tuple, *,
+        obs: Vector3Like | None = None, time: ScalarLike | None = None,
+        derivs: bool = False, hints: Any = None,
         groundtrack: bool = False) -> Vector3 | tuple: ...
     def position_is_inside(self, pos: Vector3Like, *, obs: Vector3Like | None = None,
         time: ScalarLike | None = None) -> Boolean: ...
@@ -228,8 +233,9 @@ class GraphicEllipsoid(Ellipsoid):
     def coords_from_vector3(self, pos: Vector3Like, *, obs: Vector3Like | None = None,
         time: ScalarLike | None = None, axes: int = 2, derivs: bool = False,
         hints: ScalarLike | None = None, groundtrack: bool = False) -> tuple: ...
-    def vector3_from_coords(self, coords: tuple, *, obs: Vector3Like | None = None,
-        time: ScalarLike | None = None, derivs: bool = False, hints: Any = None,
+    def vector3_from_coords(self, coords: tuple[ScalarLike, ...] | tuple, *,
+        obs: Vector3Like | None = None, time: ScalarLike | None = None,
+        derivs: bool = False, hints: Any = None,
         groundtrack: bool = False) -> Vector3 | tuple: ...
     def lon_to_centric(self, lon: ScalarLike, *, derivs: bool = False) -> Scalar: ...
     def lon_from_centric(self, lon: ScalarLike, *, derivs: bool = False) -> Scalar: ...
@@ -248,8 +254,9 @@ class GraphicSpheroid(Spheroid):
     def coords_from_vector3(self, pos: Vector3Like, *, obs: Vector3Like | None = None,
         time: ScalarLike | None = None, axes: int = 2, derivs: bool = False,
         hints: ScalarLike | None = None, groundtrack: bool = False) -> tuple: ...
-    def vector3_from_coords(self, coords: tuple, *, obs: Vector3Like | None = None,
-        time: ScalarLike | None = None, derivs: bool = False, hints: Any = None,
+    def vector3_from_coords(self, coords: tuple[ScalarLike, ...] | tuple, *,
+        obs: Vector3Like | None = None, time: ScalarLike | None = None,
+        derivs: bool = False, hints: Any = None,
         groundtrack: bool = False) -> Vector3 | tuple: ...
     def lat_to_centric(self, lat: ScalarLike, lon: ScalarLike | None = None, *,
         derivs: bool = False) -> Scalar: ...
@@ -270,7 +277,8 @@ class Limb(Surface):
     frame: Any
     unmasked: Any
     intercept_key: Any
-    def __init__(self, ground: Surface, *, limits: tuple | None = None) -> None: ...
+    def __init__(self, ground: Surface, *,
+        limits: tuple[float, float] | tuple | None = None) -> None: ...
     @property
     def ground(self) -> Surface: ...
     @property
@@ -278,8 +286,9 @@ class Limb(Surface):
     def coords_from_vector3(self, pos: Vector3Like, *, obs: Vector3Like | None = None,
         time: ScalarLike | None = None, axes: int = 2, derivs: bool = False,
         hints: ScalarLike | None = None, groundtrack: bool = False) -> tuple: ...
-    def vector3_from_coords(self, coords: tuple, *, obs: Vector3Like | None = None,
-        time: ScalarLike | None = None, derivs: bool = False, hints: Any = None,
+    def vector3_from_coords(self, coords: tuple[ScalarLike, ...] | tuple, *,
+        obs: Vector3Like | None = None, time: ScalarLike | None = None,
+        derivs: bool = False, hints: Any = None,
         groundtrack: bool = False) -> Vector3 | tuple: ...
     def intercept(self, obs: Vector3Like, los: Vector3Like, *,
         time: ScalarLike | None = None, direction: str = 'dep', derivs: bool = False,
@@ -349,15 +358,15 @@ class OrbitPlane(Surface):
     frame: Any
     intercept_key: Any
     unmasked: Any
-    def __init__(self, elements: tuple, epoch: ScalarLike, origin: Path | str,
-        frame: Frame | str, *, path_id: str | None = None,
-        radii: tuple | None = None) -> None: ...
+    def __init__(self, elements: tuple[float, ...] | tuple, epoch: ScalarLike,
+        origin: Path | str, frame: Frame | str, *, path_id: str | None = None,
+        radii: tuple[float, float] | tuple | None = None) -> None: ...
     def coords_from_vector3(self, pos: Vector3Like, *, obs: Vector3Like | None = None,
         time: ScalarLike | None = None, axes: int = 2, derivs: bool = False,
         hints: Any = None) -> tuple: ...
-    def vector3_from_coords(self, coords: tuple, *, obs: Vector3Like | None = None,
-        time: ScalarLike | None = None, derivs: bool = False,
-        hints: Any = None) -> Vector3 | tuple[Vector3, Any]: ...
+    def vector3_from_coords(self, coords: tuple[ScalarLike, ...] | tuple, *,
+        obs: Vector3Like | None = None, time: ScalarLike | None = None,
+        derivs: bool = False, hints: Any = None) -> Vector3 | tuple[Vector3, Any]: ...
     def intercept(self, obs: Vector3Like, los: Vector3Like, *,
         time: ScalarLike | None = None, direction: str = 'dep', derivs: bool = False,
         guess: ScalarLike | None = None,
@@ -378,8 +387,9 @@ class PolarLimb(Limb):
     def coords_from_vector3(self, pos: Vector3Like, *, obs: Vector3Like | None = None,
         time: ScalarLike | None = None, axes: int = 2, derivs: bool = False,
         hints: ScalarLike | None = None, groundtrack: bool = False) -> tuple: ...
-    def vector3_from_coords(self, coords: tuple, *, obs: Vector3Like | None = None,
-        time: ScalarLike | None = None, derivs: bool = False, hints: Any = None,
+    def vector3_from_coords(self, coords: tuple[ScalarLike, ...] | tuple, *,
+        obs: Vector3Like | None = None, time: ScalarLike | None = None,
+        derivs: bool = False, hints: Any = None,
         groundtrack: bool = False) -> Vector3 | tuple: ...
 
 class RingPlane(Surface):
@@ -394,15 +404,15 @@ class RingPlane(Surface):
     unmasked: Any
     intercept_key: Any
     def __init__(self, origin: Path | str, frame: Frame | str, *,
-        radii: tuple | None = None, gravity: Gravity | None = None,
-        elevation: float = 0.0, modes: list | None = None,
+        radii: tuple[float, float] | tuple | None = None, gravity: Gravity | None = None,
+        elevation: ScalarLike = 0.0, modes: list | None = None,
         epoch: float = 0.0) -> None: ...
     def coords_from_vector3(self, pos: Vector3Like, *, obs: Vector3Like | None = None,
         time: ScalarLike | None = None, axes: int = 2, derivs: bool = False,
         hints: Any = None) -> tuple[Scalar, ...]: ...
-    def vector3_from_coords(self, coords: tuple, *, obs: Vector3Like | None = None,
-        time: ScalarLike | None = None, derivs: bool = False,
-        hints: Any = None) -> Vector3 | tuple[Vector3, Any]: ...
+    def vector3_from_coords(self, coords: tuple[ScalarLike, ...] | tuple, *,
+        obs: Vector3Like | None = None, time: ScalarLike | None = None,
+        derivs: bool = False, hints: Any = None) -> Vector3 | tuple[Vector3, Any]: ...
     def intercept(self, obs: Vector3Like, los: Vector3Like, *,
         time: ScalarLike | None = None, direction: str = 'dep', derivs: bool = False,
         guess: ScalarLike | None = None,
@@ -414,7 +424,8 @@ class RingPlane(Surface):
         time: ScalarLike | None = None) -> Vector3: ...
 
 class Spheroid(Ellipsoid):
-    def __init__(self, origin: Path | str, frame: Frame | str, radii: tuple) -> None: ...
+    def __init__(self, origin: Path | str, frame: Frame | str,
+        radii: tuple[float, ...] | tuple) -> None: ...
     def intercept_normal_to(self, pos: Vector3Like, *, obs: Vector3Like | None = None,
         time: ScalarLike | None = None, direction: str = 'dep', derivs: bool = False,
         guess: ScalarLike | None = None, hints: Any = None) -> Vector3 | tuple: ...
@@ -432,6 +443,7 @@ class Spheroid(Ellipsoid):
         derivs: bool = False) -> Scalar: ...
 
 def spice_shape(spice_id: str | int, frame: Frame | None = None,
-    default_radii: tuple | None = None) -> Spheroid | Ellipsoid: ...
+    default_radii: tuple[float, float, float] | None = None
+) -> Spheroid | Ellipsoid: ...
 
 ##########################################################################################
