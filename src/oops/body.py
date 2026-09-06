@@ -848,9 +848,9 @@ class Body(Oops):
             event (Event): The event of the observation.
             derivs (bool, optional): True to propagate derivatives of the event position
                 into the returned events. The time derivative is always retained.
-            guess (Scalar, optional): An initial guess to use as the event time along the
-                path; otherwise None. Should only be used if the event time was already
-                returned from a similar calculation.
+            guess (ScalarLike, optional): An initial guess to use as the event time along
+                the path; otherwise None. Should only be used if the event time was
+                already returned from a similar calculation.
             antimask (numpy.ndarray or bool, optional): If not None, this is a boolean
                 array to be applied to event times and positions. Only the indices where
                 antimask=True will be used in the solution.
@@ -1458,7 +1458,7 @@ class Body(Oops):
                 central planet's IAU-defined pole.
             barycenter_name (str, optional): The name of the ring's barycenter if this is
                 not the same as the name of the central planet.
-            pole (Vector3, optional): If not None, this is the pole of the invariable
+            pole (Vector3Like, optional): If not None, this is the pole of the invariable
                 plane. It will be used to define the ring_frame as a
                 :class:`~oops.frame.PoleFrame` instead of a
                 :class:`~oops.frame.RingFrame`.

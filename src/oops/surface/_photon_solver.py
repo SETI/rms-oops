@@ -27,7 +27,7 @@ def photon_to_event(self, arrival, *, derivs=False, guess=None, antimask=None, q
         derivs (bool, optional): True to propagate derivatives of the `arrival` position
             and line of sight into the returned event. Derivatives with respect to time
             are always retained.
-        guess (Scalar, optional): An initial guess to use as the event time at the
+        guess (ScalarLike, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
@@ -85,7 +85,7 @@ def photon_from_event(self, departure, *, derivs=False, guess=None, antimask=Non
         derivs (bool, optional): True to propagate derivatives of the `departure` position
             and line of sight into the returned event. Derivatives with respect to time
             are always retained.
-        guess (Scalar, optional): An initial guess to use as the event time at the
+        guess (ScalarLike, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
@@ -145,7 +145,7 @@ def _solve_photon_by_los(self, link, sign, *, derivs=False, guess=None, antimask
         derivs (bool, optional): True to propagate derivatives of the link position and
             line of sight into the returned event. Derivatives with respect to time are
             always retained.
-        guess (Scalar, optional): An initial guess to use as the event time for the
+        guess (ScalarLike, optional): An initial guess to use as the event time for the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
@@ -487,12 +487,12 @@ def photon_to_coords(self, arrival, coords, *, derivs=False, guess=None, antimas
 
     Parameters:
         arrival (Event): The event of a photon's arrival.
-        coords (tuple[Scalar, ...]): Two or three coordinate values defining locations at
-            or near the surface.
+        coords (tuple[ScalarLike, ...]): Two or three coordinate values defining locations
+            at or near the surface.
         derivs (bool, optional): True to propagate derivatives of the `arrival` position
             and line of sight into the returned event. Derivatives with respect to time
             are always retained.
-        guess (Scalar, optional): An initial guess to use as the event time at the
+        guess (ScalarLike, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
@@ -547,12 +547,12 @@ def photon_from_coords(self, departure, coords, *, derivs=False, guess=None,
 
     Parameters:
         departure (Event): The event of a photon's departure.
-        coords (tuple[Scalar, ...]): Two or three coordinate values defining locations at
-            or near the surface.
+        coords (tuple[ScalarLike, ...]): Two or three coordinate values defining locations
+            at or near the surface.
         derivs (bool, optional): True to propagate derivatives of the `departure` position
             and line of sight into the returned event. Derivatives with respect to time
             are always retained.
-        guess (Scalar, optional): An initial guess to use as the event time at the
+        guess (ScalarLike, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
@@ -606,8 +606,8 @@ def _solve_photon_by_coords(self, link, coords, sign, *, derivs=False, guess=Non
 
     Parameters:
         link (Event): The link event of a photon's arrival or departure.
-        coords (tuple[Scalar, ...]): Two or three coordinate values defining locations at
-            or near the surface.
+        coords (tuple[ScalarLike, ...]): Two or three coordinate values defining locations
+            at or near the surface.
         sign (int): -1 to return earlier events, corresponding to photons departing from
             the surface and arriving later at the link. +1 to return later events,
             corresponding to photons departing from the link and arriving later at the
@@ -615,7 +615,7 @@ def _solve_photon_by_coords(self, link, coords, sign, *, derivs=False, guess=Non
         derivs (bool, optional): True to propagate derivatives of the `link` position and
             coordinates into the returned event. Derivatives with respect to time are
             always retained.
-        guess (Scalar, optional): An initial guess to use as the event time at the
+        guess (ScalarLike, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
@@ -879,7 +879,7 @@ def photon_normal_to_event(self, arrival, *, derivs=False, guess=None, antimask=
         derivs (bool, optional): True to propagate derivatives of the `arrival` position
             and line of sight into the returned event. Derivatives with respect to time
             are always retained.
-        guess (Scalar, optional): An initial guess to use as the event time at the
+        guess (ScalarLike, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
@@ -942,7 +942,7 @@ def photon_event_to_normal(self, departure, *, derivs=False, guess=None, antimas
         derivs (bool, optional): True to propagate derivatives of the `departure` position
             and line of sight into the returned event. Derivatives with respect to time
             are always retained.
-        guess (Scalar, optional): An initial guess to use as the event time at the
+        guess (ScalarLike, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
@@ -1009,7 +1009,7 @@ def _solve_photon_event_normal(self, link, sign, *, derivs=False, guess=None,
         derivs (bool, optional): True to propagate derivatives of the link position and
             line of sight into the returned event. Derivatives with respect to time are
             always retained.
-        guess (Scalar, optional): An initial guess to use as the event time for the
+        guess (ScalarLike, optional): An initial guess to use as the event time for the
             surface; otherwise None. Should only be used if the event time was already
             returned from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
@@ -1287,11 +1287,11 @@ def photon_path_to_normal(self, time, path, *, derivs=False, guess=None, antimas
     This can be used to solve for the sub-solar point on a surface.
 
     Parameters:
-        time (Scalar): The time of the photon event at the surface, in seconds TDB.
+        time (ScalarLike): The time of the photon event at the surface, in seconds TDB.
         path (Path): The remote Path from which the photon departed.
         derivs (bool, optional): True to propagate derivatives of the path position into
             the returned events. Derivatives with respect to time are always retained.
-        guess (Scalar, optional): An initial guess to use as the event time at the
+        guess (ScalarLike, optional): An initial guess to use as the event time at the
             remote path; otherwise None. Should be used if the event time was already
             returned from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
@@ -1352,11 +1352,11 @@ def photon_normal_to_path(self, time, path, *, derivs=False, guess=None, antimas
     surface normal.
 
     Parameters:
-        time (Scalar): The time of the photon event at the surface, in seconds TDB.
+        time (ScalarLike): The time of the photon event at the surface, in seconds TDB.
         path (Path): The remote Path at which the photon arrived.
         derivs (bool, optional): True to propagate derivatives of the path position into
             the returned events. Derivatives with respect to time are always retained.
-        guess (Scalar, optional): An initial guess to use as the event time at the
+        guess (ScalarLike, optional): An initial guess to use as the event time at the
             remote path; otherwise None. Should be used if the event time was already
             returned from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
@@ -1414,7 +1414,7 @@ def _solve_photon_path_normal(self, time, path, sign, *, derivs=False, guess=Non
     """Solve for a photon surface intercept based on remote path and local surface normal.
 
     Parameters:
-        time (Scalar): Time at the surface for the photon event.
+        time (ScalarLike): Time at the surface for the photon event.
         path (Path): Remote path for the event associated with the photon's travel.
         sign (int): -1 to return earlier path events, corresponding to photons departing
             from the path and arriving later at the surface. +1 to return later path
@@ -1422,9 +1422,9 @@ def _solve_photon_path_normal(self, time, path, sign, *, derivs=False, guess=Non
             at the path.
         derivs (bool, optional): True to propagate derivatives of the path position into
             the returned events. Derivatives with respect to time are always retained.
-        guess (Scalar, optional): An initial guess to use as the event time for the path;
-            otherwise None. Should only be used if the event time was already returned
-            from a similar calculation.
+        guess (ScalarLike, optional): An initial guess to use as the event time for the
+            path; otherwise None. Should only be used if the event time was already
+            returned from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
             event times and positions. Only the indices where `antimask=True` will be used
             in the solution.

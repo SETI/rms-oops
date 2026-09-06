@@ -19,7 +19,7 @@ def photon_to_event(self, arrival, *, derivs=False, guess=None, antimask=None, q
         arrival (Event): The Event of a photon's arrival.
         derivs (bool, optional): True to propagate derivatives of the `arrival` position
             into the returned Events. The time derivative is always retained.
-        guess (Scalar, optional): An initial guess to use as the event time along this
+        guess (ScalarLike, optional): An initial guess to use as the event time along this
             Path; otherwise None. Should be provided if the event time was already
             returned from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean array to be applied to event
@@ -75,7 +75,7 @@ def photon_from_event(self, departure, *, derivs=False, guess=None, antimask=Non
         departure (Event): The Event of a photon's departure.
         derivs (bool, optional): True to propagate derivatives of the `departure` position
             into the returned Events. The time derivative is always retained.
-        guess (Scalar, optional): An initial guess to use as the event time along this
+        guess (ScalarLike, optional): An initial guess to use as the event time along this
             Path; otherwise None. Should be provided if the event time was already
             returned from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean array to be applied to event
@@ -133,7 +133,7 @@ def _solve_photon(self, link, sign, *, derivs=False, guess=None, antimask=None,
             to photons arriving at this Path after departing from the Event.
         derivs (bool, optional): True to propagate derivatives of the link position into
             the returned event. The time derivative is always retained.
-        guess (Scalar, optional): An initial guess to use as the event time along this
+        guess (ScalarLike, optional): An initial guess to use as the event time along this
             Path; otherwise None. Should be provided if the event time was already
             returned from a similar calculation.
         antimask (numpy.ndarray or bool, optional): A boolean array to be applied to event

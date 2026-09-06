@@ -231,8 +231,8 @@ class SRU(object):
 
         Parameters:
             unit: SRU unit number, 1 or 2.
-            time (Scalar): Time at which to define the inertially fixed frame, in seconds
-                TDB; normally the image start time.
+            time (ScalarLike): Time at which to define the inertially fixed frame, in
+                seconds TDB; normally the image start time.
 
         Returns:
             Frame: An unregistered, per-observation Frame object.

@@ -38,9 +38,9 @@ class Backplane(Mutable):
             obs (Observation): The Observation with which this Backplane is associated.
             meshgrid (Meshgrid, optional): Defines the sampling of the FOV; default is to
                 sample the center of every pixel.
-            time (Scalar, optional): Time in seconds TDB during the Observation. The shape
-                of this Scalar will be broadcasted with the shape of the meshgrid. Default
-                is to sample the midtime of every pixel.
+            time (ScalarLike, optional): Time in seconds TDB during the Observation. The
+                shape of this Scalar will be broadcasted with the shape of the meshgrid.
+                Default is to sample the midtime of every pixel.
             inventory (bool or dict, optional): True to keep an inventory of bodies in the
                 field of view and to keep track of their locations. This option can speed
                 up backplane calculations for bodies that occupy a small fraction of the
@@ -519,8 +519,8 @@ class Backplane(Mutable):
         argument is a backplane already, the key is extracted from it.
 
         Parameters:
-            backplane_key (str, tuple, or Qube): The key to repair, or a backplane array
-                that has already been registered.
+            backplane_key (str, tuple, or QubeLike): The key to repair, or a backplane
+                array that has already been registered.
 
         Returns:
             tuple: The standardized key.
@@ -1127,7 +1127,7 @@ class Backplane(Mutable):
 
         Parameters:
             key (tuple): The standardized backplane key under which to file the array.
-            backplane (Qube, numpy.ndarray, or bool): The array to register.
+            backplane (QubeLike): The array to register.
             expand (bool, optional): True to broadcast a single value to the shape of the
                 backplane; default False.
             derivs (bool, optional): True to return the array with its derivatives

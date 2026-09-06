@@ -16,16 +16,13 @@ from oops import (Body as Body, Event as Event, Fittable as Fittable, Frame as F
                   Surface as Surface)
 from oops.frame import FrameShift as FrameShift, SpiceFrame as SpiceFrame
 from oops.cadence import TimeShift as TimeShift
-from numpy import ndarray, number
+from numpy import ndarray
 from polymath import Scalar, Vector3
-from oops.mutable import Mutable as Mutable
-
 # Parameters documented as a polymath type are passed through `as_scalar` and its
 # siblings, so each accepts the class, a number, or a nested sequence of numbers.
-# `str` is excluded deliberately: no polymath constructor accepts one.
-_Numeric = float | number | list['_Numeric'] | tuple['_Numeric', ...]
-ScalarLike = Scalar | ndarray | _Numeric
-Vector3Like = Vector3 | ndarray | _Numeric
+# `polymath.typedefs` names each of those unions.
+from polymath.typedefs import ScalarLike, Vector3Like
+from oops.mutable import Mutable as Mutable
 
 __all__ = ['Path', 'NullPath', 'SSBPath', 'LinkedPath', 'RelativePath', 'ReversedPath',
            'RotatedPath', 'CirclePath', 'CoordPath', 'FixedPath', 'KeplerPath',
@@ -119,7 +116,7 @@ class RotatedPath(Path):
 
 class CirclePath(Path):
     def __init__(self, radius: ScalarLike, lon: ScalarLike,
-        rate: ScalarLike | ndarray | float, epoch: ScalarLike | ndarray | float,
+        rate: ScalarLike, epoch: ScalarLike,
         origin: Path | str, *, frame: Frame | str | None = None,
         path_id: str | None = None) -> None: ...
     def event_at_time(self, time: ScalarLike, *,
@@ -132,7 +129,7 @@ class CoordPath(Path):
         quick: dict | bool | None = None) -> Event: ...
 
 class FixedPath(Path):
-    def __init__(self, pos: Vector3Like | ndarray, origin: Path | str,
+    def __init__(self, pos: Vector3Like, origin: Path | str,
         frame: Frame | str | None = None, *, path_id: str | None = None) -> None: ...
     def event_at_time(self, time: ScalarLike, *,
         quick: dict | bool | None = None) -> Event: ...
@@ -158,13 +155,13 @@ class KeplerPath(Path, Fittable):
 
 class LinearCoordPath(Path):
     def __init__(self, surface: Surface, coords: tuple, coords_dot: tuple,
-        epoch: ScalarLike | float, *, obs: Path | str | None = None,
+        epoch: ScalarLike, *, obs: Path | str | None = None,
         path_id: str | None = None) -> None: ...
     def event_at_time(self, time: ScalarLike, *,
         quick: dict | bool | None = None) -> Event: ...
 
 class LinearPath(Path):
-    def __init__(self, pos: Vector3Like | tuple, epoch: ScalarLike | ndarray | float,
+    def __init__(self, pos: Vector3Like, epoch: ScalarLike,
         origin: Path | str, *, frame: Frame | str | None = None,
         path_id: str | None = None) -> None: ...
     def event_at_time(self, time: ScalarLike, *,
@@ -199,7 +196,7 @@ class QuickPath(Path):
         time: ScalarLike, *, quick: dict | bool | None = False) -> Event: ...
     def extend(self, tmin: float, tmax: float) -> None: ...
     @staticmethod
-    def for_path(path: Path, time: ScalarLike | tuple, *,
+    def for_path(path: Path, time: ScalarLike, *,
         quick: dict | bool | None = None) -> Path: ...
 
 class SpicePath(Path):

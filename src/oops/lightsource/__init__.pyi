@@ -13,19 +13,13 @@ where they are unambiguous and are `Any` elsewhere.
 
 from typing import Any
 from oops import Body as Body, Event as Event, RPD as RPD
-from numpy import ndarray, number
-from polymath import Pair, Scalar, Vector3
-from oops.oops import Oops as Oops
-from oops.path import Path as Path
-
+from numpy import ndarray
 # Parameters documented as a polymath type are passed through `as_scalar` and its
 # siblings, so each accepts the class, a number, or a nested sequence of numbers.
-# `str` is excluded deliberately: no polymath constructor accepts one.
-_Numeric = float | number | list['_Numeric'] | tuple['_Numeric', ...]
-ScalarLike = Scalar | ndarray | _Numeric
-
-PairLike = Pair | ndarray | _Numeric
-Vector3Like = Vector3 | ndarray | _Numeric
+# `polymath.typedefs` names each of those unions.
+from polymath.typedefs import PairLike, ScalarLike, Vector3Like
+from oops.oops import Oops as Oops
+from oops.path import Path as Path
 
 __all__ = ['LightSource', 'DiskSource']
 
@@ -51,7 +45,7 @@ class DiskSource(LightSource):
     shape: Any
     radius: Any
     weight: Any
-    def __init__(self, name: str, source: Path | tuple | Vector3Like, radius: float,
+    def __init__(self, name: str, source: Path | PairLike | Vector3Like, radius: float,
         size: int = 11, compress: bool = False) -> None: ...
     def photon_to_event(self, event: Event, derivs: bool = False,
         guess: ScalarLike | None = None, antimask: ndarray | bool | None = None,

@@ -15,7 +15,7 @@ def border_above(self, backplane_key, value):
 
     Parameters:
         backplane_key (str or tuple): Key defining the backplane to evaluate.
-        value (float or Scalar): The value defining the border.
+        value (ScalarLike): The value defining the border.
     """
 
     return self._border_above_or_below(+1, backplane_key, value)
@@ -28,7 +28,7 @@ def border_below(self, backplane_key, value):
 
     Parameters:
         backplane_key (str or tuple): Key defining the backplane to evaluate.
-        value (float or Scalar): The value defining the border.
+        value (ScalarLike): The value defining the border.
     """
 
     return self._border_above_or_below(-1, backplane_key, value)
@@ -42,7 +42,7 @@ def border_atop(self, backplane_key, value):
 
     Parameters:
         backplane_key (str or tuple): Key defining the backplane to evaluate.
-        value (float or Scalar): The value defining the border.
+        value (ScalarLike): The value defining the border.
     """
 
     self.refresh()
@@ -78,7 +78,7 @@ def _border_above_or_below(self, sign, backplane_key, value):
         sign (int): +1 for the border of the region >= `value`; -1 for the border of the
             region <= `value`.
         backplane_key (str or tuple): Key defining the backplane to evaluate.
-        value (float or Scalar): The value defining the border.
+        value (ScalarLike): The value defining the border.
     """
 
     self.refresh()

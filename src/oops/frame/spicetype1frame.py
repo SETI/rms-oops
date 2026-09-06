@@ -95,8 +95,8 @@ class SpiceType1Frame(SpiceFrame):
         using the tick rate, which is sampled once and retained.
 
         Parameters:
-            time (Scalar): A time at which this Frame is about to be evaluated, used to
-                sample the tick rate.
+            time (ScalarLike): A time at which this Frame is about to be evaluated, used
+                to sample the tick rate.
         """
 
         if self._time_tolerance is not None:
@@ -145,7 +145,7 @@ class SpiceType1Frame(SpiceFrame):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
@@ -227,7 +227,7 @@ class SpiceType1Frame(SpiceFrame):
         raised.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use

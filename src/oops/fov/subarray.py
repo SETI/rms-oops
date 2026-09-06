@@ -17,12 +17,11 @@ class Subarray(FOV):
 
         Parameters:
             fov (FOV): Object within which this subarray is defined.
-            new_los (tuple or Pair): The location of the subarray's line of sight in the
+            new_los (PairLike): The location of the subarray's line of sight in the
                 *(u,v)* coordinates of the original FOV.
-            uv_shape (float, tuple, or Pair): The new size of the field of view in pixels.
-            uv_los (float, tuple, or Pair, optional): The *(u,v)* coordinates of the new
-                line of sight. By default, this is the midpoint of the rectangle, i.e.,
-                ``uv_shape/2``.
+            uv_shape (PairLike): The new size of the field of view in pixels.
+            uv_los (PairLike, optional): The *(u,v)* coordinates of the new line of sight.
+                By default, this is the midpoint of the rectangle, i.e., ``uv_shape/2``.
         """
 
         self.fov = fov
@@ -59,8 +58,8 @@ class Subarray(FOV):
         """The camera coordinates *(x,y)* at FOV coordinates *(u,v)* and a given time.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
-            time (Scalar, optional): Absolute time in seconds TDB.
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
             derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
                 into the returned *(x,y)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -82,8 +81,8 @@ class Subarray(FOV):
         """The FOV coordinates *(u,v)* at camera coordinates *(x,y)* and a given time.
 
         Parameters:
-            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
-            time (Scalar, optional): Absolute time in seconds TDB.
+            xy_pair (PairLike): *(x,y)* coordinates in this FOV, assuming *z = 1*.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
             derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
                 into the returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of

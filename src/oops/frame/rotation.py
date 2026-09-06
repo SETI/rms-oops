@@ -20,10 +20,9 @@ class Rotation(Frame, Fittable):
         """Constructor for a Rotation.
 
         Parameters:
-            arg (Scalar, array-like, float, or Rotation): The angle of rotation in
-                radians, which can be multidimensional. Alternatively, if another Rotation
-                is given, this object's rotation angle will always match that of the
-                argument.
+            arg (ScalarLike or Rotation): The angle of rotation in radians, which can be
+                multidimensional. Alternatively, if another Rotation is given, this
+                object's rotation angle will always match that of the argument.
             axis (int or str): The rotation axis: 0, "x", or "X" for *x*; 1, "y", or "Y"
                 for *y*; 2, "z", or "Z" for *z*.
             reference (Frame or str): The Frame or the ID of the Frame relative to which
@@ -176,7 +175,7 @@ class Rotation(Frame, Fittable):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): Ignored by class Rotation.
 
         Returns:

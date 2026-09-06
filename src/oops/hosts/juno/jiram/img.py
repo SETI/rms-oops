@@ -214,8 +214,8 @@ class IMG(object):
         ignored.
 
         Parameters:
-            time (Scalar): Time at which to define the inertialy fixed mirror- corrected
-                frame.
+            time (ScalarLike): Time at which to define the inertialy fixed mirror-
+                corrected frame.
             asof (str, optional): Only use SPICE kernels that existed before this date;
                 None to ignore. kwargs:     Arguments for juno.initialize() and
                 Body.define_solar_system()

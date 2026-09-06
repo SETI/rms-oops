@@ -24,7 +24,7 @@ class Instant(Cadence):
         """Constructor for an Instant.
 
         Parameters:
-            tdb (Scalar): A time Scalar in seconds TDB.
+            tdb (ScalarLike): A time Scalar in seconds TDB.
 
         Raises:
             ValueError: If every time in `tdb` is masked.
@@ -77,8 +77,8 @@ class Instant(Cadence):
         Indices beyond the limits of the cadence are clipped to the nearest edge.
 
         Parameters:
-            tstep (Scalar or Pair): Time step index values, with one component per axis
-                of this cadence's shape.
+            tstep (ScalarLike or PairLike): Time step index values, with one component per
+                axis of this cadence's shape.
             remask (bool, optional): True to mask values outside the cadence.
             inclusive (bool, optional): True to treat the largest index as part of this
                 Cadence; False to exclude it.
@@ -102,7 +102,7 @@ class Instant(Cadence):
         the given time.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
 
         Returns:
             tuple[numpy.ndarray, numpy.ndarray]: The raveled index of the first matching
@@ -130,8 +130,8 @@ class Instant(Cadence):
         beyond the limits of the cadence returns the time at the nearest edge.
 
         Parameters:
-            tstep (Scalar or Pair): Time step index values, with one component per axis
-                of this cadence's shape. It is ignored if this cadence has shape (),
+            tstep (ScalarLike or PairLike): Time step index values, with one component per
+                axis of this cadence's shape. It is ignored if this cadence has shape (),
                 because then it has only one time step.
             remask (bool, optional): True to mask values outside the time limits.
             derivs (bool, optional): Ignored. The returned time carries no derivatives,
@@ -155,8 +155,8 @@ class Instant(Cadence):
         An Instant has zero duration, so the two returned times are equal.
 
         Parameters:
-            tstep (Scalar or Pair): Time step index values, with one component per axis
-                of this cadence's shape.
+            tstep (ScalarLike or PairLike): Time step index values, with one component per
+                axis of this cadence's shape.
             remask (bool, optional): True to mask values outside the time limits.
             inclusive (bool, optional): True to treat the largest time step index as part
                 of this Cadence; False to exclude it.
@@ -181,7 +181,7 @@ class Instant(Cadence):
         the first of the matching time steps is returned.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             remask (bool, optional): Ignored. A time that this cadence does not sample is
                 always masked.
             derivs (bool, optional): Ignored. The returned time step carries no
@@ -213,7 +213,7 @@ class Instant(Cadence):
         """Integer range of time steps active at the given time.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             remask (bool, optional): True to mask time values not sampled within this
                 Cadence.
             inclusive (bool, optional): Ignored. Every time step of this cadence is a
@@ -251,7 +251,7 @@ class Instant(Cadence):
         moments falls outside it.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             inclusive (bool, optional): Ignored. Every time step of this cadence is a
                 single moment, which is always treated as inside.
 

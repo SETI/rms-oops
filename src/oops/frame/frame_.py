@@ -146,7 +146,7 @@ class Frame(Mutable):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
@@ -184,7 +184,7 @@ class Frame(Mutable):
         :class:`~oops.frame.QuickFrame` can interpolate across them.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
@@ -213,7 +213,7 @@ class Frame(Mutable):
         Values always fall between 0 and 2*pi.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
@@ -316,8 +316,7 @@ class Frame(Mutable):
 
     @property
     def stripped_id(self):
-        """The frame ID with any numeric suffix stripped; None if there is no ID.
-        """
+        """The frame ID with any numeric suffix stripped; None if there is no ID."""
         if not self._frame_id:
             return None
         match = Frame._FRAME_ID_PATTERN.match(self._frame_id)
@@ -630,9 +629,9 @@ class Frame(Mutable):
         Frame.
 
         Parameters:
-            time (Scalar or tuple): The set of times at which the frame is to be
-                evaluated. This can simply be a tuple *(t_min, t_max)* defining the
-                beginning and end times.
+            time (ScalarLike): The set of times at which the frame is to be evaluated.
+                This can simply be a tuple *(t_min, t_max)* defining the beginning and end
+                times.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
@@ -702,7 +701,7 @@ class NullFrame(Frame):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
@@ -864,7 +863,7 @@ class LinkedFrame(Frame):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
@@ -897,7 +896,7 @@ class LinkedFrame(Frame):
         cspyce error is still raised.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
@@ -962,7 +961,7 @@ class ReversedFrame(Frame):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
@@ -993,7 +992,7 @@ class ReversedFrame(Frame):
         cspyce error is still raised.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use

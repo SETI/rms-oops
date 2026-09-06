@@ -80,8 +80,8 @@ class FOV(Mutable):
         """The camera coordinates *(x,y)* at FOV coordinates *(u,v)* and a given time.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
-            time (Scalar, optional): Absolute time in seconds TDB.
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
             derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
                 into the returned *(x,y)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -99,8 +99,8 @@ class FOV(Mutable):
         """The FOV coordinates *(u,v)* at camera coordinates *(x,y)* and a given time.
 
         Parameters:
-            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
-            time (Scalar, optional): Absolute time in seconds TDB.
+            xy_pair (PairLike): *(x,y)* coordinates in this FOV, assuming *z = 1*.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
             derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
                 into the returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -125,7 +125,7 @@ class FOV(Mutable):
         only for an FOV whose `IS_TIME_INDEPENDENT` attribute is True.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
             derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
                 into the returned *(x,y)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -153,7 +153,7 @@ class FOV(Mutable):
         only for an FOV whose `IS_TIME_INDEPENDENT` attribute is True.
 
         Parameters:
-            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
+            xy_pair (PairLike): *(x,y)* coordinates in this FOV, assuming *z = 1*.
             derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
                 into the returned *(u,v)* Pair.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -183,8 +183,8 @@ class FOV(Mutable):
         time is expected to be very small.
 
         Parameters:
-            uv_pair (Pair, numpy.ndarray, or tuple): *(u,v)* coordinates in the FOV.
-            time (Scalar, optional): Absolute time in seconds TDB.
+            uv_pair (PairLike): *(u,v)* coordinates in the FOV.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
@@ -256,7 +256,7 @@ class FOV(Mutable):
         *opposite* to the path of arriving photons.
 
         Parameters:
-            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
+            xy_pair (PairLike): *(x,y)* coordinates in this FOV, assuming *z = 1*.
             derivs (bool, optional): True to propagate any derivatives of *(x,y)* forward
                 into the returned line-of-sight vector.
 
@@ -280,7 +280,7 @@ class FOV(Mutable):
         ignored.
 
         Parameters:
-            los (Vector3): Line of sight in this FOV's coordinate frame.
+            los (Vector3Like): Line of sight in this FOV's coordinate frame.
             derivs (bool, optional): True to propagate any derivatives of `los` into the
                 returned coordinates.
 
@@ -302,8 +302,8 @@ class FOV(Mutable):
         arriving photons.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
-            time (Scalar, optional): Absolute time in seconds TDB.
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
             derivs (bool, optional): True to propagate any derivatives of *(u,v)* into the
                 returned line of sight.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -327,7 +327,7 @@ class FOV(Mutable):
         of sight points in the direction *opposite* to that of the arriving photons.
 
         Parameters:
-            uv_pair (Pair, numpy.ndarray, or tuple): *(u,v)* coordinates in the FOV.
+            uv_pair (PairLike): *(u,v)* coordinates in the FOV.
             derivs (bool, optional): True to propagate any derivatives of *(u,v)* into the
                 returned line of sight.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -351,8 +351,8 @@ class FOV(Mutable):
         Note that `los` points in the direction *opposite* to that of the arriving photon.
 
         Parameters:
-            los (Vector3): The line of sight in the FOV's frame.
-            time (Scalar, optional): Absolute time in seconds TDB.
+            los (Vector3Like): The line of sight in the FOV's frame.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
             derivs (bool, optional): True to propagate any derivatives of `los` into the
                 returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -376,7 +376,7 @@ class FOV(Mutable):
         points in the direction *opposite* to that of the arriving photon.
 
         Parameters:
-            los (Vector3): Direction of the line of sight in the FOV's frame.
+            los (Vector3Like): Direction of the line of sight in the FOV's frame.
             derivs (bool, optional): True to propagate any derivatives of `los` into the
                 returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -401,12 +401,12 @@ class FOV(Mutable):
         """The rotation angles defined by a *(u,v)* pixel offset in an FOV.
 
         Parameters:
-            duv (Pair): *(u,v)* pixel offsets. These define the coordinates of a feature
-                in a Navigation frame as offsets from that same feature in the reference
-                frame.
-            time (Scalar, optional): Absolute time in seconds TDB.
-            origin (Pair, optional): The *(u,v)* coordinates of the reference location at
-                which this offset is determined. By default, this is the center of the
+            duv (PairLike): *(u,v)* pixel offsets. These define the coordinates of a
+                feature in a Navigation frame as offsets from that same feature in the
+                reference frame.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
+            origin (PairLike, optional): The *(u,v)* coordinates of the reference location
+                at which this offset is determined. By default, this is the center of the
                 FOV.
 
         Returns:
@@ -431,12 +431,12 @@ class FOV(Mutable):
         """The pixel offset *(u,v)* produced by a pair of rotation angles.
 
         Parameters:
-            angles (tuple[Scalar, Scalar]): Two offset angles in radians. The first
-                rotation is about the *y*-axis of this FOV's frame and the second is
+            angles (tuple[ScalarLike, ScalarLike]): Two offset angles in radians. The
+                first rotation is about the *y*-axis of this FOV's frame and the second is
                 about the *x*-axis.
-            time (Scalar, optional): Absolute time in seconds TDB.
-            origin (Pair, optional): The *(u,v)* coordinates of the reference location at
-                which this offset is determined. By default, this is the center of the
+            time (ScalarLike, optional): Absolute time in seconds TDB.
+            origin (PairLike, optional): The *(u,v)* coordinates of the reference location
+                at which this offset is determined. By default, this is the center of the
                 FOV.
 
         Returns:
@@ -467,12 +467,12 @@ class FOV(Mutable):
         """A Boolean mask identifying coordinates outside the FOV.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
-            time (Scalar, optional): Absolute time in seconds TDB.
-            uv_min (Pair, optional): The lower *(u,v)* corner of the area observed in the
-                FOV; None for the full FOV.
-            uv_max (Pair, optional): The upper *(u,v)* corner of the area observed in the
-                FOV; None for the full FOV.
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
+            uv_min (PairLike, optional): The lower *(u,v)* corner of the area observed in
+                the FOV; None for the full FOV.
+            uv_max (PairLike, optional): The upper *(u,v)* corner of the area observed in
+                the FOV; None for the full FOV.
             inclusive (bool, optional): True to interpret coordinate values at the upper
                 end of each range as inside the FOV; False to interpret them as outside.
 
@@ -504,14 +504,14 @@ class FOV(Mutable):
         """A Boolean mask identifying coordinates outside the FOV along one axis.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
             uv_index (int): 0 to test u-coordinates; 1 to test v-coordinates.
-            uv_min (Pair, optional): The lower *(u,v)* corner of the area observed in the
-                FOV, of which only the element selected by `uv_index` is used; None for
-                the full FOV.
-            uv_max (Pair, optional): The upper *(u,v)* corner of the area observed in the
-                FOV, of which only the element selected by `uv_index` is used; None for
-                the full FOV.
+            uv_min (PairLike, optional): The lower *(u,v)* corner of the area observed in
+                the FOV, of which only the element selected by `uv_index` is used; None
+                for the full FOV.
+            uv_max (PairLike, optional): The upper *(u,v)* corner of the area observed in
+                the FOV, of which only the element selected by `uv_index` is used; None
+                for the full FOV.
             inclusive (bool, optional): True to interpret coordinate values at the upper
                 end of each range as inside the FOV; False to interpret them as outside.
 
@@ -540,14 +540,14 @@ class FOV(Mutable):
         """A Boolean mask identifying coordinates outside the FOV.
 
         Parameters:
-            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
-            time (Scalar, optional): Absolute time in seconds TDB.
+            xy_pair (PairLike): *(x,y)* coordinates in this FOV, assuming *z = 1*.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
             inclusive (bool, optional): True to interpret coordinate values at the upper
                 end of each range as inside the FOV; False to interpret them as outside.
-            uv_min (Pair, optional): The lower *(u,v)* corner of the area observed in the
-                FOV; None for the full FOV.
-            uv_max (Pair, optional): The upper *(u,v)* corner of the area observed in the
-                FOV; None for the full FOV.
+            uv_min (PairLike, optional): The lower *(u,v)* corner of the area observed in
+                the FOV; None for the full FOV.
+            uv_max (PairLike, optional): The upper *(u,v)* corner of the area observed in
+                the FOV; None for the full FOV.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
@@ -564,14 +564,14 @@ class FOV(Mutable):
         """A Boolean mask identifying lines of sight outside the FOV.
 
         Parameters:
-            los (Vector3): An outward line-of-sight vector.
-            time (Scalar, optional): Absolute time in seconds TDB.
+            los (Vector3Like): An outward line-of-sight vector.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
             inclusive (bool, optional): True to interpret coordinates at the upper end of
                 each range as inside the FOV; False to interpret them as outside.
-            uv_min (Pair, optional): The lower *(u,v)* corner of the area observed in the
-                FOV; None for the full FOV.
-            uv_max (Pair, optional): The upper *(u,v)* corner of the area observed in the
-                FOV; None for the full FOV.
+            uv_min (PairLike, optional): The lower *(u,v)* corner of the area observed in
+                the FOV; None for the full FOV.
+            uv_max (PairLike, optional): The upper *(u,v)* corner of the area observed in
+                the FOV; None for the full FOV.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
@@ -587,8 +587,7 @@ class FOV(Mutable):
         """The closest *(u,v)* coordinates inside the FOV.
 
         Parameters:
-            uv_pair (Pair, tuple, list, or numpy.ndarray): *(u,v)* coordinates in this
-                FOV.
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
             remask (bool, optional): True to mask the points outside the FOV's boundary.
 
         Returns:
@@ -648,7 +647,7 @@ class FOV(Mutable):
         """Location of the center of the FOV at the specified time.
 
         Parameters:
-            time (Scalar, optional): Absolute time in seconds TDB.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
 
         Returns:
             Pair: *(x,y)* coordinates of the FOV center.
@@ -672,7 +671,7 @@ class FOV(Mutable):
         """The unit line of sight defining the center of the FOV at the specified time.
 
         Parameters:
-            time (Scalar, optional): Absolute time in seconds TDB.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
 
         Returns:
             Vector3: The unit line of sight.
@@ -764,7 +763,7 @@ class FOV(Mutable):
         """The *(x,y)* coordinates where *(u,v) = (0,0)*.
 
         Parameters:
-            time (Scalar, optional): Absolute time in seconds TDB.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
 
         Returns:
             Pair: The *(x,y)* coordinates.
@@ -788,7 +787,7 @@ class FOV(Mutable):
         """The *(x,y)* coordinates where *(u,v) = (0,v_max)*.
 
         Parameters:
-            time (Scalar, optional): Absolute time in seconds TDB.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
 
         Returns:
             Pair: The *(x,y)* coordinates.
@@ -812,7 +811,7 @@ class FOV(Mutable):
         """The *(x,y)* coordinates where *(u,v) = (u_max,0)*.
 
         Parameters:
-            time (Scalar, optional): Absolute time in seconds TDB.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
 
         Returns:
             Pair: The *(x,y)* coordinates.
@@ -836,7 +835,7 @@ class FOV(Mutable):
         """The *(x,y)* coordinates where *(u,v) = (u_max,v_max)*.
 
         Parameters:
-            time (Scalar, optional): Absolute time in seconds TDB.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
 
         Returns:
             Pair: The *(x,y)* coordinates.
@@ -860,10 +859,10 @@ class FOV(Mutable):
         """True if any piece of a sphere falls inside this FOV.
 
         Parameters:
-            center (Vector3): The apparent vector to the center of a sphere in the frame
-                of the FOV, at the given time (km).
-            radius (Scalar): The radius of the sphere (km).
-            time (Scalar, optional): Absolute time in seconds TDB.
+            center (Vector3Like): The apparent vector to the center of a sphere in the
+                frame of the FOV, at the given time (km).
+            radius (ScalarLike): The radius of the sphere (km).
+            time (ScalarLike, optional): Absolute time in seconds TDB.
             border (float, optional): Angular extension of the FOV to allow for pointing
                 uncertainties (radians).
 

@@ -15,18 +15,13 @@ from typing import Any
 from oops.path import KeplerPath as KeplerPath, PathShift as PathShift
 from oops import Fittable as Fittable, Path as Path, Transform as Transform
 from oops.cadence import TimeShift as TimeShift
-from numpy import ndarray, number
-from polymath import Matrix3, Scalar, Vector3
-from oops.mutable import Mutable as Mutable
-
+from numpy import ndarray
+from polymath import Scalar
 # Parameters documented as a polymath type are passed through `as_scalar` and its
 # siblings, so each accepts the class, a number, or a nested sequence of numbers.
-# `str` is excluded deliberately: no polymath constructor accepts one.
-_Numeric = float | number | list['_Numeric'] | tuple['_Numeric', ...]
-Matrix3Like = Matrix3 | ndarray | _Numeric
-ScalarLike = Scalar | ndarray | _Numeric
-
-Vector3Like = Vector3 | ndarray | _Numeric
+# `polymath.typedefs` names each of those unions.
+from polymath.typedefs import Matrix3Like, ScalarLike, Vector3Like
+from oops.mutable import Mutable as Mutable
 
 __all__ = ['Frame', 'NullFrame', 'J2000Frame', 'LinkedFrame', 'ReversedFrame', 'Cmatrix',
            'FrameShift', 'InclinedFrame', 'LaplaceFrame', 'Navigation', 'PoleFrame',
@@ -77,7 +72,7 @@ class Frame(Mutable):
     @staticmethod
     def frame_id_exists(frame_id: str) -> bool: ...
     def wrt(self, reference: Frame | str) -> Frame: ...
-    def quick_frame(self, time: ScalarLike | tuple, *,
+    def quick_frame(self, time: ScalarLike, *,
         quick: dict | bool | None = None) -> Frame: ...
     J2000: Any
 
@@ -143,7 +138,7 @@ class InclinedFrame(Frame):
         time: ScalarLike, *, quick: dict | bool | None = False) -> Scalar: ...
 
 class LaplaceFrame(Frame):
-    def __init__(self, orbit: KeplerPath | str, tilt: ScalarLike | ndarray | float = 0.0,
+    def __init__(self, orbit: KeplerPath | str, tilt: ScalarLike = 0.0,
         *, frame_id: str | None = None, cache_size: int = 100) -> None: ...
     def transform_at_time(self, time: ScalarLike, *,
         quick: dict | bool | None = None) -> Transform: ...
@@ -163,7 +158,7 @@ class Navigation(Frame, Fittable):
         time: ScalarLike, *, quick: dict | bool | None = False) -> Transform: ...
 
 class PoleFrame(Frame):
-    def __init__(self, frame: Frame | str, pole: Vector3Like | ndarray, *,
+    def __init__(self, frame: Frame | str, pole: Vector3Like, *,
         retrograde: bool = False, aries: bool = False, frame_id: str | None = None,
         cache_size: int = 100) -> None: ...
     def transform_at_time(self, time: ScalarLike, *,
@@ -184,11 +179,11 @@ class QuickFrame(Frame):
         time: ScalarLike, *, quick: dict | bool | None = False) -> Transform: ...
     def extend(self, tmin: float, tmax: float) -> None: ...
     @staticmethod
-    def for_frame(frame: Frame, time: ScalarLike | tuple, *,
+    def for_frame(frame: Frame, time: ScalarLike, *,
         quick: dict | bool | None = None) -> Frame: ...
 
 class RingFrame(Frame):
-    def __init__(self, frame: Frame | str, epoch: ScalarLike | float | None = None, *,
+    def __init__(self, frame: Frame | str, epoch: ScalarLike | None = None, *,
         aries: bool = False, retrograde: bool = False, frame_id: str | None = None,
         cache_size: int = 100) -> None: ...
     def transform_at_time(self, time: ScalarLike, *,
@@ -197,7 +192,7 @@ class RingFrame(Frame):
         quick: dict | bool | None = None) -> Scalar: ...
 
 class Rotation(Frame, Fittable):
-    def __init__(self, arg: ScalarLike | ndarray | float | Rotation, /, axis: int | str,
+    def __init__(self, arg: ScalarLike | Rotation, /, axis: int | str,
         reference: Frame | str, *, freeze: bool = False,
         frame_id: str | None = None) -> None: ...
     @property
@@ -236,8 +231,8 @@ class SpiceType1Frame(SpiceFrame):
         cache_size: int | None = None) -> SpiceType1Frame: ...
 
 class SpinFrame(Frame):
-    def __init__(self, offset: ScalarLike | ndarray | float,
-        rate: ScalarLike | ndarray | float, epoch: ScalarLike | ndarray | float,
+    def __init__(self, offset: ScalarLike,
+        rate: ScalarLike, epoch: ScalarLike,
         axis: int | str, reference: Frame | str, *,
         frame_id: str | None = None) -> None: ...
     def transform_at_time(self,
@@ -251,14 +246,14 @@ class SynchronousFrame(Frame):
 
 class TrackerFrame(Frame):
     def __init__(self, frame: Frame | str, target: Path | str, observer: Path | str,
-        epoch: ScalarLike | ndarray | float, *, frame_id: str | None = None,
+        epoch: ScalarLike, *, frame_id: str | None = None,
         cache_size: int = 100) -> None: ...
     def transform_at_time(self, time: ScalarLike, *,
         quick: dict | bool | None = None) -> Transform: ...
 
 class TwoVectorFrame(Frame):
-    def __init__(self, reference: Frame | str, vector1: Vector3Like | ndarray,
-        axis1: int | str, vector2: Vector3Like | ndarray, axis2: int | str, *,
+    def __init__(self, reference: Frame | str, vector1: Vector3Like,
+        axis1: int | str, vector2: Vector3Like, axis2: int | str, *,
         frame_id: str | None = None) -> None: ...
     def transform_at_time(self,
         time: ScalarLike, *, quick: dict | bool | None = False) -> Transform: ...

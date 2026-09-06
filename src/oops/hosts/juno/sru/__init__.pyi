@@ -16,13 +16,11 @@ from filecache import FCPath as FCPath
 from oops import Frame as Frame, Path as Path
 from numpy import ndarray, number
 from polymath import Scalar
-from oops.hosts.juno import Juno as Juno
-
 # Parameters documented as a polymath type are passed through `as_scalar` and its
 # siblings, so each accepts the class, a number, or a nested sequence of numbers.
-# `str` is excluded deliberately: no polymath constructor accepts one.
-_Numeric = float | number | list['_Numeric'] | tuple['_Numeric', ...]
-ScalarLike = Scalar | ndarray | _Numeric
+# `polymath.typedefs` names each of those unions.
+from polymath.typedefs import ScalarLike
+from oops.hosts.juno import Juno as Juno
 
 class SRU:
     SAMPLES: int

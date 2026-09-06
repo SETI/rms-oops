@@ -18,8 +18,8 @@ class FixedPath(Path):
         """Constructor for a FixedPath.
 
         Parameters:
-            pos (Vector3 or array-like): The position vectors within the frame and
-                relative to the specified origin.
+            pos (Vector3Like): The position vectors within the frame and relative to the
+                specified origin.
             origin (Path or str): The Path or the ID of the Path defining the origin.
             frame (Frame or str, optional): The Frame or the ID of the Frame in which the
                 fixed coordinates are defined and in which they are returned; None to use
@@ -71,7 +71,7 @@ class FixedPath(Path):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use

@@ -29,7 +29,8 @@ class LightSource(Oops):
         Parameters:
             name (str): Name under which to register this source; it is converted to
                 upper case.
-            source (Path, str, Pair, or Vector3): The location of the source, as any of:
+            source (Path, str, PairLike, or Vector3Like): The location of the source, as
+                any of:
 
                 * a Path or the ID of a registered Path, for a source that moves;
                 * a Pair or any pair of values, interpreted as J2000 right ascension and
@@ -37,7 +38,7 @@ class LightSource(Oops):
                 * a Vector3 or any triple of values, defining a fixed direction in J2000
                   coordinates.
 
-            weight (Scalar, optional): Relative weights along the given paths or
+            weight (ScalarLike, optional): Relative weights along the given paths or
                 directions, which must broadcast to the shape of `source`. This makes it
                 possible to define an extended, non-uniform source of light and to
                 retrieve a result that is integrated over the source. Default is uniform
@@ -120,9 +121,9 @@ class LightSource(Oops):
             event (Event): The event of the observation.
             derivs (bool, optional): True to propagate derivatives of the event position
                 into the returned event. The time derivative is always retained.
-            guess (Scalar, optional): An initial guess to use as the event time along the
-                path; otherwise None. Should only be used if the event time was already
-                returned from a similar calculation.
+            guess (ScalarLike, optional): An initial guess to use as the event time along
+                the path; otherwise None. Should only be used if the event time was
+                already returned from a similar calculation.
             antimask (numpy.ndarray or bool, optional): If not None, this is a boolean
                 array to be applied to event times and positions. Only the indices where
                 antimask=True will be used in the solution.

@@ -32,9 +32,10 @@ class Calibration(Oops):
         """Extended-source calibrated values for image DN and pixel coordinates.
 
         Parameters:
-            dn (Scalar): Un-calibrated image array values at the given pixel coordinates.
-            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
-                `dn` and `uv_pair` will be casted to the same shape.
+            dn (ScalarLike): Un-calibrated image array values at the given pixel
+                coordinates.
+            uv_pair (PairLike): Associated *(u,v)* pixel coordinates in the image. Note
+                that `dn` and `uv_pair` will be casted to the same shape.
 
         Returns:
             Scalar: Calibrated values for an extended source.
@@ -47,9 +48,9 @@ class Calibration(Oops):
         """Un-calibrated image DN from extended-source calibrated values.
 
         Parameters:
-            value (Scalar): Calibrated values at the given pixel coordinates.
-            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
-                `value` and `uv_pair` will be casted to the same shape.
+            value (ScalarLike): Calibrated values at the given pixel coordinates.
+            uv_pair (PairLike): Associated *(u,v)* pixel coordinates in the image. Note
+                that `value` and `uv_pair` will be casted to the same shape.
 
         Returns:
             Scalar: Un-calibrated values for an extended source.
@@ -62,9 +63,10 @@ class Calibration(Oops):
         """Point-source calibrated values for image DN and pixel coordinates.
 
         Parameters:
-            dn (Scalar): Un-calibrated image array values at the given pixel coordinates.
-            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
-                `dn` and `uv_pair` will be casted to the same shape.
+            dn (ScalarLike): Un-calibrated image array values at the given pixel
+                coordinates.
+            uv_pair (PairLike): Associated *(u,v)* pixel coordinates in the image. Note
+                that `dn` and `uv_pair` will be casted to the same shape.
 
         Returns:
             Scalar: Calibrated values for a point source.
@@ -77,9 +79,9 @@ class Calibration(Oops):
         """Un-calibrated image DN from point-source calibrated values.
 
         Parameters:
-            value (Scalar): Calibrated values at the given pixel coordinates.
-            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
-                `value` and `uv_pair` will be casted to the same shape.
+            value (ScalarLike): Calibrated values at the given pixel coordinates.
+            uv_pair (PairLike): Associated *(u,v)* pixel coordinates in the image. Note
+                that `value` and `uv_pair` will be casted to the same shape.
 
         Returns:
             Scalar: Un-calibrated values for a point source.
@@ -92,8 +94,8 @@ class Calibration(Oops):
         """A version of this Calibration with image DNs re-scaled beforehand.
 
         Parameters:
-            factor (Scalar): Scale factor to apply to DN values.
-            baseline (Scalar, optional): An optional baseline value to subtract from
+            factor (ScalarLike): Scale factor to apply to DN values.
+            baseline (ScalarLike, optional): An optional baseline value to subtract from
                 every DN value before applying the new scale factor.
             name (str, optional): Optional new name. If blank, the existing name is
                 preserved.
@@ -114,9 +116,10 @@ class Calibration(Oops):
         DEPRECATED. Use extended_from_dn or point_from_dn.
 
         Parameters:
-            dn (Scalar): Un-calibrated image array values at the given pixel coordinates.
-            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
-                `dn` and `uv_pair` will be casted to the same shape.
+            dn (ScalarLike): Un-calibrated image array values at the given pixel
+                coordinates.
+            uv_pair (PairLike): Associated *(u,v)* pixel coordinates in the image. Note
+                that `dn` and `uv_pair` will be casted to the same shape.
 
         Returns:
             Scalar: Calibrated values.
@@ -130,9 +133,9 @@ class Calibration(Oops):
         DEPRECATED. Use dn_from_extended or dn_from_point.
 
         Parameters:
-            value (Scalar): Calibrated values at the given pixel coordinates.
-            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
-                `value` and `uv_pair` will be casted to the same shape.
+            value (ScalarLike): Calibrated values at the given pixel coordinates.
+            uv_pair (PairLike): Associated *(u,v)* pixel coordinates in the image. Note
+                that `value` and `uv_pair` will be casted to the same shape.
 
         Returns:
             Scalar: The uncalibrated DN values.
@@ -152,7 +155,7 @@ class Calibration(Oops):
         two can be combined.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* pixel coordinates in the image.
+            uv_pair (PairLike): *(u,v)* pixel coordinates in the image.
 
         Returns:
             tuple[Pair, Scalar, Scalar]: The *(u,v)* pixel coordinates converted to a
@@ -175,8 +178,8 @@ class Calibration(Oops):
         implementation. The caller supplies the results to its own constructor.
 
         Parameters:
-            factor (Scalar): Scale factor to apply to DN values.
-            baseline (Scalar, optional): An optional baseline value to subtract from
+            factor (ScalarLike): Scale factor to apply to DN values.
+            baseline (ScalarLike, optional): An optional baseline value to subtract from
                 every DN value before applying the new scale factor.
             name (str, optional): Optional new name. If blank, the existing name is
                 preserved.
@@ -204,7 +207,7 @@ class Calibration(Oops):
         or an area map.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* indices into the image.
+            uv_pair (PairLike): *(u,v)* indices into the image.
 
         Returns:
             Scalar: Area factors.

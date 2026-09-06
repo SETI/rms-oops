@@ -96,7 +96,7 @@ class Observation(Mutable):
         This method supports non-integer index values.
 
         Parameters:
-            indices (Scalar or Vector): Array indices.
+            indices (ScalarLike or VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
             derivs (bool, optional): True to include derivatives in the returned values.
 
@@ -111,7 +111,7 @@ class Observation(Mutable):
         """Ranges of *(u,v)* spatial coordinates and time for integer array indices.
 
         Parameters:
-            indices (Scalar or Vector): Array indices.
+            indices (ScalarLike or VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
@@ -126,8 +126,8 @@ class Observation(Mutable):
         """The start and stop times of the specified spatial pixel *(u,v)*.
 
         Parameters:
-            uv_pair (Pair): Spatial *(u,v)* data array coordinates, truncated to integers
-                if necessary.
+            uv_pair (PairLike): Spatial *(u,v)* data array coordinates, truncated to
+                integers if necessary.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
@@ -142,8 +142,8 @@ class Observation(Mutable):
         """The time range at *(u,v)* when the spatial and time axes are independent.
 
         Parameters:
-            uv_pair (Pair): Spatial *(u,v)* data array coordinates, truncated to integers
-                if necessary.
+            uv_pair (PairLike): Spatial *(u,v)* data array coordinates, truncated to
+                integers if necessary.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
@@ -168,8 +168,8 @@ class Observation(Mutable):
         """The time range at *(u,v)* for an observation with a 1-D cadence.
 
         Parameters:
-            uv_pair (Pair): Spatial *(u,v)* data array coordinates, truncated to integers
-                if necessary.
+            uv_pair (PairLike): Spatial *(u,v)* data array coordinates, truncated to
+                integers if necessary.
             axis (int, optional): 0 or 1, indicating the uv axis associated with the
                 cadence.
             remask (bool, optional): True to mask values outside the field of view.
@@ -195,8 +195,8 @@ class Observation(Mutable):
         """The time range at *(u,v)* for an observation with a 2-D cadence.
 
         Parameters:
-            uv_pair (Pair): Spatial *(u,v)* data array coordinates, truncated to integers
-                if necessary.
+            uv_pair (PairLike): Spatial *(u,v)* data array coordinates, truncated to
+                integers if necessary.
             fast (int, optional): 0 or 1, indicating the uv axis associated with the fast
                 index of the cadence. The slow index is always 1 - fast.
             remask (bool, optional): True to mask values outside the field of view.
@@ -217,7 +217,7 @@ class Observation(Mutable):
         """The *(u,v)* range of spatial pixels observed at a specified time.
 
         Parameters:
-            time (Scalar): Time values in seconds TDB.
+            time (ScalarLike): Time values in seconds TDB.
             remask (bool, optional): True to mask values outside the time limits.
 
         Returns:
@@ -232,9 +232,9 @@ class Observation(Mutable):
         """The *(u,v)* range at a time, with time decoupled from the spatial axes.
 
         Parameters:
-            time (Scalar): Time values in seconds TDB.
-            uv_shape (tuple or Pair): Shape of the active detector(s) within the FOV,
-                in *(u,v)* order.
+            time (ScalarLike): Time values in seconds TDB.
+            uv_shape (PairLike): Shape of the active detector(s) within the FOV, in
+                *(u,v)* order.
             remask (bool, optional): True to mask times that are out of range.
 
         Returns:
@@ -262,7 +262,7 @@ class Observation(Mutable):
         """The *(u,v)* range at a time, for an observation with a 1-D cadence.
 
         Parameters:
-            time (Scalar): Time values in seconds TDB.
+            time (ScalarLike): Time values in seconds TDB.
             uv_shape (tuple): Shape of the active detector(s) within the FOV, in *(u,v)*
                 order.
             axis (int, optional): 0 or 1, indicating the uv axis associated with the
@@ -296,7 +296,7 @@ class Observation(Mutable):
         """The *(u,v)* range at a time, for an observation with a 2-D cadence.
 
         Parameters:
-            time (Scalar): Time values in seconds TDB.
+            time (ScalarLike): Time values in seconds TDB.
             uv_shape (tuple): Shape of the active detector(s) within the FOV, in *(u,v)*
                 order.
             slow (int, optional): 0 or 1, indicating the uv axis associated with the slow
@@ -340,8 +340,8 @@ class Observation(Mutable):
         """The range of spatial *(u,v)* pixels active at a particular time step.
 
         Parameters:
-            tstep (Scalar or Pair): Time step index. This is a Scalar for an observation
-                with a 1-D cadence and a Pair for one with a 2-D cadence.
+            tstep (ScalarLike or PairLike): Time step index. This is a Scalar for an
+                observation with a 1-D cadence and a Pair for one with a 2-D cadence.
             remask (bool, optional): True to mask time steps outside the cadence.
 
         Returns:
@@ -359,8 +359,8 @@ class Observation(Mutable):
         field of view.
 
         Parameters:
-            tstep (Scalar): Time step index.
-            uv_shape (tuple or Pair): Shape of the active detector(s) within the FOV, in
+            tstep (ScalarLike): Time step index.
+            uv_shape (PairLike): Shape of the active detector(s) within the FOV, in
                 *(u,v)* order.
             remask (bool, optional): True to mask time steps outside the cadence.
 
@@ -386,7 +386,7 @@ class Observation(Mutable):
         """The *(u,v)* range at a time step, for an observation with a 1-D cadence.
 
         Parameters:
-            tstep (Scalar): Time step index.
+            tstep (ScalarLike): Time step index.
             uv_shape (tuple): Shape of the active detector(s) within the FOV, in *(u,v)*
                 order.
             axis (int, optional): 0 or 1, indicating the uv axis associated with the
@@ -421,7 +421,7 @@ class Observation(Mutable):
         """The *(u,v)* range at a time step, for an observation with a 2-D cadence.
 
         Parameters:
-            tstep (Pair): Time step index, as (slow, fast).
+            tstep (PairLike): Time step index, as (slow, fast).
             uv_shape (tuple): Shape of the active detector(s) within the FOV, in *(u,v)*
                 order.
             slow (int, optional): 0 or 1, indicating the uv axis associated with the slow
@@ -583,11 +583,11 @@ class Observation(Mutable):
         the host module that created the observation.
 
         Parameters:
-            tstep (float or Scalar): The time step index or sequence of time step index
-                values, as interpreted by this Observation's cadence.
-            time (float or Scalar): The time in seconds TDB during the Observation. Note
-                that at most one of `tstep` and `time` can be specified; if neither is
-                given, the midtime of this Observation is used.
+            tstep (ScalarLike): The time step index or sequence of time step index values,
+                as interpreted by this Observation's cadence.
+            time (ScalarLike): The time in seconds TDB during the Observation. Note that
+                at most one of `tstep` and `time` can be specified; if neither is given,
+                the midtime of this Observation is used.
 
         Returns:
             Matrix3: The rotation from J2000 coordinates into the SPICE frame of the
@@ -620,9 +620,9 @@ class Observation(Mutable):
         relative to J2000.
 
         Parameters:
-            matrix (Matrix3): The C matrix rotating J2000 coordinates into the SPICE frame
-                of the instrument, as a Matrix3 or as anything that can be converted to
-                one.
+            matrix (Matrix3Like): The C matrix rotating J2000 coordinates into the SPICE
+                frame of the instrument, as a Matrix3 or as anything that can be converted
+                to one.
         """
 
         if not hasattr(self, 'spice_to_frame'):
@@ -673,7 +673,7 @@ class Observation(Mutable):
         """A Boolean mask identifying coordinates outside the FOV.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates.
+            uv_pair (PairLike): *(u,v)* coordinates.
             inclusive (bool, optional): True to interpret coordinate values at the upper
                 end of each range as inside the FOV; False to interpret them as outside.
 
@@ -697,8 +697,8 @@ class Observation(Mutable):
         """The time at a specified fraction of the exposure of spatial pixel *(u,v)*.
 
         Parameters:
-            uv (Pair): *(u,v)* coordinates.
-            tfrac (Scalar, optional): Scalar of fractional times during the exposure,
+            uv (PairLike): *(u,v)* coordinates.
+            tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where 0 refers to the beginning and 1 refers to the end. Default is 0.5,
                 the mid-time.
 
@@ -717,19 +717,19 @@ class Observation(Mutable):
         their correct locations in the axis ordering of the observation.
 
         Parameters:
-            origin (Pair, optional): A single value, tuple or Pair defining the origin of
-                the grid. Default is to place the first sample in the middle of the first
-                pixel, allowing for under- or oversampling.
-            undersample (Pair, optional): A single value, tuple or Pair defining the
+            origin (PairLike, optional): A single value, tuple or Pair defining the origin
+                of the grid. Default is to place the first sample in the middle of the
+                first pixel, allowing for under- or oversampling.
+            undersample (PairLike, optional): A single value, tuple or Pair defining the
                 magnitude of under-sampling to be performed. For example, a value of 2
                 would cause the meshgrid to sample every other pixel along each axis.
-            oversample (Pair, optional): A single value, tuple or Pair defining the
+            oversample (PairLike, optional): A single value, tuple or Pair defining the
                 magnitude of over-sampling to be performed. For example, a value of 2
                 would create a 2x2 array of samples inside each pixel.
-            limit (Pair, optional): A single value, tuple or Pair defining the upper
+            limit (PairLike, optional): A single value, tuple or Pair defining the upper
                 limits of the meshgrid. By default, this is the shape of the FOV.
-            center_uv (Pair, optional): Reference point at the center of the FOV; use None
-                for the default, which depends on the origin and limit.
+            center_uv (PairLike, optional): Reference point at the center of the FOV; use
+                None for the default, which depends on the origin and limit.
             fov_kwargs (dict, optional): Parameters passed to the FOV methods,
                 containing parameters that might affect the properties of the FOV.
 
@@ -850,12 +850,12 @@ class Observation(Mutable):
         Parameters:
             meshgrid (Meshgrid, optional): Object describing the sampling of the field of
                 view.
-            tfrac (Scalar, optional): Scalar of fractional times during the exposure,
+            tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where 0 refers to the beginning and 1 refers to the end of each sample's
                 integration interval. The default is 0.5, referring to the midtime of each
                 sample in the `meshgrid`.
-            time (Scalar, optional): Optional Scalar of absolute time in seconds. Only one
-                of `tfrac` and `time` can be specified.
+            time (ScalarLike, optional): Optional Scalar of absolute time in seconds. Only
+                one of `tfrac` and `time` can be specified.
 
         Returns:
             Event: The corresponding Event.
@@ -878,11 +878,11 @@ class Observation(Mutable):
             meshgrid (Meshgrid, optional): Object describing the sampling of the field of
                 view; None for a directionless observation. Here, it is only used to
                 define the times if time is None.
-            tfrac (Scalar, optional): Scalar of fractional times during the exposure,
+            tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where 0 refers to the beginning and 1 refers to the end of each sample's
                 integration interval. The default is 0.5, referring to the midtime of each
                 sample in the `meshgrid`.
-            time (Scalar, optional): Scalar of optional absolute time in seconds.
+            time (ScalarLike, optional): Scalar of optional absolute time in seconds.
             shapeless (bool, optional): True to return a shapeless event, referring to the
                 mean of all the times.
 
@@ -908,7 +908,7 @@ class Observation(Mutable):
         The indices can be a Scalar or Vector, a NumPy array, or a number.
 
         Parameters:
-            indices (Scalar, Vector, numpy.ndarray, or number): Array indices.
+            indices (ScalarLike or VectorLike): Array indices.
             axis (int): The array axis to select; -1 if this axis is not associated with
                 an array index.
             derivs (bool, optional): True to include derivatives in the returned value.
@@ -948,14 +948,14 @@ class Observation(Mutable):
         """Convert arbitrary scalars of RA and dec to FOV *(u,v)* coordinates.
 
         Parameters:
-            ra (Scalar): J2000 right ascensions.
-            dec (Scalar): J2000 declinations.
-            tfrac (Scalar, optional): Scalar of fractional times during the exposure,
+            ra (ScalarLike): J2000 right ascensions.
+            dec (ScalarLike): J2000 declinations.
+            tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where 0 refers to the beginning and 1 refers to the end of each sample's
                 integration interval. The default is 0.5, referring to the midtime of each
                 sample in the `meshgrid`.
-            time (Scalar, optional): Scalar of optional absolute time in seconds. Only one
-                of tfrac and time can be specified.
+            time (ScalarLike, optional): Scalar of optional absolute time in seconds. Only
+                one of tfrac and time can be specified.
             apparent (bool, optional): True to interpret the (RA,dec) values as apparent
                 coordinates; False to interpret them as actual coordinates. Default is
                 True.
@@ -1034,16 +1034,16 @@ class Observation(Mutable):
 
         Parameters:
             path (Path): Object.
-            tfrac (Scalar, optional): Scalar of fractional times during the exposure,
+            tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where 0 refers to the beginning and 1 refers to the end of each sample's
                 integration interval. The default is 0.5, referring to the midtime of each
                 sample in the `meshgrid`.
-            time (Scalar, optional): Scalar of optional absolute time in seconds. Only one
-                of tfrac and time can be specified; the other must be None.
+            time (ScalarLike, optional): Scalar of optional absolute time in seconds. Only
+                one of tfrac and time can be specified; the other must be None.
             derivs (bool, optional): True to propagate derivatives of the link time and
                 position into the returned event.
-            guess (Scalar, optional): An optional guess at the light travel time from the
-                path to the event.
+            guess (ScalarLike, optional): An optional guess at the light travel time from
+                the path to the event.
             quick (dict, optional): To override the configured default parameters for a
                 :class:`~oops.path.QuickPath` or :class:`~oops.frame.QuickFrame`; False
                 to disable the use of QuickPaths and QuickFrames. The default
@@ -1135,14 +1135,14 @@ class Observation(Mutable):
 
         Parameters:
             surface (Surface): The Surface object.
-            coords (tuple[Scalar, ...]): Two or three surface coordinates. The Scalars
+            coords (tuple[ScalarLike, ...]): Two or three surface coordinates. The Scalars
                 need not be the same shape, but must broadcast to the same shape.
-            tfrac (Scalar, optional): Scalar of fractional times during the exposure,
+            tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where 0 refers to the beginning and 1 refers to the end of each sample's
                 integration interval. The default is 0.5, referring to the midtime of each
                 sample in the `meshgrid`.
-            time (Scalar, optional): Scalar of optional absolute time in seconds. Only one
-                of `tfrac` and `time` can be specified; the other must be None.
+            time (ScalarLike, optional): Scalar of optional absolute time in seconds. Only
+                one of `tfrac` and `time` can be specified; the other must be None.
             underside (bool, optional): True for the underside of the surface (emission >
                 90 degrees) to be unmasked.
             derivs (bool, optional): True to propagate derivatives of the link time and
@@ -1171,12 +1171,12 @@ class Observation(Mutable):
 
         Parameters:
             bodies (list): The names of the body objects to be included in the inventory.
-            tfrac (Scalar, optional): Scalar of fractional times during the exposure,
+            tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where 0 refers to the beginning and 1 refers to the end of each sample's
                 integration interval. The default is 0.5, referring to the midtime of each
                 sample in the `meshgrid`.
-            time (Scalar, optional): Scalar of optional absolute time in seconds TDB. Only
-                one of `tfrac` and `time` can be specified.
+            time (ScalarLike, optional): Scalar of optional absolute time in seconds TDB.
+                Only one of `tfrac` and `time` can be specified.
             expand (float, optional): An optional angle in radians by which to extend the
                 limits of the field of view. This can be used to accommodate pointing
                 uncertainties.
@@ -1258,8 +1258,8 @@ class Observation(Mutable):
         Parameters:
             parallel (Observation): A parallel observation (same origin and time,
                 different frame and FOV).
-            los (Vector3): A line of sight in this observation.
-            time (Scalar, optional): Absolute time in seconds TDB; None to assume this
+            los (Vector3Like): A line of sight in this observation.
+            time (ScalarLike, optional): Absolute time in seconds TDB; None to assume this
                 observation's midtime.
             derivs (bool, optional): True to include the derivatives of the los in the
                 result.
@@ -1284,8 +1284,8 @@ class Observation(Mutable):
         Parameters:
             parallel (Observation): A parallel observation (same origin and time,
                 different frame and FOV).
-            uv (Pair): *(u,v)* pixel coordinates in this observation.
-            time (Scalar, optional): Absolute time in seconds TDB; None to assume this
+            uv (PairLike): *(u,v)* pixel coordinates in this observation.
+            time (ScalarLike, optional): Absolute time in seconds TDB; None to assume this
                 observation's midtime.
             derivs (bool, optional): True to include the derivatives of `uv` in the
                 result.
@@ -1314,7 +1314,7 @@ class Observation(Mutable):
             angles (tuple or list): Two offset angles in radians. The first rotation is
                 about the *y* axis of this observation's frame and the second is about the
                 *x* axis.
-            time (Scalar, optional): Absolute time in seconds TDB; None to assume this
+            time (ScalarLike, optional): Absolute time in seconds TDB; None to assume this
                 observation's midtime.
 
         Returns:
@@ -1357,11 +1357,11 @@ class Observation(Mutable):
         Parameters:
             parallel (Observation): A parallel observation (same origin and time,
                 different frame and FOV).
-            duv (Pair): The *(u,v)* coordinate offset from the predicted location of a
+            duv (PairLike): The *(u,v)* coordinate offset from the predicted location of a
                 feature to its actual location.
-            time (Scalar, optional): Absolute time in seconds TDB; None to assume this
+            time (ScalarLike, optional): Absolute time in seconds TDB; None to assume this
                 observation's midtime.
-            origin (Pair, optional): The *(u,v)* coordinates of the reference point in
+            origin (PairLike, optional): The *(u,v)* coordinates of the reference point in
                 this observation's FOV, from which the offset is measured. If unspecified,
                 the center of the FOV is assumed.
 

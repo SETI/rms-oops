@@ -15,8 +15,7 @@ class Sequence(Cadence):
         """Constructor for a Sequence.
 
         Parameters:
-            tlist (Scalar, list, or numpy.ndarray): The start times of the time steps, in
-                seconds TDB.
+            tlist (ScalarLike): The start times of the time steps, in seconds TDB.
             texp (float, list, or numpy.ndarray): The exposure time in seconds associated
                 with each step. This can be shorter than the time interval due to readout
                 times, etc. It could also potentially be longer. The value can be:
@@ -136,7 +135,7 @@ class Sequence(Cadence):
         This method supports non-integer time step values via interpolation.
 
         Parameters:
-            tstep (Scalar): Time step index values.
+            tstep (ScalarLike): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
             derivs (bool, optional): True to include derivatives of tstep in the returned
                 time.
@@ -159,7 +158,7 @@ class Sequence(Cadence):
         """The range of times for the given time step.
 
         Parameters:
-            tstep (Scalar): Time step index values.
+            tstep (ScalarLike): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
             inclusive (bool, optional): True to treat the end time as part of this
                 Cadence; False to exclude it.
@@ -185,7 +184,7 @@ class Sequence(Cadence):
         This method returns non-integer time steps via interpolation.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             remask (bool, optional): True to mask time values not sampled within this
                 Cadence.
             derivs (bool, optional): True to include derivatives of time in the returned
@@ -240,7 +239,7 @@ class Sequence(Cadence):
         """Integer range of time steps active at the given time.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             remask (bool, optional): True to mask time values not sampled within this
                 Cadence.
             inclusive (bool, optional): True to treat the end time as part of this
@@ -315,7 +314,7 @@ class Sequence(Cadence):
         """A Boolean mask of times that fall outside the cadence.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             inclusive (bool, optional): True to treat the end time of an interval as
                 inside; False to treat it as outside. The start time of an interval is
                 always treated as inside.

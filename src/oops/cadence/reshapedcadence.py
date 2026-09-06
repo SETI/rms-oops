@@ -190,7 +190,7 @@ class ReshapedCadence(Cadence):
         returns the time at the nearest edge of the cadence's shape.
 
         Parameters:
-            tstep (Scalar or Pair): Time step index values.
+            tstep (ScalarLike or PairLike): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
             derivs (bool, optional): True to include derivatives of tstep in the returned
                 time.
@@ -214,7 +214,7 @@ class ReshapedCadence(Cadence):
         returns the time range at the nearest edge.
 
         Parameters:
-            tstep (Scalar or Pair): Time step index values.
+            tstep (ScalarLike or PairLike): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
             inclusive (bool, optional): True to treat the end time as part of this
                 Cadence; False to exclude it.
@@ -238,7 +238,7 @@ class ReshapedCadence(Cadence):
         This method returns non-integer time steps via interpolation.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             remask (bool, optional): True to mask time values not sampled within this
                 Cadence.
             derivs (bool, optional): True to include derivatives of time in the returned
@@ -300,7 +300,7 @@ class ReshapedCadence(Cadence):
         """Integer range of time steps active at the given time.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             remask (bool, optional): True to mask time values not sampled within this
                 Cadence.
             inclusive (bool, optional): True to treat the end time as part of this
@@ -411,7 +411,7 @@ class ReshapedCadence(Cadence):
         """A Boolean mask of times that fall outside the cadence.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             inclusive (bool, optional): True to treat the end time of an interval as
                 inside; False to treat it as outside. The start time of an interval is
                 always treated as inside.

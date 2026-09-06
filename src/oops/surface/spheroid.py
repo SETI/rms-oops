@@ -52,17 +52,17 @@ class Spheroid(Ellipsoid):
         because the polynomial is only fourth-order instead of sixth-order.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface relative to this Surface's
+            pos (Vector3Like): Positions at or near the Surface relative to this Surface's
                 origin and frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored for this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             direction (str, optional): 'arr' for a photon arriving at the surface; 'dep'
                 for a photon departing from the surface; ignored here.
             derivs (bool, optional): True to propagate derivatives in pos into the
                 returned intercepts.
-            guess (Scalar, optional): Optional initial guess at coefficient `p` such
+            guess (ScalarLike, optional): Optional initial guess at coefficient `p` such
                 that ``intercept + p * normal(intercept) = pos``. Use `guess=True` for
                 the converged value of `p` to be returned even if an initial guess is
                 unavailable.
@@ -238,7 +238,7 @@ class Spheroid(Ellipsoid):
         """Convert longitude in internal coordinates to planetocentric.
 
         Parameters:
-            lon (Scalar): The longitude in radians.
+            lon (ScalarLike): The longitude in radians.
             derivs (bool, optional): True to propagate any derivatives of `lon` into
                 the returned longitude.
 
@@ -252,7 +252,7 @@ class Spheroid(Ellipsoid):
         """Convert planetocentric longitude to internal coordinates.
 
         Parameters:
-            lon (Scalar): The longitude in radians.
+            lon (ScalarLike): The longitude in radians.
             derivs (bool, optional): True to propagate any derivatives of `lon` into
                 the returned longitude.
 
@@ -266,7 +266,7 @@ class Spheroid(Ellipsoid):
         """Convert longitude in internal coordinates to planetographic.
 
         Parameters:
-            lon (Scalar): The longitude in radians.
+            lon (ScalarLike): The longitude in radians.
             derivs (bool, optional): True to propagate any derivatives of `lon` into
                 the returned longitude.
 
@@ -280,7 +280,7 @@ class Spheroid(Ellipsoid):
         """Convert planetographic longitude to internal coordinates.
 
         Parameters:
-            lon (Scalar): The longitude in radians.
+            lon (ScalarLike): The longitude in radians.
             derivs (bool, optional): True to propagate any derivatives of `lon` into
                 the returned longitude.
 
@@ -298,8 +298,8 @@ class Spheroid(Ellipsoid):
         """Convert latitude in internal coordinates to planetocentric.
 
         Parameters:
-            lat (Scalar): The latitude in radians.
-            lon (Scalar, optional): The longitude in radians; ignored, because
+            lat (ScalarLike): The latitude in radians.
+            lon (ScalarLike, optional): The longitude in radians; ignored, because
                 this conversion is independent of longitude for a surface of revolution.
             derivs (bool, optional): True to propagate any derivatives of `lat` into
                 the returned latitude.
@@ -315,8 +315,8 @@ class Spheroid(Ellipsoid):
         """Convert planetocentric latitude to internal spheroid coordinates.
 
         Parameters:
-            lat (Scalar): The latitude in radians.
-            lon (Scalar, optional): The longitude in radians; ignored, because
+            lat (ScalarLike): The latitude in radians.
+            lon (ScalarLike, optional): The longitude in radians; ignored, because
                 this conversion is independent of longitude for a surface of revolution.
             derivs (bool, optional): True to propagate any derivatives of `lat` into
                 the returned latitude.
@@ -332,8 +332,8 @@ class Spheroid(Ellipsoid):
         """Convert latitude in internal coordinates to planetographic.
 
         Parameters:
-            lat (Scalar): The latitude in radians.
-            lon (Scalar, optional): The longitude in radians; ignored, because
+            lat (ScalarLike): The latitude in radians.
+            lon (ScalarLike, optional): The longitude in radians; ignored, because
                 this conversion is independent of longitude for a surface of revolution.
             derivs (bool, optional): True to propagate any derivatives of `lat` into
                 the returned latitude.
@@ -349,8 +349,8 @@ class Spheroid(Ellipsoid):
         """Convert a planetographic latitude to internal spheroid latitude.
 
         Parameters:
-            lat (Scalar): The latitude in radians.
-            lon (Scalar, optional): The longitude in radians; ignored, because
+            lat (ScalarLike): The latitude in radians.
+            lon (ScalarLike, optional): The longitude in radians; ignored, because
                 this conversion is independent of longitude for a surface of revolution.
             derivs (bool, optional): True to propagate any derivatives of `lat` into
                 the returned latitude.

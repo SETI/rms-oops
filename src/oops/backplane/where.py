@@ -409,7 +409,7 @@ def where_below(self, backplane_key, value, tvl=False):
 
     Parameters:
         backplane_key (str or tuple): Key defining the backplane to evaluate.
-        value (float or Scalar): The upper limit on the backplane value.
+        value (ScalarLike): The upper limit on the backplane value.
         tvl (bool, optional): True to use three-valued logic, in which masked
             backplane values remain masked; False to return False there.
     """
@@ -442,7 +442,7 @@ def where_above(self, backplane_key, value, tvl=False):
 
     Parameters:
         backplane_key (str or tuple): Key defining the backplane to evaluate.
-        value (float or Scalar): The lower limit on the backplane value.
+        value (ScalarLike): The lower limit on the backplane value.
         tvl (bool, optional): True to use three-valued logic, in which masked
             backplane values remain masked; False to return False there.
     """
@@ -475,8 +475,8 @@ def where_between(self, backplane_key, low, high, tvl=False):
 
     Parameters:
         backplane_key (str or tuple): Key defining the backplane to evaluate.
-        low (float or Scalar): The lower limit on the backplane value.
-        high (float or Scalar): The upper limit on the backplane value.
+        low (ScalarLike): The lower limit on the backplane value.
+        high (ScalarLike): The upper limit on the backplane value.
         tvl (bool, optional): True to use three-valued logic, in which masked
             backplane values remain masked; False to return False there.
     """

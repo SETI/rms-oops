@@ -54,9 +54,9 @@ class Transform(Oops):
         """Constructor for a Transform object.
 
         Parameters:
-            matrix (Matrix3): Object that is used to rotate coordinates from the reference
-                frame into the new frame.
-            omega (Vector3): The spin vector for the coordinate frame, given in
+            matrix (Matrix3Like): Object that is used to rotate coordinates from the
+                reference frame into the new frame.
+            omega (Vector3Like): The spin vector for the coordinate frame, given in
                 coordinates of the reference frame.
             frame (Frame or str): The frame or frame ID into which this Transform rotates.
             reference (Frame or str): The frame or frame ID from which this Transform
@@ -211,9 +211,9 @@ class Transform(Oops):
         Optionally, it also rotates any derivatives.
 
         Parameters:
-            pos (Vector3, Vector, or Matrix): The position or matrix to rotate; the size
-                of its leading axis must be 3. Anything not a subclass of Qube (e.g., a
-                list or tuple) is converted to a Vector3 first.
+            pos (Vector3Like, VectorLike, or MatrixLike): The position or matrix to
+                rotate; the size of its leading axis must be 3. Anything not a subclass of
+                Qube (e.g., a list or tuple) is converted to a Vector3 first.
             derivs (bool, optional): True to calculate the time-derivative as well.
 
         Returns:
@@ -239,8 +239,8 @@ class Transform(Oops):
         component of the velocity for a position off the origin in a rotating frame.
 
         Parameters:
-            pos (Vector3): Position as a Vector3, in the reference frame.
-            vel (Vector3): Velocity as a Vector3, in the reference frame.
+            pos (Vector3Like): Position as a Vector3, in the reference frame.
+            vel (Vector3Like): Velocity as a Vector3, in the reference frame.
 
         Returns:
             tuple[Vector3, Vector3]: The same position and velocity transformed into the
@@ -267,10 +267,10 @@ class Transform(Oops):
         """Un-rotate the coordinates of a position into the reference frame.
 
         Parameters:
-            pos (Vector3, Vector, or Matrix): The position or matrix to un-rotate; the
-                size of its leading axis must be 3. Anything not a subclass of Qube (e.g.,
-                a list or tuple) is converted to a Vector3 first. Velocity is always
-                assumed zero.
+            pos (Vector3Like, VectorLike, or MatrixLike): The position or matrix to
+                un-rotate; the size of its leading axis must be 3. Anything not a subclass
+                of Qube (e.g., a list or tuple) is converted to a Vector3 first. Velocity
+                is always assumed zero.
             derivs (bool, optional): True to calculate the time-derivative as well.
 
         Returns:
@@ -295,8 +295,8 @@ class Transform(Oops):
         Derivatives are not supported.
 
         Parameters:
-            pos (Vector3): Position as a Vector3, in the target frame.
-            vel (Vector3): Velocity as a Vector3, in the target frame.
+            pos (Vector3Like): Position as a Vector3, in the target frame.
+            vel (Vector3Like): Velocity as a Vector3, in the target frame.
 
         Returns:
             tuple[Vector3, Vector3]: The same position and velocity transformed back into

@@ -32,8 +32,8 @@ class TrackerFrame(Frame):
                 `target` holds a fixed direction.
             target (Path or str): The Path or the ID of the Path of the moving target.
             observer (Path or str): The Path or the ID of the Path of the observer.
-            epoch (Scalar, array-like, or float): The time in seconds TDB at which the
-                direction to `target` is to be held fixed.
+            epoch (ScalarLike): The time in seconds TDB at which the direction to `target`
+                is to be held fixed.
             frame_id (str, optional): The ID under which to register this Frame; None to
                 leave this Frame unregistered. As a special case, use "+" to automatically
                 generate a Frame ID by appending "_TRACKER" to the ID of `frame` (if it
@@ -125,7 +125,7 @@ class TrackerFrame(Frame):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use

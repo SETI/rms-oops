@@ -118,8 +118,8 @@ class JIRAM(object):
         """Create a frame for a JIRAM component.
 
         Parameters:
-            time (Scalar): Time at which to define the inertialy fixed mirror-corrected
-                frame.
+            time (ScalarLike): Time at which to define the inertialy fixed
+                mirror-corrected frame.
             name (str): Name of the component.
         """
         spice_frame = 'JUNO_JIRAM_' + name

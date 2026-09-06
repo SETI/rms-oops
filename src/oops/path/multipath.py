@@ -105,7 +105,7 @@ class MultiPath(Path):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
@@ -152,7 +152,7 @@ class MultiPath(Path):
         every pixel of an image.
 
         Parameters:
-            time (Scalar): The time(s) at which this path is to be evaluated.
+            time (ScalarLike): The time(s) at which this path is to be evaluated.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use

@@ -35,21 +35,21 @@ class PolarLimb(Limb):
         """Surface coordinates associated with a position vector.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface, relative to this Surface's
+            pos (Vector3Like): Positions at or near the Surface, relative to this
+                Surface's origin and frame.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
                 origin and frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             axes (int, optional): 2 or 3, indicating whether to return the first two
                 coordinates (z, clock) or all three (z, clock, dist) as Scalars.
             derivs (bool, optional): True to propagate any derivatives inside pos and obs
                 into the returned coordinates.
-            hints (Scalar, optional): Optionally, the value of the coefficient `p` such
-                that ``ground + p * normal(ground) = pos``, for the ground point on the
-                body surface. If it is not None, the converged value of `p` is appended to
-                the returned tuple; use `hints=True` if you lack an initial value but
-                require the new value to be returned.
+            hints (ScalarLike, optional): Optionally, the value of the coefficient `p`
+                such that ``ground + p * normal(ground) = pos``, for the ground point on
+                the body surface. If it is not None, the converged value of `p` is
+                appended to the returned tuple; use `hints=True` if you lack an initial
+                value but require the new value to be returned.
             groundtrack (bool, optional): True to append the intercept point on the
                 surface to the returned tuple.
 
@@ -105,7 +105,7 @@ class PolarLimb(Limb):
         """The position at the given surface coordinates.
 
         Parameters:
-            coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at
+            coords (tuple[ScalarLike, ...]): Two or three Scalars defining coordinates at
                 or near this surface. These can have different shapes, but must be
                 broadcastable to a common shape.
 
@@ -115,10 +115,10 @@ class PolarLimb(Limb):
                 * `dist` (km, optional): Offset distance beyond the virtual limb plane
                   along the line of sight.
 
-            obs (Vector3, optional): Observer positions relative to this Surface's origin
-                and frame.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            obs (Vector3Like, optional): Observer positions relative to this Surface's
+                origin and frame.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             derivs (bool, optional): True to include the partial derivatives of the
                 intercept point with respect to observer and to the coordinates.
             hints (Any, optional): Any data that might be useful to carry over from one

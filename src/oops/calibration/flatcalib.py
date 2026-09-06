@@ -17,13 +17,13 @@ class FlatCalib(Calibration):
         Parameters:
             name (str): The name of the value returned by the calibration, e.g.,
                 "REFLECTIVITY".
-            factor (Scalar): A scale factor to be applied to every pixel in the field of
-                view.
-            baseline (Scalar, optional): An optional baseline value to subtract from the
-                image before applying the scale factor. Note that the factor and baseline
-                values could be arrays for cases in which the non-spatial axes of the data
-                array require different scalings. Their shapes must broadcast to the shape
-                of the data array after the spatial axes are removed.
+            factor (ScalarLike): A scale factor to be applied to every pixel in the field
+                of view.
+            baseline (ScalarLike, optional): An optional baseline value to subtract from
+                the image before applying the scale factor. Note that the factor and
+                baseline values could be arrays for cases in which the non-spatial axes of
+                the data array require different scalings. Their shapes must broadcast to
+                the shape of the data array after the spatial axes are removed.
             fov (FOV, optional): Ignored by FlatCalib. Provided for compatibility with
                 subclasses Radiance and RawCounts.
         """
@@ -48,9 +48,10 @@ class FlatCalib(Calibration):
         """Extended-source calibrated values for image DN and pixel coordinates.
 
         Parameters:
-            dn (Scalar): Un-calibrated image array values at the given pixel coordinates.
-            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
-                `dn` and `uv_pair` will be casted to the same shape.
+            dn (ScalarLike): Un-calibrated image array values at the given pixel
+                coordinates.
+            uv_pair (PairLike): Associated *(u,v)* pixel coordinates in the image. Note
+                that `dn` and `uv_pair` will be casted to the same shape.
 
         Returns:
             Scalar: Calibrated values for an extended source.
@@ -67,9 +68,9 @@ class FlatCalib(Calibration):
         """Un-calibrated image DN from extended-source calibrated values.
 
         Parameters:
-            value (Scalar): Calibrated values at the given pixel coordinates.
-            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
-                `value` and `uv_pair` will be casted to the same shape.
+            value (ScalarLike): Calibrated values at the given pixel coordinates.
+            uv_pair (PairLike): Associated *(u,v)* pixel coordinates in the image. Note
+                that `value` and `uv_pair` will be casted to the same shape.
 
         Returns:
             Scalar: Un-calibrated values for an extended source.
@@ -86,9 +87,10 @@ class FlatCalib(Calibration):
         """Point-source calibrated values for image DN and pixel coordinates.
 
         Parameters:
-            dn (Scalar): Un-calibrated image array values at the given pixel coordinates.
-            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
-                `dn` and `uv_pair` will be casted to the same shape.
+            dn (ScalarLike): Un-calibrated image array values at the given pixel
+                coordinates.
+            uv_pair (PairLike): Associated *(u,v)* pixel coordinates in the image. Note
+                that `dn` and `uv_pair` will be casted to the same shape.
 
         Returns:
             Scalar: Calibrated values for a point source.
@@ -105,9 +107,9 @@ class FlatCalib(Calibration):
         """Un-calibrated image DN from point-source calibrated values.
 
         Parameters:
-            value (Scalar): Calibrated values at the given pixel coordinates.
-            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
-                `value` and `uv_pair` will be casted to the same shape.
+            value (ScalarLike): Calibrated values at the given pixel coordinates.
+            uv_pair (PairLike): Associated *(u,v)* pixel coordinates in the image. Note
+                that `value` and `uv_pair` will be casted to the same shape.
 
         Returns:
             Scalar: Un-calibrated values for a point source.
@@ -124,9 +126,9 @@ class FlatCalib(Calibration):
         """A version of this Calibration with image DNs re-scaled beforehand.
 
         Parameters:
-            factor (Scalar): Scale factor to apply to DN values.
-            baseline (Scalar, optional): An optional baseline value to subtract from every
-                DN value before applying the new scale factor.
+            factor (ScalarLike): Scale factor to apply to DN values.
+            baseline (ScalarLike, optional): An optional baseline value to subtract from
+                every DN value before applying the new scale factor.
             name (str, optional): Optional new name. If blank, the existing name is
                 preserved.
 

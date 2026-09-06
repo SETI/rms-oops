@@ -24,7 +24,7 @@ class RingFrame(Frame):
         Parameters:
             frame (Frame or str): The Frame or the ID of the Frame describing the central
                 planet of the ring plane relative to J2000.
-            epoch (Scalar or float, optional): The time TDB at which this Frame is to be
+            epoch (ScalarLike, optional): The time TDB at which this Frame is to be
                 evaluated. If this is specified, then the Frame will be precisely
                 inertial, based on the orientation of the pole at the specified epoch. If
                 it is unspecified, then the Frame could wobble and/or rotate slowly due to
@@ -93,8 +93,10 @@ class RingFrame(Frame):
         """The longitude of the ascending node, from the J2000 components of the *z*-axis.
 
         Parameters:
-            x (Scalar): The *x*-component of this Frame's *z*-axis in J2000 coordinates.
-            y (Scalar): The *y*-component of this Frame's *z*-axis in J2000 coordinates.
+            x (ScalarLike): The *x*-component of this Frame's *z*-axis in J2000
+                coordinates.
+            y (ScalarLike): The *y*-component of this Frame's *z*-axis in J2000
+                coordinates.
 
         Returns:
             Scalar: The node longitude in radians, of the same shape as the inputs. It is
@@ -150,7 +152,7 @@ class RingFrame(Frame):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
@@ -223,7 +225,7 @@ class RingFrame(Frame):
         Values always fall between 0 and 2*pi.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use

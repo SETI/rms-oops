@@ -53,12 +53,12 @@ class NullSurface(Surface):
         relative to the surface's origin and frame.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface, relative to this Surface's
-                origin and frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            pos (Vector3Like): Positions at or near the Surface, relative to this
+                Surface's origin and frame.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored for this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             axes (int, optional): 2 or 3, indicating whether to return the first two
                 coordinates (x, y) or all three (x, y, z) coordinates as Scalars.
             derivs (bool, optional): True to propagate any derivatives inside pos and obs
@@ -94,10 +94,10 @@ class NullSurface(Surface):
                 surface. These are the *(x,y,z)* rectangular coordinates relative to the
                 surface's origin and frame. They can have different shapes, but must be
                 broadcastable to a common shape.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored for this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             derivs (bool, optional): True to propagate any derivatives inside the
                 coordinates and obs into the returned position vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -138,16 +138,16 @@ class NullSurface(Surface):
         are entirely masked.
 
         Parameters:
-            obs (Vector3): Observer position as a Vector3 relative to this Surface's
+            obs (Vector3Like): Observer position as a Vector3 relative to this Surface's
                 origin and frame.
-            los (Vector3): Line of sight as a Vector3 in this Surface's frame.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            los (Vector3Like): Line of sight as a Vector3 in this Surface's frame.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             direction (str, optional): 'arr' for a photon arriving at the surface; 'dep'
                 for a photon departing from the surface; ignored.
             derivs (bool, optional): True to propagate any derivatives inside obs and los
                 into the returned intercept point.
-            guess (Scalar, optional): Unused.
+            guess (ScalarLike, optional): Unused.
             hints (Any, optional): Any data that might be useful to carry over from one
                 call to the next; unused by this Surface subclass. If it is not None,
                 its value is appended to the returned tuple.
@@ -180,12 +180,12 @@ class NullSurface(Surface):
         """The normal vector at a position at or near a surface.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface relative to this Surface's
+            pos (Vector3Like): Positions at or near the Surface relative to this Surface's
                 origin and frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored for this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             derivs (bool, optional): True to propagate any derivatives of `pos` into the
                 returned normal vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -211,12 +211,12 @@ class NullSurface(Surface):
         speeds on a planet.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface relative to this Surface's
+            pos (Vector3Like): Positions at or near the Surface relative to this Surface's
                 origin and frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored for this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
 
         Returns:
             Vector3: Velocities, in units of km/s.

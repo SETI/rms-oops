@@ -87,12 +87,13 @@ class Surface(Mutable):
         """Surface coordinates associated with a position vector.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface, relative to its origin and
-                frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame. Ignored for solid Surfaces but needed for virtual Surfaces.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored unless
-                the Surface is time-variable.
+            pos (Vector3Like): Positions at or near the Surface, relative to its origin
+                and frame.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame. Ignored for solid Surfaces but needed for virtual
+                Surfaces.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                unless the Surface is time-variable.
             axes (int, optional): 2 or 3, indicating whether to return a tuple of two or
                 three Scalar objects.
             derivs (bool, optional): True to propagate any derivatives inside `pos` and
@@ -115,13 +116,14 @@ class Surface(Mutable):
         """The position at the given surface coordinates.
 
         Parameters:
-            coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at or
-                near this Surface. These can have different shapes, but must be
+            coords (tuple[ScalarLike, ...]): Two or three Scalars defining coordinates at
+                or near this Surface. These can have different shapes, but must be
                 broadcastable to a common shape.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame. Ignored for solid Surfaces but needed for virtual Surfaces.
-            time (Scalar, optional): Time at which to evaluate the surface; ignored unless
-                the surface is time-variable.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame. Ignored for solid Surfaces but needed for virtual
+                Surfaces.
+            time (ScalarLike, optional): Time at which to evaluate the surface; ignored
+                unless the surface is time-variable.
             derivs (bool, optional): True to propagate any derivatives inside `coords`
                 and `obs` into the returned position vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -143,19 +145,19 @@ class Surface(Mutable):
         """The position where a specified line of sight intercepts the Surface.
 
         Parameters:
-            obs (Vector3): Observer position as a Vector3 relative to this Surface's
+            obs (Vector3Like): Observer position as a Vector3 relative to this Surface's
                 origin and frame.
-            los (Vector3): Line of sight as a Vector3 in this Surface's frame.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored unless
-                the Surface is time-variable.
+            los (Vector3Like): Line of sight as a Vector3 in this Surface's frame.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                unless the Surface is time-variable.
             direction (str, optional): "arr" for a photon arriving at the Surface; "dep"
                 for a photon departing from the Surface. Needed for closed surfaces that
                 have two intercept points, one inward-facing and one outward-facing;
                 ignored otherwise.
             derivs (bool, optional): True to propagate any derivatives inside `obs` and
                 `los` into the returned intercept point.
-            guess (Scalar, optional): Optional initial guess at the coefficient *t* such
-                that ``intercept = obs + t * los``.
+            guess (ScalarLike, optional): Optional initial guess at the coefficient *t*
+                such that ``intercept = obs + t * los``.
             hints (Any, optional): Any data that might be useful to carry over from one
                 call to the next. If not None, `hints` values are appended to the returned
                 tuple. Use `hints=True` if you lack an initial value but require the new
@@ -178,12 +180,13 @@ class Surface(Mutable):
         """The normal vector at a position at or near this Surface.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface, relative to its origin and
-                frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame. Ignored for solid Surfaces but needed for virtual Surfaces.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored unless
-                the Surface is time-variable.
+            pos (Vector3Like): Positions at or near the Surface, relative to its origin
+                and frame.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame. Ignored for solid Surfaces but needed for virtual
+                Surfaces.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                unless the Surface is time-variable.
             derivs (bool, optional): True to propagate any derivatives of `pos` into the
                 returned normal vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -208,11 +211,12 @@ class Surface(Mutable):
         """Surface point where the outward normal vector parallels the given vector.
 
         Parameters:
-            normal (Vector3): Normal vector in the Surface's frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame. Ignored for solid Surfaces but needed for virtual Surfaces.
-            time (Scalar, optional): Time at the Surface; ignored unless the Surface is
-                time-variable.
+            normal (Vector3Like): Normal vector in the Surface's frame.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame. Ignored for solid Surfaces but needed for virtual
+                Surfaces.
+            time (ScalarLike, optional): Time at the Surface; ignored unless the Surface
+                is time-variable.
             derivs (bool, optional): True to propagate derivatives in the normal vector
                 into the returned surface points.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -237,19 +241,20 @@ class Surface(Mutable):
         points should be the one returned.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface, relative to its origin and
-                frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame. Ignored for solid Surfaces but needed for virtual Surfaces.
-            time (Scalar, optional): Time at the Surface; ignored unless the Surface is
-                time-variable.
+            pos (Vector3Like): Positions at or near the Surface, relative to its origin
+                and frame.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame. Ignored for solid Surfaces but needed for virtual
+                Surfaces.
+            time (ScalarLike, optional): Time at the Surface; ignored unless the Surface
+                is time-variable.
             direction (str, optional): "arr" for a photon arriving at the Surface; "dep"
                 for a photon departing from the Surface. Needed for closed surfaces that
                 have two intercept points; ignored otherwise.
             derivs (bool, optional): True to propagate derivatives in `pos` and `obs` into
                 the returned intercept points.
-            guess (Scalar, optional): Optional initial guess at the coefficient *p* such
-                that ``intercept + p * normal(intercept) = pos``. If provided, the
+            guess (ScalarLike, optional): Optional initial guess at the coefficient *p*
+                such that ``intercept + p * normal(intercept) = pos``. If provided, the
                 converged value of *p* is included in the returned results; use
                 ``guess=True`` to include this in the return even if an initial guess is
                 not available.
@@ -283,12 +288,13 @@ class Surface(Mutable):
         speeds on a planet.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface, relative to its origin and
-                frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame. Ignored for solid Surfaces but needed for virtual Surfaces.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored unless
-                the Surface is time-variable.
+            pos (Vector3Like): Positions at or near the Surface, relative to its origin
+                and frame.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame. Ignored for solid Surfaces but needed for virtual
+                Surfaces.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                unless the Surface is time-variable.
 
         Returns:
             Vector3: Velocities, in units of km/s.
@@ -300,12 +306,13 @@ class Surface(Mutable):
         """True where positions are inside this Surface.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface, relative to its origin and
-                frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame. Ignored for solid Surfaces but needed for virtual Surfaces.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored unless
-                the Surface is time-variable.
+            pos (Vector3Like): Positions at or near the Surface, relative to its origin
+                and frame.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame. Ignored for solid Surfaces but needed for virtual
+                Surfaces.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                unless the Surface is time-variable.
 
         Returns:
             Boolean: True where positions are inside the Surface. For subclasses
@@ -402,10 +409,11 @@ class Surface(Mutable):
         """An Event at the given time and surface coordinates.
 
         Parameters:
-            time (Scalar): Time in seconds TDB.
-            coords (tuple[Scalar, ...]): 2 or 3 coordinates.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame. Ignored for solid Surfaces but needed for virtual Surfaces.
+            time (ScalarLike): Time in seconds TDB.
+            coords (tuple[ScalarLike, ...]): 2 or 3 coordinates.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame. Ignored for solid Surfaces but needed for virtual
+                Surfaces.
             derivs (bool, optional): If True, then all derivatives are carried forward
                 into the event; if False, only time derivatives are included.
 
@@ -445,7 +453,7 @@ class Surface(Mutable):
         """The spatial resolution on a surface.
 
         Parameters:
-            dpos_duv (Vector3): A Vector3 with denominator shape (2,), defining the
+            dpos_duv (Vector3Like): A Vector3 with denominator shape (2,), defining the
                 partial derivatives *d(x,y,z)/d(u,v)*, where *(x,y,z)* are the 3-D
                 coordinates of a point on the surface and *(u,v)* are pixel coordinates.
 
@@ -468,7 +476,7 @@ class Surface(Mutable):
         """The spatial resolution on a surface.
 
         Parameters:
-            dpos_duv (Vector3): A Vector3 with denominator shape (2,), defining the
+            dpos_duv (Vector3Like): A Vector3 with denominator shape (2,), defining the
                 partial derivatives *d(x,y,z)/d(u,v)*, where *(x,y,z)* are the 3-D
                 coordinates of a point on the surface and *(u,v)* are pixel coordinates.
             _unittest (bool, optional): True to return `(dpos_du_prime, dpos_dv_prime)`

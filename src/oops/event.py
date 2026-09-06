@@ -118,11 +118,11 @@ class Event(Oops):
         """Constructor for the Event class.
 
         Parameters:
-            time (Scalar): Event times in seconds TDB.
-            state (Vector3): Position vectors as a Vector3 object. The velocity should be
-                included as the time-derivative. However, if specified as a tuple of two
-                objects, the first is interpreted as the position and the second as the
-                velocity.
+            time (ScalarLike): Event times in seconds TDB.
+            state (Vector3Like): Position vectors as a Vector3 object. The velocity should
+                be included as the time-derivative. However, if specified as a tuple of
+                two objects, the first is interpreted as the position and the second as
+                the velocity.
             origin (Path or str): The path or path ID identifying the origin of this
                 event.
             frame (Frame, optional): The frame or frame ID identifying the coordinate
@@ -1186,9 +1186,9 @@ class Event(Oops):
         """A shrunken version of this event.
 
         Parameters:
-            antimask (Boolean, bool, or None): None to leave the Event unchanged;
-                otherwise True where values are kept and False where they are ignored. A
-                single value of True keeps everything and a single value of False ignores
+            antimask (BooleanLike or None): None to leave the Event unchanged; otherwise
+                True where values are kept and False where they are ignored. A single
+                value of True keeps everything and a single value of False ignores
                 everything.
 
         Returns:
@@ -1222,8 +1222,8 @@ class Event(Oops):
         """Expand a shrunken version of this event to its original state.
 
         Parameters:
-            antimask (Boolean, bool, or None): None to leave the Event unchanged;
-                otherwise the boolean array whose True values were kept by `shrink`.
+            antimask (BooleanLike or None): None to leave the Event unchanged; otherwise
+                the boolean array whose True values were kept by `shrink`.
             shape (tuple, optional): Shape to restore; default None to infer it from
                 `antimask`.
 
@@ -1706,8 +1706,8 @@ class Event(Oops):
         """Apparent direction of a photon in the SSB/J2000 frame. Not cached.
 
         Parameters:
-            ray_ssb (Vector3): The true direction of a light ray in the SSB/J2000 system
-                (not reversed!).
+            ray_ssb (Vector3Like): The true direction of a light ray in the SSB/J2000
+                system (not reversed!).
             derivs (bool, optional): True to include the derivatives of the light ray in
                 the returned ray; False to exclude them.
             quick (dict, optional): To override the configured default parameters for
@@ -1745,8 +1745,8 @@ class Event(Oops):
         """Actual direction of a photon in the SSB/J2000 frame. Not cached.
 
         Parameters:
-            ray_ap_ssb (Vector3): The apparent direction of a light ray in the SSB/J2000
-                system.
+            ray_ap_ssb (Vector3Like): The apparent direction of a light ray in the
+                SSB/J2000 system.
             derivs (bool, optional): True to include the derivatives of the light ray in
                 the returned ray; False to exclude them.
             quick (dict, optional): To override the configured default parameters for

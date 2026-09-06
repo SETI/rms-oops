@@ -19,13 +19,13 @@ class OffsetFOV(FOV, Fittable):
 
         Parameters:
             fov (FOV): The FOV object relative to which this FOV is shifted.
-            uv_offset (Pair, optional): The offset in *(u,v)* coordinates; the line of
+            uv_offset (PairLike, optional): The offset in *(u,v)* coordinates; the line of
                 sight of this FOV falls at ``fov.uv_los - uv_offset``. At most one of
                 `uv_offset` and `xy_offset` can be specified; if neither is given, the
                 offset is zero.
-            xy_offset (Pair, optional): The same offset expressed in *(x,y)* coordinates;
-                the *(x,y)* values returned by this FOV are those of `fov` minus
-                `xy_offset`.
+            xy_offset (PairLike, optional): The same offset expressed in *(x,y)*
+                coordinates; the *(x,y)* values returned by this FOV are those of `fov`
+                minus `xy_offset`.
 
         Raises:
             ValueError: If both `uv_offset` and `xy_offset` are specified.
@@ -102,8 +102,8 @@ class OffsetFOV(FOV, Fittable):
         """The camera coordinates *(x,y)* at FOV coordinates *(u,v)* and a given time.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
-            time (Scalar, optional): Absolute time in seconds TDB.
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
             derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
                 into the returned *(x,y)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -125,8 +125,8 @@ class OffsetFOV(FOV, Fittable):
         """The FOV coordinates *(u,v)* at camera coordinates *(x,y)* and a given time.
 
         Parameters:
-            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
-            time (Scalar, optional): Absolute time in seconds TDB.
+            xy_pair (PairLike): *(x,y)* coordinates in this FOV, assuming *z = 1*.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
             derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
                 into the returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of

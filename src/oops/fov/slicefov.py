@@ -18,9 +18,9 @@ class SliceFOV(FOV):
 
         Parameters:
             fov (FOV): The reference FOV object within which this slice is defined.
-            origin (tuple or Pair): The location of this slice's pixel `(0,0)` in the
+            origin (PairLike): The location of this slice's pixel `(0,0)` in the
                 coordinates of the reference FOV.
-            shape (float, tuple, or Pair): The new shape of the field of view in pixels.
+            shape (PairLike): The new shape of the field of view in pixels.
         """
 
         self.fov = fov
@@ -44,8 +44,8 @@ class SliceFOV(FOV):
         """The camera coordinates *(x,y)* at FOV coordinates *(u,v)* and a given time.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
-            time (Scalar, optional): Absolute time in seconds TDB.
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
             derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
                 into the returned *(x,y)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -65,8 +65,8 @@ class SliceFOV(FOV):
         """The FOV coordinates *(u,v)* at camera coordinates *(x,y)* and a given time.
 
         Parameters:
-            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
-            time (Scalar, optional): Absolute time in seconds TDB.
+            xy_pair (PairLike): *(x,y)* coordinates in this FOV, assuming *z = 1*.
+            time (ScalarLike, optional): Absolute time in seconds TDB.
             derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
                 into the returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of

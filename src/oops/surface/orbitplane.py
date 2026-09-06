@@ -62,7 +62,7 @@ class OrbitPlane(Surface):
                 * `node` (rad): Longitude of ascending node at epoch.
                 * `regr` (rad/s): Nodal regression rate, always negative.
 
-            epoch (Scalar): The time TDB relative to which the orbital elements are
+            epoch (ScalarLike): The time TDB relative to which the orbital elements are
                 defined.
             origin (Path or str): The Path or path ID of the planet center.
             frame (Frame or str): The Frame or ID of the Frame in which the orbit is
@@ -225,11 +225,11 @@ class OrbitPlane(Surface):
         """Surface coordinates associated with a position vector.
 
         Parameters:
-            pos (Vector3): Positions at or near this Surface, relative to its origin and
-                frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored by this subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface.
+            pos (Vector3Like): Positions at or near this Surface, relative to its origin
+                and frame.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored by this subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface.
             axes (int, optional): 2 or 3, indicating whether to return the first two
                 coordinates `(a, theta)` or all three `(a, theta, z)` as Scalars.
             derivs (bool, optional): True to propagate any derivatives inside `pos` and
@@ -255,17 +255,17 @@ class OrbitPlane(Surface):
         """The position at the given surface coordinates.
 
         Parameters:
-            coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at or
-                near this Surface. These can have different shapes, but must be
+            coords (tuple[ScalarLike, ...]): Two or three Scalars defining coordinates at
+                or near this Surface. These can have different shapes, but must be
                 broadcastable to a common shape.
 
                 * `a` (km): Mean orbital radius in the ring plane.
                 * `theta` (rad): Mean longitude of the selected point.
                 * `z` (km, optional): Vertical distance above the orbit plane.
 
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored by this subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored by this subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface.
             derivs (bool, optional): True to propagate any derivatives inside `coords`
                 and `obs` into the returned position vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -286,15 +286,15 @@ class OrbitPlane(Surface):
         """The position where a specified line of sight intercepts this Surface.
 
         Parameters:
-            obs (Vector3): Observer position as a Vector3 relative to this Surface's
+            obs (Vector3Like): Observer position as a Vector3 relative to this Surface's
                 origin and frame.
-            los (Vector3): Line of sight as a Vector3 in this Surface's frame.
-            time (Scalar, optional): Time at the Surface.
+            los (Vector3Like): Line of sight as a Vector3 in this Surface's frame.
+            time (ScalarLike, optional): Time at the Surface.
             direction (str, optional): "arr" for a photon arriving at the Surface; "dep"
                 for a photon departing from the Surface; ignored.
             derivs (bool, optional): True to propagate any derivatives inside `obs` and
                 `los` into the returned intercept point.
-            guess (Scalar, optional): Unused.
+            guess (ScalarLike, optional): Unused.
             hints (Any, optional): Any data that might be useful to carry over from one
                 call to the next; unused by this Surface subclass. If it is not None,
                 its value is appended to the returned tuple.
@@ -315,11 +315,11 @@ class OrbitPlane(Surface):
         """The normal vector at a position at or near this Surface.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface, relative to its origin and
-                frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored by this subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface.
+            pos (Vector3Like): Positions at or near the Surface, relative to its origin
+                and frame.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored by this subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface.
             derivs (bool, optional): True to propagate any derivatives of `pos` into the
                 returned normal vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -341,11 +341,11 @@ class OrbitPlane(Surface):
         speeds on a planet.
 
         Parameters:
-            pos (Vector3): Positions at or near this Surface, relative to its origin and
-                frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored by this subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface.
+            pos (Vector3Like): Positions at or near this Surface, relative to its origin
+                and frame.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored by this subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface.
 
         Returns:
             Vector3: Velocities, in units of km/s.
@@ -403,7 +403,7 @@ class OrbitPlane(Surface):
         Accurate to first order in eccentricity.
 
         Parameters:
-            anom (Scalar): The mean anomaly in radians.
+            anom (ScalarLike): The mean anomaly in radians.
 
         Returns:
             Scalar: The orbital longitude in radians.
@@ -423,7 +423,7 @@ class OrbitPlane(Surface):
         method to ensure that this method is an exact inverse of `from_mean_anomaly`.
 
         Parameters:
-            lon (Scalar): The orbital longitude in radians.
+            lon (ScalarLike): The orbital longitude in radians.
 
         Returns:
             Scalar: The mean anomaly in radians.

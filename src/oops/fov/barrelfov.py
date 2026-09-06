@@ -29,17 +29,16 @@ class BarrelFOV(FOV):
         """Constructor for a BarrelFOV.
 
         Parameters:
-            uv_scale (Pair or tuple[float, float]): The ratios *dx/du* and *dy/dv* at the
-                center of the FOV. For example, if *(u,v)* are in units of arcseconds,
-                then::
+            uv_scale (PairLike): The ratios *dx/du* and *dy/dv* at the center of the FOV.
+                For example, if *(u,v)* are in units of arcseconds, then::
 
                     uv_scale = Pair((pi/180/3600.,pi/180/3600.))
 
                 Use the sign of the second element to define the direction of increasing
                 *v*: negative for up, positive for down.
-            uv_shape (Pair or tuple[int, int]): The size of the field of view in pixels.
-                This number can be non-integral if the detector is not composed of a
-                rectangular array of pixels.
+            uv_shape (PairLike): The size of the field of view in pixels. This number can
+                be non-integral if the detector is not composed of a rectangular array of
+                pixels.
             coefft_xy_from_uv (numpy.ndarray, optional): The polynomial coefficient array
                 describing the radial distortion from *(u,v)* to *(x,y)*. It is a function
                 of *r*, defined as::
@@ -65,9 +64,9 @@ class BarrelFOV(FOV):
                 coefficient on ``r**(i+1)``. The first coefficient is typically ~ 1,
                 implying no distortion at the center of the FOV. If None, the distortion
                 polynomial for ``xy_from_uv`` is inverted.
-            uv_los (Pair or tuple[float, float], optional): The *(u,v)* coordinates of the
-                nominal line of sight. By default, this is the midpoint of the rectangle,
-                i.e., ``uv_shape/2``.
+            uv_los (PairLike, optional): The *(u,v)* coordinates of the nominal line of
+                sight. By default, this is the midpoint of the rectangle, i.e.,
+                ``uv_shape/2``.
             uv_area (float, optional): The nominal area of a pixel in steradians after
                 distortion has been removed.
             iters (int, optional): The number of iterations of Newton's method to use when
@@ -146,8 +145,9 @@ class BarrelFOV(FOV):
         """The camera coordinates *(x,y)* at FOV coordinates *(u,v)* and a given time.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
-            time (Scalar, optional): Absolute time in seconds TDB. Ignored by BarrelFOV.
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
+            time (ScalarLike, optional): Absolute time in seconds TDB. Ignored by
+                BarrelFOV.
             derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
                 into the returned *(x,y)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -184,8 +184,9 @@ class BarrelFOV(FOV):
         """The FOV coordinates *(u,v)* at camera coordinates *(x,y)* and a given time.
 
         Parameters:
-            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
-            time (Scalar, optional): Absolute time in seconds TDB. Ignored by BarrelFOV.
+            xy_pair (PairLike): *(x,y)* coordinates in this FOV, assuming *z = 1*.
+            time (ScalarLike, optional): Absolute time in seconds TDB. Ignored by
+                BarrelFOV.
             derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
                 into the returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -237,7 +238,7 @@ class BarrelFOV(FOV):
         handle ``r = polynomial(r) = 0``.
 
         Parameters:
-            r (Scalar): The points at which to evaluate the polynomial.
+            r (ScalarLike): The points at which to evaluate the polynomial.
             coefft (numpy.ndarray): The coefficient array defining the polynomial, with
                 the leading zero-valued constant term omitted.
             dcoefft (numpy.ndarray): The coefficients of the derivative of the ratio,
@@ -294,8 +295,8 @@ class BarrelFOV(FOV):
         ``r = f = 0``.
 
         Parameters:
-            f (Scalar): The values of the polynomial.
-            r_guess (Scalar): Initial guess at the values of `r`.
+            f (ScalarLike): The values of the polynomial.
+            r_guess (ScalarLike): Initial guess at the values of `r`.
             coefft (numpy.ndarray): Coefficient array defining the polynomial, with the
                 leading zero-valued constant term omitted.
             dcoefft (numpy.ndarray): The coefficients of the derivative of the ratio

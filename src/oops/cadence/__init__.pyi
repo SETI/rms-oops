@@ -14,17 +14,14 @@ where they are unambiguous and are `Any` elsewhere.
 from typing import Any
 from oops.frame import FrameShift as FrameShift
 from oops.path import PathShift as PathShift
-from numpy import ndarray, number
+from numpy import ndarray
 from polymath import Boolean, Pair, Scalar
-from oops import Fittable as Fittable
-from oops.mutable import Mutable as Mutable
-
 # Parameters documented as a polymath type are passed through `as_scalar` and its
 # siblings, so each accepts the class, a number, or a nested sequence of numbers.
-# `str` is excluded deliberately: no polymath constructor accepts one.
-_Numeric = float | number | list['_Numeric'] | tuple['_Numeric', ...]
-PairLike = Pair | ndarray | _Numeric
-ScalarLike = Scalar | ndarray | _Numeric
+# `polymath.typedefs` names each of those unions.
+from polymath.typedefs import PairLike, ScalarLike
+from oops import Fittable as Fittable
+from oops.mutable import Mutable as Mutable
 
 __all__ = ['Cadence', 'DualCadence', 'Instant', 'Metronome', 'ReshapedCadence',
            'ReversedCadence', 'Sequence', 'SnapCadence', 'TDICadence', 'TimeShift']
@@ -106,10 +103,10 @@ class Metronome(Cadence):
     max_tstride: Any
     def __init__(self, tstart: float, tstride: float, texp: float, steps: int, *,
         clip: bool = True) -> None: ...
-    def time_at_tstep(self,  # type: ignore[override]
+    def time_at_tstep(self,
         tstep: ScalarLike, *, remask: bool = False, derivs: bool = False,
         inclusive: bool = True) -> Scalar: ...
-    def time_range_at_tstep(self,  # type: ignore[override]
+    def time_range_at_tstep(self,
         tstep: ScalarLike, *, remask: bool = False, inclusive: bool = True,
         shift: bool = True) -> tuple[Scalar, Scalar]: ...
     def tstep_at_time(self, time: ScalarLike, *, remask: bool = False,
@@ -119,7 +116,7 @@ class Metronome(Cadence):
     def time_is_outside(self, time: ScalarLike, *, inclusive: bool = True) -> Boolean: ...
     def time_shift(self, secs: float) -> Metronome: ...
     def as_continuous(self) -> Metronome: ...
-    def tstride_at_tstep(self,  # type: ignore[override]
+    def tstride_at_tstep(self,
         tstep: ScalarLike, sign: int = 1, *, remask: bool = False) -> Scalar: ...
     @staticmethod
     def for_array1d(steps: int, tstart: float, texp: float,
@@ -157,10 +154,10 @@ class ReversedCadence(Cadence):
     min_tstride: Any
     max_tstride: Any
     def __init__(self, cadence: Cadence, axis: int = 0) -> None: ...
-    def time_at_tstep(self,  # type: ignore[override]
+    def time_at_tstep(self,
         tstep: ScalarLike, *, remask: bool = False, derivs: bool = False,
         inclusive: bool = True) -> Scalar: ...
-    def time_range_at_tstep(self,  # type: ignore[override]
+    def time_range_at_tstep(self,
         tstep: ScalarLike, *, remask: bool = False, inclusive: bool = True,
         shift: bool = True) -> tuple[Scalar, Scalar]: ...
     def tstep_at_time(self, time: ScalarLike, *, remask: bool = False,
@@ -180,12 +177,12 @@ class Sequence(Cadence):
     time: Any
     midtime: Any
     shape: Any
-    def __init__(self, tlist: ScalarLike | list | ndarray,
+    def __init__(self, tlist: ScalarLike,
         texp: float | list | ndarray) -> None: ...
-    def time_at_tstep(self,  # type: ignore[override]
+    def time_at_tstep(self,
         tstep: ScalarLike, *, remask: bool = False, derivs: bool = False,
         inclusive: bool = True) -> Scalar: ...
-    def time_range_at_tstep(self,  # type: ignore[override]
+    def time_range_at_tstep(self,
         tstep: ScalarLike, *, remask: bool = False, inclusive: bool = True,
         shift: bool = True) -> tuple[Scalar, Scalar]: ...
     def tstep_at_time(self, time: ScalarLike, *, remask: bool = False,
@@ -214,10 +211,10 @@ class TDICadence(Cadence):
         inclusive: bool = True, shift: bool = True) -> Scalar: ...
     def tdi_shifts_after_time(self, time: ScalarLike, *, remask: bool = False,
         inclusive: bool = True) -> Scalar: ...
-    def time_at_tstep(self,  # type: ignore[override]
+    def time_at_tstep(self,
         tstep: ScalarLike, *, remask: bool = False, derivs: bool = False,
         inclusive: bool = True) -> Scalar: ...
-    def time_range_at_tstep(self,  # type: ignore[override]
+    def time_range_at_tstep(self,
         tstep: ScalarLike, *, remask: bool = False, inclusive: bool = True,
         shift: bool = True) -> tuple[Scalar, Scalar]: ...
     def tstep_at_time(self, time: ScalarLike, *, remask: bool = False,

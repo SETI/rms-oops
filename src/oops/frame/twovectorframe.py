@@ -23,11 +23,11 @@ class TwoVectorFrame(Frame):
         Parameters:
             reference (Frame or str): The Frame or the ID of the Frame relative to which
                 this Frame is defined.
-            vector1 (Vector3 or array-like): A vector describing an axis.
+            vector1 (Vector3Like): A vector describing an axis.
             axis1 (int or str): The axis defined by the first vector: 0, "x", or "X" for
                 *x*; 1, "y", or "Y" for *y*; 2, "z", or "Z" for *z*.
-            vector2 (Vector3 or array-like): A vector which, along with `vector1`, defines
-                the half-plane in which a second axis falls.
+            vector2 (Vector3Like): A vector which, along with `vector1`, defines the
+                half-plane in which a second axis falls.
             axis2 (int or str): The axis defined by the second vector: 0, "x", or "X" for
                 *x*; 1, "y", or "Y" for *y*; 2, "z", or "Z" for *z*.
             frame_id (str, optional): The ID under which to register this Frame; None to
@@ -97,7 +97,7 @@ class TwoVectorFrame(Frame):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): Ignored by class TwoVectorFrame.
 
         Returns:
@@ -121,7 +121,7 @@ class TwoVectorFrame(Frame):
         Values always fall between 0 and 2*pi.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): Ignored by class TwoVectorFrame.
 
         Returns:

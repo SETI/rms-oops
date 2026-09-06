@@ -14,12 +14,10 @@ where they are unambiguous and are `Any` elsewhere.
 from typing import Any
 from numpy import ndarray, number
 from polymath import Scalar
-
 # Parameters documented as a polymath type are passed through `as_scalar` and its
 # siblings, so each accepts the class, a number, or a nested sequence of numbers.
-# `str` is excluded deliberately: no polymath constructor accepts one.
-_Numeric = float | number | list['_Numeric'] | tuple['_Numeric', ...]
-ScalarLike = Scalar | ndarray | _Numeric
+# `polymath.typedefs` names each of those unions.
+from polymath.typedefs import ScalarLike
 
 __all__ = ['from_file', 'JIRAM']
 

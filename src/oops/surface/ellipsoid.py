@@ -148,18 +148,18 @@ class Ellipsoid(Surface):
         """Surface coordinates associated with a position vector.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface, relative to this Surface's
-                origin and frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            pos (Vector3Like): Positions at or near the Surface, relative to this
+                Surface's origin and frame.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored for this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             axes (int, optional): 2 or 3, indicating whether to return the first two
                 coordinates (lon, lat) or all three (lon, lat, z) as Scalars.
             derivs (bool, optional): True to propagate any derivatives inside pos and obs
                 into the returned coordinates.
-            hints (Scalar, optional): Optionally, the value of the coefficient `p` such
-                that ``ground + p * normal(ground) = pos``. If it is not None, the
+            hints (ScalarLike, optional): Optionally, the value of the coefficient `p`
+                such that ``ground + p * normal(ground) = pos``. If it is not None, the
                 converged value of `p` is appended to the returned tuple; use `hints=True`
                 if you lack an initial value but require the new value to be returned.
             groundtrack (bool, optional): True to append the intercept point on the
@@ -216,7 +216,7 @@ class Ellipsoid(Surface):
         """The position at the given surface coordinates.
 
         Parameters:
-            coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at
+            coords (tuple[ScalarLike, ...]): Two or three Scalars defining coordinates at
                 or near this surface. These can have different shapes, but must be
                 broadcastable to a common shape.
 
@@ -224,10 +224,10 @@ class Ellipsoid(Surface):
                 * `lat` (rad): Latitude at the surface.
                 * `z` (km, optional): Vertical altitude normal to the body surface.
 
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored for this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             derivs (bool, optional): True to propagate any derivatives inside the
                 coordinates and obs into the returned position vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -281,12 +281,12 @@ class Ellipsoid(Surface):
         """Where positions are inside the surface.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface relative to this Surface's
+            pos (Vector3Like): Positions at or near the Surface relative to this Surface's
                 origin and frame.
-            obs (Vector3, optional): Observer position relative to this Surface's
+            obs (Vector3Like, optional): Observer position relative to this Surface's
                 origin and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
 
         Returns:
             Boolean: True where positions are inside the Surface.
@@ -300,16 +300,16 @@ class Ellipsoid(Surface):
         """The position where a specified line of sight intercepts the Surface.
 
         Parameters:
-            obs (Vector3): Observer position as a Vector3 relative to this Surface's
+            obs (Vector3Like): Observer position as a Vector3 relative to this Surface's
                 origin and frame.
-            los (Vector3): Line of sight as a Vector3 in this Surface's frame.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            los (Vector3Like): Line of sight as a Vector3 in this Surface's frame.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             direction (str, optional): 'arr' for a photon arriving at the surface; 'dep'
                 for a photon departing from the surface.
             derivs (bool, optional): True to propagate any derivatives inside obs and los
                 into the returned intercept point.
-            guess (Scalar, optional): Unused.
+            guess (ScalarLike, optional): Unused.
             hints (Any, optional): Any data that might be useful to carry over from one
                 call to the next; unused by this Surface subclass. If it is not None,
                 its value is appended to the returned tuple.
@@ -398,12 +398,12 @@ class Ellipsoid(Surface):
         """The normal vector at a position at or near a surface.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface relative to this Surface's
+            pos (Vector3Like): Positions at or near the Surface relative to this Surface's
                 origin and frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored for this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             derivs (bool, optional): True to propagate any derivatives of `pos` into the
                 returned normal vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -429,11 +429,11 @@ class Ellipsoid(Surface):
         """Surface point where the normal vector parallels the given vector.
 
         Parameters:
-            normal (Vector3): Normal vectors in this Surface's frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            normal (Vector3Like): Normal vectors in this Surface's frame.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored for this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             derivs (bool, optional): True to propagate derivatives in the normal vector
                 into the returned intercepts.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -462,18 +462,18 @@ class Ellipsoid(Surface):
         points should be the one returned.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface relative to this Surface's
+            pos (Vector3Like): Positions at or near the Surface relative to this Surface's
                 origin and frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored for this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             direction (str, optional): 'arr' for a photon arriving at the surface; 'dep'
                 for a photon departing from the surface; ignored here.
             derivs (bool, optional): True to propagate derivatives in pos into the
                 returned intercepts.
-            guess (Scalar, optional): Optional initial guess at coefficient `p` such that
-                ``intercept + p * normal(intercept) = pos``. Use `guess=True` for the
+            guess (ScalarLike, optional): Optional initial guess at coefficient `p` such
+                that ``intercept + p * normal(intercept) = pos``. Use `guess=True` for the
                 converged value of `p` to be returned even if an initial guess is
                 unavailable.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -661,7 +661,7 @@ class Ellipsoid(Surface):
         errors.
 
         Parameters:
-            pos (Vector3): Positions relative to this Surface's origin and frame.
+            pos (Vector3Like): Positions relative to this Surface's origin and frame.
 
         Returns:
             Vector3: The given positions, masked and rescaled where they fall inside the
@@ -685,7 +685,7 @@ class Ellipsoid(Surface):
         """Convert longitude in internal coordinates to planetocentric.
 
         Parameters:
-            lon (Scalar): The longitude in radians.
+            lon (ScalarLike): The longitude in radians.
             derivs (bool, optional): True to propagate any derivatives of `lon` into
                 the returned longitude.
 
@@ -700,7 +700,7 @@ class Ellipsoid(Surface):
         """Convert planetocentric longitude to internal coordinates.
 
         Parameters:
-            lon (Scalar): The longitude in radians.
+            lon (ScalarLike): The longitude in radians.
             derivs (bool, optional): True to propagate any derivatives of `lon` into
                 the returned longitude.
 
@@ -715,7 +715,7 @@ class Ellipsoid(Surface):
         """Convert longitude in internal coordinates to planetographic.
 
         Parameters:
-            lon (Scalar): The longitude in radians.
+            lon (ScalarLike): The longitude in radians.
             derivs (bool, optional): True to propagate any derivatives of `lon` into
                 the returned longitude.
 
@@ -730,7 +730,7 @@ class Ellipsoid(Surface):
         """Convert planetographic longitude to internal coordinates.
 
         Parameters:
-            lon (Scalar): The longitude in radians.
+            lon (ScalarLike): The longitude in radians.
             derivs (bool, optional): True to propagate any derivatives of `lon` into
                 the returned longitude.
 
@@ -749,8 +749,8 @@ class Ellipsoid(Surface):
         """Convert latitude in internal ellipsoid coordinates to planetocentric.
 
         Parameters:
-            lat (Scalar): The latitude in radians.
-            lon (Scalar): The longitude in radians, which this conversion requires
+            lat (ScalarLike): The latitude in radians.
+            lon (ScalarLike): The longitude in radians, which this conversion requires
                 because the surface is triaxial.
             derivs (bool, optional): True to propagate any derivatives of `lat` and
                 `lon` into the returned latitude.
@@ -770,8 +770,8 @@ class Ellipsoid(Surface):
         """Convert planetocentric latitude to internal ellipsoid latitude.
 
         Parameters:
-            lat (Scalar): The latitude in radians.
-            lon (Scalar): The longitude in radians, which this conversion requires
+            lat (ScalarLike): The latitude in radians.
+            lon (ScalarLike): The longitude in radians, which this conversion requires
                 because the surface is triaxial.
             derivs (bool, optional): True to propagate any derivatives of `lat` and
                 `lon` into the returned latitude.
@@ -791,8 +791,8 @@ class Ellipsoid(Surface):
         """Convert latitude in internal ellipsoid coordinates to planetographic.
 
         Parameters:
-            lat (Scalar): The latitude in radians.
-            lon (Scalar): The longitude in radians, which this conversion requires
+            lat (ScalarLike): The latitude in radians.
+            lon (ScalarLike): The longitude in radians, which this conversion requires
                 because the surface is triaxial.
             derivs (bool, optional): True to propagate any derivatives of `lat` and
                 `lon` into the returned latitude.
@@ -812,8 +812,8 @@ class Ellipsoid(Surface):
         """Convert a planetographic latitude to internal ellipsoid latitude.
 
         Parameters:
-            lat (Scalar): The latitude in radians.
-            lon (Scalar): The longitude in radians, which this conversion requires
+            lat (ScalarLike): The latitude in radians.
+            lon (ScalarLike): The longitude in radians, which this conversion requires
                 because the surface is triaxial.
             derivs (bool, optional): True to propagate any derivatives of `lat` and
                 `lon` into the returned latitude.

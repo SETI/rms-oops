@@ -101,7 +101,7 @@ class PosTargFrame(Frame):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): Ignored by class PosTargFrame.
 
         Returns:

@@ -1424,12 +1424,12 @@ class BackplaneTest(object):
         be either full-resolution or undersampled.
 
         Parameters:
-            array (Qube): Backplane array to be compared.
-            master (Qube or float): Reference value or gold master array.
+            array (QubeLike): Backplane array to be compared.
+            master (QubeLike): Reference value or gold master array.
             title (str): Title string describing the test; must be unique.
-            limit (float or Qube, optional): Upper limit on the difference between the
-                arrays; default 0. It is scaled by the tolerance factor given on the
-                command line, and is superseded by any override defined for this title.
+            limit (QubeLike, optional): Upper limit on the difference between the arrays;
+                default 0. It is scaled by the tolerance factor given on the command line,
+                and is superseded by any override defined for this title.
             method (str, optional): Comparison method, one of "" for a standard
                 comparison, "mod360" to compare in degrees mod 360, "degrees" to compare
                 in degrees, or "border" for border backplanes, in which case `radius` is
@@ -1481,11 +1481,11 @@ class BackplaneTest(object):
         command-line options.
 
         Parameters:
-            array (Qube): Backplane array to be tested.
+            array (QubeLike): Backplane array to be tested.
             title (str): Title string describing the test; must be unique.
-            limit (float or Qube, optional): Upper limit on the difference between the
-                arrays; default 0. It is scaled by the tolerance factor given on the
-                command line, and is superseded by any override defined for this title.
+            limit (QubeLike, optional): Upper limit on the difference between the arrays;
+                default 0. It is scaled by the tolerance factor given on the command line,
+                and is superseded by any override defined for this title.
             method (str, optional): Comparison method, one of "" for a standard
                 comparison, "mod360" to compare in degrees mod 360, "degrees" to compare
                 in degrees, or "border" for border backplanes, in which case `radius` is
@@ -1612,8 +1612,8 @@ class BackplaneTest(object):
         Radians must already be converted to degrees.
 
         Parameters:
-            array (Qube): Backplane array to be compared.
-            master (Qube or float): Reference value or gold master array.
+            array (QubeLike): Backplane array to be compared.
+            master (QubeLike): Reference value or gold master array.
             comparison (_BackplaneComparison): Container for the comparison options, which
                 receives the status and the details of the result.
         """
@@ -1911,10 +1911,10 @@ class BackplaneTest(object):
         Any array compared in degrees is converted from radians here.
 
         Parameters:
-            array (Qube): Backplane array to be tested.
+            array (QubeLike): Backplane array to be tested.
             title (str): Title string describing the test; must be unique.
-            limit (float or Qube): Upper limit on the difference between the arrays,
-                before the command-line tolerance factor is applied.
+            limit (QubeLike): Upper limit on the difference between the arrays, before the
+                command-line tolerance factor is applied.
             method (str): Comparison method, one of "", "mod360", "degrees", or "border".
             operator (str): Comparison operator, one of "=", ">", ">=", "<", or "<=".
             radius (float): Radius in pixels within which to check for a spatial shift.
@@ -2011,7 +2011,7 @@ class BackplaneTest(object):
         integer or a float.
 
         Parameters:
-            array (Qube): Backplane array to summarize.
+            array (QubeLike): Backplane array to summarize.
             title (str): Title string describing the test; used as the summary key.
             method (str): Comparison method, one of "", "mod360", "degrees", or "border".
 
@@ -2232,8 +2232,7 @@ class BackplaneTest(object):
         """Value formatted for display, avoiding "0.000" and "1.000e-12".
 
         Parameters:
-            value (Qube, int, or float): The value to format. A fully masked value is
-                shown as "--".
+            value (QubeLike): The value to format. A fully masked value is shown as "--".
 
         Returns:
             str: The formatted value.
@@ -2342,7 +2341,7 @@ class BackplaneTest(object):
         as black, and is zoomed by the factor given on the command line.
 
         Parameters:
-            array (Qube or numpy.ndarray): Backplane array to save.
+            array (QubeLike): Backplane array to save.
             browse_path (FCPath): Path of the file to write. Its suffix determines the
                 image format.
         """

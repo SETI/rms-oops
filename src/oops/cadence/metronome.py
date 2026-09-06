@@ -64,7 +64,7 @@ class Metronome(Cadence):
         This method supports non-integer time step values via interpolation.
 
         Parameters:
-            tstep (Scalar): Time step index values.
+            tstep (ScalarLike): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
             derivs (bool, optional): True to include derivatives of tstep in the returned
                 time.
@@ -101,7 +101,7 @@ class Metronome(Cadence):
         """The range of times for the given time step.
 
         Parameters:
-            tstep (Scalar): Time step index values.
+            tstep (ScalarLike): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
             inclusive (bool, optional): True to treat the end time as part of this
                 Cadence; False to exclude it.
@@ -126,7 +126,7 @@ class Metronome(Cadence):
         This method returns non-integer time steps via interpolation.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             remask (bool, optional): True to mask time values not sampled within this
                 Cadence.
             derivs (bool, optional): True to include derivatives of time in the returned
@@ -200,7 +200,7 @@ class Metronome(Cadence):
         """Integer range of time steps active at the given time.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             remask (bool, optional): True to mask time values not sampled within this
                 Cadence.
             inclusive (bool, optional): True to treat the end time as part of this
@@ -270,7 +270,7 @@ class Metronome(Cadence):
         Masked time values return masked results.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             inclusive (bool, optional): True to treat the end time of an interval as
                 inside; False to treat it as outside. The start time of an interval is
                 always treated as inside.
@@ -323,7 +323,7 @@ class Metronome(Cadence):
         """The time interval(s) between the times of adjacent time steps.
 
         Parameters:
-            tstep (Scalar): Time step index values.
+            tstep (ScalarLike): Time step index values.
             sign (int, optional): +1 for the time interval to the next time step; -1 for
                 the time interval since the previous time step.
             remask (bool, optional): True to mask tsteps that are out of range.

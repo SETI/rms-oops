@@ -17,8 +17,8 @@ class CoordPath(Path):
 
         Parameters:
             surface (Surface): The surface to which the coordinates refer.
-            coords (tuple[Scalar, ...]): 2 or 3 Scalars defining the coordinates on the
-                surface.
+            coords (tuple[ScalarLike, ...]): 2 or 3 Scalars defining the coordinates on
+                the surface.
             obs (Path or str, optional): The Path or the ID of the Path of the observer,
                 required if `surface` is "virtual".
             path_id (str, optional): The ID under which to register this Path; None to
@@ -94,7 +94,7 @@ class CoordPath(Path):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use

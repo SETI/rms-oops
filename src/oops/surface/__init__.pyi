@@ -14,16 +14,13 @@ where they are unambiguous and are `Any` elsewhere.
 from typing import Any
 from oops import (Body as Body, Event as Event, Frame as Frame, Gravity as Gravity,
                   Path as Path)
-from numpy import ndarray, number
+from numpy import ndarray
 from polymath import Boolean, Scalar, Vector3
-from oops.mutable import Mutable as Mutable
-
 # Parameters documented as a polymath type are passed through `as_scalar` and its
 # siblings, so each accepts the class, a number, or a nested sequence of numbers.
-# `str` is excluded deliberately: no polymath constructor accepts one.
-_Numeric = float | number | list['_Numeric'] | tuple['_Numeric', ...]
-ScalarLike = Scalar | ndarray | _Numeric
-Vector3Like = Vector3 | ndarray | _Numeric
+# `polymath.typedefs` names each of those unions.
+from polymath.typedefs import ScalarLike, Vector3Like
+from oops.mutable import Mutable as Mutable
 
 __all__ = ['Surface', 'Ansa', 'CentricEllipsoid', 'CentricSpheroid', 'Ellipsoid',
            'GraphicEllipsoid', 'GraphicSpheroid', 'Limb', 'NullSurface', 'OrbitPlane',

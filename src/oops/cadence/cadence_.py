@@ -38,7 +38,7 @@ class Cadence(Mutable):
         returns the time at the nearest edge of the cadence's shape.
 
         Parameters:
-            tstep (Scalar or Pair): Time step index values.
+            tstep (ScalarLike or PairLike): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
             derivs (bool, optional): True to include derivatives of tstep in the returned
                 time.
@@ -59,7 +59,7 @@ class Cadence(Mutable):
         returns the time range at the nearest edge.
 
         Parameters:
-            tstep (Scalar or Pair): Time step index values.
+            tstep (ScalarLike or PairLike): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
             inclusive (bool, optional): True to treat the end time as part of this
                 Cadence; False to exclude it.
@@ -80,7 +80,7 @@ class Cadence(Mutable):
         This method returns non-integer time steps via interpolation.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             remask (bool, optional): True to mask time values not sampled within this
                 Cadence.
             derivs (bool, optional): True to include derivatives of time in the returned
@@ -99,7 +99,7 @@ class Cadence(Mutable):
         """Integer range of time steps active at the given time.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             remask (bool, optional): True to mask time values not sampled within this
                 Cadence.
             inclusive (bool, optional): True to treat the end time as part of this
@@ -120,7 +120,7 @@ class Cadence(Mutable):
         """A Boolean mask of times that fall outside the cadence.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             inclusive (bool, optional): True to treat the end time of an interval as
                 inside; False to treat it as outside. The start time of an interval is
                 always treated as inside.
@@ -169,7 +169,7 @@ class Cadence(Mutable):
         """A Boolean mask of times that fall inside the cadence.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             inclusive (bool, optional): True to treat the end time of an interval as
                 inside; False to treat it as outside. The start time of an interval is
                 always treated as inside.
@@ -184,7 +184,7 @@ class Cadence(Mutable):
         """The time interval(s) between the times of adjacent time steps.
 
         Parameters:
-            tstep (Scalar or Pair): Time step index, which need not be integral.
+            tstep (ScalarLike or PairLike): Time step index, which need not be integral.
             sign (int, optional): +1 for the time interval to the next time step; -1 for
                 the time interval since the previous time step.
             remask (bool, optional): True to mask tsteps that are out of range.

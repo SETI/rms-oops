@@ -100,9 +100,14 @@ napoleon_use_ivar = True
 # which Napoleon handles natively.
 napoleon_custom_sections = [('Properties', 'params_style')]
 
+# `polymath` is mapped so that a docstring naming one of its symbols in full, such as
+# `polymath.Vector3`, links to its own documentation. A bare name resolves against this
+# project's inventory instead, which is why `oops.rst` documents the PolyMath classes and
+# the aliases of `polymath.typedefs` alongside the classes of `oops` itself.
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
+    'polymath': ('https://rms-polymath.readthedocs.io/en/latest/', None),
 }
 
 # Nitpicky mode resolves every type named in a `Parameters:` or `Returns:` block. These
@@ -112,13 +117,9 @@ nitpick_ignore = [
     # Napoleon appends ", optional" to the type of an optional parameter. It marks the
     # parameter, not a type, so there is nothing for it to link to.
     ('py:class', 'optional'),
-    # Informal type names used by `polymath`, whose docstrings are rendered here because
-    # `oops` re-exports its classes. They name a concept, not a class.
+    # A plain numeric array, where no PolyMath type is involved. It names a concept
+    # rather than a class, so there is nothing for it to link to.
     ('py:class', 'array-like'),
-    ('py:class', 'convertible'),
-    ('py:class', 'number'),
-    ('py:class', 'scalar'),
-    ('py:class', 'vector-like'),
     # `programs.gold_master` types a callback parameter as "function", which names a
     # concept rather than a class.
     ('py:class', 'function'),

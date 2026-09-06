@@ -305,7 +305,7 @@ class KeplerPath(Path, Fittable):
         wobbles.
 
         Parameters:
-            time (Scalar or float): Time in seconds TDB.
+            time (ScalarLike): Time in seconds TDB.
             partials (bool, optional): True to include partial derivatives of the position
                 with respect to the elements.
 
@@ -750,7 +750,7 @@ class KeplerPath(Path, Fittable):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
@@ -808,7 +808,7 @@ class KeplerPath(Path, Fittable):
         frame.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
 
         Returns:
             Scalar: The longitude of ascending node at `time`.
@@ -823,7 +823,7 @@ class KeplerPath(Path, Fittable):
         Wobbles are ignored.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
 
         Returns:
             Vector3: The pole vector at `time`.
@@ -858,9 +858,9 @@ class KeplerPath(Path, Fittable):
             arrival (Event): The Event of a photon's arrival.
             derivs (bool, optional): True to propagate derivatives of the `arrival`
                 position into the returned Events. The time derivative is always retained.
-            guess (Scalar, optional): An initial guess to use as the event time along this
-                Path; otherwise None. Should be provided if the event time was already
-                returned from a similar calculation.
+            guess (ScalarLike, optional): An initial guess to use as the event time along
+                this Path; otherwise None. Should be provided if the event time was
+                already returned from a similar calculation.
             antimask (numpy.ndarray or bool, optional): A boolean array to be applied to
                 event times and positions. Only the indices where antimask=True will be
                 used in the solution.

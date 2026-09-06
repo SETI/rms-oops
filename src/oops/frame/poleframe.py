@@ -27,8 +27,8 @@ class PoleFrame(Frame):
         Parameters:
             frame (Frame or str): The Frame or the ID of the Frame describing the rotation
                 of the central planet.
-            pole (Vector3 or array-like): The invariable pole of the system, around which
-                the planet's pole precesses.
+            pole (Vector3Like): The invariable pole of the system, around which the
+                planet's pole precesses.
             retrograde (bool, optional): True to flip the sign of the *z*-axis. Necessary
                 for retrograde systems like Uranus.
             aries (bool, optional): True to measure longitudes from the First Point of
@@ -124,7 +124,7 @@ class PoleFrame(Frame):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
@@ -196,7 +196,7 @@ class PoleFrame(Frame):
         Values always fall between 0 and 2*pi.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.

@@ -99,7 +99,7 @@ class Pixel(Observation):
         This method supports non-integer index values.
 
         Parameters:
-            indices (Scalar or Vector): Array indices.
+            indices (ScalarLike or VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
             derivs (bool, optional): True to include derivatives in the returned values.
 
@@ -127,7 +127,7 @@ class Pixel(Observation):
         """Ranges of *(u,v)* spatial coordinates and time for integer array indices.
 
         Parameters:
-            indices (Scalar or Vector): Array indices.
+            indices (ScalarLike or VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
@@ -156,8 +156,8 @@ class Pixel(Observation):
         it is expected to fall between 0 and 1 inclusive.
 
         Parameters:
-            uv_pair (Pair): Spatial *(u,v)* data array coordinates, truncated to integers
-                if necessary.
+            uv_pair (PairLike): Spatial *(u,v)* data array coordinates, truncated to
+                integers if necessary.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
@@ -175,7 +175,7 @@ class Pixel(Observation):
         observation and is masked if `remask` is True.
 
         Parameters:
-            time (Scalar): Time values in seconds TDB.
+            time (ScalarLike): Time values in seconds TDB.
             remask (bool, optional): True to mask values outside the time limits.
 
         Returns:
@@ -192,7 +192,7 @@ class Pixel(Observation):
         A Pixel observation has a single pixel, so the range always covers it.
 
         Parameters:
-            tstep (Scalar): Time step index.
+            tstep (ScalarLike): Time step index.
             remask (bool, optional): True to mask time steps outside the cadence.
 
         Returns:
@@ -236,10 +236,10 @@ class Pixel(Observation):
             meshgrid (Meshgrid): Object describing the sampling of the field of view.
                 Required, because the returned Event carries the arrival directions that
                 it defines.
-            tfrac (Scalar, optional): Scalar of fractional times during the exposure,
+            tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where tfrac=0 at the beginning and 1 at the end. Default is 0.5. Ignored
                 if `time` is specified.
-            time (Scalar, optional): Optional Scalar of absolute time in seconds.
+            time (ScalarLike, optional): Optional Scalar of absolute time in seconds.
 
         Returns:
             Event: The corresponding Event.
@@ -268,11 +268,11 @@ class Pixel(Observation):
                 view. Here, it is only used to define the shape of the returned event;
                 if None, the times are returned with one value per sample of the cadence
                 and no additional axes.
-            tfrac (Scalar, optional): Scalar of fractional times during the exposure,
+            tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where 0 refers to the beginning and 1 refers to the end of each sample's
                 integration interval. The default is 0.5, referring to the midtime of each
                 sample in the `meshgrid`.
-            time (Scalar, optional): Optional Scalar of absolute time in seconds. If
+            time (ScalarLike, optional): Optional Scalar of absolute time in seconds. If
                 specified, `tfrac` is ignored.
             shapeless (bool, optional): True to return a shapeless event, referring to the
                 mean of all the times.

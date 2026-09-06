@@ -219,7 +219,7 @@ class QuickFrame(Frame):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
@@ -241,7 +241,7 @@ class QuickFrame(Frame):
         """Use the tabulated splines for a quick evaluation of the transform.
 
         Parameters:
-            time (Scalar): The time(s) at which to evaluate the transform.
+            time (ScalarLike): The time(s) at which to evaluate the transform.
             collapse_threshold (float, optional): Use linear interpolation between the end
                 points if the time interval is below this value.
 
@@ -495,9 +495,9 @@ class QuickFrame(Frame):
 
         Parameters:
             frame (Frame): The Frame to be approximated.
-            time (Scalar or tuple): The set of times at which the frame is to be
-                evaluated. This can simply be a tuple (`tmin`, `tmax`) defining the
-                beginning and end times.
+            time (ScalarLike): The set of times at which the frame is to be evaluated.
+                This can simply be a tuple (`tmin`, `tmax`) defining the beginning and end
+                times.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use

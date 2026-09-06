@@ -44,7 +44,7 @@ class RingPlane(Surface):
                 the ring, in km; None for a ring with no radial limits.
             gravity (Gravity, optional): Gravity model of the central body, used to define
                 the orbital velocities within the plane.
-            elevation (Scalar, optional): A possible offset of the ring plane in the
+            elevation (ScalarLike, optional): A possible offset of the ring plane in the
                 direction of positive rotation, in km.
             modes (list, optional): Zero or more radial modes in the ring. Each mode is
                 described by a tuple of four parameters `(cycles, amp, peri0, speed)`:
@@ -129,12 +129,12 @@ class RingPlane(Surface):
         """Surface coordinates associated with a position vector.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface, relative to this Surface's
-                origin and frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored unless
-                this RingPlane contains radial modes, in which case it is required.
+            pos (Vector3Like): Positions at or near the Surface, relative to this
+                Surface's origin and frame.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored for this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                unless this RingPlane contains radial modes, in which case it is required.
             axes (int, optional): 2 or 3, indicating whether to return the first two
                 coordinates (rad, theta) or all three (rad, theta, z) as Scalars.
             derivs (bool, optional): True to propagate any derivatives inside pos and obs
@@ -195,18 +195,18 @@ class RingPlane(Surface):
         """The position at the given surface coordinates.
 
         Parameters:
-            coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at or
-                near this surface. These can have different shapes, but must be
+            coords (tuple[ScalarLike, ...]): Two or three Scalars defining coordinates at
+                or near this surface. These can have different shapes, but must be
                 broadcastable to a common shape.
 
                 * `r`: The mean orbital radius in the ring plane, in km.
                 * `theta`: The longitude in radians of the selected point.
                 * `z`: Vertical distance in km above the ring plane, optional.
 
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored for this subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored unless
-                this RingPlane contains radial modes, in which case it is required.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored for this subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                unless this RingPlane contains radial modes, in which case it is required.
             derivs (bool, optional): True to propagate any derivatives inside `coords` and
                 `obs` into the returned position vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -251,15 +251,15 @@ class RingPlane(Surface):
         """The position where a specified line of sight intercepts this Surface.
 
         Parameters:
-            obs (Vector3): Observer position as a Vector3 relative to this Surface's
+            obs (Vector3Like): Observer position as a Vector3 relative to this Surface's
                 origin and frame.
-            los (Vector3): Line of sight as a Vector3 in this Surface's frame.
-            time (Scalar, optional): Time at the surface; ignored here.
+            los (Vector3Like): Line of sight as a Vector3 in this Surface's frame.
+            time (ScalarLike, optional): Time at the surface; ignored here.
             direction (str, optional): 'arr' for a photon arriving at the surface; 'dep'
                 for a photon departing from the surface; ignored here.
             derivs (bool, optional): True to propagate any derivatives inside obs and los
                 into the returned intercept point.
-            guess (Scalar, optional): Unused.
+            guess (ScalarLike, optional): Unused.
             hints (Any, optional): Any data that might be useful to carry over from one
                 call to the next; unused by this Surface subclass. If it is not None,
                 its value is appended to the returned tuple.
@@ -301,11 +301,12 @@ class RingPlane(Surface):
         """The normal vector at a position at or near a surface.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface relative to this Surface's
+            pos (Vector3Like): Positions at or near the Surface relative to this Surface's
                 origin and frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored here.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored for this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                here.
             derivs (bool, optional): True to propagate any derivatives of `pos` into the
                 returned normal vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -342,12 +343,12 @@ class RingPlane(Surface):
         speeds on a planet.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface relative to this Surface's
+            pos (Vector3Like): Positions at or near the Surface relative to this Surface's
                 origin and frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored unless
-                this RingPlane contains radial modes, in which case it is required.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored for this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                unless this RingPlane contains radial modes, in which case it is required.
 
         Returns:
             Vector3: Velocities, in units of km/s.
@@ -402,8 +403,8 @@ class RingPlane(Surface):
         """The sum of the modes as a radial offset from the mean epicyclic radius.
 
         Parameters:
-            lon (Scalar): Longitude in radians of the intercept point.
-            time (Scalar): Time at which to evaluate the modes, in seconds TDB. It is
+            lon (ScalarLike): Longitude in radians of the intercept point.
+            time (ScalarLike): Time at which to evaluate the modes, in seconds TDB. It is
                 required, because the modes vary with it.
             derivs (bool, optional): True to propagate any derivatives of `lon` and `time`
                 into the returned offset.

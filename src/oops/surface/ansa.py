@@ -145,11 +145,11 @@ class Ansa(Surface):
         """Surface coordinates associated with a position vector.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface, relative to this Surface's
+            pos (Vector3Like): Positions at or near the Surface, relative to this
+                Surface's origin and frame.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
                 origin and frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame.
-            time (Scalar, optional): Time at which to evaluate the Surface.
+            time (ScalarLike, optional): Time at which to evaluate the Surface.
             axes (int, optional): 2 or 3, indicating whether to return the first two
                 coordinates (rad, z) or all three `(rad, z, theta)` as Scalars.
             derivs (bool, optional): True to propagate any derivatives inside pos and obs
@@ -219,7 +219,7 @@ class Ansa(Surface):
         """The position at the given surface coordinates.
 
         Parameters:
-            coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at
+            coords (tuple[ScalarLike, ...]): Two or three Scalars defining coordinates at
                 or near this surface. These can have different shapes, but must be
                 broadcastable to a common shape.
 
@@ -227,9 +227,9 @@ class Ansa(Surface):
                 * `z` (km): Projected vertical distance above the ring plane.
                 * `theta` (rad, optional): Longitude of the intercept point.
 
-            obs (Vector3): Observer position relative to this Surface's origin and frame.
-                Required, because this is a virtual surface.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored by
+            obs (Vector3Like): Observer position relative to this Surface's origin and
+                frame. Required, because this is a virtual surface.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored by
                 this Surface subclass.
             derivs (bool, optional): True to propagate any derivatives inside the
                 coordinates and obs into the returned position vectors.
@@ -311,16 +311,16 @@ class Ansa(Surface):
         """The position where a specified line of sight intercepts the Surface.
 
         Parameters:
-            obs (Vector3): Observer position as a Vector3 relative to this Surface's
+            obs (Vector3Like): Observer position as a Vector3 relative to this Surface's
                 origin and frame.
-            los (Vector3): Line of sight as a Vector3 in this Surface's frame.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored by
+            los (Vector3Like): Line of sight as a Vector3 in this Surface's frame.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored by
                 this Surface subclass.
             direction (str, optional): 'arr' for a photon arriving at the surface; 'dep'
                 for a photon departing from the surface; ignored here.
             derivs (bool, optional): True to propagate any derivatives inside obs and los
                 into the returned intercept point.
-            guess (Scalar, optional): Unused.
+            guess (ScalarLike, optional): Unused.
             hints (Any, optional): If not None (the default), this value is appended to
                 the returned tuple. Needed for compatibility with other Surface
                 subclasses.
@@ -362,11 +362,11 @@ class Ansa(Surface):
         """The normal vector at a position at or near a surface.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface relative to this Surface's
+            pos (Vector3Like): Positions at or near the Surface relative to this Surface's
                 origin and frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored when determining the normal to an ansa.
-            time (Scalar, optional): Time at which to evaluate the Surface.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored when determining the normal to an ansa.
+            time (ScalarLike, optional): Time at which to evaluate the Surface.
             derivs (bool, optional): True to propagate any derivatives of `pos` into the
                 returned normal vectors.
             hints (Any, optional): Any data that might be useful to carry over from one

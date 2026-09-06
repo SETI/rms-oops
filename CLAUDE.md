@@ -98,13 +98,19 @@ imports fail because these are unset, say so; do not report it as a code defect.
   `Surface` and the class constants (`Frame.J2000`, `Path.SSB`,
   `Transform.IDENTITY`, the `Gravity` bodies) that their modules assign after the
   class statement.
-- Types come from the docstrings. A parameter documented as a polymath type takes
-  the matching `ScalarLike`, `PairLike`, `Vector3Like` alias, because the body
-  passes it through `as_scalar` or a sibling and so accepts the class, a number, or
-  a nested sequence of numbers; a return takes the exact class. `Any` remains only
-  where the docstring gives no type. `stubtest-allowlist.txt` holds the names that
-  exist only in the stubs (those aliases) or only at run time (the cross-class
-  attributes injected to break circular imports).
+- Types come from the docstrings, and the two must agree: a parameter documented as
+  `ScalarLike` is annotated `ScalarLike` in the stub, and changing one means changing
+  the other. A parameter documented as a polymath type takes the matching
+  `ScalarLike`, `PairLike`, `Vector3Like` alias, because the body passes it through
+  `as_scalar` or a sibling and so accepts the class, a number, or a nested sequence of
+  numbers; a return takes the exact class. `Any` remains only where the docstring gives
+  no type. The aliases are `polymath`'s, imported from `polymath.typedefs`; the stubs
+  do not define their own. `ScalarLike`, `BooleanLike`, `QubeLike` and `PairLike` each
+  admit a lone number, the last because `Pair.as_pair(1)` repeats the value; the other
+  shape-constrained aliases (`Vector3Like`, `VectorLike`, `MatrixLike`, `Matrix3Like`,
+  `QuaternionLike`) do not, so a parameter that broadcasts one needs the number spelled
+  out alongside. `stubtest-allowlist.txt` holds the names that exist only at run time,
+  chiefly the cross-class attributes injected to break circular imports.
 - The legacy exclusions are recorded in `pyproject.toml`: `ideas/` and the parked,
   uncollected test modules are outside ruff's scope, and `src/oops/hosts/*` and
   `src/spicedb/*` carry per-file ignores.

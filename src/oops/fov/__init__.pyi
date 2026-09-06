@@ -12,18 +12,14 @@ where they are unambiguous and are `Any` elsewhere.
 """
 
 from typing import Any
-from numpy import ndarray, number
+from numpy import ndarray
 from polymath import Boolean, Pair, Scalar, Vector3
-from oops import Fittable as Fittable
-from oops.mutable import Mutable as Mutable
-
 # Parameters documented as a polymath type are passed through `as_scalar` and its
 # siblings, so each accepts the class, a number, or a nested sequence of numbers.
-# `str` is excluded deliberately: no polymath constructor accepts one.
-_Numeric = float | number | list['_Numeric'] | tuple['_Numeric', ...]
-PairLike = Pair | ndarray | _Numeric
-ScalarLike = Scalar | ndarray | _Numeric
-Vector3Like = Vector3 | ndarray | _Numeric
+# `polymath.typedefs` names each of those unions.
+from polymath.typedefs import PairLike, ScalarLike, Vector3Like
+from oops import Fittable as Fittable
+from oops.mutable import Mutable as Mutable
 
 __all__ = ['FOV', 'BarrelFOV', 'FlatFOV', 'GapFOV', 'NullFOV', 'OffsetFOV', 'Platescale',
            'PolynomialFOV', 'SliceFOV', 'Subarray', 'SubsampledFOV', 'TDIFOV', 'WCSFOV']
@@ -38,14 +34,13 @@ class FOV(Mutable):
         remask: bool = False, **kwargs: Any) -> Pair: ...
     def uv_from_xy(self, xy_pair: PairLike, *, derivs: bool = False,
         remask: bool = False, **kwargs: Any) -> Pair: ...
-    def area_factor(self, uv_pair: PairLike | ndarray | tuple,
-        time: ScalarLike | None = None, *, remask: bool = False,
-        **kwargs: Any) -> Scalar: ...
+    def area_factor(self, uv_pair: PairLike, time: ScalarLike | None = None, *,
+        remask: bool = False, **kwargs: Any) -> Scalar: ...
     def los_from_xy(self, xy_pair: PairLike, *, derivs: bool = False) -> Vector3: ...
     def xy_from_los(self, los: Vector3Like, *, derivs: bool = False) -> Pair: ...
     def los_from_uvt(self, uv_pair: PairLike, time: ScalarLike | None = None, *,
         derivs: bool = False, remask: bool = False, **kwargs: Any) -> Vector3: ...
-    def los_from_uv(self, uv_pair: PairLike | ndarray | tuple, *, derivs: bool = False,
+    def los_from_uv(self, uv_pair: PairLike, *, derivs: bool = False,
         remask: bool = False, **kwargs: Any) -> Vector3: ...
     def uv_from_los_t(self, los: Vector3Like, time: ScalarLike | None = None, *,
         derivs: bool = False, remask: bool = False, **kwargs: Any) -> Pair: ...
@@ -67,8 +62,7 @@ class FOV(Mutable):
     def los_is_outside(self, los: Vector3Like, time: ScalarLike | None = None, *,
         inclusive: bool = True, uv_min: PairLike | None = None,
         uv_max: PairLike | None = None, **kwargs: Any) -> Boolean: ...
-    def nearest_uv(self, uv_pair: PairLike | tuple | list | ndarray, *,
-        remask: bool = False) -> Pair: ...
+    def nearest_uv(self, uv_pair: PairLike, *, remask: bool = False) -> Pair: ...
     def max_inversion_error(self, steps: int = 30) -> float: ...
     def center_xy(self, time: ScalarLike | None = None) -> Pair: ...
     def center_los(self, time: ScalarLike | None = None) -> Vector3: ...
@@ -100,11 +94,9 @@ class BarrelFOV(FOV):
     uv_area: Any
     uv_precision: Any
     xy_precision: Any
-    def __init__(self, uv_scale: PairLike | tuple[float, float] | tuple,
-        uv_shape: PairLike | tuple[int, int] | tuple, *,
+    def __init__(self, uv_scale: PairLike, uv_shape: PairLike, *,
         coefft_xy_from_uv: ndarray | None = None,
-        coefft_uv_from_xy: ndarray | None = None,
-        uv_los: PairLike | tuple[float, float] | tuple | None = None,
+        coefft_uv_from_xy: ndarray | None = None, uv_los: PairLike | None = None,
         uv_area: float | None = None, iters: int = 8, fast: bool = True) -> None: ...
     def xy_from_uvt(self, uv_pair: PairLike, time: ScalarLike | None = None, *,
         derivs: bool = False, remask: bool = False, **kwargs: Any) -> Pair: ...
@@ -118,10 +110,8 @@ class FlatFOV(FOV):
     uv_area: Any
     dxy_duv: Any
     duv_dxy: Any
-    def __init__(self, uv_scale: PairLike | float | tuple[float, float],
-        uv_shape: PairLike | int | tuple[int, int], *,
-        uv_los: PairLike | tuple[float, float] | tuple | None = None,
-        uv_area: float | None = None) -> None: ...
+    def __init__(self, uv_scale: PairLike, uv_shape: PairLike, *,
+        uv_los: PairLike | None = None, uv_area: float | None = None) -> None: ...
     def xy_from_uvt(self, uv_pair: PairLike, time: ScalarLike | None = None, *,
         derivs: bool = False, remask: bool = False, **kwargs: Any) -> Pair: ...
     def uv_from_xyt(self, xy_pair: PairLike, time: ScalarLike | None = None, *,
@@ -135,7 +125,7 @@ class GapFOV(FOV):
     uv_los: Any
     uv_area: Any
     uv_shape: Any
-    def __init__(self, fov: FOV, uv_size: float | tuple | PairLike) -> None: ...
+    def __init__(self, fov: FOV, uv_size: PairLike) -> None: ...
     def xy_from_uvt(self, uv_pair: PairLike, time: ScalarLike | None = None, *,
         derivs: bool = False, remask: bool = False, **kwargs: Any) -> Pair: ...
     def uv_from_xyt(self, xy_pair: PairLike, time: ScalarLike | None = None, *,
@@ -223,11 +213,9 @@ class PolynomialFOV(FOV):
     xy_precision: Any
     uv_scale: Any
     uv_area: Any
-    def __init__(self, uv_shape: float | tuple | PairLike,
-        coefft_xy_from_uv: ndarray | None = None,
-        coefft_uv_from_xy: ndarray | None = None,
-        uv_los: float | tuple | PairLike | None = None, uv_area: float | None = None,
-        iters: int = 8, fast: bool = True) -> None: ...
+    def __init__(self, uv_shape: PairLike, coefft_xy_from_uv: ndarray | None = None,
+        coefft_uv_from_xy: ndarray | None = None, uv_los: PairLike | None = None,
+        uv_area: float | None = None, iters: int = 8, fast: bool = True) -> None: ...
     def xy_from_uvt(self, uv_pair: PairLike, time: ScalarLike | None = None, *,
         derivs: bool = False, remask: bool = False, **kwargs: Any) -> Pair: ...
     def uv_from_xyt(self, xy_pair: PairLike, time: ScalarLike | None = None, *,
@@ -240,8 +228,7 @@ class SliceFOV(FOV):
     uv_los: Any
     uv_scale: Any
     uv_area: Any
-    def __init__(self, fov: FOV, origin: tuple | PairLike,
-        shape: float | tuple | PairLike) -> None: ...
+    def __init__(self, fov: FOV, origin: PairLike, shape: PairLike) -> None: ...
     def xy_from_uvt(self, uv_pair: PairLike, time: ScalarLike | None = None, *,
         derivs: bool = False, remask: bool = False, **kwargs: Any) -> Pair: ...
     def uv_from_xyt(self, xy_pair: PairLike, time: ScalarLike | None = None, *,
@@ -256,9 +243,8 @@ class Subarray(FOV):
     new_origin_in_old_uv: Any
     uv_scale: Any
     uv_area: Any
-    def __init__(self, fov: FOV, new_los: tuple | PairLike,
-        uv_shape: float | tuple | PairLike,
-        uv_los: float | tuple | PairLike | None = None) -> None: ...
+    def __init__(self, fov: FOV, new_los: PairLike, uv_shape: PairLike,
+        uv_los: PairLike | None = None) -> None: ...
     def xy_from_uvt(self, uv_pair: PairLike, time: ScalarLike | None = None, *,
         derivs: bool = False, remask: bool = False, **kwargs: Any) -> Pair: ...
     def uv_from_xyt(self, xy_pair: PairLike, time: ScalarLike | None = None, *,
@@ -272,7 +258,7 @@ class SubsampledFOV(FOV):
     uv_los: Any
     uv_area: Any
     uv_shape: Any
-    def __init__(self, fov: FOV, rescale: float | tuple | PairLike) -> None: ...
+    def __init__(self, fov: FOV, rescale: PairLike) -> None: ...
     def xy_from_uvt(self, uv_pair: PairLike, time: ScalarLike | None = None, *,
         derivs: bool = False, remask: bool = False, **kwargs: Any) -> Pair: ...
     def uv_from_xyt(self, xy_pair: PairLike, time: ScalarLike | None = None, *,

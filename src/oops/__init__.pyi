@@ -12,9 +12,14 @@ where they are unambiguous and are `Any` elsewhere.
 """
 
 from typing import Any
-from numpy import ndarray, number
+from numpy import ndarray
 from polymath import (Boolean, Matrix, Matrix3, Pair, Quaternion, Qube, Scalar, Vector,
                       Vector3)
+# Parameters documented as a polymath type are passed through `as_scalar` and its
+# siblings, so each accepts the class, a number, or a nested sequence of numbers.
+# `polymath.typedefs` names each of those unions.
+from polymath.typedefs import (BooleanLike, Matrix3Like, MatrixLike, PairLike,
+                               ScalarLike, Vector3Like, VectorLike)
 import oops.backplane as backplane
 import oops.body as body
 import oops.cadence as cadence
@@ -44,18 +49,6 @@ from oops.observation import Observation as Observation
 from oops.oops import Oops as Oops
 from oops.path import Path as Path
 from oops.surface import Surface as Surface
-
-# Parameters documented as a polymath type are passed through `as_scalar` and its
-# siblings, so each accepts the class, a number, or a nested sequence of numbers.
-# `str` is excluded deliberately: no polymath constructor accepts one.
-_Numeric = float | number | list['_Numeric'] | tuple['_Numeric', ...]
-Matrix3Like = Matrix3 | ndarray | _Numeric
-PairLike = Pair | ndarray | _Numeric
-ScalarLike = Scalar | ndarray | _Numeric
-Vector3Like = Vector3 | ndarray | _Numeric
-
-BooleanLike = Boolean | bool | ndarray | _Numeric
-VectorLike = Vector | ndarray | _Numeric
 
 __all__ = ['cadence', 'calibration', 'fov', 'gravity', 'frame', 'observation', 'path',
            'surface', 'obs', 'backplane', 'body', 'event', 'fittable', 'meshgrid',
@@ -302,8 +295,8 @@ class Event(Oops):
     def with_lt_derivs(self) -> Event: ...
     def with_dep_derivs(self) -> Event: ...
     def with_dlt_derivs(self) -> Event: ...
-    def shrink(self, antimask: BooleanLike | bool | None) -> Event: ...
-    def unshrink(self, antimask: BooleanLike | bool | None, *,
+    def shrink(self, antimask: BooleanLike | None) -> Event: ...
+    def unshrink(self, antimask: BooleanLike | None, *,
         shape: tuple | None = None) -> Event: ...
     def wrt_ssb(self, *, derivs: bool = True, quick: dict | None = None) -> Any: ...
     def from_ssb(self, path: Path, frame: Frame, *, derivs: bool = True,
@@ -369,7 +362,7 @@ class Meshgrid(Oops):
     def for_shape(fov: FOV, shape: tuple, u_axis: int = -1, v_axis: int = -1,
         origin: PairLike | None = None, undersample: PairLike = 1,
         oversample: PairLike = 1, limit: PairLike | None = None,
-        center_uv: PairLike | tuple[float, float] | tuple | None = None,
+        center_uv: PairLike | None = None,
         fov_kwargs: dict | None = None) -> Meshgrid: ...
     def los_w_derivs(self, time: ScalarLike | None = None) -> Vector3: ...
     def los(self, time: ScalarLike | None = None) -> Vector3: ...
@@ -405,11 +398,11 @@ class Transform(Oops):
     def wod(self) -> Any: ...
     @staticmethod
     def identity(frame: Frame | str) -> Transform: ...
-    def rotate(self, pos: Vector3Like | VectorLike | Matrix,
+    def rotate(self, pos: Vector3Like | VectorLike | MatrixLike,
         derivs: bool = True) -> Vector3: ...
     def rotate_pos_vel(self, pos: Vector3Like,
         vel: Vector3Like) -> tuple[Vector3, Vector3]: ...
-    def unrotate(self, pos: Vector3Like | VectorLike | Matrix,
+    def unrotate(self, pos: Vector3Like | VectorLike | MatrixLike,
         derivs: bool = True) -> Vector3: ...
     def unrotate_pos_vel(self, pos: Vector3Like,
         vel: Vector3Like) -> tuple[Vector3, Vector3]: ...

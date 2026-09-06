@@ -150,7 +150,7 @@ class QuickPath(Path):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
@@ -322,9 +322,9 @@ class QuickPath(Path):
 
         Parameters:
             path (Path): The Path to be approximated.
-            time (Scalar or tuple): The set of times at which the Path is to be
-                evaluated. This can simply be a tuple (`tmin`, `tmax`) defining the
-                beginning and end times.
+            time (ScalarLike): The set of times at which the Path is to be evaluated. This
+                can simply be a tuple (`tmin`, `tmax`) defining the beginning and end
+                times.
             quick (dict or bool, optional): If False, no QuickPath is created and `path`
                 is returned; if a dictionary, then the values provided override the values
                 in the default dictionary QUICK.dictionary, and the merged dictionary is

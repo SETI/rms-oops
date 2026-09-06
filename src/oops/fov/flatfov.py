@@ -21,19 +21,19 @@ class FlatFOV(FOV):
         The U-axis is assumed to align with *x* and the *v*-axis aligns with *y*.
 
         Parameters:
-            uv_scale (Pair, float, or tuple[float, float]): The ratios *dx/du* and
-                *dy/dv*. For example, if *(u,v)* are in units of arcseconds, then::
+            uv_scale (PairLike): The ratios *dx/du* and *dy/dv*. For example, if *(u,v)*
+                are in units of arcseconds, then::
 
                     uv_scale = Pair((pi/180/3600.,pi/180/3600.))
 
                 Use the sign of the second element to define the direction of increasing
                 *v*: negative for up, positive for down.
-            uv_shape (Pair, int, or tuple[int, int]): The size of the field of view in
-                pixels. This number can be non-integral if the detector is not composed of
-                a rectangular array of pixels.
-            uv_los (Pair or tuple[float, float], optional): The *(u,v)* coordinates of the
-                nominal line of sight. By default, this is the midpoint of the rectangle,
-                i.e., ``uv_shape/2``.
+            uv_shape (PairLike): The size of the field of view in pixels. This number can
+                be non-integral if the detector is not composed of a rectangular array of
+                pixels.
+            uv_los (PairLike, optional): The *(u,v)* coordinates of the nominal line of
+                sight. By default, this is the midpoint of the rectangle, i.e.,
+                ``uv_shape/2``.
             uv_area (float, optional): The nominal area of a pixel in steradians. If not
                 provided, it is derived from `uv_scale`.
         """
@@ -71,8 +71,8 @@ class FlatFOV(FOV):
         """The camera coordinates *(x,y)* at FOV coordinates *(u,v)* and a given time.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
-            time (Scalar, optional): Absolute time in seconds TDB. Ignored by FlatFOV.
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
+            time (ScalarLike, optional): Absolute time in seconds TDB. Ignored by FlatFOV.
             derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
                 into the returned *(x,y)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -94,8 +94,8 @@ class FlatFOV(FOV):
         """The *(u,v)* FOV coordinates given *(x,y)* camera frame coordinates.
 
         Parameters:
-            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
-            time (Scalar, optional): Absolute time in seconds TDB. Ignored by FlatFOV.
+            xy_pair (PairLike): *(x,y)* coordinates in this FOV, assuming *z = 1*.
+            time (ScalarLike, optional): Absolute time in seconds TDB. Ignored by FlatFOV.
             derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
                 into the returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of

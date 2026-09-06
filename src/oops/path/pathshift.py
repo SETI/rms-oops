@@ -147,7 +147,7 @@ class PathShift(Path, Fittable):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.

@@ -102,7 +102,7 @@ class Snapshot(Observation):
         This method supports non-integer index values.
 
         Parameters:
-            indices (Scalar or Vector): Array indices.
+            indices (ScalarLike or VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
             derivs (bool, optional): True to include derivatives in the returned values.
 
@@ -127,7 +127,7 @@ class Snapshot(Observation):
         """Ranges of *(u,v)* spatial coordinates and time for integer array indices.
 
         Parameters:
-            indices (Scalar or Vector): Array indices.
+            indices (ScalarLike or VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
@@ -153,8 +153,8 @@ class Snapshot(Observation):
         stop times of the observation overall.
 
         Parameters:
-            uv_pair (Pair): Spatial *(u,v)* data array coordinates, truncated to integers
-                if necessary.
+            uv_pair (PairLike): Spatial *(u,v)* data array coordinates, truncated to
+                integers if necessary.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
@@ -182,7 +182,7 @@ class Snapshot(Observation):
         the whole FOV.
 
         Parameters:
-            time (Scalar): Time values in seconds TDB.
+            time (ScalarLike): Time values in seconds TDB.
             remask (bool, optional): True to mask values outside the time limits.
 
         Returns:
@@ -200,7 +200,7 @@ class Snapshot(Observation):
         the whole FOV.
 
         Parameters:
-            tstep (Scalar): Time step index.
+            tstep (ScalarLike): Time step index.
             remask (bool, optional): True to mask values outside the time interval.
 
         Returns:
@@ -235,12 +235,12 @@ class Snapshot(Observation):
         """Convert arbitrary scalars of RA and dec to FOV *(u,v)* coordinates.
 
         Parameters:
-            ra (Scalar): J2000 right ascensions.
-            dec (Scalar): J2000 declinations.
-            tfrac (Scalar, optional): Scalar of fractional times during the exposure,
+            ra (ScalarLike): J2000 right ascensions.
+            dec (ScalarLike): J2000 declinations.
+            tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where tfrac=0 at the beginning and 1 at the end. Default is 0.5. Ignored
                 if `time` is specified.
-            time (Scalar, optional): Scalar of optional absolute time in seconds.
+            time (ScalarLike, optional): Scalar of optional absolute time in seconds.
             apparent (bool, optional): True to interpret the (RA,dec) values as apparent
                 coordinates; False to interpret them as actual coordinates. Default is
                 True.
@@ -274,16 +274,16 @@ class Snapshot(Observation):
 
         Parameters:
             path (Path): Object.
-            tfrac (Scalar, optional): Scalar of fractional times during the exposure,
+            tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where 0 refers to the beginning and 1 refers to the end of each sample's
                 integration interval. The default is 0.5, referring to the midtime of each
                 sample in the `meshgrid`.
-            time (Scalar, optional): Scalar of optional absolute time in seconds. If
+            time (ScalarLike, optional): Scalar of optional absolute time in seconds. If
                 specified, `tfrac` is ignored.
             derivs (bool, optional): True to propagate derivatives of the link time and
                 position into the returned event.
-            guess (Scalar, optional): An optional guess at the light travel time from the
-                path to the event.
+            guess (ScalarLike, optional): An optional guess at the light travel time from
+                the path to the event.
             quick (dict, optional): To override the configured default parameters for a
                 :class:`~oops.path.QuickPath` or :class:`~oops.frame.QuickFrame`; False
                 to disable the use of QuickPaths and QuickFrames. The default
@@ -312,13 +312,13 @@ class Snapshot(Observation):
 
         Parameters:
             surface (Surface): The Surface object.
-            coords (tuple[Scalar, ...]): Two or three surface coordinates. The Scalars
+            coords (tuple[ScalarLike, ...]): Two or three surface coordinates. The Scalars
                 need not be the same shape, but must broadcast to the same shape.
-            tfrac (Scalar, optional): Scalar of fractional times during the exposure,
+            tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where 0 refers to the beginning and 1 refers to the end of each sample's
                 integration interval. The default is 0.5, referring to the midtime of each
                 sample in the `meshgrid`.
-            time (Scalar, optional): Scalar of optional absolute time in seconds. If
+            time (ScalarLike, optional): Scalar of optional absolute time in seconds. If
                 specified, `tfrac` is ignored.
             underside (bool, optional): True for the underside of the surface (emission >
                 90 degrees) to be unmasked.
@@ -361,12 +361,12 @@ class Snapshot(Observation):
 
         Parameters:
             bodies (list): The names of the body objects to be included in the inventory.
-            tfrac (Scalar, optional): Scalar of fractional times during the exposure,
+            tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where 0 refers to the beginning and 1 refers to the end of each sample's
                 integration interval. The default is 0.5, referring to the midtime of each
                 sample in the `meshgrid`.
-            time (Scalar, optional): Scalar of optional absolute time in seconds TDB. Only
-                one of `tfrac` and `time` can be specified.
+            time (ScalarLike, optional): Scalar of optional absolute time in seconds TDB.
+                Only one of `tfrac` and `time` can be specified.
             expand (float, optional): An optional angle in radians by which to extend the
                 limits of the field of view. This can be used to accommodate pointing
                 uncertainties.

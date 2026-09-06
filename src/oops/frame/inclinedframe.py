@@ -26,10 +26,10 @@ class InclinedFrame(Frame):
         """Constructor for an InclinedFrame.
 
         Parameters:
-            inc (Scalar): The inclination angle in radians.
-            node (Scalar): The longitude of the ascending node at `epoch`, in radians.
-            rate (Scalar): The rate of nodal precession in radians/second.
-            epoch (Scalar): The time in seconds TDB at which `node` applies.
+            inc (ScalarLike): The inclination angle in radians.
+            node (ScalarLike): The longitude of the ascending node at `epoch`, in radians.
+            rate (ScalarLike): The rate of nodal precession in radians/second.
+            epoch (ScalarLike): The time in seconds TDB at which `node` applies.
             despin (bool, optional): True for a nearly inertial Frame, in which the *x*-
                 and *y*-axes vary as little as possible while the *z*-axis rotates; False
                 for a Frame in which the *x*-axis is tied to the ascending node.
@@ -122,7 +122,7 @@ class InclinedFrame(Frame):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): Ignored by class InclinedFrame.
 
         Returns:
@@ -150,7 +150,7 @@ class InclinedFrame(Frame):
         Values always fall between 0 and 2*pi.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): Ignored by class InclinedFrame.
 
         Returns:

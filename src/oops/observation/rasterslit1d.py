@@ -128,7 +128,7 @@ class RasterSlit1D(Observation):
         This method supports non-integer index values.
 
         Parameters:
-            indices (Scalar or Vector): Array indices.
+            indices (ScalarLike or VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
             derivs (bool, optional): True to include derivatives in the returned values.
 
@@ -156,7 +156,7 @@ class RasterSlit1D(Observation):
         """Ranges of *(u,v)* spatial coordinates and time for integer array indices.
 
         Parameters:
-            indices (Scalar or Vector): Array indices.
+            indices (ScalarLike or VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
@@ -187,8 +187,8 @@ class RasterSlit1D(Observation):
         The index along the cross-slit axis is ignored, because that axis has length 1.
 
         Parameters:
-            uv_pair (Pair): Spatial *(u,v)* data array coordinates, truncated to integers
-                if necessary.
+            uv_pair (PairLike): Spatial *(u,v)* data array coordinates, truncated to
+                integers if necessary.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
@@ -209,7 +209,7 @@ class RasterSlit1D(Observation):
         pixel.
 
         Parameters:
-            time (Scalar): Time values in seconds TDB.
+            time (ScalarLike): Time values in seconds TDB.
             remask (bool, optional): True to mask values outside the time limits.
 
         Returns:
@@ -228,7 +228,7 @@ class RasterSlit1D(Observation):
         active at each time step.
 
         Parameters:
-            tstep (Scalar): Time step index.
+            tstep (ScalarLike): Time step index.
             remask (bool, optional): True to mask time steps outside the cadence.
 
         Returns:

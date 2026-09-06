@@ -26,11 +26,9 @@ class SpinFrame(Frame):
         """Constructor for a SpinFrame.
 
         Parameters:
-            offset (Scalar, array-like, or float): The rotation angle in radians at
-                `epoch`.
-            rate (Scalar, array-like, or float): The rotation rate in radians/second.
-            epoch (Scalar, array-like, or float): The time in seconds TDB at which
-                `offset` applies.
+            offset (ScalarLike): The rotation angle in radians at `epoch`.
+            rate (ScalarLike): The rotation rate in radians/second.
+            epoch (ScalarLike): The time in seconds TDB at which `offset` applies.
             axis (int or str): The rotation axis: 0, "x", or "X" for *x*; 1, "y", or "Y"
                 for *y*; 2, "z", or "Z" for *z*.
             reference (Frame or str): The Frame or the ID of the Frame relative to which
@@ -113,7 +111,7 @@ class SpinFrame(Frame):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): Ignored for class SpinFrame.
 
         Returns:

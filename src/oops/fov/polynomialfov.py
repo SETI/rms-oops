@@ -30,9 +30,9 @@ class PolynomialFOV(FOV):
         """Constructor for a PolynomialFOV.
 
         Parameters:
-            uv_shape (float, tuple, or Pair): The size of the field of view in pixels.
-                This number can be non-integral if the detector is not composed of a
-                rectangular array of pixels.
+            uv_shape (PairLike): The size of the field of view in pixels. This number can
+                be non-integral if the detector is not composed of a rectangular array of
+                pixels.
             coefft_xy_from_uv (numpy.ndarray, optional): The coefficient array of the
                 polynomial to convert ``(u,v)`` to ``(x,y)``. The array has shape
                 ``(order+1, order+1, 2)``, where ``coefft[i,j,0]`` is the coefficient on
@@ -45,9 +45,9 @@ class PolynomialFOV(FOV):
                 ``x**i * y**j`` yielding ``u(x,y)``, and ``coefft[i,j,1]`` is the
                 coefficient yielding ``v(x,y)``. If None, then the polynomial for
                 :meth:`~oops.FOV.xy_from_uv` is inverted.
-            uv_los (float, tuple, or Pair, optional): The *(u,v)* coordinates of the
-                nominal line of sight. By default, this is the midpoint of the rectangle,
-                i.e., ``uv_shape/2``.
+            uv_los (PairLike, optional): The *(u,v)* coordinates of the nominal line of
+                sight. By default, this is the midpoint of the rectangle, i.e.,
+                ``uv_shape/2``.
             uv_area (float, optional): The nominal area of a pixel in steradians after
                 distortion has been removed.
             iters (int, optional): The maximum number of iterations of Newton's method to
@@ -155,8 +155,8 @@ class PolynomialFOV(FOV):
         """The camera coordinates *(x,y)* at FOV coordinates *(u,v)* and a given time.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
-            time (Scalar, optional): Absolute time in seconds TDB. Ignored by
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
+            time (ScalarLike, optional): Absolute time in seconds TDB. Ignored by
                 PolynomialFOV.
             derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
                 into the returned *(x,y)* coordinates.
@@ -201,8 +201,8 @@ class PolynomialFOV(FOV):
         """The FOV coordinates *(u,v)* at camera coordinates *(x,y)* and a given time.
 
         Parameters:
-            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
-            time (Scalar, optional): Absolute time in seconds TDB. Ignored by
+            xy_pair (PairLike): *(x,y)* coordinates in this FOV, assuming *z = 1*.
+            time (ScalarLike, optional): Absolute time in seconds TDB. Ignored by
                 PolynomialFOV.
             derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
                 into the returned *(u,v)* coordinates.
@@ -263,7 +263,7 @@ class PolynomialFOV(FOV):
         """Evaluate the 2-D polynomial at `(p,q)` to return `(a,b)`.
 
         Parameters:
-            pq (Pair): The points at which to evaluate the polynomial.
+            pq (PairLike): The points at which to evaluate the polynomial.
             coefft (array-like): The coefficient array defining the polynomial.
             dcoefft_p (array-like): The coefficient array for the polynomial derivative
                 with respect to `p`.
@@ -338,8 +338,8 @@ class PolynomialFOV(FOV):
         """Invert the 2-D polynomial to find the `(p,q)` where it evaluates to `(a,b)`.
 
         Parameters:
-            ab (Pair): The value of the polynomial.
-            pq_guess (Pair): An initial guess at the `(p,q)` value to return.
+            ab (PairLike): The value of the polynomial.
+            pq_guess (PairLike): An initial guess at the `(p,q)` value to return.
             coefft (array-like): The coefficient array defining the polynomial.
             dcoefft_p (array-like): The coefficient array for the polynomial derivative
                 with respect to `p`.

@@ -107,18 +107,18 @@ class Limb(Surface):
         """Surface coordinates associated with a position vector.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface, relative to this Surface's
+            pos (Vector3Like): Positions at or near the Surface, relative to this
+                Surface's origin and frame.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
                 origin and frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             axes (int, optional): 2 or 3, indicating whether to return the first two
                 coordinates (lon, lat) or all three (lon, lat, z) as Scalars.
             derivs (bool, optional): True to propagate any derivatives inside pos and obs
                 into the returned coordinates.
-            hints (Scalar, optional): Optionally, the value of the coefficient `p` such
-                that ``ground + p * normal(ground) = pos``, for the ground point
+            hints (ScalarLike, optional): Optionally, the value of the coefficient `p`
+                such that ``ground + p * normal(ground) = pos``, for the ground point
                 associated with the position. If it is not None, the converged value of
                 `p` is appended to the returned tuple; use `hints=True` if you lack an
                 initial value but require the new value to be returned.
@@ -183,7 +183,7 @@ class Limb(Surface):
         """The position at the given surface coordinates.
 
         Parameters:
-            coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at
+            coords (tuple[ScalarLike, ...]): Two or three Scalars defining coordinates at
                 or near this surface. These can have different shapes, but must be
                 broadcastable to a common shape.
 
@@ -191,10 +191,10 @@ class Limb(Surface):
                 * `lat` (rad): Latitude.
                 * `z` (km, optional): Perpendicular distance from the limb surface.
 
-            obs (Vector3, optional): Observer positions relative to this Surface's origin
-                and frame.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            obs (Vector3Like, optional): Observer positions relative to this Surface's
+                origin and frame.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             derivs (bool, optional): True to include the partial derivatives of the
                 intercept point with respect to observer and to the coordinates.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -232,18 +232,18 @@ class Limb(Surface):
         """The position where a specified line of sight intercepts the Surface.
 
         Parameters:
-            obs (Vector3): Observer position as a Vector3 relative to this Surface's
+            obs (Vector3Like): Observer position as a Vector3 relative to this Surface's
                 origin and frame.
-            los (Vector3): Line of sight as a Vector3 in this Surface's frame.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            los (Vector3Like): Line of sight as a Vector3 in this Surface's frame.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             direction (str, optional): 'arr' for a photon arriving at the surface; 'dep'
                 for a photon departing from the surface; ignored here.
             derivs (bool, optional): True to propagate any derivatives inside obs and los
                 into the returned intercept point.
-            guess (Scalar, optional): Unused.
-            hints (Scalar, optional): Optional initial guess at the coefficient `p` such
-                that ``ground + p * normal(ground) = limb_intercept``, for the ground
+            guess (ScalarLike, optional): Unused.
+            hints (ScalarLike, optional): Optional initial guess at the coefficient `p`
+                such that ``ground + p * normal(ground) = limb_intercept``, for the ground
                 point on the body surface associated with the limb intercept point being
                 sought. If it is not None, the converged value is appended to the returned
                 tuple; use `hints=True` if you lack an initial guess but require the
@@ -357,12 +357,12 @@ class Limb(Surface):
         """The normal vector at a position at or near a surface.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface relative to this Surface's
+            pos (Vector3Like): Positions at or near the Surface relative to this Surface's
                 origin and frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored for this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             derivs (bool, optional): True to propagate any derivatives of `pos` into the
                 returned normal vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -385,9 +385,9 @@ class Limb(Surface):
         """The clock angle from the projected pole to the groundtrack's normal.
 
         Parameters:
-            track (Vector3): Positions at or near the ellipsoid's surface relative to the
-                ellipsoid's origin and frame.
-            obs (Vector3): Observer positions relative to the ellipsoid's origin and
+            track (Vector3Like): Positions at or near the ellipsoid's surface relative to
+                the ellipsoid's origin and frame.
+            obs (Vector3Like): Observer positions relative to the ellipsoid's origin and
                 frame.
             derivs (bool, optional): True to propagate derivatives of track and obs into
                 the returned clock angle.
@@ -426,9 +426,9 @@ class Limb(Surface):
         """The ground point defined by the clock angle and observation point.
 
         Parameters:
-            clock (Scalar): Angle of the ellipsoid's normal vector, measured clockwise
+            clock (ScalarLike): Angle of the ellipsoid's normal vector, measured clockwise
                 from the projected pole.
-            obs (Vector3): Observer positions relative to the ellipsoid's origin and
+            obs (Vector3Like): Observer positions relative to the ellipsoid's origin and
                 frame.
             derivs (bool, optional): True to propagate derivatives of clock and obs into
                 the returned ellipsoid surface point.
@@ -456,13 +456,13 @@ class Limb(Surface):
         """The z and clock values at a limb intercept point.
 
         Parameters:
-            pos (Vector3): Limb intercept points relative to this Surface's origin and
+            pos (Vector3Like): Limb intercept points relative to this Surface's origin and
                 frame.
-            obs (Vector3): Observer positions relative to the ellipsoid's origin and
+            obs (Vector3Like): Observer positions relative to the ellipsoid's origin and
                 frame.
             derivs (bool, optional): True to propagate derivatives of pos and obs into the
                 returned values.
-            hints (Scalar, optional): Optional value of the coefficient `p` such that
+            hints (ScalarLike, optional): Optional value of the coefficient `p` such that
                 ``ground + p * normal(ground) = pos``. If it is not None, the value of `p`
                 is appended to the returned tuple; use `hints=True` if you lack an initial
                 value but require the new value to be returned.
@@ -524,10 +524,10 @@ class Limb(Surface):
         """The limb intercept point as defined by z and clock.
 
         Parameters:
-            z (Scalar): The perpendicular distance in km from the body surface.
-            clock (Scalar): Angle of the ellipsoid's normal vector, measured clockwise
+            z (ScalarLike): The perpendicular distance in km from the body surface.
+            clock (ScalarLike): Angle of the ellipsoid's normal vector, measured clockwise
                 from the projected pole.
-            obs (Vector3): Observer positions relative to the ellipsoid's origin and
+            obs (Vector3Like): Observer positions relative to the ellipsoid's origin and
                 frame.
             derivs (bool, optional): True to propagate derivatives of z, clock, and obs
                 into the returned limb intercept points.
@@ -652,7 +652,7 @@ class Limb(Surface):
         """Convert longitude in internal coordinates to planetocentric.
 
         Parameters:
-            lon (Scalar): The longitude in radians.
+            lon (ScalarLike): The longitude in radians.
             derivs (bool, optional): True to propagate any derivatives of `lon` into
                 the returned longitude.
 
@@ -666,7 +666,7 @@ class Limb(Surface):
         """Convert planetocentric longitude to internal coordinates.
 
         Parameters:
-            lon (Scalar): The longitude in radians.
+            lon (ScalarLike): The longitude in radians.
             derivs (bool, optional): True to propagate any derivatives of `lon` into
                 the returned longitude.
 
@@ -680,7 +680,7 @@ class Limb(Surface):
         """Convert longitude in internal coordinates to planetographic.
 
         Parameters:
-            lon (Scalar): The longitude in radians.
+            lon (ScalarLike): The longitude in radians.
             derivs (bool, optional): True to propagate any derivatives of `lon` into
                 the returned longitude.
 
@@ -694,7 +694,7 @@ class Limb(Surface):
         """Convert planetographic longitude to internal coordinates.
 
         Parameters:
-            lon (Scalar): The longitude in radians.
+            lon (ScalarLike): The longitude in radians.
             derivs (bool, optional): True to propagate any derivatives of `lon` into
                 the returned longitude.
 
@@ -712,8 +712,8 @@ class Limb(Surface):
         """Convert latitude in internal ellipsoid coordinates to planetocentric.
 
         Parameters:
-            lat (Scalar): The latitude in radians.
-            lon (Scalar): The longitude in radians, which this conversion requires
+            lat (ScalarLike): The latitude in radians.
+            lon (ScalarLike): The longitude in radians, which this conversion requires
                 because the surface is triaxial.
             derivs (bool, optional): True to propagate any derivatives of `lat` and
                 `lon` into the returned latitude.
@@ -728,8 +728,8 @@ class Limb(Surface):
         """Convert planetocentric latitude to internal ellipsoid latitude.
 
         Parameters:
-            lat (Scalar): The latitude in radians.
-            lon (Scalar): The longitude in radians, which this conversion requires
+            lat (ScalarLike): The latitude in radians.
+            lon (ScalarLike): The longitude in radians, which this conversion requires
                 because the surface is triaxial.
             derivs (bool, optional): True to propagate any derivatives of `lat` and
                 `lon` into the returned latitude.
@@ -744,8 +744,8 @@ class Limb(Surface):
         """Convert latitude in internal ellipsoid coordinates to planetographic.
 
         Parameters:
-            lat (Scalar): The latitude in radians.
-            lon (Scalar): The longitude in radians, which this conversion requires
+            lat (ScalarLike): The latitude in radians.
+            lon (ScalarLike): The longitude in radians, which this conversion requires
                 because the surface is triaxial.
             derivs (bool, optional): True to propagate any derivatives of `lat` and
                 `lon` into the returned latitude.
@@ -760,8 +760,8 @@ class Limb(Surface):
         """Convert a planetographic latitude to internal ellipsoid latitude.
 
         Parameters:
-            lat (Scalar): The latitude in radians.
-            lon (Scalar): The longitude in radians, which this conversion requires
+            lat (ScalarLike): The latitude in radians.
+            lon (ScalarLike): The longitude in radians, which this conversion requires
                 because the surface is triaxial.
             derivs (bool, optional): True to propagate any derivatives of `lat` and
                 `lon` into the returned latitude.
@@ -780,7 +780,7 @@ class Limb(Surface):
         """Longitude and latitude for a position near the surface.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface relative to this Surface's
+            pos (Vector3Like): Positions at or near the Surface relative to this Surface's
                 origin and frame.
             derivs (bool, optional): True to propagate derivatives of pos into the
                 returned coordinates.

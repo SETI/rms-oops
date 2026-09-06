@@ -24,7 +24,7 @@ class Cmatrix(Frame):
         """Constructor for a Cmatrix.
 
         Parameters:
-            cmatrix (Matrix3): The 3x3 rotation matrix that rotates coordinates from
+            cmatrix (Matrix3Like): The 3x3 rotation matrix that rotates coordinates from
                 `reference` into this Frame.
             reference (Frame or str, optional): The Frame or the ID of the Frame relative
                 to which this Frame is defined; None for J2000.
@@ -92,10 +92,10 @@ class Cmatrix(Frame):
         """Construct a Cmatrix from RA, dec, and celestial north clock angles.
 
         Parameters:
-            ra (Scalar): The right ascension of the optic axis in degrees.
-            dec (Scalar): The declination of the optic axis in degrees.
-            clock (Scalar): The angle of celestial north in degrees, measured clockwise
-                from the "up" direction in the observation.
+            ra (ScalarLike): The right ascension of the optic axis in degrees.
+            dec (ScalarLike): The declination of the optic axis in degrees.
+            clock (ScalarLike): The angle of celestial north in degrees, measured
+                clockwise from the "up" direction in the observation.
             reference (Frame or str, optional): The Frame or the ID of the Frame
                 relative to which this Frame is defined; None for J2000.
             frame_id (str, optional): The ID under which to register this Frame; None to
@@ -155,7 +155,7 @@ class Cmatrix(Frame):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): Ignored by class Cmatrix.
 
         Returns:

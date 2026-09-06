@@ -28,8 +28,8 @@ class NullFOV(FOV):
         """The camera coordinates *(x,y)* at FOV coordinates *(u,v)* and a given time.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
-            time (Scalar, optional): Absolute time in seconds TDB. Ignored by NullFOV.
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
+            time (ScalarLike, optional): Absolute time in seconds TDB. Ignored by NullFOV.
             derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
                 into the returned *(x,y)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -48,8 +48,8 @@ class NullFOV(FOV):
         """The FOV coordinates *(u,v)* at camera coordinates *(x,y)* and a given time.
 
         Parameters:
-            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
-            time (Scalar, optional): Absolute time in seconds TDB. Ignored by NullFOV.
+            xy_pair (PairLike): *(x,y)* coordinates in this FOV, assuming *z = 1*.
+            time (ScalarLike, optional): Absolute time in seconds TDB. Ignored by NullFOV.
             derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
                 into the returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -73,8 +73,8 @@ class NullFOV(FOV):
         Results are scaled to the nominal pixel area.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
-            time (Scalar, optional): Absolute time in seconds TDB. Ignored by NullFOV.
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
+            time (ScalarLike, optional): Absolute time in seconds TDB. Ignored by NullFOV.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
             **kwargs: Additional parameters that might affect the transform can be
@@ -93,7 +93,7 @@ class NullFOV(FOV):
         photons.
 
         Parameters:
-            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
+            xy_pair (PairLike): *(x,y)* coordinates in this FOV, assuming *z = 1*.
             derivs (bool, optional): True to propagate any derivatives of *(x,y)* into the
                 returned line of sight.
 
@@ -111,7 +111,7 @@ class NullFOV(FOV):
         ignored.
 
         Parameters:
-            los (Vector3): Direction of the line of sight in the FOV's frame.
+            los (Vector3Like): Direction of the line of sight in the FOV's frame.
             derivs (bool, optional): True to propagate any derivatives of `los` into the
                 returned coordinates.
 
@@ -128,8 +128,8 @@ class NullFOV(FOV):
         this is the direction *opposite* to that of the arriving photon.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
-            time (Scalar, optional): Absolute time in seconds TDB. Ignored by NullFOV.
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
+            time (ScalarLike, optional): Absolute time in seconds TDB. Ignored by NullFOV.
             derivs (bool, optional): True to propagate any derivatives of *(u,v)* into the
                 returned line of sight.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -150,8 +150,8 @@ class NullFOV(FOV):
         this is the direction *opposite* to that of the arriving photon.
 
         Parameters:
-            los (Vector3): Direction of the line of sight in the FOV's frame.
-            time (Scalar, optional): Absolute time in seconds TDB. Ignored by NullFOV.
+            los (Vector3Like): Direction of the line of sight in the FOV's frame.
+            time (ScalarLike, optional): Absolute time in seconds TDB. Ignored by NullFOV.
             derivs (bool, optional): True to propagate any derivatives of `los` into the
                 returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
@@ -170,12 +170,12 @@ class NullFOV(FOV):
         """A Boolean mask identifying coordinates outside the FOV.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
-            time (Scalar, optional): Absolute time in seconds TDB. Ignored by NullFOV.
-            uv_min (Pair, optional): The lower *(u,v)* corner of the area observed in the
-                FOV; None for the full FOV.
-            uv_max (Pair, optional): The upper *(u,v)* corner of the area observed in the
-                FOV; None for the full FOV.
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
+            time (ScalarLike, optional): Absolute time in seconds TDB. Ignored by NullFOV.
+            uv_min (PairLike, optional): The lower *(u,v)* corner of the area observed in
+                the FOV; None for the full FOV.
+            uv_max (PairLike, optional): The upper *(u,v)* corner of the area observed in
+                the FOV; None for the full FOV.
             inclusive (bool, optional): True to interpret coordinate values at the upper
                 end of each range as inside the FOV; False to interpret them as outside.
 
@@ -191,14 +191,14 @@ class NullFOV(FOV):
         """A Boolean mask identifying coordinates outside the FOV along one axis.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
             uv_index (int): 0 to test u-coordinates; 1 to test v-coordinates.
-            uv_min (Pair, optional): The lower *(u,v)* corner of the area observed in the
-                FOV, of which only the element selected by `uv_index` is used; None for
-                the full FOV.
-            uv_max (Pair, optional): The upper *(u,v)* corner of the area observed in the
-                FOV, of which only the element selected by `uv_index` is used; None for
-                the full FOV.
+            uv_min (PairLike, optional): The lower *(u,v)* corner of the area observed in
+                the FOV, of which only the element selected by `uv_index` is used; None
+                for the full FOV.
+            uv_max (PairLike, optional): The upper *(u,v)* corner of the area observed in
+                the FOV, of which only the element selected by `uv_index` is used; None
+                for the full FOV.
             inclusive (bool, optional): True to interpret coordinate values at the upper
                 end of each range as inside the FOV; False to interpret them as outside.
 
@@ -214,14 +214,14 @@ class NullFOV(FOV):
         """A Boolean mask identifying coordinates outside the FOV.
 
         Parameters:
-            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
-            time (Scalar, optional): Absolute time in seconds TDB. Ignored by NullFOV.
+            xy_pair (PairLike): *(x,y)* coordinates in this FOV, assuming *z = 1*.
+            time (ScalarLike, optional): Absolute time in seconds TDB. Ignored by NullFOV.
             inclusive (bool, optional): True to interpret coordinate values at the upper
                 end of each range as inside the FOV; False to interpret them as outside.
-            uv_min (Pair, optional): The lower *(u,v)* corner of the area observed in the
-                FOV; None for the full FOV.
-            uv_max (Pair, optional): The upper *(u,v)* corner of the area observed in the
-                FOV; None for the full FOV.
+            uv_min (PairLike, optional): The lower *(u,v)* corner of the area observed in
+                the FOV; None for the full FOV.
+            uv_max (PairLike, optional): The upper *(u,v)* corner of the area observed in
+                the FOV; None for the full FOV.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
@@ -237,14 +237,14 @@ class NullFOV(FOV):
         """A Boolean mask identifying lines of sight outside the FOV.
 
         Parameters:
-            los (Vector3): Direction of the line of sight in the FOV's frame.
-            time (Scalar, optional): Absolute time in seconds TDB. Ignored by NullFOV.
+            los (Vector3Like): Direction of the line of sight in the FOV's frame.
+            time (ScalarLike, optional): Absolute time in seconds TDB. Ignored by NullFOV.
             inclusive (bool, optional): True to interpret coordinate values at the upper
                 end of each range as inside the FOV; False to interpret them as outside.
-            uv_min (Pair, optional): The lower *(u,v)* corner of the area observed in the
-                FOV; None for the full FOV.
-            uv_max (Pair, optional): The upper *(u,v)* corner of the area observed in the
-                FOV; None for the full FOV.
+            uv_min (PairLike, optional): The lower *(u,v)* corner of the area observed in
+                the FOV; None for the full FOV.
+            uv_max (PairLike, optional): The upper *(u,v)* corner of the area observed in
+                the FOV; None for the full FOV.
             **kwargs: Additional parameters that might affect the transform can be
                 included as keyword arguments.
 
@@ -259,7 +259,7 @@ class NullFOV(FOV):
         """The closest *(u,v)* coordinates inside the FOV.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
 

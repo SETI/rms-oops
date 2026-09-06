@@ -82,7 +82,7 @@ class TDICadence(Cadence):
         """The number of TDI shifts at the given image line (or tstep).
 
         Parameters:
-            line (Scalar): Line number, which is also the time step index.
+            line (ScalarLike): Line number, which is also the time step index.
             remask (bool, optional): True to mask values outside the time limits.
             inclusive (bool, optional): True to treat the end time as part of this
                 Cadence; False to exclude it. If inclusive is False and remask is True,
@@ -108,7 +108,7 @@ class TDICadence(Cadence):
         """The number of TDI shifts remaining after the given time.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             remask (bool, optional): True to mask values outside the time limits.
             inclusive (bool, optional): True to treat the end time as part of this
                 Cadence; False to exclude it. If inclusive is False and remask is True,
@@ -134,7 +134,7 @@ class TDICadence(Cadence):
         This method supports non-integer time step values via interpolation.
 
         Parameters:
-            tstep (Scalar): Time step index values.
+            tstep (ScalarLike): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
             derivs (bool, optional): True to include derivatives of tstep in the returned
                 time.
@@ -160,7 +160,7 @@ class TDICadence(Cadence):
         Every time step ends at the end time of the cadence; only the start times differ.
 
         Parameters:
-            tstep (Scalar): Time step index values.
+            tstep (ScalarLike): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
             inclusive (bool, optional): True to treat the end time as part of this
                 Cadence; False to exclude it.
@@ -185,7 +185,7 @@ class TDICadence(Cadence):
         This method returns non-integer time steps via interpolation.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             remask (bool, optional): True to mask time values not sampled within this
                 Cadence.
             derivs (bool, optional): True to include derivatives of time in the returned
@@ -218,7 +218,7 @@ class TDICadence(Cadence):
         """Integer range of time steps active at the given time.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             remask (bool, optional): True to mask time values not sampled within this
                 Cadence.
             inclusive (bool, optional): True to treat the end time as part of this
@@ -261,7 +261,7 @@ class TDICadence(Cadence):
         """A Boolean mask of times that fall outside the cadence.
 
         Parameters:
-            time (Scalar): Times in seconds TDB.
+            time (ScalarLike): Times in seconds TDB.
             inclusive (bool, optional): True to treat the end time of an interval as
                 inside; False to treat it as outside. The start time of an interval is
                 always treated as inside.

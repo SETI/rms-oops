@@ -23,13 +23,13 @@ class RawCounts(FlatCalib):
                 "REFLECTIVITY".
             fov (FOV): The field of view, used to model the distortion. Alternatively, it
                 can be a 2-D array containing the pixel area corrections.
-            factor (Scalar): A constant scale factor to be applied to every pixel in the
-                field of view.
-            baseline (Scalar, optional): An optional baseline value to subtract from the
-                image before applying the scale factor. Note that the factor and baseline
-                values could be arrays for cases in which the non-spatial axes of the data
-                array require different scalings. Their shapes must broadcast to the shape
-                of the data array after the spatial axes are eliminated.
+            factor (ScalarLike): A constant scale factor to be applied to every pixel in
+                the field of view.
+            baseline (ScalarLike, optional): An optional baseline value to subtract from
+                the image before applying the scale factor. Note that the factor and
+                baseline values could be arrays for cases in which the non-spatial axes of
+                the data array require different scalings. Their shapes must broadcast to
+                the shape of the data array after the spatial axes are eliminated.
         """
 
         self.name = name
@@ -52,9 +52,10 @@ class RawCounts(FlatCalib):
         """Extended-source calibrated values for image DN and pixel coordinates.
 
         Parameters:
-            dn (Scalar): Un-calibrated image array values at the given pixel coordinates.
-            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
-                `dn` and `uv_pair` will be casted to the same shape.
+            dn (ScalarLike): Un-calibrated image array values at the given pixel
+                coordinates.
+            uv_pair (PairLike): Associated *(u,v)* pixel coordinates in the image. Note
+                that `dn` and `uv_pair` will be casted to the same shape.
 
         Returns:
             Scalar: Calibrated values for an extended source.
@@ -71,9 +72,9 @@ class RawCounts(FlatCalib):
         """Un-calibrated image DN from extended-source calibrated values.
 
         Parameters:
-            value (Scalar): Calibrated values at the given pixel coordinates.
-            uv_pair (Pair): Associated *(u,v)* pixel coordinates in the image. Note that
-                `value` and `uv_pair` will be casted to the same shape.
+            value (ScalarLike): Calibrated values at the given pixel coordinates.
+            uv_pair (PairLike): Associated *(u,v)* pixel coordinates in the image. Note
+                that `value` and `uv_pair` will be casted to the same shape.
 
         Returns:
             Scalar: Un-calibrated values for an extended source.
@@ -90,9 +91,9 @@ class RawCounts(FlatCalib):
         """A version of this Calibration with image DNs re-scaled beforehand.
 
         Parameters:
-            factor (Scalar): Scale factor to apply to DN values.
-            baseline (Scalar, optional): An optional baseline value to subtract from every
-                DN value before applying the new scale factor.
+            factor (ScalarLike): Scale factor to apply to DN values.
+            baseline (ScalarLike, optional): An optional baseline value to subtract from
+                every DN value before applying the new scale factor.
             name (str, optional): Optional new name. If blank, the existing name is
                 preserved.
 

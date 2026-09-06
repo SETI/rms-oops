@@ -75,3 +75,16 @@ throughout the API above.
 .. autoclass:: oops.Vector
 
 .. autoclass:: oops.Vector3
+
+PolyMath type aliases
+---------------------
+
+A parameter documented as one of these aliases is passed through
+:meth:`~polymath.Scalar.as_scalar` or one of its siblings, so it accepts the PolyMath
+class, a number, or a nested sequence of numbers rather than only an instance of the
+class itself. They are documented here, alongside the classes they name, because they
+appear throughout the API above; they belong to ``polymath`` and are imported from
+:mod:`polymath.typedefs`.
+
+.. automodule:: polymath.typedefs
+    :members:

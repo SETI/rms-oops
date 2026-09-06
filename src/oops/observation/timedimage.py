@@ -177,7 +177,7 @@ class TimedImage(Observation):
         This method supports non-integer index values.
 
         Parameters:
-            indices (Scalar or Vector): Array indices.
+            indices (ScalarLike or VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
             derivs (bool, optional): True to include derivatives in the returned values.
 
@@ -229,7 +229,7 @@ class TimedImage(Observation):
         """Ranges of *(u,v)* spatial coordinates and time for integer array indices.
 
         Parameters:
-            indices (Scalar or Vector): Array indices.
+            indices (ScalarLike or VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
@@ -283,8 +283,8 @@ class TimedImage(Observation):
         carry the time-dependence.
 
         Parameters:
-            uv_pair (Pair): Spatial *(u,v)* data array coordinates, truncated to integers
-                if necessary.
+            uv_pair (PairLike): Spatial *(u,v)* data array coordinates, truncated to
+                integers if necessary.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
@@ -302,7 +302,7 @@ class TimedImage(Observation):
         """The *(u,v)* range of spatial pixels observed at a specified time.
 
         Parameters:
-            time (Scalar): Time values in seconds TDB.
+            time (ScalarLike): Time values in seconds TDB.
             remask (bool, optional): True to mask values outside the time limits.
 
         Returns:
@@ -326,8 +326,8 @@ class TimedImage(Observation):
         pixel is active if it is 2-D.
 
         Parameters:
-            tstep (Scalar or Pair): Time step index. This is a Scalar if the cadence is
-                1-D and a Pair, as (slow, fast), if it is 2-D.
+            tstep (ScalarLike or PairLike): Time step index. This is a Scalar if the
+                cadence is 1-D and a Pair, as (slow, fast), if it is 2-D.
             remask (bool, optional): True to mask time steps outside the cadence.
 
         Returns:

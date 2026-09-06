@@ -64,8 +64,8 @@ class TDIFOV(FOV):
         """The camera coordinates *(x,y)* at FOV coordinates *(u,v)* and a given time.
 
         Parameters:
-            uv_pair (Pair): *(u,v)* coordinates in this FOV.
-            time (Scalar): Absolute time in seconds TDB. Required, because a TDIFOV is
+            uv_pair (PairLike): *(u,v)* coordinates in this FOV.
+            time (ScalarLike): Absolute time in seconds TDB. Required, because a TDIFOV is
                 time-dependent.
             derivs (bool, optional): If True, any derivatives in *(u,v)* get propagated
                 into the returned *(x,y)* coordinates.
@@ -108,8 +108,8 @@ class TDIFOV(FOV):
         """The FOV coordinates *(u,v)* at camera coordinates *(x,y)* and a given time.
 
         Parameters:
-            xy_pair (Pair): *(x,y)* coordinates in this FOV, assuming *z = 1*.
-            time (Scalar): Absolute time in seconds TDB. Required, because a TDIFOV is
+            xy_pair (PairLike): *(x,y)* coordinates in this FOV, assuming *z = 1*.
+            time (ScalarLike): Absolute time in seconds TDB. Required, because a TDIFOV is
                 time-dependent.
             derivs (bool, optional): If True, any derivatives in *(x,y)* get propagated
                 into the returned *(u,v)* coordinates.

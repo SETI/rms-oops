@@ -20,12 +20,12 @@ class CirclePath(Path):
         """Constructor for a CirclePath.
 
         Parameters:
-            radius (Scalar): Radius of the path, km.
-            lon (Scalar): Longitude of the path at epoch, measured from the *x*-axis of
-                the frame, toward the *y*-axis, in radians.
-            rate (Scalar, array-like, or float): Rate of circular motion, radians/second.
-            epoch (Scalar, array-like, or float): The time TDB relative to which all
-                orbital elements are defined.
+            radius (ScalarLike): Radius of the path, km.
+            lon (ScalarLike): Longitude of the path at epoch, measured from the *x*-axis
+                of the frame, toward the *y*-axis, in radians.
+            rate (ScalarLike): Rate of circular motion, radians/second.
+            epoch (ScalarLike): The time TDB relative to which all orbital elements are
+                defined.
             origin (Path or str): The Path or the ID of the Path at the center of the
                 circle.
             frame (Frame or str, optional): The Frame or the ID of the Frame in which the
@@ -97,7 +97,7 @@ class CirclePath(Path):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use

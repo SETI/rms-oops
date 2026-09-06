@@ -17,11 +17,11 @@ class LinearPath(Path):
         """Constructor for a LinearPath.
 
         Parameters:
-            pos (Vector3 or tuple): Position vector. The velocity is defined via a
-                derivative 'd_dt'. Alternatively, provide (pos, vel) as a tuple of two
-                Vector3 or array-like values.
-            epoch (Scalar, array-like, or float): The time TDB relative to which all
-                orbital elements are defined.
+            pos (Vector3Like): Position vector. The velocity is defined via a derivative
+                'd_dt'. Alternatively, provide (pos, vel) as a tuple of two Vector3 or
+                array-like values.
+            epoch (ScalarLike): The time TDB relative to which all orbital elements are
+                defined.
             origin (Path or str): The Path or the ID of the Path defining the origin of
                 the linear path.
             frame (Frame or str, optional): The Frame or the ID of the Frame in which the
@@ -96,7 +96,7 @@ class LinearPath(Path):
         """An Event corresponding to a specified time on this path.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use

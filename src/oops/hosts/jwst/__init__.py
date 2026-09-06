@@ -126,15 +126,15 @@ def from_file(filespec, **options):
             yielding a Navigation frame. Use True to employ a Navigation frame without
             specifying the angles; this is equivalent to navigation=(0.,0.). If not
             specified, None, or False, a Navigation frame will not be used.
-        offset (tuple or Pair, optional): An optional tuple or Pair of coordinate offsets
-            (du, dv) in units of pixels to apply to the FITS-derived geometry in order to
-            align with the actual image geometry. This is an alternative to specifying the
+        offset (PairLike, optional): An optional tuple or Pair of coordinate offsets (du,
+            dv) in units of pixels to apply to the FITS-derived geometry in order to align
+            with the actual image geometry. This is an alternative to specifying the
             navigation angles; only one of the inputs "offset" and "navigation" can be
             specified.
-        origin (tuple or Pair, optional): An optional tuple or Pair of coordinate values
-            (u,v) in units of pixels, which define the location in the FOV where the
-            offset was determined. If not provided, the offset is assumed to apply at the
-            center of the FOV.
+        origin (PairLike, optional): An optional tuple or Pair of coordinate values (u,v)
+            in units of pixels, which define the location in the FOV where the offset was
+            determined. If not provided, the offset is assumed to apply at the center of
+            the FOV.
         parallel (Observation, optional): An optional Observation object defining the
             parallel observation in which the offset and origin parameters are defined. If
             specified, those options will be converted from the detector of the parallel

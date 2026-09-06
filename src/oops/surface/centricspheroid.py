@@ -15,18 +15,18 @@ class CentricSpheroid(Spheroid):
         """Surface coordinates associated with a position vector.
 
         Parameters:
-            pos (Vector3): Positions at or near the Surface, relative to this Surface's
-                origin and frame.
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            pos (Vector3Like): Positions at or near the Surface, relative to this
+                Surface's origin and frame.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored for this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             axes (int, optional): 2 or 3, indicating whether to return the first two
                 coordinates (lon, lat) or all three (lon, lat, z) as Scalars.
             derivs (bool, optional): True to propagate any derivatives inside pos and obs
                 into the returned coordinates.
-            hints (Scalar, optional): Optionally, the value of the coefficient p such that
-                ground + p * normal(ground) = pos; ignored if the value is None (the
+            hints (ScalarLike, optional): Optionally, the value of the coefficient p such
+                that ground + p * normal(ground) = pos; ignored if the value is None (the
                 default) or True. If it is not None, the converged value of `p` is
                 appended to the returned tuple; use `hints=True` if you lack an initial
                 value but require the new value to be returned.
@@ -57,7 +57,7 @@ class CentricSpheroid(Spheroid):
         """The position at the given surface coordinates.
 
         Parameters:
-            coords (tuple[Scalar, ...]): Two or three Scalars defining coordinates at
+            coords (tuple[ScalarLike, ...]): Two or three Scalars defining coordinates at
                 or near this surface. These can have different shapes, but must be
                 broadcastable to a common shape.
 
@@ -65,10 +65,10 @@ class CentricSpheroid(Spheroid):
                 * `lat` (rad): Latitude at the surface.
                 * `z` (km, optional): Vertical altitude normal to the body surface.
 
-            obs (Vector3, optional): Observer position relative to this Surface's origin
-                and frame; ignored for this Surface subclass.
-            time (Scalar, optional): Time at which to evaluate the Surface; ignored for
-                this Surface subclass.
+            obs (Vector3Like, optional): Observer position relative to this Surface's
+                origin and frame; ignored for this Surface subclass.
+            time (ScalarLike, optional): Time at which to evaluate the Surface; ignored
+                for this Surface subclass.
             derivs (bool, optional): True to propagate any derivatives inside the
                 coordinates and obs into the returned position vectors.
             hints (Any, optional): Any data that might be useful to carry over from one
@@ -106,8 +106,8 @@ class CentricSpheroid(Spheroid):
         """Convert latitude in internal coordinates to planetocentric.
 
         Parameters:
-            lat (Scalar): The latitude in radians.
-            lon (Scalar, optional): The longitude in radians; ignored, because
+            lat (ScalarLike): The latitude in radians.
+            lon (ScalarLike, optional): The longitude in radians; ignored, because
                 this conversion is independent of longitude for a surface of revolution.
             derivs (bool, optional): True to propagate any derivatives of `lat` into
                 the returned latitude.
@@ -122,8 +122,8 @@ class CentricSpheroid(Spheroid):
         """Convert planetocentric latitude to internal coordinates.
 
         Parameters:
-            lat (Scalar): The latitude in radians.
-            lon (Scalar, optional): The longitude in radians; ignored, because
+            lat (ScalarLike): The latitude in radians.
+            lon (ScalarLike, optional): The longitude in radians; ignored, because
                 this conversion is independent of longitude for a surface of revolution.
             derivs (bool, optional): True to propagate any derivatives of `lat` into
                 the returned latitude.
@@ -138,8 +138,8 @@ class CentricSpheroid(Spheroid):
         """Convert latitude in internal coordinates to planetographic.
 
         Parameters:
-            lat (Scalar): The latitude in radians.
-            lon (Scalar, optional): The longitude in radians; ignored, because
+            lat (ScalarLike): The latitude in radians.
+            lon (ScalarLike, optional): The longitude in radians; ignored, because
                 this conversion is independent of longitude for a surface of revolution.
             derivs (bool, optional): True to propagate any derivatives of `lat` into
                 the returned latitude.
@@ -155,8 +155,8 @@ class CentricSpheroid(Spheroid):
         """Convert a planetographic latitude to internal coordinates.
 
         Parameters:
-            lat (Scalar): The latitude in radians.
-            lon (Scalar, optional): The longitude in radians; ignored, because
+            lat (ScalarLike): The latitude in radians.
+            lon (ScalarLike, optional): The longitude in radians; ignored, because
                 this conversion is independent of longitude for a surface of revolution.
             derivs (bool, optional): True to propagate any derivatives of `lat` into
                 the returned latitude.

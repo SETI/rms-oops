@@ -358,8 +358,8 @@ def _sub_longitude(self, event_key, longitude, reference='iau', direction='west'
 
     Parameters:
         event_key (str or tuple): Key defining the surface event.
-        longitude (Scalar): The longitude to convert, in radians, measured eastward from
-            the IAU-defined prime meridian.
+        longitude (ScalarLike): The longitude to convert, in radians, measured eastward
+            from the IAU-defined prime meridian.
         reference (str, optional): Defines the location of zero longitude. 'iau' for the
             IAU-defined prime meridian; 'obs' for the sub-observer longitude; 'sun' for
             the sub-solar longitude; 'oha' for the anti-observer longitude; 'sha' for the

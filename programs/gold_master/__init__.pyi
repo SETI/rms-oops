@@ -15,15 +15,12 @@ from typing import Any
 from filecache import FCPath as FCPath, FileCache
 from oops import Observation as Observation, Path as Path
 from collections.abc import Callable
-from numpy import ndarray, number
-from polymath import Qube
-from collections import defaultdict
-
+from numpy import ndarray
 # Parameters documented as a polymath type are passed through `as_scalar` and its
 # siblings, so each accepts the class, a number, or a nested sequence of numbers.
-# `str` is excluded deliberately: no polymath constructor accepts one.
-_Numeric = float | number | list['_Numeric'] | tuple['_Numeric', ...]
-QubeLike = Qube | ndarray | _Numeric
+# `polymath.typedefs` names each of those unions.
+from polymath.typedefs import QubeLike
+from collections import defaultdict
 
 __all__ = ['set_default_obs', 'define_standard_obs', 'set_default_args', 'override',
            'module_dirname', 'set_gold_master_path', 'execute_as_command',
@@ -99,13 +96,13 @@ class BackplaneTest:
     def __init__(self, obs: Observation, planets: list, moons: list, rings: list,
         overrides: dict, args: Any, suffix: str = '') -> None: ...
     def run_tests(self) -> None: ...
-    def compare(self, array: QubeLike, master: QubeLike | float, title: str,
-        limit: float | QubeLike = 0.0, method: str = '', operator: str = '=',
+    def compare(self, array: QubeLike, master: QubeLike, title: str,
+        limit: QubeLike = 0.0, method: str = '', operator: str = '=',
         radius: float = 0.0, mask: bool | ndarray = False) -> None: ...
-    def gmtest(self, array: QubeLike, title: str, limit: float | QubeLike = 0.0,
+    def gmtest(self, array: QubeLike, title: str, limit: QubeLike = 0.0,
         method: str = '', operator: str = '=', radius: float = 0.0,
         mask: bool | ndarray = False) -> None: ...
-    def save_browse(self, array: QubeLike | ndarray, browse_path: FCPath) -> None: ...
+    def save_browse(self, array: QubeLike, browse_path: FCPath) -> None: ...
     @staticmethod
     def read_browse(browse_path: FCPath) -> ndarray: ...
     @property

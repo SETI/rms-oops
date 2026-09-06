@@ -35,9 +35,9 @@ class Navigation(Frame, Fittable):
                 leave this Frame unregistered. As a special case, use "+" to automatically
                 generate a Frame ID by appending "_NAV" to the ID of `reference` (if it
                 has an ID).
-            _matrix (Matrix3, optional): A 3x3 matrix, used internally, to speed up the
-                copying of Navigation objects. If provided, it must contain the Matrix3
-                object that performs the defined rotation.
+            _matrix (Matrix3Like, optional): A 3x3 matrix, used internally, to speed up
+                the copying of Navigation objects. If provided, it must contain the
+                Matrix3 object that performs the defined rotation.
 
         Raises:
             KeyError: If `reference` is an ID string that has not been registered.
@@ -196,7 +196,7 @@ class Navigation(Frame, Fittable):
         relative to the center of rotation.
 
         Parameters:
-            time (Scalar): The time in seconds TDB.
+            time (ScalarLike): The time in seconds TDB.
             quick (dict or bool, optional): Ignored by class Navigation.
 
         Returns:

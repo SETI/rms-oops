@@ -29,41 +29,7 @@ oops.hosts.cassini.vims.IR_FULL_FOV
 oops.hosts.cassini.vims.VIS_FULL_FOV
 oops.hosts.newhorizons.lorri.LORRI.instrument_kernel
 
-# Type aliases that exist only in the stubs. A parameter documented as a
-# polymath type is passed through `as_scalar` or one of its siblings, so it
-# accepts the class or anything convertible to it; these aliases name that
-# union. They are annotations, not run-time API.
-oops.backplane.ScalarLike
-oops.cadence.PairLike
-oops.cadence.ScalarLike
-oops.calibration.PairLike
-oops.calibration.ScalarLike
-oops.fov.PairLike
-oops.fov.ScalarLike
-oops.fov.Vector3Like
-oops.frame.Matrix3Like
-oops.frame.ScalarLike
-oops.hosts.juno.jiram.ScalarLike
-oops.hosts.juno.sru.ScalarLike
-oops.lightsource.ScalarLike
-oops.Matrix3Like
-oops.observation.Matrix3Like
-oops.observation.PairLike
-oops.observation.ScalarLike
-oops.observation.Vector3Like
-oops.observation.VectorLike
-oops.PairLike
-oops.path.ScalarLike
-oops.path.Vector3Like
-oops.ScalarLike
-oops.surface.ScalarLike
-oops.surface.Vector3Like
-oops.Vector3Like
-programs.gold_master.QubeLike
-oops.BooleanLike
-oops.VectorLike
-oops.backplane.QubeLike
-oops.frame.Vector3Like
-oops.lightsource.PairLike
-oops.lightsource.Vector3Like
+# A return type the stub re-exports so that it can name it. The source imports
+# `tabulation` only inside the method that builds one, so the module namespace does not
+# carry the name at run time.
 oops.hosts.hst.Tabulation
