@@ -4,11 +4,16 @@
 
 import re
 
+from typing import TYPE_CHECKING
+
 from polymath       import Matrix3, Qube, Scalar, Vector3
 from oops._cache    import _Cache
 from oops.config    import PICKLE_CONFIG
 from oops.mutable   import Mutable
 from oops.transform import Transform
+
+if TYPE_CHECKING:                       # `oops.path` imports this module
+    from oops.path import Path
 
 
 class Frame(Mutable):
@@ -115,7 +120,7 @@ class Frame(Mutable):
     ######################################################################################
 
     @property
-    def pickle_quickframe_details(self):
+    def pickle_quickframe_details(self) -> bool:
         """True if all QuickFrame tabulations are included when pickling this Frame.
         """
         if not hasattr(self, '_pickle_quickframe_details'):
@@ -123,12 +128,12 @@ class Frame(Mutable):
         return self._pickle_quickframe_details
 
     @pickle_quickframe_details.setter
-    def pickle_quickframe_details(self, value):
+    def pickle_quickframe_details(self, value) -> None:
         """Set to True to include all QuickFrame tabulations when pickling this Frame.
         """
         self._pickle_quickframe_details = bool(value)
 
-    def _get_quickframes(self):
+    def _get_quickframes(self) -> list | None:
         """The `_quickframes` attribute if present and needed for pickling, else None."""
         if (self.pickle_quickframe_details and hasattr(self, '_quickframes')
                 and self._quickframes):
@@ -238,15 +243,15 @@ class Frame(Mutable):
     # String operations
     ######################################################################################
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self._reference is Frame.J2000:
             return f'{type(self).__name__}({self.string_id})'
         return f'{type(self).__name__}({self.string_id}/{self._reference.string_id})'
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
-    def show(self, level, indent=0):
+    def show(self, level, indent=0) -> str:
         """A string describing this Frame and, recursively, the Frames it is built from.
 
         Parameters:
@@ -273,27 +278,27 @@ class Frame(Mutable):
     ######################################################################################
 
     @property
-    def wayframe(self):
+    def wayframe(self) -> 'Frame':
         """The canonical version of this Frame, used as a global key for indexing."""
         return self._wayframe
 
     @property
-    def primary(self):
+    def primary(self) -> 'Frame':
         """The primary definition of this Frame."""
         return self._primary
 
     @property
-    def reference(self):
+    def reference(self) -> 'Frame':
         """The Frame relative to which this Frame is referenced."""
         return self._reference
 
     @property
-    def origin(self):
+    def origin(self) -> 'Path | None':
         """The origin Path of this Frame if any; None if it is inertial."""
         return self._origin
 
     @property
-    def is_inertial(self):
+    def is_inertial(self) -> bool:
         """True if this Frame is inertial."""
         if hasattr(self, '_is_inertial'):
             return self._is_inertial
@@ -301,12 +306,12 @@ class Frame(Mutable):
         return self._origin is None
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         """The shape of this Frame as a tuple of integers."""
         return self._shape
 
     @property
-    def frame_id(self):
+    def frame_id(self) -> str | None:
         """The ID of this Frame as a string if registered; otherwise, None."""
         if not hasattr(self, '_frame_id'):  # occurs in errors during Frame initialization
             self._frame_id = None
@@ -315,7 +320,7 @@ class Frame(Mutable):
     _FRAME_ID_PATTERN = re.compile(r'(.*)-\d+$')
 
     @property
-    def stripped_id(self):
+    def stripped_id(self) -> str | None:
         """The frame ID with any numeric suffix stripped; None if there is no ID."""
         if not self._frame_id:
             return None
@@ -325,13 +330,13 @@ class Frame(Mutable):
         return self._frame_id
 
     @property
-    def string_id(self):
+    def string_id(self) -> str:
         """The ID of this Frame if registered, or a string from its Python `id()`.
         """
         return self._frame_id if self._frame_id else f'#{id(self)}'
 
     @property
-    def wrt_j2000(self):
+    def wrt_j2000(self) -> 'Frame':
         """This Frame with respect to J2000."""
         if not hasattr(self, '_wrt_j2000') or self._wrt_j2000 is None:
             self._wrt_j2000 = self.wrt(Frame.J2000)
@@ -339,7 +344,7 @@ class Frame(Mutable):
         return self._wrt_j2000
 
     @property
-    def is_registered(self):
+    def is_registered(self) -> bool:
         """True if this Frame is registered."""
         return bool(self._frame_id)
 
@@ -352,7 +357,7 @@ class Frame(Mutable):
     _FRAME_SUBCLASSES = []  # list of all subclasses of Frame
 
     @staticmethod
-    def _reset_caches():
+    def _reset_caches() -> None:
         """Reset the caches to their initial states. Mainly useful for debugging."""
 
         Frame._FRAME_REGISTRY.clear()
@@ -370,7 +375,7 @@ class Frame(Mutable):
                 if hasattr(subclass, name):
                     getattr(subclass, name).clear()
 
-    def _register(self, frame_id=None):
+    def _register(self, frame_id=None) -> None:
         """Fill in this Frame's wayframe and frame_id; register if necessary.
 
         Parameters:
@@ -439,7 +444,7 @@ class Frame(Mutable):
 
         self._primary = self
 
-    def _reregister(self):
+    def _reregister(self) -> None:
         """Update this Frame's key in the cache now that it has been frozen.
 
         A Frame that was left out of the pool by `_register` because it was unfrozen is
