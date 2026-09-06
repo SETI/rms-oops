@@ -176,9 +176,6 @@ class Body(Oops):
 
 class Event(Oops):
     SSB: Any
-    ARR_VEC3_PROPERTIES: Any
-    DEP_VEC3_PROPERTIES: Any
-    SPECIAL_PROPERTIES: Any
     def __init__(self, time: ScalarLike, state: Vector3Like, origin: Path | str,
         frame: Frame | None = None, **more: Any) -> None: ...
     @property

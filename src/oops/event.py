@@ -77,13 +77,13 @@ class Event(Oops):
     SSB = None
 
     # Property names, categorized
-    ARR_VEC3_PROPERTIES = ['arr', 'arr_ap', 'arr_j2000', 'arr_ap_j2000', 'neg_arr',
-                           'neg_arr_ap', 'neg_arr_j2000', 'neg_arr_ap_j2000']
+    _ARR_VEC3_PROPERTIES = ['arr', 'arr_ap', 'arr_j2000', 'arr_ap_j2000', 'neg_arr',
+                            'neg_arr_ap', 'neg_arr_j2000', 'neg_arr_ap_j2000']
 
-    DEP_VEC3_PROPERTIES = ['dep', 'dep_ap', 'dep_j2000', 'dep_ap_j2000']
+    _DEP_VEC3_PROPERTIES = ['dep', 'dep_ap', 'dep_j2000', 'dep_ap_j2000']
 
-    SPECIAL_PROPERTIES = ARR_VEC3_PROPERTIES + DEP_VEC3_PROPERTIES
-    SPECIAL_PROPERTIES += ['arr_lt', 'dep_lt', 'perp', 'vflat']
+    _SPECIAL_PROPERTIES = _ARR_VEC3_PROPERTIES + _DEP_VEC3_PROPERTIES
+    _SPECIAL_PROPERTIES += ['arr_lt', 'dep_lt', 'perp', 'vflat']
 
     @staticmethod
     def _attr_name(prop_name):
@@ -164,7 +164,7 @@ class Event(Oops):
         self._wod = None
 
         # Set default values for properties
-        for prop_name in Event.SPECIAL_PROPERTIES:
+        for prop_name in Event._SPECIAL_PROPERTIES:
             self.__dict__[Event._attr_name(prop_name)] = None
 
         # Fill in any given subfields or properties
@@ -178,14 +178,14 @@ class Event(Oops):
         more = {}           # dict of the defined photon properties and subfields
 
         # Save only the first defined arriving photon vector; the rest are derivable
-        for prop in Event.ARR_VEC3_PROPERTIES:
+        for prop in Event._ARR_VEC3_PROPERTIES:
             vec = getattr(self, Event._attr_name(prop))
             if vec is not None:
                 more[prop] = vec
                 break
 
         # Save only the first defined departing photon vector; the rest are derivable
-        for prop in Event.DEP_VEC3_PROPERTIES:
+        for prop in Event._DEP_VEC3_PROPERTIES:
             vec = getattr(self, Event._attr_name(prop))
             if vec is not None:
                 more[prop] = vec
@@ -809,7 +809,7 @@ class Event(Oops):
             value (Any): Value of the subfield.
         """
 
-        if name in Event.SPECIAL_PROPERTIES:
+        if name in Event._SPECIAL_PROPERTIES:
             self._set_prop(name, value)
 
         else:
@@ -836,7 +836,7 @@ class Event(Oops):
             Any: The value of the subfield.
         """
 
-        if name in Event.SPECIAL_PROPERTIES:
+        if name in Event._SPECIAL_PROPERTIES:
             return self._get_prop(name)
 
         return self.subfields[name]
@@ -862,7 +862,7 @@ class Event(Oops):
                        self._origin, self._frame)
 
         # Apply to all the properties
-        for prop_name in Event.SPECIAL_PROPERTIES:
+        for prop_name in Event._SPECIAL_PROPERTIES:
             attr = Event._attr_name(prop_name)
             value = self.__dict__[attr]
             if isinstance(value, Qube):
@@ -910,9 +910,9 @@ class Event(Oops):
         omissions = []
         for name in omit:
             if name == 'arr':
-                omissions += Event.ARR_VEC3_PROPERTIES
+                omissions += Event._ARR_VEC3_PROPERTIES
             elif name == 'dep':
-                omissions += Event.DEP_VEC3_PROPERTIES
+                omissions += Event._DEP_VEC3_PROPERTIES
             else:
                 omissions.append(name)
 
@@ -920,7 +920,7 @@ class Event(Oops):
         for name in omissions:
 
             # Wipe out a property
-            if name in Event.SPECIAL_PROPERTIES:
+            if name in Event._SPECIAL_PROPERTIES:
                 attr = Event._attr_name(name)
                 result.__dict__[attr] = None
                 if result._ssb is not None:
@@ -1060,7 +1060,7 @@ class Event(Oops):
         omissions = []
         for k in range(0, len(args), 2):
             name = args[k]
-            if name in Event.SPECIAL_PROPERTIES:
+            if name in Event._SPECIAL_PROPERTIES:
                 if 'arr' in name and '_lt' not in name:
                     omissions.append('arr')
                 elif 'dep' in name and '_lt' not in name:
@@ -1485,7 +1485,7 @@ class Event(Oops):
         result = new_path.add_to_event(event, derivs=derivs, quick=quick)
 
         # Other attributes do not depend on the path
-        for prop_name in Event.SPECIAL_PROPERTIES:
+        for prop_name in Event._SPECIAL_PROPERTIES:
             attr = Event._attr_name(prop_name)
             result.__dict__[attr] = event.__dict__[attr]
 
@@ -1578,7 +1578,7 @@ class Event(Oops):
 
         result = Event(event._time, state, event._origin, frame.wayframe)
 
-        for prop_name in Event.SPECIAL_PROPERTIES:
+        for prop_name in Event._SPECIAL_PROPERTIES:
             attr = Event._attr_name(prop_name)
             result.__dict__[attr] = xform_rotate(event.__dict__[attr])
 
@@ -1630,7 +1630,7 @@ class Event(Oops):
 
         result = Event(event._time, state, event._origin, frame.reference)
 
-        for prop_name in Event.SPECIAL_PROPERTIES:
+        for prop_name in Event._SPECIAL_PROPERTIES:
             attr = Event._attr_name(prop_name)
             result.__dict__[attr] = xform_unrotate(event.__dict__[attr])
 
@@ -1740,7 +1740,7 @@ class Event(Oops):
 
         diff._ssb = self._ssb
 
-        for prop_name in Event.SPECIAL_PROPERTIES:
+        for prop_name in Event._SPECIAL_PROPERTIES:
             attr = Event._attr_name(prop_name)
             diff.__dict__[attr] = ref_unrotate(event_ssb.__dict__[attr])
 
