@@ -175,12 +175,12 @@ warn_unused_ignores = true
 module = ["oops.*", "spicedb.*", "programs.*", "cspyce.*", "astropy.*", "spicedb",
           "oops"]
 ignore_missing_imports = true
-# Only the package stubs exist, so stubtest's mypy build reads the unannotated sources
-# for every module below a package. These codes report that absence rather than any
-# defect; the stub-versus-runtime comparison stubtest exists for is unaffected.
-disable_error_code = ["attr-defined", "var-annotated", "assignment", "operator",
-                      "index", "misc", "has-type", "import-untyped",
-                      "import-not-found"]
+# stubtest sets MYPYPATH to src, so its mypy build reads the source of every module below
+# a package, only the packages themselves having a stub. `src` is not type-checked here by
+# house rule, so nothing found in that source is reported: it would be a comment on the
+# source rather than on the stubs, and the stub-versus-runtime comparison that stubtest
+# exists for is unaffected. This holds however much of `src` comes to carry annotations.
+ignore_errors = true
 
 [tool.bandit]
 # The library is the target; the tests are not shipped.
