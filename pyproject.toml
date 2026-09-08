@@ -23,7 +23,7 @@ dependencies = [
   "rms-pdstable",
   # The stubs and the documentation both read `polymath.typedefs`; raise this to a
   # lower bound naming the first release that ships it.
-  "rms-polymath",
+  "rms-polymath>=2.1.0",
   "rms-solar",
   "rms-tabulation",
   "rms-vax",
