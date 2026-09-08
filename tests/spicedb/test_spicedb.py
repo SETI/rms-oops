@@ -1208,4 +1208,29 @@ def test_spicedb():
 
         spicedb.DEBUG = False
         spicedb.close_db()
+
+
+def test_fileno_values_parses_the_bracketed_file_numbers() -> None:
+    """A name ending in a bracketed list yields the bare name and the numbers listed."""
+
+    assert spicedb._fileno_values('NAME-V1') == ('NAME-V1', [])
+    assert spicedb._fileno_values('NAME-V1[1,3-5]') == ('NAME-V1', [1, 3, 4, 5])
+
+
+def test_set_spice_path_with_no_argument_restores_the_default(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """An explicit path is returned as given; an empty one falls back to the environment."""
+
+    monkeypatch.setattr(spicedb, 'SPICE_PATH', None)
+    monkeypatch.setattr(spicedb, 'SPICE_FILECACHE', None)
+    monkeypatch.setattr(spicedb, 'SPICE_FILECACHE_PREFIX', None)
+    monkeypatch.setenv('SPICE_PATH', '/env/spice')
+
+    spicedb.set_spice_path('/explicit/spice')
+    assert spicedb.get_spice_path().as_posix() == '/explicit/spice'
+
+    spicedb.set_spice_path()
+    assert spicedb.SPICE_FILECACHE_PREFIX is None
+    assert spicedb.get_spice_path().as_posix() == '/env/spice'
+
 ##########################################################################################

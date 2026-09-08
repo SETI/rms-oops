@@ -47,7 +47,7 @@ def from_file(filespec, **parameters):
     if this.detector_name(hdulist) != 'NIC3':
         raise IOError(f'not an HST/NICMOS/NIC3 file: {filespec}')
 
-    return NIC3.from_opened_fitsfile(hdulist, **parameters)
+    return NIC3.from_hdulist(hdulist, **parameters)
 
 ##########################################################################################
 # NIC3 class

@@ -46,7 +46,7 @@ def from_file(filespec, **parameters):
     if this.detector_name(hdulist) != 'IR':
         raise IOError(f'not an HST/WFC3/IR file: {filespec}')
 
-    return IR.from_opened_fitsfile(hdulist, **parameters)
+    return IR.from_hdulist(hdulist, **parameters)
 
 ##########################################################################################
 # WFC3 class

@@ -706,7 +706,7 @@ def _fileno_values(name):
 
     # Interpret the indices
     filenos = []
-    split_by_commas = name.index.split(',')
+    split_by_commas = indices.split(',')
     for item in split_by_commas:
         split_by_dash = item.split('-')
         if len(split_by_dash) == 2:
@@ -715,7 +715,7 @@ def _fileno_values(name):
             for fileno in range(k0,k1+1):
                 filenos.append(fileno)
         else:
-            filenos.append(str(item))
+            filenos.append(int(item))
 
     return (name, filenos)
 
@@ -1080,18 +1080,20 @@ def set_spice_path(spice_path=""):
     This directory may also be on a webserver or in the cloud by providing an
     appropriate prefix.
 
-    Call with no argument to reset the path to its default value.
+    Call with no argument to reset the path to its default value, which
+    :func:`get_spice_path` derives from the environment.
 
     Parameters:
         spice_path (str | FCPath, optional): The path to the root of the SPICE file
-            directory tree, optionally with a prefix naming a webserver or cloud resource.
+            directory tree, optionally with a prefix naming a webserver or cloud resource;
+            an empty string to restore the default.
     """
 
-    global SPICE_PATH, SPICE_FILECACHE, SPICE_FILECACHE_PFX
+    global SPICE_PATH, SPICE_FILECACHE, SPICE_FILECACHE_PREFIX
 
-    SPICE_PATH = spice_path
+    SPICE_PATH = FCPath(spice_path) if spice_path else None
     SPICE_FILECACHE = None
-    SPICE_FILECACHE_PFX = None
+    SPICE_FILECACHE_PREFIX = None
 
 def get_spice_path():
     """Return the current path to the root of the SPICE file directory tree.
@@ -1881,7 +1883,7 @@ def furnish_by_metafile(metafile, time=None, asof=None):
             metafile = pfx.retrieve(kernel_list[-1].filespec)
             kernel_names = [kernel_list[-1].full_name]
 
-    local_path = get_spice_filecache.retrieve(metafile)
+    local_path = pfx.retrieve(metafile)
     filespecs = textkernel.from_file(local_path)['KERNELS_TO_LOAD']
 
     kernel_list = select_by_filespec(filespecs, time=time)

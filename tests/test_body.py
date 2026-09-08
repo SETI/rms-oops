@@ -52,4 +52,17 @@ def test_body():
                                   exclude=['IRREGULAR', 'BARYCENTER', 'IO'],
                                   recursive=True)
     assert len(planets) == 16  # 9 planets + 7 Jovian moons
+
+
+def test_has_gravity_filters_on_the_gravity_field() -> None:
+    """Bodies with a gravity field pass has_gravity; the others pass has_no_gravity."""
+
+    mimas = Body.lookup('MIMAS')
+    janus = Body.lookup('JANUS')
+    assert mimas.gravity is not None
+    assert janus.gravity is None
+
+    assert Body.has_gravity([mimas, janus, mimas]) == [mimas]
+    assert Body.has_no_gravity([mimas, janus, janus]) == [janus]
+
 ##########################################################################################

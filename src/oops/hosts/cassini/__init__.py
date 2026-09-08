@@ -367,7 +367,7 @@ class Cassini(object):
                 and the name of the kernel.
         """
         if asof is not None:
-            (day,sec) = julian.day_sec_from_iso(stop_time)
+            (day,sec) = julian.day_sec_from_iso(asof)
             asof = julian.ymdhms_format_from_day_sec(day, sec)
 
         spicedb.open_db()
@@ -394,12 +394,12 @@ class Cassini(object):
                 kernels.
         """
         if asof is not None:
-            (day,sec) = julian.day_sec_from_iso(stop_time)
+            (day,sec) = julian.day_sec_from_iso(asof)
             asof = julian.ymdhms_format_from_day_sec(day, sec)
 
         spicedb.open_db()
         kernel_list = spicedb.select_inst(-82, types='FK', asof=asof)
-        spicedb.furnish_kernels(kernel_info, fast=True)
+        spicedb.furnish_kernels(kernel_list, fast=True)
         spicedb.close_db()
 
         return (spicedb.as_dict(kernel_list), spicedb.as_names(kernel_list))

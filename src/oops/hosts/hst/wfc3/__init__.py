@@ -44,7 +44,7 @@ def from_file(filespec, **parameters):
     if this.instrument_name(hdulist) != 'WFC3':
         raise IOError('not an HST/WFC3 file: ' + this.filespec(hdulist))
 
-    return WFC3.from_opened_fitsfile(hdulist)
+    return WFC3.from_hdulist(hdulist, **parameters)
 
 
 class WFC3(HST):

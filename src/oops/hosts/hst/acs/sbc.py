@@ -47,7 +47,7 @@ def from_file(filespec, **parameters):
     if this.detector_name(hdulist) != 'SBC':
         raise IOError(f'not an HST/ACS/SBC file: {filespec}')
 
-    return SBC.from_opened_fitsfile(hdulist, **parameters)
+    return SBC.from_hdulist(hdulist, **parameters)
 
 IDC_DICT = None
 

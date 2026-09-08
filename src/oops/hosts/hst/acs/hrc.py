@@ -47,7 +47,7 @@ def from_file(filespec, **parameters):
     if this.detector_name(hdulist) != 'HRC':
         raise IOError(f'not an HST/ACS/HRC file: {filespec}')
 
-    return HRC.from_opened_fitsfile(hdulist, **parameters)
+    return HRC.from_hdulist(hdulist, **parameters)
 
 ##########################################################################################
 # Class HRC

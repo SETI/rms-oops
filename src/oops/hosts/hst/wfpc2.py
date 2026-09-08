@@ -57,7 +57,7 @@ def from_file(filespec, **parameters):
     if this.instrument_name(hdulist) != 'WFPC2':
         raise IOError('not an HST/WFPC2 file: ' + this.filespec(hdulist))
 
-    return WFPC2.from_opened_fitsfile(hdulist, **parameters)
+    return WFPC2.from_hdulist(hdulist, **parameters)
 
 ##########################################################################################
 # WFPC2 class

@@ -155,7 +155,7 @@ class NIRC2(Keck):
             vscale = -vscale
 
         # Display directions: [u,v] = [right,down]
-        full_fov = oops.fov.Flat((uscale,vscale), (samples,lines))
+        full_fov = oops.fov.FlatFOV((uscale,vscale), (samples,lines))
 
         return full_fov
 

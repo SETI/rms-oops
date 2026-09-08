@@ -807,7 +807,7 @@ class Body(Oops):
 
         selection = []
         for body in bodies:
-            if body.gm is not None and body not in selection:
+            if body.gravity is not None and body not in selection:
                 selection.append(body)
 
         return selection
@@ -825,7 +825,7 @@ class Body(Oops):
 
         selection = []
         for body in bodies:
-            if body.gm is None and body not in selection:
+            if body.gravity is None and body not in selection:
                 selection.append(body)
 
         return selection

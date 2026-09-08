@@ -46,7 +46,7 @@ def from_file(filespec, **parameters):
     if this.detector_name(hdulist) != 'UVIS':
         raise IOError(f'not an HST/WFC3/UVIS file: {filespec}')
 
-    return UVIS.from_opened_fitsfile(hdulist, **parameters)
+    return UVIS.from_hdulist(hdulist, **parameters)
 
 ##########################################################################################
 # UVIS class

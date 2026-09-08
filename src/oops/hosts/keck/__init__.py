@@ -144,20 +144,20 @@ class Keck(object):
         return keck_file[0].data
 
     # This works for Snapshot observations. Others must override.
-    def time_limits(self, hst_file, **parameters):
+    def time_limits(self, keck_file, **parameters):
         """A tuple containing the overall start and end times of the observation.
 
         Parameters:
-            hst_file (astropy.io.fits.HDUList): The HDU list of the FITS file.
+            keck_file (astropy.io.fits.HDUList): The HDU list of the FITS file.
             **parameters (Any): Accepted and ignored.
 
         Returns:
             tuple[float, float]: The start and end times in seconds TDB.
         """
 
-        date_obs = hst_file[0].header["DATE-OBS"]
-        time_obs_start = hst_file[0].header["EXPSTART"]
-        time_obs_end = hst_file[0].header["EXPSTOP"]
+        date_obs = keck_file[0].header["DATE-OBS"]
+        time_obs_start = keck_file[0].header["EXPSTART"]
+        time_obs_end = keck_file[0].header["EXPSTOP"]
 
         tdb0 = julian.tdb_from_tai(julian.tai_from_iso(date_obs + "T" +
                                                        time_obs_start))

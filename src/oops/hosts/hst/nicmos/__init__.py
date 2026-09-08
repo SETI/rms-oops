@@ -45,7 +45,7 @@ def from_file(filespec, **parameters):
     if this.instrument_name(hdulist) != 'NICMOS':
         raise IOError(f'not an HST/NICMOS file: {filespec}')
 
-    return NICMOS.from_opened_fitsfile(hdulist, **parameters)
+    return NICMOS.from_hdulist(hdulist, **parameters)
 
 ##########################################################################################
 # NICMOS class

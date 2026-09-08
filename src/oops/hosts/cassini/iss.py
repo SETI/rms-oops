@@ -139,8 +139,8 @@ def from_index(filespec, fast_distortion=True, return_all_planets=False,
     Parameters:
         filespec (str | pathlib.Path | FCPath): The full path to a Cassini ISS index
             file or its PDS label.
-        fast_distortion (bool | None, optional): Accepted for consistency with
-            :func:`from_file`; the snapshots always use a dynamically solved polynomial.
+        fast_distortion (bool | None, optional): True to use a pre-inverted polynomial;
+            False to use a dynamically solved polynomial; None to use a FlatFOV.
         return_all_planets (bool, optional): Include kernels for all planets not just
             Jupiter or Saturn.
         navigation (bool, optional): True to wrap the frame inside a
@@ -176,7 +176,7 @@ def from_index(filespec, fast_distortion=True, return_all_planets=False,
             frame = oops.frame.Navigation((0., 0.), frame)
 
         item = oops.obs.Snapshot(('v','u'), tstart, texp,
-                                 fov = ISS.fovs[camera, mode, False],
+                                 fov = ISS.fovs[camera, mode, fast_distortion],
                                  path = 'CASSINI',
                                  frame = frame,
                                  dict = row_dict,       # Add index dictionary

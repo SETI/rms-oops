@@ -149,7 +149,7 @@ class NewHorizons(object):
 
     @staticmethod
     def spice_frames_kernel(asof=None):
-        """A dictionary containing the Cassini Frames Kernel information.
+        """A dictionary containing the New Horizons Frames Kernel information.
 
         Also furnishes the kernels for use by the SPICE tools.
 
@@ -164,8 +164,7 @@ class NewHorizons(object):
         """
 
         spicedb.open_db()
-        kernel_info = spicedb.select_inst(-98, inst=inst_name, types="FK",
-                                               asof=asof)
+        kernel_info = spicedb.select_inst(-98, types="FK", asof=asof)
         spicedb.furnish_kernels(kernel_info)
         spicedb.close_db()
 

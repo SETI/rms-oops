@@ -46,10 +46,10 @@ def from_file(filespec, **parameters):
         raise IOError(f'not an HST/NICMOS file: {filespec}')
 
     # Confirm that the detector is NIC1
-    if this.detector_name(hdulist) != 'IR':
+    if this.detector_name(hdulist) != 'NIC1':
         raise IOError(f'not an HST/NICMOS/NIC1 file: {filespec}')
 
-    return NIC1.from_opened_fitsfile(hdulist, **parameters)
+    return NIC1.from_hdulist(hdulist, **parameters)
 
 ##########################################################################################
 # NIC1 class
