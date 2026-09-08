@@ -16,7 +16,7 @@ command-line program, through `execute_as_command`.
     def test_<your test name>():
 
         # Define the default observation
-        gm.define_default_obs(
+        gm.set_default_obs(
                 obspath = 'file path inside the test_data directory',
                 index   = (index to apply to result of from_file, or None),
                 planets = ['SATURN'],               # for example
@@ -74,7 +74,7 @@ command-line program, through `execute_as_command`.
     # Define the default observation and any number of others for testing;
     # note that the selection can be overridden on the command line.
 
-    gm.define_default_obs(
+    gm.set_default_obs(
                 obspath = 'file path inside the test_data directory',
                 index   = (index to apply to result of from_file, or None),
                 planets = ['SATURN'],               # for example
@@ -446,8 +446,7 @@ def execute_as_command():
     gr.add_argument('--module', type=str, metavar='oops.hosts...',
         help='Name of the module containing the "from_file"  method for the file paths '
              'specified' + (f'; default is {module}.' if module else '.'))
-    gr.add_argument('--name', '-n', type=str, nargs='*',
-        default=list(STANDARD_OBS_INFO.keys()),
+    gr.add_argument('--name', '-n', type=str, nargs='*', default=None,
         help='Name(s) of the pre-defined standard observation to use if a file path is '
              'not given explicitly. Default is to use all of the standard observations.')
 
@@ -720,11 +719,14 @@ def _clean_up_args(args):
         if isinstance(args.obspath, str):
             args.obspath = [args.obspath]
 
-        for obspath in args.obspaths:
+        for obspath in args.obspath:
             define_standard_obs(obspath, obspath, index=args.index, planets=args.planets,
                                 moons=args.moons, rings=args.rings)
 
         args.name = args.obspath        # using obspath as the temporary name
+
+    elif args.name is None:             # the default is every standard observation
+        args.name = list(STANDARD_OBS_INFO.keys())
 
     # --platform
     if args.platform is None:
@@ -2391,7 +2393,7 @@ class BackplaneTest(object):
 
         # Apply zoom
         if self.args.zoom != 1:
-            scaled_bytes = zoom_image(scaled_bytes, self.zoom, order=0)
+            scaled_bytes = zoom_image(scaled_bytes, self.args.zoom, order=0)
 
         # Make sure y-axis increases downward
         if self.upward:
