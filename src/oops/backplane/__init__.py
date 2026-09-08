@@ -1039,6 +1039,16 @@ class Backplane(Mutable):
             if self._DIAGNOSTICS:
                 LOGGING.diagnostic('INTERCEPT REUSED', event_key, f'derivs={derivs}')
 
+            # The intercept was solved for another surface that shares its geometry, so
+            # this key's unmasked event may not be filed yet. A key that is its own
+            # unmasked key is never filed below, and get_surface_event, finding nothing
+            # in the cache after the arrivals are requested, would then call itself
+            # without end.
+            if unmasked_event_key not in self._surface_events[derivs]:
+                self._save_event(unmasked_event_key, event.copy(),
+                                 surface=surface.unmasked, derivs=derivs)
+                event = self._surface_events[derivs][unmasked_event_key]
+
         else:
             now = datetime.datetime.now()
             event = surface.unmasked.photon_to_event(detection, antimask=antimask,

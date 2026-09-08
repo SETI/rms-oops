@@ -206,4 +206,19 @@ def test_masks_are_cached(bp: Backplane) -> None:
     assert bp.where_intercepted(PLANET) is bp.where_intercepted(PLANET)
     assert bp.where_sunward(PLANET) is bp.where_sunward(PLANET)
 
+
+def test_where_sunward_after_a_bounded_ring_reuses_the_intercept(fresh_bp: Backplane
+                                                                 ) -> None:
+    """A key that shares a cached intercept with another key still reaches the cache.
+
+    The bounded ring solves the photon intercept first; the unbounded ring plane then
+    reuses it, and asking for its arrivals must not recurse.
+    """
+
+    radius = fresh_bp.ring_radius('SATURN_MAIN_RINGS')
+    sunward = fresh_bp.where_sunward(RING)
+
+    assert sunward.shape == radius.shape
+    assert sunward.dtype() == 'bool'
+
 ##########################################################################################
