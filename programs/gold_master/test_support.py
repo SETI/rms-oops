@@ -59,18 +59,14 @@ TEST_DATA_FILECACHE = FileCache('oops_test_data')
 # the same name
 TEST_SPICE_FILECACHE = FileCache('oops_test_kernels')
 
-if OOPS_TEST_DATA_PATH:
-    TEST_DATA_PREFIX = TEST_DATA_FILECACHE.new_path(OOPS_TEST_DATA_PATH)
-    TEST_SPICE_PREFIX = TEST_SPICE_FILECACHE.new_path(
-        f'{OOPS_TEST_DATA_PATH}/SPICE')
-else:
-    TEST_DATA_PREFIX = None
-    TEST_SPICE_PREFIX = None
-
-if OOPS_GOLD_MASTER_PATH:
-    GOLD_MASTER_PREFIX = TEST_DATA_FILECACHE.new_path(OOPS_GOLD_MASTER_PATH)
-else:
-    GOLD_MASTER_PREFIX = None
+# Conditional expressions rather than if/else blocks, for the same reason as above: the
+# inferred type is then `FCPath | None`, which is what each prefix is without the tree.
+TEST_DATA_PREFIX = (TEST_DATA_FILECACHE.new_path(OOPS_TEST_DATA_PATH)
+                    if OOPS_TEST_DATA_PATH else None)
+TEST_SPICE_PREFIX = (TEST_SPICE_FILECACHE.new_path(f'{OOPS_TEST_DATA_PATH}/SPICE')
+                     if OOPS_TEST_DATA_PATH else None)
+GOLD_MASTER_PREFIX = (TEST_DATA_FILECACHE.new_path(OOPS_GOLD_MASTER_PATH)
+                      if OOPS_GOLD_MASTER_PATH else None)
 
 BACKPLANE_OUTPUT_PREFIX = TEST_DATA_FILECACHE.new_path(
     OOPS_BACKPLANE_OUTPUT_PATH)
