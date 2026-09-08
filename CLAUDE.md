@@ -33,7 +33,14 @@ imports fail because these are unset, say so; do not report it as a code defect.
   `-e ".[dev]"`. Never install into system Python.
 - `scripts/run-all-checks.sh` runs the gates; `-h` lists the flags. A full run is
   ruff, flake8, mypy, stubtest, pyroma, bandit, vulture, the three pytest suites,
-  and the Sphinx build. pip-audit and PyMarkdown remain off by default (`ENABLE_*` in the
+  and the Sphinx build. The Sphinx gate builds the tree twice: the public copy into
+  `docs/_build/html`, and a second copy tagged `private` (`-t private`) into
+  `docs/_build/private/html`, in which autodoc documents the private members and the
+  `.. private-only::` blocks of the Developer's Guide are rendered; `docs/conf.py`
+  defines the tag's effects and that directive. The narrative pages are the User's
+  Guide under `docs/user_guide/` and the Developer's Guide under `docs/dev_guide/`,
+  one chapter per file; a change to the public API, a backplane, or a command-line
+  option updates the matching chapter in the same change. pip-audit and PyMarkdown remain off by default (`ENABLE_*` in the
   script): pip-audit reports findings against pinned upstream dependencies this
   repository does not control, and PyMarkdown reports pre-existing findings in the
   Markdown. `.github/workflows/run-lint.yml` runs the same set minus the pytest

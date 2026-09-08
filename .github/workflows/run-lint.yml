@@ -77,7 +77,10 @@ jobs:
 
       # -W makes a warning fail the build; -n reports every cross-reference that
       # resolves to nothing; -E rebuilds from scratch so a cached page cannot hide one.
-      # This step needs no SPICE kernels: conf.py mocks cspyce.
+      # This step needs no SPICE kernels: conf.py mocks cspyce. The second build is the
+      # private-members copy of the API reference that the Developer's Guide relies on;
+      # scripts/run-all-checks.sh --sphinx builds the same two.
       - name: Build the documentation
         run: |
           python -m sphinx -W -n -E -b html docs docs/_build/html
+          python -m sphinx -W -n -E -t private -b html docs docs/_build/private/html

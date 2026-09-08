@@ -331,7 +331,7 @@ class LOGGING(object):
         """Send log messages to a logger; None to disable Python logging.
 
         Parameters:
-            logger (Logger, optional): The logger to receive log messages; None, the
+            logger (logging.Logger, optional): The logger to receive log messages; None, the
                 default, disables Python logging and restores the default level.
             level (str | int, optional): Minimum level for the logger, given as a name
                 such as "DEBUG" or as an integer; default "DEBUG". Ignored if `logger` is
@@ -501,7 +501,7 @@ class LOGGING(object):
 
     @staticmethod
     def debug(*args, force=False):
-        """Same as print(*args, level='DEBUG').
+        """Same as ``print(*args, level='DEBUG')``.
 
         Parameters:
             *args (Any): The values to log; each is converted to a string.
@@ -512,7 +512,7 @@ class LOGGING(object):
 
     @staticmethod
     def info(*args, force=False):
-        """Same as print(*args, level='INFO').
+        """Same as ``print(*args, level='INFO')``.
 
         Parameters:
             *args (Any): The values to log; each is converted to a string.
@@ -523,7 +523,7 @@ class LOGGING(object):
 
     @staticmethod
     def warn(*args, force=False):
-        """Same as print(*args, level='WARN').
+        """Same as ``print(*args, level='WARN')``.
 
         Parameters:
             *args (Any): The values to log; each is converted to a string.
@@ -534,7 +534,7 @@ class LOGGING(object):
 
     @staticmethod
     def error(*args, force=False):
-        """Same as print(*args, level='ERROR').
+        """Same as ``print(*args, level='ERROR')``.
 
         Parameters:
             *args (Any): The values to log; each is converted to a string.
@@ -545,7 +545,7 @@ class LOGGING(object):
 
     @staticmethod
     def fatal(*args, force=False):
-        """Same as print(*args, level='FATAL').
+        """Same as ``print(*args, level='FATAL')``.
 
         Parameters:
             *args (Any): The values to log; each is converted to a string.

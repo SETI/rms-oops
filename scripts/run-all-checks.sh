@@ -21,7 +21,8 @@
 #   --pyroma               Run pyroma only
 #   --bandit               Run bandit only
 #   --vulture              Run vulture only
-#   --sphinx               Build the documentation only
+#   --sphinx               Build the documentation only, both the public copy
+#                          and the private-members copy the Developer's Guide uses
 #   --pytest               Run the main oops test suite only
 #   --pytest-hosts         Run the host (gold master) test suite only
 #   --pytest-spicedb       Run the spicedb tests only
@@ -572,8 +573,15 @@ run_docs_checks() {
     # handful with no target to resolve to are listed in `nitpick_ignore` in docs/conf.py.
     # -E rebuilds from scratch, so a stale cache cannot hide a warning that a previous run
     # already reported.
+    #
+    # The tree is built twice. The first build is the published documentation, in which
+    # the API reference covers the public API alone. The second, tagged `private`, is the
+    # copy the Developer's Guide relies on: the same pages with the private members
+    # documented too (see the end of docs/conf.py). Both must build clean.
     print_info "Building the documentation..."
-    if python -m sphinx -W -n -E -b html docs docs/_build/html; then
+    if python -m sphinx -W -n -E -b html docs docs/_build/html \
+            && python -m sphinx -W -n -E -t private -b html docs docs/_build/private/html
+    then
         print_success "Documentation build passed"
         deactivate 2>/dev/null || true
         return 0

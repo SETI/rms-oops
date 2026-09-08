@@ -114,11 +114,16 @@ pytest tests
 ./scripts/run-all-checks.sh
 ```
 
-- To build the documentation on its own:
+- To build the documentation on its own, both the public copy in `docs/_build/html`
+  and the private-members copy the Developer's Guide relies on, in
+  `docs/_build/private/html`:
 
 ```sh
 ./scripts/run-all-checks.sh --sphinx
 ```
+
+  The documentation holds a User's Guide and a Developer's Guide alongside the API
+  reference; open `docs/_build/html/index.html` after the build.
 
 - To run the gold master tests for one instrument with the ability to specify command
   line options:

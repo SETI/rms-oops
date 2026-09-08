@@ -7,6 +7,10 @@ import importlib.metadata
 import os
 import sys
 
+from docutils import nodes
+from docutils.parsers.rst import Directive
+from sphinx.util.nodes import nested_parse_with_titles
+
 # Anchored to this file rather than to the working directory, so that autodoc imports the
 # same tree whether the build runs from docs/ (as the Makefile does) or from the
 # repository root (as the check script and CI do).
@@ -142,5 +146,46 @@ myst_enable_extensions = ['colon_fence', 'deflist']
 
 # Client-side rendering, so no mmdc binary is needed in CI or on ReadTheDocs.
 mermaid_output_format = 'raw'
+
+# -- The private copy of the API reference -----------------------------------
+
+# The published reference documents the public API alone. The Developer's Guide needs a
+# second copy in which the private members are visible too, since a change to `oops`
+# means working with them. That copy is built from the same tree with `-t private`, into
+# docs/_build/private/html; `scripts/run-all-checks.sh --sphinx` builds both. The tag
+# turns on autodoc's `private-members` option, lets Napoleon keep a private member's
+# docstring, selects the `.. only:: private` prose that says which copy the reader is
+# looking at, and populates the `.. private-only::` blocks of the Developer's Guide. `tags` is a name Sphinx
+# binds in this namespace, which ruff cannot see.
+_PRIVATE = tags.has('private')                                              # noqa: F821
+
+if _PRIVATE:
+    autodoc_default_options['private-members'] = True
+    napoleon_include_private_with_doc = True
+
+
+class _PrivateOnly(Directive):
+    """Content that exists only in the private build.
+
+    `.. only:: private` is not enough for the private API pages: its body is parsed in
+    every build and merely pruned from the output afterwards, so an autodoc directive
+    inside it would still register its objects, and a cross-reference to a private member
+    would still be checked, in the public build. This directive parses its body in the
+    private build and drops it, unparsed, in the public one.
+    """
+
+    has_content = True
+
+    def run(self):
+        if not _PRIVATE:
+            return []
+        node = nodes.section()
+        node.document = self.state.document
+        nested_parse_with_titles(self.state, self.content, node, self.content_offset)
+        return node.children
+
+
+def setup(app):
+    app.add_directive('private-only', _PrivateOnly)
 
 ##########################################################################################

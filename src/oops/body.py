@@ -135,7 +135,7 @@ def lrange(*args):
     """A list of the integers in the given range.
 
     Parameters:
-        *args (int): The arguments of :func:`range`: `stop`; `start, stop`; or `start,
+        *args (int): The arguments of :class:`range`: `stop`; `start, stop`; or `start,
             stop, step`.
 
     Returns:

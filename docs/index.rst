@@ -12,6 +12,18 @@ regression-tests the backplanes of a standard observation against stored referen
 arrays; it is documented here because host tests call into it, but it is not part of the
 ``oops`` API and does not ship in the wheel.
 
+The :doc:`User's Guide <user_guide/user_guide>` shows how to load an observation,
+describe the solar system around it and compute its geometry. The :doc:`Developer's Guide
+<dev_guide/dev_guide>` explains how the library is put together and how to extend and
+test it.
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Guides:
+
+   user_guide/user_guide
+   dev_guide/dev_guide
+
 .. toctree::
    :maxdepth: 2
    :caption: API reference:
@@ -19,6 +31,7 @@ arrays; it is documented here because host tests call into it, but it is not par
    oops
    oops_cadence
    oops_calibration
+   oops_config
    oops_fov
    oops_frame
    oops_gravity
