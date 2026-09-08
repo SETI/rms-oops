@@ -35,31 +35,20 @@ __all__ = ['OOPS_RESOURCES', 'OOPS_TEST_DATA_PATH', 'OOPS_GOLD_MASTER_PATH',
 # Any environment variable may be a URI for a cloud resource such as
 #   gs://rms-oops-resources
 
-try:
-    OOPS_RESOURCES = os.environ['OOPS_RESOURCES']
-except KeyError:
-    OOPS_RESOURCES = None
+# Each is read with `get` rather than by indexing so that the inferred type is `str |
+# None`, which is what the value is on a machine without the resource tree; stubtest
+# compares that inference against the run-time value.
+OOPS_RESOURCES = os.environ.get('OOPS_RESOURCES')
 
-try:
-    OOPS_TEST_DATA_PATH = os.environ['OOPS_TEST_DATA_PATH']
-except KeyError:
-    if OOPS_RESOURCES:
-        OOPS_TEST_DATA_PATH = f'{OOPS_RESOURCES}/test_data'
-    else:
-        OOPS_TEST_DATA_PATH = None
+OOPS_TEST_DATA_PATH = os.environ.get('OOPS_TEST_DATA_PATH')
+if OOPS_TEST_DATA_PATH is None and OOPS_RESOURCES:
+    OOPS_TEST_DATA_PATH = f'{OOPS_RESOURCES}/test_data'
 
-try:
-    OOPS_GOLD_MASTER_PATH = os.environ['OOPS_GOLD_MASTER_PATH']
-except KeyError:
-    if OOPS_RESOURCES:
-        OOPS_GOLD_MASTER_PATH = f'{OOPS_RESOURCES}/gold_master'
-    else:
-        OOPS_GOLD_MASTER_PATH = None
+OOPS_GOLD_MASTER_PATH = os.environ.get('OOPS_GOLD_MASTER_PATH')
+if OOPS_GOLD_MASTER_PATH is None and OOPS_RESOURCES:
+    OOPS_GOLD_MASTER_PATH = f'{OOPS_RESOURCES}/gold_master'
 
-try:
-    OOPS_BACKPLANE_OUTPUT_PATH = os.environ['OOPS_BACKPLANE_OUTPUT_PATH']
-except KeyError:
-    OOPS_BACKPLANE_OUTPUT_PATH = os.getcwd()
+OOPS_BACKPLANE_OUTPUT_PATH = os.environ.get('OOPS_BACKPLANE_OUTPUT_PATH', os.getcwd())
 
 
 # The FileCache in which to store the "$OOPS_RESOURCES/test_data" directory
