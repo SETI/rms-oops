@@ -1,0 +1,443 @@
+##########################################################################################
+# oops/hosts/galileo/ssi/__init__.py
+##########################################################################################
+import sys
+import os
+import numpy as np
+import julian
+import cspyce
+import vicar
+import pdstable
+import pdsparser
+import oops
+
+from oops.hosts.galileo import Galileo
+
+from filecache import FCPath
+
+__all__ = ['from_file', 'from_index', 'initialize', 'Metadata', 'SSI']
+
+##########################################################################################
+# Standard class methods
+##########################################################################################
+def from_file(filespec,
+              return_all_planets=False, full_fov=False, method='strict', **parameters):
+    """A Snapshot object based on a given Galileo SSI image file.
+
+    By default, only the valid image region is returned.
+
+    Parameters:
+        filespec (str | pathlib.Path | FCPath): The full path to a Galileo SSI file or
+            its PDS label.
+        return_all_planets (bool, optional): Include kernels for all planets not just
+            Jupiter or Saturn.
+        full_fov (bool, optional): If True, the full image is returned with a mask
+            describing the regions with no data.
+        method (str, optional): Label reading method to be passed to Pds3Label.
+        **parameters (Any): Additional keyword arguments; they are accepted and ignored.
+
+    Returns:
+        Snapshot: The observation, with subfields `spice_kernels`, `spice_to_frame`,
+        `spice_frame_name`, `spice_frame_id`, `abspath` and `image_url` inserted.
+    """
+
+    SSI.initialize()    # Define everything the first time through; use defaults
+                        # unless initialize() is called explicitly.
+
+    filespec = FCPath(filespec)
+
+    # Load the PDS label
+    label = pdsparser.Pds3Label(filespec, method=method).as_dict()
+
+    # Load the data array
+    vic = vicar.VicarImage.from_file(filespec)
+    vicar_dict = vic.as_dict()
+
+    # Get image metadata
+    meta = Metadata(label)
+
+    # Define the field of view
+    FOV = meta.fov(full_fov=full_fov)
+
+    # Trim the image
+    data = meta.trim(vic.data_2d, full_fov=full_fov)
+
+    # Create a Snapshot
+    result = oops.obs.Snapshot(('v','u'), meta.tstart, meta.exposure,
+                               fov = FOV,
+                               path = 'GLL',
+                               frame = 'GLL_SCAN_PLATFORM',
+                               dict = vicar_dict,       # Add the VICAR dict
+                               data = data,             # Add the data array
+                               instrument = 'SSI',
+                               filter = meta.filter,
+                               filespec = filespec,
+                               basename = filespec.name)
+
+    result.insert_subfield('spice_kernels',
+                           Galileo.used_kernels(result.time, 'ssi',
+                                                return_all_planets))
+    result.insert_subfield('spice_to_frame', oops.Matrix3.IDENTITY)
+    result.insert_subfield('spice_frame_name', 'GLL_SCAN_PLATFORM')
+    result.insert_subfield('spice_frame_id', -77001)
+    result.insert_subfield('abspath', filespec.get_local_path().resolve())
+    result.insert_subfield('image_url', filespec.absolute().as_posix())
+
+    return result
+
+def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameters):
+    """A list of Snapshot objects, one for each row in an SSI index file.
+
+    Rows whose exposure duration is zero are skipped.
+
+    Parameters:
+        filespec (str | pathlib.Path | FCPath): The full path to the label of the index
+            file.
+        supplemental_filespec (str | pathlib.Path | FCPath, optional): The full path to
+            the label of a supplemental index file whose columns, row by row, augment
+            those of the index file.
+        full_fov (bool, optional): If True, each field of view covers the full image
+            rather than the cutout window.
+        **parameters (Any): Additional keyword arguments; they are accepted and ignored.
+
+    Returns:
+        list[Snapshot]: One observation per row of the index, each with subfields
+        `spice_to_frame`, `spice_frame_name`, `spice_frame_id` and `spice_kernels`
+        inserted.
+    """
+    SSI.initialize()    # Define everything the first time through
+
+    filespec = FCPath(filespec)
+
+    # Read the index file
+    COLUMNS = []        # Return all columns
+    table = pdstable.PdsTable(filespec, columns=COLUMNS)
+    row_dicts = table.dicts_by_row()
+
+    # Read the supplemental index file
+    if supplemental_filespec is not None:
+        supplemental_filespec = FCPath(supplemental_filespec)
+        table = pdstable.PdsTable(supplemental_filespec)
+        supplemental_row_dicts = table.dicts_by_row()
+
+#        # Sort supplemental rows to match index file
+#        specs = [os.path.splitext(row_dict['FILE_SPECIFICATION_NAME'])[0]
+#                 for row_dict in row_dicts]
+#        supplemental_specs = \
+#            [os.path.splitext(supplemental_row_dict['FILE_SPECIFICATION_NAME'])[0] \
+#             for supplemental_row_dict in supplemental_row_dicts]
+
+#        indices = np.argsort(specs)
+
+#        row_dicts_sorted = [None]*len(row_dicts)
+#        for i in range(len(row_dicts)):
+#            row_dicts_sorted[i] = row_dicts[indices[i]]
+
+#        supplemental_indices = np.argsort(supplemental_specs)
+#        supplemental_row_dicts_sorted = [None]*len(supplemental_row_dicts)
+#        for i in range(len(supplemental_row_dicts)):
+#            supplemental_row_dicts_sorted[i] = \
+#                supplemental_row_dicts[supplemental_indices[i]]
+
+        # Append supplemental columns to index file
+        for row_dict, supplemental_row_dict in zip(row_dicts, supplemental_row_dicts):
+            row_dict.update(supplemental_row_dict)
+
+    # Create a list of Snapshot objects
+    snapshots = []
+    for row_dict in row_dicts:
+        filepath = row_dict['VOLUME_ID'] + '/' + row_dict['FILE_SPECIFICATION_NAME']
+        basename = os.path.basename(filepath)
+
+        # Get image metadata; do not return observations with zero exposures
+        meta = Metadata(row_dict)
+
+        if meta.exposure == 0:
+            continue
+
+        # Define the field of view
+        FOV = meta.fov(full_fov=full_fov)
+
+        # Create a Snapshot
+        item = oops.obs.Snapshot(('v','u'), meta.tstart, meta.exposure,
+                                 fov = FOV,
+                                 path = 'GLL',
+                                 frame = 'GLL_SCAN_PLATFORM',
+                                 dict = row_dict,         # Add the index dict
+                                 instrument = 'SSI',
+                                 filter = meta.filter,
+                                 filespec = filepath,
+                                 basename = basename)
+
+        item.insert_subfield('spice_to_frame', oops.Matrix3.IDENTITY)
+        item.insert_subfield('spice_frame_name', 'GLL_SCAN_PLATFORM')
+        item.insert_subfield('spice_frame_id', -77001)
+        item.spice_kernels = Galileo.used_kernels(item.time, 'ssi')
+
+        snapshots.append(item)
+
+    return snapshots
+
+def initialize(planets=None, asof=None,
+               mst_pck=True, irregulars=True):
+    """Initialize key information about the SSI instrument.
+
+    Must be called first. After the first call, later calls to this function are ignored.
+
+    Parameters:
+        planets (list, optional): A list of planets to pass to
+            :meth:`~oops.Body.define_solar_system`. None or 0 means all.
+        asof (str, optional): Only use SPICE kernels that existed before this date; None
+            to ignore.
+        mst_pck (bool, optional): True to include MST PCKs, which update the rotation
+            models for some of the small moons.
+        irregulars (bool, optional): True to include the irregular satellites; False
+            otherwise.
+    """
+    SSI.initialize(planets=planets, asof=asof,
+                   mst_pck=mst_pck, irregulars=irregulars)
+
+
+class Metadata(object):
+    """The metadata of a Galileo SSI image, derived from its label.
+
+    Attributes:
+        nlines (int): Number of lines in the full image.
+        nsamples (int): Number of samples per line in the full image.
+        exposure (float): Exposure duration in seconds.
+        filter (str): Name of the filter.
+        tstart (float): Image start time in seconds TDB.
+        tstop (float): Image stop time in seconds TDB.
+        target (str): Target name.
+        mode (str): The telemetry format ID; 'NONE' if the label does not give one.
+        window (numpy.ndarray | None): The cutout window from the label as (line,
+            sample, lines, samples), or None if the image has no cutout window.
+        window_origin (numpy.ndarray): The (line, sample) origin of the cutout window,
+            counted from zero; defined only if `window` is not None.
+        window_shape (numpy.ndarray): The (lines, samples) shape of the cutout window;
+            defined only if `window` is not None.
+        window_uv_origin (numpy.ndarray): The (u, v) origin of the cutout window; defined
+            only if `window` is not None.
+        window_uv_shape (numpy.ndarray): The (u, v) shape of the cutout window; defined
+            only if `window` is not None.
+    """
+
+    def __init__(self, meta_dict):
+        """Use the label or index dict to assemble the image metadata.
+
+        Parameters:
+            meta_dict (dict): The PDS label or the index row as a dictionary. Key
+                'TELEMETRY_FORMAT_ID' is inserted with value 'NONE' if absent.
+        """
+
+        info = SSI.instrument_kernel['INS'][-77036]
+
+        # Image dimensions
+        self.nlines = info['MAX_LINE']
+        self.nsamples = info['MAX_SAMPLE']
+
+        # Exposure time
+        exposure_ms = meta_dict['EXPOSURE_DURATION']
+        self.exposure = exposure_ms/1000.
+
+        # Filters
+        self.filter = meta_dict['FILTER_NAME']
+
+        #TODO: determine whether IMAGE_TIME is the start time or the mid time..
+        if meta_dict['IMAGE_TIME'] == 'UNK':
+            self.tstart = self.tstop = sys.float_info.min
+        else:
+            self.tstart = julian.tdb_from_tai(
+                            julian.tai_from_iso(meta_dict['IMAGE_TIME']))
+            self.tstop = self.tstart + self.exposure
+
+        # Target
+        self.target = meta_dict['TARGET_NAME']
+
+        # Telemetry mode
+        if 'TELEMETRY_FORMAT_ID' not in meta_dict:
+            meta_dict['TELEMETRY_FORMAT_ID'] = 'NONE'
+        self.mode = meta_dict['TELEMETRY_FORMAT_ID']
+
+        # Window
+        self.window = None
+        if 'CUT_OUT_WINDOW' in meta_dict:
+            window = np.array(meta_dict['CUT_OUT_WINDOW'])
+
+            # check for [-1,-1,-1,-1].  This is the value written in the
+            # supplemental index when there is no CUT_OUT_WINDOW in the label.
+            if window.tolist() != [-1,-1,-1,-1]:
+                self.window = window
+                self.window_origin = self.window[0:2]-1
+                self.window_shape = self.window[2:]
+                self.window_uv_origin = np.flip(self.window_origin)
+                self.window_uv_shape = np.flip(self.window_shape)
+
+    def trim(self, data, full_fov=False):
+        """Trim image to label window.
+
+        Parameters:
+            data (numpy.ndarray): Numpy array containing the image data.
+            full_fov (bool, optional): If True, the image is not trimmed.
+
+        Returns:
+            numpy.ndarray: Data array trimmed to the data window.
+        """
+        if full_fov:
+            return data
+
+        if self.window is None:
+            return data
+
+        origin = self.window_origin
+        shape = self.window_shape
+
+        return data[origin[0]:origin[0]+shape[0],
+                    origin[1]:origin[1]+shape[1]]
+
+    def fov(self, full_fov=False):
+        """Construct the field of view based on the metadata.
+
+        Parameters:
+            full_fov (bool, optional): If False, the FOV is cropped to the dimensions
+                given by the cutout window.
+
+        Returns:
+            FOV: The field of view of this image.
+        """
+
+        # Get FOV
+        fov = SSI.fovs[self.mode]
+
+        # Apply cutout window if full fov not requested
+        if not full_fov and self.window is not None:
+            uv_origin = self.window_uv_origin
+            uv_shape = self.window_uv_shape
+            fov = oops.fov.SliceFOV(fov, uv_origin, uv_shape)
+
+        return fov
+
+
+class SSI(object):
+    """An instance-free class to hold Galileo SSI instrument parameters.
+
+    Attributes:
+        instrument_kernel (dict | None): The SSI instrument kernel as a dictionary; None
+            until :meth:`initialize` has been called.
+        fovs (dict[str, FOV]): The field of view for each telemetry format ID.
+        initialized (bool): True after :meth:`initialize` has been called.
+    """
+
+    instrument_kernel = None
+    fovs = {}
+    initialized = False
+
+    @staticmethod
+    def initialize(planets=None, asof=None,
+                   mst_pck=True, irregulars=True):
+        """Initialize key information about the SSI instrument.
+
+        Fills in key information about the camera.  Must be called first. After the first
+        call, later calls to this function are ignored.
+
+        Parameters:
+            planets (list, optional): A list of planets to pass to
+                :meth:`~oops.Body.define_solar_system`. None or 0 means all.
+            asof (str, optional): Only use SPICE kernels that existed before this date;
+                None to ignore.
+            mst_pck (bool, optional): True to include MST PCKs, which update the rotation
+                models for some of the small moons.
+            irregulars (bool, optional): True to include the irregular satellites; False
+                otherwise.
+        """
+
+        # Quick exit after first call
+        if SSI.initialized:
+            return
+
+        # Initialize Galileo
+        Galileo.initialize(planets=planets, asof=asof,
+                           mst_pck=mst_pck, irregulars=irregulars)
+        Galileo.load_instruments(asof=asof)
+
+        # Load the instrument kernel
+        SSI.instrument_kernel = Galileo.spice_instrument_kernel('SSI')[0]
+
+        # Construct the FOVs
+        info = SSI.instrument_kernel['INS'][-77036]
+
+        cf_var = 'INS-77036_DISTORTION_COEFF'
+        fo_var = 'INS-77036_FOCAL_LENGTH'
+        px_var = 'INS-77036_PIXEL_SIZE'
+        cxy_var = 'INS-77036_FOV_CENTER'
+
+        cf = cspyce.gdpool(cf_var, 0)[0]
+        fo = cspyce.gdpool(fo_var, 0)[0]
+        px = cspyce.gdpool(px_var, 0)[0]
+        cxy = cspyce.gdpool(cxy_var, 0)
+
+        scale = px/fo
+        distortion_coeff = [1, 0, cf]
+
+        # Construct FOVs
+        assert info['MAX_SAMPLE'] == 800
+        assert info['MAX_LINE'] == 800
+
+        fov_full = oops.fov.BarrelFOV(scale,
+                                      (info['MAX_SAMPLE'], info['MAX_LINE']),
+                                      coefft_uv_from_xy=distortion_coeff,
+                                      uv_los=(cxy[0], cxy[1]))
+        fov_summed = oops.fov.SubsampledFOV(fov_full, 2)
+#        fov_his =
+#        fov_hma =
+#        fov_hca = oops.fov.GapFOV(oops.fov.SubsampledFOV(fov_full, (1,4)),
+#                                  (1,0.25))
+#               ... maybe need SparseFOV or SkipFOV class
+#        fov_him =
+
+        # Construct FOV dictionary
+        SSI.fovs['FULL'] = fov_full
+
+        # Phase-2 Telemetry Formats
+        SSI.fovs['HIS'] = fov_summed
+        SSI.fovs['HMA'] = fov_full
+        SSI.fovs['HCA'] = fov_full
+        SSI.fovs['HIM'] = fov_full
+        SSI.fovs['IM8'] = fov_full
+        SSI.fovs['AI8'] = fov_summed
+        SSI.fovs['IM4'] = fov_full
+
+        # Phase-1 Telemetry Formats
+        SSI.fovs['XCM'] = fov_full
+#        SSI.fovs['XED'] = fov_full
+        SSI.fovs['HCJ'] = fov_full      # Inference based on inspection
+        SSI.fovs['HCM'] = fov_full      # Inference based on inspection
+                                        # hmmm, actually C0248807700R.img is 800x200
+                                        # maybe this is just a cropped full fov
+        SSI.fovs['NONE'] = fov_full     # Inference based on inspection
+
+        # Construct the SpiceFrame
+        # SSI images are spaced as closely as 1 unit in the file name, which
+        # corresponds to 80 clock ticks.  Therefore, we use a tolerance of +/-40
+        _ = oops.frame.SpiceType1Frame("GLL_SCAN_PLATFORM", 40)
+
+        # Load kernels
+        Galileo.load_kernels()
+
+        SSI.initialized = True
+        return
+
+    @staticmethod
+    def reset():
+        """Reset the internal Galileo SSI parameters.
+
+        Can be useful for debugging.
+        """
+
+        SSI.instrument_kernel = None
+        SSI.fovs = {}
+        SSI.initialized = False
+
+        Galileo.reset()
+
+##########################################################################################

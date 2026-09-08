@@ -1,0 +1,281 @@
+##########################################################################################
+# oops/frame/ringframe.py
+##########################################################################################
+
+from polymath       import Matrix3, Qube, Scalar, Vector3
+from oops._cache    import _Cache
+from oops.frame     import Frame
+from oops.transform import Transform
+
+
+class RingFrame(Frame):
+    """A non-rotating Frame centered on the *z*-axis of another frame.
+
+    The *x*-axis is fixed along the ascending node of the equator within the reference
+    frame.
+    """
+
+    _WAYFRAMES = {}
+
+    def __init__(self, frame, epoch=None, *, aries=False, retrograde=False, frame_id=None,
+                 cache_size=100):
+        """Constructor for a RingFrame.
+
+        Parameters:
+            frame (Frame | str): The Frame or the ID of the Frame describing the central
+                planet of the ring plane relative to J2000.
+            epoch (ScalarLike, optional): The time TDB at which this Frame is to be
+                evaluated. If this is specified, then the Frame will be precisely
+                inertial, based on the orientation of the pole at the specified epoch. If
+                it is unspecified, then the Frame could wobble and/or rotate slowly due to
+                precession of the planet's pole.
+            aries (bool, optional): True to use the First Point of Aries as the longitude
+                reference; False to use the ascending node of the ring plane. Note that
+                the former might be preferred in a situation where the ring plane is
+                uncertain, wobbles, or is nearly parallel to the celestial equator. In
+                these situations, using Aries as a reference will reduce the uncertainties
+                related to the pole orientation.
+            retrograde (bool, optional): True to flip the sign of the *z*-axis. Necessary
+                for retrograde systems like Uranus.
+            frame_id (str, optional): The ID under which to register this Frame; None to
+                leave this Frame unregistered. As a special case, use "+" to automatically
+                generate a Frame ID by appending "_DESPUN" (if `epoch` is None) or
+                "_INERTIAL" (if `epoch` is specified) to the ID of `frame` (if it has an
+                ID).
+            cache_size (int, optional): The number of transforms to cache. This can be
+                useful because it avoids unnecessary SPICE calls when the Frame is being
+                used repeatedly at a finite set of times.
+
+        Raises:
+            KeyError: If `frame` is an ID string that has not been registered.
+            ValueError: If `frame` and `epoch` cannot be broadcasted to the same shape.
+        """
+
+        self._planet_frame = Frame.as_frame(frame)
+        self._epoch = (None if epoch is None
+                       else Scalar.as_scalar(epoch).wod.as_readonly())
+        self._retrograde = bool(retrograde)
+        self._aries = bool(aries)
+        self._cache_size = cache_size
+
+        self._reference = Frame.J2000
+        self._is_inertial = self._epoch is not None
+        self._USE_QUICKFRAMES = not self._is_inertial
+        self._origin = self._planet_frame._origin if self._epoch is None else None
+        self._shape = Qube.broadcasted_shape(self._planet_frame, self._epoch)
+
+        if frame_id == '+' and self._planet_frame._frame_id:
+            if self._is_inertial:
+                frame_id = self._planet_frame._frame_id + '_INERTIAL'
+            else:
+                frame_id = self._planet_frame._frame_id + '_DESPUN'
+
+        self._register(frame_id)
+        self.refresh()
+
+    def _refresh(self):
+        """Relink the planet Frame to J2000 and empty the cache.
+
+        For a fixed epoch, the inertial Transform and its node are derived here.
+        """
+        self._planet_wrt_j2000 = self._planet_frame.wrt(Frame.J2000)
+        self._cache = _Cache(self._cache_size)
+        self._transform = None
+        self._node = None
+
+        # For a fixed epoch, derive the inertial transform now
+        if self._is_inertial:
+            transform = self.transform_at_time(self._epoch)
+            self._transform = transform
+
+            z_axis_wrt_j2000 = transform.unrotate(Vector3.ZAXIS)
+            (x, y, _) = z_axis_wrt_j2000.to_scalars()
+            self._node = RingFrame._node_from_z_axis(x, y)
+
+    @staticmethod
+    def _node_from_z_axis(x, y):
+        """The longitude of the ascending node, from the J2000 components of the *z*-axis.
+
+        Parameters:
+            x (ScalarLike): The *x*-component of this Frame's *z*-axis in J2000
+                coordinates.
+            y (ScalarLike): The *y*-component of this Frame's *z*-axis in J2000
+                coordinates.
+
+        Returns:
+            Scalar: The node longitude in radians, of the same shape as the inputs. It is
+            zero wherever the *z*-axis is aligned with that of J2000, because the node is
+            undefined there and the arctangent would otherwise place it a quarter turn
+            away.
+        """
+
+        node = (y.arctan2(x) + Scalar.HALFPI) % Scalar.TWOPI
+
+        return node.mask_where((x == 0.) & (y == 0.), replace=0., remask=False)
+
+    def _wayframe_key(self):
+        """The key that identifies this Frame's definition in the pool of wayframes.
+
+        Returns:
+            tuple[Frame, Scalar | None, bool, bool]: The planet Frame, the epoch, the
+            retrograde flag, and the aries flag.
+        """
+        return (self._planet_frame, self._epoch, self._retrograde, self._aries)
+
+    def _show(self, level, indent=0):
+        """The expanded description of this Frame used by :meth:`~oops.Frame.show`.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame.
+        """
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        parts = [f'{name}(frame = {self._planet_frame.show(level-1, skip+8)}']
+        if self._epoch is not None:
+            parts.append(f'{blanks}epoch = {self._epoch}')
+        if self._retrograde:
+            parts.append(f'{blanks}retrograde = {self._retrograde}')
+        if self._aries:
+            parts.append(f'{blanks}aries = {self._aries}')
+        return ', '.join(parts) + ')'
+
+    ######################################################################################
+    # Serialization support
+    ######################################################################################
+
+    def __getstate__(self):
+        self.refresh()
+        return (self._planet_frame, self._epoch, self._retrograde,  self._aries,
+                self.stripped_id, self._cache_size)
+
+    def __setstate__(self, state):
+        (frame, epoch, retrograde, aries, frame_id, cache_size) = state
+        self.__init__(frame, epoch, retrograde=retrograde, aries=aries,
+                      frame_id=frame_id, cache_size=cache_size)
+        self.freeze()
+
+    ######################################################################################
+    # Frame API
+    ######################################################################################
+
+    def transform_at_time(self, time, *, quick=None):
+        """Transform that rotates coordinates from the reference to this frame.
+
+        If the frame is rotating, then the coordinates being transformed must be given
+        relative to the center of rotation.
+
+        Parameters:
+            time (ScalarLike): The time in seconds TDB.
+            quick (dict | bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
+
+        Returns:
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
+
+        Raises:
+            ValueError: If the shapes of `time` and this object cannot be broadcasted.
+
+        Notes:
+            If an `epoch` was defined for this Frame, then the returned Transform is
+            independent of time. In this case, it always has the shape of this Frame,
+            regardless of the shape of `time`.
+        """
+
+        # For a fixed epoch, return the fixed transform
+        if self._transform is not None:
+            return self._transform
+
+        time = Scalar.as_scalar(time)
+
+        # Check cache first if time is a Scalar
+        if time.shape == ():
+            transform = self._cache[time.vals]
+            if transform:
+                return transform
+
+        # Otherwise, calculate it for the current time
+        transform = self._planet_wrt_j2000.transform_at_time(time, quick=quick)
+
+        # The bottom row of the matrix is the Z-axis of the ring frame in J2000
+        z_axis = transform.matrix.row_vector(2)
+
+        # For a retrograde ring, reverse Z
+        if self._retrograde:
+            z_axis = -z_axis
+
+        x_axis = Vector3.ZAXIS.cross(z_axis)
+        matrix = Matrix3.twovec(z_axis, 2, x_axis, 0)
+
+        # This is the RingFrame matrix. It rotates from J2000 to the frame where the pole
+        # at epoch is along the Z-axis and the ascending node relative to the J2000
+        # equator is along the X-axis.
+
+        if self._aries:
+            (x,y,z) = x_axis.to_scalars()
+            node_lon = y.arctan2(x)
+            matrix = Matrix3.z_rotation(node_lon) * matrix
+
+        # Create transform
+        transform = Transform(matrix, Vector3.ZERO, self._wayframe, self._reference,
+                              origin=None)
+
+        # Cache the transform if necessary
+        if time.shape == ():
+            self._cache[time.vals] = transform
+
+        return transform
+
+    def node_at_time(self, time, *, quick=None):
+        """The angle from the reference Frame's *x*-axis to this Frame's ascending node.
+
+        The angle is measured within the *x*-*y* plane of the reference frame, to the
+        ascending node of this Frame's *x*-*y* plane.
+
+        Values always fall between 0 and 2*pi.
+
+        Parameters:
+            time (ScalarLike): The time in seconds TDB.
+            quick (dict | bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
+
+        Returns:
+            Scalar: At the specified times, the angle from the reference Frame's *x*-axis,
+            along its *x*-*y* plane, to the ascending node of this Frame's *x*-*y* plane.
+
+        Raises:
+            ValueError: If the shapes of `time` and this object cannot be broadcasted.
+
+        Notes:
+            If an `epoch` was defined for this Frame, then the returned node is
+            independent of time. In this case, it has the shape of this Frame, regardless
+            of the shape of `time`.
+        """
+
+        if self._is_inertial:
+            return self._node
+
+        transform = self.transform_at_time(time, quick=quick)
+        z_axis_wrt_j2000 = transform.unrotate(Vector3.ZAXIS)
+        (x, y, _) = z_axis_wrt_j2000.to_scalars()
+
+        return RingFrame._node_from_z_axis(x, y)
+
+##########################################################################################
+
+Frame._FRAME_SUBCLASSES.append(RingFrame)
+
+##########################################################################################

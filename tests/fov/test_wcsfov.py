@@ -1,10 +1,10 @@
-################################################################################
+##########################################################################################
 # tests/fov/test_wcsfov.py
-################################################################################
+##########################################################################################
 
 import numpy as np
+import pytest
 import time
-import unittest
 
 from astropy.wcs import WCS
 
@@ -88,10 +88,7 @@ header2 = {
 }
 
 
-class Test_WCSFOV(unittest.TestCase):
-
-  def runTest(self):
-
+def test_wcsfov():
     np.random.seed(9400)
 
     PolynomialFOV.DEBUG = False
@@ -101,10 +98,10 @@ class Test_WCSFOV(unittest.TestCase):
         fov = WCSFOV(header, 'y', fast=False)
         fov_fast = WCSFOV(header, 'y', fast=True)
 
-        self.assertTrue(fov.polyfov.max_inversion_error(), 1.e-12)
-        self.assertTrue(fov_fast.polyfov.max_inversion_error(), 0.15)
+        assert fov.polyfov.max_inversion_error() < 1.e-12
+        assert fov_fast.polyfov.max_inversion_error() < 0.15
 
-        ############################################
+        ##################################################################################
         # Comparison to astropy.wcs.WCS
 
         uv = Pair.combos(np.arange(4,2048,8),np.arange(4,2048,8))
@@ -120,17 +117,17 @@ class Test_WCSFOV(unittest.TestCase):
         fov_ra  = ra_dec.vals[...,0] * DPR
         fov_dec = ra_dec.vals[...,1] * DPR
 
-        self.assertTrue(abs(fov_ra  - wcs_ra ).max() < (3.e-10 if h == 0 else 3.e-5))
-        self.assertTrue(abs(fov_dec - wcs_dec).max() < (5.e-08 if h == 0 else 3.e-5))
+        assert abs(fov_ra  - wcs_ra ).max() < (3.e-10 if h == 0 else 3.e-5)
+        assert abs(fov_dec - wcs_dec).max() < (5.e-08 if h == 0 else 3.e-5)
 
         los_fov = fov.los_from_uv(uv)
         los_j2000 = fov.cmatrix.transform.matrix.unrotate(los_fov)
         (ra, dec, _) = los_j2000.to_ra_dec_length()
 
-        self.assertTrue(abs(ra.vals  * DPR - wcs_ra ).max() < (4.e-14 if h == 0 else 3.e-5))
-        self.assertTrue(abs(dec.vals * DPR - wcs_dec).max() < (4.e-14 if h == 0 else 3.e-5))
+        assert abs(ra.vals  * DPR - wcs_ra ).max() < (4.e-14 if h == 0 else 3.e-5)
+        assert abs(dec.vals * DPR - wcs_dec).max() < (4.e-14 if h == 0 else 3.e-5)
 
-        ############################################
+        ##################################################################################
         #### uv -> xy -> uv, with derivs
 
         uv = Pair.combos(np.arange(4,2048,8),np.arange(4,2048,8))
@@ -158,15 +155,15 @@ class Test_WCSFOV(unittest.TestCase):
             xy = fov.xy_from_uv(uv, derivs=True)
             uv_test = fov.uv_from_xy(xy, derivs=False)
 
-        self.assertTrue(abs(uv - uv_test).max() < 1.e-12)
+        assert abs(uv - uv_test).max() < 1.e-12
 
         EPS = 1.e-6
-        xy0 = fov.xy_from_uv(uv + (-EPS,0), False)
-        xy1 = fov.xy_from_uv(uv + ( EPS,0), False)
+        xy0 = fov.xy_from_uv(uv + (-EPS,0), derivs=False)
+        xy1 = fov.xy_from_uv(uv + ( EPS,0), derivs=False)
         dxy_du = (xy1 - xy0) / (2. * EPS)
 
-        xy0 = fov.xy_from_uv(uv + (0,-EPS), False)
-        xy1 = fov.xy_from_uv(uv + (0, EPS), False)
+        xy0 = fov.xy_from_uv(uv + (0,-EPS), derivs=False)
+        xy1 = fov.xy_from_uv(uv + (0, EPS), derivs=False)
         dxy_dv = (xy1 - xy0) / (2. * EPS)
 
         dxy_dt = dxy_du * uv.d_dt.vals[...,0] + dxy_dv * uv.d_dt.vals[...,1]
@@ -174,11 +171,11 @@ class Test_WCSFOV(unittest.TestCase):
         dxy_ds = dxy_du * uv.d_drs.vals[...,0,1] + dxy_dv * uv.d_drs.vals[...,1,1]
 
         DEL = 1.e-6
-        self.assertTrue(abs(xy.d_dt.vals - dxy_dt.vals).max() <= DEL)
-        self.assertTrue(abs(xy.d_drs.vals[...,0] - dxy_dr.vals).max() <= DEL)
-        self.assertTrue(abs(xy.d_drs.vals[...,1] - dxy_ds.vals).max() <= DEL)
+        assert abs(xy.d_dt.vals - dxy_dt.vals).max() <= DEL
+        assert abs(xy.d_drs.vals[...,0] - dxy_dr.vals).max() <= DEL
+        assert abs(xy.d_drs.vals[...,1] - dxy_ds.vals).max() <= DEL
 
-        ############################################
+        ##################################################################################
         #### xy -> uv -> xy, with derivs
 
         xy = fov.xy_from_uv(uv, derivs=False)
@@ -189,15 +186,15 @@ class Test_WCSFOV(unittest.TestCase):
         uv = fov.uv_from_xy(xy, derivs=True)
 
         xy_test = fov.xy_from_uv(uv)
-        self.assertTrue(abs(xy - xy_test).max() < 1.e-14)
+        assert abs(xy - xy_test).max() < 1.e-14
 
         EPS = 1.e-6
-        xy0 = fov.xy_from_uv(uv + (-EPS,0), False)
-        xy1 = fov.xy_from_uv(uv + ( EPS,0), False)
+        xy0 = fov.xy_from_uv(uv + (-EPS,0), derivs=False)
+        xy1 = fov.xy_from_uv(uv + ( EPS,0), derivs=False)
         dxy_du = (xy1 - xy0) / (2. * EPS)
 
-        xy0 = fov.xy_from_uv(uv + (0,-EPS), False)
-        xy1 = fov.xy_from_uv(uv + (0, EPS), False)
+        xy0 = fov.xy_from_uv(uv + (0,-EPS), derivs=False)
+        xy1 = fov.xy_from_uv(uv + (0, EPS), derivs=False)
         dxy_dv = (xy1 - xy0) / (2. * EPS)
 
         dxy_dt = dxy_du * uv.d_dt.vals[...,0]    + dxy_dv * uv.d_dt.vals[...,1]
@@ -205,11 +202,11 @@ class Test_WCSFOV(unittest.TestCase):
         dxy_ds = dxy_du * uv.d_drs.vals[...,0,1] + dxy_dv * uv.d_drs.vals[...,1,1]
 
         DEL = 2.e-6
-        self.assertTrue(abs(xy.d_dt.vals - dxy_dt.vals).max() <= DEL)
-        self.assertTrue(abs(xy.d_drs.vals[...,0] - dxy_dr.vals).max() <= DEL)
-        self.assertTrue(abs(xy.d_drs.vals[...,1] - dxy_ds.vals).max() <= DEL)
+        assert abs(xy.d_dt.vals - dxy_dt.vals).max() <= DEL
+        assert abs(xy.d_drs.vals[...,0] - dxy_dr.vals).max() <= DEL
+        assert abs(xy.d_drs.vals[...,1] - dxy_ds.vals).max() <= DEL
 
-        ############################################
+        ##################################################################################
         # Same tests, fast=True
 
         #### uv -> xy -> uv, with derivs
@@ -222,15 +219,15 @@ class Test_WCSFOV(unittest.TestCase):
 
         xy = fov_fast.xy_from_uv(uv, derivs=True)
         uv_test = fov_fast.uv_from_xy(xy, derivs=False)
-        self.assertTrue(abs(uv - uv_test).max() < 0.15)
+        assert abs(uv - uv_test).max() < 0.15
 
         EPS = 1.e-6
-        xy0 = fov_fast.xy_from_uv(uv + (-EPS,0), False)
-        xy1 = fov_fast.xy_from_uv(uv + ( EPS,0), False)
+        xy0 = fov_fast.xy_from_uv(uv + (-EPS,0), derivs=False)
+        xy1 = fov_fast.xy_from_uv(uv + ( EPS,0), derivs=False)
         dxy_du = (xy1 - xy0) / (2. * EPS)
 
-        xy0 = fov_fast.xy_from_uv(uv + (0,-EPS), False)
-        xy1 = fov_fast.xy_from_uv(uv + (0, EPS), False)
+        xy0 = fov_fast.xy_from_uv(uv + (0,-EPS), derivs=False)
+        xy1 = fov_fast.xy_from_uv(uv + (0, EPS), derivs=False)
         dxy_dv = (xy1 - xy0) / (2. * EPS)
 
         dxy_dt = dxy_du * uv.d_dt.vals[...,0] + dxy_dv * uv.d_dt.vals[...,1]
@@ -238,11 +235,11 @@ class Test_WCSFOV(unittest.TestCase):
         dxy_ds = dxy_du * uv.d_drs.vals[...,0,1] + dxy_dv * uv.d_drs.vals[...,1,1]
 
         DEL = 1.e-6
-        self.assertTrue(abs(xy.d_dt.vals - dxy_dt.vals).max() <= DEL)
-        self.assertTrue(abs(xy.d_drs.vals[...,0] - dxy_dr.vals).max() <= DEL)
-        self.assertTrue(abs(xy.d_drs.vals[...,1] - dxy_ds.vals).max() <= DEL)
+        assert abs(xy.d_dt.vals - dxy_dt.vals).max() <= DEL
+        assert abs(xy.d_drs.vals[...,0] - dxy_dr.vals).max() <= DEL
+        assert abs(xy.d_drs.vals[...,1] - dxy_ds.vals).max() <= DEL
 
-        ############################################
+        ##################################################################################
         #### xy -> uv -> xy, with derivs
 
         xy = fov_fast.xy_from_uv(uv, derivs=False)
@@ -253,15 +250,15 @@ class Test_WCSFOV(unittest.TestCase):
         uv = fov_fast.uv_from_xy(xy, derivs=True)
 
         xy_test = fov_fast.xy_from_uv(uv)
-        self.assertTrue(abs(xy - xy_test).max() < 0.15)
+        assert abs(xy - xy_test).max() < 0.15
 
         EPS = 1.e-6
-        xy0 = fov_fast.xy_from_uv(uv + (-EPS,0), False)
-        xy1 = fov_fast.xy_from_uv(uv + ( EPS,0), False)
+        xy0 = fov_fast.xy_from_uv(uv + (-EPS,0), derivs=False)
+        xy1 = fov_fast.xy_from_uv(uv + ( EPS,0), derivs=False)
         dxy_du = (xy1 - xy0) / (2. * EPS)
 
-        xy0 = fov_fast.xy_from_uv(uv + (0,-EPS), False)
-        xy1 = fov_fast.xy_from_uv(uv + (0, EPS), False)
+        xy0 = fov_fast.xy_from_uv(uv + (0,-EPS), derivs=False)
+        xy1 = fov_fast.xy_from_uv(uv + (0, EPS), derivs=False)
         dxy_dv = (xy1 - xy0) / (2. * EPS)
 
         dxy_dt = dxy_du * uv.d_dt.vals[...,0]    + dxy_dv * uv.d_dt.vals[...,1]
@@ -269,11 +266,11 @@ class Test_WCSFOV(unittest.TestCase):
         dxy_ds = dxy_du * uv.d_drs.vals[...,0,1] + dxy_dv * uv.d_drs.vals[...,1,1]
 
         DEL = 2.e-4
-        self.assertTrue(abs(xy.d_dt.vals - dxy_dt.vals).max() <= DEL)
-        self.assertTrue(abs(xy.d_drs.vals[...,0] - dxy_dr.vals).max() <= DEL)
-        self.assertTrue(abs(xy.d_drs.vals[...,1] - dxy_ds.vals).max() <= DEL)
+        assert abs(xy.d_dt.vals - dxy_dt.vals).max() <= DEL
+        assert abs(xy.d_drs.vals[...,0] - dxy_dr.vals).max() <= DEL
+        assert abs(xy.d_drs.vals[...,1] - dxy_ds.vals).max() <= DEL
 
-        ############################################
+        ##################################################################################
         # Half-resolution test, no derivs
 
         if h == 0 and SpeedTest:
@@ -294,7 +291,78 @@ class Test_WCSFOV(unittest.TestCase):
             t1 = time.time()
             LOGGING.print('slow time = %.2f ms' % ((t1-t0)/iters*1000.))
 
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
-################################################################################
+##########################################################################################
+# Header validation, the reference axis, and the derivatives of the WCS coordinates
+##########################################################################################
+
+def test_the_reference_axis_must_be_x_or_y() -> None:
+    """The clock angle is measured from one image axis or the other."""
+
+    with pytest.raises(ValueError, match="invalid value of ref_axis: 'z'"):
+        WCSFOV(header1, ref_axis='z')
+
+
+def test_the_coordinate_types_must_be_a_tangent_projection() -> None:
+    """Only the gnomonic (TAN) projection of RA and dec is supported."""
+
+    header = dict(header2)
+    header['CTYPE1'] = 'GLON-AIT'
+    header['CTYPE2'] = 'GLAT-AIT'
+
+    with pytest.raises(ValueError, match='only WCS CTYPEs'):
+        WCSFOV(header)
+
+
+def test_the_coordinate_units_must_be_degrees() -> None:
+    """The FITS values are read as degrees, so no other unit is supported."""
+
+    header = dict(header2)
+    header['CUNIT1'] = 'rad'
+    header['CUNIT2'] = 'rad'
+
+    with pytest.raises(ValueError, match='only CUNIT = "deg" is supported'):
+        WCSFOV(header)
+
+
+def test_the_clock_angle_is_measured_from_the_reference_axis() -> None:
+    """Each reference axis has its own formula in terms of the CD matrix."""
+
+    from_x = WCSFOV(header1, ref_axis='x')
+    from_y = WCSFOV(header1, ref_axis='y')
+    cd = from_x.cd.vals
+
+    assert from_x.clock == pytest.approx(np.arctan2(-cd[0, 1], cd[1, 1]), abs=1.e-12)
+    assert from_y.clock == pytest.approx(np.arctan2(-cd[1, 0], -cd[0, 0]), abs=1.e-12)
+    assert from_x.clock != from_y.clock
+
+
+def test_a_header_without_inverse_coefficients_still_inverts() -> None:
+    """With no AP/BP coefficients the inverse is solved rather than evaluated."""
+
+    header = {key: value for (key, value) in header1.items()
+              if not key.startswith(('AP_', 'BP_'))}
+
+    fov = WCSFOV(header)
+    uv = Pair([(100.5, 200.5), (1500.25, 1000.75)])
+
+    assert fov.polyfov.coefft_uv_from_xy is None
+    assert fov.uv_from_xy(fov.xy_from_uv(uv)).vals \
+           == pytest.approx(uv.vals, abs=1.e-6)
+
+
+def test_the_wcs_coordinates_carry_the_derivatives_of_the_pixel() -> None:
+    """A derivative of (u,v) propagates into the returned (RA,dec)."""
+
+    fov = WCSFOV(header2)
+    uv = Pair([(100.5, 200.5), (1500.25, 1000.75)])
+    uv.insert_deriv('uv', Pair.IDENTITY)
+
+    radec = fov.wcs_from_uv(uv, derivs=True)
+
+    assert 'uv' in radec.derivs
+
+    # The right ascension is divided by cos(dec), and so is its derivative
+    without_derivs = fov.wcs_from_uv(uv.wod)
+    assert radec.vals == pytest.approx(without_derivs.vals, abs=1.e-12)
+
+##########################################################################################

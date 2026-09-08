@@ -25,6 +25,35 @@
 
 This package is under development. Use with extreme caution.
 
+# Repository Layout
+
+- `src/oops`: The `oops` library.
+- `src/spicedb`: The `spicedb` library.
+- `programs/gold_master`: The gold master backplane test framework, imported as
+  `programs.gold_master`. It is a runnable tool rather than part of the `oops` API, so
+  it lives outside `src`.
+- `tests`: The unit tests, mirroring `src/oops`, plus the host tests under
+  `tests/hosts` and the `spicedb` tests under `tests/spicedb`.
+- `scripts`: `setup-venv.sh`, `run-all-checks.sh`, and the automated test script CI
+  runs.
+
+# Development Setup
+
+The library packages live under `src`, so they are importable only after an editable
+install (or with `src` on `PYTHONPATH`). To create the virtual environment the check
+script expects and install the package with its development extras:
+
+```sh
+./scripts/setup-venv.sh
+source venv/bin/activate
+```
+
+To run the checks:
+
+```sh
+./scripts/run-all-checks.sh
+```
+
 # Environment Variables
 
 - `OOPS_RESOURCES`: The top-level directory containing all files needed by OOPS. Unless
@@ -52,23 +81,49 @@ This package is under development. Use with extreme caution.
 
 # Running Tests
 
+The tests use pytest.
+
 - To run the main oops unit tests:
 
 ```sh
-python -m unittest tests/unittester.py
+pytest tests --ignore=tests/hosts --ignore=tests/spicedb
 ```
 
-- To run the host tests including golden master tests:
+- To run the host tests, which are the gold master tests:
 
 ```sh
-python -m unittest tests/hosts/unittester.py
+pytest tests/hosts
 ```
 
-- To run the main oops unit tests and the host tests:
+- To run the spicedb tests:
 
 ```sh
-python -m unittest tests/unittester_with_hosts.py
+pytest tests/spicedb
 ```
+
+- To run everything:
+
+```sh
+pytest tests
+```
+
+- To run the full set of quality gates (ruff, flake8, mypy, stubtest, pyroma,
+  bandit, vulture, the three test suites, and the documentation build):
+
+```sh
+./scripts/run-all-checks.sh
+```
+
+- To build the documentation on its own, both the public copy in `docs/_build/html`
+  and the private-members copy the Developer's Guide relies on, in
+  `docs/_build/private/html`:
+
+```sh
+./scripts/run-all-checks.sh --sphinx
+```
+
+  The documentation holds a User's Guide and a Developer's Guide alongside the API
+  reference; open `docs/_build/html/index.html` after the build.
 
 - To run the gold master tests for one instrument with the ability to specify command
   line options:
@@ -78,3 +133,35 @@ export PYTHONPATH=.
 python tests/hosts/cassini/iss/gold_master.py --help
 python tests/hosts/galileo/ssi/gold_master.py --help
 ```
+
+- To compare against a set of gold master files somewhere other than the default, use
+  `--gold-master` on either the instrument command or pytest. It overrides
+  `$OOPS_GOLD_MASTER_PATH` and `$OOPS_RESOURCES` for that run only:
+
+```sh
+pytest tests/hosts --gold-master=/path/to/masters
+PYTHONPATH=. python tests/hosts/cassini/iss/gold_master.py --gold-master=/path/to/masters
+```
+
+  The directory must have the standard layout, in which the files for one observation
+  are found in `<path>/<mission>.<instrument>/<basename>`, such as
+  `<path>/cassini.iss/W1573721822_1`. The directory is named for the mission and the
+  instrument alone, not for the module's place in any import tree, so the files stay put
+  when the module moves. As with the environment variables, the path may name a cloud
+  resource such as `gs://rms-oops-resources/gold_master`.
+
+- Generated backplanes are written to `$OOPS_BACKPLANE_OUTPUT_PATH` (or `--output`) under
+  that same `<mission>.<instrument>/<basename>` layout, so an output directory can be
+  handed straight back to `--gold-master`. To build a complete set of masters somewhere
+  else, adopt into it: `--adopt` writes the full-resolution arrays that a comparison
+  expects, along with the `summary.py` holding the backplanes whose value is constant.
+
+```sh
+export PYTHONPATH=.
+python tests/hosts/cassini/iss/gold_master.py --adopt --gold-master=/path/to/new
+python tests/hosts/cassini/iss/gold_master.py --gold-master=/path/to/new
+pytest tests/hosts/cassini/iss --gold-master=/path/to/new
+```
+
+  Naming the directory with `--gold-master` is what keeps `--adopt` away from the real
+  masters, which it would otherwise overwrite in place.

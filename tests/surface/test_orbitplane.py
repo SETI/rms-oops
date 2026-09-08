@@ -1,263 +1,550 @@
-################################################################################
+##########################################################################################
 # tests/surface/test_orbitplane.py
-################################################################################
+##########################################################################################
+
+import pickle
+from typing import cast
 
 import numpy as np
-import unittest
+import pytest
 
 from polymath                import Scalar, Vector3
 from oops.constants          import PI, HALFPI, TWOPI, RPD
 from oops.event              import Event
+from oops.frame              import Frame, SpinFrame
+from oops.path               import Path
 from oops.surface.orbitplane import OrbitPlane
 
 
-class Test_OrbitPlane(unittest.TestCase):
+def test_orbitplane():
+    # elements = (a, lon, n)
 
-    def runTest(self):
+    # Circular orbit, no derivatives, forward
+    elements = (1, 0, 1)
+    epoch = 0
+    orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000', path_id='TEST')
 
-        # elements = (a, lon, n)
+    pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
+    (r,l,z) = orbit.coords_from_vector3(pos, axes=3, derivs=False)
 
-        # Circular orbit, no derivatives, forward
-        elements = (1, 0, 1)
-        epoch = 0
-        orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000', 'TEST')
+    r_true = Scalar([1,2,1,1])
+    l_true = Scalar([0, 0, PI, HALFPI])
+    z_true = Scalar([0,0,0,0.1])
 
-        pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-        (r,l,z) = orbit.coords_from_vector3(pos, None, axes=3, derivs=False)
+    assert abs(r - r_true).max() < 1.e-12
+    assert abs(l - l_true).max() < 1.e-12
+    assert abs(z - z_true).max() < 1.e-12
 
-        r_true = Scalar([1,2,1,1])
-        l_true = Scalar([0, 0, PI, HALFPI])
-        z_true = Scalar([0,0,0,0.1])
+    # Circular orbit, no derivatives, reverse
+    pos2 = orbit.vector3_from_coords((r, l, z), derivs=False)
 
-        self.assertTrue(abs(r - r_true).max() < 1.e-12)
-        self.assertTrue(abs(l - l_true).max() < 1.e-12)
-        self.assertTrue(abs(z - z_true).max() < 1.e-12)
+    assert (pos - pos2).norm().max() < 1.e-10
 
-        # Circular orbit, no derivatives, reverse
-        pos2 = orbit.vector3_from_coords((r, l, z), None, derivs=False)
+    # Circular orbit, with derivatives, forward
+    pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
+    pos.insert_deriv('pos', Vector3.IDENTITY, override=True)
+    eps = 1.e-6
+    delta = 1.e-4
 
-        self.assertTrue((pos - pos2).norm().max() < 1.e-10)
+    for step in ([eps,0,0], [0,eps,0], [0,0,eps]):
+        dpos = Vector3(step)
+        (r,l,z) = orbit.coords_from_vector3(pos + dpos, axes=3,
+                                            derivs=True)
 
-        # Circular orbit, with derivatives, forward
-        pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-        pos.insert_deriv('pos', Vector3.IDENTITY, override=True)
-        eps = 1.e-6
-        delta = 1.e-4
+        r_test = r + r.d_dpos.chain(dpos)
+        l_test = l + l.d_dpos.chain(dpos)
+        z_test = z + z.d_dpos.chain(dpos)
 
-        for step in ([eps,0,0], [0,eps,0], [0,0,eps]):
-            dpos = Vector3(step)
-            (r,l,z) = orbit.coords_from_vector3(pos + dpos, None, axes=3,
-                                                derivs=True)
+        assert abs(r - r_test).max() < delta
+        assert abs(l - l_test).max() < delta
+        assert abs(z - z_test).max() < delta
 
-            r_test = r + r.d_dpos.chain(dpos)
-            l_test = l + l.d_dpos.chain(dpos)
-            z_test = z + z.d_dpos.chain(dpos)
+    # Circular orbit, with derivatives, reverse
+    pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
+    (r,l,z) = orbit.coords_from_vector3(pos, axes=3, derivs=False)
+    eps = 1.e-6
+    delta = 1.e-5
 
-            self.assertTrue(abs(r - r_test).max() < delta)
-            self.assertTrue(abs(l - l_test).max() < delta)
-            self.assertTrue(abs(z - z_test).max() < delta)
+    r.insert_deriv('r', Scalar.ONE, override=True)
+    l.insert_deriv('l', Scalar.ONE, override=True)
+    z.insert_deriv('z', Scalar.ONE, override=True)
+    pos0 = orbit.vector3_from_coords((r, l, z), derivs=True)
 
-        # Circular orbit, with derivatives, reverse
-        pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-        (r,l,z) = orbit.coords_from_vector3(pos, None, axes=3, derivs=False)
-        eps = 1.e-6
-        delta = 1.e-5
+    pos1 = orbit.vector3_from_coords((r + eps, l, z), derivs=False)
+    pos1_test = pos0 + eps * pos0.d_dr
+    assert (pos1_test - pos1).norm().max() < delta
 
-        r.insert_deriv('r', Scalar.ONE, override=True)
-        l.insert_deriv('l', Scalar.ONE, override=True)
-        z.insert_deriv('z', Scalar.ONE, override=True)
-        pos0 = orbit.vector3_from_coords((r, l, z), None, derivs=True)
+    pos1 = orbit.vector3_from_coords((r, l + eps, z), derivs=False)
+    pos1_test = pos0 + eps * pos0.d_dl
+    assert (pos1_test - pos1).norm().max() < delta
 
-        pos1 = orbit.vector3_from_coords((r + eps, l, z), None, derivs=False)
-        pos1_test = pos0 + eps * pos0.d_dr
-        self.assertTrue((pos1_test - pos1).norm().max() < delta)
+    pos1 = orbit.vector3_from_coords((r, l, z + eps), derivs=False)
+    pos1_test = pos0 + eps * pos0.d_dz
+    assert (pos1_test - pos1).norm().max() < delta
 
-        pos1 = orbit.vector3_from_coords((r, l + eps, z), None, derivs=False)
-        pos1_test = pos0 + eps * pos0.d_dl
-        self.assertTrue((pos1_test - pos1).norm().max() < delta)
+    # elements = (a, lon, n, e, peri, prec)
 
-        pos1 = orbit.vector3_from_coords((r, l, z + eps), None, derivs=False)
-        pos1_test = pos0 + eps * pos0.d_dz
-        self.assertTrue((pos1_test - pos1).norm().max() < delta)
+    # Eccentric orbit, no derivatives, forward
+    ae = 0.1
+    prec = 0.1
+    elements = (1, 0, 1, ae, 0, prec)
+    epoch = 0
+    orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000', path_id='TEST')
+    eps = 1.e-6
+    delta = 1.e-5
 
-        # elements = (a, lon, n, e, peri, prec)
+    pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
+    event = Event(0., pos, 'SSB', 'J2000')
+    (r,l,z) = orbit.coords_of_event(event, derivs=False)
 
-        # Eccentric orbit, no derivatives, forward
-        ae = 0.1
-        prec = 0.1
-        elements = (1, 0, 1, ae, 0, prec)
-        epoch = 0
-        orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000', 'TEST')
-        eps = 1.e-6
-        delta = 1.e-5
+    r_true = Scalar([1. + ae, 2. + ae, 1 - ae, np.sqrt(1. + ae**2)])
+    l_true = Scalar([TWOPI, TWOPI, PI, np.arctan2(1,ae)])
+    z_true = Scalar([0,0,0,0.1])
 
-        pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-        event = Event(0., pos, 'SSB', 'J2000')
-        (r,l,z) = orbit.coords_of_event(event, derivs=False)
+    assert abs(r - r_true).max() < delta
+    assert abs(l - l_true).max() < delta
+    assert abs(z - z_true).max() < delta
 
-        r_true = Scalar([1. + ae, 2. + ae, 1 - ae, np.sqrt(1. + ae**2)])
-        l_true = Scalar([TWOPI, TWOPI, PI, np.arctan2(1,ae)])
-        z_true = Scalar([0,0,0,0.1])
+    # Eccentric orbit, no derivatives, reverse
+    event2 = orbit.event_at_coords(event.time, (r,l,z)).wrt_ssb()
+    assert (pos - event2.pos).norm().max() < 1.e-10
+    assert (event2.vel).norm().max() < 1.e-10
 
-        self.assertTrue(abs(r - r_true).max() < delta)
-        self.assertTrue(abs(l - l_true).max() < delta)
-        self.assertTrue(abs(z - z_true).max() < delta)
+    # Eccentric orbit, with derivatives, forward
+    ae = 0.1
+    prec = 0.1
+    elements = (1, 0, 1, ae, 0, prec)
+    epoch = 0
+    orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000')
+    eps = 1.e-6
+    delta = 3.e-5
 
-        # Eccentric orbit, no derivatives, reverse
-        event2 = orbit.event_at_coords(event.time, (r,l,z)).wrt_ssb()
-        self.assertTrue((pos - event2.pos).norm().max() < 1.e-10)
-        self.assertTrue((event2.vel).norm().max() < 1.e-10)
+    pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
 
-        # Eccentric orbit, with derivatives, forward
-        ae = 0.1
-        prec = 0.1
-        elements = (1, 0, 1, ae, 0, prec)
-        epoch = 0
-        orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000')
-        eps = 1.e-6
-        delta = 3.e-5
+    for v in ([0,0,0], [0.1,0,0], [0,0.1,0], [0,0,0.1]):
+        vel = Vector3(v)
+        event = Event(0., (pos, vel), 'SSB', 'J2000')
+        (r,l,z) = orbit.coords_of_event(event, derivs=True)
 
-        pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
+        event = Event(eps, (pos + vel*eps, vel), 'SSB', 'J2000')
+        (r1,l1,z1) = orbit.coords_of_event(event, derivs=False)
+        dr_dt_test = (r1 - r) / eps
+        dl_dt_test = (l1 - l) / eps
+        dz_dt_test = (z1 - z) / eps
 
-        for v in ([0,0,0], [0.1,0,0], [0,0.1,0], [0,0,0.1]):
-            vel = Vector3(v)
-            event = Event(0., (pos, vel), 'SSB', 'J2000')
-            (r,l,z) = orbit.coords_of_event(event, derivs=True)
+        assert abs(r.d_dt - dr_dt_test).max() < delta
+        assert abs(z.d_dt - dz_dt_test).max() < delta
 
-            event = Event(eps, (pos + vel*eps, vel), 'SSB', 'J2000')
-            (r1,l1,z1) = orbit.coords_of_event(event, derivs=False)
-            dr_dt_test = (r1 - r) / eps
-            dl_dt_test = (l1 - l) / eps
-            dz_dt_test = (z1 - z) / eps
+        d_dl_dt = ((l.d_dt*eps - dl_dt_test*eps + PI) % TWOPI - PI) / eps
+        assert abs(d_dl_dt).max() < delta
 
-            self.assertTrue(abs(r.d_dt - dr_dt_test).max() < delta)
-            self.assertTrue(abs(z.d_dt - dz_dt_test).max() < delta)
+    # Eccentric orbit, with derivatives, reverse
+    pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
+    (r,l,z) = orbit.coords_from_vector3(pos, axes=3, derivs=False)
+    eps = 1.e-6
+    delta = 1.e-5
 
-            d_dl_dt = ((l.d_dt*eps - dl_dt_test*eps + PI) % TWOPI - PI) / eps
-            self.assertTrue(abs(d_dl_dt).max() < delta)
+    r.insert_deriv('r', Scalar.ONE)
+    l.insert_deriv('l', Scalar.ONE)
+    z.insert_deriv('z', Scalar.ONE)
+    pos0 = orbit.vector3_from_coords((r, l, z), derivs=True)
 
-        # Eccentric orbit, with derivatives, reverse
-        pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-        (r,l,z) = orbit.coords_from_vector3(pos, axes=3, derivs=False)
-        eps = 1.e-6
-        delta = 1.e-5
+    pos1 = orbit.vector3_from_coords((r + eps, l, z), derivs=False)
+    pos1_test = pos0 + eps * pos0.d_dr
+    assert (pos1_test - pos1).norm().max() < delta
 
-        r.insert_deriv('r', Scalar.ONE)
-        l.insert_deriv('l', Scalar.ONE)
-        z.insert_deriv('z', Scalar.ONE)
-        pos0 = orbit.vector3_from_coords((r, l, z), derivs=True)
+    pos1 = orbit.vector3_from_coords((r, l + eps, z), derivs=False)
+    pos1_test = pos0 + eps * pos0.d_dl
+    assert (pos1_test - pos1).norm().max() < delta
 
-        pos1 = orbit.vector3_from_coords((r + eps, l, z), derivs=False)
-        pos1_test = pos0 + eps * pos0.d_dr
-        self.assertTrue((pos1_test - pos1).norm().max() < delta)
+    pos1 = orbit.vector3_from_coords((r, l, z + eps), derivs=False)
+    pos1_test = pos0 + eps * pos0.d_dz
+    assert (pos1_test - pos1).norm().max() < delta
 
-        pos1 = orbit.vector3_from_coords((r, l + eps, z), derivs=False)
-        pos1_test = pos0 + eps * pos0.d_dl
-        self.assertTrue((pos1_test - pos1).norm().max() < delta)
+    # elements = (a, lon, n, e, peri, prec, i, node, regr)
 
-        pos1 = orbit.vector3_from_coords((r, l, z + eps), derivs=False)
-        pos1_test = pos0 + eps * pos0.d_dz
-        self.assertTrue((pos1_test - pos1).norm().max() < delta)
+    # Inclined orbit, no eccentricity, no derivatives, forward
+    inc = 0.1
+    regr = -0.1
+    node = -HALFPI
+    sini = np.sin(inc)
+    cosi = np.cos(inc)
 
-        # elements = (a, lon, n, e, peri, prec, i, node, regr)
+    elements = (1, 0, 1, 0, 0, 0, inc, node, regr)
+    epoch = 0
+    orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000')
+    eps = 1.e-6
+    delta = 1.e-5
 
-        # Inclined orbit, no eccentricity, no derivatives, forward
-        inc = 0.1
-        regr = -0.1
-        node = -HALFPI
-        sini = np.sin(inc)
-        cosi = np.cos(inc)
+    dz = 0.1
+    pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,dz)])
+    event = Event(0., pos, 'SSB', 'J2000')
+    (r,l,z) = orbit.coords_of_event(event, derivs=False)
 
-        elements = (1, 0, 1, 0, 0, 0, inc, node, regr)
-        epoch = 0
-        orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000')
-        eps = 1.e-6
-        delta = 1.e-5
+    r_true = Scalar([cosi, 2*cosi, cosi, np.sqrt(1 + (dz*sini)**2)])
+    l_true = Scalar([TWOPI, TWOPI, PI, np.arctan2(1,dz*sini)])
+    z_true = Scalar([-sini, -2*sini, sini, dz*cosi])
 
-        dz = 0.1
-        pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,dz)])
-        event = Event(0., pos, 'SSB', 'J2000')
-        (r,l,z) = orbit.coords_of_event(event, derivs=False)
+    assert abs(r - r_true).max() < delta
+    assert abs(l - l_true).max() < delta
+    assert abs(z - z_true).max() < delta
 
-        r_true = Scalar([cosi, 2*cosi, cosi, np.sqrt(1 + (dz*sini)**2)])
-        l_true = Scalar([TWOPI, TWOPI, PI, np.arctan2(1,dz*sini)])
-        z_true = Scalar([-sini, -2*sini, sini, dz*cosi])
+    # Inclined orbit, no derivatives, reverse
+    event2 = orbit.event_at_coords(event.time, (r,l,z)).wrt_ssb()
+    assert (pos - event2.pos).norm().max() < 1.e-10
+    assert event2.vel.norm().max() < 1.e-10
 
-        self.assertTrue(abs(r - r_true).max() < delta)
-        self.assertTrue(abs(l - l_true).max() < delta)
-        self.assertTrue(abs(z - z_true).max() < delta)
+    # Inclined orbit, with derivatives, forward
+    inc = 0.1
+    regr = -0.1
+    node = -HALFPI
+    sini = np.sin(inc)
+    cosi = np.cos(inc)
 
-        # Inclined orbit, no derivatives, reverse
-        event2 = orbit.event_at_coords(event.time, (r,l,z)).wrt_ssb()
-        self.assertTrue((pos - event2.pos).norm().max() < 1.e-10)
-        self.assertTrue(event2.vel.norm().max() < 1.e-10)
+    elements = (1, 0, 1, 0, 0, 0, inc, node, regr)
+    epoch = 0
+    orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000')
+    eps = 1.e-6
+    delta = 1.e-5
 
-        # Inclined orbit, with derivatives, forward
-        inc = 0.1
-        regr = -0.1
-        node = -HALFPI
-        sini = np.sin(inc)
-        cosi = np.cos(inc)
+    dz = 0.1
+    pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,dz)])
 
-        elements = (1, 0, 1, 0, 0, 0, inc, node, regr)
-        epoch = 0
-        orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000')
-        eps = 1.e-6
-        delta = 1.e-5
+    for v in ([0,0,0], [0.1,0,0], [0,0.1,0], [0,0,0.1]):
+        vel = Vector3(v)
+        event = Event(0., (pos, vel), 'SSB', 'J2000')
+        (r,l,z) = orbit.coords_of_event(event, derivs=True)
 
-        dz = 0.1
-        pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,dz)])
+        event = Event(eps, (pos + vel*eps, vel), 'SSB', 'J2000')
+        (r1,l1,z1) = orbit.coords_of_event(event, derivs=False)
+        dr_dt_test = (r1 - r) / eps
+        dl_dt_test = ((l1 - l + PI) % TWOPI - PI) / eps
+        dz_dt_test = (z1 - z) / eps
 
-        for v in ([0,0,0], [0.1,0,0], [0,0.1,0], [0,0,0.1]):
-            vel = Vector3(v)
-            event = Event(0., (pos, vel), 'SSB', 'J2000')
-            (r,l,z) = orbit.coords_of_event(event, derivs=True)
+        assert abs(r.d_dt - dr_dt_test).max() < delta
+        assert abs(l.d_dt - dl_dt_test).max() < delta
+        assert abs(z.d_dt - dz_dt_test).max() < delta
 
-            event = Event(eps, (pos + vel*eps, vel), 'SSB', 'J2000')
-            (r1,l1,z1) = orbit.coords_of_event(event, derivs=False)
-            dr_dt_test = (r1 - r) / eps
-            dl_dt_test = ((l1 - l + PI) % TWOPI - PI) / eps
-            dz_dt_test = (z1 - z) / eps
+    # Inclined orbit, with derivatives, reverse
+    pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
+    (r,l,z) = orbit.coords_from_vector3(pos, axes=3, derivs=False)
+    eps = 1.e-6
+    delta = 1.e-5
 
-            self.assertTrue(abs(r.d_dt - dr_dt_test).max() < delta)
-            self.assertTrue(abs(l.d_dt - dl_dt_test).max() < delta)
-            self.assertTrue(abs(z.d_dt - dz_dt_test).max() < delta)
+    r.insert_deriv('r', Scalar.ONE)
+    l.insert_deriv('l', Scalar.ONE)
+    z.insert_deriv('z', Scalar.ONE)
+    pos0 = orbit.vector3_from_coords((r, l, z), derivs=True)
 
-        # Inclined orbit, with derivatives, reverse
-        pos = Vector3([(1,0,0), (2,0,0), (-1,0,0), (0,1,0.1)])
-        (r,l,z) = orbit.coords_from_vector3(pos, axes=3, derivs=False)
-        eps = 1.e-6
-        delta = 1.e-5
+    pos1 = orbit.vector3_from_coords((r + eps, l, z), derivs=False)
+    pos1_test = pos0 + eps * pos0.d_dr
+    assert (pos1_test - pos1).norm().max() < delta
 
-        r.insert_deriv('r', Scalar.ONE)
-        l.insert_deriv('l', Scalar.ONE)
-        z.insert_deriv('z', Scalar.ONE)
-        pos0 = orbit.vector3_from_coords((r, l, z), derivs=True)
+    pos1 = orbit.vector3_from_coords((r, l + eps, z), derivs=False)
+    pos1_test = pos0 + eps * pos0.d_dl
+    assert (pos1_test - pos1).norm().max() < delta
 
-        pos1 = orbit.vector3_from_coords((r + eps, l, z), derivs=False)
-        pos1_test = pos0 + eps * pos0.d_dr
-        self.assertTrue((pos1_test - pos1).norm().max() < delta)
+    pos1 = orbit.vector3_from_coords((r, l, z + eps), derivs=False)
+    pos1_test = pos0 + eps * pos0.d_dz
+    assert (pos1_test - pos1).norm().max() < delta
 
-        pos1 = orbit.vector3_from_coords((r, l + eps, z), derivs=False)
-        pos1_test = pos0 + eps * pos0.d_dl
-        self.assertTrue((pos1_test - pos1).norm().max() < delta)
+    # From/to mean anomaly
+    elements = (1, 0, 1, 0.1, 0, 0.1)
+    epoch = 0
+    orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000', path_id='TEST')
 
-        pos1 = orbit.vector3_from_coords((r, l, z + eps), derivs=False)
-        pos1_test = pos0 + eps * pos0.d_dz
-        self.assertTrue((pos1_test - pos1).norm().max() < delta)
+    l = np.arange(361) * RPD
+    anoms = orbit.to_mean_anomaly(l)
 
-        # From/to mean anomaly
-        elements = (1, 0, 1, 0.1, 0, 0.1)
-        epoch = 0
-        orbit = OrbitPlane(elements, epoch, 'SSB', 'J2000', 'TEST')
+    lons = orbit.from_mean_anomaly(anoms)
+    assert abs(lons - l).max() < 1.e-15
 
-        l = np.arange(361) * RPD
-        anoms = orbit.to_mean_anomaly(l)
 
-        lons = orbit.from_mean_anomaly(anoms)
-        self.assertTrue(abs(lons - l).max() < 1.e-15)
+# A representative eccentric orbit: 100,000 km, with a mean motion and pericenter fixed in
+# inertial space so that the surface frame does not rotate and the orbital velocity can be
+# compared directly against the Keplerian solution.
+_A = 100000.
+_N = 1.e-4
+_ANOMALIES = np.arange(24) * (TWOPI / 24.)
 
-########################################
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
-################################################################################
+
+def _eccentric_orbit(e):
+    """An OrbitPlane of eccentricity `e` with its pericenter along the x-axis.
+
+    Parameters:
+        e (float): The orbital eccentricity.
+
+    Returns:
+        OrbitPlane: The orbit, centered on the SSB and defined in the J2000 frame.
+    """
+
+    return OrbitPlane((_A, 0., _N, e, 0., 0.), 0., 'SSB', 'J2000')
+
+
+def _planet_offset(orbit):
+    """The position of the planet relative to the center of the eccentric ring.
+
+    The surface is centered on the displaced ring center, so this is what converts a
+    planet-centered position into one relative to the surface. It is obtained from the
+    orbit's own origin path rather than assumed.
+
+    Parameters:
+        orbit (OrbitPlane): The orbit to evaluate.
+
+    Returns:
+        Vector3: The offset, in km, in the orbit's own frame.
+    """
+
+    ring_center = Path.as_path(orbit.origin).event_at_time(0.).wrt('SSB', orbit.frame)
+    return -ring_center.pos
+
+
+def _kepler_velocity_error(orbit, e):
+    """The largest relative error in `velocity` against the Keplerian solution.
+
+    The comparison is made at points spread around the orbit. Because the surface models
+    the orbit only to first order in eccentricity, the error is expected to be of order
+    e**2.
+
+    Parameters:
+        orbit (OrbitPlane): The orbit to evaluate.
+        e (float): The orbital eccentricity.
+
+    Returns:
+        float: The largest error, relative to the local orbital speed.
+    """
+
+    offset = _planet_offset(orbit)
+    worst = 0.
+    for nu in _ANOMALIES:
+        # The exact Keplerian position and velocity, relative to the planet
+        r = _A * (1. - e**2) / (1. + e * np.cos(nu))
+        v_radial = _N * _A / np.sqrt(1. - e**2) * e * np.sin(nu)
+        v_tangential = _N * _A / np.sqrt(1. - e**2) * (1. + e * np.cos(nu))
+
+        pos = Vector3((r * np.cos(nu), r * np.sin(nu), 0.)) + offset
+        (vx, vy, _) = [value.vals for value in orbit.velocity(pos).to_scalars()]
+
+        radial = vx * np.cos(nu) + vy * np.sin(nu)
+        tangential = -vx * np.sin(nu) + vy * np.cos(nu)
+
+        speed = np.hypot(v_radial, v_tangential)
+        error = np.hypot(radial - v_radial, tangential - v_tangential) / speed
+        worst = max(worst, error)
+
+    return worst
+
+
+def _kepler_orbit(e):
+    """An OrbitPlane with the given eccentricity, for the anomaly conversions.
+
+    Parameters:
+        e (float): The orbital eccentricity.
+
+    Returns:
+        OrbitPlane: The orbit, unregistered.
+    """
+
+    return OrbitPlane((_A, 0., _N, e, 0., 0.), 0., 'SSB', 'J2000')
+
+
+def test_velocity_of_a_circular_orbit() -> None:
+    """A circular orbit moves at the mean motion, perpendicular to its radius."""
+
+    orbit = _eccentric_orbit(0.)
+    pos = Vector3([(_A, 0., 0.), (0., _A, 0.), (-_A, 0., 0.), (0., 0.5*_A, 0.)])
+
+    expected = _N * cast(Vector3, Vector3.ZAXIS.cross(pos))
+    assert (orbit.velocity(pos) - expected).norm().max() < 1.e-15
+
+
+def test_velocity_of_an_eccentric_orbit_matches_kepler() -> None:
+    """An eccentric orbit moves at the Keplerian velocity, to first order in e."""
+
+    e = 0.02
+    assert _kepler_velocity_error(_eccentric_orbit(e), e) < 3. * e**2
+
+
+def test_velocity_error_is_second_order_in_eccentricity() -> None:
+    """The departure from the Keplerian velocity falls as the square of eccentricity.
+
+    A first-order model leaves an error of order e**2, so halving the eccentricity
+    quarters it. An error that instead falls only in proportion to e would mean a term of
+    the wrong order, such as a displacement applied in the wrong direction.
+    """
+
+    errors = [_kepler_velocity_error(_eccentric_orbit(e), e) for e in (0.02, 0.01, 0.005)]
+
+    for (coarse, fine) in zip(errors[:-1], errors[1:]):
+        assert 3.5 < coarse / fine < 4.5
+
+
+def test_to_mean_anomaly_inverts_from_mean_anomaly() -> None:
+    """The two conversions are exact inverses for an eccentricity the model can solve."""
+
+    lon = Scalar(np.arange(0., TWOPI, 0.01))
+
+    for e in (0.001, 0.01, 0.1, 0.3, 0.45):
+        orbit = _kepler_orbit(e)
+        assert abs(orbit.from_mean_anomaly(orbit.to_mean_anomaly(lon))
+                   - lon).max(builtins=True) < 1.e-14
+
+
+def test_to_mean_anomaly_reports_a_failure_to_converge() -> None:
+    """An eccentricity the iteration cannot solve raises rather than returning a guess.
+
+    The derivative of the longitude with respect to the anomaly approaches zero as the
+    eccentricity approaches 0.5, so Newton's method breaks down there. It used to stop at
+    whatever it had reached and return it, a value that could be many radians wrong.
+    """
+
+    lon = Scalar(np.arange(0., TWOPI, 0.01))
+
+    for e in (0.5, 0.8):
+        with pytest.raises(ValueError, match='did not converge'):
+            _kepler_orbit(e).to_mean_anomaly(lon)
+
+
+def test_to_mean_anomaly_accepts_masked_longitudes() -> None:
+    """A masked longitude has nothing to solve and must not be read as a failure."""
+
+    orbit = _kepler_orbit(0.2)
+
+    assert np.all(orbit.to_mean_anomaly(Scalar([1., 2., 3.], mask=True)).mask)
+
+    partly = orbit.to_mean_anomaly(Scalar([1., 2., 3.], mask=[False, True, False]))
+    assert list(partly.mask) == [False, True, False]
+
+##########################################################################################
+# Frame validation, radial limits, the circular shortcuts, and serialization
+##########################################################################################
+
+# A circular orbit of unit radius, with a mean motion of one radian per second
+CIRCULAR = (1., 0., 1.)
+EPOCH = 0.
+
+# The same orbit, given an eccentricity, a pericenter and a precession rate
+ECCENTRIC = (1., 0., 1., 0.1, 0., 0.1)
+
+# Radial limits spanning the circular orbit
+RADII = (0.5, 1.5)
+
+
+def _orbit(elements=CIRCULAR, **kwargs) -> OrbitPlane:
+    """An orbit plane about the SSB in J2000.
+
+    Parameters:
+        elements: The orbital elements.
+        kwargs: Overrides of the remaining constructor arguments.
+
+    Returns:
+        OrbitPlane: The surface.
+    """
+
+    args = {'epoch': EPOCH, 'origin': 'SSB', 'frame': 'J2000'}
+    args.update(kwargs)
+
+    return OrbitPlane(elements, **args)
+
+
+def test_the_frame_of_an_orbit_plane_must_be_inertial() -> None:
+    """A rotating frame has an origin, and an orbit cannot be defined relative to one."""
+
+    spinning = SpinFrame(0., 1.e-6, EPOCH, 2, Frame.J2000, frame_id='TEST_SPINNING')
+
+    with pytest.raises(ValueError, match='must be inertial'):
+        OrbitPlane(CIRCULAR, EPOCH, 'SSB', spinning)
+
+
+def test_radial_limits_mask_the_coordinates_outside_them() -> None:
+    """A radius beyond the limits is masked."""
+
+    orbit = _orbit(radii=RADII)
+    pos = Vector3([(1., 0., 0.), (2., 0., 0.)])
+
+    assert list(orbit.coords_from_vector3(pos)[0].mask) == [False, True]
+
+
+def test_the_unmasked_orbit_plane_drops_the_radial_limits() -> None:
+    """The unmasked counterpart shares the geometry but keeps every radius."""
+
+    orbit = _orbit(radii=RADII)
+    pos = Vector3([(2., 0., 0.)])
+
+    assert orbit.unmasked is not orbit
+    assert orbit.unmasked._radii is None
+    assert not np.any(orbit.unmasked.coords_from_vector3(pos)[0].mask)
+
+
+def test_an_unlimited_orbit_plane_is_its_own_unmasked_surface() -> None:
+    """With no radial limits there is nothing to unmask."""
+
+    orbit = _orbit()
+
+    assert orbit.unmasked is orbit
+
+
+def test_the_unmasked_orbit_plane_is_its_own_unmasked_surface() -> None:
+    """The unmasked counterpart has nothing left to unmask."""
+
+    unmasked = _orbit(radii=RADII).unmasked
+
+    assert unmasked.unmasked is unmasked
+
+
+def test_the_intercept_of_an_orbit_plane_is_the_ring_plane_intercept() -> None:
+    """The geometry is that of the underlying ring plane."""
+
+    orbit = _orbit()
+    obs = Vector3((0., 0., 10.))
+    los = Vector3([(1., 0., -10.)])
+
+    (pos, t) = orbit.intercept(obs, los)
+
+    assert pos == Vector3([(1., 0., 0.)])
+    assert t == Scalar([1.])
+
+
+def test_the_normal_to_an_orbit_plane_is_the_ring_plane_normal() -> None:
+    """The normal is that of the underlying ring plane."""
+
+    orbit = _orbit()
+    pos = Vector3([(1., 0., 0.)])
+
+    assert orbit.normal(pos) == orbit._ringplane.normal(pos)
+
+
+def test_a_circular_orbit_has_no_anomaly_to_convert() -> None:
+    """With no eccentricity, the mean anomaly and the longitude are the same angle."""
+
+    orbit = _orbit()
+    angle = Scalar([0., 1., 2.])
+
+    assert orbit.from_mean_anomaly(angle) == angle
+    assert orbit.to_mean_anomaly(angle) == angle
+
+
+def test_the_anomaly_conversions_invert_each_other() -> None:
+    """With eccentricity, the two conversions are exact inverses."""
+
+    orbit = _orbit(ECCENTRIC, path_id='TEST_ECCENTRIC_ANOMALY')
+    anom = Scalar([0., 1., 2., 3.])
+
+    assert orbit.to_mean_anomaly(orbit.from_mean_anomaly(anom)).vals \
+           == pytest.approx(anom.vals, abs=1.e-12)
+
+
+def test_an_orbit_plane_survives_a_round_trip_through_pickle() -> None:
+    """Unpickling rebuilds the surface from its elements, epoch and radii."""
+
+    orbit = _orbit(radii=RADII)
+    pos = Vector3([(1., 0., 0.1)])
+
+    revived = pickle.loads(pickle.dumps(orbit))
+
+    assert list(revived._elements) == list(orbit._elements)
+    assert list(revived._radii) == list(RADII)
+    assert revived.coords_from_vector3(pos, axes=3) \
+           == orbit.coords_from_vector3(pos, axes=3)
+
+##########################################################################################

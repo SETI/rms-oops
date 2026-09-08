@@ -1,0 +1,173 @@
+##########################################################################################
+# oops/hosts/newhorizons/__init__.py: NewHorizons class
+#
+# For managing SPICE kernels while working with NewHorizons data sets.
+##########################################################################################
+
+import numpy as np
+
+import spicedb
+import oops
+
+__all__ = ['lrange', 'NewHorizons']
+
+def lrange(*args):
+    """A list of the integers in the given range.
+
+    Parameters:
+        *args (int): The arguments of range: a stop value, or a start value, a stop
+            value and an optional step.
+
+    Returns:
+        list[int]: The integers in the range.
+    """
+
+    return list(range(*args))
+
+class NewHorizons(object):
+    """A instance-free class to hold NewHorizons-specific parameters."""
+
+    START_TIME = '2006-10-01'
+    STOP_TIME  = '2018-01-01'
+
+    initialized = False
+    time = [START_TIME, STOP_TIME]
+    asof = np.nan       # placeholder value ensuring first call
+    meta = None
+    names = []
+
+    ######################################################################################
+
+    @staticmethod
+    def initialize(asof=None, time=None, meta=None):
+        """Furnish the SPICE kernels needed by the New Horizons mission.
+
+        After the first call, later calls with the same arguments are ignored.
+
+        Parameters:
+            asof (str, optional): Only use SPICE kernels that existed before this date;
+                None to ignore.
+            time (list, optional): The time limits as a pair of date strings; None to use
+                the mission duration.
+            meta (str, optional): The name of a metakernel to furnish instead of the
+                kernels selected from the database.
+
+        Returns:
+            list[str]: The names of the kernels that are furnished.
+        """
+
+        if time is None:
+            time = NewHorizons.time
+
+        if NewHorizons.initialized and \
+           NewHorizons.asof == asof and \
+           NewHorizons.meta == meta and \
+           NewHorizons.time[0] <= time[0] and NewHorizons.time[1] >= time[1]:
+                return NewHorizons.names
+
+        # Load SPICE kernels
+        if meta is None:
+            ignore = oops.Body.define_solar_system(NewHorizons.START_TIME,
+                                                   NewHorizons.STOP_TIME,
+                                                   asof=asof)
+
+            spicedb.open_db()
+
+            names = spicedb.furnish_lsk(asof=asof)
+            names = spicedb.furnish_pck([5,9] + list(range(501,505)) +
+                                                list(range(514,517)) +
+                                                list(range(901,906)), asof=asof)
+
+            names += spicedb.furnish_inst(-98, asof=asof)
+
+            names += spicedb.furnish_spk(-98, time=time,
+                                              name='NH-SPK-PREDICTED%',
+                                              asof=asof)
+
+            names += spicedb.furnish_spk(-98, time=time,
+                                              name='NH-SPK-RECONSTRUCTED%',
+                                              asof=asof)
+
+            names += spicedb.furnish_ck(-98, time=time, asof=asof)
+
+        else:
+            spicedb.open_db()
+            names = spicedb.furnish_by_metafile(meta, time=time, asof=asof)
+
+        spicedb.close_db()
+
+        NewHorizons.initialized = True
+        NewHorizons.time = time
+        NewHorizons.asof = asof
+        NewHorizons.meta = meta
+        NewHorizons.names = names
+
+        ignore = oops.path.SpicePath('NEW HORIZONS', 'JUPITER')
+        ignore = oops.path.SpicePath('NEW HORIZONS', 'PLUTO')
+
+        return names
+
+    @staticmethod
+    def reset():
+        """Resets the internal parameters. Can be useful for debugging."""
+
+        spicedb.unload_by_name(NewHorizons.names)
+
+        NewHorizons.loaded_instruments = []
+        NewHorizons.initialized = False
+        NewHorizons.asof = None
+        NewHorizons.names = []
+
+    ######################################################################################
+    # Routines for managing text kernel information
+    ######################################################################################
+
+    @staticmethod
+    def spice_instrument_kernel(inst_name, asof=None):
+        """A dictionary containing the Instrument Kernel information.
+
+        It also furnishes it for use by the SPICE tools.
+
+        Parameters:
+            inst_name (str): One of "LORRI", etc.
+            asof (str, optional): An optional date in the past, in ISO date or date-time
+                format. If provided, then the information provided will be applicable as
+                of that date. Otherwise, the most recent information is always provided.
+
+        Returns:
+            tuple[dict, list[str]]: The dictionary generated by textkernel.from_file() and
+            the names of the kernels.
+        """
+
+        spicedb.open_db()
+        kernel_info = spicedb.select_inst(-98, inst=inst_name.lower(),
+                                               types="IK", asof=asof)
+        spicedb.furnish_kernels(kernel_info)
+        spicedb.close_db()
+
+        return (spicedb.as_dict(kernel_info), spicedb.as_names(kernel_info))
+
+    @staticmethod
+    def spice_frames_kernel(asof=None):
+        """A dictionary containing the New Horizons Frames Kernel information.
+
+        Also furnishes the kernels for use by the SPICE tools.
+
+        Parameters:
+            asof (str, optional): An optional date in the past, in ISO date or date-time
+                format. If provided, then the information provided will be applicable as
+                of that date. Otherwise, the most recent information is always provided.
+
+        Returns:
+            tuple[dict, str]: The dictionary generated by textkernel.from_file() and the
+            name of the kernel.
+        """
+
+        spicedb.open_db()
+        kernel_info = spicedb.select_inst(-98, types="FK", asof=asof)
+        spicedb.furnish_kernels(kernel_info)
+        spicedb.close_db()
+
+        return (spicedb.as_dict(kernel_info), spicedb.as_names(kernel_info)[0])
+
+##########################################################################################

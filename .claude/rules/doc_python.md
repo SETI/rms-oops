@@ -109,8 +109,8 @@ A single `conf.py` configures the whole tree. It MUST:
 Documentation is correct only when it builds clean under BOTH gates:
 
 ```bash
-sphinx-build -W -b html docs docs/_build   # warnings-as-errors
-sphinx-build -n -b html docs docs/_build   # nitpicky (catches broken xrefs)
+sphinx-build -W -b html docs docs/_build/html   # warnings-as-errors
+sphinx-build -n -b html docs docs/_build/html   # nitpicky (catches broken xrefs)
 ```
 
 - `-W` promotes every warning (undefined label, duplicate target, malformed

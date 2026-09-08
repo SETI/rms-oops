@@ -1,0 +1,141 @@
+##########################################################################################
+# oops/calibration/flatcalib.py
+##########################################################################################
+
+import numpy as np
+
+from polymath         import Scalar, Qube
+from oops.calibration import Calibration
+
+
+class FlatCalib(Calibration):
+    """Calibration subclass to use for an un-distorted field of view."""
+
+    def __init__(self, name, factor, baseline=0., fov=None):
+        """Constructor for a FlatCalib object.
+
+        Parameters:
+            name (str): The name of the value returned by the calibration, e.g.,
+                "REFLECTIVITY".
+            factor (ScalarLike): A scale factor to be applied to every pixel in the field
+                of view.
+            baseline (ScalarLike, optional): An optional baseline value to subtract from
+                the image before applying the scale factor. Note that the factor and
+                baseline values could be arrays for cases in which the non-spatial axes of
+                the data array require different scalings. Their shapes must broadcast to
+                the shape of the data array after the spatial axes are removed.
+            fov (FOV, optional): Ignored by FlatCalib. Provided for compatibility with
+                subclasses Radiance and RawCounts.
+        """
+
+        self.name = name
+
+        factor = Scalar.as_scalar(factor)
+        baseline = Scalar.as_scalar(baseline)
+        self.has_baseline = np.any(baseline.vals != 0)
+
+        (self.factor, self.baseline) = Qube.broadcast(factor, baseline)
+        self.shape = self.factor.shape
+        self.fov = None
+
+    def __getstate__(self):
+        return (self.name, self.factor, self.baseline)
+
+    def __setstate__(self, state):
+        self.__init__(*state)
+
+    def extended_from_dn(self, dn, uv_pair):
+        """Extended-source calibrated values for image DN and pixel coordinates.
+
+        Parameters:
+            dn (ScalarLike): Un-calibrated image array values at the given pixel
+                coordinates.
+            uv_pair (PairLike): Associated *(u,v)* pixel coordinates in the image. Note
+                that `dn` and `uv_pair` will be casted to the same shape.
+
+        Returns:
+            Scalar: Calibrated values for an extended source.
+        """
+
+        (uv_pair, factor, baseline) = self._factor_and_baseline(uv_pair)
+        dn = Scalar.as_scalar(dn)
+        if self.has_baseline:
+            return (dn - baseline) * factor
+
+        return dn * factor
+
+    def dn_from_extended(self, value, uv_pair):
+        """Un-calibrated image DN from extended-source calibrated values.
+
+        Parameters:
+            value (ScalarLike): Calibrated values at the given pixel coordinates.
+            uv_pair (PairLike): Associated *(u,v)* pixel coordinates in the image. Note
+                that `value` and `uv_pair` will be casted to the same shape.
+
+        Returns:
+            Scalar: Un-calibrated values for an extended source.
+        """
+
+        (uv_pair, factor, baseline) = self._factor_and_baseline(uv_pair)
+        value = Scalar.as_scalar(value)
+        if self.has_baseline:
+            return value / factor + baseline
+
+        return value / factor
+
+    def point_from_dn(self, dn, uv_pair):
+        """Point-source calibrated values for image DN and pixel coordinates.
+
+        Parameters:
+            dn (ScalarLike): Un-calibrated image array values at the given pixel
+                coordinates.
+            uv_pair (PairLike): Associated *(u,v)* pixel coordinates in the image. Note
+                that `dn` and `uv_pair` will be casted to the same shape.
+
+        Returns:
+            Scalar: Calibrated values for a point source.
+        """
+
+        (uv_pair, factor, baseline) = self._factor_and_baseline(uv_pair)
+        dn = Scalar.as_scalar(dn)
+        if self.has_baseline:
+            return (dn - baseline) * factor
+
+        return dn * factor
+
+    def dn_from_point(self, value, uv_pair):
+        """Un-calibrated image DN from point-source calibrated values.
+
+        Parameters:
+            value (ScalarLike): Calibrated values at the given pixel coordinates.
+            uv_pair (PairLike): Associated *(u,v)* pixel coordinates in the image. Note
+                that `value` and `uv_pair` will be casted to the same shape.
+
+        Returns:
+            Scalar: Un-calibrated values for a point source.
+        """
+
+        (uv_pair, factor, baseline) = self._factor_and_baseline(uv_pair)
+        value = Scalar.as_scalar(value)
+        if self.has_baseline:
+            return value / factor + baseline
+
+        return value / factor
+
+    def prescale(self, factor, baseline=0., *, name=''):
+        """A version of this Calibration with image DNs re-scaled beforehand.
+
+        Parameters:
+            factor (ScalarLike): Scale factor to apply to DN values.
+            baseline (ScalarLike, optional): An optional baseline value to subtract from
+                every DN value before applying the new scale factor.
+            name (str, optional): Optional new name. If blank, the existing name is
+                preserved.
+
+        Returns:
+            Calibration: A new object with the given `factor` and `baseline` incorporated.
+        """
+
+        return FlatCalib(*self._prescaled_args(factor, baseline, name=name))
+
+##########################################################################################

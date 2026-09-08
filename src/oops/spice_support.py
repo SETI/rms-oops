@@ -1,0 +1,185 @@
+##########################################################################################
+# oops/spice_support.py
+##########################################################################################
+
+import numbers
+
+import cspyce
+import spicedb
+
+from oops.path.path_ import Path
+
+# Maintain dictionaries that translate names in the SPICE toolkit into their
+# corresponding names in the Frame and Path registries.
+
+FRAME_TRANSLATION = {'J2000':'J2000', cspyce.namfrm('J2000'):'J2000'}
+PATH_TRANSLATION = {'SSB':'SSB', 0:'SSB', 'SOLAR SYSTEM BARYCENTER':'SSB'}
+
+##########################################################################################
+# Useful SPICE support utilities
+##########################################################################################
+
+LSK_LOADED = False
+
+def load_leap_seconds():
+    """Load the most recent leap seconds kernel if it was not already loaded.
+    """
+
+    global LSK_LOADED
+
+    if LSK_LOADED:
+        return
+
+    # Furnish the LSK to the SPICE toolkit
+    spicedb.open_db()
+    _ = spicedb.furnish_lsk(fast=True)
+    spicedb.close_db()
+
+    LSK_LOADED = True
+
+##########################################################################################
+
+def body_id_and_name(arg):
+    """The SPICE ID and name of a body, given its name or ID.
+
+    A name or ID already present in the path translation table is resolved through the
+    registered Path; otherwise the SPICE Toolkit is consulted.
+
+    Parameters:
+        arg (str | int): The body name or the SPICE body ID.
+
+    Returns:
+        tuple[int, str]: The SPICE body ID and its name. A body with no name in the
+        Toolkit is given the string form of its ID.
+
+    Raises:
+        LookupError: If the argument is neither a recognized name nor an integer.
+        TypeError: If the argument names a registered Path that is not a SpicePath.
+    """
+
+    # First see if the path is already registered
+    try:
+        path = Path.as_primary_path(PATH_TRANSLATION[arg])
+        if path.path_id == 'SSB':
+            return (0, 'SSB')
+
+        if type(path).__name__ != 'SpicePath':
+            raise TypeError('path ' + repr(path.path_id) + ' is a '
+                            + type(path).__name__ + ', not a SpicePath')
+
+        return (path._spice_path_code, path._spice_path_name)
+    except KeyError:
+        pass
+
+    # Interpret the argument given as a string
+    if isinstance(arg, str):
+        body_id = cspyce.bodn2c(arg)    # raises LookupError if not found
+        name = cspyce.bodc2n(body_id)
+        return (body_id, name)
+
+    # Otherwise, interpret the argument given as an integer
+    elif isinstance(arg, numbers.Integral):
+        try:
+            name = cspyce.bodc2n(arg)
+        except LookupError:
+            # In rare cases, a body has no name; use the ID instead
+            name = str(arg)
+
+        return (arg, name)
+
+    else:
+        raise LookupError('invalid SPICE body: %s' % str(arg))
+
+##########################################################################################
+
+def frame_id_and_name(arg):
+    """The SPICE ID and name of a frame, given its name or ID.
+
+    An argument that names a body rather than a frame yields the frame associated with
+    that body.
+
+    Parameters:
+        arg (str | int): The frame name, the SPICE frame ID, a body name, or a SPICE
+            body ID.
+
+    Returns:
+        tuple[int, str]: The SPICE frame ID and its name.
+
+    Raises:
+        LookupError: If the argument is neither a recognized frame nor a body whose
+            frame is defined, or is neither a string nor an integer.
+    """
+
+    # Interpret the SPICE frame ID as an int
+    if isinstance(arg, numbers.Integral):
+        try:
+            # cspyce.frmnam returns an empty name for an unrecognized ID rather than
+            # raising, so an empty result is treated as "not a frame ID" below
+            name = cspyce.frmnam(arg)
+        except ValueError:
+            name = ''
+        except KeyError:
+            name = ''
+
+        # If the int is recognized as a frame ID, return it
+        if name != '':
+            return (arg, name)
+
+        # Make sure the body's frame is defined
+        if not cspyce.bodfnd(arg, 'POLE_RA'):
+            raise LookupError('frame for body %d is undefined' % arg)
+
+        # Otherwise, perhaps it is a body ID
+        return cspyce.cidfrm(arg)   # LookupError if not found
+
+    # Interpret the argument given as a string
+    if isinstance(arg, str):
+
+        # Validate this as the name of a frame
+        try:
+            # cspyce.namfrm returns zero for an unrecognized name rather than raising,
+            # so a zero result is treated as "not a frame name" below
+            frame_id = cspyce.namfrm(arg)
+        except ValueError:
+            frame_id = 0
+        except KeyError:
+            frame_id = 0
+
+        # If a nonzero ID is found...
+        if frame_id != 0:
+
+            # Make sure the frame is defined
+            body_id = cspyce.frinfo(frame_id)[0]
+            if (body_id > 0) and not cspyce.bodfnd(body_id, 'POLE_RA'):
+                raise LookupError('frame "%s" is undefined' % arg)
+
+            # Return the official, capitalized name
+            return (frame_id, cspyce.frmnam(frame_id))
+
+        # See if this is the name of a body
+        body_id = cspyce.bodn2c(arg)        # raises LookupError if not found
+
+        # Make sure the body's frame is defined
+        if not cspyce.bodfnd(body_id, 'POLE_RA'):
+            raise LookupError('frame for body "%s" is undefined' % arg)
+
+        # If this is a body, return the name of the associated frame
+        return cspyce.cidfrm(body_id)
+
+    raise LookupError('invalid SPICE frame: %s' % str(arg))
+
+##########################################################################################
+
+def initialize():
+    """Reset the frame and path translation tables to their initial contents.
+
+    Only the entries for J2000 and the solar system barycenter survive, so any name
+    registered since the last call is forgotten.
+    """
+
+    global FRAME_TRANSLATION, PATH_TRANSLATION
+
+    FRAME_TRANSLATION = {'J2000':'J2000', cspyce.namfrm('J2000'):'J2000'}
+    PATH_TRANSLATION = {'SSB':'SSB', 0:'SSB', 'SOLAR SYSTEM BARYCENTER':'SSB'}
+
+##########################################################################################

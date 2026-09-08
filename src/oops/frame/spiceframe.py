@@ -1,0 +1,721 @@
+##########################################################################################
+# oops/frame/spiceframe.py
+##########################################################################################
+
+import numbers
+import numpy as np
+from scipy.interpolate import UnivariateSpline
+
+import cspyce
+
+from polymath              import Matrix3, Quaternion, Scalar, Vector3
+from oops.frame            import Frame, J2000Frame, LinkedFrame, NullFrame
+from oops.frame.quickframe import QuickFrame
+from oops.transform        import Transform
+
+
+class SpiceFrame(Frame):
+    """A Frame subclass defined within the SPICE toolkit."""
+
+    _WAYFRAMES = {}         # frame_key -> wayframe
+    _FOR_NAME = {}          # SPICE frame name -> first defined SpiceFrame
+    _FRAME_LOOKUP = {}      # (name, reference name, omega_type, omega_dt) -> SpiceFrame
+
+    _USE_QUICKFRAMES = True     # Overrides default to enable QuickFrames
+
+    def __init__(self, spice_frame, reference=None, *, omega_type='tabulated',
+                 omega_dt=1., frame_id=None):
+        """Constructor for a SpiceFrame.
+
+        Parameters:
+            spice_frame (str | int): The name, frame code, or body code as used in the
+                SPICE toolkit.
+            reference (SpiceFrame | str, optional): The Frame or ID of the Frame relative
+                to which this frame is defined. This must be a SpiceFrame or else, by
+                default, J2000.
+            omega_type (str, optional): Options defining how `omega`, the time derivative
+                of the frame, is calculated:
+
+                * "tabulated" to take `omega` directly from the SPICE kernel (default);
+                * "numerical" to derive `omega` via numerical derivatives;
+                * "zero" to ignore omega vectors. This is the default for inertial frames.
+
+            omega_dt (float, optional): The default time step in seconds to use when
+                `omega_type` equals "numerical"; default is 1.
+            frame_id (str, optional): The ID under which to register this Frame. If not
+                specified, the name as defined in the SPICE Toolkit is used. Note that
+                SpiceFrames are always registered.
+
+        Raises:
+            IndexError: If `spice_frame` is an integer but is not a recognized frame ID or
+                body ID.
+            KeyError: If `spice_frame` is a string but is not a recognized frame name or
+                body name.
+            KeyError: If `spice_frame` defines a known SPICE body but its rotation frame
+                is undefined.
+            TypeError: If `spice_frame` is not an integer or string.
+            ValueError: If `reference` is not a SpiceFrame or J2000, or if `omega_type`
+                does not have a recognized value.
+        """
+
+        self._fill_spice_info(spice_frame, reference)
+
+        # _fill_spice_info infers inertia from the origin, which is only a proxy; the
+        # SPICE frame class is the authoritative test, so it takes precedence here.
+        self._is_inertial = cspyce.frinfo(self._spice_frame_name)[1] == 1   # frame class
+        self._reference_is_inertial = cspyce.frinfo(self._spice_reference_name)[1] == 1
+        if self._is_inertial and self._reference_is_inertial:
+            omega_type = 'zero'
+
+        # Handle the omega parameters
+        self._omega_type = omega_type or 'tabulated'
+        self._omega_dt = float(omega_dt or 1.)
+        self._omega_tabulated = (omega_type == 'tabulated')
+        self._omega_numerical = (omega_type == 'numerical')
+        self._omega_zero = (omega_type == 'zero')
+        if self._omega_type not in {'tabulated', 'numerical', 'zero'}:
+            raise ValueError(f'invalid SpiceFrame omega_type: {self._omega_type}')
+
+        # If the reference is J2000, register as normal
+        if self._reference == Frame.J2000:
+            _ = SpiceFrame._FOR_NAME.setdefault(self._spice_frame_name, self)
+            self._register(frame_id or self._spice_frame_name.replace(' ', '_'))
+        else:
+            # Otherwise, construct the primary version first
+            wrt_j2000 = SpiceFrame.get(self._spice_frame_name, Frame.J2000,
+                                       omega_type=omega_type, omega_dt=omega_dt,
+                                       frame_id=frame_id)
+            # Cache but don't register under this frame ID
+            self._register(frame_id=None)
+            self._wayframe = wrt_j2000._wayframe
+            self._frame_id = wrt_j2000._frame_id
+
+        # Save for use by get(). A frame that is inertial relative to its reference has
+        # zero omega whichever option was requested, so it satisfies any omega_type; a
+        # key with omega_dt of None matches a request that does not constrain the step.
+        if self._omega_zero and self._is_inertial and self._reference_is_inertial:
+            omega_types = ('tabulated', 'numerical', 'zero')
+        else:
+            omega_types = (self._omega_type,)
+
+        for key_omega_type in omega_types:
+            for key_omega_dt in (self._omega_dt, None):
+                key = (self._spice_frame_name, self._spice_reference_name,
+                       key_omega_type, key_omega_dt)
+                _ = SpiceFrame._FRAME_LOOKUP.setdefault(key, self)
+
+    @classmethod
+    def _reference_spice_info(cls, reference):
+        """The SPICE code and name of a frame serving as the reference for this one.
+
+        Parameters:
+            reference (Frame): The wayframe to be used as a reference.
+
+        Returns:
+            tuple[int, str]: The SPICE frame code and name.
+
+        Raises:
+            ValueError: If the frame is neither a SpiceFrame nor J2000.
+        """
+
+        if reference == Frame.J2000:
+            return (1, 'J2000')
+
+        if isinstance(reference, SpiceFrame):
+            return (reference._spice_frame_code, reference._spice_frame_name)
+
+        raise ValueError(f'{cls.__name__} reference must be a SpiceFrame or J2000')
+
+    def _fill_spice_info(self, spice_frame, reference):
+        """Fill in this object's SPICE codes and names, plus the origin and reference.
+
+        Used by both SpiceFrame and :class:`~oops.frame.SpiceType1Frame`.
+
+        Parameters:
+            spice_frame (str | int): The name, frame code, body name, or body code as
+                used in the SPICE toolkit.
+            reference (SpiceFrame | str | None): The Frame or the ID of the Frame
+                relative to which this Frame is defined; None for J2000.
+
+        Raises:
+            IndexError: If `spice_frame` is an integer but is not a recognized frame ID or
+                body ID.
+            KeyError: If `spice_frame` is a string but is not a recognized frame name or
+                body name.
+            KeyError: If `spice_frame` defines a known SPICE body but its rotation frame
+                is undefined.
+            TypeError: If `spice_frame` is not an integer or string.
+            ValueError: If `reference` is not a SpiceFrame or J2000.
+        """
+
+        # Interpret the SPICE frame
+        (self._spice_frame_code,
+         self._spice_frame_name) = SpiceFrame._frame_code_and_name(spice_frame)
+
+        # Determine the reference frame
+        self._reference = reference and Frame.as_wayframe(reference) or Frame.J2000
+        (self._spice_reference_code,
+         self._spice_reference_name) = type(self)._reference_spice_info(self._reference)
+
+        # Determine the origin Path, constructing it if necessary. The origin code is
+        # retained because SpiceType1Frame needs it to convert between ET and the host's
+        # spacecraft clock; for a spacecraft-mounted frame it is the spacecraft ID.
+        spice_origin_code = cspyce.frinfo(self._spice_frame_name)[0]
+        self._spice_origin_code = spice_origin_code
+        if spice_origin_code == 0:  # if the origin is the SSB, this Frame is inertial
+            self._origin = None
+            self._is_inertial = True
+        else:
+            self._origin = Frame._SpicePath.get(spice_origin_code)
+            self._is_inertial = False
+
+        self._shape = ()
+
+    def _refresh(self):
+        """Discard any QuickFrames tabulated from this Frame."""
+        if hasattr(self, '_quickframes'):
+            self._quickframes.clear()
+
+    def _wayframe_key(self):
+        """The key that identifies this Frame's definition in the pool of wayframes.
+
+        Returns:
+            str: The SPICE frame name.
+        """
+        return self._spice_frame_name
+
+    def _show(self, level, indent=0):
+        """The expanded description of this Frame used by :meth:`~oops.Frame.show`.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame.
+        """
+        name = type(self).__name__
+        skip = indent + len(name) + 1
+        blanks = skip * ' '
+
+        if self._reference == Frame.J2000:
+            return f'{type(self).__name__}("{self._spice_frame_name}")'
+
+        return (f'{type(self).__name__}("{self._spice_frame_name}",\n'
+                f'{blanks}{self._reference.show(level-1, skip)})')
+
+    @staticmethod
+    def _frame_code_and_name(arg):
+        """The SPICE frame code and frame name of a Frame, given either a code or a name.
+
+        Parameters:
+            arg (str | int): The frame name, frame code, body name, or body code as used
+                in the SPICE toolkit.
+
+        Returns:
+            tuple[int, str]: `(spice_code, spice_name)` as defined within the SPICE
+            Toolkit.
+
+        Raises:
+            IndexError: If `arg` is an integer but is not a recognized frame ID or body
+                ID.
+            KeyError: If `arg` is a string but is not a recognized frame name or body
+                name.
+            KeyError: If `arg` defines a known SPICE body but its rotation frame is
+                undefined.
+            TypeError: If `arg` is not an integer or string.
+        """
+
+        # A trapped cspyce error is suppressed with `from None`; its traceback ends inside
+        # the SWIG wrapper and its message names the C signature rather than the input, so
+        # it adds nothing the caller can act on.
+
+        # Interpret an integer input
+        if isinstance(arg, numbers.Integral):
+            try:
+                name = cspyce.frmnam_error(arg)
+            except (IndexError, KeyError, RuntimeError):  # not a frame code
+                pass
+            else:
+                return (arg, name)
+
+            # Otherwise, perhaps it is a body code
+            if not cspyce.bodfnd(arg, 'POLE_RA'):
+                raise IndexError(f'unrecognized SPICE frame {arg}')
+
+            # It's a body code, so return its frame info
+            try:
+                return tuple(cspyce.cidfrm_error(arg))
+            except (IndexError, KeyError, RuntimeError):
+                raise KeyError(f'frame for body {arg} is undefined') from None
+
+        # Interpret a string input
+        elif isinstance(arg, str):
+            # Validate this as the name of a frame
+            try:
+                frame_code = cspyce.namfrm_error(arg)
+            except (IndexError, KeyError, RuntimeError):  # not a frame name
+                pass
+            else:
+                # Frame code exists; If it's a body frame, make sure the frame is defined
+                body_code = cspyce.frinfo(frame_code)[0]
+                if body_code > 0 and not cspyce.bodfnd(body_code, 'POLE_RA'):
+                    raise KeyError(f'frame "{arg}" is undefined')
+                return (frame_code, cspyce.frmnam(frame_code))
+
+            # See if this is the name of a body
+            try:
+                body_code = cspyce.bodn2c_error(arg)
+            except (IndexError, KeyError, RuntimeError):
+                raise KeyError(f'unrecognized SPICE frame "{arg}"') from None
+
+            # Make sure the body's frame is defined
+            if not cspyce.bodfnd(body_code, 'POLE_RA'):
+                raise KeyError(f'frame for body "{arg}" is undefined')
+
+            # Return the name of the associated frame
+            try:
+                return tuple(cspyce.cidfrm_error(body_code))
+            except (IndexError, KeyError, RuntimeError):
+                raise KeyError(f'frame for body "{arg}" is undefined') from None
+
+        else:
+            raise TypeError(f'invalid SPICE frame: {arg!r}')
+
+    @staticmethod
+    def _omega_from_quaternions(quat, qdot):
+        """The rotation vector implied by a quaternion and its time derivative.
+
+        Parameters:
+            quat (QuaternionLike): The quaternion of the rotation from the reference frame
+                into this frame, at the time of interest.
+            qdot (numpy.ndarray): The time derivative of that quaternion, as four floats.
+
+        Returns:
+            numpy.ndarray: The rotation vector of this frame relative to the reference,
+            expressed in the coordinates of the reference frame, as three floats.
+
+        Notes:
+            A Transform defines `omega` in the reference frame, so the derivative is
+            taken through the conjugate quaternion rather than through `quat` itself;
+            ``2 * qdot / quat`` would give the vector in the coordinates of this frame
+            instead. The sign follows from the direction of the rotation that
+            ``Quaternion.as_quaternion`` assigns to a rotation matrix.
+        """
+
+        return -2. * (quat.reciprocal() * Quaternion(qdot)).vals[1:4]
+
+    ######################################################################################
+    # Serialization support
+    ######################################################################################
+
+    def __getstate__(self):
+        return (self._spice_frame_name, self._reference, self._omega_type, self._omega_dt,
+                self.stripped_id, self._get_quickframes())
+
+    def __setstate__(self, state):
+        (frame_name, reference, omega_type, omega_dt, frame_id, quickframes) = state
+        self.__init__(frame_name, reference, omega_type=omega_type, omega_dt=omega_dt,
+                      frame_id=frame_id)
+        if quickframes:
+            self._quickframes = quickframes
+
+    ######################################################################################
+    # Frame API
+    ######################################################################################
+
+    def transform_at_time(self, time, *, quick=None):
+        """Transform that rotates coordinates from the reference to this frame.
+
+        If the frame is rotating, then the coordinates being transformed must be given
+        relative to the center of rotation.
+
+        Parameters:
+            time (ScalarLike): The time in seconds TDB.
+            quick (dict | bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
+
+        Returns:
+            Transform: Rotates vectors from the reference frame to this frame at the
+            specified time.
+
+        Raises:
+            RuntimeError: If any individual time is out of range for the currently
+                furnished C kernels.
+        """
+
+        time = Scalar.as_scalar(time).as_float()
+
+        # Handle a single time
+        if time.shape == ():
+
+            # Case 1: omega_type = tabulated
+            if self._omega_tabulated:
+                matrix6 = cspyce.sxform(self._spice_reference_name,
+                                        self._spice_frame_name, time.vals)
+                (matrix, omega) = cspyce.xf2rav(matrix6)
+                return Transform(matrix, omega, self, self.reference)
+
+            # Case 2: omega_type = zero
+            elif self._omega_zero:
+                matrix = cspyce.pxform(self._spice_reference_name, self._spice_frame_name,
+                                       time.vals)
+                return Transform(matrix, Vector3.ZERO, self, self.reference)
+
+            # Case 3: omega_type = numerical
+            else:
+                et = time.vals
+                times = np.array((et - self._omega_dt, et, et + self._omega_dt))
+                mats = cspyce.pxform_vector(self._spice_reference_name,
+                                            self._spice_frame_name, times)
+
+                # Convert three matrices to quaternions
+                quats = Quaternion.as_quaternion(Matrix3(mats))
+
+                # Use a Univariate spline to get components of the derivative
+                qdot = np.empty(4)
+                for j in range(4):
+                    spline = UnivariateSpline(times, quats.vals[:,j], k=2, s=0)
+                    qdot[j] = spline.derivative(1)(et)
+
+                omega = SpiceFrame._omega_from_quaternions(quats[1], qdot)
+                return Transform(mats[1], omega, self, self._reference)
+
+        # Use a QuickFrame if warranted
+        if quick is None:
+            quick = {}
+
+        if isinstance(quick, dict):
+            quick = quick.copy()
+            quick['quickframe_numerical_omega'] = self._omega_numerical
+            quick['ignore_quickframe_omega'] = self._omega_zero
+
+            if self._omega_numerical:
+                quick['frame_time_step'] = min(quick.get('frame_time_step', np.inf),
+                                               self._omega_dt)
+
+            frame = self.quick_frame(time, quick=quick)
+            if isinstance(frame, QuickFrame):
+                return frame.transform_at_time(time, quick=False)
+
+        # Handle multiple times
+        matrix = np.empty(time.shape + (3, 3))
+        omega  = np.zeros(time.shape + (3,))
+
+        # Case 1: omega_type = tabulated
+        if self._omega_tabulated:
+            for i, t in np.ndenumerate(time.vals):
+                matrix6 = cspyce.sxform(self._spice_reference_name,
+                                        self._spice_frame_name, t)
+                (matrix[i], omega[i]) = cspyce.xf2rav(matrix6)
+
+        # Case 2: omega_type = zero
+        elif self._omega_zero:
+            for i,t in np.ndenumerate(time.vals):
+                matrix[i] = cspyce.pxform(self._spice_reference_name,
+                                          self._spice_frame_name, t)
+
+        # Case 3: omega_type = numerical
+        # This procedure calculates each omega using its own UnivariateSpline; it could be
+        # very slow. A QuickFrame is recommended as it would accomplish the same goals
+        # much faster.
+        else:
+            for i, t in np.ndenumerate(time.vals):
+
+                # Define a set of three times centered on given time
+                times = np.array((t - self._omega_dt, t, t + self._omega_dt))
+
+                # Generate the rotation matrix at each time
+                mats = np.empty((3, 3, 3))
+                for j in range(len(times)):
+                    mats[j] = cspyce.pxform(self._spice_reference_name,
+                                            self._spice_frame_name, times[j])
+
+                # Convert these three matrices to quaternions
+                quats = Quaternion.as_quaternion(Matrix3(mats))
+
+                # Use a Univariate spline to get components of the derivative
+                qdot = np.empty(4)
+                for j in range(4):
+                    spline = UnivariateSpline(times, quats.vals[:, j], k=2, s=0)
+                    qdot[j] = spline.derivative(1)(t)
+
+                omega[i] = SpiceFrame._omega_from_quaternions(quats[1], qdot)
+                matrix[i] = mats[1]
+
+        matrix = Matrix3(matrix, mask=time.mask)
+        return Transform(matrix, omega, self, self._reference)
+
+    def transform_at_time_if_possible(self, time, *, quick=None):
+        """Transform that rotates coordinates from the reference to this frame.
+
+        If the frame is rotating, then the coordinates being transformed must be given
+        relative to the center of rotation.
+
+        Unlike :meth:`transform_at_time`, this variant tolerates times that raise cspyce
+        errors. If `time` is 1-D, this method returns a new time Scalar along with the new
+        Transform, where both objects skip over the times at which the transform could not
+        be evaluated. If `time` has more than one dimension, the cspyce error is still
+        raised.
+
+        Parameters:
+            time (ScalarLike): The time in seconds TDB.
+            quick (dict | bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
+
+        Returns:
+            tuple[Scalar, Transform]: `(valid_time, transform)`:
+
+            * `valid_time` (Scalar) identifies the time(s) at which `transform` has been
+              provided; this may be a subset of the input times, because it omits the
+              times at which the Transform could not be evaluated.
+            * `transform` (Transform) is the Transform defined at `valid_time`. It rotates
+              vectors from the reference frame to this frame.
+
+        Raises:
+            RuntimeError: If `time` is multidimensional and any single time is out of
+                range for the currently furnished C kernels, or if every time is out of
+                range. A one-dimensional `time` with some times in range returns those.
+                The SPICE Toolkit reports this as SPICE(NOFRAMECONNECT).
+        """
+
+        time = Scalar.as_scalar(time).as_float()
+
+        # A single input time can be handled via the previous method
+        # RuntimeError on failure
+        if time.shape == ():
+            return (time, self.transform_at_time(time, quick=quick))
+
+        # Apply the QuickFrame if requested
+        if quick is None:
+            quick = {}
+
+        if isinstance(quick, dict):
+            quick = quick.copy()
+            quick['quickframe_numerical_omega'] = self._omega_numerical
+            quick['ignore_quickframe_omega'] = self._omega_zero
+
+            if self._omega_numerical:
+                quick['frame_time_step'] = min(quick.get('frame_time_step', np.inf),
+                                               self._omega_dt)
+
+            frame = self.quick_frame(time, quick=quick)
+            return frame.transform_at_time_if_possible(time, quick=False)
+
+        # Handle multiple times
+        matrix = np.empty(time.shape + (3, 3))
+        omega  = np.zeros(time.shape + (3,))
+
+        # Lists used in case of error
+        new_time = []
+        matrix_list = []
+        omega_list = []
+
+        error_found = None
+
+        # Case 1: omega_type = tabulated
+        if self._omega_tabulated:
+            for i, t in np.ndenumerate(time.vals):
+                try:
+                    matrix6 = cspyce.sxform(self._spice_reference_name,
+                                            self._spice_frame_name, t)
+                    (matrix[i], omega[i]) = cspyce.xf2rav(matrix6)
+
+                    new_time.append(t)
+                    matrix_list.append(matrix[i])
+                    omega_list.append(omega[i])
+
+                except (RuntimeError, ValueError, IOError) as e:
+                    if len(time.shape) > 1:
+                        raise e
+                    error_found = e
+
+        # Case 2: omega_type = zero
+        elif self._omega_zero:
+            for i, t in np.ndenumerate(time.vals):
+                try:
+                    matrix[i] = cspyce.pxform(self._spice_reference_name,
+                                              self._spice_frame_name, t)
+                    new_time.append(t)
+                    matrix_list.append(matrix[i])
+                    omega_list.append((0., 0., 0.))
+
+                except (RuntimeError, ValueError, IOError) as e:
+                    if len(time.shape) > 1:
+                        raise e
+                    error_found = e
+
+        # Case 3: omega_type = numerical
+        # This procedure calculates each omega using its own UnivariateSpline; it could be
+        # very slow. A QuickFrame is recommended as it would accomplish the same goals
+        # much faster.
+        else:
+            for i, t in np.ndenumerate(time.vals):
+                try:
+                    times = np.array((t - self._omega_dt, t, t + self._omega_dt))
+                    mats = np.empty((3, 3, 3))
+
+                    for j in range(len(times)):
+                        mats[j] = cspyce.pxform(self._spice_reference_name,
+                                                self._spice_frame_name, times[j])
+
+                    # Convert three matrices to quaternions
+                    quats = Quaternion.as_quaternion(Matrix3(mats))
+
+                    # Use a Univariate spline to get components of the derivative
+                    qdot = np.empty(4)
+                    for j in range(4):
+                        spline = UnivariateSpline(times, quats.vals[:,j], k=2, s=0)
+                        qdot[j] = spline.derivative(1)(t)
+
+                    omega[i] = 2. * (Quaternion(qdot) / quats[1]).vals[1:4]
+                    matrix[i] = mats[1]
+
+                    new_time.append(t)
+                    matrix_list.append(matrix[i])
+                    omega_list.append(omega[i])
+
+                except (RuntimeError, ValueError, IOError) as e:
+                    if len(time.shape) > 1:
+                        raise e
+                    error_found = e
+
+        if error_found is not None:
+            if len(new_time) == 0:
+                raise error_found
+
+            time = Scalar(new_time)
+            matrix = Matrix3(matrix_list)
+            omega = Vector3(omega_list)
+        else:
+            matrix = Matrix3(matrix)
+            omega = Vector3(omega)
+
+        return (time, Transform(matrix, omega, self, self.reference))
+
+    ######################################################################################
+    # SpiceFrame API
+    ######################################################################################
+
+    @staticmethod
+    def get(spice_frame, reference=None, *, omega_type='tabulated', omega_dt=1.,
+            frame_id=None):
+        """The SpiceFrame defined by the given parameters.
+
+        If a matching SpiceFrame already exists, it is returned; otherwise, a new one is
+        constructed and returned.
+
+        Parameters:
+            spice_frame (str | int | SpiceFrame): The frame name, frame code, body name,
+                or body code as used in the SPICE toolkit. Alternatively, an existing
+                SpiceFrame (which might use the wrong reference frame).
+            reference (SpiceFrame | str, optional): The SpiceFrame or frame ID relative
+                to which this frame refers. This must be a SpiceFrame or else, by default,
+                J2000.
+            omega_type (str, optional): Options defining how `omega`, the time derivative
+                of the frame, is calculated:
+
+                * "tabulated" to take `omega` directly from the SPICE kernel;
+                * "numerical" to derive `omega` via numerical derivatives;
+                * "zero" to ignore omega vectors. This is the default for inertial frames.
+
+            omega_dt (float, optional): The default time step in seconds to use when
+                `omega_type` equals "numerical". By default, the `omega_dt` of the
+                returned SpiceFrame is not constrained.
+            frame_id (str, optional): The ID under which to register this Frame. If not
+                specified, the name as defined in the SPICE Toolkit is used. Note that
+                SpiceFrames are always registered. This input is used only if a new
+                SpiceFrame is constructed; otherwise, the pre-existing ID is retained.
+
+        Returns:
+            SpiceFrame: The SpiceFrame, newly constructed if necessary.
+
+        Raises:
+            IndexError: If `spice_frame` is an integer but is not a recognized frame ID or
+                body ID.
+            KeyError: If `spice_frame` is a string but is not a recognized frame name or
+                body name.
+            KeyError: If `spice_frame` defines a known SPICE body but its rotation frame
+                is undefined.
+            TypeError: If `spice_frame` is not an integer or string.
+            ValueError: If `reference` is not a SpiceFrame or J2000, or if `omega_type`
+                does not have a recognized value.
+        """
+
+        reference = Frame.as_wayframe(reference)
+
+        # Handle a SpiceFrame input; use it if it matches
+        if isinstance(spice_frame, SpiceFrame):
+            if (reference == spice_frame._reference
+                    and omega_type == spice_frame._omega_type
+                    and (omega_dt == spice_frame._omega_dt
+                         or not spice_frame._omega_numerical)):
+                return spice_frame
+            # Otherwise, identify the name and continue
+            name = spice_frame._spice_frame_name
+        else:
+            (_, name) = SpiceFrame._frame_code_and_name(spice_frame)
+
+        # The reference must be usable by the constructor; fail here with the same error
+        # rather than on a missing attribute below
+        reference_name = SpiceFrame._reference_spice_info(reference)[1]
+
+        # See if a pre-existing Frame matches the request (including omega options)
+        if name == reference_name:
+            if name == 'J2000':
+                return Frame.J2000
+            else:
+                return NullFrame(reference)
+
+        key = (name, reference_name, omega_type, omega_dt)
+        if key in SpiceFrame._FRAME_LOOKUP:
+            return SpiceFrame._FRAME_LOOKUP[key]
+
+        # Otherwise, we need a new SpiceFrame
+        return SpiceFrame(name, reference, omega_type=omega_type, omega_dt=omega_dt,
+                          frame_id=frame_id)
+
+    def _get_shortcut(self, reference):
+        """A Frame that directly transforms from the given reference to this SpiceFrame.
+
+        This is an override of the default method, needed because the SPICE Toolkit can
+        handle the connections between SpiceFrames very efficiently.
+
+        Parameters:
+            reference (Frame): The reference Frame, which must be a valid wayframe.
+
+        Returns:
+            Frame: This Frame relative to `reference`, connected through the nearest
+            SpiceFrame ancestor of `reference`.
+        """
+
+        # Find the first SpiceFrame (or J2000) that's an ancestor of the reference
+        ancestor = reference
+        while not isinstance(ancestor, (SpiceFrame, J2000Frame)):
+            ancestor = ancestor._reference
+
+        # Get the SpiceFrame to the selected ancestor
+        spice_frame = SpiceFrame.get(self, ancestor, omega_type=self._omega_type,
+                                     omega_dt=self._omega_dt)
+
+        # Maybe we're done
+        if ancestor == reference:
+            return spice_frame
+
+        # Get the "remainder" frame from the ancestor to the reference, then link
+        remainder = ancestor._wrt(reference, use_shortcuts=False)
+        return LinkedFrame(spice_frame, remainder)
+
+##########################################################################################
+
+Frame._FRAME_SUBCLASSES.append(SpiceFrame)
+Frame._SpiceFrame = SpiceFrame
+
+##########################################################################################

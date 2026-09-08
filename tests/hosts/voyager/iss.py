@@ -1,14 +1,14 @@
-################################################################################
+##########################################################################################
 # oops/hosts/voyager/iss.py
-################################################################################
+##########################################################################################
 
-################################################################################
+##########################################################################################
 # UNIT TESTS
-################################################################################
+##########################################################################################
 #import unittest
 #import oops.backplane.gold_master as gm
 #
-#from oops.unittester_support            import TEST_DATA_PREFIX
+#from programs.gold_master.test_support            import TEST_DATA_PREFIX
 #
 #
 ##===============================================================================
@@ -29,7 +29,8 @@
 #
 #        To preview and regenerate gold masters (from pds-oops/oops/backplane/):
 #            python gold_master.py \
-#                ~/Dropbox-SETI/OOPS-Resources/test_data/voyager/ISS/VGISS_6109/C34502XX/C3450201_GEOMED.img \
+#                ~/Dropbox-SETI/OOPS-Resources/test_data/voyager/ISS/\
+#                    VGISS_6109/C34502XX/C3450201_GEOMED.img \
 #                --module hosts.voyager.iss \
 #                --planet SATURN \
 #                --ring SATURN_MAIN_RINGS \
@@ -37,7 +38,8 @@
 #                --preview
 #
 #            python gold_master.py \
-#                ~/Dropbox-SETI/OOPS-Resources/test_data/voyager/ISS/VGISS_6109/C34502XX/C3450201_GEOMED.img \
+#                ~/Dropbox-SETI/OOPS-Resources/test_data/voyager/ISS/\
+#                    VGISS_6109/C34502XX/C3450201_GEOMED.img \
 #                --module hosts.voyager.iss \
 #                --planet SATURN \
 #                --ring SATURN_MAIN_RINGS \
@@ -54,7 +56,7 @@
 #                inventory=False, border=10)
 #
 #
-###############################################
+##########################################################################################
 #if __name__ == '__main__':
 #    unittest.main(verbosity=2)
 
@@ -66,7 +68,7 @@
 
 # import unittest
 #
-# from oops.unittester_support            import TEST_DATA_PREFIX
+# from programs.gold_master.test_support            import TEST_DATA_PREFIX
 # from oops.backplane.exercise_backplanes import exercise_backplanes
 # from oops.backplane.unittester_support  import Backplane_Settings
 #
@@ -89,4 +91,4 @@
 # if __name__ == '__main__':
 #     backplane_unittester_args()
 #     unittest.main(verbosity=2)
-################################################################################
+##########################################################################################

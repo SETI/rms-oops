@@ -1,0 +1,44 @@
+# Names that exist at run time but cannot be described by a package stub.
+#
+# Only package stubs exist: `oops/frame/__init__.pyi` describes `oops.frame`, and no stub
+# describes `oops.frame.frame_`. stubtest still walks every module below a package and
+# compares it against what mypy reads from the source, so the entries below are names the
+# source cannot describe on its own.
+#
+# The cross-class attributes are the circular-import workaround documented in CLAUDE.md:
+# `oops/__init__.py` assigns them after every module is loaded, so the source shows the
+# `None` placeholder while the run-time value is the injected class.
+oops._cache._Cache._Frame
+oops._cache._Cache._Path
+oops.event.Event._Path
+oops.event.Event.SSB
+oops.frame.frame_.Frame._Event
+oops.frame.frame_.Frame._Path
+oops.frame.frame_.Frame._QuickFrame
+oops.frame.frame_.Frame._SpicePath
+oops.frame.frame_.J2000Frame._J2000
+oops.path.path_.Path._Body
+oops.path.path_.Path._QuickPath
+oops.path.path_.SSBPath._SSB
+oops.surface.surface_.Surface._Body
+oops.transform.Transform._Frame
+
+# The host packages, which are outside the cleanup that the rest of the library has had.
+# Several of them load SPICE kernels when they are imported, which reads $OOPS_RESOURCES,
+# so on a machine without the resource tree (the lint runner in CI) stubtest cannot
+# import them at all; where it can, the few mismatches are module-level constants built
+# by calling a constructor (`oops.hosts.cassini.vims.IR_FULL_FOV`) and a return type the
+# stub re-exports so that it can name it (`oops.hosts.hst.Tabulation`). One pattern
+# covers both cases, so the entry is used whether or not the tree is present; stubtest
+# fails on an allowlist entry that matches nothing.
+oops\.hosts\..*
+
+# Class constants that are instances of the class itself (or a subclass), assigned by
+# `oops/__init__.py` after the class statement. Each package stub declares its classes
+# outright, so stubtest sees the stub's `Transform` and the run-time
+# `oops.transform.Transform` as different types and reports a mismatch on every one of
+# them. The stubs give the true type; these entries silence only that comparison.
+oops.Event.SSB
+oops.Transform.IDENTITY
+oops.frame.Frame.J2000
+oops.path.Path.SSB

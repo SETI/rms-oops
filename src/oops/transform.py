@@ -1,0 +1,415 @@
+##########################################################################################
+# oops/transform.py: Class Transform
+##########################################################################################
+
+from polymath import Qube, Vector3, Matrix3
+from oops.oops import Oops
+
+
+class Transform(Oops):
+    """An object describing a coordinate transformation.
+
+    A Transform is defined by a rotation matrix plus an optional angular rotation vector
+    indicating how the target frame is rotating.
+
+    Given a state vector (pos, vel) in the reference coordinate frame, the state vector in
+    the target frame is::
+
+        pos_target = matrix * pos_ref
+        vel_target = matrix * (vel_ref - omega x pos_ref)
+
+    The inverse transformation is::
+
+        pos_ref = matrix-T * pos_target
+        vel_ref = matrix-T * vel_target + omega x pos_ref
+                = matrix-T * (vel_target - omega1 x pos_target)
+
+    where `omega1` = -matrix * omega, the negative of the rotation vector transformed into
+    the target frame.
+
+    With this definition, a Transform can also describe the orientation and rotation rate
+    of a planetary body, in which case the rows of `matrix` are the instantaneous X, Y and
+    Z axes in reference coordinates and `omega` is the body's rotation vector in reference
+    coordinates.
+
+    Attributes:
+        matrix (Matrix3): Rotates coordinates from the reference coordinate frame into the
+            target frame.
+        omega (Vector3): The angular rotation vector of the target frame relative to the
+            reference, specified in the reference coordinate frame.
+        is_fixed (bool): True if `omega` is zero, meaning that the target frame is not
+            rotating.
+        frame (Frame): The target frame, into which this Transform rotates.
+        reference (Frame): The reference frame, whose coordinates this Transform rotates
+            into the target frame. The reference frame must have shape ().
+        origin (Path | None): The path defining the center of rotation if this is a
+            rotating frame; None otherwise.
+        shape (tuple[int, ...]): The intrinsic shape of the Transform, generated only if
+            needed.
+    """
+
+    # Class constants to avoid circular references
+    _Frame = None           # class filled in by oops/__init__.py
+
+    def __init__(self, matrix, omega, frame, reference, *, origin=None):
+        """Constructor for a Transform object.
+
+        Parameters:
+            matrix (Matrix3Like): Object that is used to rotate coordinates from the
+                reference frame into the new frame.
+            omega (Vector3Like): The spin vector for the coordinate frame, given in
+                coordinates of the reference frame.
+            frame (Frame | str): The frame or frame ID into which this Transform rotates.
+            reference (Frame | str): The frame or frame ID from which this Transform
+                rotates.
+            origin (Path | str, optional): The path or path ID of the center of rotation.
+                If None, it is derived from the `reference` frame.
+        """
+
+        self.matrix = Matrix3.as_matrix3(matrix)
+        self.omega  = Vector3.as_vector3(omega)
+
+        self.is_fixed = (self.omega == Vector3.ZERO)
+
+        self.frame     = Transform._Frame.as_wayframe(frame)
+        self.reference = Transform._Frame.as_wayframe(reference)
+
+        if origin is None:
+            self.origin = self.reference.origin if reference is not None else None
+        elif isinstance(origin, str):
+            self.origin = Transform._Frame._Path.as_waypoint(origin)
+        else:
+            self.origin = origin.waypoint
+
+        self._clear_cache()
+
+    def _clear_cache(self):
+        """Discard every value that this Transform derives from its matrix and omega."""
+
+        self._filled_shape = None            # filled in only when needed
+        self._filled_omega1 = None
+        self._filled_matrix_with_deriv = None
+        self._filled_inverse_matrix = None
+        self._filled_inverse_with_deriv = None
+        self._filled_wod = None
+
+    def __getstate__(self):
+        return (self.matrix, self.omega, self.frame, self.reference,
+                self.origin)
+
+    def __setstate__(self, state):
+        (matrix, omega, frame, reference, origin) = state
+
+        # The frame, reference and origin saved in the state are already a wayframe, a
+        # wayframe and a waypoint, so none of them needs the conversion that __init__
+        # performs on user-supplied arguments. Re-running the constructor would look up
+        # the wayframe of each, and a Transform can be restored before the Frame it
+        # refers to when the two belong to the same reference cycle, as they do when a
+        # Frame carries the QuickFrames tabulated from it.
+        self.matrix = matrix
+        self.omega = omega
+        self.is_fixed = (omega == Vector3.ZERO)
+        self.frame = frame
+        self.reference = reference
+        self.origin = origin
+
+        self._clear_cache()
+
+    @property
+    def shape(self) -> tuple[int, ...]:
+        """The intrinsic shape of the Transform.
+
+        This is a bit expensive to generate and used rarely, so it is implemented as a
+        property rather than an attribute.
+        """
+
+        if self._filled_shape is None:
+            self._filled_shape =  Qube.broadcasted_shape(self.matrix, self.omega,
+                                                        self.frame, self.reference)
+        return self._filled_shape
+
+    @property
+    def omega1(self) -> Vector3:
+        """The negative of the rotation vector, transformed into the target frame.
+
+        Used for the inverse transform.
+        """
+
+        if self._filled_omega1 is None:
+            self._filled_omega1 = self.matrix * (-self.omega)
+
+        return self._filled_omega1
+
+    @property
+    def matrix_with_deriv(self) -> Matrix3:
+        """The rotation matrix with its time-derivative filled in."""
+
+        if self._filled_matrix_with_deriv is None:
+            self._filled_matrix_with_deriv = self.matrix.clone()
+
+            d_dt = self.matrix * (-self.omega.cross_product_as_matrix())
+            self._filled_matrix_with_deriv.insert_deriv('t', d_dt, override=True)
+
+        return self._filled_matrix_with_deriv
+
+    @property
+    def inverse_matrix(self) -> Matrix3:
+        """The inverse rotation matrix."""
+
+        if self._filled_inverse_matrix is None:
+            self._filled_inverse_matrix = self.matrix.transpose()
+
+        return self._filled_inverse_matrix
+
+    @property
+    def inverse_with_deriv(self) -> Matrix3:
+        """The inverse rotation matrix with its time-derivative filled in."""
+
+        if self._filled_inverse_with_deriv is None:
+            inverse = self.matrix_with_deriv.inverse(recursive=True)
+            self._filled_inverse_with_deriv = inverse
+
+        return self._filled_inverse_with_deriv
+
+    @property
+    def wod(self) -> 'Transform':
+        """This Transform without any time-derivatives."""
+        if self._filled_wod is None:
+            self._filled_wod = Transform(self.matrix, Vector3.ZERO, self.frame,
+                                         self.reference, origin=self.origin)
+
+        return self._filled_wod
+
+    def __str__(self):
+        return ('Transform(shape=' +
+                repr(self.shape).replace(' ', '') + '/' +
+                repr(self.frame.frame_id) + ')')
+
+    def __repr__(self):
+        return self.__str__()
+
+    @staticmethod
+    def identity(frame):
+        """An identity transform from a frame to itself.
+
+        Parameters:
+            frame (Frame | str): The frame or frame ID that serves as both the target and
+                the reference of the returned Transform.
+
+        Returns:
+            Transform: A Transform with an identity matrix and zero rotation vector.
+        """
+
+        return Transform(Matrix3.IDENTITY, Vector3.ZERO, frame, frame)
+
+    ######################################################################################
+    # Vector operations
+    ######################################################################################
+
+    def rotate(self, pos, derivs=True):
+        """Rotate the coordinates of a position or matrix.
+
+        Optionally, it also rotates any derivatives.
+
+        Parameters:
+            pos (Vector3Like | VectorLike | MatrixLike): The position or matrix to
+                rotate; the size of its leading axis must be 3. Anything not a subclass of
+                Qube (e.g., a list or tuple) is converted to a Vector3 first.
+            derivs (bool, optional): True to calculate the time-derivative as well.
+
+        Returns:
+            Vector3 | Vector | Matrix | None: The position or matrix transformed into the
+            target frame, of the same class as `pos` where that is a Qube and a Vector3
+            otherwise; None if `pos` is None. If `derivs` is True, then the returned
+            object has a time derivative.
+        """
+
+        if pos is None:
+            return None
+
+        if not isinstance(pos, Qube):
+            pos = Vector3.as_vector3(pos)
+
+        if derivs:
+            return self.matrix_with_deriv * pos
+        else:
+            return self.matrix * pos.wod
+
+    def rotate_pos_vel(self, pos, vel):
+        """Rotate the coordinates of a position and velocity.
+
+        This function ignores derivatives. It does correctly allow for the artificial
+        component of the velocity for a position off the origin in a rotating frame.
+
+        Parameters:
+            pos (Vector3Like): Position as a Vector3, in the reference frame.
+            vel (Vector3Like): Velocity as a Vector3, in the reference frame.
+
+        Returns:
+            tuple[Vector3, Vector3]: The same position and velocity transformed into the
+            target frame.
+        """
+
+        pos = Vector3.as_vector3(pos)
+        vel = Vector3.as_vector3(vel)
+
+        # pos_target = matrix * pos_ref
+        # vel_target = matrix * (vel_ref - omega x pos_ref)
+
+        pos_target = self.matrix * pos
+
+        velocity_is_easy = self.is_fixed or (pos == Vector3.ZERO)
+        if velocity_is_easy:
+            vel_target = self.matrix * vel
+        else:
+            vel_target = self.matrix * (vel - self.omega.cross(pos))
+
+        return (pos_target, vel_target)
+
+    def unrotate(self, pos, derivs=True):
+        """Un-rotate the coordinates of a position into the reference frame.
+
+        Parameters:
+            pos (Vector3Like | VectorLike | MatrixLike): The position or matrix to
+                un-rotate; the size of its leading axis must be 3. Anything not a subclass
+                of Qube (e.g., a list or tuple) is converted to a Vector3 first. Velocity
+                is always assumed zero.
+            derivs (bool, optional): True to calculate the time-derivative as well.
+
+        Returns:
+            Vector3 | Vector | Matrix | None: The position or matrix transformed back into
+            the reference frame, of the same class as `pos` where that is a Qube and a
+            Vector3 otherwise; None if `pos` is None. If `derivs` is True, then the
+            returned object has a time derivative.
+        """
+
+        if pos is None:
+            return None
+
+        if not isinstance(pos, Qube):
+            pos = Vector3.as_vector3(pos)
+
+        if derivs:
+            return self.inverse_with_deriv * pos
+        else:
+            return self.inverse_matrix * pos.wod
+
+    def unrotate_pos_vel(self, pos, vel):
+        """Un-rotates the coordinates of a position and velocity.
+
+        Derivatives are not supported.
+
+        Parameters:
+            pos (Vector3Like): Position as a Vector3, in the target frame.
+            vel (Vector3Like): Velocity as a Vector3, in the target frame.
+
+        Returns:
+            tuple[Vector3, Vector3]: The same position and velocity transformed back into
+            the reference frame.
+        """
+
+        pos = Vector3.as_vector3(pos)
+        vel = Vector3.as_vector3(vel)
+
+        # pos_ref = matrix-T * pos_target
+        # vel_ref = matrix-T * vel_target + omega x pos_ref
+
+        pos_ref = self.matrix.unrotate(pos)
+
+        velocity_is_easy = self.is_fixed or pos == Vector3.ZERO
+        if velocity_is_easy:
+            vel_ref = self.matrix.unrotate(vel)
+        else:
+            vel_ref = self.matrix.unrotate(vel) + self.omega.cross(pos_ref)
+
+        return (pos_ref, vel_ref)
+
+    ######################################################################################
+    # Operations on Transforms
+    ######################################################################################
+
+    def invert(self):
+        """The inverse transformation.
+
+        Returns:
+            Transform: A Transform that rotates from this Transform's target frame back
+            into its reference frame, sharing the same origin.
+        """
+
+        return Transform(self.matrix.reciprocal(), self.omega1, self.reference,
+                         self.frame, origin=self.origin)
+
+    def rotate_transform(self, arg):
+        """Apply this transform to another, as a left-multiply.
+
+        The result is a single transform that converts coordinates in the reference frame
+        of the argument transform into the frame of this transform.
+
+        Parameters:
+            arg (Transform): The Transform to apply first. Its target frame must match the
+                reference frame of this Transform.
+
+        Returns:
+            Transform: The combined Transform, from the reference frame of `arg` into the
+            target frame of this Transform. Where only one of the two defines an origin,
+            that origin is used; where both do, this Transform's origin is used.
+
+        Raises:
+            ValueError: If the target frame of `arg` is not the reference frame of this
+                Transform.
+        """
+
+        # Two tranforms
+        #   P1 = M P0; V1 = M (V0 - omega x P0)
+        #   P2 = N P1; V2 = N (V1 - kappa x P1)
+        #
+        # Combine...
+        #   P2 = [N M] P0
+        #
+        #   V2 = N [M (V0 - omega x P0) - kappa x M P0]
+        #      = N [M (V0 - omega x P0) - M MT (kappa x M P0)
+        #      = N M [(V0 - omega x P0) - MT ([M MT kappa] x M P0)]
+        #      = N M [(V0 - omega x P0) - MT ([M MT kappa] x M P0)]
+        #      = N M [(V0 - omega x P0) - MT M ([MT kappa] x P0)]
+        #      = N M [(V0 - [omega + MT kappa] x P0)]
+
+        if self.reference != arg.frame:
+            raise ValueError('frame mismatch in rotate_transform: %s, %s'
+                             % (self.reference, arg.frame))
+
+        if self.origin is None:
+            origin = arg.origin
+        elif arg.origin is None:
+            origin = self.origin
+        else:
+            origin = self.origin
+            # assert self.origin_id == arg.origin_id
+
+        return Transform(self.matrix.rotate(arg.matrix),
+                         arg.matrix.unrotate(self.omega) + arg.omega,
+                         self.frame, arg.reference, origin=origin)
+
+    def unrotate_transform(self, arg):
+        """Apply the inverse of this transform to another, as a left-multiply.
+
+        The result is a single transform that converts coordinates in the reference frame
+        of the argument transform into the reference frame of this transform. I.e., if
+        `arg` rotates A to B and this Transform rotates C to B, then the result rotates A
+        to C.
+
+        Parameters:
+            arg (Transform): The Transform to apply first. Its target frame must match the
+                target frame of this Transform.
+
+        Returns:
+            Transform: The combined Transform, from the reference frame of `arg` into the
+            reference frame of this Transform.
+
+        Raises:
+            ValueError: If the target frame of `arg` is not the target frame of this
+                Transform.
+        """
+
+        return self.invert().rotate_transform(arg)
+
+##########################################################################################

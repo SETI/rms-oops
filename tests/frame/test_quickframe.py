@@ -1,149 +1,474 @@
-################################################################################
+##########################################################################################
 # oops/frame/quickframe.py: Subclass QuickFrame of class Frame
-################################################################################
+##########################################################################################
+
+import pickle
 
 import numpy as np
-import unittest
-
-import cspyce
+import pytest
 
 from polymath   import Matrix3, Quaternion, Scalar, Vector3
+from oops.config import LOGGING
 from oops.frame import (Frame, Cmatrix, Navigation, PosTargFrame, QuickFrame,
                         Rotation, SpiceFrame, SpinFrame, TwoVectorFrame)
-from oops.path  import Path, SpicePath
-from oops.unittester_support import TEST_SPICE_PREFIX
+from oops.path  import SpicePath
 
 
-class Test_QuickFrame(unittest.TestCase):
+def test_quickframe(core_kernels):
+    np.random.seed(4417)
 
-    def setUp(self):
-        paths = TEST_SPICE_PREFIX.retrieve(['naif0009.tls',
-                                            'pck00010.tpc',
-                                            'de421.bsp'])
-        for path in paths:
-            cspyce.furnsh(path)
-        Path._reset_caches()
-        Frame._reset_caches()
+    _ = SpicePath('MARS', 'SSB')
+    mars = SpiceFrame('IAU_MARS', 'J2000')
 
-    def tearDown(self):
-        Path._reset_caches()
-        Frame._reset_caches()
+    epoch = 1.e8
+    time = Scalar(epoch + np.arange(0., 100., 0.01))
 
-    def runTest(self):
+    ######################################################################################
+    # Tabulating a Frame does not spawn a second, nested QuickFrame
+    ######################################################################################
 
-        np.random.seed(4417)
+    # SpiceFrame quickens itself when handed an array of times, so the tabulation
+    # inside QuickFrame must not re-enter that machinery. The span is short enough
+    # that a QuickFrame of the tabulation times would otherwise be judged worthwhile.
+    short_time = Scalar(epoch + np.arange(0., 0.5, 0.001))
+    assert isinstance(mars.quick_frame(short_time, quick={}), QuickFrame)
+    assert len(mars._quickframes) == 1
 
-        _ = SpicePath('MARS', 'SSB')
-        mars = SpiceFrame('IAU_MARS', 'J2000')
+    # The same must hold when the frame being tabulated is a composite, which
+    # requires LinkedFrame to forward `quick` to the frames it combines. The times
+    # are well clear of the tabulation above, so a second QuickFrame of IAU_MARS
+    # could not be mistaken for a re-use of the first.
+    linked_time = short_time + 1000.
+    twovector = TwoVectorFrame(mars, Vector3.XAXIS, 'X', Vector3.YAXIS, 'Y',
+                               frame_id='nested_twovector')
+    linked = twovector.wrt(Frame.J2000)
+    assert isinstance(linked.quick_frame(linked_time, quick={}), QuickFrame)
+    assert len(mars._quickframes) == 1
 
-        epoch = 1.e8
-        time = Scalar(epoch + np.arange(0., 100., 0.01))
+    ######################################################################################
+    # A Frame whose transform is fixed in time is never tabulated
+    ######################################################################################
 
-        ########################################
-        # Tabulating a Frame does not spawn a second, nested QuickFrame
-        ########################################
+    # These Frames return one Transform regardless of the times requested, so a
+    # QuickFrame could not interpolate them and would gain nothing if it could
+    fixed = [Cmatrix(Matrix3.IDENTITY, reference=mars, frame_id='fixed_cmatrix'),
+             PosTargFrame(1.e-5, 2.e-5, mars, frame_id='fixed_postarg'),
+             Rotation(0.3, 2, mars, frame_id='fixed_rotation'),
+             TwoVectorFrame(mars, Vector3.XAXIS, 'X', Vector3.YAXIS, 'Y',
+                            frame_id='fixed_twovector')]
 
-        # SpiceFrame quickens itself when handed an array of times, so the tabulation
-        # inside QuickFrame must not re-enter that machinery. The span is short enough
-        # that a QuickFrame of the tabulation times would otherwise be judged worthwhile.
-        short_time = Scalar(epoch + np.arange(0., 0.5, 0.001))
-        self.assertIsInstance(mars.quick_frame(short_time, quick={}), QuickFrame)
-        self.assertEqual(len(mars._quickframes), 1)
+    for frame in fixed:
+        assert not frame._USE_QUICKFRAMES
+        assert frame.quick_frame(time, quick={}) is frame
 
-        # The same must hold when the frame being tabulated is a composite, which
-        # requires LinkedFrame to forward `quick` to the frames it combines. The times
-        # are well clear of the tabulation above, so a second QuickFrame of IAU_MARS
-        # could not be mistaken for a re-use of the first.
-        linked_time = short_time + 1000.
-        twovector = TwoVectorFrame(mars, Vector3.XAXIS, 'X', Vector3.YAXIS, 'Y',
-                                   frame_id='nested_twovector')
-        linked = twovector.wrt(Frame.J2000)
-        self.assertIsInstance(linked.quick_frame(linked_time, quick={}), QuickFrame)
-        self.assertEqual(len(mars._quickframes), 1)
+        # ...but the composite with a time-dependent reference still is tabulated
+        linked = frame.wrt(Frame.J2000)
+        assert linked._USE_QUICKFRAMES
+        assert isinstance(linked.quick_frame(time, quick={}), QuickFrame)
 
-        ########################################
-        # A Frame whose transform is fixed in time is never tabulated
-        ########################################
+    ######################################################################################
+    # Tabulating a fixed Frame raises a meaningful error
+    ######################################################################################
 
-        # These Frames return one Transform regardless of the times requested, so a
-        # QuickFrame could not interpolate them and would gain nothing if it could
-        fixed = [Cmatrix(Matrix3.IDENTITY, reference=mars, frame_id='fixed_cmatrix'),
-                 PosTargFrame(1.e-5, 2.e-5, mars, frame_id='fixed_postarg'),
-                 Rotation(0.3, 2, mars, frame_id='fixed_rotation'),
-                 TwoVectorFrame(mars, Vector3.XAXIS, 'X', Vector3.YAXIS, 'Y',
-                                frame_id='fixed_twovector')]
+    cmatrix = fixed[0]
+    with pytest.raises(ValueError):
+        QuickFrame(cmatrix, epoch, epoch + 100.)
 
-        for frame in fixed:
-            self.assertFalse(frame._USE_QUICKFRAMES)
-            self.assertIs(frame.quick_frame(time, quick={}), frame)
+    ######################################################################################
+    # Quaternions q and -q describe the same rotation, so the tabulated values can
+    # reverse sign where the rotation angle passes pi; the splines require them to
+    # be continuous
+    ######################################################################################
 
-            # ...but the composite with a time-dependent reference still is tabulated
-            linked = frame.wrt(Frame.J2000)
-            self.assertTrue(linked._USE_QUICKFRAMES)
-            self.assertIsInstance(linked.quick_frame(time, quick={}), QuickFrame)
+    # 110 seconds at 0.1 rad/s sweeps through pi more than three times
+    spin = SpinFrame(0., 0.1, epoch, 2, mars, frame_id='fast_spin')
+    spin_wrt_j2000 = spin.wrt(Frame.J2000)
 
-        ########################################
-        # Tabulating a fixed Frame raises a meaningful error
-        ########################################
+    quick = spin_wrt_j2000.quick_frame(time, quick={})
+    assert isinstance(quick, QuickFrame)
 
-        cmatrix = fixed[0]
-        self.assertRaises(ValueError, QuickFrame, cmatrix, epoch, epoch + 100.)
+    exact = spin_wrt_j2000.transform_at_time(time, quick=False)
+    interpolated = quick.transform_at_time(time)
+    error = np.max(np.abs(interpolated.matrix.vals - exact.matrix.vals))
+    assert error < 1.e-8
 
-        ########################################
-        # Quaternions q and -q describe the same rotation, so the tabulated values can
-        # reverse sign where the rotation angle passes pi; the splines require them to
-        # be continuous
-        ########################################
+    # The tabulation itself must be free of sign reversals
+    quats = Quaternion.as_quaternion(quick._xforms.matrix).vals
+    unwrapped = QuickFrame._unwrap_quaternions(quats)
+    assert np.any(np.sum(quats[:-1] * quats[1:], axis=-1) < 0.)
+    assert np.all(np.sum(unwrapped[:-1] * unwrapped[1:], axis=-1) > 0.)
 
-        # 110 seconds at 0.1 rad/s sweeps through pi more than three times
-        spin = SpinFrame(0., 0.1, epoch, 2, mars, frame_id='fast_spin')
-        spin_wrt_j2000 = spin.wrt(Frame.J2000)
+    # Unwrapping preserves the rotations it describes
+    before = Matrix3.as_matrix3(Quaternion(quats)).vals
+    after = Matrix3.as_matrix3(Quaternion(unwrapped)).vals
+    assert np.max(np.abs(after - before)) < 1.e-14
 
-        quick = spin_wrt_j2000.quick_frame(time, quick={})
-        self.assertIsInstance(quick, QuickFrame)
+    # A tabulation without sign reversals is returned unchanged
+    assert QuickFrame._unwrap_quaternions(unwrapped) is unwrapped
 
-        exact = spin_wrt_j2000.transform_at_time(time, quick=False)
-        interpolated = quick.transform_at_time(time)
-        error = np.max(np.abs(interpolated.matrix.vals - exact.matrix.vals))
-        self.assertLess(error, 1.e-8)
+    ######################################################################################
+    # A tabulation of a fittable Frame is redone after that Frame is re-fit
+    ######################################################################################
 
-        # The tabulation itself must be free of sign reversals
-        quats = Quaternion.as_quaternion(quick._xforms.matrix).vals
-        unwrapped = QuickFrame._unwrap_quaternions(quats)
-        self.assertTrue(np.any(np.sum(quats[:-1] * quats[1:], axis=-1) < 0.))
-        self.assertTrue(np.all(np.sum(unwrapped[:-1] * unwrapped[1:], axis=-1) > 0.))
+    # The Cmatrix contributes no time dependence, but the SpiceFrame underneath it
+    # does, so the composite is worth tabulating
+    cmatrix = Cmatrix([[0., 1., 0.], [-1., 0., 0.], [0., 0., 1.]], mars,
+                      frame_id='fitted_cmatrix')
+    nav = Navigation((1.e-3, 2.e-3), cmatrix, frame_id='fitted_nav')
+    nav_wrt_j2000 = nav.wrt(Frame.J2000)
+    assert nav_wrt_j2000._USE_QUICKFRAMES
 
-        # Unwrapping preserves the rotations it describes
-        before = Matrix3.as_matrix3(Quaternion(quats)).vals
-        after = Matrix3.as_matrix3(Quaternion(unwrapped)).vals
-        self.assertLess(np.max(np.abs(after - before)), 1.e-14)
+    quick = nav_wrt_j2000.quick_frame(time, quick={})
+    assert isinstance(quick, QuickFrame)
 
-        # A tabulation without sign reversals is returned unchanged
-        self.assertIs(QuickFrame._unwrap_quaternions(unwrapped), unwrapped)
+    nav.set_params(np.array([0.5, 0.5]))
+    exact = nav_wrt_j2000.transform_at_time(time, quick=False)
 
-        ########################################
-        # A tabulation of a fittable Frame is redone after that Frame is re-fit
-        ########################################
+    # The same QuickFrame is handed back, but tabulated afresh
+    reused = nav_wrt_j2000.quick_frame(time, quick={})
+    assert reused is quick
+    error = np.max(np.abs(reused.transform_at_time(time).matrix.vals
+                          - exact.matrix.vals))
+    assert error < 1.e-8
 
-        # The Cmatrix contributes no time dependence, but the SpiceFrame underneath it
-        # does, so the composite is worth tabulating
-        cmatrix = Cmatrix([[0., 1., 0.], [-1., 0., 0.], [0., 0., 1.]], mars,
-                          frame_id='fitted_cmatrix')
-        nav = Navigation((1.e-3, 2.e-3), cmatrix, frame_id='fitted_nav')
-        nav_wrt_j2000 = nav.wrt(Frame.J2000)
-        self.assertTrue(nav_wrt_j2000._USE_QUICKFRAMES)
 
-        quick = nav_wrt_j2000.quick_frame(time, quick={})
-        self.assertIsInstance(quick, QuickFrame)
+##########################################################################################
+# QuickFrame.for_frame: creation, re-use, and extension
+##########################################################################################
 
-        nav.set_params(np.array([0.5, 0.5]))
-        exact = nav_wrt_j2000.transform_at_time(time, quick=False)
+_EPOCH = 1.e8
 
-        # The same QuickFrame is handed back, but tabulated afresh
-        reused = nav_wrt_j2000.quick_frame(time, quick={})
-        self.assertIs(reused, quick)
-        error = np.max(np.abs(reused.transform_at_time(time).matrix.vals
-                              - exact.matrix.vals))
-        self.assertLess(error, 1.e-8)
 
-################################################################################
+def _dense_times(start: float, stop: float) -> Scalar:
+    """Enough closely-spaced times that a QuickFrame is worth building."""
+
+    return Scalar(_EPOCH + np.arange(start, stop, 0.01))
+
+
+def _mars_frame() -> SpiceFrame:
+    """The IAU_MARS body-fixed frame, with the Mars path registered alongside it."""
+
+    SpicePath('MARS', 'SSB')
+
+    return SpiceFrame('IAU_MARS', 'J2000')
+
+
+def test_for_frame_builds_a_quickframe_when_it_is_worthwhile(core_kernels) -> None:
+    """A dense set of times justifies the overhead of tabulating the frame."""
+
+    mars = _mars_frame()
+    quick = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+
+    assert isinstance(quick, QuickFrame)
+
+
+def test_for_frame_returns_the_frame_when_quick_is_false(core_kernels) -> None:
+    """quick=False creates no QuickFrame and returns the frame itself."""
+
+    mars = _mars_frame()
+
+    assert QuickFrame.for_frame(mars, _dense_times(0., 100.), quick=False) is mars
+
+
+def test_for_frame_saves_the_quickframe_on_the_frame(core_kernels) -> None:
+    """A QuickFrame is saved in the list inside frame._quickframes."""
+
+    mars = _mars_frame()
+    quick = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+
+    assert quick in mars._quickframes
+
+
+def test_for_frame_reuses_a_covering_quickframe(core_kernels) -> None:
+    """A pre-existing QuickFrame that covers the range is returned as it is."""
+
+    mars = _mars_frame()
+    first = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+    second = QuickFrame.for_frame(mars, _dense_times(20., 80.), quick={})
+
+    assert second is first
+    assert len(mars._quickframes) == 1
+
+
+def test_for_frame_extends_a_partially_covering_quickframe(core_kernels) -> None:
+    """A QuickFrame covering part of the range is extended rather than duplicated."""
+
+    mars = _mars_frame()
+    first = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+    original_end = first._times[-1]
+
+    second = QuickFrame.for_frame(mars, _dense_times(50., 200.), quick={})
+
+    assert second is first
+    assert len(mars._quickframes) == 1
+    assert second._times[-1] > original_end
+
+
+def test_for_frame_builds_a_second_quickframe_for_a_distant_time(core_kernels) -> None:
+    """A range nowhere near the first tabulation gets a QuickFrame of its own."""
+
+    mars = _mars_frame()
+    first = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+    second = QuickFrame.for_frame(mars, Scalar(5.e8 + np.arange(0., 100., 0.01)),
+                                  quick={})
+
+    assert second is not first
+    assert len(mars._quickframes) == 2
+
+
+def test_quickframe_matches_the_frame_it_emulates(core_kernels) -> None:
+    """Interpolation reproduces the rotation of the underlying frame."""
+
+    np.random.seed(2288)
+    mars = _mars_frame()
+    quick = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+
+    times = Scalar(_EPOCH + np.random.rand(20) * 100.)
+    vectors = Vector3(np.random.randn(20, 3))
+    rotated = quick.transform_at_time(times).rotate(vectors)
+    expected = mars.transform_at_time(times).rotate(vectors)
+
+    assert abs(rotated - expected).max() < 1.e-9
+
+
+def test_quickframe_reproduces_the_rotation_vector(core_kernels) -> None:
+    """The tabulated omega matches that of the underlying frame."""
+
+    np.random.seed(4471)
+    mars = _mars_frame()
+    quick = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+
+    times = Scalar(_EPOCH + np.random.rand(20) * 100.)
+    error = abs(quick.transform_at_time(times).omega
+                - mars.transform_at_time(times).omega).max()
+
+    assert error < 1.e-12
+
+
+def test_extend_widens_the_tabulated_interval(core_kernels) -> None:
+    """extend() re-tabulates the frame over the wider interval."""
+
+    mars = _mars_frame()
+    quick = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+
+    quick.extend(_EPOCH - 200., _EPOCH + 300.)
+
+    assert quick._times[0] <= _EPOCH - 200.
+    assert quick._times[-1] >= _EPOCH + 300.
+
+
+def test_extend_to_a_narrower_interval_changes_nothing(core_kernels) -> None:
+    """An interval already covered leaves the tabulation alone."""
+
+    mars = _mars_frame()
+    quick = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+    before = (quick._times[0], quick._times[-1])
+
+    quick.extend(_EPOCH + 20., _EPOCH + 80.)
+
+    assert (quick._times[0], quick._times[-1]) == before
+
+
+def test_extended_quickframe_is_still_accurate(core_kernels) -> None:
+    """The frame is still reproduced accurately over the extended interval."""
+
+    np.random.seed(6003)
+    mars = _mars_frame()
+    quick = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+    quick.extend(_EPOCH - 200., _EPOCH + 300.)
+
+    times = Scalar(_EPOCH + np.random.rand(20) * 500. - 200.)
+    vectors = Vector3(np.random.randn(20, 3))
+    error = abs(quick.transform_at_time(times).rotate(vectors)
+                - mars.transform_at_time(times).rotate(vectors)).max()
+
+    assert error < 1.e-9
+
+
+def test_unwrap_quaternions_flips_a_sign_reversal() -> None:
+    """A sample in the opposite hemisphere is flipped to match its predecessor."""
+
+    vals = np.array([[1., 0., 0., 0.],
+                     [0.9, 0.1, 0., 0.],
+                     [-0.8, -0.2, 0., 0.]])
+    unwrapped = QuickFrame._unwrap_quaternions(vals)
+
+    assert unwrapped[2, 0] == pytest.approx(0.8)
+    assert unwrapped[2, 1] == pytest.approx(0.2)
+
+
+def test_unwrap_quaternions_leaves_the_earlier_samples_alone() -> None:
+    """Only the samples after a reversal are flipped."""
+
+    vals = np.array([[1., 0., 0., 0.],
+                     [0.9, 0.1, 0., 0.],
+                     [-0.8, -0.2, 0., 0.]])
+    unwrapped = QuickFrame._unwrap_quaternions(vals)
+
+    assert unwrapped[0].tolist() == [1., 0., 0., 0.]
+    assert unwrapped[1].tolist() == [0.9, 0.1, 0., 0.]
+
+
+def test_unwrap_quaternions_returns_its_input_when_there_is_no_reversal() -> None:
+    """An array with no sign reversals is returned as it is."""
+
+    vals = np.array([[1., 0., 0., 0.], [0.9, 0.1, 0., 0.]])
+
+    assert QuickFrame._unwrap_quaternions(vals) is vals
+
+##########################################################################################
+# Serialization, empty inputs, validation, and the creation diagnostics
+##########################################################################################
+
+def test_a_quickframe_survives_a_round_trip_through_pickle(core_kernels) -> None:
+    """By default only the frame and its limits are pickled, and the table is rebuilt."""
+
+    mars = _mars_frame()
+    quick = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+    time = Scalar(_EPOCH + 50.)
+    expected = quick.transform_at_time(time).matrix
+
+    restored = pickle.loads(pickle.dumps(quick))
+
+    assert isinstance(restored, QuickFrame)
+    assert restored.transform_at_time(time).matrix == expected
+
+
+def test_a_quickframe_can_pickle_its_tabulated_details(core_kernels) -> None:
+    """With the flag set, the interpolation table is pickled along with the frame."""
+
+    mars = _mars_frame()
+    quick = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+    time = Scalar(_EPOCH + 50.)
+    expected = quick.transform_at_time(time).matrix
+
+    quick.pickle_quickframe_details = True
+    try:
+        restored = pickle.loads(pickle.dumps(quick))
+    finally:
+        quick.pickle_quickframe_details = False
+
+    assert restored.transform_at_time(time).matrix == expected
+
+
+def test_an_empty_array_of_times_gives_an_identity_transform(core_kernels) -> None:
+    """With no times to evaluate, the matrix is the identity and omega is zero."""
+
+    mars = _mars_frame()
+    quick = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+
+    (matrix, omega) = quick._interpolate_matrix_omega(Scalar(np.zeros((0,))))
+
+    assert matrix.shape == (0,)
+    assert omega.shape == (0,)
+
+
+def test_a_quickframe_can_ignore_the_rotation_vector(core_kernels) -> None:
+    """With the option set, the rotation vector is reported as zero."""
+
+    mars = _mars_frame()
+    quick = QuickFrame(mars, _EPOCH, _EPOCH + 100.,
+                       quick={'ignore_quickframe_omega': True})
+    time = Scalar(_EPOCH + np.arange(10., 90., 0.5))
+
+    assert quick.transform_at_time(time).omega == Vector3.ZERO
+    assert quick.transform_at_time(Scalar(_EPOCH + 50.)).omega == Vector3.ZERO
+
+
+def test_extending_a_quickframe_over_a_covered_interval_does_nothing(
+        core_kernels) -> None:
+    """An interval already inside the table leaves the table unchanged."""
+
+    mars = _mars_frame()
+    quick = QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+    before = quick._times.size
+
+    quick.extend(quick._tmin, quick._tmax)
+
+    assert quick._times.size == before
+
+
+def test_a_quickframe_cannot_be_built_on_a_shaped_frame(core_kernels) -> None:
+    """A QuickFrame tabulates one frame, so a shaped frame cannot be quickened."""
+
+    shaped = Rotation(Scalar([0.5, 1.5]), 2, Frame.J2000, frame_id='TEST_QUICK_SHAPED')
+
+    with pytest.raises(ValueError, match=r'shape of QuickFrame must be \(\)'):
+        QuickFrame(shaped, _EPOCH, _EPOCH + 100.)
+
+
+def test_a_quickframe_cannot_be_built_on_another_quickframe(core_kernels) -> None:
+    """Tabulating a tabulation would only add error."""
+
+    mars = _mars_frame()
+    quick = QuickFrame(mars, _EPOCH, _EPOCH + 100.)
+
+    with pytest.raises(ValueError, match='cannot be constructed from another QuickFrame'):
+        QuickFrame(quick, _EPOCH, _EPOCH + 100.)
+
+
+def test_for_frame_rejects_an_unusable_quick_argument(core_kernels) -> None:
+    """The `quick` argument is a dictionary of overrides, None, or False."""
+
+    mars = _mars_frame()
+
+    with pytest.raises(ValueError, match='invalid `quick` input'):
+        QuickFrame.for_frame(mars, _dense_times(0., 100.), quick=17)
+
+
+def test_for_frame_returns_a_shaped_frame_unchanged(core_kernels) -> None:
+    """A shaped frame is returned as it stands rather than tabulated."""
+
+    shaped = Rotation(Scalar([0.5, 1.5]), 2, Frame.J2000,
+                      frame_id='TEST_QUICK_SHAPED_FOR')
+
+    assert QuickFrame.for_frame(shaped, _dense_times(0., 100.), quick={}) is shaped
+
+
+def test_for_frame_treats_a_quick_of_none_as_the_defaults(core_kernels) -> None:
+    """quick=None means the configured defaults, which do build a QuickFrame."""
+
+    mars = _mars_frame()
+
+    assert isinstance(QuickFrame.for_frame(mars, _dense_times(0., 100.), quick=None),
+                      QuickFrame)
+
+
+def test_for_frame_returns_the_frame_when_quickframes_are_disabled(core_kernels) -> None:
+    """The configured switch turns the optimization off entirely."""
+
+    mars = _mars_frame()
+
+    assert QuickFrame.for_frame(mars, _dense_times(0., 100.),
+                                quick={'use_quickframes': False}) is mars
+
+
+def test_building_a_quickframe_is_reported_as_a_diagnostic(
+        core_kernels, capsys: pytest.CaptureFixture[str]) -> None:
+    """A new QuickFrame is logged when the diagnostic is on."""
+
+    mars = _mars_frame()
+
+    LOGGING.on()
+    LOGGING.quickframe_creation = True
+    try:
+        QuickFrame.for_frame(mars, _dense_times(0., 100.), quick={})
+    finally:
+        LOGGING.quickframe_creation = False
+        LOGGING.off()
+
+    assert 'New QuickFrame for' in capsys.readouterr().out
+
+
+def test_the_quickframe_cache_holds_only_as_many_as_it_is_allowed(core_kernels) -> None:
+    """A new QuickFrame displaces the oldest one once the cache is full."""
+
+    mars = _mars_frame()
+    quick = {'quickframe_cache_size': 2}
+
+    for offset in (0., 1.e6, 2.e6, 3.e6):
+        QuickFrame.for_frame(mars, _dense_times(offset, offset + 100.), quick=quick)
+
+    assert len(mars._quickframes) == 2
+
+##########################################################################################
