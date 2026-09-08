@@ -33,7 +33,7 @@ class InclinedFrame(Frame):
             despin (bool, optional): True for a nearly inertial Frame, in which the *x*-
                 and *y*-axes vary as little as possible while the *z*-axis rotates; False
                 for a Frame in which the *x*-axis is tied to the ascending node.
-            reference (Frame or str, optional): The Frame or the ID of the Frame
+            reference (Frame | str, optional): The Frame or the ID of the Frame
                 describing the central planet of the inclined plane; None for J2000.
             frame_id (str, optional): The ID under which to register this Frame; None to
                 leave this Frame unregistered. As a special case, use "+" to automatically
@@ -64,6 +64,7 @@ class InclinedFrame(Frame):
         self.refresh()
 
     def _refresh(self):
+        """Rebuild the SpinFrame and Rotation Frames of which this Frame is composed."""
         self._spin1 = SpinFrame(self._node, self._rate, self._epoch, axis=2,
                                 reference=self._reference)
         self._rotate = Rotation(self._inc, axis=0, reference=self._spin1)
@@ -76,10 +77,26 @@ class InclinedFrame(Frame):
             self._spin2 = None
 
     def _wayframe_key(self):
+        """The key that identifies this Frame's definition in the pool of wayframes.
+
+        Returns:
+            tuple[Scalar, Scalar, Scalar, Scalar, Frame, bool]: The inclination, node,
+            rate, epoch, reference Frame, and despin flag.
+        """
         return (self._inc, self._node, self._rate, self._epoch, self._reference,
                 self._despin)
 
     def _show(self, level, indent=0):
+        """The expanded description of this Frame used by :meth:`~oops.Frame.show`.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame.
+        """
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -123,7 +140,7 @@ class InclinedFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): Ignored by class InclinedFrame.
+            quick (dict | bool, optional): Ignored by class InclinedFrame.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the
@@ -151,7 +168,7 @@ class InclinedFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): Ignored by class InclinedFrame.
+            quick (dict | bool, optional): Ignored by class InclinedFrame.
 
         Returns:
             Scalar: At the specified times, the angle from the reference Frame's *x*-axis,

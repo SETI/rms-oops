@@ -26,12 +26,12 @@ class SpicePath(Path):
         """Constructor for a SpicePath.
 
         Parameters:
-            spice_path (str or int): The SPICE toolkit identification of the target body
+            spice_path (str | int): The SPICE toolkit identification of the target body
                 as a name or integer.
-            origin (SpicePath or str, optional): The Path or the ID of the Path relative
+            origin (SpicePath | str, optional): The Path or the ID of the Path relative
                 to which this Path is defined. This must be a SpicePath or else, by
                 default, the Solar System Barycenter.
-            frame (SpiceFrame or str, optional): The Frame or the ID of the Frame for the
+            frame (SpiceFrame | str, optional): The Frame or the ID of the Frame for the
                 returned Path coordinates. This must be a SpiceFrame or else, by default,
                 J2000.
             path_id (str, optional): The ID under which to register this Path. If not
@@ -91,13 +91,31 @@ class SpicePath(Path):
             SpicePath._register_alias(spice_path, self)
 
     def _refresh(self):
+        """Discard the QuickPaths tabulated from this Path."""
         if hasattr(self, '_quickpaths'):
             self._quickpaths.clear()
 
     def _waypoint_key(self):
+        """The key identifying this Path's waypoint, from the attributes that define it.
+
+        Returns:
+            int: The SPICE body ID of this Path.
+        """
+
         return self._spice_path_code
 
     def _show(self, level, indent=0):
+        """The expanded description of this Path used by :meth:`~oops.Path.show`.
+
+        Parameters:
+            level (int): The number of levels of the Path's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Path.
+        """
+
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -116,7 +134,7 @@ class SpicePath(Path):
         """The SPICE body code and body name of a body, given either a code or a name.
 
         Parameters:
-            arg (str or int): The SPICE toolkit identification of the body as a name or
+            arg (str | int): The SPICE toolkit identification of the body as a name or
                 integer.
 
         Returns:
@@ -176,7 +194,7 @@ class SpicePath(Path):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
@@ -265,13 +283,13 @@ class SpicePath(Path):
         is constructed and returned.
 
         Parameters:
-            spice_path (SpicePath, str, or int): The SPICE toolkit identification of the
+            spice_path (SpicePath | str | int): The SPICE toolkit identification of the
                 target body as a name or integer, or an existing SpicePath. A SpicePath is
                 returned unchanged if its origin and frame already match those requested.
-            origin (SpicePath or str, optional): The Path or the ID of the Path relative
+            origin (SpicePath | str, optional): The Path or the ID of the Path relative
                 to which this Path is defined. This must be a SpicePath or else, by
                 default, the Solar System Barycenter.
-            frame (SpiceFrame or str, optional): The Frame or the ID of the Frame for the
+            frame (SpiceFrame | str, optional): The Frame or the ID of the Frame for the
                 returned Path coordinates. This must be a SpiceFrame or else, by default,
                 J2000.
             path_id (str, optional): The ID under which to register this Path. If not

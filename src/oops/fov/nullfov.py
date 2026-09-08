@@ -34,8 +34,8 @@ class NullFOV(FOV):
                 into the returned *(x,y)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Pair: The transformed *(x,y)* coordinates in the camera's frame, with the same
@@ -54,8 +54,8 @@ class NullFOV(FOV):
                 into the returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Pair: The computed *(u,v)* FOV coordinates, with the same shape as `xy_pair`.
@@ -77,8 +77,8 @@ class NullFOV(FOV):
             time (ScalarLike, optional): Absolute time in seconds TDB. Ignored by NullFOV.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Scalar: Relative area of the pixel at *(u,v)*.
@@ -134,8 +134,8 @@ class NullFOV(FOV):
                 returned line of sight.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Vector3: Direction of the line of sight in the camera's frame.
@@ -156,8 +156,8 @@ class NullFOV(FOV):
                 returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Pair: *(u,v)* coordinates in the FOV.
@@ -222,8 +222,8 @@ class NullFOV(FOV):
                 the FOV; None for the full FOV.
             uv_max (PairLike, optional): The upper *(u,v)* corner of the area observed in
                 the FOV; None for the full FOV.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Boolean: True where `xy_pair` is outside the FOV.
@@ -245,8 +245,8 @@ class NullFOV(FOV):
                 the FOV; None for the full FOV.
             uv_max (PairLike, optional): The upper *(u,v)* corner of the area observed in
                 the FOV; None for the full FOV.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Boolean: True where `los` is outside the FOV.

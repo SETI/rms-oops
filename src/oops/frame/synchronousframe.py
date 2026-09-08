@@ -23,9 +23,9 @@ class SynchronousFrame(Frame):
         """Constructor for a SynchronousFrame.
 
         Parameters:
-            orbit_path (Path or str): The Path or the ID of the Path of the body orbiting
+            orbit_path (Path | str): The Path or the ID of the Path of the body orbiting
                 its planet.
-            planet_path (Path or str, optional): The Path or the ID of the Path for the
+            planet_path (Path | str, optional): The Path or the ID of the Path for the
                 central planet. By default, this is the origin of `orbit_path`.
             frame_id (str, optional): The ID under which to register this Frame; None to
                 leave this Frame unregistered. As a special case, use "+" to automatically
@@ -61,9 +61,24 @@ class SynchronousFrame(Frame):
         self.refresh()
 
     def _wayframe_key(self):
+        """The key that identifies this Frame's definition in the pool of wayframes.
+
+        Returns:
+            tuple[Path, Path]: The orbit Path and the planet Path.
+        """
         return (self._orbit_path, self._planet_path)
 
     def _show(self, level, indent=0):
+        """The expanded description of this Frame used by :meth:`~oops.Frame.show`.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame.
+        """
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -99,7 +114,7 @@ class SynchronousFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in

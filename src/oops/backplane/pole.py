@@ -14,7 +14,10 @@ def pole_clock_angle(self, event_key):
     in radians.
 
     Parameters:
-        event_key (str or tuple): Key defining the event at the body's path.
+        event_key (str | tuple): Key defining the event at the body's path.
+
+    Returns:
+        Scalar: The clock angle in radians, registered as a gridless backplane.
     """
 
     self.refresh()
@@ -59,7 +62,10 @@ def pole_position_angle(self, event_key):
     This is the complement of the clock angle, in radians.
 
     Parameters:
-        event_key (str or tuple): Key defining the event at the body's path.
+        event_key (str | tuple): Key defining the event at the body's path.
+
+    Returns:
+        Scalar: The position angle in radians, registered as a gridless backplane.
     """
 
     self.refresh()

@@ -33,26 +33,26 @@ class Observation(Mutable):
 
     Attributes:
         cadence (Cadence): Defines the timing of the Observation.
-        time (tuple or Pair): The start time and end time of the Observation overall, in
-            seconds TDB. Inherited from `cadence`.
+        time (tuple[float, float]): The start time and end time of the Observation
+            overall, in seconds TDB. Inherited from `cadence`.
         midtime (float): The mid-time of the Observation, in seconds TDB. Inherited from
             `cadence`.
         fov (FOV): The field of view, which describes the field of view including any
             spatial distortion. It maps between spatial coordinates *(u,v)* and instrument
             coordinates *(x,y)*.
-        uv_shape (tuple): The 2-D shape of the spatial axes of the data array, in *(u,v)*
-            order. This differs from `fov.uv_shape` in cases where the time-dependence
-            introduces an extra dimension.
+        uv_shape (tuple[int, ...]): The 2-D shape of the spatial axes of the data array,
+            in *(u,v)* order. This differs from `fov.uv_shape` in cases where the
+            time-dependence introduces an extra dimension.
         u_axis (int): The axis of the data array associated with the *u*-axis; -1 if that
             axis is not associated with an array index.
         v_axis (int): The axis of the data array associated with the *v*-axis; -1 if that
             axis is not associated with an array index.
         swap_uv (bool): True if the *v*-axis comes before the *u*-axis; False otherwise.
-        t_axis (int or list): The axes of the data array associated with time. When a list
+        t_axis (int | list): The axes of the data array associated with time. When a list
             has multiple values, this is the sequence of array indices that break down
             time into finer and finer divisions, ordered from left to right. Use -1 if the
             observation has no time-dependence.
-        shape (list or tuple): The overall shape of the observation data. Where the size
+        shape (list | tuple): The overall shape of the observation data. Where the size
             of an axis is unknown, e.g., for a wavelength axis, the value can be zero.
         path (Path): The path waypoint co-located with the instrument.
         frame (Frame): The wayframe of a coordinate frame fixed to the optics of the
@@ -79,14 +79,22 @@ class Observation(Mutable):
         pass
 
     @property
-    def time(self):
-        """The start and stop times of the observation overall, in seconds TDB."""
+    def time(self) -> tuple[float, float]:
+        """The start and stop times of the observation overall, in seconds TDB.
+
+        Returns:
+            tuple[float, float]: The start and stop times in seconds TDB.
+        """
 
         return self.cadence.time
 
     @property
-    def midtime(self):
-        """The mid-time of the observation, in seconds TDB."""
+    def midtime(self) -> float:
+        """The mid-time of the observation, in seconds TDB.
+
+        Returns:
+            float: The mid-time in seconds TDB.
+        """
 
         return self.cadence.midtime
 
@@ -96,7 +104,7 @@ class Observation(Mutable):
         This method supports non-integer index values.
 
         Parameters:
-            indices (ScalarLike or VectorLike): Array indices.
+            indices (ScalarLike | VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
             derivs (bool, optional): True to include derivatives in the returned values.
 
@@ -111,7 +119,7 @@ class Observation(Mutable):
         """Ranges of *(u,v)* spatial coordinates and time for integer array indices.
 
         Parameters:
-            indices (ScalarLike or VectorLike): Array indices.
+            indices (ScalarLike | VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
@@ -263,8 +271,8 @@ class Observation(Mutable):
 
         Parameters:
             time (ScalarLike): Time values in seconds TDB.
-            uv_shape (tuple): Shape of the active detector(s) within the FOV, in *(u,v)*
-                order.
+            uv_shape (tuple[int, ...]): Shape of the active detector(s) within the FOV, in
+                *(u,v)* order.
             axis (int, optional): 0 or 1, indicating the uv axis associated with the
                 cadence. Alternatively, -1 indicates that the time axis is not associated
                 with a spatial axis.
@@ -297,8 +305,8 @@ class Observation(Mutable):
 
         Parameters:
             time (ScalarLike): Time values in seconds TDB.
-            uv_shape (tuple): Shape of the active detector(s) within the FOV, in *(u,v)*
-                order.
+            uv_shape (tuple[int, ...]): Shape of the active detector(s) within the FOV, in
+                *(u,v)* order.
             slow (int, optional): 0 or 1, indicating the uv axis associated with the slow
                 index of the cadence. Alternatively, -1 indicates that this index is not
                 associated with a spatial axis.
@@ -340,7 +348,7 @@ class Observation(Mutable):
         """The range of spatial *(u,v)* pixels active at a particular time step.
 
         Parameters:
-            tstep (ScalarLike or PairLike): Time step index. This is a Scalar for an
+            tstep (ScalarLike | PairLike): Time step index. This is a Scalar for an
                 observation with a 1-D cadence and a Pair for one with a 2-D cadence.
             remask (bool, optional): True to mask time steps outside the cadence.
 
@@ -387,8 +395,8 @@ class Observation(Mutable):
 
         Parameters:
             tstep (ScalarLike): Time step index.
-            uv_shape (tuple): Shape of the active detector(s) within the FOV, in *(u,v)*
-                order.
+            uv_shape (tuple[int, ...]): Shape of the active detector(s) within the FOV, in
+                *(u,v)* order.
             axis (int, optional): 0 or 1, indicating the uv axis associated with the
                 cadence. Alternatively, -1 indicates that the time axis is not associated
                 with a spatial axis.
@@ -422,8 +430,8 @@ class Observation(Mutable):
 
         Parameters:
             tstep (PairLike): Time step index, as (slow, fast).
-            uv_shape (tuple): Shape of the active detector(s) within the FOV, in *(u,v)*
-                order.
+            uv_shape (tuple[int, ...]): Shape of the active detector(s) within the FOV, in
+                *(u,v)* order.
             slow (int, optional): 0 or 1, indicating the uv axis associated with the slow
                 index of the cadence. Alternatively, -1 indicates that this index is not
                 associated with a spatial axis.
@@ -528,7 +536,7 @@ class Observation(Mutable):
         observation unchanged.
 
         Parameters:
-            angles (tuple or list): Two or three angles of rotation in radians. The
+            angles (tuple | list): Two or three angles of rotation in radians. The
                 order of the rotations is about the *y*, *x*, and (optionally) *z* axes.
                 These angles rotate a vector in the reference frame into this frame.
 
@@ -908,7 +916,7 @@ class Observation(Mutable):
         The indices can be a Scalar or Vector, a NumPy array, or a number.
 
         Parameters:
-            indices (ScalarLike or VectorLike): Array indices.
+            indices (ScalarLike | VectorLike): Array indices.
             axis (int): The array axis to select; -1 if this axis is not associated with
                 an array index.
             derivs (bool, optional): True to include derivatives in the returned value.
@@ -1199,7 +1207,7 @@ class Observation(Mutable):
                 ``config.py``.
 
         Returns:
-            list, numpy.ndarray, or dict: The inventory, in the form named by
+            list | numpy.ndarray | dict: The inventory, in the form named by
             `return_type`.
 
             * If return_type is "list", it returns a list of the names of all the body
@@ -1311,7 +1319,7 @@ class Observation(Mutable):
             parallel (Observation): A parallel observation (same `origin` and `time`,
                 different `frame` and `fov`). Alternatively, a tuple of two values:
                 `(frame, fov)`.
-            angles (tuple or list): Two offset angles in radians. The first rotation is
+            angles (tuple | list): Two offset angles in radians. The first rotation is
                 about the *y* axis of this observation's frame and the second is about the
                 *x* axis.
             time (ScalarLike, optional): Absolute time in seconds TDB; None to assume this

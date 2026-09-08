@@ -38,9 +38,9 @@ class Ansa(Surface):
         """Constructor for an Ansa Surface.
 
         Parameters:
-            origin (Path or str): The Path or the ID of the Path defining the motion of
+            origin (Path | str): The Path or the ID of the Path defining the motion of
                 the center of the ring system.
-            frame (Frame or str): The Frame or the ID of the Frame in which the ring plane
+            frame (Frame | str): The Frame or the ID of the Frame in which the ring plane
                 is the *(x,y)* plane (where *z == 0*).
             gravity (Gravity, optional): The Gravity object used to define the orbital
                 velocities relative to the Surface.
@@ -82,7 +82,7 @@ class Ansa(Surface):
         self.intercept_key = ('ansa', self.origin.waypoint, self.frame.wayframe)
 
     @property
-    def ringplane(self):
+    def ringplane(self) -> RingPlane:
         """The :class:`~oops.surface.RingPlane` with which this surface is associated.
 
         Returns:
@@ -238,7 +238,7 @@ class Ansa(Surface):
                 its value is appended to the returned tuple.
 
         Returns:
-            Vector3 or tuple[Vector3, Any]: Points defined by the coordinates, relative to
+            Vector3 | tuple[Vector3, Any]: Points defined by the coordinates, relative to
             this Surface's origin and frame, optionally followed by `hints`. The input
             value of `hints` is returned if it is not None.
         """
@@ -374,7 +374,7 @@ class Ansa(Surface):
                 its value is appended to the returned tuple.
 
         Returns:
-            Vector3 or tuple[Vector3, Any]: Directions normal to the Surface that pass
+            Vector3 | tuple[Vector3, Any]: Directions normal to the Surface that pass
             through the position, optionally followed by `hints`. Vector lengths are
             arbitrary, and the input value of `hints` is returned if it is not None.
 

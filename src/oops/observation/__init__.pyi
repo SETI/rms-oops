@@ -3,12 +3,12 @@
 ##########################################################################################
 """Type stub for :mod:`oops.observation`.
 
-The `src` tree carries no inline annotations, so type information for public symbols is
-published here instead. Only package stubs exist, so a name is annotated when it is
-imported from the package that exports it and not when it is imported from the module
-that defines it. The stub describes the shape of the API exactly: every public name, its
-parameters, which of them are keyword-only, and which have defaults. Types are given
-where they are unambiguous and are `Any` elsewhere.
+The source types its methods in their docstrings rather than in their signatures, so the
+type information for public symbols is published here instead. Only package stubs exist,
+so a name is annotated when it is imported from the package that exports it and not when
+it is imported from the module that defines it. The stub describes the shape of the API
+exactly: every public name, its parameters, which of them are keyword-only, and which have
+defaults. Types are given where they are unambiguous and are `Any` elsewhere.
 """
 
 from typing import Any
@@ -28,9 +28,9 @@ __all__ = ['Observation', 'InSitu', 'Pixel', 'RasterSlit1D', 'Slit1D', 'Snapshot
 class Observation(Mutable):
     def __init__(self) -> None: ...
     @property
-    def time(self) -> Any: ...
+    def time(self) -> tuple[float, float]: ...
     @property
-    def midtime(self) -> Any: ...
+    def midtime(self) -> float: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
         derivs: bool = True) -> tuple[Pair, Scalar]: ...
     def uvt_range(self, indices: ScalarLike | VectorLike, *,
@@ -47,22 +47,22 @@ class Observation(Mutable):
         remask: bool = False) -> tuple[Pair, Pair]: ...
     def _uv_range_at_time_0d(self, time: ScalarLike, uv_shape: PairLike, *,
         remask: bool = False) -> tuple[Pair, Pair]: ...
-    def _uv_range_at_time_1d(self, time: ScalarLike, uv_shape: tuple, *, axis: int = 0,
-        remask: bool = False) -> tuple[Pair, Pair]: ...
-    def _uv_range_at_time_2d(self, time: ScalarLike, uv_shape: tuple, *, slow: int = 0,
-        fast: int = 1, remask: bool = False) -> tuple[Pair, Pair]: ...
+    def _uv_range_at_time_1d(self, time: ScalarLike, uv_shape: tuple[int, ...], *,
+        axis: int = 0, remask: bool = False) -> tuple[Pair, Pair]: ...
+    def _uv_range_at_time_2d(self, time: ScalarLike, uv_shape: tuple[int, ...], *,
+        slow: int = 0, fast: int = 1, remask: bool = False) -> tuple[Pair, Pair]: ...
     def uv_range_at_tstep(self, tstep: ScalarLike | PairLike, *,
         remask: bool = False) -> tuple[Pair, Pair]: ...
     def _uv_range_at_tstep_0d(self, tstep: ScalarLike, uv_shape: PairLike, *,
         remask: bool = False) -> tuple[Pair, Pair]: ...
-    def _uv_range_at_tstep_1d(self, tstep: ScalarLike, uv_shape: tuple, *, axis: int = 0,
-        remask: bool = False) -> tuple[Pair, Pair]: ...
-    def _uv_range_at_tstep_2d(self, tstep: PairLike, uv_shape: tuple, *, slow: int = 0,
-        fast: int = 1, remask: bool = False) -> tuple[Pair, Pair]: ...
+    def _uv_range_at_tstep_1d(self, tstep: ScalarLike, uv_shape: tuple[int, ...], *,
+        axis: int = 0, remask: bool = False) -> tuple[Pair, Pair]: ...
+    def _uv_range_at_tstep_2d(self, tstep: PairLike, uv_shape: tuple[int, ...], *,
+        slow: int = 0, fast: int = 1, remask: bool = False) -> tuple[Pair, Pair]: ...
     def time_shift(self, dtime: float) -> Observation: ...
     def copy(self) -> Observation: ...
     def navigate(self, angles: tuple | list) -> Observation: ...
-    frame: Any
+    frame: Frame
     def set_frame(self, frame: Frame) -> None: ...
     def get_spice_cmatrix(self, tstep: ScalarLike | None = None, *,
         time: ScalarLike | None = None) -> Matrix3: ...
@@ -110,32 +110,32 @@ class Observation(Mutable):
         time: ScalarLike | None = None, origin: PairLike | None = None) -> Pair: ...
 
 class InSitu(Observation):
-    path: Any
-    frame: Any
-    fov: Any
-    cadence: Any
+    path: Path
+    frame: Frame
+    fov: FOV
+    cadence: Cadence
     u_axis: int
     v_axis: int
     swap_uv: bool
-    uv_shape: Any
-    shape: Any
-    t_axis: Any
-    subfields: Any
+    uv_shape: tuple[int, ...]
+    shape: list | tuple
+    t_axis: int | list
+    subfields: dict
     def __init__(self, cadence: Cadence, path: Path, **subfields: dict) -> None: ...
     def time_shift(self, dtime: float) -> Observation: ...
 
 class Pixel(Observation):
-    path: Any
-    frame: Any
-    fov: Any
-    uv_shape: Any
+    path: Path
+    frame: Frame
+    fov: FOV
+    uv_shape: tuple[int, ...]
     u_axis: int
     v_axis: int
     swap_uv: bool
-    t_axis: Any
-    cadence: Any
-    shape: Any
-    subfields: Any
+    t_axis: int | list
+    cadence: Cadence
+    shape: list | tuple
+    subfields: dict
     def __init__(self, axes: list | tuple, cadence: Cadence, fov: FOV, path: Path,
         frame: Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
@@ -155,17 +155,17 @@ class Pixel(Observation):
         time: ScalarLike | None = None, shapeless: bool = False) -> Event: ...
 
 class RasterSlit1D(Observation):
-    path: Any
-    frame: Any
-    fov: Any
-    shape: Any
-    u_axis: Any
+    path: Path
+    frame: Frame
+    fov: FOV
+    shape: list | tuple
+    u_axis: int
     v_axis: int
-    t_axis: Any
-    uv_shape: Any
+    t_axis: int | list
+    uv_shape: tuple[int, ...]
     swap_uv: bool
-    cadence: Any
-    subfields: Any
+    cadence: Cadence
+    subfields: dict
     def __init__(self, axes: list | tuple, cadence: Cadence, fov: FOV, path: Path,
         frame: Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
@@ -181,17 +181,17 @@ class RasterSlit1D(Observation):
     def time_shift(self, dtime: float) -> Observation: ...
 
 class Slit1D(Observation):
-    path: Any
-    frame: Any
-    fov: Any
-    uv_shape: Any
-    shape: Any
-    u_axis: Any
+    path: Path
+    frame: Frame
+    fov: FOV
+    uv_shape: tuple[int, ...]
+    shape: list | tuple
+    u_axis: int
     v_axis: int
     swap_uv: bool
     t_axis: int
-    cadence: Any
-    subfields: Any
+    cadence: Cadence
+    subfields: dict
     def __init__(self, axes: list | tuple, tstart: float, texp: float, fov: FOV,
         path: Path, frame: Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
@@ -207,17 +207,17 @@ class Slit1D(Observation):
     def time_shift(self, dtime: float) -> Observation: ...
 
 class Snapshot(Observation):
-    path: Any
-    frame: Any
-    fov: Any
-    uv_shape: Any
-    u_axis: Any
-    v_axis: Any
-    swap_uv: Any
+    path: Path
+    frame: Frame
+    fov: FOV
+    uv_shape: tuple[int, ...]
+    u_axis: int
+    v_axis: int
+    swap_uv: bool
     t_axis: int
-    shape: Any
-    cadence: Any
-    subfields: Any
+    shape: list | tuple
+    cadence: Cadence
+    subfields: dict
     def __init__(self, axes: list | tuple, tstart: float, texp: float, fov: FOV,
         path: Path, frame: Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
@@ -248,17 +248,17 @@ class Snapshot(Observation):
         converge: dict | None = None) -> list | ndarray | dict: ...
 
 class TimedImage(Observation):
-    path: Any
-    frame: Any
-    fov: Any
-    u_axis: Any
-    v_axis: Any
-    t_axis: Any
-    swap_uv: Any
-    cadence: Any
-    shape: Any
-    uv_shape: Any
-    subfields: Any
+    path: Path
+    frame: Frame
+    fov: FOV
+    u_axis: int
+    v_axis: int
+    t_axis: int | list
+    swap_uv: bool
+    cadence: Cadence
+    shape: list | tuple
+    uv_shape: tuple[int, ...]
+    subfields: dict
     def __init__(self, axes: list | tuple, cadence: Cadence, fov: FOV, path: Path,
         frame: Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,

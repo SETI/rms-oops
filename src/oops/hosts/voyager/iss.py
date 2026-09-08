@@ -22,12 +22,20 @@ def from_file(filespec, astrometry=False, action='error', method='strict',
     """A Snapshot object based on a given Voyager ISS image file or its label.
 
     Parameters:
-        filespec (str or FCPath): Name of the image file or its PDS3 label.
+        filespec (str | pathlib.Path | FCPath): Name of the image file or its PDS3 label.
         astrometry (bool, optional): True to omit loading the image data.
-        action (optional): What to do for a missing C kernel entry, via the Python
+        action (str, optional): What to do for a missing C kernel entry, via the Python
             warnings interface: 'error', 'ignore', 'always', 'default', 'module', 'once'.
-        parameters (dict, optional): Dictionary of VGR-ISS-specific parameters.
         method (str, optional): Label reading method to be passed to Pds3Label.
+        parameters (dict | None, optional): Dictionary of VGR-ISS-specific parameters.
+            The recognized keys are "navigation", True or a tuple of two or three angles
+            in radians to wrap the frame in a Navigation frame, and "offset", a pointing
+            offset (du,dv) in units of pixels, which is an alternative to the angles.
+
+    Returns:
+        Snapshot | None: The observation, with subfields `spice_to_frame`,
+        `spice_frame_name`, `spice_frame_id`, `abspath` and `image_url` inserted; None if
+        neither a PDS3 label nor the VICAR file is available.
     """
     if parameters is None:
         parameters={}
@@ -202,14 +210,20 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
     The filespec refers to the label of the index file.
 
     Parameters:
-        filespec (str or FCPath): Name of the index file or its PDS3 label.
-        geomed (optional): Assume the image is geomed (1000x1000).
-        action (optional): What to do for a missing C kernel entry or a missing time,
-            via the Python warnings interface: 'error', 'ignore', 'always', 'default',
-            'module', 'once'.
+        filespec (str | pathlib.Path | FCPath): Name of the index file or its PDS3 label.
+        geomed (bool, optional): Assume the image is geomed (1000x1000).
+        action (str, optional): What to do for a missing C kernel entry or a missing
+            time, via the Python warnings interface: 'error', 'ignore', 'always',
+            'default', 'module', 'once'.
         omit (bool, optional): True to remove any images with missing C kernels or missing
             times from the returned list; False to include them. If time is missing,
             tstart = 0.
+        parameters (dict, optional): Accepted and ignored.
+
+    Returns:
+        list[Snapshot]: One observation per row of the index, each with subfields
+        `filespec`, `basename`, `spice_to_frame`, `spice_frame_name` and
+        `spice_frame_id` inserted.
     """
     ISS.initialize()    # Define everything the first time through
 
@@ -335,6 +349,10 @@ class ISS(object):
         """Fill in key information about the WAC and NAC.
 
         Must be called first.
+
+        Parameters:
+            asof (str, optional): Only use SPICE kernels that existed before this date;
+                None to ignore.
         """
 
 #         TOL_TICKS = 800.

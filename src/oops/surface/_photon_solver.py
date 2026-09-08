@@ -30,10 +30,10 @@ def photon_to_event(self, arrival, *, derivs=False, guess=None, antimask=None, q
         guess (ScalarLike, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
-        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+        antimask (numpy.ndarray | bool, optional): A boolean filter to be applied to
             event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict or bool, optional): A dictionary of parameter values to use as
+        quick (dict | bool, optional): A dictionary of parameter values to use as
             overrides to the configured default :class:`~oops.path.QuickPath` and
             :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
             QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -88,10 +88,10 @@ def photon_from_event(self, departure, *, derivs=False, guess=None, antimask=Non
         guess (ScalarLike, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
-        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+        antimask (numpy.ndarray | bool, optional): A boolean filter to be applied to
             event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict or bool, optional): A dictionary of parameter values to use as
+        quick (dict | bool, optional): A dictionary of parameter values to use as
             overrides to the configured default :class:`~oops.path.QuickPath` and
             :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
             QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -148,10 +148,10 @@ def _solve_photon_by_los(self, link, sign, *, derivs=False, guess=None, antimask
         guess (ScalarLike, optional): An initial guess to use as the event time for the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
-        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+        antimask (numpy.ndarray | bool, optional): A boolean filter to be applied to
             event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict or bool, optional): A dictionary of parameter values to use as
+        quick (dict | bool, optional): A dictionary of parameter values to use as
             overrides to the configured default :class:`~oops.path.QuickPath` and
             :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
             QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -495,10 +495,10 @@ def photon_to_coords(self, arrival, coords, *, derivs=False, guess=None, antimas
         guess (ScalarLike, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
-        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+        antimask (numpy.ndarray | bool, optional): A boolean filter to be applied to
             event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict or bool, optional): A dictionary of parameter values to use as
+        quick (dict | bool, optional): A dictionary of parameter values to use as
             overrides to the configured default :class:`~oops.path.QuickPath` and
             :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
             QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -555,10 +555,10 @@ def photon_from_coords(self, departure, coords, *, derivs=False, guess=None,
         guess (ScalarLike, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
-        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+        antimask (numpy.ndarray | bool, optional): A boolean filter to be applied to
             event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict or bool, optional): A dictionary of parameter values to use as
+        quick (dict | bool, optional): A dictionary of parameter values to use as
             overrides to the configured default :class:`~oops.path.QuickPath` and
             :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
             QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -618,10 +618,10 @@ def _solve_photon_by_coords(self, link, coords, sign, *, derivs=False, guess=Non
         guess (ScalarLike, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
-        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+        antimask (numpy.ndarray | bool, optional): A boolean filter to be applied to
             event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict or bool, optional): A dictionary of parameter values to use as
+        quick (dict | bool, optional): A dictionary of parameter values to use as
             overrides to the configured default :class:`~oops.path.QuickPath` and
             :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
             QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -882,10 +882,10 @@ def photon_normal_to_event(self, arrival, *, derivs=False, guess=None, antimask=
         guess (ScalarLike, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
-        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+        antimask (numpy.ndarray | bool, optional): A boolean filter to be applied to
             event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict or bool, optional): A dictionary of parameter values to use as
+        quick (dict | bool, optional): A dictionary of parameter values to use as
             overrides to the configured default :class:`~oops.path.QuickPath` and
             :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
             QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -945,10 +945,10 @@ def photon_event_to_normal(self, departure, *, derivs=False, guess=None, antimas
         guess (ScalarLike, optional): An initial guess to use as the event time at the
             surface; otherwise None. Should be used if the event time was already returned
             from a similar calculation.
-        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+        antimask (numpy.ndarray | bool, optional): A boolean filter to be applied to
             event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict or bool, optional): A dictionary of parameter values to use as
+        quick (dict | bool, optional): A dictionary of parameter values to use as
             overrides to the configured default :class:`~oops.path.QuickPath` and
             :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
             QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -1012,10 +1012,10 @@ def _solve_photon_event_normal(self, link, sign, *, derivs=False, guess=None,
         guess (ScalarLike, optional): An initial guess to use as the event time for the
             surface; otherwise None. Should only be used if the event time was already
             returned from a similar calculation.
-        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+        antimask (numpy.ndarray | bool, optional): A boolean filter to be applied to
             event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict or bool, optional): A dictionary of parameter values to use as
+        quick (dict | bool, optional): A dictionary of parameter values to use as
             overrides to the configured default :class:`~oops.path.QuickPath` and
             :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
             QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -1294,10 +1294,10 @@ def photon_path_to_normal(self, time, path, *, derivs=False, guess=None, antimas
         guess (ScalarLike, optional): An initial guess to use as the event time at the
             remote path; otherwise None. Should be used if the event time was already
             returned from a similar calculation.
-        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+        antimask (numpy.ndarray | bool, optional): A boolean filter to be applied to
             event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict or bool, optional): A dictionary of parameter values to use as
+        quick (dict | bool, optional): A dictionary of parameter values to use as
             overrides to the configured default :class:`~oops.path.QuickPath` and
             :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
             QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -1359,10 +1359,10 @@ def photon_normal_to_path(self, time, path, *, derivs=False, guess=None, antimas
         guess (ScalarLike, optional): An initial guess to use as the event time at the
             remote path; otherwise None. Should be used if the event time was already
             returned from a similar calculation.
-        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+        antimask (numpy.ndarray | bool, optional): A boolean filter to be applied to
             event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict or bool, optional): A dictionary of parameter values to use as
+        quick (dict | bool, optional): A dictionary of parameter values to use as
             overrides to the configured default :class:`~oops.path.QuickPath` and
             :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
             QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -1425,10 +1425,10 @@ def _solve_photon_path_normal(self, time, path, sign, *, derivs=False, guess=Non
         guess (ScalarLike, optional): An initial guess to use as the event time for the
             path; otherwise None. Should only be used if the event time was already
             returned from a similar calculation.
-        antimask (numpy.ndarray or bool, optional): A boolean filter to be applied to
+        antimask (numpy.ndarray | bool, optional): A boolean filter to be applied to
             event times and positions. Only the indices where `antimask=True` will be used
             in the solution.
-        quick (dict or bool, optional): A dictionary of parameter values to use as
+        quick (dict | bool, optional): A dictionary of parameter values to use as
             overrides to the configured default :class:`~oops.path.QuickPath` and
             :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use of
             QuickPaths and QuickFrames. The default quick dictionary is defined in

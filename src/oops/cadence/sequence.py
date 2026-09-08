@@ -16,7 +16,7 @@ class Sequence(Cadence):
 
         Parameters:
             tlist (ScalarLike): The start times of the time steps, in seconds TDB.
-            texp (float, list, or numpy.ndarray): The exposure time in seconds associated
+            texp (float | list | numpy.ndarray): The exposure time in seconds associated
                 with each step. This can be shorter than the time interval due to readout
                 times, etc. It could also potentially be longer. The value can be:
 

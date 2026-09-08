@@ -62,8 +62,9 @@ dev = [
   "bandit[toml]>=1.8",
   "coverage>=7.0",
   "flake8",
-  # mypy checks the tests only; src carries no annotations (see [tool.mypy]). It also
-  # supplies stubtest, which checks the .pyi stubs against the imported packages.
+  # mypy checks the tests only; src types its methods in docstrings, not signatures
+  # (see [tool.mypy]). It also supplies stubtest, which checks the .pyi stubs against
+  # the imported packages.
   "mypy>=1.0",
   "pip-audit>=2.7",
   "pymarkdownlnt>=0.9.35",
@@ -153,9 +154,9 @@ exclude_lines = [
 # environment rather than the tests.
 
 [tool.mypy]
-# The tests only. `src` carries no annotations by house rule, so type-checking it would
-# report the absence of types rather than any defect; CLAUDE.md says not to run mypy
-# there. Everything under tests/ that pytest does not collect is excluded: those modules
+# The tests only. Under `src` only properties carry inline annotations, the types of
+# methods living in their docstrings, so type-checking it would report the absence of
+# types rather than any defect; CLAUDE.md says not to run mypy there. Everything under tests/ that pytest does not collect is excluded: those modules
 # were parked mid-conversion and several do not even parse.
 files = ["tests"]
 exclude = [

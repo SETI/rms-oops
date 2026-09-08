@@ -193,14 +193,15 @@ def from_file(filespec, data=True, method='strict'):
     """A pair of Observations based on a Cassini VIMS data or label file.
 
     Parameters:
-        filespec (str or FCPath): The full path to a VIMS cube file or its PDS label.
-        data (bool, optional): If True, data arrays are included in the returned
-            observation objects. Use a tuple of two booleans to specify whether to include
-            the VIS and IR data independently.
+        filespec (str | pathlib.Path | FCPath): The full path to a VIMS cube file or its
+            PDS label.
+        data (bool | tuple[bool, bool], optional): If True, data arrays are included in
+            the returned observation objects. Use a tuple of two booleans to specify
+            whether to include the VIS and IR data independently.
         method (str, optional): Label reading method to be passed to Pds3Label.
 
     Returns:
-        tuple: (vis, ir), where:
+        tuple[Observation | None, Observation | None]: (vis, ir), where:
 
         * `vis`: The VIS observation, or None if the VIS channel was inactive.
         * `ir`: The IR observation, or None if the IR channel was inactive.
@@ -610,13 +611,13 @@ def _load_data_and_times(filespec, label):
     derived from these backplanes.
 
     Parameters:
-        filespec (str or FCPath): Full path to the data file.
+        filespec (str | pathlib.Path | FCPath): Full path to the data file.
         label (dict): The label dictionary.
 
     Returns:
-        tuple: (data, times), where:
+        tuple[numpy.ndarray, numpy.ndarray | None]: (data, times), where:
 
-        * `data` (numpy.ndarray): The data in axis order (line, sample, band).
+        * `data`: The data in axis order (line, sample, band).
         * `times`: The time sampling array in (line, sample) axis order, or None if no
           time backplane is found in the file.
 
@@ -782,15 +783,18 @@ def meshgrid_and_times(obs, oversample=6, extend=1.5):
     observation.
 
     Parameters:
-        obs: The VIMS observation object to for which to generate a meshgrid and a
-            time array.
-        oversample (optional): The factor by which to oversample the field of view, in
-            units of the full-resolution VIMS pixel size.
+        obs (Observation): The VIMS observation object for which to generate a meshgrid
+            and a time array.
+        oversample (float, optional): The factor by which to oversample the field of
+            view, in units of the full-resolution VIMS pixel size.
         extend (float, optional): Pixels by which to extend the field of view, in units of
             the oversampled pixel.
 
     Returns:
-        tuple: (mesgrid, time)
+        tuple[Meshgrid, Scalar]: (meshgrid, time), where:
+
+        * `meshgrid`: The oversampled :class:`~oops.Meshgrid`.
+        * `time`: The time in seconds TDB at each point of the meshgrid.
     """
 
     shrinkage = {('IR',  'NORMAL'): (1,1),
@@ -828,10 +832,16 @@ def initialize(ck='reconstructed', planets=None, asof=None, spk='reconstructed',
     Must be called first. After the first call, later calls to this function are ignored.
 
     Parameters:
-        planets (list, optional): A list of planets to pass to define_solar_system. None
-            or 0 means all.
+        ck (str, optional): The set of C kernels to load, 'reconstructed' or 'predicted'
+            (case-insensitive); 'none' to load no C kernels automatically, leaving their
+            handling to the caller.
+        planets (list, optional): A list of planets to pass to
+            :meth:`~oops.Body.define_solar_system`. None or 0 means all.
         asof (str, optional): Only use SPICE kernels that existed before this date; None
             to ignore.
+        spk (str, optional): The set of SP kernels to load, 'reconstructed' or
+            'predicted' (case-insensitive); 'none' to load no SP kernels automatically,
+            leaving their handling to the caller.
         gapfill (bool, optional): True to include gapfill CKs. False otherwise.
         mst_pck (bool, optional): True to include MST PCKs, which update the rotation
             models for some of of the small moons.
@@ -859,10 +869,16 @@ class VIMS(object):
         ignored.
 
         Parameters:
-            planets (list, optional): A list of planets to pass to define_solar_system.
-                None or 0 means all.
+            ck (str, optional): The set of C kernels to load, 'reconstructed' or
+                'predicted' (case-insensitive); 'none' to load no C kernels
+                automatically, leaving their handling to the caller.
+            planets (list, optional): A list of planets to pass to
+                :meth:`~oops.Body.define_solar_system`. None or 0 means all.
             asof (str, optional): Only use SPICE kernels that existed before this date;
                 None to ignore.
+            spk (str, optional): The set of SP kernels to load, 'reconstructed' or
+                'predicted' (case-insensitive); 'none' to load no SP kernels
+                automatically, leaving their handling to the caller.
             gapfill (bool, optional): True to include gapfill CKs. False otherwise.
             mst_pck (bool, optional): True to include MST PCKs, which update the rotation
                 models for some of the small moons.

@@ -34,16 +34,23 @@ def from_file(filespec, *, fast_distortion=True,
     """A Snapshot object based on a given Cassini ISS image file.
 
     Parameters:
-        filespec (str, Path, or FCPath): The full path to a Cassini ISS file or its PDS
-            label.
-        fast_distortion (bool or None, optional): True to use a pre-inverted polynomial;
-            False to use a dynamically solved polynomial; None to use a FlatFOV.
+        filespec (str | pathlib.Path | FCPath): The full path to a Cassini ISS file or its
+            PDS label.
+        fast_distortion (bool | None, optional): True to use a pre-inverted polynomial;
+            False to use a dynamically solved polynomial; None to use a
+            :class:`~oops.fov.FlatFOV`.
         return_all_planets (bool, optional): Include kernels for all planets not just
             Jupiter or Saturn.
-        frame (Frame, optional): An alternative Frame object to use for this Observation;
-            default is to use the SPICE C kernel frame for Cassini.
-        navigation (bool, optional): True to wrap the frame inside a Navigation frame to
-            make it Fittable.
+        frame (Frame | str, optional): An alternative Frame object or frame ID to use for
+            this Observation; default is to use the SPICE C kernel frame for Cassini.
+        navigation (bool, optional): True to wrap the frame inside a
+            :class:`~oops.frame.Navigation` frame to make it Fittable.
+        **kwargs (Any): Additional keyword arguments; they are accepted and ignored.
+
+    Returns:
+        Snapshot: The observation, with subfields `spice_kernels`, `filespec`,
+        `basename`, `spice_to_frame`, `spice_frame_name`, `spice_frame_id`, `abspath`
+        and `image_url` inserted.
     """
 
     ISS.initialize()    # Define everything the first time through; use defaults
@@ -127,17 +134,23 @@ def from_file(filespec, *, fast_distortion=True,
 
 def from_index(filespec, fast_distortion=True, return_all_planets=False,
                navigation=False, **kwargs):
-    """A static method to return a list of Snapshot objects.
+    """A list of Snapshot objects, one for each row of a Cassini ISS index file.
 
     Parameters:
-        filespec (str, Path, or FCPath): The full path to a Cassini ISS file or its PDS
-            label.
-        fast_distortion (bool or None, optional): True to use a pre-inverted polynomial;
-            False to use a dynamically solved polynomial; None to use a FlatFOV.
+        filespec (str | pathlib.Path | FCPath): The full path to a Cassini ISS index
+            file or its PDS label.
+        fast_distortion (bool | None, optional): Accepted for consistency with
+            :func:`from_file`; the snapshots always use a dynamically solved polynomial.
         return_all_planets (bool, optional): Include kernels for all planets not just
             Jupiter or Saturn.
-        navigation (bool, optional): True to wrap the frame inside a Navigation frame to
-            make it Fittable.
+        navigation (bool, optional): True to wrap the frame inside a
+            :class:`~oops.frame.Navigation` frame to make it Fittable.
+        **kwargs (Any): Additional keyword arguments; they are accepted and ignored.
+
+    Returns:
+        list[Snapshot]: One observation per row of the index, each with subfields
+        `spice_kernels`, `filespec`, `basename`, `spice_to_frame`, `spice_frame_name`
+        and `spice_frame_id` inserted.
     """
     ISS.initialize()    # Define everything the first time through
     ISS.define_camera_frames()          # use the SPICE-derived pointing
@@ -201,10 +214,16 @@ def initialize(ck='reconstructed', planets=None, asof=None,
     Must be called first. After the first call, later calls to this function are ignored.
 
     Parameters:
-        planets (list, optional): A list of planets to pass to define_solar_system. None
-            or 0 means all.
+        ck (str, optional): The set of C kernels to load, 'reconstructed' or 'predicted'
+            (case-insensitive); 'none' to load no C kernels automatically, leaving their
+            handling to the caller.
+        planets (list, optional): A list of planets to pass to
+            :meth:`~oops.Body.define_solar_system`. None or 0 means all.
         asof (str, optional): Only use SPICE kernels that existed before this date; None
             to ignore.
+        spk (str, optional): The set of SP kernels to load, 'reconstructed' or
+            'predicted' (case-insensitive); 'none' to load no SP kernels automatically,
+            leaving their handling to the caller.
         gapfill (bool, optional): True to include gapfill CKs. False otherwise.
         mst_pck (bool, optional): True to include MST PCKs, which update the rotation
             models for some of the small moons.
@@ -343,10 +362,16 @@ class ISS(object):
         first call, later calls to this function are ignored.
 
         Parameters:
-            planets (list, optional): A list of planets to pass to define_solar_system.
-                None or 0 means all.
+            ck (str, optional): The set of C kernels to load, 'reconstructed' or
+                'predicted' (case-insensitive); 'none' to load no C kernels
+                automatically, leaving their handling to the caller.
+            planets (list, optional): A list of planets to pass to
+                :meth:`~oops.Body.define_solar_system`. None or 0 means all.
             asof (str, optional): Only use SPICE kernels that existed before this date;
                 None to ignore.
+            spk (str, optional): The set of SP kernels to load, 'reconstructed' or
+                'predicted' (case-insensitive); 'none' to load no SP kernels
+                automatically, leaving their handling to the caller.
             gapfill (bool, optional): True to include gapfill CKs. False otherwise.
             mst_pck (bool, optional): True to include MST PCKs, which update the rotation
                 models for some of the small moons.
@@ -414,9 +439,9 @@ class ISS(object):
     def define_camera_frames():
         """Register the SPICE-derived CASSINI_ISS_NAC and CASSINI_ISS_WAC frames.
 
-        ISS.initialize() must have been called first. Built lazily (and only
-        once) so that observations using a custom C-matrix never construct or
-        depend on the SPICE camera frames.
+        :meth:`initialize` must have been called first. Built lazily (and only once) so
+        that observations using a custom C-matrix never construct or depend on the SPICE
+        camera frames.
         """
 
         # Each camera is tested individually against the Frame registry rather than

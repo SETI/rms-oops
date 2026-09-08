@@ -39,7 +39,32 @@ oops.spice.load_leap_seconds()
 ##########################################################################################
 
 class Cassini(object):
-    """An instance-free class to hold Cassini-specific parameters."""
+    """An instance-free class to hold Cassini-specific parameters.
+
+    Attributes:
+        START_TIME (str): The start of the mission as an ISO date.
+        STOP_TIME (str): The end of the mission as an ISO date.
+        MONTHS (int): The number of equal "months" into which the mission is divided
+            for the purpose of loading kernels.
+        TDB0 (float): The mission start time in seconds TDB.
+        TDB1 (float): The mission stop time in seconds TDB.
+        DTDB (float): The duration of one "month" in seconds.
+        SLOP (float): The margin, in seconds, by which each month is extended when
+            deciding which kernels apply to it.
+        CK_LOADED (numpy.ndarray): Boolean array with one flag per month, True if the C
+            kernels for that month have been furnished.
+        CK_LIST (numpy.ndarray): Object array holding, for each month, the list of
+            KernelInfo objects for the C kernels needed within that month.
+        CK_DICT (dict[str, KernelInfo]): The furnished C kernels, keyed by filespec.
+        SPK_LOADED (numpy.ndarray): Boolean array with one flag per month, True if the
+            SP kernels for that month have been furnished.
+        SPK_LIST (numpy.ndarray): Object array holding, for each month, the list of
+            KernelInfo objects for the SP kernels needed within that month.
+        SPK_DICT (dict[str, KernelInfo]): The furnished SP kernels, keyed by filespec.
+        loaded_instruments (list[str]): The names of the instruments whose kernels have
+            been loaded.
+        initialized (bool): True after :meth:`initialize` has been called.
+    """
 
     START_TIME = '1997-10-01'
     STOP_TIME  = '2017-10-01'
@@ -74,10 +99,16 @@ class Cassini(object):
         After the first call, later calls to this function are ignored.
 
         Parameters:
-            planets (list, optional): A list of planets to pass to define_solar_system.
-                None or 0 means all.
+            ck (str, optional): The set of C kernels to load, 'reconstructed' or
+                'predicted' (case-insensitive); 'none' to load no C kernels
+                automatically, leaving their handling to the caller.
+            planets (list, optional): A list of planets to pass to
+                :meth:`~oops.Body.define_solar_system`. None or 0 means all.
             asof (str, optional): Only use SPICE kernels that existed before this date;
                 None to ignore.
+            spk (str, optional): The set of SP kernels to load, 'reconstructed' or
+                'predicted' (case-insensitive); 'none' to load no SP kernels
+                automatically, leaving their handling to the caller.
             gapfill (bool, optional): True to include gapfill CKs. False otherwise.
             mst_pck (bool, optional): True to include MST PCKs, which update the rotation
                 models for some of the small moons.
@@ -155,6 +186,9 @@ class Cassini(object):
         """Furnish the C kernels applicable at or near a given time.
 
         The time can be tai or tdb.
+
+        Parameters:
+            t (float): The time in seconds.
         """
         Cassini.load_kernels(t, t, Cassini.CK_LOADED, Cassini.CK_LIST,
                                    Cassini.CK_DICT)
@@ -163,10 +197,13 @@ class Cassini(object):
     def load_cks(t0, t1):
         """Furnish the C kernels applicable within a time interval.
 
-        Every C kernel applicable near or within the interval `tdb0` to `tdb1` is
-        furnished.
+        Every C kernel applicable near or within the interval `t0` to `t1` is furnished.
 
         The time can be tai or tdb.
+
+        Parameters:
+            t0 (float): The start time in seconds.
+            t1 (float): The stop time in seconds.
         """
         Cassini.load_kernels(t0, t1, Cassini.CK_LOADED, Cassini.CK_LIST,
                                      Cassini.CK_DICT)
@@ -176,6 +213,9 @@ class Cassini(object):
         """Furnish the SPK kernels applicable at or near a given time.
 
         The time can be tai or tdb.
+
+        Parameters:
+            t (float): The time in seconds.
         """
         Cassini.load_kernels(t, t, Cassini.SPK_LOADED, Cassini.SPK_LIST,
                                    Cassini.SPK_DICT)
@@ -184,10 +224,14 @@ class Cassini(object):
     def load_spks(t0, t1):
         """Furnish the SPK kernels applicable within a time interval.
 
-        Every SPK kernel applicable near or within the interval `tdb0` to `tdb1` is
+        Every SPK kernel applicable near or within the interval `t0` to `t1` is
         furnished.
 
         The time can be tai or tdb.
+
+        Parameters:
+            t0 (float): The start time in seconds.
+            t1 (float): The stop time in seconds.
         """
         Cassini.load_kernels(t0, t1, Cassini.SPK_LOADED, Cassini.SPK_LIST,
                                      Cassini.SPK_DICT)
@@ -199,9 +243,12 @@ class Cassini(object):
         Parameters:
             t0 (float): The start time in seconds TDB.
             t1 (float): The stop time in seconds TDB.
-            loaded (set): The set of kernel names already furnished; it is updated.
-            lists (list): The KernelInfo objects for each month of the mission.
-            kernel_dict (dict): The KernelInfo objects, keyed by kernel name.
+            loaded (numpy.ndarray): Boolean array with one flag per month, True if that
+                month's kernels have already been furnished; it is updated in place.
+            lists (numpy.ndarray): Object array holding, for each month of the mission,
+                the list of KernelInfo objects needed within that month.
+            kernel_dict (dict[str, KernelInfo]): The furnished KernelInfo objects, keyed
+                by filespec; it is updated in place.
         """
 
         # Find the range of months needed
@@ -231,6 +278,13 @@ class Cassini(object):
 
         After initialization, `lists[m]` holds the KernelInfo objects needed within the
         specified month.
+
+        Parameters:
+            kernels (list[KernelInfo]): The KernelInfo objects to distribute among the
+                months of the mission.
+            lists (numpy.ndarray): Object array with one entry per month; each entry is
+                replaced by the list of KernelInfo objects that apply within that month,
+                extended by :attr:`SLOP` at each end.
         """
         for i in range(Cassini.MONTHS):
             lists[i] = []
@@ -264,6 +318,9 @@ class Cassini(object):
         It is generally only to be called once.
 
         Parameters:
+            instruments (list[str], optional): The names of the instruments whose kernels
+                to load. On the first call, 'ISS', 'VIMS', 'CIRS' and 'UVIS' are always
+                included.
             asof (str, optional): If this specifies a date or date-time in ISO format,
                 then only kernels that existed before the specified date are used.
                 Otherwise, the most recent versions are always loaded.
@@ -300,14 +357,14 @@ class Cassini(object):
         Also furnishes it for use by the SPICE tools.
 
         Parameters:
-            inst (str, list or tuple): One of "ISS", "UVIS", "VIMS", "CIRS", etc.
+            inst (str | list | tuple): One of "ISS", "UVIS", "VIMS", "CIRS", etc.
             asof (str, optional): An optional date in the past, in ISO date or date-time
                 format. If provided, then the information provided will be applicable as
                 of that date. Otherwise, the most recent information is always provided.
 
         Returns:
-            tuple: Containing: the dictionary generated by textkernel.from_file() the
-                name of the kernel.
+            tuple[dict, str]: The dictionary generated by :func:`textkernel.from_file`
+                and the name of the kernel.
         """
         if asof is not None:
             (day,sec) = julian.day_sec_from_iso(stop_time)
@@ -332,8 +389,9 @@ class Cassini(object):
                 of that date. Otherwise, the most recent information is always provided.
 
         Returns:
-            tuple: Containing: the dictionary generated by textkernel.from_file() an
-                ordered list of the names of the kernels.
+            tuple[dict, list[str]]: The dictionary generated by
+                :func:`textkernel.from_file` and an ordered list of the names of the
+                kernels.
         """
         if asof is not None:
             (day,sec) = julian.day_sec_from_iso(stop_time)
@@ -353,14 +411,18 @@ class Cassini(object):
         The list covers a selected range of times.
 
         Parameters:
-            time: A (start, stop) tuple of times in seconds TDB.
-            inst (str, list or tuple): The instrument name, e.g., 'iss'.
-            return_all_planets (optional): Include kernels for all planets not just
+            time (tuple[float, float]): A (start, stop) tuple of times in seconds TDB.
+            inst (str | list | tuple): The instrument name, e.g., 'iss'.
+            return_all_planets (bool, optional): Include kernels for all planets not just
                 Jupiter or Saturn.
             ck (bool, optional): True (default) to include CK (pointing) kernels; False to
                 exclude them, e.g. for an observation whose pointing came from a custom
                 cmatrix rather than SPICE, where any furnished CK is unrelated to how the
                 observation was actually pointed.
+
+        Returns:
+            list[str]: The basenames of the furnished kernels that apply to the
+                observation.
         """
         if return_all_planets:
             bodies = [1, 199, 2, 299, 3, 399, 4, 499, 5, 599, 6, 699,

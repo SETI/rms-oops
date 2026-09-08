@@ -2,10 +2,16 @@
 # oops/frame/frameshift.py
 ##########################################################################################
 
+from typing import TYPE_CHECKING
+
 from polymath      import Scalar
 from oops.fittable import Fittable
 from oops.frame    import Frame
 import oops.mutable as mutable
+
+if TYPE_CHECKING:                       # `oops.cadence`, `oops.path` import this module
+    from oops.cadence import TimeShift
+    from oops.path import PathShift
 
 
 class FrameShift(Frame, Fittable):
@@ -17,10 +23,10 @@ class FrameShift(Frame, Fittable):
         """Constructor for a FrameShift.
 
         Parameters:
-            arg (float, FrameShift, TimeShift, or PathShift): The initial time shift in
+            arg (float | FrameShift | TimeShift | PathShift): The initial time shift in
                 seconds. Alternatively, if another time-shifted object is given, this
                 object's time shift will always match that of the argument.
-            frame (Frame or str): The Frame or the ID of the Frame to which the time shift
+            frame (Frame | str): The Frame or the ID of the Frame to which the time shift
                 applies.
             frame_id (str, optional): The ID under which to register this Frame; None to
                 leave this Frame unregistered. As a special case, use "+" to automatically
@@ -61,24 +67,44 @@ class FrameShift(Frame, Fittable):
             self.freeze()
 
     def _wayframe_key(self):
+        """The key that identifies this Frame's definition in the pool of wayframes.
+
+        Returns:
+            tuple[float, Frame, FrameShift | TimeShift | PathShift | None]: The time
+            shift, the shifted Frame, and the linked object, if any.
+        """
         return (self._dt, self._frame, self._link)
 
     @property
-    def dt(self):
+    def dt(self) -> float:
         """The time shift in seconds applied to the Frame."""
         return self._dt
 
     @property
-    def link(self):
+    def link(self) -> 'FrameShift | TimeShift | PathShift | None':
         """The object to which this one is linked, or None if it is unlinked."""
         return self._link
 
     def _source(self):
         """The original source of the time shift, or self if there is none.
+
+        Returns:
+            FrameShift | TimeShift | PathShift: The object whose time shift this one
+            ultimately follows; this object if it is unlinked.
         """
         return self._link and self._link._source() or self
 
     def _show(self, level, indent=0):
+        """The expanded description of this Frame used by :meth:`~oops.Frame.show`.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame.
+        """
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -103,6 +129,9 @@ class FrameShift(Frame, Fittable):
 
         If this object is linked to another, the time offset of the linked object is also
         redefined.
+
+        Parameters:
+            params (tuple[float]): A tuple containing the new time shift in seconds.
         """
 
         if self._link:
@@ -112,15 +141,20 @@ class FrameShift(Frame, Fittable):
             self._dt = params[0]
 
     @property
-    def params(self):
+    def params(self) -> tuple[float]:
         """The fittable parameters of this FrameShift as a tuple of one time shift."""
         return (self._dt,)
 
     def _refresh(self):
+        """Copy the time shift from the linked object, if there is one."""
         if self._link:
             self._dt = self._link._dt
 
     def _freeze(self):
+        """Adopt the linked object's time shift as this object's own and drop the link.
+
+        Once the object is frozen, it takes its place in the pool of wayframes.
+        """
         if self._link:
             self._dt = self._link._dt
             self._link = None
@@ -151,7 +185,7 @@ class FrameShift(Frame, Fittable):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in

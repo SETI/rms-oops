@@ -21,7 +21,7 @@ class LinearCoordPath(Path):
             coords (tuple): 2 or 3 Scalars defining the coordinates on the surface.
             coords_dot (tuple): The time-derivatives of `coords`.
             epoch (ScalarLike): Reference time TDB for the linear motion.
-            obs (Path or str, optional): The Path or the ID of the Path of the observer,
+            obs (Path | str, optional): The Path or the ID of the Path of the observer,
                 required if `surface` is "virtual".
             path_id (str, optional): The ID under which to register this Path; None to
                 leave this Path unregistered.
@@ -55,10 +55,28 @@ class LinearCoordPath(Path):
         self.refresh()
 
     def _waypoint_key(self):
+        """The key identifying this Path's waypoint, from the attributes that define it.
+
+        Returns:
+            tuple[Surface, tuple[Scalar, ...], tuple[Scalar, ...], Scalar, Path | None]:
+            The surface, the coordinates, their rates, the epoch, and the observer Path.
+        """
+
         return (self._surface, self._coords, self._coords_dot, self._epoch,
                 self._obs_path)
 
     def _show(self, level, indent=0):
+        """The expanded description of this Path used by :meth:`~oops.Path.show`.
+
+        Parameters:
+            level (int): The number of levels of the Path's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Path.
+        """
+
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -106,7 +124,7 @@ class LinearCoordPath(Path):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in

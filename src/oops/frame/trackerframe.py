@@ -28,10 +28,10 @@ class TrackerFrame(Frame):
         """Constructor for a TrackerFrame.
 
         Parameters:
-            frame (Frame or str): The Frame or the ID of the Frame to be modified so that
+            frame (Frame | str): The Frame or the ID of the Frame to be modified so that
                 `target` holds a fixed direction.
-            target (Path or str): The Path or the ID of the Path of the moving target.
-            observer (Path or str): The Path or the ID of the Path of the observer.
+            target (Path | str): The Path or the ID of the Path of the moving target.
+            observer (Path | str): The Path or the ID of the Path of the observer.
             epoch (ScalarLike): The time in seconds TDB at which the direction to `target`
                 is to be held fixed.
             frame_id (str, optional): The ID under which to register this Frame; None to
@@ -67,6 +67,10 @@ class TrackerFrame(Frame):
         self.refresh()
 
     def _refresh(self):
+        """Rederive the tracked direction and the Transform at the epoch.
+
+        The cache is emptied as well.
+        """
 
         # Determine the apparent direction to the target path at epoch
         self._target_wrt_ssb = self._target_path.wrt_ssb
@@ -87,9 +91,25 @@ class TrackerFrame(Frame):
         self._cache = _Cache(self._cache_size)
 
     def _wayframe_key(self):
+        """The key that identifies this Frame's definition in the pool of wayframes.
+
+        Returns:
+            tuple[Frame, Path, Path, Scalar]: The fixed Frame, the target Path, the
+            observer Path, and the epoch.
+        """
         return (self._fixed_frame, self._target_path, self._observer_path, self._epoch)
 
     def _show(self, level, indent=0):
+        """The expanded description of this Frame used by :meth:`~oops.Frame.show`.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame.
+        """
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -126,7 +146,7 @@ class TrackerFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in

@@ -80,7 +80,7 @@ class Frame(Mutable):
     Frame called "ENCELADUS", then its ID will also be "ENCELADUS".
 
     Attributes:
-        frame_id (str or None): The optional ID string for this Frame. Once registered, a
+        frame_id (str | None): The optional ID string for this Frame. Once registered, a
             Frame can be referenced globally by its Frame ID.
         reference (Frame): The Frame from which this Frame transforms. The
             :meth:`~oops.Frame.transform_at_time` method will always return a Transform
@@ -89,7 +89,7 @@ class Frame(Mutable):
         wayframe (Frame): A Frame object that uniquely identifies this frame, irrespective
             of any particular reference. Under most circumstances, this is the Frame's
             primary definition.
-        origin (Path or None): A Path object that uniquely identifies the origin relative
+        origin (Path | None): A Path object that uniquely identifies the origin relative
             to which this Frame is defined. For inertial Frames, this can be None.
         shape (tuple[int, ...]): The shape of the Frame object. This is the shape of the
             Transform object returned by :meth:`~oops.Frame.transform_at_time` when it is
@@ -134,7 +134,12 @@ class Frame(Mutable):
         self._pickle_quickframe_details = bool(value)
 
     def _get_quickframes(self) -> list | None:
-        """The `_quickframes` attribute if present and needed for pickling, else None."""
+        """The `_quickframes` attribute if present and needed for pickling, else None.
+
+        Returns:
+            list[QuickFrame] | None: The QuickFrames tabulated from this Frame; None if
+            there are none or if they are not to be pickled.
+        """
         if (self.pickle_quickframe_details and hasattr(self, '_quickframes')
                 and self._quickframes):
             return self._quickframes
@@ -152,7 +157,7 @@ class Frame(Mutable):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -190,7 +195,7 @@ class Frame(Mutable):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -219,7 +224,7 @@ class Frame(Mutable):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -331,7 +336,7 @@ class Frame(Mutable):
 
     @property
     def string_id(self) -> str:
-        """The ID of this Frame if registered, or a string from its Python `id()`.
+        """The ID of this Frame if registered, or a string from its Python :func:`id`.
         """
         return self._frame_id if self._frame_id else f'#{id(self)}'
 
@@ -468,7 +473,7 @@ class Frame(Mutable):
         """The Frame given a Frame or its registered ID.
 
         Parameters:
-            frame (Frame or str): The Frame or the Frame's ID string.
+            frame (Frame | str): The Frame or the Frame's ID string.
 
         Returns:
             Frame: The Frame, converted from the ID if `frame` is a string.
@@ -487,7 +492,7 @@ class Frame(Mutable):
         """The primary definition of a Frame object.
 
         Parameters:
-            frame (Frame or str): The Frame or the Frame's ID string.
+            frame (Frame | str): The Frame or the Frame's ID string.
 
         Returns:
             Frame: The Frame representing the given Frame's primary definition.
@@ -509,7 +514,7 @@ class Frame(Mutable):
         was assigned this definition.
 
         Parameters:
-            frame (Frame or str): The Frame or the Frame's ID string.
+            frame (Frame | str): The Frame or the Frame's ID string.
 
         Returns:
             Frame: The canonical Frame, converted from the ID if `frame` is a string.
@@ -545,11 +550,11 @@ class Frame(Mutable):
     def _wrt(self, reference, *, use_shortcuts=False):
         """A Frame that directly transforms from the given reference to this Frame.
 
-        This is the private version. The public version is `wrt` and does not have the
-        `use_shortcuts` option.
+        This is the private version. The public version is :meth:`wrt` and does not have
+        the `use_shortcuts` option.
 
         Parameters:
-            reference (Frame or str): The reference Frame defined by a Frame object or its
+            reference (Frame | str): The reference Frame defined by a Frame object or its
                 registered ID.
             use_shortcuts (bool, optional): True to check for a class-specific shortcut;
                 the default is False.
@@ -593,7 +598,7 @@ class Frame(Mutable):
         """A Frame that directly transforms from the given reference to this Frame.
 
         Parameters:
-            reference (Frame or str): The reference Frame defined by a Frame or Frame ID.
+            reference (Frame | str): The reference Frame defined by a Frame or Frame ID.
 
         Returns:
             Frame: This Frame relative to the specified frame.
@@ -615,7 +620,7 @@ class Frame(Mutable):
             reference (Frame): The reference Frame, which must be a valid wayframe.
 
         Returns:
-            Frame or None: The "shortcut" Frame if it could be constructed; None
+            Frame | None: The "shortcut" Frame if it could be constructed; None
             otherwise.
         """
 
@@ -637,7 +642,7 @@ class Frame(Mutable):
             time (ScalarLike): The set of times at which the frame is to be evaluated.
                 This can simply be a tuple *(t_min, t_max)* defining the beginning and end
                 times.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -668,7 +673,7 @@ class NullFrame(Frame):
         """Constructor for a NullFrame.
 
         Parameters:
-            frame (Frame or str): The Frame or Frame ID to use as both this Frame and
+            frame (Frame | str): The Frame or Frame ID to use as both this Frame and
                 its reference.
 
         Raises:
@@ -707,7 +712,7 @@ class NullFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -777,10 +782,20 @@ class J2000Frame(NullFrame):
         return 'J2000'
 
     def _show(self, level, indent=0):
+        """The expanded description of this Frame used by :meth:`~oops.Frame.show`.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame, always ``"J2000"`` in quotes.
+        """
         return '"J2000"'
 
     @property
-    def string_id(self):
+    def string_id(self) -> str:
         """The ID of this Frame, always "J2000"."""
 
         return 'J2000'
@@ -795,7 +810,7 @@ class J2000Frame(NullFrame):
             reference (Frame): The reference Frame, which must be a valid wayframe.
 
         Returns:
-            Frame or None: The "shortcut" SpiceFrame if `reference` is a SpiceFrame; None
+            Frame | None: The "shortcut" SpiceFrame if `reference` is a SpiceFrame; None
             otherwise.
         """
 
@@ -816,9 +831,9 @@ class LinkedFrame(Frame):
         """Constructor for a LinkedFrame.
 
         Parameters:
-            frame (Frame or str): A Frame or Frame ID, which must be defined relative to
+            frame (Frame | str): A Frame or Frame ID, which must be defined relative to
                 the given `parent`.
-            parent (Frame or str): The Frame or Frame ID to which the above will be
+            parent (Frame | str): The Frame or Frame ID to which the above will be
                 linked.
 
         Raises:
@@ -869,7 +884,7 @@ class LinkedFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -902,7 +917,7 @@ class LinkedFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -933,7 +948,7 @@ class ReversedFrame(Frame):
         """Constructor for a ReversedFrame.
 
         Parameters:
-            frame (Frame or str): The Frame or Frame ID to be reversed.
+            frame (Frame | str): The Frame or Frame ID to be reversed.
 
         Raises:
             KeyError: If `frame` is an ID string that has not been registered.
@@ -967,7 +982,7 @@ class ReversedFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -998,7 +1013,7 @@ class ReversedFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in

@@ -46,7 +46,7 @@ def body_id_and_name(arg):
     registered Path; otherwise the SPICE Toolkit is consulted.
 
     Parameters:
-        arg (str or int): The body name or the SPICE body ID.
+        arg (str | int): The body name or the SPICE body ID.
 
     Returns:
         tuple[int, str]: The SPICE body ID and its name. A body with no name in the
@@ -99,7 +99,7 @@ def frame_id_and_name(arg):
     that body.
 
     Parameters:
-        arg (str or int): The frame name, the SPICE frame ID, a body name, or a SPICE
+        arg (str | int): The frame name, the SPICE frame ID, a body name, or a SPICE
             body ID.
 
     Returns:

@@ -52,7 +52,15 @@ TRANSLATOR_ID = None
 
 # Sometimes you really just want a list
 def lrange(*args):
-    """A list of the integers in the given range."""
+    """A list of the integers in the given range.
+
+    Parameters:
+        *args (int): The arguments of :class:`range`: a stop value, or a start and stop
+            value, or a start, stop and step value.
+
+    Returns:
+        list[int]: The integers in the range.
+    """
 
     return list(range(*args))
 
@@ -141,15 +149,37 @@ KERNEL_TYPE_FROM_EXT = {
 class KernelInfo(object):
     """Information about an individual SPICE kernel.
 
-    The information is that described by a row of the SPICEDB table. KernelInfo objects
-    sort into an appropriate order for furnishing.
+    The information is that described by a row of the SPICEDB table. :class:`KernelInfo`
+    objects sort into an appropriate order for furnishing.
+
+    Attributes:
+        kernel_name (str): The name of the kernel.
+        kernel_version (str | None): The version of the kernel, if any.
+        kernel_type (str): The kernel type, e.g., "LSK", "SPK" or "CK".
+        filespec (str): The file specification of the kernel, relative to the root of the
+            SPICE file directory tree.
+        start_time (str | None): The start time of the kernel's coverage in ISO format;
+            None if the kernel is timeless.
+        stop_time (str | None): The stop time of the kernel's coverage in ISO format;
+            None if the kernel is timeless.
+        release_date (str | None): The release date of the kernel in ISO format.
+        spice_id (int | None): The SPICE ID of the body or spacecraft that the kernel
+            describes, if any.
+        load_priority (int): The load priority; kernels with higher values are furnished
+            later and so take precedence.
+        basename (str): The basename of the kernel file.
+        start_tai (float): The start time in seconds TAI; -1.e99 if timeless.
+        stop_tai (float): The stop time in seconds TAI; 1.e99 if timeless.
+        start_tdb (float): The start time in seconds TDB; -1.e99 if timeless.
+        stop_tdb (float): The stop time in seconds TDB; 1.e99 if timeless.
+        file_no (int | None): The file number within a multi-file kernel, if any.
     """
 
     def __init__(self, info):
         """Constructor for a KernelInfo.
 
         Parameters:
-            info (list or tuple): The contents of one row of the SPICEDB table. The order
+            info (list | tuple): The contents of one row of the SPICEDB table. The order
                 of the items is defined by the module's `COLUMN_NAMES` list, which
                 corresponds to the order of the columns in the table.
         """
@@ -184,9 +214,12 @@ class KernelInfo(object):
     def compare(self, other):
         """Identify which of two kernels has a higher load priority.
 
-        The compare() operator compares two KernelInfo objects and returns
-        -1 if the former should be earlier in load order, 0 if they are equal,
-        or +1 if the former should be later in loader order.
+        Parameters:
+            other (KernelInfo): The kernel to compare against.
+
+        Returns:
+            int: -1 if this kernel should be earlier in load order than `other`, 0 if
+            they are equal, or +1 if this kernel should be later in load order.
         """
 
         # Compare types
@@ -316,7 +349,7 @@ class KernelInfo(object):
         return result
 
     @property
-    def full_name(self):
+    def full_name(self) -> str:
         """The kernel name with its version appended, if it has one."""
 
         # Append version if present
@@ -333,14 +366,30 @@ class KernelInfo(object):
             return self.kernel_name
 
     @property
-    def timeless(self):
+    def timeless(self) -> bool:
         """True if this kernel has no start or stop time."""
 
         return (self.start_time is None and self.stop_time is None)
 
 def kernels_from_filespec(filespec, name=None, version=None, release=None,
                                     priority=100):
-    """Fill in kernel info as well as possible from a file path."""
+    """Fill in kernel info as well as possible from a file path.
+
+    The database is consulted first; a file that it does not describe is examined
+    directly, so the file need not be in the database.
+
+    Parameters:
+        filespec (str): The file path of the kernel.
+        name (str, optional): The kernel name; None to derive it from the basename of the
+            file.
+        version (str, optional): The kernel version; None for "V1".
+        release (str, optional): The release date in ISO format; None for today's date.
+        priority (int, optional): The load priority.
+
+    Returns:
+        list[KernelInfo]: The kernels described by the file: one per body and coverage
+        interval for a CK or SPK, and otherwise one.
+    """
 
     # Search in the database first
     basename = os.path.basename(filespec)
@@ -433,11 +482,15 @@ def kernels_from_filespec(filespec, name=None, version=None, release=None,
 ##########################################################################################
 
 def _sort_kernels(kernel_list):
-    """Sort a list of KernelInfo objects immediately prior to loading.
+    """Sort a list of :class:`KernelInfo` objects immediately prior to loading.
+
+    Parameters:
+        kernel_list (list[KernelInfo]): The kernels to sort; the list is sorted in place
+            as a side effect.
 
     Returns:
-        list: In which duplicates are removed and the rest are sorted into their proper
-            load order.
+        list[KernelInfo]: In which duplicates are removed and the rest are sorted into
+        their proper load order.
     """
 
     # Sort kernels into load order
@@ -508,16 +561,17 @@ def _remove_overlaps(kernel_list, start_time, stop_time):
     not required. It returns the filtered list in the proper load order.
 
     Parameters:
-        start_time (str): The start time of the interval of interest, as ISO format
-            "yyyy-hh-mmThh:mm:ss" or as seconds TAI since January 1, 2000. None to ignore
-            time limits and just select the most recent kernel(s).
-        stop_time (str): The stop time of the interval of interest. None to ignore time
-            limits.  and just select the most recent kernel(s).
+        kernel_list (list[KernelInfo]): The kernels to filter.
+        start_time (str | float | None): The start time of the interval of interest, as
+            ISO format "yyyy-hh-mmThh:mm:ss" or as seconds TAI since January 1, 2000.
+            None to ignore time limits and just select the most recent kernel(s).
+        stop_time (str | float | None): The stop time of the interval of interest. None
+            to ignore time limits and just select the most recent kernel(s).
 
     Returns:
-        list: A filtered list of kernels, in which unnecessary kernels have been removed.
-            An unnecessary kernel is one whose entire time range is covered by
-            higher-priority kernels.
+        list[KernelInfo]: A filtered list of kernels, in which unnecessary kernels have
+        been removed. An unnecessary kernel is one whose entire time range is covered by
+        higher-priority kernels.
     """
 
     # Construct a dictionary of kernel lists, one list for each body
@@ -579,7 +633,15 @@ def _remove_overlaps(kernel_list, start_time, stop_time):
     return _sort_kernels(filtered_kernels)
 
 def _fileno_str(filenos):
-    """Construct a string listing filenos and their ranges inside brackets."""
+    """Construct a string listing filenos and their ranges inside brackets.
+
+    Parameters:
+        filenos (list[int]): The file numbers.
+
+    Returns:
+        str: The file numbers inside square brackets, with runs of consecutive values
+        written as ranges, e.g., "[1,3-5,7]".
+    """
 
     # Copy and sort the list
     filenos = list(filenos)
@@ -622,7 +684,16 @@ def _fileno_str(filenos):
     return ''.join(strlist + [']'])
 
 def _fileno_values(name):
-    """Return a kernel name and list of fileno values from a name string."""
+    """Return a kernel name and list of fileno values from a name string.
+
+    Parameters:
+        name (str): A full kernel name, optionally followed by file number ranges inside
+            square brackets, e.g., "NAME-V1[1,3-5]".
+
+    Returns:
+        tuple[str, list[int]]: The kernel name without the brackets, and the file numbers
+        listed inside them; an empty list if there are none.
+    """
 
     # If there are no file_nos in the name, just return it with an empty list
     if name[-1] != ']':
@@ -657,9 +728,10 @@ def _query_kernels(kernel_type, name=None, body=None, time=None, asof=None,
     """Return a list of KernelInfo objects based on the given constraints.
 
     Parameters:
+        kernel_type (str): The kernel type, e.g., "LSK", "SPK" or "CK".
         name (str, optional): A SQL match string for the name of the kernel; use "%" for
             multiple wildcards and "_" for a single wildcard.
-        body (int, list or tuple, optional): Zero or more SPICE body IDs.
+        body (int | list | tuple, optional): Zero or more SPICE body IDs.
         time (tuple, optional): Consisting of a start and stop time, each expressed as a
             string in ISO format, "yyyy-mm-ddThh:mm:ss". Alternatively, times may be given
             as elapsed seconds TAI since January 1, 2000.
@@ -674,10 +746,14 @@ def _query_kernels(kernel_type, name=None, body=None, time=None, asof=None,
             kernel.
         limit (bool, optional): True to limit the number of returned kernels to one where
             appropriate; False to return all the matching kernels.
+        redo (bool, optional): True to relax the `asof` and `after` constraints if no
+            matching results are found; False to raise a ValueError instead.
 
     Returns:
-        list: A list of KernelInfo objects describing the files that match the
-            requirements.
+        list[KernelInfo]: The kernels describing the files that match the requirements.
+
+    Raises:
+        ValueError: If no kernels match.
     """
 
     # Query the database
@@ -707,9 +783,10 @@ def _sql_query(kernel_type, name=None, body=None, time=None, asof=None,
     """Generate a query string based on the constraints.
 
     Parameters:
+        kernel_type (str): The kernel type, e.g., "LSK", "SPK" or "CK".
         name (str, optional): A SQL match string for the name of the kernel; use "%" for
             multiple wildcards and "_" for a single wildcard.
-        body (int, list or tuple, optional): One or more SPICE body IDs.
+        body (int | list | tuple, optional): One or more SPICE body IDs.
         time (tuple, optional): Consisting of a start and stop time, each expressed as a
             string in ISO format "yyyy-mm-ddThh:mm:ss". Alternatively, times may be given
             as elapsed seconds TAI since January 1, 2000.
@@ -803,7 +880,7 @@ def _query_by_name(names, time=None):
     """Return a list of KernelInfo objects based on a name (including version).
 
     Parameters:
-        names (str, list or tuple): One or more full kernel names, including versions,
+        names (str | list | tuple): One or more full kernel names, including versions,
             optionally indexed by file_no ranges.
         time (tuple, optional): Consisting of a start and stop time, each expressed as a
             string in ISO format, "yyyy-mm-ddThh:mm:ss". Alternatively, times may be given
@@ -811,8 +888,10 @@ def _query_by_name(names, time=None):
             regardless of the time.
 
     Returns:
-        list: A list of KernelInfo objects describing the files that match the
-            requirements.
+        list[KernelInfo]: The kernels describing the files that match the requirements.
+
+    Raises:
+        ValueError: If no kernels match one of the names.
     """
 
     # Normalize the input
@@ -849,8 +928,7 @@ def _sql_query_by_name(name, time=None):
             regardless of the time.
 
     Returns:
-        list: A list of KernelInfo objects describing the files that match the
-            requirements.
+        str: A complete SQL query string.
     """
 
     # Begin query
@@ -907,14 +985,18 @@ def _query_by_filespec(filespecs, time=None):
     """Return a list of KernelInfo objects based on a filename or pattern.
 
     Parameters:
-        filespec (str or FCPath): One file path or match pattern.
+        filespecs (str | list[str] | tuple[str, ...]): One or more file paths or match
+            patterns.
         time (tuple, optional): Consisting of a start and stop time, each expressed as a
             string in ISO format, "yyyy-mm-ddThh:mm:ss". Alternatively, times may be given
             as elapsed seconds TAI since January 1, 2000. Use None to return kernels
             regardless of the time.
 
     Returns:
-        list: A list of KernelInfo objects describing the files that match the pattern.
+        list[KernelInfo]: The kernels describing the files that match the patterns.
+
+    Raises:
+        ValueError: If no kernels match one of the patterns.
     """
 
     # Normalize the input
@@ -950,15 +1032,14 @@ def _sql_query_by_filespec(filespec, time=None):
     """Generate a query string based on a kernel name.
 
     Parameters:
-        filespec (str or FCPath): One file path or match pattern.
+        filespec (str): One file path or match pattern.
         time (tuple, optional): Consisting of a start and stop time, each expressed as a
             string in ISO format, "yyyy-mm-ddThh:mm:ss". Alternatively, times may be given
             as elapsed seconds TAI since January 1, 2000. Use None to return kernels
             regardless of the time.
 
     Returns:
-        list: A list of KernelInfo objects describing the files that match the
-            requirements.
+        str: A complete SQL query string.
     """
 
     # Begin query
@@ -1000,6 +1081,10 @@ def set_spice_path(spice_path=""):
     appropriate prefix.
 
     Call with no argument to reset the path to its default value.
+
+    Parameters:
+        spice_path (str | FCPath, optional): The path to the root of the SPICE file
+            directory tree, optionally with a prefix naming a webserver or cloud resource.
     """
 
     global SPICE_PATH, SPICE_FILECACHE, SPICE_FILECACHE_PFX
@@ -1016,6 +1101,9 @@ def get_spice_path():
 
     If the path is undefined, it uses the value of environment variable
     SPICE_PATH. If SPICE_PATH is undefined, it uses ${OOPS_RESOURCES}/SPICE.
+
+    Returns:
+        str | FCPath: The path to the root of the SPICE file directory tree.
     """
 
     global SPICE_PATH
@@ -1029,7 +1117,11 @@ def get_spice_path():
     return SPICE_PATH
 
 def get_spice_filecache():
-    """Return the FileCache used for storing the SPICE DB and kernels."""
+    """Return the FileCache used for storing the SPICE DB and kernels.
+
+    Returns:
+        FileCache: The shared file cache.
+    """
 
     global SPICE_FILECACHE
 
@@ -1039,7 +1131,11 @@ def get_spice_filecache():
     return SPICE_FILECACHE
 
 def get_spice_filecache_prefix():
-    """Return the FileCachePrefix used for storing the SPICE kernels."""
+    """Return the FCPath prefix used for storing the SPICE kernels.
+
+    Returns:
+        FCPath: The root of the SPICE file directory tree within the shared file cache.
+    """
 
     global SPICE_FILECACHE_PREFIX
 
@@ -1056,6 +1152,9 @@ def open_db(name=None):
     If no name is given, the value of the environment variable
     SPICE_SQLITE_DB_NAME is used. If SPICE_SQLITE_DB_NAME is not set,
     then ${SPICE_PATH}/SPICE.db is used.
+
+    Parameters:
+        name (FCPath, optional): The path to the database file; None to use the default.
     """
 
     global IS_OPEN, DB_PATH
@@ -1088,7 +1187,11 @@ def close_db():
         IS_OPEN = False
 
 def db_is_open():
-    """Return True if SPICE database is currently open."""
+    """Return True if SPICE database is currently open.
+
+    Returns:
+        bool: True if the SPICE database is currently open.
+    """
 
     global IS_OPEN
 
@@ -1099,7 +1202,20 @@ def db_is_open():
 ##########################################################################################
 
 def set_translator(func):
-    """Define the translator function."""
+    """Define the translator function.
+
+    The translator alters the paths of SPICE kernels before they are furnished, and so
+    can be used to override the default kernels. It can be defined only once, and only
+    before any kernels have been furnished.
+
+    Parameters:
+        func (Callable): A function that takes the file path of a kernel and returns the
+            path to furnish instead, or None to skip the kernel.
+
+    Raises:
+        RuntimeError: If a different translator is already defined or kernels have
+            already been furnished.
+    """
 
     global TRANSLATOR, TRANSLATOR_ID
 
@@ -1136,7 +1252,7 @@ def select_lsk(asof=None, after=None, redo=True):
             matching results are found; False to raise a ValueError instead.
 
     Returns:
-        list: A sorted list of KernelInfo objects.
+        list[KernelInfo]: A sorted list of kernels.
     """
 
     # Search the database
@@ -1150,7 +1266,7 @@ def select_pck(bodies=None, name=None, asof=None, after=None, redo=True):
     """Return a sorted list of PCKs for one or more bodies.
 
     Parameters:
-        bodies (int, list or tuple, optional): One or more SPICE body IDs; None to load
+        bodies (int | list | tuple, optional): One or more SPICE body IDs; None to load
             kernels for all planetary bodies.
         name (str, optional): A SQL match string for the name of the kernel; use "%" for
             multiple wildcards and "_" for a single wildcard.
@@ -1165,7 +1281,7 @@ def select_pck(bodies=None, name=None, asof=None, after=None, redo=True):
             matching results are found; False to raise a ValueError instead.
 
     Returns:
-        list: A sorted list of KernelInfo objects.
+        list[KernelInfo]: A sorted list of kernels.
     """
 
     # Search database
@@ -1180,7 +1296,7 @@ def select_spk(bodies, name=None, time=None, asof=None, after=None, redo=True):
     """Return a sorted list of SPKs for one or more bodies.
 
     Parameters:
-        bodies (int, list or tuple): One or more SPICE body IDs; None to load kernels for
+        bodies (int | list | tuple): One or more SPICE body IDs; None to load kernels for
             all planetary bodies.
         name (str, optional): A SQL match string for the name of the kernel; use "%" for
             multiple wildcards and "_" for a single wildcard.
@@ -1199,7 +1315,7 @@ def select_spk(bodies, name=None, time=None, asof=None, after=None, redo=True):
             matching results are found; False to raise a ValueError instead.
 
     Returns:
-        list: A sorted list of KernelInfo objects.
+        list[KernelInfo]: A sorted list of kernels.
     """
 
     # Normalize the input
@@ -1237,10 +1353,10 @@ def select_inst(ids, inst=None, types=None, asof=None, after=None, redo=True):
     """Return a sorted list of IKs, FKs and SCLKs for spacecrafts/instruments.
 
     Parameters:
-        ids (int, list or tuple): One or more negative SPICE body IDs for spacecrafts.
-        inst (str, list or tuple, optional): One or more instrument names or
+        ids (int | list | tuple): One or more negative SPICE body IDs for spacecrafts.
+        inst (str | list | tuple, optional): One or more instrument names or
             abbreviations. None to return kernels for every instrument.
-        types (str, list or tuple, optional): One or more kernel types ("IK", "FK",
+        types (str | list | tuple, optional): One or more kernel types ("IK", "FK",
             "SCLK") to return. None to return every kernel type.
         asof (str, optional): An optional earlier date for which values should be
             returned. Wherever possible, the kernels selected will have release dates
@@ -1253,7 +1369,7 @@ def select_inst(ids, inst=None, types=None, asof=None, after=None, redo=True):
             matching results are found; False to raise a ValueError instead.
 
     Returns:
-        list: A sorted list of KernelInfo objects.
+        list[KernelInfo]: A sorted list of kernels.
     """
 
     # Normalize inputs
@@ -1302,7 +1418,7 @@ def select_ck(ids, name=None, time=None, asof=None, after=None, redo=True):
     """Return a sorted list of CKs for one or more spacecrafts.
 
     Parameters:
-        ids (int, list or tuple): One or more negative SPICE body IDs for spacecrafts.
+        ids (int | list | tuple): One or more negative SPICE body IDs for spacecrafts.
         name (str, optional): A SQL match string for the name of the kernel; use "%" for
             multiple wildcards and "_" for a single wildcard.
         time (tuple, optional): The start and stop times. Each time is expressed in either
@@ -1319,7 +1435,7 @@ def select_ck(ids, name=None, time=None, asof=None, after=None, redo=True):
             matching results are found; False to raise a ValueError instead.
 
     Returns:
-        list: A sorted list of KernelInfo objects.
+        list[KernelInfo]: A sorted list of kernels.
     """
 
     # Normalize inputs
@@ -1344,11 +1460,14 @@ def select_by_name(names, time=None):
     """Return a list of kernel objects associated with a list of names.
 
     Parameters:
-        names (list): Kernel names, including version numbers, and optional file_no
-            indices.
+        names (str | list[str]): Kernel names, including version numbers, and optional
+            file_no indices.
         time (tuple, optional): The start and stop times. Each time is expressed in either
             ISO format "yyyy-mm-ddThh:mm:ss" or as a number of seconds TAI elapsed since
             January 1, 2000. Use None to load all the matching kernels.
+
+    Returns:
+        list[KernelInfo]: A sorted list of kernels.
     """
 
     # Search database
@@ -1361,11 +1480,14 @@ def select_by_filespec(filespecs, time=None):
     """Return a list of kernel objects associated with a list of names.
 
     Parameters:
-        names (list): A list of file specifications or match patterns. The file
-            specification need not contain the directory path.
+        filespecs (str | list[str]): One or more file specifications or match patterns.
+            The file specification need not contain the directory path.
         time (tuple, optional): The start and stop times. Each time is expressed in either
             ISO format "yyyy-mm-ddThh:mm:ss" or as a number of seconds TAI elapsed since
             January 1, 2000. Use None to load all the matching kernels.
+
+    Returns:
+        list[KernelInfo]: The matching kernels, in database order.
     """
 
     # Search database, DO NOT sort!
@@ -1379,6 +1501,12 @@ def as_dict(kernel_list):
     """Return a dictionary containing the information in text kernels.
 
     Binary kernels are ignored.
+
+    Parameters:
+        kernel_list (list[KernelInfo]): The kernels to read.
+
+    Returns:
+        dict[str, Any]: The contents of the text kernels, merged into one dictionary.
     """
 
     pfx = get_spice_filecache_prefix()
@@ -1404,13 +1532,14 @@ def furnish_kernels(kernel_list, fast=True):
     """Furnish a pre-sorted list of kernels for use by the cspyce module.
 
     Parameters:
+        kernel_list (list[KernelInfo]): The kernels to furnish, in load order.
         fast (bool, optional): True to skip the loading kernels that have already been
             loaded. False to unload and load them again, thereby raising their priority.
 
     Returns:
-        list: An ordered list of the names, versions and file_nos of the kernels loaded.
-            This can be used to re-load the exact same selection of kernels again at a
-            later date.
+        list[str]: An ordered list of the names, versions and file_nos of the kernels
+        loaded. This can be used to re-load the exact same selection of kernels again at a
+        later date.
     """
 
     global DEBUG, ABSPATH_LIST
@@ -1552,7 +1681,7 @@ def furnish_lsk(asof=None, after=None, redo=True, fast=True):
             loaded. False to unload and load them again, thereby raising their priority.
 
     Returns:
-        list: A list of kernel names in load order.
+        list[str]: A list of kernel names in load order.
     """
 
     # Search the database
@@ -1566,7 +1695,7 @@ def furnish_pck(bodies=None, name=None, asof=None, after=None, redo=True,
     """Furnish selected PCKs for one or more bodies.
 
     Parameters:
-        bodies (int, list or tuple, optional): One or more SPICE body IDs; None to load
+        bodies (int | list | tuple, optional): One or more SPICE body IDs; None to load
             kernels for all planetary bodies.
         name (str, optional): A SQL match string for the name of the kernel; use "%" for
             multiple wildcards and "_" for a single wildcard.
@@ -1583,7 +1712,7 @@ def furnish_pck(bodies=None, name=None, asof=None, after=None, redo=True,
             loaded. False to unload and load them again, thereby raising their priority.
 
     Returns:
-        list: A list of kernel names in load order.
+        list[str]: A list of kernel names in load order.
     """
 
     # Search database
@@ -1598,7 +1727,7 @@ def furnish_spk(bodies, name=None, time=None, asof=None, after=None, redo=True,
     """Furnish SPKs for one or more bodies and spacecrafts.
 
     Parameters:
-        bodies (int, list or tuple): One or more SPICE body IDs; None to load kernels for
+        bodies (int | list | tuple): One or more SPICE body IDs; None to load kernels for
             all planetary bodies.
         name (str, optional): A SQL match string for the name of the kernel; use "%" for
             multiple wildcards and "_" for a single wildcard.
@@ -1619,7 +1748,7 @@ def furnish_spk(bodies, name=None, time=None, asof=None, after=None, redo=True,
             loaded. False to unload and load them again, thereby raising their priority.
 
     Returns:
-        list: A list of kernel names in load order.
+        list[str]: A list of kernel names in load order.
     """
 
     # Search database
@@ -1634,10 +1763,10 @@ def furnish_inst(ids, inst=None, types=None, asof=None, after=None, redo=True,
     """Furnish IKs, FKs and SCLKs for one or more spacecrafts and instruments.
 
     Parameters:
-        ids (int, list or tuple): One or more negative SPICE body IDs for spacecrafts.
-        inst (str, list or tuple, optional): One or more instrument names or
+        ids (int | list | tuple): One or more negative SPICE body IDs for spacecrafts.
+        inst (str | list | tuple, optional): One or more instrument names or
             abbreviations. None to furnish kernels for every instrument.
-        types (str, list or tuple, optional): One or more kernel types ("IK", "FK",
+        types (str | list | tuple, optional): One or more kernel types ("IK", "FK",
             "SCLK") to furnish. None to return every kernel type.
         asof (str, optional): An optional earlier date for which values should be
             returned. Wherever possible, the kernels selected will have release dates
@@ -1648,9 +1777,11 @@ def furnish_inst(ids, inst=None, types=None, asof=None, after=None, redo=True,
             of seconds TAI elapsed since January 1, 2000.
         redo (bool, optional): True to relax the 'asof' and 'after" constraints if no
             matching results are found; False to raise a ValueError instead.
+        fast (bool, optional): True to skip the loading kernels that have already been
+            loaded. False to unload and load them again, thereby raising their priority.
 
     Returns:
-        list: A list of kernel names in load order.
+        list[str]: A list of kernel names in load order.
     """
 
     # Search database
@@ -1664,7 +1795,7 @@ def furnish_ck(ids, name=None, time=None, asof=None, after=None, redo=True,
     """Furnish CKs for one or more spacecrafts.
 
     Parameters:
-        ids (int, list or tuple): One or more negative SPICE body IDs for spacecrafts.
+        ids (int | list | tuple): One or more negative SPICE body IDs for spacecrafts.
         name (str, optional): A SQL match string for the name of the kernel; use "%" for
             multiple wildcards and "_" for a single wildcard.
         time (tuple, optional): The start and stop times. Each time is expressed in either
@@ -1683,7 +1814,7 @@ def furnish_ck(ids, name=None, time=None, asof=None, after=None, redo=True,
             loaded. False to unload and load them again, thereby raising their priority.
 
     Returns:
-        list: A list of kernel names in load order.
+        list[str]: A list of kernel names in load order.
     """
 
     # Search database
@@ -1697,8 +1828,8 @@ def furnish_by_name(names, time=None, fast=True):
     """Furnish kernels identified by a list of names.
 
     Parameters:
-        names (list): Kernel names, including version numbers, and optional file_no
-            indices.
+        names (str | list[str]): Kernel names, including version numbers, and optional
+            file_no indices.
         time (tuple, optional): The start and stop times. Each time is expressed in either
             ISO format "yyyy-mm-ddThh:mm:ss" or as a number of seconds TAI elapsed since
             January 1, 2000. Use None to load all the matching kernels.
@@ -1706,8 +1837,8 @@ def furnish_by_name(names, time=None, fast=True):
             loaded. False to unload and load them again, thereby raising their priority.
 
     Returns:
-        list: A list of kernel names in load order. This will typically match the input
-            names unless different time limits are applied.
+        list[str]: A list of kernel names in load order. This will typically match the
+        input names unless different time limits are applied.
     """
 
     # Search database
@@ -1720,7 +1851,7 @@ def furnish_by_metafile(metafile, time=None, asof=None):
     """Furnish kernels identified by the path to a metakernel.
 
     Parameters:
-        metafile (str or FCPath): A file path to a metafile, or the name of a metafile in
+        metafile (str | FCPath): A file path to a metafile, or the name of a metafile in
             the SPICE database, or the filespec of a meta kernel in the SPICE database.
         time (tuple, optional): Consisting of a start and stop time, each expressed as a
             string in ISO format, "yyyy-mm-ddThh:mm:ss". Alternatively, times may be given
@@ -1732,7 +1863,7 @@ def furnish_by_metafile(metafile, time=None, asof=None):
             a number of seconds TAI elapsed since January 1, 2000.
 
     Returns:
-        list: A list of kernel names in load order.
+        list[str]: A list of kernel names in load order.
     """
 
     pfx = get_spice_filecache_prefix()
@@ -1762,6 +1893,9 @@ def furnish_by_filepath(filepath):
     """Furnish a file by its full file path.
 
     The file need not be in the database.
+
+    Parameters:
+        filepath (str): The full file path of the kernel.
     """
 
     kernels = kernels_from_filespec(filepath)
@@ -1772,7 +1906,12 @@ def furnish_by_filepath(filepath):
 ##########################################################################################
 
 def unload_by_name(names):
-    """Unload kernels based on a list of kernel names."""
+    """Unload kernels based on a list of kernel names.
+
+    Parameters:
+        names (str | list[str]): Kernel names, including version numbers, and optional
+            file_no indices.
+    """
 
     global FURNISHED_ABSPATHS, FURNISHED_NAMES, FURNISHED_INFO
     global FURNISHED_FILENOS
@@ -1817,7 +1956,12 @@ def unload_by_name(names):
     return
 
 def unload_by_type(types=None):
-    """Unload all the kernels of one or more specified types."""
+    """Unload all the kernels of one or more specified types.
+
+    Parameters:
+        types (str | list[str], optional): One or more kernel types, e.g., "SPK" or "CK";
+            None or an empty list to unload every type.
+    """
 
     global FURNISHED_ABSPATHS, FURNISHED_NAMES, FURNISHED_INFO
     global FURNISHED_FILENOS, KERNEL_TYPE_SORT_ORDER
@@ -1855,6 +1999,9 @@ def unload_by_filepath(filepath):
     """Unload a file by its full file path.
 
     The file need not be in the database.
+
+    Parameters:
+        filepath (str): The full file path of the kernel.
     """
 
     kernels = kernels_from_filespec(filepath)
@@ -1892,7 +2039,15 @@ def unload_all():
 ##########################################################################################
 
 def as_names(kernels):
-    """Return a list of names identifying a list of KernelInfo objects."""
+    """Return a list of names identifying a list of :class:`KernelInfo` objects.
+
+    Parameters:
+        kernels (list[KernelInfo]): The kernels to name.
+
+    Returns:
+        list[str]: The full names of the kernels, without duplicates and with file number
+        ranges appended where the kernels have file numbers.
+    """
 
     name_list = []
     fileno_dict = {}
@@ -1927,6 +2082,14 @@ def as_names(kernels):
 
 def furnished_names(types=None):
     """Return a list of strings containing the names of the furnished kernels.
+
+    Parameters:
+        types (str | list[str], optional): One or more kernel types, e.g., "SPK" or "CK";
+            None or an empty list to include every type.
+
+    Returns:
+        list[str]: The names of the furnished kernels of the given types, in load order,
+        with file number ranges appended where applicable.
     """
 
     global FURNISHED_NAMES, FURNISHED_FILENOS
@@ -1954,6 +2117,14 @@ def furnished_names(types=None):
 
 def furnished_basenames(types=None):
     """The basenames of the furnished kernels.
+
+    Parameters:
+        types (str | list[str], optional): One or more kernel types, e.g., "SPK" or "CK";
+            None or an empty list to include every type.
+
+    Returns:
+        list[str]: The basenames of the furnished kernel files of the given types, in load
+        order.
     """
 
     global FURNISHED_NAMES, FURNISHED_FILENOS
@@ -1982,6 +2153,24 @@ def used_basenames(types=[], time=None, bodies=[], sc=None, inst=None,
     """The SPICE file basenames needed for a list of bodies and frames.
 
     The list applies at a particular time.
+
+    Parameters:
+        types (str | list[str], optional): One or more kernel types, e.g., "SPK" or "CK";
+            None or an empty list to include every type.
+        time (str | float | tuple[str | float, str | float], optional): A time, or a
+            start and stop time, each in ISO format "yyyy-mm-ddThh:mm:ss" or as seconds
+            TAI since January 1, 2000; None to ignore time limits.
+        bodies (list[int], optional): The SPICE IDs of the bodies of interest; an empty
+            list to include every body.
+        sc (int, optional): The SPICE ID of the spacecraft, if any. C kernels are
+            included only if a spacecraft or an instrument is given.
+        inst (str, optional): The name of the instrument, if any. Instrument kernels are
+            included only if an instrument is given.
+        slop (float, optional): The tolerance in seconds by which a kernel's time limits
+            may miss the given time and still count as used.
+
+    Returns:
+        list[str]: The basenames of the furnished kernel files that are needed.
     """
 
     global FURNISHED_NAMES, FURNISHED_FILENOS
@@ -2067,7 +2256,7 @@ def furnish_cassini_kernels(start_time, stop_time, instrument=None, asof=None):
         start_time (str): The start time of the period of interest, in ISO format,
             "yyyy-mm-ddThh:mm:ss".
         stop_time (str): The stop time of the period of interest.
-        instrument (list, optional): Instruments to be used. If the list is empty, C
+        instrument (list[str], optional): Instruments to be used. If the list is empty, C
             kernels will not be loaded. If one or more instruments are listed, the C
             kernels and needed Frames kernels will be loaded. Options are the standard
             mission abbreviations, e.g., "ISS", "VIMS", "CIRS", "UVIS", etc.
@@ -2076,7 +2265,7 @@ def furnish_cassini_kernels(start_time, stop_time, instrument=None, asof=None):
             earlier than this date. The date is expressed as a string in ISO format.
 
     Returns:
-        list: The names of all the kernels loaded.
+        list[str]: The names of all the kernels loaded.
     """
 
     names = []
@@ -2110,19 +2299,19 @@ def furnish_solar_system(start_time=None, stop_time=None, asof=None,
     The files cover the planets and their moons.
 
     Parameters:
-        start_time (str, optional): The start time of the period of interest, in ISO
-            format, "yyyy-mm-ddThh:mm:ss" or in seconds TAI past January 1, 2000. Use None
-            to furnish the latest kernels irrespective of their time limits.
-        stop_time (str, optional): The stop time of the period of interest.
+        start_time (str | float, optional): The start time of the period of interest, in
+            ISO format, "yyyy-mm-ddThh:mm:ss" or in seconds TAI past January 1, 2000. Use
+            None to furnish the latest kernels irrespective of their time limits.
+        stop_time (str | float, optional): The stop time of the period of interest.
         asof (str, optional): An optional earlier date for which values should be
             returned. Wherever possible, the kernels selected will have release dates
             earlier than this date. The date is expressed as a string in ISO format.
-        planets (int, optional): 1-9 to load kernels for a particular planet and its
-            moons. 0 or None to load nine planets (including Pluto). Use a tuple to list
-            more than one planet number.
+        planets (int | tuple[int, ...], optional): 1-9 to load kernels for a particular
+            planet and its moons. 0 or None to load nine planets (including Pluto). Use a
+            tuple to list more than one planet number.
 
     Returns:
-        list: The names of all the kernels loaded.
+        list[str]: The names of all the kernels loaded.
     """
 
     if planets is None or planets == 0:

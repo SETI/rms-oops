@@ -3,17 +3,21 @@
 ##########################################################################################
 """Type stub for :mod:`oops.hosts.juno.sru`.
 
-The `src` tree carries no inline annotations, so type information for public symbols is
-published here instead. Only package stubs exist, so a name is annotated when it is
-imported from the package that exports it and not when it is imported from the module
-that defines it. The stub describes the shape of the API exactly: every public name, its
-parameters, which of them are keyword-only, and which have defaults. Types are given
-where they are unambiguous and are `Any` elsewhere.
+The source types its methods in their docstrings rather than in their signatures, so the
+type information for public symbols is published here instead. Only package stubs exist,
+so a name is annotated when it is imported from the package that exports it and not when
+it is imported from the module that defines it. The stub describes the shape of the API
+exactly: every public name, its parameters, which of them are keyword-only, and which have
+defaults. Types are given where they are unambiguous and are `Any` elsewhere.
 """
 
+from pathlib import Path
 from typing import Any
 from filecache import FCPath as FCPath
-from oops import Frame as Frame, Path as Path
+from oops import Frame as Frame
+from oops.fov import BarrelFOV as BarrelFOV
+from oops.frame import SpiceFrame as SpiceFrame
+from oops.observation import Snapshot as Snapshot
 from numpy import ndarray, number
 from polymath import Scalar
 # Parameters documented as a polymath type are passed through `as_scalar` and its
@@ -25,21 +29,21 @@ from oops.hosts.juno import Juno as Juno
 class SRU:
     SAMPLES: int
     LINES: int
-    UV_LOS: Any
+    UV_LOS: tuple[float, float]
     FL_PIXELS: float
-    DISTORTION: Any
-    spice_frames: Any
+    DISTORTION: tuple[float, float, float, float]
+    spice_frames: dict[int, SpiceFrame]
     initialized: bool
     @staticmethod
     def initialize(asof: str | None = None, **kwargs: Any) -> None: ...
     @staticmethod
-    def fov() -> Any: ...
+    def fov() -> BarrelFOV: ...
     @staticmethod
-    def create_frame(unit: Any, time: ScalarLike) -> Frame: ...
+    def create_frame(unit: int, time: ScalarLike) -> Frame: ...
     @staticmethod
     def reset() -> None: ...
 
 def from_file(filespec: str | Path | FCPath, return_all_planets: bool = False,
-    method: str = 'strict', **parameters: Any) -> Any: ...
+    method: str = 'strict', **parameters: Any) -> Snapshot: ...
 
 ##########################################################################################

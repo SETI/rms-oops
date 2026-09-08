@@ -23,7 +23,7 @@ class Slit1D(Observation):
         """Constructor for a Slit1D observation.
 
         Parameters:
-            axes (list or tuple): Strings, with one value for each axis in the associated
+            axes (list | tuple): Strings, with one value for each axis in the associated
                 data array. A value of 'u' should appear at the location of the array's
                 *u*-axis if any; 'v' should appear at the location of the array's *v*-axis
                 if any. Only one of 'u' or 'v' can appear in a Slit1D.
@@ -119,7 +119,7 @@ class Slit1D(Observation):
         This method supports non-integer index values.
 
         Parameters:
-            indices (ScalarLike or VectorLike): Array indices.
+            indices (ScalarLike | VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
             derivs (bool, optional): True to include derivatives in the returned values.
 
@@ -155,7 +155,7 @@ class Slit1D(Observation):
         """Ranges of *(u,v)* spatial coordinates and time for integer array indices.
 
         Parameters:
-            indices (ScalarLike or VectorLike): Array indices.
+            indices (ScalarLike | VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:

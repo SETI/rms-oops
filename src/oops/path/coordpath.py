@@ -19,7 +19,7 @@ class CoordPath(Path):
             surface (Surface): The surface to which the coordinates refer.
             coords (tuple[ScalarLike, ...]): 2 or 3 Scalars defining the coordinates on
                 the surface.
-            obs (Path or str, optional): The Path or the ID of the Path of the observer,
+            obs (Path | str, optional): The Path or the ID of the Path of the observer,
                 required if `surface` is "virtual".
             path_id (str, optional): The ID under which to register this Path; None to
                 leave this Path unregistered.
@@ -54,9 +54,27 @@ class CoordPath(Path):
         self.refresh()
 
     def _waypoint_key(self):
+        """The key identifying this Path's waypoint, from the attributes that define it.
+
+        Returns:
+            tuple[Surface, tuple[Scalar, ...], Path | None]: The surface, the coordinates,
+            and the observer Path.
+        """
+
         return (self._surface, self._coords, self._obs_path)
 
     def _show(self, level, indent=0):
+        """The expanded description of this Path used by :meth:`~oops.Path.show`.
+
+        Parameters:
+            level (int): The number of levels of the Path's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Path.
+        """
+
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -95,7 +113,7 @@ class CoordPath(Path):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -120,7 +138,38 @@ class CoordPath(Path):
 
     def _solve_photon(self, link, sign, *, derivs=False, guess=None, antimask=None,
                       quick=None, converge=None):
-        """Override of the default method to avoid extra iteration."""
+        """Solve for a photon arrival or departure event on this path.
+
+        This override solves directly on the Surface, avoiding extra iteration.
+
+        Parameters:
+            link (Event): The Event of a photon's arrival or departure.
+            sign (int): -1 to return earlier Events, corresponding to photons departing
+                from this Path and arriving at the Event; +1 to return later Events,
+                corresponding to photons arriving at this Path after departing from the
+                Event.
+            derivs (bool, optional): True to propagate derivatives of the link position
+                into the returned event. The time derivative is always retained.
+            guess (ScalarLike, optional): An initial guess to use as the event time along
+                this Path; otherwise None.
+            antimask (MaskType, optional): A boolean array to be applied to event times
+                and positions. Only the indices where antimask=True will be used in the
+                solution.
+            quick (dict | bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
+            converge (dict, optional): A dictionary of parameters to override the
+                configured default convergence parameters; see
+                :meth:`~oops.Path.photon_to_event`.
+
+        Returns:
+            tuple[Event, Event]: `(path_event, link_event)`, where `path_event` is the
+            Event on this Path that matches the light travel time to or from `link`, and
+            `link_event` is a copy of `link` with the photon's line of sight and light
+            travel time filled in.
+        """
 
         return self._surface._solve_photon_by_coords(link, self._coords, sign,
                                                      derivs=derivs, guess=guess,

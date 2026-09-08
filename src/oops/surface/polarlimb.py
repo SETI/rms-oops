@@ -128,7 +128,7 @@ class PolarLimb(Limb):
                 on the body surface to the returned result.
 
         Returns:
-            Vector3 or tuple: `pos` or `(pos[, hints][, track])`, where:
+            Vector3 | tuple: `pos` or `(pos[, hints][, track])`, where:
 
             * `pos` (Vector3): Points defined by the coordinates, relative to this
               surface's origin and frame.

@@ -230,13 +230,13 @@ def set_default_obs(obspath, index, planets, moons=(), rings=(), kwargs=None):
     is unspecified, but can be overridden at the command line.
 
     Parameters:
-        obspath (Path or str): File path to the default data object to be used.
-        index (int, tuple[int], or None): The index to apply if `from_file` returns a
+        obspath (Path | str): File path to the default data object to be used.
+        index (int | tuple[int] | None): The index to apply if `from_file` returns a
             list. If None, backplanes will be generated for every Observation returned by
             `from_file`.
-        planets (str or list[str]): Name(s) of the default planet or planets.
-        moons (str or list[str], optional): Name(s) of the default moon or moons.
-        rings (str or list[str], optional): Name(s) of the default ring or rings, if any.
+        planets (str | list[str]): Name(s) of the default planet or planets.
+        moons (str | list[str], optional): Name(s) of the default moon or moons.
+        rings (str | list[str], optional): Name(s) of the default ring or rings, if any.
             Backplane arrays are always generated for the full ring plane of the specified
             planet.
         kwargs (dict, optional): Any keyword arguments to be passed to `from_file`.
@@ -257,13 +257,13 @@ def define_standard_obs(obsname, obspath, index=None, *, planets=(), moons=(),
 
     Parameters:
         obsname (str): Name given for this observation.
-        obspath (Path or str): File path to the default data object to be used.
-        index (int, tuple[int], or None): The index to apply if `from_file` returns a
+        obspath (Path | str): File path to the default data object to be used.
+        index (int | tuple[int] | None): The index to apply if `from_file` returns a
             list. If None, backplanes will be generated for every Observation returned by
             `from_file`.
-        planets (str or list[str]): Name(s) of the default planet or planets.
-        moons (str or list[str], optional): Name(s) of the default moon or moons.
-        rings (str or list[str], optional): Name(s) of the default ring or rings, if any.
+        planets (str | list[str]): Name(s) of the default planet or planets.
+        moons (str | list[str], optional): Name(s) of the default moon or moons.
+        rings (str | list[str], optional): Name(s) of the default ring or rings, if any.
             Backplane arrays are always generated for the full ring plane of the specified
             planet.
         kwargs (dict, optional): Any keyword arguments to be passed to `from_file`.
@@ -326,11 +326,11 @@ def set_default_args(**options):
     subsequent tests. An unrecognized keyword is stored but never read.
 
     Parameters:
-        planets (str or list[str], optional): Name(s) of the planet(s) to use if this
+        planets (str | list[str], optional): Name(s) of the planet(s) to use if this
             run does not employ a standard observation.
-        moons (str or list[str], optional): Name(s) of the moon(s) to use if this run
+        moons (str | list[str], optional): Name(s) of the moon(s) to use if this run
             does not employ a standard observation.
-        rings (str or list[str], optional): Name(s) of the ring(s) to use if this run
+        rings (str | list[str], optional): Name(s) of the ring(s) to use if this run
             does not employ a standard observation.
         module (str): Name of the module containing the `from_file` method, e.g.,
             "hosts.cassini.iss".
@@ -342,7 +342,7 @@ def set_default_args(**options):
             between the gold master and the test array; default 1.
         ignore_missing (bool, optional): True to raise a warning on any missing gold
             masters; False to raise an error. Default is False.
-        suite (str or list[str], optional): Name(s) of the default test suite(s) to run;
+        suite (str | list[str], optional): Name(s) of the default test suite(s) to run;
             use [] (the default) to include all test suites.
         du (float, optional): Pixel offsets to apply to the u-origin of the meshgrid, for
             testing sensitivity to pointing offsets; default 0.
@@ -361,7 +361,7 @@ def set_default_args(**options):
             "tiff". Default is "png".
         verbose (bool, optional): True to print output to the terminal by default.
         log (bool, optional): True to save a log file; default False
-        level (str or int): Minimum level for messages to be logged: "debug", "info",
+        level (str | int): Minimum level for messages to be logged: "debug", "info",
             "warning", "error", or an integer 1-30. Default is "debug".
         summary (bool, optional): True to write a summary to the output directory;
             default False.
@@ -394,9 +394,9 @@ def override(title, value, names=None):
     Parameters:
         title (str): The exact title of a test, e.g., "JUPITER:RING incidence angle, ring
             minus center (deg)".
-        value (float or None): The revised comparison value, or None to suppress the
+        value (float | None): The revised comparison value, or None to suppress the
             test entirely.
-        names (str or list[str], optional): Name(s) of one or more standard observations;
+        names (str | list[str], optional): Name(s) of one or more standard observations;
             None to apply to all standard observations.
     """
 
@@ -1440,7 +1440,7 @@ class BackplaneTest(object):
             radius (float, optional): Radius of a circle, in pixels, within which to
                 check for a possible spatial shift of the values or the mask; default 0.
                 The value is rounded down, so a radius below 1 indicates no shift.
-            mask (bool or numpy.ndarray, optional): Mask to apply; masked areas are
+            mask (bool | numpy.ndarray, optional): Mask to apply; masked areas are
                 excluded from the comparison. Default is False, meaning nothing is
                 excluded.
 
@@ -1496,7 +1496,7 @@ class BackplaneTest(object):
             radius (float, optional): Radius of a circle, in pixels, within which to
                 check for a possible spatial shift of the values or the mask; default 0.
                 The value is rounded down, so a radius below 1 indicates no shift.
-            mask (bool or numpy.ndarray, optional): Mask to apply; masked areas are
+            mask (bool | numpy.ndarray, optional): Mask to apply; masked areas are
                 excluded from the comparison. Default is False, meaning nothing is
                 excluded.
 
@@ -1918,7 +1918,7 @@ class BackplaneTest(object):
             method (str): Comparison method, one of "", "mod360", "degrees", or "border".
             operator (str): Comparison operator, one of "=", ">", ">=", "<", or "<=".
             radius (float): Radius in pixels within which to check for a spatial shift.
-            mask (bool or numpy.ndarray): Mask to apply; masked areas are excluded.
+            mask (bool | numpy.ndarray): Mask to apply; masked areas are excluded.
 
         Returns:
             tuple: (array, comparison), where `array` is the validated array, converted to
@@ -2023,9 +2023,9 @@ class BackplaneTest(object):
             """Save the summary info and return a formatted text string.
 
             Parameters:
-                minval (float or int): Minimum value, or the count of False values for a
+                minval (float | int): Minimum value, or the count of False values for a
                     boolean array.
-                maxval (float or int): Maximum value, or the count of True values for a
+                maxval (float | int): Maximum value, or the count of True values for a
                     boolean array.
                 masked (int): Number of masked pixels.
                 total (int): Total number of pixels.

@@ -64,8 +64,8 @@ class OrbitPlane(Surface):
 
             epoch (ScalarLike): The time TDB relative to which the orbital elements are
                 defined.
-            origin (Path or str): The Path or path ID of the planet center.
-            frame (Frame or str): The Frame or ID of the Frame in which the orbit is
+            origin (Path | str): The Path or path ID of the planet center.
+            frame (Frame | str): The Frame or ID of the Frame in which the orbit is
                 defined. Should be inertial.
             path_id (str, optional): The ID under which to register the orbit path; None
                 to leave it unregistered.
@@ -273,7 +273,7 @@ class OrbitPlane(Surface):
                 its value is appended to the returned tuple.
 
         Returns:
-            Vector3 or tuple[Vector3, Any]: Points defined by the coordinates, relative to
+            Vector3 | tuple[Vector3, Any]: Points defined by the coordinates, relative to
             this Surface's origin and frame, optionally followed by `hints`. The input
             value of `hints` is returned if it is not None.
         """
@@ -327,7 +327,7 @@ class OrbitPlane(Surface):
                 its value is appended to the returned tuple.
 
         Returns:
-            Vector3 or tuple[Vector3, Any]: Directions normal to the Surface that pass
+            Vector3 | tuple[Vector3, Any]: Directions normal to the Surface that pass
             through the position, optionally followed by `hints`. Vector lengths are
             arbitrary, and the input value of `hints` is returned if it is not None.
         """

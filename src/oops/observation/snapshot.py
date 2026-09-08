@@ -25,7 +25,7 @@ class Snapshot(Observation):
         """Constructor for a Snapshot.
 
         Parameters:
-            axes (list or tuple): Strings, with one value for each axis in the associated
+            axes (list | tuple): Strings, with one value for each axis in the associated
                 data array. A value of 'u' should appear at the location of the array's
                 *u*-axis; 'v' should appear at the location of the array's *v*-axis. For
                 example, ('v','u'), is correct for a 2-D array read from an image file in
@@ -102,7 +102,7 @@ class Snapshot(Observation):
         This method supports non-integer index values.
 
         Parameters:
-            indices (ScalarLike or VectorLike): Array indices.
+            indices (ScalarLike | VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
             derivs (bool, optional): True to include derivatives in the returned values.
 
@@ -127,7 +127,7 @@ class Snapshot(Observation):
         """Ranges of *(u,v)* spatial coordinates and time for integer array indices.
 
         Parameters:
-            indices (ScalarLike or VectorLike): Array indices.
+            indices (ScalarLike | VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
@@ -389,7 +389,7 @@ class Snapshot(Observation):
                 ``config.py``.
 
         Returns:
-            list, numpy.ndarray, or dict: The inventory, in the form named by
+            list | numpy.ndarray | dict: The inventory, in the form named by
             `return_type`.
 
             * If return_type is "list", it returns a list of the names of all the body

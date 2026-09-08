@@ -20,11 +20,16 @@ def from_file(filespec, return_all_planets=False, method='strict', **parameters)
     """A Snapshot object based on a given Juno SRU EDR image file.
 
     Parameters:
-        filespec (str, Path, or FCPath): The full path to a Juno SRU FITS image file or
-            its detached PDS label.
+        filespec (str | pathlib.Path | FCPath): The full path to a Juno SRU FITS image
+            file or its detached PDS label.
         return_all_planets (bool, optional): Include kernels for all planets not just
             Jupiter or Saturn.
         method (str, optional): Label reading method to be passed to Pds3Label.
+        **parameters (Any): Additional keyword arguments; they are accepted and ignored.
+
+    Returns:
+        Snapshot: The observation, with subfields `filespec`, `basename` and `dict`
+        inserted.
     """
     SRU.initialize()    # Define everything the first time through; use
                         # defaults unless initialize() is called explicitly.
@@ -78,14 +83,17 @@ def _load_data(datspec, meta):
     """Load the image array from the FITS file.
 
     Parameters:
-        datspec (str or FCPath): Full path to the FITS data file.
-        meta (object): Image Metadata object.
+        datspec (FCPath): Full path to the FITS data file.
+        meta (_Metadata): Image metadata object.
 
     Returns:
         numpy.ndarray: The data in axis order (line, sample), where lines and samples
         correspond to the CCD rows and columns defined in the SIS.
         Dummy pixels (rows 510-511, columns 0-1) and any pixels not downlinked contain
         zero.
+
+    Raises:
+        ValueError: If the shape of the data array does not match the label.
     """
     local_path = datspec.retrieve()
     with pyfits.open(local_path) as hdulist:
@@ -154,6 +162,18 @@ class SRU(object):
     The Juno Stellar Reference Unit (SRU) is a star tracker operated as a broadband
     visible (450-1100 nm) science imager. Values here are from the SRU EDR/CRT SIS,
     JUNO_SRU_EDR_CRT_SIS_V01_2.
+
+    Attributes:
+        SAMPLES (int): The number of CCD columns; columns 0-1 are dummy pixels.
+        LINES (int): The number of CCD rows; rows 510-511 are dummy pixels.
+        UV_LOS (tuple[float, float]): The boresight pixel.
+        FL_PIXELS (float): The focal length in pixel units.
+        DISTORTION (tuple[float, float, float, float]): The coefficients (a0, a1, a2,
+            a3) of the radial distortion correction f(R) = a0 + a1*R + a2*R**2 +
+            a3*R**4, where R is the tangent of the undistorted radial angle.
+        spice_frames (dict[int, SpiceFrame]): The SPICE frame of each SRU unit, keyed
+            by unit number and defined on first use.
+        initialized (bool): True after :meth:`initialize` has been called.
     """
 
     SAMPLES = 512               # CCD columns; columns 0-1 are dummy pixels
@@ -179,8 +199,9 @@ class SRU(object):
 
         Parameters:
             asof (str, optional): Only use SPICE kernels that existed before this date;
-                None to ignore. kwargs:     Arguments for juno.initialize() and
-                Body.define_solar_system()
+                None to ignore.
+            **kwargs (Any): Arguments for :meth:`~oops.hosts.juno.Juno.initialize` and
+                :meth:`~oops.Body.define_solar_system`.
         """
 
         # Quick exit after first call
@@ -201,6 +222,9 @@ class SRU(object):
         offsets relative to the boresight) by f(R); in BarrelFOV terms the
         radial distance polynomial is f(R)*R, so the R**4 term of f becomes
         the fifth-order coefficient.
+
+        Returns:
+            BarrelFOV: The field of view, constructed on the first call and cached.
         """
         if SRU._fov is None:
             scale = 1./SRU.FL_PIXELS
@@ -230,7 +254,7 @@ class SRU(object):
         boresight along +Z, x along increasing sample, y along increasing line.
 
         Parameters:
-            unit: SRU unit number, 1 or 2.
+            unit (int): SRU unit number, 1 or 2.
             time (ScalarLike): Time at which to define the inertially fixed frame, in
                 seconds TDB; normally the image start time.
 

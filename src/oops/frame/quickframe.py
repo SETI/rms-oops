@@ -23,11 +23,11 @@ class QuickFrame(Frame):
         """Constructor for a QuickFrame.
 
         Parameters:
-            frame (Frame or str): The Frame or the ID of the Frame that this QuickFrame
+            frame (Frame | str): The Frame or the ID of the Frame that this QuickFrame
                 will emulate.
             tmin (float): The earliest time to tabulate in this QuickFrame.
             tmax (float): The latest time to tabulate in this QuickFrame.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -98,6 +98,12 @@ class QuickFrame(Frame):
                 raise ValueError(f'precision failure: {error:.3f} > {precision}')
 
     def _refresh(self):
+        """Tabulate the Transforms of the slow Frame across the time range.
+
+        Raises:
+            ValueError: If the slow Frame returns a Transform that is independent of
+                time, because such a Transform cannot be tabulated.
+        """
 
         times = np.arange(self._tmin, self._tmax + self._tstep/2., self._tstep)
         self._steps = len(times)
@@ -183,6 +189,16 @@ class QuickFrame(Frame):
         return vals
 
     def _show(self, level, indent=0):
+        """The expanded description of this Frame used by :meth:`~oops.Frame.show`.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame.
+        """
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -220,7 +236,7 @@ class QuickFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -498,7 +514,7 @@ class QuickFrame(Frame):
             time (ScalarLike): The set of times at which the frame is to be evaluated.
                 This can simply be a tuple (`tmin`, `tmax`) defining the beginning and end
                 times.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in

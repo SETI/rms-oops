@@ -86,8 +86,8 @@ class FOV(Mutable):
                 into the returned *(x,y)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Pair: The transformed *(x,y)* coordinates in the FOV's frame.
@@ -105,8 +105,8 @@ class FOV(Mutable):
                 into the returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Pair: The computed *(u,v)* coordinates in the FOV.
@@ -130,8 +130,8 @@ class FOV(Mutable):
                 into the returned *(x,y)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Pair: The transformed *(x,y)* coordinates in the FOV's frame.
@@ -158,8 +158,8 @@ class FOV(Mutable):
                 into the returned *(u,v)* Pair.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Pair: The computed *(u,v)* coordinates in the FOV.
@@ -187,8 +187,8 @@ class FOV(Mutable):
             time (ScalarLike, optional): Absolute time in seconds TDB.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Scalar: Relative area of the pixel at FOV coordinates *(u,v)*.
@@ -308,8 +308,8 @@ class FOV(Mutable):
                 returned line of sight.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Vector3: Direction of the line of sight in the FOV's frame.
@@ -332,8 +332,8 @@ class FOV(Mutable):
                 returned line of sight.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Vector3: Direction of the line of sight in the FOV's frame.
@@ -357,8 +357,8 @@ class FOV(Mutable):
                 returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Pair: *(u,v)* coordinates in the FOV.
@@ -381,8 +381,8 @@ class FOV(Mutable):
                 returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Pair: *(u,v)* coordinates in the FOV.
@@ -548,8 +548,8 @@ class FOV(Mutable):
                 the FOV; None for the full FOV.
             uv_max (PairLike, optional): The upper *(u,v)* corner of the area observed in
                 the FOV; None for the full FOV.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Boolean: True where `xy_pair` is outside the FOV.
@@ -572,8 +572,8 @@ class FOV(Mutable):
                 the FOV; None for the full FOV.
             uv_max (PairLike, optional): The upper *(u,v)* corner of the area observed in
                 the FOV; None for the full FOV.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Boolean: True where `los` is outside the FOV.
@@ -693,7 +693,7 @@ class FOV(Mutable):
         return self._center_los_filled
 
     @property
-    def center_dlos_duv(self):
+    def center_dlos_duv(self) -> Vector3:
         """The line of sight derivative matrix *dlos/d(u,v)* at the FOV center.
 
         Returns:
@@ -713,7 +713,7 @@ class FOV(Mutable):
         return self._center_dlos_duv_filled
 
     @property
-    def outer_radius(self):
+    def outer_radius(self) -> float:
         """The radius of a circle circumscribing the entire FOV.
 
         Returns:
@@ -735,7 +735,7 @@ class FOV(Mutable):
         return self._outer_radius_filled
 
     @property
-    def inner_radius(self):
+    def inner_radius(self) -> float:
         """The radius of a circle entirely enclosed within the FOV.
 
         Returns:

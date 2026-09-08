@@ -13,7 +13,10 @@ def where_intercepted(self, event_key):
     """A Boolean array that is True where the surface was intercepted.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
+
+    Returns:
+        Boolean: True where the surface was intercepted, registered as a backplane.
     """
 
     self.refresh()
@@ -34,12 +37,16 @@ def where_inside_shadow(self, event_key, surface_key, tvl=False):
     masked; otherwise, they are False.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event. Once standardized, it
+        event_key (str | tuple): Key defining the surface event. Once standardized, it
             must contain exactly two items, the light source and one body.
         surface_key (str): A registered body ID for the shadowing body, optionally
             modified with ":ANSA", ":RING" or ":LIMB" to select an associated surface.
         tvl (bool, optional): True to use three-valued logic, in which locations
             outside the surface remain masked; False to return False there.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Locations outside the surface are
+        masked if `tvl` is True and False otherwise.
 
     Raises:
         ValueError: If the standardized event key does not contain exactly two items.
@@ -56,12 +63,16 @@ def where_outside_shadow(self, event_key, surface_key, tvl=False):
     surface are masked; otherwise, they are False.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event. Once standardized, it
+        event_key (str | tuple): Key defining the surface event. Once standardized, it
             must contain exactly two items, the light source and one body.
         surface_key (str): A registered body ID for the shadowing body, optionally
             modified with ":ANSA", ":RING" or ":LIMB" to select an associated surface.
         tvl (bool, optional): True to use three-valued logic, in which locations
             outside the surface remain masked; False to return False there.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Locations outside the surface are
+        masked if `tvl` is True and False otherwise.
 
     Raises:
         ValueError: If the standardized event key does not contain exactly two items.
@@ -72,12 +83,13 @@ def where_outside_shadow(self, event_key, surface_key, tvl=False):
 
 
 def _where_inside_or_outside_shadow(self, event_key, surface_key, tvl, inside):
-    """Internal method implementing where_inside_shadow and where_outside_shadow.
+    """Internal method implementing :meth:`where_inside_shadow` and
+    :meth:`where_outside_shadow`.
 
     Both the three-valued and the two-valued results are cached on the first call.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event. Once standardized, it
+        event_key (str | tuple): Key defining the surface event. Once standardized, it
             must contain exactly two items, the light source and one body.
         surface_key (str): A registered body ID for the shadowing body, optionally
             modified with ":ANSA", ":RING" or ":LIMB" to select an associated surface.
@@ -85,6 +97,10 @@ def _where_inside_or_outside_shadow(self, event_key, surface_key, tvl, inside):
             surface remain masked; False to return False there.
         inside (bool): True for the region inside the shadow; False for the region
             outside it.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Locations outside the surface are
+        masked if `tvl` is True and False otherwise.
 
     Raises:
         ValueError: If the standardized event key does not contain exactly two items.
@@ -140,11 +156,15 @@ def where_in_front(self, event_key, surface_key, tvl=False):
     the first surface are masked; otherwise, they are False.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         surface_key (str): A registered body ID for the second surface, optionally
             modified with ":ANSA", ":RING" or ":LIMB" to select an associated surface.
         tvl (bool, optional): True to use three-valued logic, in which locations
             outside the first surface remain masked; False to return False there.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Locations outside the surface are
+        masked if `tvl` is True and False otherwise.
     """
 
     return self._where_in_front_or_in_back(event_key, surface_key, tvl=tvl, in_front=True)
@@ -157,11 +177,15 @@ def where_in_back(self, event_key, surface_key, tvl=False):
     the first surface are masked; otherwise, they are False.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         surface_key (str): A registered body ID for the second surface, optionally
             modified with ":ANSA", ":RING" or ":LIMB" to select an associated surface.
         tvl (bool, optional): True to use three-valued logic, in which locations
             outside the first surface remain masked; False to return False there.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Locations outside the surface are
+        masked if `tvl` is True and False otherwise.
     """
 
     return self._where_in_front_or_in_back(event_key, surface_key, tvl=tvl,
@@ -169,18 +193,22 @@ def where_in_back(self, event_key, surface_key, tvl=False):
 
 
 def _where_in_front_or_in_back(self, event_key, surface_key, tvl, in_front):
-    """Internal method implementing where_in_front and where_in_back.
+    """Internal method implementing :meth:`where_in_front` and :meth:`where_in_back`.
 
     Both the three-valued and the two-valued results are cached on the first call.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         surface_key (str): A registered body ID for the second surface, optionally
             modified with ":ANSA", ":RING" or ":LIMB" to select an associated surface.
         tvl (bool): True to use three-valued logic, in which locations outside the first
             surface remain masked; False to return False there.
         in_front (bool): True where the first surface is the closer of the two; False
             where it is the farther.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Locations outside the surface are
+        masked if `tvl` is True and False otherwise.
     """
 
     self.refresh()
@@ -225,9 +253,13 @@ def where_sunward(self, event_key, tvl=False):
     the surface are masked; otherwise, they are False.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         tvl (bool, optional): True to use three-valued logic, in which locations
             outside the surface remain masked; False to return False there.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Locations outside the surface are
+        masked if `tvl` is True and False otherwise.
     """
 
     return self._where_sunward_or_antisunward(event_key, tvl=tvl, sunward=True)
@@ -240,27 +272,35 @@ def where_antisunward(self, event_key, tvl=False):
     the surface are masked; otherwise, they are False.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         tvl (bool, optional): True to use three-valued logic, in which locations
             outside the surface remain masked; False to return False there.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Locations outside the surface are
+        masked if `tvl` is True and False otherwise.
     """
 
     return self._where_sunward_or_antisunward(event_key, tvl=tvl, sunward=False)
 
 
 def _where_sunward_or_antisunward(self, event_key, tvl, sunward):
-    """Internal method implementing where_sunward and where_antisunward.
+    """Internal method implementing :meth:`where_sunward` and :meth:`where_antisunward`.
 
     The incidence angle is measured against the observed pole for a ring and against the
     surface normal otherwise. Both the three-valued and the two-valued results are cached
     on the first call.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         tvl (bool): True to use three-valued logic, in which locations outside the
             surface remain masked; False to return False there.
         sunward (bool): True where the incidence angle is at most 90 degrees; False where
             it exceeds 90 degrees.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Locations outside the surface are
+        masked if `tvl` is True and False otherwise.
     """
 
     self.refresh()
@@ -303,13 +343,17 @@ def where_inside(self, event_key, surface_key, tvl=False):
     the first surface are masked; otherwise, they are False.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event. Once standardized, it
+        event_key (str | tuple): Key defining the surface event. Once standardized, it
             must contain exactly two items, the light source and one body.
         surface_key (str): A registered body ID for the surface whose interior is
             tested, optionally modified with ":ANSA", ":RING" or ":LIMB" to select an
             associated surface.
         tvl (bool, optional): True to use three-valued logic, in which locations
             outside the first surface remain masked; False to return False there.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Locations outside the surface are
+        masked if `tvl` is True and False otherwise.
 
     Raises:
         ValueError: If the standardized event key does not contain exactly two items.
@@ -326,13 +370,17 @@ def where_outside(self, event_key, surface_key, tvl=False):
     the surface are masked; otherwise, they are False.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event. Once standardized, it
+        event_key (str | tuple): Key defining the surface event. Once standardized, it
             must contain exactly two items, the light source and one body.
         surface_key (str): A registered body ID for the surface whose interior is
             tested, optionally modified with ":ANSA", ":RING" or ":LIMB" to select an
             associated surface.
         tvl (bool, optional): True to use three-valued logic, in which locations
             outside the first surface remain masked; False to return False there.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Locations outside the surface are
+        masked if `tvl` is True and False otherwise.
 
     Raises:
         ValueError: If the standardized event key does not contain exactly two items.
@@ -343,13 +391,13 @@ def where_outside(self, event_key, surface_key, tvl=False):
 
 
 def _where_inside_or_outside(self, event_key, surface_key, tvl, inside):
-    """Internal method implementing where_inside and where_outside.
+    """Internal method implementing :meth:`where_inside` and :meth:`where_outside`.
 
     A surface with no interior is treated as containing nothing. Both the three-valued
     and the two-valued results are cached on the first call.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event. Once standardized, it
+        event_key (str | tuple): Key defining the surface event. Once standardized, it
             must contain exactly two items, the light source and one body.
         surface_key (str): A registered body ID for the surface whose interior is
             tested, optionally modified with ":ANSA", ":RING" or ":LIMB" to select an
@@ -358,6 +406,10 @@ def _where_inside_or_outside(self, event_key, surface_key, tvl, inside):
             surface remain masked; False to return False there.
         inside (bool): True for the region inside the second surface; False for the
             region outside it.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Locations outside the surface are
+        masked if `tvl` is True and False otherwise.
 
     Raises:
         ValueError: If the standardized event key does not contain exactly two items.
@@ -408,10 +460,14 @@ def where_below(self, backplane_key, value, tvl=False):
     masked; otherwise, they are False.
 
     Parameters:
-        backplane_key (str or tuple): Key defining the backplane to evaluate.
+        backplane_key (str | tuple): Key defining the backplane to evaluate.
         value (ScalarLike): The upper limit on the backplane value.
         tvl (bool, optional): True to use three-valued logic, in which masked
             backplane values remain masked; False to return False there.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Masked backplane values remain
+        masked if `tvl` is True and are False otherwise.
     """
 
     self.refresh()
@@ -441,10 +497,14 @@ def where_above(self, backplane_key, value, tvl=False):
     masked; otherwise, they are False.
 
     Parameters:
-        backplane_key (str or tuple): Key defining the backplane to evaluate.
+        backplane_key (str | tuple): Key defining the backplane to evaluate.
         value (ScalarLike): The lower limit on the backplane value.
         tvl (bool, optional): True to use three-valued logic, in which masked
             backplane values remain masked; False to return False there.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Masked backplane values remain
+        masked if `tvl` is True and are False otherwise.
     """
 
     self.refresh()
@@ -474,11 +534,15 @@ def where_between(self, backplane_key, low, high, tvl=False):
     masked; otherwise, they are False.
 
     Parameters:
-        backplane_key (str or tuple): Key defining the backplane to evaluate.
+        backplane_key (str | tuple): Key defining the backplane to evaluate.
         low (ScalarLike): The lower limit on the backplane value.
         high (ScalarLike): The upper limit on the backplane value.
         tvl (bool, optional): True to use three-valued logic, in which masked
             backplane values remain masked; False to return False there.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Masked backplane values remain
+        masked if `tvl` is True and are False otherwise.
     """
 
     self.refresh()
@@ -509,9 +573,13 @@ def where_not(self, backplane_key, tvl=False):
     masked; otherwise, they are False.
 
     Parameters:
-        backplane_key (str or tuple): Key defining the backplane to evaluate.
+        backplane_key (str | tuple): Key defining the backplane to evaluate.
         tvl (bool, optional): True to use three-valued logic, in which masked
             backplane values remain masked; False to return False there.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Masked backplane values remain
+        masked if `tvl` is True and are False otherwise.
     """
 
     self.refresh()
@@ -539,9 +607,13 @@ def where_any(self, *backplane_keys, tvl=False):
     masked; otherwise, they are False.
 
     Parameters:
-        *backplane_keys (str or tuple): Keys defining the backplanes to combine.
+        *backplane_keys (str | tuple): Keys defining the backplanes to combine.
         tvl (bool, optional): True to use three-valued logic, in which masked
             backplane values remain masked; False to return False there.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Masked backplane values remain
+        masked if `tvl` is True and are False otherwise.
     """
 
     self.refresh()
@@ -568,9 +640,13 @@ def where_all(self, *backplane_keys, tvl=False):
     masked; otherwise, they are False.
 
     Parameters:
-        *backplane_keys (str or tuple): Keys defining the backplanes to combine.
+        *backplane_keys (str | tuple): Keys defining the backplanes to combine.
         tvl (bool, optional): True to use three-valued logic, in which masked
             backplane values remain masked; False to return False there.
+
+    Returns:
+        Boolean: The mask, registered as a backplane. Masked backplane values remain
+        masked if `tvl` is True and are False otherwise.
     """
 
     self.refresh()

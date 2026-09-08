@@ -18,11 +18,15 @@ def ring_radius(self, event_key, rmin=None, rmax=None):
     """Radius of the ring intercept point in the observation.
 
     Parameters:
-        event_key (str or tuple): Key defining the ring surface event.
-        rmin (optional): Minimum radius in km; None to allow it to be defined by the
-            `event_key`.
-        rmax (optional): Maximum radius in km; None to allow it to be defined by the
-            `event_key`.
+        event_key (str | tuple): Key defining the ring surface event.
+        rmin (float | None, optional): Minimum radius in km; None to allow it to be
+            defined by the `event_key`.
+        rmax (float | None, optional): Maximum radius in km; None to allow it to be
+            defined by the `event_key`.
+
+    Returns:
+        Scalar: The radius in km, registered as a backplane and masked outside the given
+        limits.
     """
 
     self.refresh()
@@ -55,9 +59,9 @@ def ring_longitude(self, event_key, reference='node'):
     """Longitude of the ring intercept point in the image.
 
     Parameters:
-        event_key (str or tuple): Key defining the ring surface event. Alternatively, a
-            ring_radius or radial_mode backplane key, in which case this backplane
-            inherits the mask of the given backplane array.
+        event_key (str | tuple): Key defining the ring surface event. Alternatively, a
+            :meth:`ring_radius` or :meth:`radial_mode` backplane key, in which case this
+            backplane inherits the mask of the given backplane array.
         reference (str, optional): Defines the location of zero longitude, one of:
 
             * 'aries' for the First point of Aries;
@@ -66,6 +70,12 @@ def ring_longitude(self, event_key, reference='node'):
             * 'sun'   for the sub-solar longitude;
             * 'oha'   for the anti-observer longitude;
             * 'sha'   for the anti-solar longitude, returning the solar hour angle.
+
+    Returns:
+        Scalar: The longitude in radians, registered as a backplane.
+
+    Raises:
+        ValueError: If `reference` is not one of the values listed above.
     """
 
     self.refresh()
@@ -117,8 +127,8 @@ def radial_mode(self, backplane_key, cycles, epoch, amp, peri0, speed, a0=0., dp
     """Radius shift based on a particular ring mode.
 
     Parameters:
-        backplane_key (str or tuple): Key defining a ring_radius or radial_mode backplane,
-            possibly with other radial modes.
+        backplane_key (str | tuple): Key defining a :meth:`ring_radius` or
+            :meth:`radial_mode` backplane, possibly with other radial modes.
         cycles (float): Radial oscillations in 360 degrees of longitude.
         epoch (float): The time (seconds TDB) at which the mode parameters apply.
         amp (float): Radial amplitude of the mode in km.
@@ -132,7 +142,13 @@ def radial_mode(self, backplane_key, cycles, epoch, amp, peri0, speed, a0=0., dp
         dperi_da (float, optional): The rate of change of pericenter with semimajor axis,
             measured at semimajor axis a0 in radians/km.
         reference (str, optional): The reference longitude used to describe the mode; same
-            options as for ring_longitude.
+            options as for :meth:`ring_longitude`.
+
+    Returns:
+        Scalar: The shifted radius in km, registered as a backplane.
+
+    Raises:
+        ValueError: If `backplane_key` is not based on a :meth:`ring_radius` backplane.
     """
 
     self.refresh()
@@ -197,8 +213,11 @@ def _aries_ring_longitude(self, event_key):
     (prograde) direction, in radians.
 
     Parameters:
-        event_key (str or tuple): Key defining the event at the ring's path; it defaults
+        event_key (str | tuple): Key defining the event at the ring's path; it defaults
             to the body's "RING" surface.
+
+    Returns:
+        Scalar: The longitude in radians, registered as a gridless backplane.
     """
 
     event_key = Backplane.gridless_event_key(event_key, default='RING')
@@ -222,15 +241,21 @@ def ring_azimuth(self, event_key, direction='obs', apparent=True):
     plane. This value is 90 degrees at the left ansa and 270 degrees at the right ansa.
 
     Parameters:
-        event_key (str or tuple): Key defining the ring surface event. Alternatively, a
-            ring_radius or radial_mode backplane key, in which case this backplane
-            inherits the mask of the given backplane array.
+        event_key (str | tuple): Key defining the ring surface event. Alternatively, a
+            :meth:`ring_radius` or :meth:`radial_mode` backplane key, in which case this
+            backplane inherits the mask of the given backplane array.
         direction (str, optional): 'obs'   for the apparent departing direction of the
             photon to the observer; 'sun'   for the (negative) apparent direction of the
             photon arriving from the Sun.
         apparent (bool, optional): True for the apparent azimuth in the surface frame,
             allowing for the fact that ring particles are in orbital motion around the
             planet center; False for the actual azimuth.
+
+    Returns:
+        Scalar: The azimuth in radians, registered as a backplane.
+
+    Raises:
+        ValueError: If `direction` is neither 'obs' nor 'sun'.
     """
 
     self.refresh()
@@ -272,9 +297,9 @@ def ring_elevation(self, event_key, direction='obs', pole='prograde', apparent=T
     direction == 'sun'.
 
     Parameters:
-        event_key (str or tuple): Key defining the ring surface event. Alternatively, a
-            ring_radius or radial_mode backplane key, in which case this backplane
-            inherits the mask of the given backplane array.
+        event_key (str | tuple): Key defining the ring surface event. Alternatively, a
+            :meth:`ring_radius` or :meth:`radial_mode` backplane key, in which case this
+            backplane inherits the mask of the given backplane array.
         direction (str, optional): One of:
 
             * 'obs' for the apparent departing direction of the photon to the observer;
@@ -293,6 +318,12 @@ def ring_elevation(self, event_key, direction='obs', pole='prograde', apparent=T
         apparent (bool, optional): True for the apparent elevation in the surface frame,
             allowing for the fact that ring particles are in orbital motion around the
             planet center; False for the actual elevation.
+
+    Returns:
+        Scalar: The elevation in radians, registered as a backplane.
+
+    Raises:
+        ValueError: If `direction` is neither 'obs' nor 'sun'.
     """
 
     self.refresh()
@@ -328,7 +359,10 @@ def _fill_ring_intercepts(self, event_key):
     """Internal method to fill in the ring intercept geometry backplanes.
 
     Parameters:
-        event_key (str or tuple): Key defining the ring surface event.
+        event_key (str | tuple): Key defining the ring surface event.
+
+    Raises:
+        ValueError: If the surface does not use polar coordinates.
     """
 
     # Validate the surface type
@@ -353,9 +387,9 @@ def ring_incidence_angle(self, event_key, pole='sunward', apparent=True):
     to the prograde pole are also supported.
 
     Parameters:
-        event_key (str or tuple): Key defining the ring surface event. Alternatively, a
-            ring_radius or radial_mode backplane key, in which case this backplane
-            inherits the mask of the given backplane array.
+        event_key (str | tuple): Key defining the ring surface event. Alternatively, a
+            :meth:`ring_radius` or :meth:`radial_mode` backplane key, in which case this
+            backplane inherits the mask of the given backplane array.
         pole (str, optional): One of:
 
             * 'sunward'  for incidence < pi/2 on the illuminated face;
@@ -366,6 +400,12 @@ def ring_incidence_angle(self, event_key, pole='sunward', apparent=True):
 
         apparent (bool, optional): True for the apparent angle in the surface frame; False
             for the actual.
+
+    Returns:
+        Scalar: The incidence angle in radians, registered as a backplane.
+
+    Raises:
+        ValueError: If `pole` is not one of the values listed above.
     """
 
     if pole not in ('sunward', 'observed', 'north', 'prograde'):
@@ -422,9 +462,9 @@ def ring_emission_angle(self, event_key, pole='sunward', apparent=True):
     prograde pole are also supported.
 
     Parameters:
-        event_key (str or tuple): Key defining the ring surface event. Alternatively, a
-            ring_radius or radial_mode backplane key, in which case this backplane
-            inherits the mask of the given backplane array.
+        event_key (str | tuple): Key defining the ring surface event. Alternatively, a
+            :meth:`ring_radius` or :meth:`radial_mode` backplane key, in which case this
+            backplane inherits the mask of the given backplane array.
         pole (str, optional): One of:
 
             * 'sunward'  for emission < pi/2 on the illuminated face;
@@ -435,6 +475,12 @@ def ring_emission_angle(self, event_key, pole='sunward', apparent=True):
 
         apparent (bool, optional): True for the apparent angle in the surface frame;
             False for the actual.
+
+    Returns:
+        Scalar: The emission angle in radians, registered as a backplane.
+
+    Raises:
+        ValueError: If `pole` is not one of the values listed above.
     """
 
     if pole not in ('sunward', 'observed', 'north', 'prograde'):
@@ -484,7 +530,7 @@ def ring_sub_observer_longitude(self, event_key, reference='node'):
     """Gridless sub-observer longitude in the ring plane.
 
     Parameters:
-        event_key (str or tuple): Key defining the event on the center of the ring's path.
+        event_key (str | tuple): Key defining the event on the center of the ring's path.
         reference (str, optional): Defines the location of zero longitude:
 
             * 'aries' for the First point of Aries;
@@ -493,6 +539,12 @@ def ring_sub_observer_longitude(self, event_key, reference='node'):
             * 'sun'   for the sub-solar longitude;
             * 'oha'   for the anti-observer longitude;
             * 'sha'   for the anti-solar longitude, returning the solar hour angle.
+
+    Returns:
+        Scalar: The longitude in radians, registered as a gridless backplane.
+
+    Raises:
+        ValueError: If `reference` is not one of the values listed above.
     """
 
     if reference not in ('aries', 'node', 'obs', 'oha', 'sun', 'sha'):
@@ -537,7 +589,7 @@ def ring_sub_solar_longitude(self, event_key, reference='node'):
     """Gridless sub-solar longitude in the ring plane.
 
     Parameters:
-        event_key (str or tuple): Key defining the event on the center of the ring's path.
+        event_key (str | tuple): Key defining the event on the center of the ring's path.
         reference (str, optional): Defines the location of zero longitude:
 
             * 'aries' for the First point of Aries;
@@ -546,6 +598,12 @@ def ring_sub_solar_longitude(self, event_key, reference='node'):
             * 'sun'   for the sub-solar longitude;
             * 'oha'   for the anti-observer longitude;
             * 'sha'   for the anti-solar longitude, returning the solar hour angle.
+
+    Returns:
+        Scalar: The longitude in radians, registered as a gridless backplane.
+
+    Raises:
+        ValueError: If `reference` is not one of the values listed above.
     """
 
     if reference not in ('aries', 'node', 'obs', 'oha', 'sun', 'sha'):
@@ -590,7 +648,7 @@ def ring_center_incidence_angle(self, event_key, pole='sunward', apparent=True):
     """Incidence angle of the arriving photons at the ring system center.
 
     Parameters:
-        event_key (str or tuple): Key defining the event on the ring system's path.
+        event_key (str | tuple): Key defining the event on the ring system's path.
         pole (str, optional): One of:
 
             * 'sunward'  for incidence < pi/2 on the illuminated face;
@@ -601,6 +659,12 @@ def ring_center_incidence_angle(self, event_key, pole='sunward', apparent=True):
 
         apparent (bool, optional): True for the apparent angle in the body frame; False
             for the actual.
+
+    Returns:
+        Scalar: The incidence angle in radians, registered as a gridless backplane.
+
+    Raises:
+        ValueError: If `pole` is not one of the values listed above.
     """
 
     self.refresh()
@@ -617,7 +681,7 @@ def ring_center_emission_angle(self, event_key, pole='sunward', apparent=True):
     prograde pole are also supported.
 
     Parameters:
-        event_key (str or tuple): Key defining the event on the ring system's path.
+        event_key (str | tuple): Key defining the event on the ring system's path.
         pole (str, optional): One of:
 
             * 'sunward'  for emission < pi/2 on the illuminated face;
@@ -628,6 +692,12 @@ def ring_center_emission_angle(self, event_key, pole='sunward', apparent=True):
 
         apparent (bool, optional): True for the apparent angle in the body frame; False
             for the actual.
+
+    Returns:
+        Scalar: The emission angle in radians, registered as a gridless backplane.
+
+    Raises:
+        ValueError: If `pole` is not one of the values listed above.
     """
 
     self.refresh()
@@ -639,9 +709,15 @@ def ring_radial_resolution(self, event_key):
     """Projected radial resolution in km/pixel at the ring intercept point.
 
     Parameters:
-        event_key (str or tuple): Key defining the ring surface event. Alternatively, a
-            ring_radius or radial_mode backplane key, in which case this backplane
-            inherits the mask of the given backplane array.
+        event_key (str | tuple): Key defining the ring surface event. Alternatively, a
+            :meth:`ring_radius` or :meth:`radial_mode` backplane key, in which case this
+            backplane inherits the mask of the given backplane array.
+
+    Returns:
+        Scalar: The radial resolution in km per pixel, registered as a backplane.
+
+    Raises:
+        ValueError: If the surface does not use polar coordinates.
     """
 
     self.refresh()
@@ -672,10 +748,18 @@ def ring_angular_resolution(self, event_key, units="rad"):
     """Projected angular resolution in radians/pixel at the ring intercept.
 
     Parameters:
-        event_key (str or tuple): Key defining the ring surface event. Alternatively, a
-            ring_radius or radial_mode backplane key, in which case this backplane
-            inherits the mask of the given backplane array.
+        event_key (str | tuple): Key defining the ring surface event. Alternatively, a
+            :meth:`ring_radius` or :meth:`radial_mode` backplane key, in which case this
+            backplane inherits the mask of the given backplane array.
         units (str, optional): Longitude representation; "rad" or "km".
+
+    Returns:
+        Scalar: The angular resolution in radians per pixel, or in km per pixel if `units`
+        is "km", registered as a backplane.
+
+    Raises:
+        ValueError: If `units` is neither "rad" nor "km", or if the surface does not use
+            polar coordinates.
     """
 
     if units not in {'rad', 'km'}:
@@ -714,9 +798,15 @@ def ring_gradient_angle(self, event_key):
     The angle is measured from the U-axis toward the V-axis.
 
     Parameters:
-        event_key (str or tuple): Key defining the ring surface event. Alternatively, a
-            ring_radius or radial_mode backplane key, in which case this backplane
-            inherits the mask of the given backplane array.
+        event_key (str | tuple): Key defining the ring surface event. Alternatively, a
+            :meth:`ring_radius` or :meth:`radial_mode` backplane key, in which case this
+            backplane inherits the mask of the given backplane array.
+
+    Returns:
+        Scalar: The direction of the gradient in radians, registered as a backplane.
+
+    Raises:
+        ValueError: If the surface does not use polar coordinates.
     """
 
     self.refresh()
@@ -752,9 +842,12 @@ def ring_shadow_radius(self, event_key, ring_surface_key):
     the ring plane.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event on the shadowed body.
+        event_key (str | tuple): Key defining the surface event on the shadowed body.
         ring_surface_key (str): Name of the ring surface casting the shadow, for example
             "SATURN_MAIN_RINGS". The name is not case-sensitive.
+
+    Returns:
+        Scalar: The ring radius in km, registered as a backplane.
     """
 
     self.refresh()
@@ -783,9 +876,12 @@ def ring_shadow_incidence(self, event_key, ring_surface_key):
     derived from the emission angle of the ring event.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event on the shadowed body.
+        event_key (str | tuple): Key defining the surface event on the shadowed body.
         ring_surface_key (str): Name of the ring surface casting the shadow, for example
             "SATURN_MAIN_RINGS". The name is not case-sensitive.
+
+    Returns:
+        Scalar: The incidence angle in radians, registered as a backplane.
     """
 
     self.refresh()
@@ -816,9 +912,12 @@ def ring_radius_in_front(self, event_key, ring_surface_key):
     The value is in km, and is masked wherever the body's surface is not intercepted.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event on the obscured body.
+        event_key (str | tuple): Key defining the surface event on the obscured body.
         ring_surface_key (str): Name of the ring surface in front of the body, for example
             "SATURN_MAIN_RINGS". The name is not case-sensitive.
+
+    Returns:
+        Scalar: The ring radius in km, registered as a backplane.
     """
 
     self.refresh()
@@ -845,6 +944,9 @@ def _ring_is_retrograde(self, event_key):
 
     Parameters:
         event_key (tuple): Standardized key defining the ring surface event.
+
+    Returns:
+        bool: True if the ring is retrograde; False otherwise.
     """
 
     body_name = event_key[1]

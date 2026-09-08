@@ -141,7 +141,7 @@ class Meshgrid(Oops):
 
         Parameters:
             fov (FOV): FOV object.
-            shape (tuple): Overall shape to which this Meshgrid must broadcast.
+            shape (tuple[int, ...]): Overall shape to which this Meshgrid must broadcast.
             u_axis (int, optional): Location of the u axis within the shape; -1 if there
                 is no *u*-axis, in which case the meshgrid has a single sample along u.
             v_axis (int, optional): Location of the v axis within the shape; -1 if there
@@ -264,10 +264,10 @@ class Meshgrid(Oops):
         """The given time converted to a key for the internal caches.
 
         Parameters:
-            time (ScalarLike or None): Absolute time in seconds TDB.
+            time (ScalarLike | None): Absolute time in seconds TDB.
 
         Returns:
-            float, None, or bool: The time in a hashable form, or False if this time
+            float | None | bool: The time in a hashable form, or False if this time
             cannot be used as a cache key.
         """
 

@@ -15,13 +15,16 @@ def right_ascension(self, event_key=(), apparent=True, direction='arr'):
     Optionally, it allows for stellar aberration.
 
     Parameters:
-        event_key (str or tuple, optional): Key defining the surface event, typically ()
+        event_key (str | tuple, optional): Key defining the surface event, typically ()
             to refer to the observation.
         apparent (bool, optional): True to return the apparent direction of photons in the
             frame of the event; False to return the purely geometric directions of the
             photons.
         direction (str, optional): 'arr' to return the direction of an arriving photon;
             'dep' to return the direction of a departing photon.
+
+    Returns:
+        Scalar: The right ascension in radians, registered as a backplane.
     """
 
     self.refresh()
@@ -39,13 +42,16 @@ def declination(self, event_key=(), apparent=True, direction='arr'):
     Optionally, it allows for stellar aberration.
 
     Parameters:
-        event_key (str or tuple, optional): Key defining the surface event, typically ()
+        event_key (str | tuple, optional): Key defining the surface event, typically ()
             to refer to the observation.
         apparent (bool, optional): True to return the apparent direction of photons in the
             frame of the event; False to return the purely geometric directions of the
             photons.
         direction (str, optional): 'arr' to base the direction on an arriving photon;
             'dep' to base the direction on a departing photon.
+
+    Returns:
+        Scalar: The declination in radians, registered as a backplane.
     """
 
     self.refresh()
@@ -64,7 +70,7 @@ def _fill_ra_dec(self, event_key, apparent, direction):
     combination of event key, aberration and photon direction.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event; an empty key refers to
+        event_key (str | tuple): Key defining the surface event; an empty key refers to
             the observation itself.
         apparent (bool): True to use the apparent direction of photons in the frame of the
             event; False to use the purely geometric directions of the photons.
@@ -97,8 +103,11 @@ def celestial_north_angle(self, event_key=()):
     of view due to spherical distortion and also any distortion in the FOV.
 
     Parameters:
-        event_key (str or tuple, optional): Key defining the surface event, typically ()
+        event_key (str | tuple, optional): Key defining the surface event, typically ()
             to refer to the observation.
+
+    Returns:
+        Scalar: The angle in radians, registered as a backplane.
     """
 
     self.refresh()
@@ -123,8 +132,11 @@ def celestial_east_angle(self, event_key=()):
     of view due to spherical distortion and also any distortion in the FOV.
 
     Parameters:
-        event_key (str or tuple, optional): Key defining the surface event, typically ()
+        event_key (str | tuple, optional): Key defining the surface event, typically ()
             to refer to the observation.
+
+    Returns:
+        Scalar: The angle in radians, registered as a backplane.
     """
 
     self.refresh()
@@ -149,7 +161,7 @@ def _fill_dlos_dradec(self, event_key):
     and to declination, under the internal keys "_dlos_dra" and "_dlos_ddec".
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event; an empty key refers to
+        event_key (str | tuple): Key defining the surface event; an empty key refers to
             the observation itself.
     """
 
@@ -192,12 +204,15 @@ def center_right_ascension(self, event_key, apparent=True, direction='arr'):
     """Gridless right ascension of a photon from the body center to the detector.
 
     Parameters:
-        event_key (str or tuple): Key defining the event at the body's path.
+        event_key (str | tuple): Key defining the event at the body's path.
         apparent (bool, optional): True to return the apparent direction of photons in the
             frame of the event; False to return the purely geometric directions of the
             photons.
         direction (str, optional): 'arr' to return the direction of an arriving photon;
             'dep' to return the direction of a departing photon.
+
+    Returns:
+        Scalar: The right ascension in radians, registered as a gridless backplane.
     """
 
     self.refresh()
@@ -213,12 +228,15 @@ def center_declination(self, event_key, apparent=True, direction='arr'):
     """Gridless declination of a photon from the body center to the detector.
 
     Parameters:
-        event_key (str or tuple): Key defining the event at the body's path.
+        event_key (str | tuple): Key defining the event at the body's path.
         apparent (bool, optional): True to return the apparent direction of photons in the
             frame of the event; False to return the purely geometric directions of the
             photons.
         direction (str, optional): 'arr' to return the direction of an arriving photon;
             'dep' to return the direction of a departing photon.
+
+    Returns:
+        Scalar: The declination in radians, registered as a gridless backplane.
     """
 
     self.refresh()
@@ -237,7 +255,7 @@ def _fill_center_ra_dec(self, event_key, apparent, direction):
     body's path rather than its surface.
 
     Parameters:
-        event_key (str or tuple): Key defining the event at the body's path.
+        event_key (str | tuple): Key defining the event at the body's path.
         apparent (bool): True to use the apparent direction of photons in the frame of the
             event; False to use the purely geometric directions of the photons.
         direction (str): 'arr' to base the direction on an arriving photon; 'dep' to base

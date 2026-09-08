@@ -66,15 +66,23 @@ class OffsetFOV(FOV, Fittable):
     nparams = 2
 
     def _set_params(self, params):
-        """Redefine the *(u,v)* offsets of this OffsetFOV."""
+        """Redefine the *(u,v)* offsets of this OffsetFOV.
+
+        Parameters:
+            params (tuple[float, float]): The new *(u,v)* offset in pixels.
+        """
 
         self.uv_offset = Pair.as_pair(params)
         self.xy_offset = self.fov.xy_from_uv(self.uv_offset + self.fov.uv_los)
         self.uv_los = self.fov.uv_los - self.uv_offset
 
     @property
-    def params(self):
-        """The fitted parameters, the *(u,v)* offset as a tuple of two floats."""
+    def params(self) -> tuple[float, float]:
+        """The fitted parameters, the *(u,v)* offset as a tuple of two floats.
+
+        Returns:
+            tuple[float, float]: The *(u,v)* offset in pixels.
+        """
 
         return tuple(self.uv_offset.vals)
 
@@ -108,8 +116,8 @@ class OffsetFOV(FOV, Fittable):
                 into the returned *(x,y)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Pair: The transformed *(x,y)* coordinates in the camera's frame, with the same
@@ -131,8 +139,8 @@ class OffsetFOV(FOV, Fittable):
                 into the returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Pair: The computed *(u,v)* FOV coordinates, with the same shape as `xy_pair`.

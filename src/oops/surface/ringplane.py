@@ -36,9 +36,9 @@ class RingPlane(Surface):
         """Constructor for a RingPlane surface.
 
         Parameters:
-            origin (Path or str): The Path or the ID of the Path defining the motion of
+            origin (Path | str): The Path or the ID of the Path defining the motion of
                 the center of the ring plane.
-            frame (Frame or str): The Frame or the ID of the Frame in which the ring
+            frame (Frame | str): The Frame or the ID of the Frame in which the ring
                 plane is the *(x,y)* plane (where ``z = 0``).
             radii (tuple[float, float], optional): The nominal inner and outer radii of
                 the ring, in km; None for a ring with no radial limits.
@@ -214,7 +214,7 @@ class RingPlane(Surface):
                 appended to the returned tuple.
 
         Returns:
-            Vector3 or tuple[Vector3, Any]: Points defined by the coordinates, relative to
+            Vector3 | tuple[Vector3, Any]: Points defined by the coordinates, relative to
             this Surface's origin and frame, optionally followed by `hints`. The input
             value of `hints` is returned if it is not None.
 
@@ -314,7 +314,7 @@ class RingPlane(Surface):
                 its value is appended to the returned tuple.
 
         Returns:
-            Vector3 or tuple[Vector3, Any]: Directions normal to the Surface that pass
+            Vector3 | tuple[Vector3, Any]: Directions normal to the Surface that pass
             through the position, optionally followed by `hints`. Vector lengths are
             arbitrary, and the input value of `hints` is returned if it is not None.
         """
@@ -412,7 +412,7 @@ class RingPlane(Surface):
                 radial offset.
 
         Returns:
-            Scalar or tuple[Scalar, Scalar, Scalar]: The radial offset in km, or
+            Scalar | tuple[Scalar, Scalar, Scalar]: The radial offset in km, or
             `(offset, dr_dt, dlon_dt)` if `rates` is True.
 
         Raises:

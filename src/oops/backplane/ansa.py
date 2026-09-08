@@ -15,14 +15,21 @@ def ansa_radius(self, event_key, radius_type='positive', rmax=None):
     """Radius of the ring ansa intercept point in the image.
 
     Parameters:
-        event_key (str or tuple): Key defining the ring surface event.
+        event_key (str | tuple): Key defining the ring surface event.
         radius_type (str, optional):
 
             * 'right' for radii increasing rightward when prograde rotation pole is 'up';
             * 'left' for the opposite of 'right';
             * 'positive' for all radii using positive values.
 
-        rmax (optional): Maximum absolute value of the radius in km, if any.
+        rmax (float | None, optional): Maximum absolute value of the radius in km, if
+            any.
+
+    Returns:
+        Scalar: The ansa radius in km, registered as a backplane.
+
+    Raises:
+        ValueError: If `radius_type` is not one of the values listed above.
     """
 
     if radius_type not in ('right', 'left', 'positive'):
@@ -63,9 +70,13 @@ def ansa_altitude(self, event_key):
     """Elevation of the ring ansa intercept point in the image.
 
     Parameters:
-        event_key (str or tuple): Key defining the ansa surface event. Alternatively, an
-            `ansa_radius` backplane key, in which case this backplane inherits the mask of
-            the given backplane array.
+        event_key (str | tuple): Key defining the ansa surface event. Alternatively, an
+            :meth:`ansa_radius` backplane key, in which case this backplane inherits the
+            mask of the given backplane array.
+
+    Returns:
+        Scalar: The elevation of the ansa intercept above the ring plane in km, registered
+        as a backplane.
     """
 
     self.refresh()
@@ -89,9 +100,9 @@ def ansa_longitude(self, event_key, reference='node'):
     """Longitude of the ansa intercept point in the image.
 
     Parameters:
-        event_key (str or tuple): Key defining the ansa surface event. Alternatively, an
-            `ansa_radius` backplane key, in which case this backplane inherits the mask of
-            the given backplane array.
+        event_key (str | tuple): Key defining the ansa surface event. Alternatively, an
+            :meth:`ansa_radius` backplane key, in which case this backplane inherits the
+            mask of the given backplane array.
         reference (str, optional): Defines the location of zero longitude:
 
             * 'aries' for the First point of Aries;
@@ -100,6 +111,13 @@ def ansa_longitude(self, event_key, reference='node'):
             * 'sun'   for the sub-solar longitude;
             * 'oha'   for the anti-observer longitude;
             * 'sha'   for the anti-solar longitude, returning the solar hour angle.
+
+    Returns:
+        Scalar: The longitude in radians, measured in the associated ring plane and
+        registered as a backplane.
+
+    Raises:
+        ValueError: If `reference` is not one of the values listed above.
     """
 
     if reference not in ('aries', 'node', 'obs', 'oha', 'sun', 'sha'):
@@ -147,6 +165,9 @@ def _fill_ansa_intercepts(self, event_key):
 
     Parameters:
         event_key (tuple): Standardized key defining the ansa surface event.
+
+    Raises:
+        ValueError: If the surface does not use cylindrical coordinates.
     """
 
     # Validate the surface type
@@ -198,9 +219,15 @@ def ansa_radial_resolution(self, event_key):
     """Projected radial resolution in km/pixel at the ring ansa intercept.
 
     Parameters:
-        event_key (str or tuple): Key defining the ansa surface event. Alternatively, an
-            `ansa_radius` backplane key, in which case this backplane inherits the mask of
-            the given backplane array.
+        event_key (str | tuple): Key defining the ansa surface event. Alternatively, an
+            :meth:`ansa_radius` backplane key, in which case this backplane inherits the
+            mask of the given backplane array.
+
+    Returns:
+        Scalar: The radial resolution in km per pixel, registered as a backplane.
+
+    Raises:
+        ValueError: If the surface does not use cylindrical coordinates.
     """
 
     self.refresh()
@@ -232,9 +259,15 @@ def ansa_vertical_resolution(self, event_key):
     """Projected vertical resolution in km/pixel at the ring ansa intercept.
 
     Parameters:
-        event_key (str or tuple): Key defining the ansa surface event. Alternatively, an
-            `ansa_radius` backplane key, in which case this backplane inherits the mask of
-            the given backplane array.
+        event_key (str | tuple): Key defining the ansa surface event. Alternatively, an
+            :meth:`ansa_radius` backplane key, in which case this backplane inherits the
+            mask of the given backplane array.
+
+    Returns:
+        Scalar: The vertical resolution in km per pixel, registered as a backplane.
+
+    Raises:
+        ValueError: If the surface does not use cylindrical coordinates.
     """
 
     self.refresh()

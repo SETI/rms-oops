@@ -10,9 +10,15 @@ def distance(self, event_key, direction='dep'):
     """Distance in km between a photon's departure and its arrival.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         direction (str, optional): 'arr' for distance traveled by the arriving photon;
             'dep' for distance traveled by the departing photon.
+
+    Returns:
+        Scalar: The distance in km, registered as a backplane.
+
+    Raises:
+        ValueError: If `direction` is neither 'arr' nor 'dep'.
     """
 
     if direction not in ('dep', 'arr'):
@@ -32,9 +38,15 @@ def light_time(self, event_key, direction='dep'):
     """Time in seconds between a photon's departure and its arrival.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         direction (str, optional): 'arr' for the travel time of the arriving photon; 'dep'
             for the travel time of the departing photon.
+
+    Returns:
+        Scalar: The light travel time in seconds, registered as a backplane.
+
+    Raises:
+        ValueError: If `direction` is neither 'arr' nor 'dep'.
     """
 
     if direction not in ('dep', 'arr'):
@@ -60,7 +72,10 @@ def event_time(self, event_key):
     """Absolute time in seconds TDB when the photon intercepted the surface.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
+
+    Returns:
+        Scalar: The event time in seconds TDB, registered as a backplane.
     """
 
     self.refresh()
@@ -78,10 +93,13 @@ def center_distance(self, event_key, direction='dep'):
     """Gridless distance traveled by a photon between paths.
 
     Parameters:
-        event_key (str or tuple): Key defining the event at the body's path.
+        event_key (str | tuple): Key defining the event at the body's path.
         direction (str, optional): 'arr' or 'sun' to return the distance traveled by an
             arriving photon; 'dep' or 'obs' to return the distance traveled by a departing
             photon.
+
+    Returns:
+        Scalar: The distance in km, registered as a gridless backplane.
     """
 
     directions = {'arr':'arr', 'sun':'arr', 'dep':'dep', 'obs':'dep'}
@@ -93,10 +111,13 @@ def center_light_time(self, event_key, direction='dep'):
     """Gridless light travel time in seconds from a path.
 
     Parameters:
-        event_key (str or tuple): Key defining the event at the body's path.
+        event_key (str | tuple): Key defining the event at the body's path.
         direction (str, optional): 'arr' or 'sun' to return the travel time of an
             arriving photon; 'dep' or 'obs' to return the travel time of a departing
             photon.
+
+    Returns:
+        Scalar: The light travel time in seconds, registered as a gridless backplane.
     """
 
     directions = {'arr':'arr', 'sun':'arr', 'dep':'dep', 'obs':'dep'}
@@ -110,7 +131,10 @@ def center_time(self, event_key):
     Measured in seconds TDB.
 
     Parameters:
-        event_key (str or tuple): Key defining the event at the body's path.
+        event_key (str | tuple): Key defining the event at the body's path.
+
+    Returns:
+        Scalar: The event time in seconds TDB, registered as a gridless backplane.
     """
 
     gridless_key = Backplane.gridless_event_key(event_key)

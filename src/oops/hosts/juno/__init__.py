@@ -38,7 +38,32 @@ oops.spice.load_leap_seconds()
 
 #*******************************************************************************
 class Juno(object):
-    """An instance-free class to hold Juno-specific parameters."""
+    """An instance-free class to hold Juno-specific parameters.
+
+    Attributes:
+        START_TIME (str): The start of the mission as an ISO date.
+        STOP_TIME (str): The end of the mission as an ISO date.
+        MONTHS (int): The number of equal "months" into which the mission is divided
+            for the purpose of loading kernels.
+        TDB0 (float): The mission start time in seconds TDB.
+        TDB1 (float): The mission stop time in seconds TDB.
+        DTDB (float): The duration of one "month" in seconds.
+        SLOP (float): The margin, in seconds, by which each month is extended when
+            deciding which kernels apply to it.
+        CK_LOADED (numpy.ndarray): Boolean array with one flag per month, True if the C
+            kernels for that month have been furnished.
+        CK_LIST (numpy.ndarray): Object array holding, for each month, the list of
+            KernelInfo objects for the C kernels needed within that month.
+        CK_DICT (dict[str, KernelInfo]): The furnished C kernels, keyed by filespec.
+        SPK_LOADED (numpy.ndarray): Boolean array with one flag per month, True if the
+            SP kernels for that month have been furnished.
+        SPK_LIST (numpy.ndarray): Object array holding, for each month, the list of
+            KernelInfo objects for the SP kernels needed within that month.
+        SPK_DICT (dict[str, KernelInfo]): The furnished SP kernels, keyed by filespec.
+        loaded_instruments (list[str]): The names of the instruments whose kernels have
+            been loaded.
+        initialized (bool): True after :meth:`initialize` has been called.
+    """
 
     START_TIME = '2011-08-01'
     STOP_TIME  = '2025-08-01'
@@ -69,8 +94,16 @@ class Juno(object):
         After the first call, later calls to this function are ignored.
 
         Parameters:
+            ck (str, optional): The set of C kernels to load, 'reconstructed' or
+                'predicted' (case-insensitive); 'none' to load no C kernels
+                automatically, leaving their handling to the caller.
+            spk (str, optional): The set of SP kernels to load, 'reconstructed' or
+                'predicted' (case-insensitive); 'none' to load no SP kernels
+                automatically, leaving their handling to the caller.
             gapfill (bool, optional): True to include gapfill CKs. False otherwise.
-                kwargs:     Arguments for juno.__init__() and Body.define_solar_system()
+            **kwargs (Any): Additional keyword arguments. `asof` (str) restricts the
+                kernels to those that existed before the given ISO date; the rest are
+                passed to :meth:`~oops.Body.define_solar_system`.
         """
         if Juno.initialized: return
 
@@ -141,6 +174,9 @@ class Juno(object):
         """Furnish the C kernels applicable at or near a given time.
 
         The time can be tai or tdb.
+
+        Parameters:
+            t (float): The time in seconds.
         """
         Juno.load_kernels(t, t, Juno.CK_LOADED, Juno.CK_LIST,
                                    Juno.CK_DICT)
@@ -149,10 +185,13 @@ class Juno(object):
     def load_cks(t0, t1):
         """Furnish the C kernels applicable within a time interval.
 
-        Every C kernel applicable near or within the interval `tdb0` to `tdb1` is
-        furnished.
+        Every C kernel applicable near or within the interval `t0` to `t1` is furnished.
 
         The time can be tai or tdb.
+
+        Parameters:
+            t0 (float): The start time in seconds.
+            t1 (float): The stop time in seconds.
         """
         Juno.load_kernels(t0, t1, Juno.CK_LOADED, Juno.CK_LIST,
                                      Juno.CK_DICT)
@@ -162,6 +201,9 @@ class Juno(object):
         """Furnish the SPK kernels applicable at or near a given time.
 
         The time can be tai or tdb.
+
+        Parameters:
+            t (float): The time in seconds.
         """
         Juno.load_kernels(t, t, Juno.SPK_LOADED, Juno.SPK_LIST,
                                    Juno.SPK_DICT)
@@ -170,17 +212,35 @@ class Juno(object):
     def load_spks(t0, t1):
         """Furnish the SPK kernels applicable within a time interval.
 
-        Every SPK kernel applicable near or within the interval `tdb0` to `tdb1` is
+        Every SPK kernel applicable near or within the interval `t0` to `t1` is
         furnished.
 
         The time can be tai or tdb.
+
+        Parameters:
+            t0 (float): The start time in seconds.
+            t1 (float): The stop time in seconds.
         """
         Juno.load_kernels(t0, t1, Juno.SPK_LOADED, Juno.SPK_LIST,
                                      Juno.SPK_DICT)
 
     @staticmethod
     def load_kernels(t0, t1, loaded, lists, kernel_dict):
-        """Load kernal pool."""
+        """Furnish the fixed set of Juno kernels.
+
+        Every kernel that Juno observations require is furnished on every call; the
+        parameters are accepted but do not affect which kernels are loaded.
+
+        Parameters:
+            t0 (float): The start time in seconds TDB.
+            t1 (float): The stop time in seconds TDB.
+            loaded (numpy.ndarray): Boolean array with one flag per month, True if that
+                month's kernels have already been furnished.
+            lists (numpy.ndarray): Object array holding, for each month of the mission,
+                the list of KernelInfo objects needed within that month.
+            kernel_dict (dict[str, KernelInfo]): The furnished KernelInfo objects, keyed
+                by filespec.
+        """
 
         from spicedb import get_spice_filecache_prefix
 
@@ -323,6 +383,13 @@ class Juno(object):
 
         After initialization, `lists[m]` holds the KernelInfo objects needed within the
         specified month.
+
+        Parameters:
+            kernels (list[KernelInfo]): The KernelInfo objects to distribute among the
+                months of the mission.
+            lists (numpy.ndarray): Object array with one entry per month; each entry is
+                replaced by the list of KernelInfo objects that apply within that month,
+                extended by :attr:`SLOP` at each end.
         """
         for i in range(Juno.MONTHS):
             lists[i] = []
@@ -356,6 +423,8 @@ class Juno(object):
         It is generally only be called once.
 
         Parameters:
+            instruments (list[str], optional): The names of the instruments whose kernels
+                to load. On the first call, 'JUNOCAM' is always included.
             asof (str, optional): If this specifies a date or date-time in ISO format,
                 then only kernels that existed before the specified date are used.
                 Otherwise, the most recent versions are always loaded.
@@ -391,14 +460,14 @@ class Juno(object):
         Also furnishes it for use by the SPICE tools.
 
         Parameters:
-            inst (str, list or tuple): One of "JUNOCAM", etc.
+            inst (str | list | tuple): One of "JUNOCAM", etc.
             asof (str, optional): An optional date in the past, in ISO date or date-time
                 format. If provided, then the information provided will be applicable as
                 of that date. Otherwise, the most recent information is always provided.
 
         Returns:
-            tuple: Containing: the dictionary generated by textkernel.from_file() the
-                name of the kernel.
+            tuple[dict, str]: The dictionary generated by :func:`textkernel.from_file`
+            and the name of the kernel.
         """
         if asof is not None:
             (day,sec) = julian.day_sec_from_iso(stop_time)
@@ -423,8 +492,9 @@ class Juno(object):
                 of that date. Otherwise, the most recent information is always provided.
 
         Returns:
-            tuple: Containing: the dictionary generated by textkernel.from_file() an
-                ordered list of the names of the kernels.
+            tuple[dict, list[str]]: The dictionary generated by
+            :func:`textkernel.from_file` and an ordered list of the names of the
+            kernels.
         """
         if asof is not None:
             (day,sec) = julian.day_sec_from_iso(stop_time)
@@ -442,6 +512,16 @@ class Juno(object):
         """The kernels associated with a Juno observation.
 
         The list covers a selected range of times.
+
+        Parameters:
+            time (tuple[float, float]): The start and stop times of the observation in
+                seconds TDB.
+            inst (str | list | tuple): The instrument name or names.
+            return_all_planets (bool, optional): True to include the kernels for all the
+                planets, not just the one being observed.
+
+        Returns:
+            list[str]: The basenames of the kernels used.
         """
         if return_all_planets:
             bodies = [1, 199, 2, 299, 3, 399, 4, 499, 5, 599, 6, 699,

@@ -77,14 +77,14 @@ class Instant(Cadence):
         Indices beyond the limits of the cadence are clipped to the nearest edge.
 
         Parameters:
-            tstep (ScalarLike or PairLike): Time step index values, with one component per
+            tstep (ScalarLike | PairLike): Time step index values, with one component per
                 axis of this cadence's shape.
             remask (bool, optional): True to mask values outside the cadence.
             inclusive (bool, optional): True to treat the largest index as part of this
                 Cadence; False to exclude it.
 
         Returns:
-            Scalar or Vector: The integer index, always within the shape of the times.
+            Scalar | Vector: The integer index, always within the shape of the times.
         """
 
         if len(self.shape) == 1:
@@ -130,7 +130,7 @@ class Instant(Cadence):
         beyond the limits of the cadence returns the time at the nearest edge.
 
         Parameters:
-            tstep (ScalarLike or PairLike): Time step index values, with one component per
+            tstep (ScalarLike | PairLike): Time step index values, with one component per
                 axis of this cadence's shape. It is ignored if this cadence has shape (),
                 because then it has only one time step.
             remask (bool, optional): True to mask values outside the time limits.
@@ -155,7 +155,7 @@ class Instant(Cadence):
         An Instant has zero duration, so the two returned times are equal.
 
         Parameters:
-            tstep (ScalarLike or PairLike): Time step index values, with one component per
+            tstep (ScalarLike | PairLike): Time step index values, with one component per
                 axis of this cadence's shape.
             remask (bool, optional): True to mask values outside the time limits.
             inclusive (bool, optional): True to treat the largest time step index as part
@@ -190,7 +190,7 @@ class Instant(Cadence):
                 single moment, which is always treated as part of the cadence.
 
         Returns:
-            Scalar or Pair: Time step index values, with one component per axis of this
+            Scalar | Pair: Time step index values, with one component per axis of this
             cadence's shape, masked where the time is not sampled. A cadence of shape ()
             has one time step, whose index is zero.
         """
@@ -220,7 +220,7 @@ class Instant(Cadence):
                 single moment, which is always treated as part of the cadence.
 
         Returns:
-            tuple[Scalar or Pair, Scalar or Pair]: The range of time step indices active
+            tuple[Scalar | Pair, Scalar | Pair]: The range of time step indices active
             at the given `time`, as (first, last+1); the upper limit is excluded. Values
             are always within the allowed range for the cadence, regardless of any mask.
             A time that this cadence does not sample yields an empty range, meaning that

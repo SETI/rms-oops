@@ -74,7 +74,7 @@ class Limb(Surface):
         self.intercept_key = ('limb',) + self._ground.intercept_key
 
     @property
-    def ground(self):
+    def ground(self) -> Surface:
         """The surface relative to which this limb is defined.
 
         Returns:
@@ -84,11 +84,12 @@ class Limb(Surface):
         return self._ground
 
     @property
-    def limits(self):
+    def limits(self) -> 'tuple[float, float] | None':
         """The range of vertical distances from the ground surface, in km.
 
         Returns:
-            tuple or None: The (lower, upper) limits in km, or None if unlimited.
+            tuple[float, float] | None: The (lower, upper) limits in km, or None if
+            unlimited.
         """
 
         return self._limits
@@ -204,7 +205,7 @@ class Limb(Surface):
                 on the body surface to the returned result.
 
         Returns:
-            Vector3 or tuple: `pos` or `(pos[, hints][, track])`, where:
+            Vector3 | tuple: `pos` or `(pos[, hints][, track])`, where:
 
             * `pos` (Vector3): Points defined by the coordinates, relative to this
               surface's origin and frame.
@@ -370,7 +371,7 @@ class Limb(Surface):
                 its value is appended to the returned tuple.
 
         Returns:
-            Vector3 or tuple[Vector3, Any]: Directions normal to the Surface that pass
+            Vector3 | tuple[Vector3, Any]: Directions normal to the Surface that pass
             through the position, optionally followed by `hints`. Vector lengths are
             arbitrary, and the input value of `hints` is returned if it is not None.
         """
@@ -396,7 +397,7 @@ class Limb(Surface):
                 is appended to the returned tuple.
 
         Returns:
-            Scalar or tuple[Scalar, Any]: The clock angle in radians, measured clockwise
+            Scalar | tuple[Scalar, Any]: The clock angle in radians, measured clockwise
             from the projected pole, optionally followed by `hints`. The input value of
             `hints` is returned if it is not None.
         """
@@ -437,7 +438,7 @@ class Limb(Surface):
                 is appended to the returned tuple.
 
         Returns:
-            Vector3 or tuple[Vector3, Any]: The ground point on the ellipsoid, optionally
+            Vector3 | tuple[Vector3, Any]: The ground point on the ellipsoid, optionally
             followed by `hints`. The input value of `hints` is returned if it is not None.
         """
 
@@ -538,7 +539,7 @@ class Limb(Surface):
                 surface of the ellipsoid to the returned tuple.
 
         Returns:
-            Vector3 or tuple: `intercept` or `(intercept[, hints][, track])`, where:
+            Vector3 | tuple: `intercept` or `(intercept[, hints][, track])`, where:
 
             * `intercept` (Vector3): Limb surface intercept points.
             * `hints` (Any): The input value of `hints`, included if it is not None.

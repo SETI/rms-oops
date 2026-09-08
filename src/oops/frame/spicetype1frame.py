@@ -23,11 +23,11 @@ class SpiceType1Frame(SpiceFrame):
         """Constructor for a SpiceType1Frame.
 
         Parameters:
-            spice_frame (str or int): The name, frame code, or frame name as used in the
+            spice_frame (str | int): The name, frame code, or frame name as used in the
                 SPICE toolkit.
-            tick_tolerance (float, int, or str): A number or string defining the time
+            tick_tolerance (float | int | str): A number or string defining the time
                 tolerance in spacecraft clock ticks for the Frame returned.
-            reference (SpiceFrame or str, optional): The Frame or ID of the Frame relative
+            reference (SpiceFrame | str, optional): The Frame or ID of the Frame relative
                 to which this frame is defined. This must be a SpiceFrame or else, by
                 default, J2000.
             frame_id (str, optional): The ID under which to register this Frame. If not
@@ -110,6 +110,7 @@ class SpiceType1Frame(SpiceFrame):
         self._time_tolerance = self._tick_tolerance / ticks_per_sec
 
     def _refresh(self):
+        """Empty the caches and discard any QuickFrames tabulated from this Frame."""
         self._cache = _Cache(self._cache_size)   # saves result for multiple single times
 
         self._cached_transform = None           # saves result for one shaped time
@@ -146,7 +147,7 @@ class SpiceType1Frame(SpiceFrame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -220,7 +221,7 @@ class SpiceType1Frame(SpiceFrame):
         If the frame is rotating, then the coordinates being transformed must be given
         relative to the center of rotation.
 
-        Unlike method `transform_at_time`, this variant tolerates times that raise cspyce
+        Unlike :meth:`transform_at_time`, this variant tolerates times that raise cspyce
         errors. If `time` is 1-D, this method returns a new time Scalar along with the new
         Transform, where both objects skip over the times at which the transform could not
         be evaluated. If `time` has more than one dimension, the cspyce error is still
@@ -228,14 +229,14 @@ class SpiceType1Frame(SpiceFrame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
                 config.py.
 
         Returns:
-            tuple: `(valid_time, transform)`:
+            tuple[Scalar, Transform]: `(valid_time, transform)`:
 
             * `valid_time` (Scalar) identifies the time(s) at which `transform` has been
               provided; this may be a subset of the input times, because it omits the
@@ -367,12 +368,12 @@ class SpiceType1Frame(SpiceFrame):
         is constructed and returned.
 
         Parameters:
-            spice_frame (str or int): The name, frame code, or frame name as used in the
+            spice_frame (str | int): The name, frame code, or frame name as used in the
                 SPICE toolkit. Alternatively, an existing SpiceType1Frame (which might use
                 the wrong reference frame).
-            tick_tolerance (float, int, or str): A number or string defining the time
+            tick_tolerance (float | int | str): A number or string defining the time
                 tolerance in spacecraft clock ticks for the Frame returned.
-            reference (SpiceFrame or str, optional): The Frame or ID of the Frame relative
+            reference (SpiceFrame | str, optional): The Frame or ID of the Frame relative
                 to which this frame is defined. This must be a SpiceFrame or else, by
                 default, J2000.
             frame_id (str, optional): The ID under which to register this Frame. If not

@@ -63,9 +63,9 @@ class Ellipsoid(Surface):
         """Constructor for an Ellipsoid object.
 
         Parameters:
-            origin (Path or str): The Path or the ID of the Path defining the center of
+            origin (Path | str): The Path or the ID of the Path defining the center of
                 the ellipsoid.
-            frame (Frame or str): The Frame or the ID of the Frame in which the
+            frame (Frame | str): The Frame or the ID of the Frame in which the
                 ellipsoid is fixed, with the shortest radius of the ellipsoid along the
                 *z*-axis and the longest radius along the *x*-axis.
             radii (tuple[float, float, float]): `(a, b, c)`, the radii from longest to
@@ -111,7 +111,7 @@ class Ellipsoid(Surface):
                                            tuple(self._radii))
 
     @property
-    def radii(self):
+    def radii(self) -> np.ndarray:
         """The three radii of the ellipsoid in km, from longest to shortest.
 
         Returns:
@@ -121,7 +121,7 @@ class Ellipsoid(Surface):
         return self._radii
 
     @property
-    def unsquash_sq(self):
+    def unsquash_sq(self) -> Vector3:
         """The squared scale factors that unsquash a vector into spherical coordinates.
 
         Multiplying a vector by these factors element by element converts it from the
@@ -237,7 +237,7 @@ class Ellipsoid(Surface):
                 on the body surface to the returned result.
 
         Returns:
-            Vector3 or tuple: `pos` or `(pos[, hints][, track])`, where:
+            Vector3 | tuple: `pos` or `(pos[, hints][, track])`, where:
 
             * `pos` (Vector3): Points defined by the coordinates, relative to this
               surface's origin and frame.
@@ -411,7 +411,7 @@ class Ellipsoid(Surface):
                 its value is appended to the returned tuple.
 
         Returns:
-            Vector3 or tuple[Vector3, Any]: Directions normal to the Surface that pass
+            Vector3 | tuple[Vector3, Any]: Directions normal to the Surface that pass
             through the position, optionally followed by `hints`. Vector lengths are
             arbitrary, and the input value of `hints` is returned if it is not None.
         """
@@ -441,7 +441,7 @@ class Ellipsoid(Surface):
                 its value is appended to the returned tuple.
 
         Returns:
-            Vector3 or tuple[Vector3, Any]: Surface intercept points in km, optionally
+            Vector3 | tuple[Vector3, Any]: Surface intercept points in km, optionally
             followed by `hints`. Where no solution exists, values are masked, and the
             input value of `hints` is returned if it is not None.
         """
@@ -481,7 +481,7 @@ class Ellipsoid(Surface):
                 its value is appended to the returned tuple.
 
         Returns:
-            Vector3 or tuple: `intercept` or `(intercept[, p][, hints])`, where:
+            Vector3 | tuple: `intercept` or `(intercept[, p][, hints])`, where:
 
             * `intercept` (Vector3): Surface intercept points relative to this surface's
               origin and frame, in km. Where no intercept exists, values are masked.

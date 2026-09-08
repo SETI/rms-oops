@@ -333,7 +333,7 @@ class LOGGING(object):
         Parameters:
             logger (Logger, optional): The logger to receive log messages; None, the
                 default, disables Python logging and restores the default level.
-            level (str or int, optional): Minimum level for the logger, given as a name
+            level (str | int, optional): Minimum level for the logger, given as a name
                 such as "DEBUG" or as an integer; default "DEBUG". Ignored if `logger` is
                 None.
             reset (bool, optional): True to zero the warning, error, and line counts;
@@ -370,7 +370,7 @@ class LOGGING(object):
         """Set the logging level of the logger.
 
         Parameters:
-            level (str or int): The minimum level, given as a name such as "DEBUG" or as
+            level (str | int): The minimum level, given as a name such as "DEBUG" or as
                 an integer.
         """
 
@@ -410,8 +410,8 @@ class LOGGING(object):
         then concatenating them with spaces in between.
 
         Parameters:
-            *args: The values to log; each is converted to a string.
-            level (int or str, optional): Logging level, one of "DEBUG"=10, "INFO"=20,
+            *args (Any): The values to log; each is converted to a string.
+            level (int | str, optional): Logging level, one of "DEBUG"=10, "INFO"=20,
                 "WARN" or "WARNING"=30, "ERROR"=40, or "FATAL"=50; default "INFO". A
                 message reaches a defined logger only if the level is at or above that
                 logger's threshold, but it is sent to other streams regardless.
@@ -501,47 +501,101 @@ class LOGGING(object):
 
     @staticmethod
     def debug(*args, force=False):
-        """Same as print(*args, level='DEBUG')."""
+        """Same as print(*args, level='DEBUG').
+
+        Parameters:
+            *args (Any): The values to log; each is converted to a string.
+            force (bool, optional): True to log the message even if its level falls below
+                that of the logger; default False.
+        """
         LOGGING.print(*args, level=logging.DEBUG, literal=False, force=force)
 
     @staticmethod
     def info(*args, force=False):
-        """Same as print(*args, level='INFO')."""
+        """Same as print(*args, level='INFO').
+
+        Parameters:
+            *args (Any): The values to log; each is converted to a string.
+            force (bool, optional): True to log the message even if its level falls below
+                that of the logger; default False.
+        """
         LOGGING.print(*args, level=logging.INFO, literal=False, force=force)
 
     @staticmethod
     def warn(*args, force=False):
-        """Same as print(*args, level='WARN')."""
+        """Same as print(*args, level='WARN').
+
+        Parameters:
+            *args (Any): The values to log; each is converted to a string.
+            force (bool, optional): True to log the message even if its level falls below
+                that of the logger; default False.
+        """
         LOGGING.print(*args, level=logging.WARN, literal=False, force=force)
 
     @staticmethod
     def error(*args, force=False):
-        """Same as print(*args, level='ERROR')."""
+        """Same as print(*args, level='ERROR').
+
+        Parameters:
+            *args (Any): The values to log; each is converted to a string.
+            force (bool, optional): True to log the message even if its level falls below
+                that of the logger; default False.
+        """
         LOGGING.print(*args, level=logging.ERROR, literal=False, force=force)
 
     @staticmethod
     def fatal(*args, force=False):
-        """Same as print(*args, level='FATAL')."""
+        """Same as print(*args, level='FATAL').
+
+        Parameters:
+            *args (Any): The values to log; each is converted to a string.
+            force (bool, optional): True to log the message even if its level falls below
+                that of the logger; default False.
+        """
         LOGGING.print(*args, level=logging.FATAL, literal=False, force=force)
 
     @staticmethod
     def convergence(*args, force=False):
-        """Print a convergence message."""
+        """Print a convergence message.
+
+        Parameters:
+            *args (Any): The values to log; each is converted to a string.
+            force (bool, optional): True to log the message even if its level falls below
+                that of the logger; default False.
+        """
         LOGGING.print(*args, level=logging.DEBUG, literal=True, force=force)
 
     @staticmethod
     def diagnostic(*args, force=False):
-        """Print a diagnostic message."""
+        """Print a diagnostic message.
+
+        Parameters:
+            *args (Any): The values to log; each is converted to a string.
+            force (bool, optional): True to log the message even if its level falls below
+                that of the logger; default False.
+        """
         LOGGING.print(*args, level=logging.DEBUG, literal=True, force=force)
 
     @staticmethod
     def diagnostics(*args, force=False):
-        """Print a diagnostic message."""
+        """Print a diagnostic message.
+
+        Parameters:
+            *args (Any): The values to log; each is converted to a string.
+            force (bool, optional): True to log the message even if its level falls below
+                that of the logger; default False.
+        """
         LOGGING.print(*args, level=logging.DEBUG, literal=True, force=force)
 
     @staticmethod
     def performance(*args, force=False):
-        """Print a performance message."""
+        """Print a performance message.
+
+        Parameters:
+            *args (Any): The values to log; each is converted to a string.
+            force (bool, optional): True to log the message even if its level falls below
+                that of the logger; default False.
+        """
         LOGGING.print(*args, level=logging.DEBUG, literal=True, force=force)
 
     @staticmethod
@@ -549,6 +603,14 @@ class LOGGING(object):
         """Log an exception with its traceback at FATAL level.
 
         If no logger is defined, the exception is raised instead of logged.
+
+        Parameters:
+            exception (Exception): The exception to log.
+            message (str, optional): A message to log in place of the exception's
+                description, which then follows the traceback.
+
+        Raises:
+            Exception: The given exception, if no logger is defined.
         """
 
         if not LOGGING.logger:
@@ -581,7 +643,15 @@ class LOGGING(object):
 
     @staticmethod
     def literal(*args, level=logging.DEBUG, force=True):
-        """Print a literal message to the log."""
+        """Print a literal message to the log.
+
+        Parameters:
+            *args (Any): The values to log; each is converted to a string.
+            level (int | str, optional): Logging level, as for :meth:`print`; default
+                "DEBUG".
+            force (bool, optional): True to log the message even if its level falls below
+                that of the logger; default True.
+        """
         LOGGING.print(*args, level=level, literal=True, force=force)
 
     @staticmethod

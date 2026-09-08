@@ -2,9 +2,15 @@
 # oops/cadence/timeshift.py
 ##########################################################################################
 
+from typing import TYPE_CHECKING
+
 from polymath      import Scalar
 from oops.cadence  import Cadence
 from oops.fittable import Fittable
+
+if TYPE_CHECKING:                       # `oops.frame` and `oops.path` import this package
+    from oops.frame import FrameShift
+    from oops.path  import PathShift
 
 
 class TimeShift(Cadence, Fittable):
@@ -14,7 +20,7 @@ class TimeShift(Cadence, Fittable):
         """Constructor for a TimeShift.
 
         Parameters:
-            arg (float, TimeShift, FrameShift, or PathShift): The initial time shift in
+            arg (float | TimeShift | FrameShift | PathShift): The initial time shift in
                 seconds. A positive value shifts times later. Alternatively, if another
                 time-shifted object is given, this object's time shift will always match
                 that of the argument.
@@ -37,17 +43,30 @@ class TimeShift(Cadence, Fittable):
         self.max_tstride = cadence.max_tstride
 
     @property
-    def dt(self):
-        """The time shift in seconds. A positive value shifts times later."""
+    def dt(self) -> float:
+        """The time shift in seconds. A positive value shifts times later.
+
+        Returns:
+            float: The time shift in seconds.
+        """
         return self._dt
 
     @property
-    def link(self):
-        """The object to which this one is linked, or None if it is unlinked."""
+    def link(self) -> 'TimeShift | FrameShift | PathShift | None':
+        """The object to which this one is linked, or None if it is unlinked.
+
+        Returns:
+            TimeShift | FrameShift | PathShift | None: The linked object, whose time shift
+            this object always matches; None if this object is unlinked.
+        """
         return self._link
 
     def _source(self):
         """The original source of the time shift, or self if there is none.
+
+        Returns:
+            TimeShift | FrameShift | PathShift: The object at the end of the chain of
+            links, which holds the time shift.
         """
         return self._link._source() if self._link else self
 
@@ -59,8 +78,12 @@ class TimeShift(Cadence, Fittable):
     is_initialize = True
 
     @property
-    def params(self):
-        """The fitted parameters, the time shift in seconds as a tuple of one float."""
+    def params(self) -> tuple[float]:
+        """The fitted parameters, the time shift in seconds as a tuple of one float.
+
+        Returns:
+            tuple[float]: The time shift in seconds.
+        """
 
         return (self._dt,)
 
@@ -69,6 +92,9 @@ class TimeShift(Cadence, Fittable):
 
         If this object is linked to another, the time offset of the linked object is also
         redefined.
+
+        Parameters:
+            params (tuple[float]): The new time shift in seconds as a tuple of one float.
         """
 
         if self._link:
@@ -113,7 +139,7 @@ class TimeShift(Cadence, Fittable):
         returns the time at the nearest edge of the cadence's shape.
 
         Parameters:
-            tstep (ScalarLike or PairLike): Time step index values.
+            tstep (ScalarLike | PairLike): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
             derivs (bool, optional): True to include derivatives of tstep in the returned
                 time.
@@ -135,7 +161,7 @@ class TimeShift(Cadence, Fittable):
         returns the time range at the nearest edge.
 
         Parameters:
-            tstep (ScalarLike or PairLike): Time step index values.
+            tstep (ScalarLike | PairLike): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
             inclusive (bool, optional): True to treat the end time as part of this
                 Cadence; False to exclude it.
@@ -166,7 +192,7 @@ class TimeShift(Cadence, Fittable):
                 Cadence; False to exclude it.
 
         Returns:
-            Scalar or Pair: Time step index values.
+            Scalar | Pair: Time step index values.
         """
 
         return self._cadence.tstep_at_time(time - self._dt, remask=remask, derivs=derivs,
@@ -183,7 +209,7 @@ class TimeShift(Cadence, Fittable):
                 Cadence; False to exclude it.
 
         Returns:
-            tuple[Scalar or Pair, Scalar or Pair]: The range of time step indices active
+            tuple[Scalar | Pair, Scalar | Pair]: The range of time step indices active
             at the given `time`, as (first, last+1); the upper limit is excluded. Values
             are always within the allowed range for the cadence, regardless of any mask.
             If `time` is not sampled by the cadence, the range is empty, meaning that the

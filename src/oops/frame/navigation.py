@@ -22,12 +22,13 @@ class Navigation(Frame, Fittable):
         """Constructor for a Navigation.
 
         Parameters:
-            arg (array-like or Navigation): Two or three angles of rotation in radians.
-                The order of the rotations is about the *y*, *x*, and (optionally) *z*
-                axes. These angles rotate a vector in the reference frame into this frame.
-                Alternatively, specify another `Navigation` object and this object will be
-                linked to that one, meaning that the rotation angles will always match.
-            reference (Frame or str): The Frame or the ID of the Frame relative to which
+            arg (tuple[float, ...] | list[float] | numpy.ndarray | Navigation): Two or
+                three angles of rotation in radians. The order of the rotations is about
+                the *y*, *x*, and (optionally) *z* axes. These angles rotate a vector in
+                the reference frame into this frame. Alternatively, specify another
+                Navigation object and this object will be linked to that one, meaning
+                that the rotation angles will always match.
+            reference (Frame | str): The Frame or the ID of the Frame relative to which
                 this navigation applies.
             freeze (bool, optional): True to return a frozen object; False to leave it
                 fittable.
@@ -78,25 +79,45 @@ class Navigation(Frame, Fittable):
             self.freeze()
 
     def _wayframe_key(self):
+        """The key that identifies this Frame's definition in the pool of wayframes.
+
+        Returns:
+            tuple[tuple[float, ...], Frame, Navigation | None]: The rotation angles, the
+            reference Frame, and the linked Navigation, if any.
+        """
         return (self._angles, self._reference, self._link)
 
     @property
-    def angles(self):
+    def angles(self) -> tuple[float, ...]:
         """The two or three rotation angles in radians, as a tuple."""
         self.refresh()
         return self._angles
 
     @property
-    def link(self):
+    def link(self) -> 'Navigation | None':
         """The object to which this one is linked, or None if it is unlinked."""
         return self._link
 
     def _source(self):
         """The original source of the rotation angles, or self if there is none.
+
+        Returns:
+            Navigation: The object whose rotation angles this one ultimately follows;
+            this object if it is unlinked.
         """
         return self._link._source() if self._link else self
 
     def _show(self, level, indent=0):
+        """The expanded description of this Frame used by :meth:`~oops.Frame.show`.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame.
+        """
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -127,7 +148,11 @@ class Navigation(Frame, Fittable):
     ######################################################################################
 
     def _set_params(self, params):
-        """Redefine the navigation angles."""
+        """Redefine the navigation angles.
+
+        Parameters:
+            params (tuple[float, ...]): The two or three new rotation angles in radians.
+        """
 
         if self._link:
             self._link.set_params(params)
@@ -136,11 +161,18 @@ class Navigation(Frame, Fittable):
             self._angles = tuple(params)
 
     @property
-    def params(self):
+    def params(self) -> tuple[float, ...]:
         """The fittable parameters of this Navigation, as a tuple of rotation angles."""
         return self._angles
 
     def _refresh(self, matrix=None):
+        """Rebuild the rotation matrix and Transform from the current angles.
+
+        Parameters:
+            matrix (Matrix3Like, optional): The rotation matrix to adopt in place of one
+                derived from the angles; None to derive it. Ignored if this object is
+                linked to another.
+        """
         if self._link:
             self._angles = self._link._angles
             self._matrix = self._link._matrix
@@ -155,6 +187,10 @@ class Navigation(Frame, Fittable):
                                     origin=self._origin)
 
     def _freeze(self):
+        """Adopt the linked object's rotation angles as this object's own; drop the link.
+
+        Once the object is frozen, it takes its place in the pool of wayframes.
+        """
         if self._link:
             self._angles = self._link._angles
             self._link = None
@@ -197,7 +233,7 @@ class Navigation(Frame, Fittable):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): Ignored by class Navigation.
+            quick (dict | bool, optional): Ignored by class Navigation.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the

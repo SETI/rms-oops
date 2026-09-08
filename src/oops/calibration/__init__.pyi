@@ -3,15 +3,14 @@
 ##########################################################################################
 """Type stub for :mod:`oops.calibration`.
 
-The `src` tree carries no inline annotations, so type information for public symbols is
-published here instead. Only package stubs exist, so a name is annotated when it is
-imported from the package that exports it and not when it is imported from the module
-that defines it. The stub describes the shape of the API exactly: every public name, its
-parameters, which of them are keyword-only, and which have defaults. Types are given
-where they are unambiguous and are `Any` elsewhere.
+The source types its methods in their docstrings rather than in their signatures, so the
+type information for public symbols is published here instead. Only package stubs exist,
+so a name is annotated when it is imported from the package that exports it and not when
+it is imported from the module that defines it. The stub describes the shape of the API
+exactly: every public name, its parameters, which of them are keyword-only, and which have
+defaults. Types are given where they are unambiguous and are `Any` elsewhere.
 """
 
-from typing import Any
 from oops import FOV as FOV
 from polymath import Scalar
 # Parameters documented as a polymath type are passed through `as_scalar` and its
@@ -34,10 +33,10 @@ class Calibration(Oops):
     def area_factor(self, uv_pair: PairLike) -> Scalar: ...
 
 class FlatCalib(Calibration):
-    name: Any
-    has_baseline: Any
-    shape: Any
-    fov: Any
+    name: str
+    has_baseline: bool
+    shape: tuple[int, ...]
+    fov: FOV | None
     def __init__(self, name: str, factor: ScalarLike, baseline: ScalarLike = 0.0,
         fov: FOV | None = None) -> None: ...
     def extended_from_dn(self, dn: ScalarLike, uv_pair: PairLike) -> Scalar: ...
@@ -48,12 +47,12 @@ class FlatCalib(Calibration):
         name: str = '') -> Calibration: ...
 
 class NullCalib(Calibration):
-    name: Any
-    factor: Any
-    baseline: Any
+    name: str
+    factor: Scalar
+    baseline: Scalar
     has_baseline: bool
-    fov: Any
-    shape: Any
+    fov: FOV | None
+    shape: tuple[int, ...]
     def __init__(self, name: str) -> None: ...
     def extended_from_dn(self, dn: ScalarLike, uv_pair: PairLike) -> Scalar: ...
     def dn_from_extended(self, value: ScalarLike, uv_pair: PairLike) -> Scalar: ...
@@ -63,10 +62,10 @@ class NullCalib(Calibration):
         name: str = '') -> Calibration: ...
 
 class Radiance(FlatCalib):
-    name: Any
-    fov: Any
-    has_baseline: Any
-    shape: Any
+    name: str
+    fov: FOV
+    has_baseline: bool
+    shape: tuple[int, ...]
     def __init__(self, name: str, fov: FOV | None, factor: ScalarLike,
         baseline: ScalarLike = 0.0) -> None: ...
     def point_from_dn(self, dn: ScalarLike, uv_pair: PairLike) -> Scalar: ...
@@ -75,10 +74,10 @@ class Radiance(FlatCalib):
         name: str = '') -> Calibration: ...
 
 class RawCounts(FlatCalib):
-    name: Any
-    fov: Any
-    has_baseline: Any
-    shape: Any
+    name: str
+    fov: FOV
+    has_baseline: bool
+    shape: tuple[int, ...]
     def __init__(self, name: str, fov: FOV | None, factor: ScalarLike,
         baseline: ScalarLike = 0.0) -> None: ...
     def extended_from_dn(self, dn: ScalarLike, uv_pair: PairLike) -> Scalar: ...

@@ -33,3 +33,13 @@ oops.hosts.newhorizons.lorri.LORRI.instrument_kernel
 # `tabulation` only inside the method that builds one, so the module namespace does not
 # carry the name at run time.
 oops.hosts.hst.Tabulation
+
+# Class constants that are instances of the class itself (or a subclass), assigned by
+# `oops/__init__.py` after the class statement. Each package stub declares its classes
+# outright, so stubtest sees the stub's `Transform` and the run-time
+# `oops.transform.Transform` as different types and reports a mismatch on every one of
+# them. The stubs give the true type; these entries silence only that comparison.
+oops.Event.SSB
+oops.Transform.IDENTITY
+oops.frame.Frame.J2000
+oops.path.Path.SSB

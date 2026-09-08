@@ -28,7 +28,7 @@ class TimedImage(Observation):
         """Constructor for a TimedImage.
 
         Parameters:
-            axes (list or tuple): Strings, with one value for each axis in the associated
+            axes (list | tuple): Strings, with one value for each axis in the associated
                 data array. One of these strings must begin with "u", and the other must
                 begin with "v", to indicate the locations of the spatial axes. If the
                 image has a 1-D cadence, then "t" should be appended to the name of the
@@ -177,7 +177,7 @@ class TimedImage(Observation):
         This method supports non-integer index values.
 
         Parameters:
-            indices (ScalarLike or VectorLike): Array indices.
+            indices (ScalarLike | VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
             derivs (bool, optional): True to include derivatives in the returned values.
 
@@ -229,7 +229,7 @@ class TimedImage(Observation):
         """Ranges of *(u,v)* spatial coordinates and time for integer array indices.
 
         Parameters:
-            indices (ScalarLike or VectorLike): Array indices.
+            indices (ScalarLike | VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:
@@ -326,7 +326,7 @@ class TimedImage(Observation):
         pixel is active if it is 2-D.
 
         Parameters:
-            tstep (ScalarLike or PairLike): Time step index. This is a Scalar if the
+            tstep (ScalarLike | PairLike): Time step index. This is a Scalar if the
                 cadence is 1-D and a Pair, as (slow, fast), if it is 2-D.
             remask (bool, optional): True to mask time steps outside the cadence.
 
@@ -367,10 +367,12 @@ class TimedImage(Observation):
 
         Parameters:
             bodies (list): The names of the body objects to be included in the inventory.
-            **kwargs: The remaining keyword options of Snapshot.inventory(), which see.
+            **kwargs (Any): The remaining keyword options of
+                :meth:`~oops.observation.Snapshot.inventory`, which see.
 
         Returns:
-            list, numpy.ndarray, or dict: As described in Snapshot.inventory().
+            list | numpy.ndarray | dict: As described in
+            :meth:`~oops.observation.Snapshot.inventory`.
 
         Raises:
             NotImplementedError: If the cadence extends this observation beyond the shape

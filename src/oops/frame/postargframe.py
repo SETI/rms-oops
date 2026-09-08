@@ -26,7 +26,7 @@ class PosTargFrame(Frame):
                 *z*-axis falls within this Frame.
             ypos (float): The *y*-position, in radians, at which the `reference` Frame's
                 *z*-axis falls within this Frame.
-            reference (Frame or str): The Frame or the ID of the Frame relative to which
+            reference (Frame | str): The Frame or the ID of the Frame relative to which
                 this Frame is defined.
             frame_id (str, optional): The ID under which to register this Frame; None to
                 leave this Frame unregistered. As a special case, use "+" to automatically
@@ -63,13 +63,29 @@ class PosTargFrame(Frame):
         self.refresh()
 
     def _refresh(self):
+        """Rebuild the fixed Transform from the rotation matrix."""
         self._transform = Transform(self._matrix, Vector3.ZERO, self, self._reference,
                                     origin=self._origin)
 
     def _wayframe_key(self):
+        """The key that identifies this Frame's definition in the pool of wayframes.
+
+        Returns:
+            tuple[float, float, Frame]: The two pointing offsets and the reference Frame.
+        """
         return (self._xpos, self._ypos, self._reference)
 
     def _show(self, level, indent=0):
+        """The expanded description of this Frame used by :meth:`~oops.Frame.show`.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame.
+        """
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -102,7 +118,7 @@ class PosTargFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): Ignored by class PosTargFrame.
+            quick (dict | bool, optional): Ignored by class PosTargFrame.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the

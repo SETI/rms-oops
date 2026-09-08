@@ -24,7 +24,7 @@ class Pixel(Observation):
         """Constructor for a Pixel observation.
 
         Parameters:
-            axes (list or tuple): Strings, with one value for each axis in the associated
+            axes (list | tuple): Strings, with one value for each axis in the associated
                 data array. A value of 't' should appear at the location of the array's
                 time axis, if any.
             cadence (Cadence): A 1-D Cadence object defining the start time and duration
@@ -99,7 +99,7 @@ class Pixel(Observation):
         This method supports non-integer index values.
 
         Parameters:
-            indices (ScalarLike or VectorLike): Array indices.
+            indices (ScalarLike | VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
             derivs (bool, optional): True to include derivatives in the returned values.
 
@@ -127,7 +127,7 @@ class Pixel(Observation):
         """Ranges of *(u,v)* spatial coordinates and time for integer array indices.
 
         Parameters:
-            indices (ScalarLike or VectorLike): Array indices.
+            indices (ScalarLike | VectorLike): Array indices.
             remask (bool, optional): True to mask values outside the field of view.
 
         Returns:

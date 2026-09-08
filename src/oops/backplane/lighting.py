@@ -10,9 +10,12 @@ def incidence_angle(self, event_key, apparent=True):
     """Incidence angle of the arriving photons at the local surface.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         apparent (bool, optional): True for the apparent angle in the surface frame; False
             for the actual.
+
+    Returns:
+        Scalar: The incidence angle in radians, registered as a backplane.
     """
 
     self.refresh()
@@ -48,9 +51,12 @@ def emission_angle(self, event_key, apparent=True):
     """Emission angle of the departing photons at the local surface.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         apparent (bool, optional): True for the apparent angle in the surface frame; False
             for the actual.
+
+    Returns:
+        Scalar: The emission angle in radians, registered as a backplane.
     """
 
     self.refresh()
@@ -89,9 +95,12 @@ def phase_angle(self, event_key, apparent=True):
     """Phase angle between the arriving and departing photons.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         apparent (bool, optional): True for the apparent angle in the surface frame; False
             for the actual.
+
+    Returns:
+        Scalar: The phase angle in radians, registered as a backplane.
     """
 
     self.refresh()
@@ -109,9 +118,12 @@ def scattering_angle(self, event_key, apparent=True):
     """Scattering angle between the arriving and departing photons.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         apparent (bool, optional): True for the apparent angle in the surface frame; False
             for the actual.
+
+    Returns:
+        Scalar: The scattering angle in radians, registered as a backplane.
     """
 
     self.refresh()
@@ -130,9 +142,12 @@ def center_incidence_angle(self, event_key, apparent=True):
     This uses the *z*-axis of the body's frame to define the local normal.
 
     Parameters:
-        event_key (str or tuple): Key defining the event on the body's path.
+        event_key (str | tuple): Key defining the event on the body's path.
         apparent (bool, optional): True for the apparent angle in the body frame; False
             for the actual.
+
+    Returns:
+        Scalar: The incidence angle in radians, registered as a gridless backplane.
     """
 
     self.refresh()
@@ -146,9 +161,12 @@ def center_emission_angle(self, event_key, apparent=True):
     This uses the *z*-axis of the body's frame to define the local normal.
 
     Parameters:
-        event_key (str or tuple): Key defining the event on the body's path.
+        event_key (str | tuple): Key defining the event on the body's path.
         apparent (bool, optional): True for the apparent angle in the body frame; False
             for the actual.
+
+    Returns:
+        Scalar: The emission angle in radians, registered as a gridless backplane.
     """
 
     self.refresh()
@@ -160,9 +178,12 @@ def center_phase_angle(self, event_key, apparent=True):
     """Gridless phase angle as measured at the body's central path.
 
     Parameters:
-        event_key (str or tuple): Key defining the event on the body's path.
+        event_key (str | tuple): Key defining the event on the body's path.
         apparent (bool, optional): True for the apparent angle in the body frame; False
             for the actual.
+
+    Returns:
+        Scalar: The phase angle in radians, registered as a gridless backplane.
     """
 
     self.refresh()
@@ -174,9 +195,12 @@ def center_scattering_angle(self, event_key, apparent=True):
     """Gridless scattering angle as measured at the body's central path.
 
     Parameters:
-        event_key (str or tuple): Key defining the event on the body's path.
+        event_key (str | tuple): Key defining the event on the body's path.
         apparent (bool, optional): True for the apparent angle in the body frame; False
             for the actual.
+
+    Returns:
+        Scalar: The scattering angle in radians, registered as a gridless backplane.
     """
 
     self.refresh()
@@ -188,9 +212,12 @@ def mu0(self, event_key, apparent=True):
     """Cosine of the incidence angle of the arriving photons at the surface.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         apparent (bool, optional): True for the apparent angle in the surface frame; False
             for the actual.
+
+    Returns:
+        Scalar: The cosine of the incidence angle, registered as a backplane.
     """
 
     self.refresh()
@@ -207,9 +234,12 @@ def mu(self, event_key, apparent=True):
     """Cosine of the emission angle of the photons departing from the surface.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         apparent (bool, optional): True for the apparent angle in the surface frame; False
             for the actual.
+
+    Returns:
+        Scalar: The cosine of the emission angle, registered as a backplane.
     """
 
     self.refresh()
@@ -226,7 +256,11 @@ def lambert_law(self, event_key):
     """Lambert law model cos(incidence_angle) for the surface.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
+
+    Returns:
+        Scalar: The Lambert law value, registered as a backplane; it is zero wherever the
+        surface is unlit.
     """
 
     self.refresh()
@@ -244,12 +278,15 @@ def minnaert_law(self, event_key, k, k2=None, clip=0.2):
     """Minnaert law model for the surface.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         k (float): The Minnaert exponent (for cos(i)).
         k2 (float, optional): Optional second Minnaert exponent (for cos(e)). Defaults
             to k-1.
         clip (float, optional): Lower limit on cos(e). Needed because otherwise the
             Minnaert law diverges near the limb. Default 0.2.
+
+    Returns:
+        Scalar: The Minnaert law value, registered as a backplane.
     """
 
     self.refresh()
@@ -273,7 +310,11 @@ def lommel_seeliger_law(self, event_key):
     """Lommel-Seeliger law model for the surface, mu0 / (mu + mu0).
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
+
+    Returns:
+        Scalar: The Lommel-Seeliger law value, registered as a backplane; it is zero
+        wherever the surface is unlit.
     """
 
     self.refresh()

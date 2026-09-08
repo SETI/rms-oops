@@ -19,10 +19,10 @@ class MultiPath(Path):
         """Constructor for a MultiPath.
 
         Parameters:
-            paths (list[Path or str]): The Paths or Path IDs to include in this MultiPath.
-            origin (Path or str, optional): The Path or the ID of the Path defining the
+            paths (list[Path | str]): The Paths or Path IDs to include in this MultiPath.
+            origin (Path | str, optional): The Path or the ID of the Path defining the
                 common origin of all the Paths; None to use the SSB.
-            frame (Frame or str, optional): The Frame or the ID of the Frame in which
+            frame (Frame | str, optional): The Frame or the ID of the Frame in which
                 coordinates are returned; None to use the Frame of the `origin` Path.
             path_id (str, optional): The ID under which to register this Path; None to
                 leave this Path unregistered.
@@ -55,6 +55,7 @@ class MultiPath(Path):
         self._register(path_id)
 
     def _refresh(self):
+        """Re-derive each member Path relative to this MultiPath's origin and frame."""
         for k, path in np.ndenumerate(self._input_paths):
             self._paths[k] = path.wrt(self._origin, self._frame)
 
@@ -66,9 +67,27 @@ class MultiPath(Path):
         return MultiPath(paths, self._origin, self._frame, path_id=None)
 
     def _waypoint_key(self):
+        """The key identifying this Path's waypoint, from the attributes that define it.
+
+        Returns:
+            numpy.ndarray: The 1-D object array of member Paths, each relative to this
+            MultiPath's origin and frame.
+        """
+
         return self._paths
 
     def _show(self, level, indent=0):
+        """The expanded description of this Path used by :meth:`~oops.Path.show`.
+
+        Parameters:
+            level (int): The number of levels of the Path's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Path.
+        """
+
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -106,7 +125,7 @@ class MultiPath(Path):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -153,7 +172,7 @@ class MultiPath(Path):
 
         Parameters:
             time (ScalarLike): The time(s) at which this path is to be evaluated.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in

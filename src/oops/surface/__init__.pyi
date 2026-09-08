@@ -3,12 +3,12 @@
 ##########################################################################################
 """Type stub for :mod:`oops.surface`.
 
-The `src` tree carries no inline annotations, so type information for public symbols is
-published here instead. Only package stubs exist, so a name is annotated when it is
-imported from the package that exports it and not when it is imported from the module
-that defines it. The stub describes the shape of the API exactly: every public name, its
-parameters, which of them are keyword-only, and which have defaults. Types are given
-where they are unambiguous and are `Any` elsewhere.
+The source types its methods in their docstrings rather than in their signatures, so the
+type information for public symbols is published here instead. Only package stubs exist,
+so a name is annotated when it is imported from the package that exports it and not when
+it is imported from the module that defines it. The stub describes the shape of the API
+exactly: every public name, its parameters, which of them are keyword-only, and which have
+defaults. Types are given where they are unambiguous and are `Any` elsewhere.
 """
 
 from typing import Any
@@ -31,9 +31,9 @@ class Surface(Mutable):
     IS_TIME_DEPENDENT: bool
     HAS_INTERIOR: bool
     COORDINATE_TYPE: str
-    COORDINATE_NAMES: Any
-    COORDINATE_ABBREVS: Any
-    COORDINATE_RANGES: Any
+    COORDINATE_NAMES: tuple[str, str, str]
+    COORDINATE_ABBREVS: tuple[str, str, str]
+    COORDINATE_RANGES: tuple[tuple[float | None, float | None], ...]
     def coords_from_vector3(self, pos: Vector3Like, *, obs: Vector3Like | None = None,
         time: ScalarLike | None = None, axes: int = 2, derivs: bool = False,
         hints: Any = None) -> tuple[Scalar, ...]: ...
@@ -104,14 +104,14 @@ class Surface(Mutable):
 
 class Ansa(Surface):
     COORDINATE_TYPE: str
-    COORDINATE_NAMES: Any
-    COORDINATE_ABBREVS: Any
-    COORDINATE_RANGES: Any
+    COORDINATE_NAMES: tuple[str, str, str]
+    COORDINATE_ABBREVS: tuple[str, str, str]
+    COORDINATE_RANGES: tuple[tuple[float | None, float | None], ...]
     IS_VIRTUAL: bool
-    origin: Any
-    frame: Any
-    unmasked: Any
-    intercept_key: Any
+    origin: Path
+    frame: Frame
+    unmasked: Surface
+    intercept_key: tuple
     def __init__(self, origin: Path | str, frame: Frame | str, *,
         gravity: Gravity | None = None, ringplane: RingPlane | None = None,
         radii: tuple[float, float] | tuple | None = None) -> None: ...
@@ -175,15 +175,15 @@ class CentricSpheroid(Spheroid):
 
 class Ellipsoid(Surface):
     COORDINATE_TYPE: str
-    COORDINATE_NAMES: Any
-    COORDINATE_ABBREVS: Any
-    COORDINATE_RANGES: Any
+    COORDINATE_NAMES: tuple[str, str, str]
+    COORDINATE_ABBREVS: tuple[str, str, str]
+    COORDINATE_RANGES: tuple[tuple[float | None, float | None], ...]
     IS_VIRTUAL: bool
     HAS_INTERIOR: bool
-    origin: Any
-    frame: Any
-    unmasked: Any
-    intercept_key: Any
+    origin: Path
+    frame: Frame
+    unmasked: Surface
+    intercept_key: tuple
     def __init__(self, origin: Path | str, frame: Frame | str,
         radii: tuple[float, float, float] | tuple) -> None: ...
     @property
@@ -266,20 +266,20 @@ class GraphicSpheroid(Spheroid):
 
 class Limb(Surface):
     COORDINATE_TYPE: str
-    COORDINATE_NAMES: Any
-    COORDINATE_ABBREVS: Any
-    COORDINATE_RANGES: Any
+    COORDINATE_NAMES: tuple[str, str, str]
+    COORDINATE_ABBREVS: tuple[str, str, str]
+    COORDINATE_RANGES: tuple[tuple[float | None, float | None], ...]
     IS_VIRTUAL: bool
-    origin: Any
-    frame: Any
-    unmasked: Any
-    intercept_key: Any
+    origin: Path
+    frame: Frame
+    unmasked: Surface
+    intercept_key: tuple
     def __init__(self, ground: Surface, *,
         limits: tuple[float, float] | tuple | None = None) -> None: ...
     @property
     def ground(self) -> Surface: ...
     @property
-    def limits(self) -> tuple | None: ...
+    def limits(self) -> tuple[float, float] | None: ...
     def coords_from_vector3(self, pos: Vector3Like, *, obs: Vector3Like | None = None,
         time: ScalarLike | None = None, axes: int = 2, derivs: bool = False,
         hints: ScalarLike | None = None, groundtrack: bool = False) -> tuple: ...
@@ -321,13 +321,13 @@ class Limb(Surface):
 
 class NullSurface(Surface):
     COORDINATE_TYPE: str
-    COORDINATE_NAMES: Any
-    COORDINATE_ABBREVS: Any
-    COORDINATE_RANGES: Any
-    origin: Any
-    frame: Any
-    unmasked: Any
-    intercept_key: Any
+    COORDINATE_NAMES: tuple[str, str, str]
+    COORDINATE_ABBREVS: tuple[str, str, str]
+    COORDINATE_RANGES: tuple[tuple[float | None, float | None], ...]
+    origin: Path
+    frame: Frame
+    unmasked: Surface
+    intercept_key: tuple
     def __init__(self, origin: Path | str, frame: Frame | str) -> None: ...
     def coords_from_vector3(self, pos: Vector3Like, *, obs: Vector3Like | None = None,
         time: ScalarLike | None = None, axes: int = 2, derivs: bool = False,
@@ -347,14 +347,14 @@ class NullSurface(Surface):
 
 class OrbitPlane(Surface):
     COORDINATE_TYPE: str
-    COORDINATE_NAMES: Any
-    COORDINATE_ABBREVS: Any
-    COORDINATE_RANGES: Any
+    COORDINATE_NAMES: tuple[str, str, str]
+    COORDINATE_ABBREVS: tuple[str, str, str]
+    COORDINATE_RANGES: tuple[tuple[float | None, float | None], ...]
     IS_VIRTUAL: bool
-    origin: Any
-    frame: Any
-    intercept_key: Any
-    unmasked: Any
+    origin: Path
+    frame: Frame
+    intercept_key: tuple
+    unmasked: Surface
     def __init__(self, elements: tuple[float, ...] | tuple, epoch: ScalarLike,
         origin: Path | str, frame: Frame | str, *, path_id: str | None = None,
         radii: tuple[float, float] | tuple | None = None) -> None: ...
@@ -378,9 +378,9 @@ class OrbitPlane(Surface):
 
 class PolarLimb(Limb):
     COORDINATE_TYPE: str
-    COORDINATE_NAMES: Any
-    COORDINATE_ABBREVS: Any
-    COORDINATE_RANGES: Any
+    COORDINATE_NAMES: tuple[str, str, str]
+    COORDINATE_ABBREVS: tuple[str, str, str]
+    COORDINATE_RANGES: tuple[tuple[float | None, float | None], ...]
     def coords_from_vector3(self, pos: Vector3Like, *, obs: Vector3Like | None = None,
         time: ScalarLike | None = None, axes: int = 2, derivs: bool = False,
         hints: ScalarLike | None = None, groundtrack: bool = False) -> tuple: ...
@@ -391,15 +391,15 @@ class PolarLimb(Limb):
 
 class RingPlane(Surface):
     COORDINATE_TYPE: str
-    COORDINATE_NAMES: Any
-    COORDINATE_ABBREVS: Any
-    COORDINATE_RANGES: Any
+    COORDINATE_NAMES: tuple[str, str, str]
+    COORDINATE_ABBREVS: tuple[str, str, str]
+    COORDINATE_RANGES: tuple[tuple[float | None, float | None], ...]
     IS_VIRTUAL: bool
     IS_TIME_DEPENDENT: bool
-    origin: Any
-    frame: Any
-    unmasked: Any
-    intercept_key: Any
+    origin: Path
+    frame: Frame
+    unmasked: Surface
+    intercept_key: tuple
     def __init__(self, origin: Path | str, frame: Frame | str, *,
         radii: tuple[float, float] | tuple | None = None, gravity: Gravity | None = None,
         elevation: ScalarLike = 0.0, modes: list | None = None,

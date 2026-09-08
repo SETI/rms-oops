@@ -126,8 +126,10 @@ nitpick_ignore = [
     # `polymath` internals that its own docstrings mention but do not publish.
     ('py:class', 'QubeNDIterator'),
     ('py:class', 'Unit'),
-    # `filecache.FCPath`, which has no Sphinx inventory to link to.
+    # `filecache.FCPath` and `filecache.FileCache`, which have no Sphinx inventory to
+    # link to.
     ('py:class', 'FCPath'),
+    ('py:class', 'FileCache'),
 ]
 
 # The arithmetic docstrings of `polymath.Qube` cross-reference its operator methods, which

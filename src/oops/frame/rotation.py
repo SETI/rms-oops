@@ -20,12 +20,12 @@ class Rotation(Frame, Fittable):
         """Constructor for a Rotation.
 
         Parameters:
-            arg (ScalarLike or Rotation): The angle of rotation in radians, which can be
+            arg (ScalarLike | Rotation): The angle of rotation in radians, which can be
                 multidimensional. Alternatively, if another Rotation is given, this
                 object's rotation angle will always match that of the argument.
-            axis (int or str): The rotation axis: 0, "x", or "X" for *x*; 1, "y", or "Y"
+            axis (int | str): The rotation axis: 0, "x", or "X" for *x*; 1, "y", or "Y"
                 for *y*; 2, "z", or "Z" for *z*.
-            reference (Frame or str): The Frame or the ID of the Frame relative to which
+            reference (Frame | str): The Frame or the ID of the Frame relative to which
                 this rotation is defined.
             freeze (bool, optional): True to return a frozen object; False to leave it
                 fittable.
@@ -75,20 +75,40 @@ class Rotation(Frame, Fittable):
             self.freeze()
 
     def _wayframe_key(self):
+        """The key that identifies this Frame's definition in the pool of wayframes.
+
+        Returns:
+            tuple[Scalar, int, Frame, Rotation | None]: The rotation angle, the axis, the
+            reference Frame, and the linked Rotation, if any.
+        """
         return (self._angle, self._axis2, self._reference, self._link)
 
     @property
-    def angle(self):
+    def angle(self) -> Scalar:
         """The angle of rotation in radians, as a Scalar."""
         self.refresh()
         return self._angle
 
     def _source(self):
         """The original source of the rotation angle, or self if there is none.
+
+        Returns:
+            Rotation: The object whose rotation angle this one ultimately follows; this
+            object if it is unlinked.
         """
         return self._link._source() if self._link else self
 
     def _show(self, level, indent=0):
+        """The expanded description of this Frame used by :meth:`~oops.Frame.show`.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame.
+        """
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -110,7 +130,12 @@ class Rotation(Frame, Fittable):
     nparams = 1
 
     def _set_params(self, params):
-        """Redefine the rotation angle of this Rotation object."""
+        """Redefine the rotation angle of this Rotation object.
+
+        Parameters:
+            params (tuple[float, ...]): The new rotation angle or angles in radians, one
+                per element of this object's angle array.
+        """
 
         if self._link:
             self._link.set_params(params)
@@ -122,7 +147,7 @@ class Rotation(Frame, Fittable):
             self._angle = Scalar(params, self._angle_mask)
 
     @property
-    def params(self):
+    def params(self) -> tuple[float, ...]:
         """The fittable parameters of this Rotation, as a tuple of rotation angles."""
         if self._angle_shape == ():
             return (self._angle.vals,)
@@ -130,6 +155,7 @@ class Rotation(Frame, Fittable):
             return tuple(self._angle.vals.ravel())
 
     def _refresh(self):
+        """Rebuild the rotation matrix and Transform from the current angle."""
         if self._link:
             self._angle = self._link._angle
             self._matrix = self._link._matrix
@@ -146,6 +172,10 @@ class Rotation(Frame, Fittable):
                                     origin=self._origin)
 
     def _freeze(self):
+        """Adopt the linked object's rotation angle as this object's own; drop the link.
+
+        Once the object is frozen, it takes its place in the pool of wayframes.
+        """
         if self._link:
             self._angle = self._link._angle
             self._link = None
@@ -176,7 +206,7 @@ class Rotation(Frame, Fittable):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): Ignored by class Rotation.
+            quick (dict | bool, optional): Ignored by class Rotation.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the

@@ -22,7 +22,7 @@ class RingFrame(Frame):
         """Constructor for a RingFrame.
 
         Parameters:
-            frame (Frame or str): The Frame or the ID of the Frame describing the central
+            frame (Frame | str): The Frame or the ID of the Frame describing the central
                 planet of the ring plane relative to J2000.
             epoch (ScalarLike, optional): The time TDB at which this Frame is to be
                 evaluated. If this is specified, then the Frame will be precisely
@@ -74,6 +74,10 @@ class RingFrame(Frame):
         self.refresh()
 
     def _refresh(self):
+        """Relink the planet Frame to J2000 and empty the cache.
+
+        For a fixed epoch, the inertial Transform and its node are derived here.
+        """
         self._planet_wrt_j2000 = self._planet_frame.wrt(Frame.J2000)
         self._cache = _Cache(self._cache_size)
         self._transform = None
@@ -110,9 +114,25 @@ class RingFrame(Frame):
         return node.mask_where((x == 0.) & (y == 0.), replace=0., remask=False)
 
     def _wayframe_key(self):
+        """The key that identifies this Frame's definition in the pool of wayframes.
+
+        Returns:
+            tuple[Frame, Scalar | None, bool, bool]: The planet Frame, the epoch, the
+            retrograde flag, and the aries flag.
+        """
         return (self._planet_frame, self._epoch, self._retrograde, self._aries)
 
     def _show(self, level, indent=0):
+        """The expanded description of this Frame used by :meth:`~oops.Frame.show`.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame.
+        """
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -153,7 +173,7 @@ class RingFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -226,7 +246,7 @@ class RingFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in

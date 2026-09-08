@@ -38,7 +38,7 @@ class Surface(Mutable):
         COORDINATE_NAMES (tuple[str, str, str]): Names of the three coordinates.
         COORDINATE_ABBREVS (tuple[str, str, str]): Short abbreviations for the three
             coordinates.
-        COORDINATE_RANGES (tuple[tuple[float or None, float or None], ...]): Numeric
+        COORDINATE_RANGES (tuple[tuple[float | None, float | None], ...]): Numeric
             ranges for the three components: ``(None, None)`` for no limits, ``(0, None)``
             for non-negative, ``(0, 2*pi)`` for a cyclic angle, or any other pair of
             floats to define the specific limits of the range.
@@ -65,14 +65,28 @@ class Surface(Mutable):
     _intercept_normal_to_DERIVS_ARE_IMPLEMENTED = True
 
     def _coords_from_vector3_check(self, axes):
-        """Validate axes as equal to 2 or 3."""
+        """Validate axes as equal to 2 or 3.
+
+        Parameters:
+            axes (int): The number of coordinates requested.
+
+        Raises:
+            ValueError: If `axes` is not 2 or 3.
+        """
 
         if not isinstance(axes, numbers.Integral) or axes not in (2, 3):
             raise ValueError(f'axes must be 2 or 3 in {type(self).__name__}'
                              '.coords_from_vector3()')
 
     def _vector3_from_coords_check(self, coords):
-        """Validate coords as a tuple of 2 or 3 Scalars."""
+        """Validate coords as a tuple of 2 or 3 Scalars.
+
+        Parameters:
+            coords (tuple[ScalarLike, ...] | list[ScalarLike]): The coordinates given.
+
+        Raises:
+            ValueError: If `coords` is not a tuple or list of length 2 or 3.
+        """
 
         if not isinstance(coords, (tuple, list)) or len(coords) not in (2, 3):
             raise ValueError(f'2 or 3 coords required in {type(self).__name__}'
@@ -132,7 +146,7 @@ class Surface(Mutable):
                 value to be returned.
 
         Returns:
-            Vector3 or tuple[Vector3, Any]: Points defined by the coordinates, relative to
+            Vector3 | tuple[Vector3, Any]: Points defined by the coordinates, relative to
             this Surface's origin and frame, optionally followed by `hints`. For Surface
             subclasses that do not use hints, the input value of `hints` is returned.
         """
@@ -195,7 +209,7 @@ class Surface(Mutable):
                 value to be returned.
 
         Returns:
-            Vector3 or tuple[Vector3, Any]: Directions normal to the Surface that pass
+            Vector3 | tuple[Vector3, Any]: Directions normal to the Surface that pass
             through the position, optionally followed by `hints`. Vector lengths are
             arbitrary.
         """
@@ -225,7 +239,7 @@ class Surface(Mutable):
                 value to be returned.
 
         Returns:
-            Vector3 or tuple[Vector3, Any]: Surface intercept points in km, optionally
+            Vector3 | tuple[Vector3, Any]: Surface intercept points in km, optionally
             followed by `hints`. Where no solution exists, values of the intercept point
             are masked.
         """
@@ -264,7 +278,7 @@ class Surface(Mutable):
                 value to be returned.
 
         Returns:
-            Vector3 or tuple[Vector3[, Scalar][, Any]]: `intercept` or tuple of up to
+            Vector3 | tuple[Vector3[, Scalar][, Any]]: `intercept` or tuple of up to
             three values, depending on the input values of `guess` and `hints`.
 
             * `intercept` (Vector3): The Surface intercept points, in km. Where no

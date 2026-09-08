@@ -17,11 +17,16 @@ def limb_altitude(self, event_key, zmin=None, zmax=None, scaled=False):
     """Elevation of a limb point above the body's surface.
 
     Parameters:
-        event_key (str or tuple): Key defining the limb surface event.
-        zmin (optional): Lower limit on altitude; lower values are masked.
-        zmax (optional): Upper limit on altitude.
+        event_key (str | tuple): Key defining the limb surface event.
+        zmin (float | None, optional): Lower limit on altitude; lower values are masked.
+        zmax (float | None, optional): Upper limit on altitude; higher values are
+            masked.
         scaled (bool, optional): If True, `zmin` and `zmax` are in units of the maximum
             body radius.
+
+    Returns:
+        Scalar: The altitude in km, registered as a backplane and masked outside the given
+        limits.
     """
 
     self.refresh()
@@ -63,7 +68,10 @@ def _fill_limb_intercepts(self, event_key):
     """Internal method to fill in the limb intercept geometry backplanes.
 
     Parameters:
-        event_key (str or tuple): Key defining the limb surface event.
+        event_key (str | tuple): Key defining the limb surface event.
+
+    Raises:
+        ValueError: If the surface does not use limb coordinates.
     """
 
     # Validate the surface type
@@ -89,9 +97,9 @@ def limb_longitude(self, event_key, reference='iau', direction='west', minimum=0
     """Longitude at the limb surface intercept point in the image.
 
     Parameters:
-        event_key (str or tuple): Key defining the limb surface event. Alternatively, a
-            limb_altitude backplane key, in which case this backplane inherits the mask of
-            the given backplane array.
+        event_key (str | tuple): Key defining the limb surface event. Alternatively, a
+            :meth:`limb_altitude` backplane key, in which case this backplane inherits
+            the mask of the given backplane array.
         reference (str, optional): Defines the location of zero longitude.
 
             * 'iau' for the IAU-defined prime meridian;
@@ -112,6 +120,9 @@ def limb_longitude(self, event_key, reference='iau', direction='west', minimum=0
             * 'graphic' for planetographic;
             * 'squashed' for an intermediate longitude type used internally. Note that
               `lon_type` is irrelevant to Spheroids but matters for Ellipsoids.
+
+    Returns:
+        Scalar: The longitude in radians, registered as a backplane.
     """
 
     self.refresh()
@@ -136,14 +147,17 @@ def limb_latitude(self, event_key, lat_type='centric'):
     """Latitude at the surface intercept point in the image.
 
     Parameters:
-        event_key (str or tuple): Key defining the limb surface event. Alternatively, a
-            limb_altitude backplane key, in which case this backplane inherits the mask of
-            the given backplane array.
+        event_key (str | tuple): Key defining the limb surface event. Alternatively, a
+            :meth:`limb_altitude` backplane key, in which case this backplane inherits
+            the mask of the given backplane array.
         lat_type (str, optional): Defines the type of latitude measurement:
 
             * 'centric' for planetocentric;
             * 'graphic' for planetographic;
             * 'squashed' for an intermediate latitude type used internally.
+
+    Returns:
+        Scalar: The latitude in radians, registered as a backplane.
     """
 
     self.refresh()
@@ -168,9 +182,12 @@ def limb_clock_angle(self, event_key):
     """Angular location around the limb, measured clockwise from the projected north pole.
 
     Parameters:
-        event_key (str or tuple): Key defining the limb surface event. Alternatively, a
-            limb_altitude backplane key, in which case this backplane inherits the mask of
-            the given backplane array.
+        event_key (str | tuple): Key defining the limb surface event. Alternatively, a
+            :meth:`limb_altitude` backplane key, in which case this backplane inherits
+            the mask of the given backplane array.
+
+    Returns:
+        Scalar: The clock angle in radians, registered as a backplane.
     """
 
     # Create the clock angle backplane

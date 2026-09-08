@@ -152,8 +152,8 @@ class BarrelFOV(FOV):
                 into the returned *(x,y)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Pair: The transformed *(x,y)* coordinates in the camera's frame.
@@ -191,8 +191,8 @@ class BarrelFOV(FOV):
                 into the returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Pair: The computed *(u,v)* FOV coordinates, with the same shape as `xy_pair`.
@@ -249,7 +249,7 @@ class BarrelFOV(FOV):
                 `(ratio, dratio_dr)`; otherwise, only `ratio` is returned.
 
         Returns:
-            Scalar or tuple: Either `ratio` or `(ratio, dratio_dr)`, depending on the
+            Scalar | tuple: Either `ratio` or `(ratio, dratio_dr)`, depending on the
             input value of `d_dr`.
 
             * `ratio` (Scalar): The value of ``polynomial(r) / r``.

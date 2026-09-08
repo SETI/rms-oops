@@ -3,15 +3,14 @@
 ##########################################################################################
 """Type stub for :mod:`oops.cadence`.
 
-The `src` tree carries no inline annotations, so type information for public symbols is
-published here instead. Only package stubs exist, so a name is annotated when it is
-imported from the package that exports it and not when it is imported from the module
-that defines it. The stub describes the shape of the API exactly: every public name, its
-parameters, which of them are keyword-only, and which have defaults. Types are given
-where they are unambiguous and are `Any` elsewhere.
+The source types its methods in their docstrings rather than in their signatures, so the
+type information for public symbols is published here instead. Only package stubs exist,
+so a name is annotated when it is imported from the package that exports it and not when
+it is imported from the module that defines it. The stub describes the shape of the API
+exactly: every public name, its parameters, which of them are keyword-only, and which have
+defaults. Types are given where they are unambiguous and are `Any` elsewhere.
 """
 
-from typing import Any
 from oops.frame import FrameShift as FrameShift
 from oops.path import PathShift as PathShift
 from numpy import ndarray
@@ -43,14 +42,14 @@ class Cadence(Mutable):
         remask: bool = False) -> Scalar | Pair: ...
 
 class DualCadence(Cadence):
-    shape: Any
-    time: Any
-    midtime: Any
-    lasttime: Any
-    is_continuous: Any
-    is_unique: Any
-    min_tstride: Any
-    max_tstride: Any
+    shape: tuple[int, ...]
+    time: tuple[float, float]
+    midtime: float
+    lasttime: float
+    is_continuous: bool
+    is_unique: bool
+    min_tstride: float
+    max_tstride: float
     def __init__(self, long: Cadence, short: Cadence) -> None: ...
     def time_at_tstep(self,  # type: ignore[override]
         tstep: PairLike, *, remask: bool = False, derivs: bool = False,
@@ -71,14 +70,14 @@ class DualCadence(Cadence):
         interline_delay: float | None = None) -> DualCadence: ...
 
 class Instant(Cadence):
-    shape: Any
-    time: Any
-    midtime: Any
-    lasttime: Any
+    shape: tuple[int, ...]
+    time: tuple[float, float]
+    midtime: float
+    lasttime: float
     is_continuous: bool
-    is_unique: Any
-    min_tstride: Any
-    max_tstride: Any
+    is_unique: bool
+    min_tstride: float
+    max_tstride: float
     def __init__(self, tdb: ScalarLike) -> None: ...
     def time_at_tstep(self, tstep: ScalarLike | PairLike, *, remask: bool = False,
         derivs: bool = False, inclusive: bool = True) -> Scalar: ...
@@ -93,14 +92,14 @@ class Instant(Cadence):
     def as_continuous(self) -> Instant: ...
 
 class Metronome(Cadence):
-    lasttime: Any
-    time: Any
-    midtime: Any
-    shape: Any
-    is_continuous: Any
-    is_unique: Any
-    min_tstride: Any
-    max_tstride: Any
+    lasttime: float
+    time: tuple[float, float]
+    midtime: float
+    shape: tuple[int, ...]
+    is_continuous: bool
+    is_unique: bool
+    min_tstride: float
+    max_tstride: float
     def __init__(self, tstart: float, tstride: float, texp: float, steps: int, *,
         clip: bool = True) -> None: ...
     def time_at_tstep(self,
@@ -123,15 +122,15 @@ class Metronome(Cadence):
         interstep_delay: float = 0.0) -> Metronome: ...
 
 class ReshapedCadence(Cadence):
-    shape: Any
-    time: Any
-    midtime: Any
-    lasttime: Any
-    is_continuous: Any
-    is_unique: Any
-    min_tstride: Any
-    max_tstride: Any
-    def __init__(self, cadence: Cadence, shape: tuple) -> None: ...
+    shape: tuple[int, ...]
+    time: tuple[float, float]
+    midtime: float
+    lasttime: float
+    is_continuous: bool
+    is_unique: bool
+    min_tstride: float
+    max_tstride: float
+    def __init__(self, cadence: Cadence, shape: tuple[int, ...]) -> None: ...
     def time_at_tstep(self, tstep: ScalarLike | PairLike, *, remask: bool = False,
         derivs: bool = False, inclusive: bool = True) -> Scalar: ...
     def time_range_at_tstep(self, tstep: ScalarLike | PairLike, *, remask: bool = False,
@@ -145,14 +144,14 @@ class ReshapedCadence(Cadence):
     def as_continuous(self) -> ReshapedCadence: ...
 
 class ReversedCadence(Cadence):
-    shape: Any
-    lasttime: Any
-    time: Any
-    midtime: Any
-    is_continuous: Any
-    is_unique: Any
-    min_tstride: Any
-    max_tstride: Any
+    shape: tuple[int, ...]
+    lasttime: float
+    time: tuple[float, float]
+    midtime: float
+    is_continuous: bool
+    is_unique: bool
+    min_tstride: float
+    max_tstride: float
     def __init__(self, cadence: Cadence, axis: int = 0) -> None: ...
     def time_at_tstep(self,
         tstep: ScalarLike, *, remask: bool = False, derivs: bool = False,
@@ -169,14 +168,14 @@ class ReversedCadence(Cadence):
     def as_continuous(self) -> ReversedCadence: ...
 
 class Sequence(Cadence):
-    min_tstride: Any
-    max_tstride: Any
-    is_continuous: Any
-    is_unique: Any
-    lasttime: Any
-    time: Any
-    midtime: Any
-    shape: Any
+    min_tstride: float
+    max_tstride: float
+    is_continuous: bool
+    is_unique: bool
+    lasttime: float
+    time: tuple[float, float]
+    midtime: float
+    shape: tuple[int, ...]
     def __init__(self, tlist: ScalarLike,
         texp: float | list | ndarray) -> None: ...
     def time_at_tstep(self,
@@ -197,14 +196,14 @@ class SnapCadence(Metronome):
     def __init__(self, tstart: float, texp: float, *, clip: bool = True) -> None: ...
 
 class TDICadence(Cadence):
-    time: Any
-    midtime: Any
-    lasttime: Any
-    shape: Any
+    time: tuple[float, float]
+    midtime: float
+    lasttime: float
+    shape: tuple[int, ...]
     is_continuous: bool
-    is_unique: Any
+    is_unique: bool
     min_tstride: float
-    max_tstride: Any
+    max_tstride: float
     def __init__(self, lines: int, tstart: float, tdi_texp: float, tdi_stages: int,
         tdi_sign: int = -1) -> None: ...
     def tdi_shifts_at_line(self, line: ScalarLike, *, remask: bool = False,
@@ -226,21 +225,21 @@ class TDICadence(Cadence):
     def as_continuous(self) -> TDICadence: ...
 
 class TimeShift(Cadence, Fittable):
-    shape: Any
-    is_continuous: Any
-    is_unique: Any
-    min_tstride: Any
-    max_tstride: Any
+    shape: tuple[int, ...]
+    is_continuous: bool
+    is_unique: bool
+    min_tstride: float
+    max_tstride: float
     def __init__(self, arg: float | TimeShift | FrameShift | PathShift, /,
         cadence: Cadence) -> None: ...
     @property
-    def dt(self) -> Any: ...
+    def dt(self) -> float: ...
     @property
-    def link(self) -> Any: ...
+    def link(self) -> TimeShift | FrameShift | PathShift | None: ...
     nparams: int
     is_initialize: bool
     @property
-    def params(self) -> Any: ...
+    def params(self) -> tuple[float]: ...
     def time_at_tstep(self, tstep: ScalarLike | PairLike, *, remask: bool = False,
         derivs: bool = False, inclusive: bool = True) -> Scalar: ...
     def time_range_at_tstep(self, tstep: ScalarLike | PairLike, *, remask: bool = False,

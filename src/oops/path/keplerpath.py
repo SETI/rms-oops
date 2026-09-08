@@ -45,11 +45,11 @@ class KeplerPath(Path, Fittable):
         """Constructor for a KeplerPath.
 
         Parameters:
-            body (Body or str): The Body object or name of the central planet, including
+            body (Body | str): The Body object or name of the central planet, including
                 its gravity and its ring_frame.
             epoch (float): The time TDB relative to which all orbital elements are
                 defined.
-            elements (array-like or dict, optional): The orbital elements and wobble
+            elements (array-like | dict, optional): The orbital elements and wobble
                 terms. If an array-like object is provided, this is the order of the
                 elements:
 
@@ -77,14 +77,14 @@ class KeplerPath(Path, Fittable):
                 "amp", "phase0", and "dphase_dt" (in which case only one wobble term is
                 allowed). If the elements are not provided, the object remains
                 uninitialized until `set_elements` is called.
-            observer (Path or str, optional): The Path or the ID of the Path of the
+            observer (Path | str, optional): The Path or the ID of the Path of the
                 observer.
                 If provided, then `event_at_time` returns positions relative to this
                 observer in J2000 coordinates and with light travel time already accounted
                 for; this makes it easy to use this Path object for astrometry and orbit
                 fitting. If not provided, `event_at_time` returns positions relative to
                 the planet center and in the planet's `ring_frame`.
-            wobbles (str or tuple, optional): The name(s) of each wobble element:
+            wobbles (str | tuple, optional): The name(s) of each wobble element:
 
                 * "a": semimajor axis.
                 * "e": eccentricity.
@@ -168,6 +168,13 @@ class KeplerPath(Path, Fittable):
         self.refresh()
 
     def _waypoint_key(self):
+        """The key identifying this Path's waypoint, from the attributes that define it.
+
+        Returns:
+            tuple[Body, float, numpy.ndarray, Path | None, tuple[str, ...]]: The planet,
+            epoch, elements, observer, and wobble names.
+        """
+
         return (self._planet, self._epoch, self._elements, self._observer,
                 self._wobbles)
 
@@ -225,10 +232,25 @@ class KeplerPath(Path, Fittable):
             self._dphase_dt = 0.
 
     def get_elements(self):
-        """The orbital elements and wobble terms of this KeplerPath as an array."""
+        """The orbital elements and wobble terms of this KeplerPath as an array.
+
+        Returns:
+            numpy.ndarray: The elements, in the order given to :meth:`set_elements`.
+        """
         return self._elements
 
     def _show(self, level, indent=0):
+        """The expanded description of this Path used by :meth:`~oops.Path.show`.
+
+        Parameters:
+            level (int): The number of levels of the Path's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Path.
+        """
+
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -248,18 +270,25 @@ class KeplerPath(Path, Fittable):
     ######################################################################################
 
     def _set_params(self, params):
-        """Re-define the orbital elements of this KeplerPath."""
+        """Re-define the orbital elements of this KeplerPath.
+
+        Parameters:
+            params (tuple[float, ...]): The new orbital elements and wobble terms, in the
+                order given to :meth:`set_elements`.
+        """
         self._elements = params
 
     @property
-    def params(self):
+    def params(self) -> tuple[float, ...]:
         """The fittable parameters of this KeplerPath as a tuple of orbital elements."""
         return tuple(self._elements)
 
     def _refresh(self):
+        """Recompute the derived orbital quantities from the current elements."""
         self.set_elements(self._elements)
 
     def _freeze(self):
+        """Pool this Path's waypoint now that its elements are frozen."""
         self._reregister()
 
     ######################################################################################
@@ -751,7 +780,7 @@ class KeplerPath(Path, Fittable):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -788,6 +817,35 @@ class KeplerPath(Path, Fittable):
 
     def _photon_from_planet(self, time, *, derivs=False, guess=None, antimask=None,
                             quick=None, converge=None):
+        """The photon departure event from the planet center to reach the observer.
+
+        The result for a single time is cached, so later calls at the same time return the
+        same Events.
+
+        Parameters:
+            time (ScalarLike): The time of the photon's arrival at the observer, in
+                seconds TDB.
+            derivs (bool, optional): True to propagate derivatives into the returned
+                Events. The time derivative is always retained.
+            guess (ScalarLike, optional): An initial guess to use as the event time at the
+                planet; otherwise None.
+            antimask (MaskType, optional): A boolean array to be applied to event times
+                and positions. Only the indices where antimask=True will be used in the
+                solution.
+            quick (dict | bool, optional): A dictionary of parameter values to use as
+                overrides to the configured default :class:`~oops.path.QuickPath` and
+                :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
+                of QuickPaths and QuickFrames. The default quick dictionary is defined in
+                config.py.
+            converge (dict, optional): A dictionary of parameters to override the
+                configured default convergence parameters; see
+                :meth:`~oops.Path.photon_to_event`.
+
+        Returns:
+            tuple[Event, Event]: `(planet_event, obs_event)`, the departure Event at the
+            planet center and the arrival Event at the observer, as returned by
+            :meth:`~oops.Path.photon_to_event`.
+        """
 
         # Check the cache for the planet event
         events = self._events[time]
@@ -861,10 +919,10 @@ class KeplerPath(Path, Fittable):
             guess (ScalarLike, optional): An initial guess to use as the event time along
                 this Path; otherwise None. Should be provided if the event time was
                 already returned from a similar calculation.
-            antimask (numpy.ndarray or bool, optional): A boolean array to be applied to
+            antimask (numpy.ndarray | bool, optional): A boolean array to be applied to
                 event times and positions. Only the indices where antimask=True will be
                 used in the solution.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -887,13 +945,13 @@ class KeplerPath(Path, Fittable):
                 with respect to the orbital elements.
 
         Returns:
-            tuple: `(path_event, arrival_event)`:
+            tuple[Event, Event]: `(path_event, arrival_event)`:
 
-            * `path_event` (Event): The Event on this Path that matches the light travel
-              time to `arrival`. This always has position (0,0,0) on the Path, and it
-              holds the departing photon's line of sight and light travel time.
-            * `arrival_event` (Event): A copy of `arrival`, with the photon's arriving
-              line of sight and light travel time filled in.
+            * `path_event`: The Event on this Path that matches the light travel time to
+              `arrival`. This always has position (0,0,0) on the Path, and it holds the
+              departing photon's line of sight and light travel time.
+            * `arrival_event`: A copy of `arrival`, with the photon's arriving line of
+              sight and light travel time filled in.
 
         Notes:
             These subfields are defined in the returned Events:

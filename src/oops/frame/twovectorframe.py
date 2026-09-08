@@ -21,14 +21,14 @@ class TwoVectorFrame(Frame):
         """Constructor for a TwoVectorFrame.
 
         Parameters:
-            reference (Frame or str): The Frame or the ID of the Frame relative to which
+            reference (Frame | str): The Frame or the ID of the Frame relative to which
                 this Frame is defined.
             vector1 (Vector3Like): A vector describing an axis.
-            axis1 (int or str): The axis defined by the first vector: 0, "x", or "X" for
+            axis1 (int | str): The axis defined by the first vector: 0, "x", or "X" for
                 *x*; 1, "y", or "Y" for *y*; 2, "z", or "Z" for *z*.
             vector2 (Vector3Like): A vector which, along with `vector1`, defines the
                 half-plane in which a second axis falls.
-            axis2 (int or str): The axis defined by the second vector: 0, "x", or "X" for
+            axis2 (int | str): The axis defined by the second vector: 0, "x", or "X" for
                 *x*; 1, "y", or "Y" for *y*; 2, "z", or "Z" for *z*.
             frame_id (str, optional): The ID under which to register this Frame; None to
                 leave this Frame unregistered.
@@ -54,6 +54,7 @@ class TwoVectorFrame(Frame):
         self.refresh()
 
     def _refresh(self):
+        """Rebuild the Transform and the ascending node from the two vectors."""
         matrix = Matrix3.twovec(self._vector1, self._axis1, self._vector2, self._axis2)
         self._transform = Transform(matrix, Vector3.ZERO, self, self._reference)
         z_axis = matrix.row_vector(2, classes=[Vector3])
@@ -61,9 +62,25 @@ class TwoVectorFrame(Frame):
         self._node = (y.arctan2(x) + Scalar.HALFPI) % Scalar.TWOPI
 
     def _wayframe_key(self):
+        """The key that identifies this Frame's definition in the pool of wayframes.
+
+        Returns:
+            tuple[Frame, Vector3, int, Vector3, int]: The reference Frame, the first
+            vector and its axis, and the second vector and its axis.
+        """
         return (self._reference, self._vector1, self._axis1, self._vector2, self._axis2)
 
     def _show(self, level, indent=0):
+        """The expanded description of this Frame used by :meth:`~oops.Frame.show`.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame.
+        """
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -98,7 +115,7 @@ class TwoVectorFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): Ignored by class TwoVectorFrame.
+            quick (dict | bool, optional): Ignored by class TwoVectorFrame.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the
@@ -122,7 +139,7 @@ class TwoVectorFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): Ignored by class TwoVectorFrame.
+            quick (dict | bool, optional): Ignored by class TwoVectorFrame.
 
         Returns:
             Scalar: At the specified times, the angle from the reference Frame's *x*-axis,

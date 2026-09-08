@@ -24,9 +24,9 @@ class NullSurface(Surface):
         """Constructor for a NullSurface surface.
 
         Parameters:
-            origin (Path or str): The Path or the ID of the Path defining the motion of
+            origin (Path | str): The Path or the ID of the Path defining the motion of
                 the center of the ring plane.
-            frame (Frame or str): The Frame or the ID of the Frame in which this
+            frame (Frame | str): The Frame or the ID of the Frame in which this
                 Surface's "normal" is defined by the *z*-axis.
         """
 
@@ -105,7 +105,7 @@ class NullSurface(Surface):
                 its value is appended to the returned tuple.
 
         Returns:
-            Vector3 or tuple[Vector3, Any]: Points defined by the coordinates, relative to
+            Vector3 | tuple[Vector3, Any]: Points defined by the coordinates, relative to
             this Surface's origin and frame, optionally followed by `hints`. The input
             value of `hints` is returned if it is not None.
         """
@@ -193,7 +193,7 @@ class NullSurface(Surface):
                 its value is appended to the returned tuple.
 
         Returns:
-            Vector3 or tuple[Vector3, Any]: Directions normal to the Surface that pass
+            Vector3 | tuple[Vector3, Any]: Directions normal to the Surface that pass
             through the position, optionally followed by `hints`. Vector lengths are
             arbitrary, and the input value of `hints` is returned if it is not None.
         """

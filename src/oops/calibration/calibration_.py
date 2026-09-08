@@ -17,10 +17,10 @@ class Calibration(Oops):
         baseline (Scalar): An offset value subtracted from each DN before the factor is
             applied.
         has_baseline (bool): True if this object has a non-zero baseline.
-        shape (tuple): The broadcasted shape of the factor and the baseline. When
-            applying the Calibration to a data object, the data object, excluding spatial
-            indices, must be broadcastable to this shape.
-        fov (FOV or None): The FOV object to which this calibration refers; None if the
+        shape (tuple[int, ...]): The broadcasted shape of the factor and the baseline.
+            When applying the Calibration to a data object, the data object, excluding
+            spatial indices, must be broadcastable to this shape.
+        fov (FOV | None): The FOV object to which this calibration refers; None if the
             object does not require an FOV.
     """
 

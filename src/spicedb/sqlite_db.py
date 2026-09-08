@@ -12,7 +12,7 @@ def open(filepath):
     """Opens the database.
 
     Parameters:
-        filepath (str or FCPath): The file path and name of the database file.
+        filepath (str | pathlib.Path): The file path and name of the database file.
     """
 
     global CONNECTION, CURSOR
@@ -36,10 +36,11 @@ def query(sql_string):
         sql_string (str): A string containing the complete SQL query.
 
     Returns:
-        tuple: A tuple, where:
+        list[list]: The rows of results returned by the query, each a list of the column
+        values.
 
-        * `table` (list): A list of lists containing the rows and columns of results
-          returned by the query.
+    Raises:
+        RuntimeError: If the database is not open.
     """
 
     if CURSOR is None:

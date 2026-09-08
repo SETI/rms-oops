@@ -36,12 +36,13 @@ def radec_from_uv(u, v, header):
     """The right ascension and declination at FITS pixel coordinates `(u,v)`.
 
     Parameters:
-        u (float or numpy.ndarray): The FITS horizontal pixel coordinate.
-        v (float or numpy.ndarray): The FITS vertical pixel coordinate.
+        u (float | numpy.ndarray): The FITS horizontal pixel coordinate.
+        v (float | numpy.ndarray): The FITS vertical pixel coordinate.
         header (dict): The FITS header, which provides the WCS parameters.
 
     Returns:
-        tuple: The right ascension and declination in degrees.
+        tuple[float | numpy.ndarray, float | numpy.ndarray]: The right ascension and
+        declination in degrees.
     """
 
     dx = u - header['CRPIX1']
@@ -70,12 +71,13 @@ def uv_from_radec(ra, dec, header):
     """The FITS pixel coordinates `(u,v)` at a right ascension and declination.
 
     Parameters:
-        ra (float or numpy.ndarray): The right ascension in degrees.
-        dec (float or numpy.ndarray): The declination in degrees.
+        ra (float | numpy.ndarray): The right ascension in degrees.
+        dec (float | numpy.ndarray): The declination in degrees.
         header (dict): The FITS header, which provides the WCS parameters.
 
     Returns:
-        tuple: The FITS horizontal and vertical pixel coordinates.
+        tuple[float | numpy.ndarray, float | numpy.ndarray]: The FITS horizontal and
+        vertical pixel coordinates.
     """
 
     dra = ra - header['CRVAL1']
@@ -118,8 +120,8 @@ def to_xms(x):
         x (float): The value to convert.
 
     Returns:
-        tuple: The whole units, whole minutes, and remaining seconds. The sign is carried
-        by the first item.
+        tuple[int, int, float]: The whole units, whole minutes, and remaining seconds. The
+        sign is carried by the first item.
     """
 
     if x < 0.:
@@ -156,6 +158,7 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
     the Sun to the target body (in AU) for calibration purposes.
 
     Parameters:
+        filespec (str | pathlib.Path | FCPath): Path to the FITS file.
         geom (str, optional): 'spice' to use a SPICE SPK for the geometry; 'fits' to read
             the geoemtry info from the header.
         pointing (str, optional): 'spice' to use a SPICE CK for the pointing; 'fits' to
@@ -167,6 +170,25 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         fov_type (str, optional): 'fast' to use a separate numerically inverted polynomial
             FOV for camera distortion; 'slow' to invert the polynomial FOV using Newton's
             method; 'flat' to use a flat FOV model.
+        asof (str, optional): Only use SPICE kernels that existed before this date; None
+            to ignore.
+        meta (str, optional): The name of a metakernel to furnish instead of the kernels
+            selected from the database.
+        **parameters (Any): The loader options. The recognized keys are "data",
+            "calibration", "headers" and "astrometry", described above, plus
+            "solar_range" and "calib_body", the name of the body whose spectrum is used
+            for calibration.
+
+    Returns:
+        Snapshot: The observation, with subfields `filespec`, `basename`,
+        `spice_to_frame`, `spice_frame_name`, `spice_frame_id`, `abspath` and `image_url`
+        inserted, plus `data`, `error` and `quality` when the data is loaded and
+        `headers` when the headers are loaded.
+
+    Raises:
+        ValueError: If the binning mode of the image is not recognized.
+        IOError: If the calibration requires the solar range and it cannot be
+            determined.
     """
 
     assert geom in {'spice', 'fits'}
@@ -382,9 +404,20 @@ def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
     """A list of Snapshot objects, one for each row in a supplemental index file.
 
     Parameters:
+        filespec (str | pathlib.Path | FCPath): Path to the index file or its PDS3 label.
         fov_type (str, optional): 'fast' to use a separate numerically inverted polynomial
             FOV for camera distortion; 'slow' to invert the polynomial FOV using Newton's
             method; 'flat' to use a flat FOV model.
+        asof (str, optional): Only use SPICE kernels that existed before this date; None
+            to ignore.
+        meta (str, optional): The name of a metakernel to furnish instead of the kernels
+            selected from the database.
+        **parameters (Any): Accepted and ignored.
+
+    Returns:
+        list[Snapshot]: One observation per row of the index, each with subfields
+        `filespec`, `basename`, `spice_to_frame`, `spice_frame_name` and
+        `spice_frame_id` inserted.
     """
 
     LORRI.initialize(asof=asof, meta=meta)
@@ -485,7 +518,16 @@ class LORRI(object):
 
     @staticmethod
     def initialize(asof=None, time=None, meta=None):
-        """Fill in key information about LORRI. Must be called first."""
+        """Fill in key information about LORRI. Must be called first.
+
+        Parameters:
+            asof (str, optional): Only use SPICE kernels that existed before this date;
+                None to ignore.
+            time (list, optional): The time limits as a pair of date strings; None to use
+                the mission duration.
+            meta (str, optional): The name of a metakernel to furnish instead of the
+                kernels selected from the database.
+        """
 
         # Update kernels if necessary
         NewHorizons.initialize(asof=asof, time=time, meta=meta)

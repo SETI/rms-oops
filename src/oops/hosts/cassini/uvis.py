@@ -24,14 +24,24 @@ def from_file(filespec, data=True, enclose=False, method='strict', **parameters)
     """One or more Observations based on the label of a Cassini UVIS file.
 
     Parameters:
-        filespec (str or FCPath): The full path to the PDS label of a UVIS data file.
+        filespec (str | pathlib.Path | FCPath): The full path to the PDS label of a UVIS
+            data file.
         data (bool, optional): True to include the data array.
         enclose (bool, optional): True to return a single observation, regardless of how
             many windows are defined. If multiple windows are used, then the observation
             (and the optional data array) are are defined by the enclosing limits in line
             and band, and the binning is assumed to be 1. If False and multiple windows
             are used, the function returns a tuple of observations rather than a single
-            observation. method:         Label reading method to be passed to Pds3Label.
+            observation.
+        method (str, optional): Label reading method to be passed to Pds3Label.
+        **parameters (Any): Additional keyword arguments; they are accepted and ignored.
+
+    Returns:
+        Observation | tuple[Observation, ...]: A :class:`~oops.observation.Pixel` for a
+        SPECTRUM, a TIME_SERIES, or a one-line QUBE, or a
+        :class:`~oops.observation.TimedImage` for a multi-line QUBE. A QUBE with multiple
+        windows returns a tuple of observations, one per window, unless `enclose` is
+        True.
     """
 
     UVIS.initialize()   # Define everything the first time through; use defaults unless
@@ -55,7 +65,23 @@ def from_file(filespec, data=True, enclose=False, method='strict', **parameters)
         return get_spectrum(filespec, tstart, label, data)
 
 def get_qube(filespec, tstart, label, data, enclose):
-    """The observation object given that it is a QUBE."""
+    """The observation object given that it is a QUBE.
+
+    Parameters:
+        filespec (str | pathlib.Path | FCPath): The full path to the PDS label.
+        tstart (float): The start time of the observation in seconds TDB.
+        label (dict): The PDS label as a dictionary.
+        data (bool): True to include the data array.
+        enclose (bool): True to combine multiple windows into a single observation
+            defined by their enclosing limits in line and band; False to return one
+            observation per window.
+
+    Returns:
+        Observation | tuple[Observation, ...]: A :class:`~oops.observation.Pixel` for a
+        one-line QUBE or a :class:`~oops.observation.TimedImage` otherwise; a tuple of
+        observations, one per window, if multiple windows are defined and `enclose` is
+        False.
+    """
 
     global DEBUG
 
@@ -167,7 +193,37 @@ def get_one_qube(label, detector, resolution,
                  lines, line0, line1, line_bin,
                  bands, band0, band1, band_bin,
                  rebin):
-    """A single Observation object for the identified window of the UVIS qube."""
+    """A single Observation object for the identified window of the UVIS qube.
+
+    Parameters:
+        label (dict): The PDS label as a dictionary.
+        detector (str): The detector name, 'EUV' or 'FUV'.
+        resolution (str): The slit state, which defines the spatial resolution.
+        fov (FOV): The full field of view of the detector.
+        cadence (Cadence): The cadence of the samples.
+        frame_id (str): The ID of the instrument frame.
+        shape (tuple[int, ...]): The shape of the full observation, (lines, samples,
+            bands) or (samples, bands) for a one-line qube.
+        array (numpy.ndarray | None): The full data array, or None if the data are not
+            loaded.
+        samples (int): The number of samples along the time axis.
+        lines (int): The number of lines in the full qube.
+        line0 (int): The first line of the window.
+        line1 (int): One past the last line of the window.
+        line_bin (int): The binning factor along the line axis.
+        bands (int): The number of bands in the full qube.
+        band0 (int): The first band of the window.
+        band1 (int): One past the last band of the window.
+        band_bin (int): The binning factor along the band axis.
+        rebin (bool): True to apply the binning factors to the field of view, the shape
+            and the data array; False to ignore them.
+
+    Returns:
+        Observation: A :class:`~oops.observation.Pixel` for a one-line qube or a
+        :class:`~oops.observation.TimedImage` otherwise, with subfields `dict`,
+        `instrument`, `detector`, `sampling`, `product_type`, `line_window`, `line_bin`,
+        `band_window`, `band_bin`, `samples` and, if the data are loaded, `data`.
+    """
 
     global DEBUG
 
@@ -244,7 +300,22 @@ def get_one_qube(label, detector, resolution,
     return obs
 
 def get_time_series(filespec, tstart, label, data):
-    """The observation object given that it is a TIME_SERIES."""
+    """The observation object given that it is a TIME_SERIES.
+
+    Parameters:
+        filespec (str | pathlib.Path | FCPath): The full path to the PDS label.
+        tstart (float): The start time of the observation in seconds TDB.
+        label (dict): The PDS label as a dictionary.
+        data (bool): True to include the data array.
+
+    Returns:
+        Pixel: The observation, with subfields `dict`, `instrument`, `detector`,
+        `product_type`, `line_window`, `line_bin`, `band_window`, `band_bin`, `samples`
+        and, if the data are loaded, `data`.
+
+    Raises:
+        ValueError: If the product is neither HSP nor HDAC.
+    """
 
     # Determine the detector
     product_id = label['PRODUCT_ID']
@@ -302,7 +373,19 @@ def get_time_series(filespec, tstart, label, data):
     return obs
 
 def get_spectrum(filespec, tstart, label, data):
-    """The observation object given that it is a SPECTRUM."""
+    """The observation object given that it is a SPECTRUM.
+
+    Parameters:
+        filespec (str | pathlib.Path | FCPath): The full path to the PDS label.
+        tstart (float): The start time of the observation in seconds TDB.
+        label (dict): The PDS label as a dictionary.
+        data (bool): True to include the data array.
+
+    Returns:
+        Pixel: The observation, with subfields `dict`, `instrument`, `detector`,
+        `sampling`, `product_type`, `line_window`, `line_bin`, `band_window`,
+        `band_bin`, `samples` and, if the data are loaded, `data`.
+    """
 
     # Determine the detector
     detector = label['PRODUCT_ID'][:3]
@@ -369,7 +452,7 @@ def load_data(filespec, body, dtype):
     """The contents of a UVIS data file as a NumPy array.
 
     Parameters:
-        filespec (str, Path, or FCPath): Path to the label file.
+        filespec (str | pathlib.Path | FCPath): Path to the label file.
         body (str): Basename of the data file, as named in the label.
         dtype (numpy.dtype): The data type of the values in the file.
 
@@ -390,15 +473,21 @@ def load_data(filespec, body, dtype):
 def initialize(ck='reconstructed', planets=None, asof=None,
                spk='reconstructed', gapfill=True,
                mst_pck=True, irregulars=True):
-    """Initialize key information about the VIMS instrument.
+    """Initialize key information about the UVIS instrument.
 
     Must be called first. After the first call, later calls to this function are ignored.
 
     Parameters:
-        planets (list, optional): A list of planets to pass to define_solar_system. None
-            or 0 means all.
+        ck (str, optional): The set of C kernels to load, 'reconstructed' or 'predicted'
+            (case-insensitive); 'none' to load no C kernels automatically, leaving their
+            handling to the caller.
+        planets (list, optional): A list of planets to pass to
+            :meth:`~oops.Body.define_solar_system`. None or 0 means all.
         asof (str, optional): Only use SPICE kernels that existed before this date; None
             to ignore.
+        spk (str, optional): The set of SP kernels to load, 'reconstructed' or
+            'predicted' (case-insensitive); 'none' to load no SP kernels automatically,
+            leaving their handling to the caller.
         gapfill (bool, optional): True to include gapfill CKs. False otherwise.
         mst_pck (bool, optional): True to include MST PCKs, which update the rotation
             models for some of the small moons.
@@ -444,10 +533,16 @@ class UVIS(object):
         ignored.
 
         Parameters:
-            planets (list, optional): A list of planets to pass to define_solar_system.
-                None or 0 means all.
+            ck (str, optional): The set of C kernels to load, 'reconstructed' or
+                'predicted' (case-insensitive); 'none' to load no C kernels
+                automatically, leaving their handling to the caller.
+            planets (list, optional): A list of planets to pass to
+                :meth:`~oops.Body.define_solar_system`. None or 0 means all.
             asof (str, optional): Only use SPICE kernels that existed before this date;
                 None to ignore.
+            spk (str, optional): The set of SP kernels to load, 'reconstructed' or
+                'predicted' (case-insensitive); 'none' to load no SP kernels
+                automatically, leaving their handling to the caller.
             gapfill (bool, optional): True to include gapfill CKs. False otherwise.
             mst_pck (bool, optional): True to include MST PCKs, which update the rotation
                 models for some of the small moons.

@@ -25,7 +25,7 @@ class PoleFrame(Frame):
         """Constructor for a PoleFrame.
 
         Parameters:
-            frame (Frame or str): The Frame or the ID of the Frame describing the rotation
+            frame (Frame | str): The Frame or the ID of the Frame describing the rotation
                 of the central planet.
             pole (Vector3Like): The invariable pole of the system, around which the
                 planet's pole precesses.
@@ -79,13 +79,30 @@ class PoleFrame(Frame):
         self.refresh()
 
     def _refresh(self):
+        """Relink the planet Frame to J2000 and empty the cache."""
         self._planet_wrt_j2000 = self._planet_frame.wrt(Frame.J2000)
         self._cache = _Cache(self._cache_size)
 
     def _wayframe_key(self):
+        """The key that identifies this Frame's definition in the pool of wayframes.
+
+        Returns:
+            tuple[Frame, Vector3, bool, bool]: The planet Frame, the invariable pole, the
+            retrograde flag, and the aries flag.
+        """
         return (self._planet_frame, self._invariable_pole, self._retrograde, self._aries)
 
     def _show(self, level, indent=0):
+        """The expanded description of this Frame used by :meth:`~oops.Frame.show`.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame.
+        """
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -125,7 +142,7 @@ class PoleFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -197,7 +214,7 @@ class PoleFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 

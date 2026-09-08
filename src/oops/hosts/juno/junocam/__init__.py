@@ -23,17 +23,25 @@ RATIONALE_RE = re.compile(r' *INS-61504_DISTORTION_Y = ([\d\.]+)')
 
 def from_file(filespec, fast_distortion=True,
               return_all_planets=False, snap=False, method='strict', **parameters):
-    """A Pushframe based on a given JUNOCAM image file.
+    """A list of observations, one per framelet, based on a given JUNOCAM image file.
 
     Parameters:
-        filespec (str, Path, or FCPath): Path to input file.
-        fast_distortion (bool or None, optional): True to use a pre-inverted polynomial;
-            False to use a dynamically solved polynomial; None to use a FlatFOV.
+        filespec (str | pathlib.Path | FCPath): Path to input file.
+        fast_distortion (bool | None, optional): True to use a pre-inverted polynomial;
+            False to use a dynamically solved polynomial; None to use a
+            :class:`~oops.fov.FlatFOV`.
         return_all_planets (bool, optional): Include kernels for all planets not just
             Jupiter or Saturn.
-        snap (bool, optional): True to model the image as a Snapshot rather than as a
-            TimedImage.
+        snap (bool, optional): True to model each framelet as a
+            :class:`~oops.observation.Snapshot` rather than as a
+            :class:`~oops.observation.TimedImage`.
         method (str, optional): Label reading method to be passed to Pds3Label.
+        **parameters (Any): Additional keyword arguments; they are accepted and ignored.
+
+    Returns:
+        list[Observation]: One observation per framelet, a Snapshot if `snap` is True
+        and a TimedImage otherwise, each with subfields `filespec` and `basename`
+        inserted.
     """
     JUNOCAM.initialize()    # Define everything the first time through; use
                             # defaults unless initialize() is called explicitly.
@@ -102,16 +110,15 @@ def _load_data(filespec, label, meta):
     """Load the data array from the file and splits into individual framelets.
 
     Parameters:
-        filespec (str or FCPath): Full path to the data file.
-        label (str): Label for composite image.
-        meta (object): Image _Metadata object.
+        filespec (FCPath): Full path to the data file.
+        label (dict): Label for composite image.
+        meta (_Metadata): Image metadata object.
 
     Returns:
-        tuple: (framelets, framelet_labels), where:
+        tuple[numpy.ndarray, list[dict]]: (framelets, framelet_labels), where:
 
-        * `framelets` (numpy.ndarray): The individual frames in axis order (line,
-          sample, framelet #).
-        * `framelet_labels` (list): The label of each framelet.
+        * `framelets`: The individual frames in axis order (framelet #, line, sample).
+        * `framelet_labels`: The label of each framelet.
     """
 
     # Read data
@@ -270,12 +277,11 @@ class _Metadata(object):
 
         Parameters:
             label (dict): The label dictionary.
-            cy: Uncorrected cy value.
+            cy (float): Uncorrected cy value.
 
         Returns:
-            tuple: A tuple, where:
-
-            * `cy`: Corrected cy value.
+            float: The corrected cy value, or `cy` unchanged if the label carries no
+            correction.
         """
         match = RATIONALE_RE.match(label['RATIONALE_DESC'])
         if match:
@@ -284,7 +290,14 @@ class _Metadata(object):
 
 #*******************************************************************************
 class JUNOCAM(object):
-    """A instance-free class to hold JUNOCAM instrument parameters."""
+    """A instance-free class to hold JUNOCAM instrument parameters.
+
+    Attributes:
+        instrument_kernel (dict | None): The instrument kernel as a dictionary; not
+            loaded by this class.
+        fovs (dict): The fields of view keyed by detector; not filled in by this class.
+        initialized (bool): True after :meth:`initialize` has been called.
+    """
 
     instrument_kernel = None
     fovs = {}
@@ -301,8 +314,9 @@ class JUNOCAM(object):
 
         Parameters:
             asof (str, optional): Only use SPICE kernels that existed before this date;
-                None to ignore. kwargs:     Arguments for juno.initialize() and
-                Body.define_solar_system()
+                None to ignore.
+            **kwargs (Any): Arguments for :meth:`~oops.hosts.juno.Juno.initialize` and
+                :meth:`~oops.Body.define_solar_system`.
         """
 
         # Quick exit after first call

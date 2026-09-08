@@ -18,7 +18,7 @@ class _Cache(Oops):
     A KeyError is never raised.
 
     Dictionary keys can include mutable items, which are converted to immutable. The class
-    method `clean_key` performs this conversion.
+    method :meth:`clean_key` performs this conversion.
     """
 
     # These are filled in by oops/__init__.py to avoid circular imports
@@ -61,6 +61,15 @@ class _Cache(Oops):
         """
 
         def clean_item(item):
+            """An immutable version of one item of a key.
+
+            Parameters:
+                item (Any): The item to convert.
+
+            Returns:
+                Any: The immutable version of `item`, or `item` itself if it needs no
+                conversion.
+            """
             match item:
                 case Qube():
                     vals = tuple(item.vals.ravel()) if np.shape(item.vals) else item.vals

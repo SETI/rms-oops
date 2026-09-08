@@ -16,12 +16,24 @@ __all__ = ['from_file', 'JIRAM']
 # Standard class methods
 ##########################################################################################
 def from_file(filespec, return_all_planets=False, method='strict', **parameters):
-    """A Snapshot object based on a given JIRAM image or spectrum file.
+    """One or more observations based on a given JIRAM image or spectrum file.
 
     Parameters:
+        filespec (str | pathlib.Path | FCPath): The full path to a Juno JIRAM image
+            (.IMG) or spectrum (.DAT) file or its PDS label.
         return_all_planets (bool, optional): Include kernels for all planets not just
             Jupiter or Saturn.
         method (str, optional): Label reading method to be passed to Pds3Label.
+        **parameters (Any): Additional keyword arguments passed on to
+            :func:`~oops.hosts.juno.jiram.img.from_file` or
+            :func:`~oops.hosts.juno.jiram.spe.from_file`; `fast_distortion` (bool | None)
+            is the one they recognize.
+
+    Returns:
+        list[Snapshot] | tuple[Slit1D, list[Snapshot]] | None: For an image file, a
+        list of Snapshots, one per framelet; for a spectrum file, the Slit1D covering
+        all bands together with a list of Snapshots, one per band; None if the file
+        extension is neither .IMG nor .DAT.
     """
     JIRAM.initialize()    # Define everything the first time through; use
                           # defaults unless initialize() is called explicitly.
@@ -81,7 +93,14 @@ class _Metadata(object):
 
 #*******************************************************************************
 class JIRAM(object):
-    """A instance-free class to hold JIRAM instrument parameters."""
+    """A instance-free class to hold JIRAM instrument parameters.
+
+    Attributes:
+        instrument_kernel (dict | None): The instrument kernel as a dictionary; not
+            loaded by this class.
+        fovs (dict): The fields of view keyed by detector; not filled in by this class.
+        initialized (bool): True after :meth:`initialize` has been called.
+    """
 
     instrument_kernel = None
     fovs = {}
@@ -99,7 +118,7 @@ class JIRAM(object):
         Parameters:
             asof (str, optional): Only use SPICE kernels that existed before this date;
                 None to ignore.
-            **kwargs: Arguments for `juno.initialize()` and
+            **kwargs (Any): Arguments for :meth:`~oops.hosts.juno.Juno.initialize` and
                 :meth:`~oops.Body.define_solar_system`.
         """
 

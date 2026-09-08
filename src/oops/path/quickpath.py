@@ -74,6 +74,11 @@ class QuickPath(Path):
                 raise ValueError(f'precision failure: {error:.3f} > {precision}')
 
     def _refresh(self):
+        """Tabulate the emulated Path over the time range and rebuild the splines.
+
+        Raises:
+            ValueError: If the emulated Path returns a state independent of time.
+        """
 
         times = np.arange(self._tmin, self._tmax + self._tstep/2., self._tstep)
         self._steps = len(times)
@@ -117,6 +122,17 @@ class QuickPath(Path):
                                             self._events.vel.vals[:, 2], k=KIND)
 
     def _show(self, level, indent=0):
+        """The expanded description of this Path used by :meth:`~oops.Path.show`.
+
+        Parameters:
+            level (int): The number of levels of the Path's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Path.
+        """
+
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -151,7 +167,7 @@ class QuickPath(Path):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default QuickPath and QuickFrame parameters.
                 Use False to disable the use of QuickPaths and QuickFrames.
 
@@ -167,6 +183,19 @@ class QuickPath(Path):
         return Event(time, (pos, vel), self._origin, self._frame)
 
     def _interpolate_pos_vel(self, time, collapse_threshold=None):
+        """The interpolated position and velocity at the given time(s).
+
+        Parameters:
+            time (ScalarLike): The time(s) in seconds TDB.
+            collapse_threshold (float, optional): The span of `time`, in seconds, below
+                which linear interpolation between the end points replaces spline
+                evaluation; None to use the "quickpath_linear_interpolation_threshold"
+                entry of this QuickPath's dictionary.
+
+        Returns:
+            tuple[Vector3, Vector3]: `(pos, vel)`, the position and velocity, each with
+            the shape of `time` and masked where `time` is masked.
+        """
 
         if collapse_threshold is None:
             collapse_threshold = \
@@ -325,7 +354,7 @@ class QuickPath(Path):
             time (ScalarLike): The set of times at which the Path is to be evaluated. This
                 can simply be a tuple (`tmin`, `tmax`) defining the beginning and end
                 times.
-            quick (dict or bool, optional): If False, no QuickPath is created and `path`
+            quick (dict | bool, optional): If False, no QuickPath is created and `path`
                 is returned; if a dictionary, then the values provided override the values
                 in the default dictionary QUICK.dictionary, and the merged dictionary is
                 used.

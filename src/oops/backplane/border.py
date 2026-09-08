@@ -14,8 +14,11 @@ def border_above(self, backplane_key, value):
     These pixels are the inner edge of the region, not a ring of pixels around it.
 
     Parameters:
-        backplane_key (str or tuple): Key defining the backplane to evaluate.
+        backplane_key (str | tuple): Key defining the backplane to evaluate.
         value (ScalarLike): The value defining the border.
+
+    Returns:
+        Boolean: True at the pixels forming the border, registered as a backplane.
     """
 
     return self._border_above_or_below(+1, backplane_key, value)
@@ -27,8 +30,11 @@ def border_below(self, backplane_key, value):
     These pixels are the inner edge of the region, not a ring of pixels around it.
 
     Parameters:
-        backplane_key (str or tuple): Key defining the backplane to evaluate.
+        backplane_key (str | tuple): Key defining the backplane to evaluate.
         value (ScalarLike): The value defining the border.
+
+    Returns:
+        Boolean: True at the pixels forming the border, registered as a backplane.
     """
 
     return self._border_above_or_below(-1, backplane_key, value)
@@ -41,8 +47,11 @@ def border_atop(self, backplane_key, value):
     from below to above.
 
     Parameters:
-        backplane_key (str or tuple): Key defining the backplane to evaluate.
+        backplane_key (str | tuple): Key defining the backplane to evaluate.
         value (ScalarLike): The value defining the border.
+
+    Returns:
+        Boolean: True at the pixels forming the border, registered as a backplane.
     """
 
     self.refresh()
@@ -77,8 +86,11 @@ def _border_above_or_below(self, sign, backplane_key, value):
     Parameters:
         sign (int): +1 for the border of the region >= `value`; -1 for the border of the
             region <= `value`.
-        backplane_key (str or tuple): Key defining the backplane to evaluate.
+        backplane_key (str | tuple): Key defining the backplane to evaluate.
         value (ScalarLike): The value defining the border.
+
+    Returns:
+        Boolean: True at the pixels forming the border, registered as a backplane.
     """
 
     self.refresh()
@@ -112,7 +124,10 @@ def border_inside(self, backplane_key):
     """Defines the locus of True pixels adjacent to a region of False pixels.
 
     Parameters:
-        backplane_key (str or tuple): Key defining a boolean backplane.
+        backplane_key (str | tuple): Key defining a boolean backplane.
+
+    Returns:
+        Boolean: True at the pixels forming the border, registered as a backplane.
     """
 
     return self._border_outside_or_inside(backplane_key, is_inside=True)
@@ -122,7 +137,10 @@ def border_outside(self, backplane_key):
     """Defines the locus of False pixels adjacent to a region of True pixels.
 
     Parameters:
-        backplane_key (str or tuple): Key defining a boolean backplane.
+        backplane_key (str | tuple): Key defining a boolean backplane.
+
+    Returns:
+        Boolean: True at the pixels forming the border, registered as a backplane.
     """
 
     return self._border_outside_or_inside(backplane_key, is_inside=False)
@@ -136,10 +154,13 @@ def _border_outside_or_inside(self, backplane_key, is_inside=True):
     False pixels.
 
     Parameters:
-        backplane_key (str or tuple): Key defining a boolean backplane.
+        backplane_key (str | tuple): Key defining a boolean backplane.
         is_inside (bool, optional): True to identify the last True pixels adjacent to an
             area of False pixels; False to identify the first False pixels outside each
             area of True pixels.
+
+    Returns:
+        Boolean: True at the pixels forming the border, registered as a backplane.
 
     Raises:
         ValueError: If the given backplane is not boolean.

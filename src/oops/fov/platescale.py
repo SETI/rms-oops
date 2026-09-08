@@ -45,13 +45,21 @@ class Platescale(FOV, Fittable):
         self.uv_area = self.fov.uv_area * self.factor**2
 
     def _set_params(self, params):
-        """Redefine the scale factor of this Platescale FOV."""
+        """Redefine the scale factor of this Platescale FOV.
+
+        Parameters:
+            params (tuple[float]): The new scale factor as a tuple of one float.
+        """
 
         self.factor = params[0]
 
     @property
-    def params(self):
-        """The fitted parameters, the scale factor as a tuple of one float."""
+    def params(self) -> tuple[float]:
+        """The fitted parameters, the scale factor as a tuple of one float.
+
+        Returns:
+            tuple[float]: The scale factor.
+        """
 
         return (self.factor,)
 
@@ -81,8 +89,8 @@ class Platescale(FOV, Fittable):
                 into the returned *(x,y)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Pair: *(x,y)* coordinates in the FOV's frame.
@@ -102,8 +110,8 @@ class Platescale(FOV, Fittable):
                 into the returned *(u,v)* coordinates.
             remask (bool, optional): True to mask *(u,v)* coordinates outside the field of
                 view; False to leave them unmasked.
-            **kwargs: Additional parameters that might affect the transform can be
-                included as keyword arguments.
+            **kwargs (Any): Additional parameters that might affect the transform can
+                be included as keyword arguments.
 
         Returns:
             Pair: *(u,v)* pixel coordinates in the FOV.

@@ -13,12 +13,19 @@ def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
     """Gridless approximate apparent diameter of the body in pixels.
 
     Parameters:
-        event_key (str or tuple): Key defining the event on the body's path.
+        event_key (str | tuple): Key defining the event on the body's path.
         radius (float, optional): If nonzero, override the radius of the body referred
             to in the event key.
         axis (str, optional): "u"   : horizontal pixel direction. "v"   : vertical pixel
             direction. "min" : direction of smallest diameter. "max" : direction of
             largest diameter.
+
+    Returns:
+        Scalar: The apparent diameter in pixels, registered as a gridless backplane.
+
+    Raises:
+        NotImplementedError: If the observation does not support an inventory.
+        ValueError: If `axis` is not one of the values listed above.
     """
     if not self.obs._INVENTORY_IMPLEMENTED:
         raise NotImplementedError('body_diameter_in_pixels not defined for '
@@ -61,9 +68,16 @@ def center_coordinate(self, event_key, axis="u"):
     """Gridless coordinate of the center of the disk.
 
     Parameters:
-        event_key (str or tuple): Key defining the event on the body's path.
+        event_key (str | tuple): Key defining the event on the body's path.
         axis (str, optional): "u" (horizontal pixel direction) or "v" (vertical pixel
             direction).
+
+    Returns:
+        Scalar: The pixel coordinate of the body center along the given axis, registered
+        as a gridless backplane.
+
+    Raises:
+        ValueError: If `axis` is neither 'u' nor 'v'.
     """
     if axis not in {'u', 'v'}:
         raise ValueError('invalid axis: ' + repr(axis))

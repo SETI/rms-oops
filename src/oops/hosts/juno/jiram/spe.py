@@ -19,15 +19,26 @@ from filecache import FCPath
 ####       other host modules.
 def from_file(filespec, label, fast_distortion=True,
                                return_all_planets=False, **parameters):
-    """A Snapshot object based on a given JIRAM image or spectrum file.
+    """The observations based on a given JIRAM spectrum file.
 
     Parameters:
-        filespec (str, Path, or FCPath): The full path to a Juno JIRAM spectral file or
-            its PDS label.
-        fast_distortion (bool or None, optional): True to use a pre-inverted polynomial;
-            False to use a dynamically solved polynomial; None to use a FlatFOV.
+        filespec (str | pathlib.Path | FCPath): The full path to a Juno JIRAM spectral
+            file or its PDS label.
+        label (dict): The PDS label as a dictionary.
+        fast_distortion (bool | None, optional): True to use a pre-inverted polynomial;
+            False to use a dynamically solved polynomial; None to use a
+            :class:`~oops.fov.FlatFOV`.
         return_all_planets (bool, optional): Include kernels for all planets not just
             Jupiter or Saturn.
+        **parameters (Any): Additional keyword arguments; they are accepted and ignored.
+
+    Returns:
+        tuple[Slit1D, list[Snapshot]]: (obs, slits), where:
+
+        * `obs`: The Slit1D covering all bands.
+        * `slits`: One Snapshot per band.
+
+        Each observation has subfields `filespec` and `basename` inserted.
     """
 
     filespec = FCPath(filespec)
@@ -73,9 +84,9 @@ def _load_data(filespec, label, meta):
     """Load the data array from the file and splits into individual framelets.
 
     Parameters:
-        filespec (str or FCPath): Full path to the data file.
-        label (str): Label for composite image.
-        meta (object): Image Metadata object.
+        filespec (FCPath): Full path to the data file.
+        label (dict): Label for composite image.
+        meta (_Metadata): Image metadata object.
 
     Returns:
         numpy.ndarray: The individual spectra in wavelength order, with axes
@@ -145,7 +156,7 @@ class SPE(object):
 
     @staticmethod
     def initialize(time, asof=None, **kwargs):
-        """        Initialize key information about the SPE instrument.
+        """Initialize key information about the SPE instrument.
 
         Must be called first. After the first call, later calls to this function are
         ignored.
@@ -154,8 +165,9 @@ class SPE(object):
             time (ScalarLike): Time at which to define the inertialy fixed mirror-
                 corrected frame.
             asof (str, optional): Only use SPICE kernels that existed before this date;
-                None to ignore. kwargs:     Arguments for juno.initialize() and
-                Body.define_solar_system()
+                None to ignore.
+            **kwargs (Any): Arguments for :meth:`~oops.hosts.juno.Juno.initialize` and
+                :meth:`~oops.Body.define_solar_system`.
         """
 
         # Quick exit after first call

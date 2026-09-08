@@ -74,10 +74,13 @@ imports fail because these are unset, say so; do not report it as a code defect.
   to `.flake8`, because nothing there is ever selected.
 - `ruff format` is deliberately never run. Column-aligned assignments, imports,
   and trailing comments are the house style and the formatter would undo them.
-- mypy covers `tests/` only; `src` carries no annotations by house rule, so
-  checking it would report their absence rather than any defect. `mypy_path` does
-  not name `src`, so that run does not see the stubs either; pointing it there
-  reports the tests' use of private members, which the stubs do not publish.
+- mypy covers `tests/` only. Under `src`, the only inline annotations are the
+  return types of properties and setters (plus the signatures of `fittable.py`,
+  `mutable.py`, `frame_.py` and `event.py`); method parameter and return types
+  live in the docstrings, so checking `src` would report their absence rather
+  than any defect. `mypy_path` does not name `src`, so that run does not see the
+  stubs either; pointing it there reports the tests' use of private members,
+  which the stubs do not publish.
 - All three packages ship a PEP 561 `py.typed` marker, one per top-level package
   (`src/oops`, `src/spicedb`, `programs`); a marker at the package root covers the
   whole tree, so subpackages do not carry their own. The published type information
@@ -143,7 +146,17 @@ house style. Do not "fix" alignment or blank-line counts that flake8 passes.
   `surface_`, `fov_`, `observation_`, `cadence_`, `calibration_`, `gravity_`.
   Subclass modules are lowercase with no separators (`twovectorframe.py`).
 - Imports are absolute; `polymath` is grouped with the `oops` imports, not treated
-  as third-party. Type annotations appear only in `fittable.py` and `mutable.py`.
+  as third-party.
+- Every property getter is annotated `-> T` and every setter `-> None`; a name
+  not yet bound when the class body runs is quoted, and a class that cannot be
+  imported at run time without a cycle is imported under `TYPE_CHECKING`. Ordinary
+  methods and functions carry no signature annotations: every parameter and return
+  is typed in the docstring instead, `name (type): ...` under `Parameters:` and
+  `type: ...` under `Returns:`, with `A | B` for alternatives (never `A or B`),
+  `None` last, and containers parameterized where the content is known. A
+  method, function, class or attribute named in docstring prose takes a Sphinx
+  role (`:meth:`, `:func:`, `:class:`, `:attr:`) so that Napoleon links it;
+  bare backticks are for parameter names.
 - Every `__init__.py` declares its public API in `__all__`: the re-exported names
   for a package that only re-exports, the public classes and functions it defines
   otherwise. A module that exists only for its import side effects (`all.py`)

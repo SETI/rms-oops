@@ -20,15 +20,22 @@ from filecache import FCPath
 ####       other host modules.
 def from_file(filespec, label, fast_distortion=True,
                                return_all_planets=False, **parameters):
-    """A Snapshot object based on a given JIRAM image or spectrum file.
+    """A list of Snapshot objects based on a given JIRAM image file.
 
     Parameters:
-        filespec (str, Path, or FCPath): The full path to a Juno JIRAM image file or its
-            PDS label.
-        fast_distortion (bool or None, optional): True to use a pre-inverted polynomial;
-            False to use a dynamically solved polynomial; None to use a FlatFOV.
+        filespec (str | pathlib.Path | FCPath): The full path to a Juno JIRAM image file
+            or its PDS label.
+        label (dict): The PDS label as a dictionary.
+        fast_distortion (bool | None, optional): True to use a pre-inverted polynomial;
+            False to use a dynamically solved polynomial; None to use a
+            :class:`~oops.fov.FlatFOV`.
         return_all_planets (bool, optional): Include kernels for all planets not just
             Jupiter or Saturn.
+        **parameters (Any): Additional keyword arguments; they are accepted and ignored.
+
+    Returns:
+        list[Snapshot]: One Snapshot per framelet, each with subfields `filespec` and
+        `basename` inserted.
     """
 
     filespec = FCPath(filespec)
@@ -66,16 +73,15 @@ def _load_data(filespec, label, meta):
     """Load the data array from the file and splits into individual framelets.
 
     Parameters:
-        filespec (str or FCPath): Full path to the data file.
-        label (str): Label for composite image.
-        meta (object): Image Metadata object.
+        filespec (FCPath): Full path to the data file.
+        label (dict): Label for composite image.
+        meta (_Metadata): Image metadata object.
 
     Returns:
-        tuple: (framelets, framelet_labels), where:
+        tuple[numpy.ndarray, list[dict]]: (framelets, framelet_labels), where:
 
-        * `framelets` (numpy.ndarray): The individual frames in axis order (line,
-          sample, framelet #).
-        * `framelet_labels` (list): The label of each framelet.
+        * `framelets`: The individual frames in axis order (line, sample, framelet #).
+        * `framelet_labels`: The label of each framelet.
     """
 
     # Read data
@@ -217,8 +223,9 @@ class IMG(object):
             time (ScalarLike): Time at which to define the inertialy fixed mirror-
                 corrected frame.
             asof (str, optional): Only use SPICE kernels that existed before this date;
-                None to ignore. kwargs:     Arguments for juno.initialize() and
-                Body.define_solar_system()
+                None to ignore.
+            **kwargs (Any): Arguments for :meth:`~oops.hosts.juno.Juno.initialize` and
+                :meth:`~oops.Body.define_solar_system`.
         """
 
         # Quick exit after first call

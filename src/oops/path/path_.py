@@ -51,10 +51,10 @@ class Path(Mutable):
 
     Every Path also has a :attr:`~oops.Path.waypoint` property, which provides a unique
     identifier for that Path without regard to its origin or Frame. In the example above,
-    ``saturn`` and ``saturn_wrt_wac`` will have the same `waypoint`, meaning that they
-    define Events on the same path, albeit relative to different Paths and Frames. The
-    waypoint can be used in almost any place where the Path itself can be used, so this
-    would also have worked::
+    ``saturn`` and ``saturn_wrt_wac`` will have the same :attr:`waypoint`, meaning that
+    they define Events on the same path, albeit relative to different Paths and Frames.
+    The waypoint can be used in almost any place where the Path itself can be used, so
+    this would also have worked::
 
         saturn_wrt_wac = saturn.waypoint.wrt(cassini_wac.waypoint)
 
@@ -82,9 +82,9 @@ class Path(Mutable):
     "SATURN", then its ID will also be "SATURN".
 
     Attributes:
-        path_id (str or None): The optional ID string for this Path. Once registered, a
+        path_id (str | None): The optional ID string for this Path. Once registered, a
             Path can be referenced globally by its Path ID.
-        stripped_id (str or None): The Path ID with any numeric suffix stripped; None if
+        stripped_id (str | None): The Path ID with any numeric suffix stripped; None if
             this Path is not registered.
         string_id (str): The Path ID if this Path is registered; otherwise, a unique
             string derived from its Python ``id()``.
@@ -124,7 +124,7 @@ class Path(Mutable):
     ######################################################################################
 
     @property
-    def pickle_quickpath_details(self):
+    def pickle_quickpath_details(self) -> bool:
         """True if all QuickPath tabulations are included when pickling this Path.
         """
         if not hasattr(self, '_pickle_quickpath_details'):
@@ -132,13 +132,18 @@ class Path(Mutable):
         return self._pickle_quickpath_details
 
     @pickle_quickpath_details.setter
-    def pickle_quickpath_details(self, value):
+    def pickle_quickpath_details(self, value) -> None:
         """Set to True to include all QuickPath tabulations when pickling this Path.
         """
         self._pickle_quickpath_details = bool(value)
 
     def _get_quickpaths(self):
-        """The `_quickpaths` attribute if present and needed for pickling, else None."""
+        """The `_quickpaths` attribute if present and needed for pickling, else None.
+
+        Returns:
+            list[QuickPath] | None: The list of QuickPaths tabulated for this Path, if
+            there are any and :attr:`pickle_quickpath_details` is True; otherwise, None.
+        """
         if (self._pickle_quickpath_details and hasattr(self, '_quickpaths')
                 and self._quickpaths):
             return self._quickpaths
@@ -153,7 +158,7 @@ class Path(Mutable):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -222,32 +227,32 @@ class Path(Mutable):
         return self._show(level, indent)
 
     @property
-    def waypoint(self):
+    def waypoint(self) -> 'Path':
         """The canonical version of this Path, used as a global key for indexing."""
         return self._waypoint
 
     @property
-    def primary(self):
+    def primary(self) -> 'Path':
         """The primary definition of this Path."""
         return self._primary
 
     @property
-    def origin(self):
+    def origin(self) -> 'Path':
         """The origin Path relative to which this Path is defined."""
         return self._origin
 
     @property
-    def frame(self):
+    def frame(self) -> Frame:
         """The Frame relative to which this Path is defined."""
         return self._frame
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         """The shape of this Path as a tuple of integers."""
         return self._shape
 
     @property
-    def path_id(self):
+    def path_id(self) -> str | None:
         """The ID of this Path as a string if registered; otherwise, None."""
         if not hasattr(self, '_path_id'):   # occurs in errors during Path initialization
             self._path_id = None
@@ -256,7 +261,7 @@ class Path(Mutable):
     _PATH_ID_PATTERN = re.compile(r'(.*)-\d+$')
 
     @property
-    def stripped_id(self):
+    def stripped_id(self) -> str | None:
         """The Path ID with any numeric suffix stripped; None if there is no ID.
         """
         if not self._path_id:
@@ -267,13 +272,13 @@ class Path(Mutable):
         return self._path_id
 
     @property
-    def string_id(self):
-        """The ID of this Path if registered, or a string from its Python `id()`.
+    def string_id(self) -> str:
+        """The ID of this Path if registered, or a string from its Python :func:`id`.
         """
         return self._path_id if self._path_id else f'#{id(self)}'
 
     @property
-    def wrt_ssb(self):
+    def wrt_ssb(self) -> 'Path':
         """This Path with respect to the Solar System Barycenter and J2000."""
         if not hasattr(self, '_wrt_ssb') or self._wrt_ssb is None:
             self._wrt_ssb = self.wrt(Path.SSB)
@@ -281,7 +286,7 @@ class Path(Mutable):
         return self._wrt_ssb
 
     @property
-    def is_registered(self):
+    def is_registered(self) -> bool:
         """True if this Path is registered."""
         return bool(self._path_id)
 
@@ -405,7 +410,7 @@ class Path(Mutable):
         """The Path object given a path or its registered ID.
 
         Parameters:
-            path (Path or str): The Path or the Path's ID.
+            path (Path | str): The Path or the Path's ID.
 
         Returns:
             Path: The Path, converted from the ID if `path` is a string.
@@ -424,7 +429,7 @@ class Path(Mutable):
         """The primary definition of a Path object.
 
         Parameters:
-            path (Path or str): The Path or the Path's ID.
+            path (Path | str): The Path or the Path's ID.
 
         Returns:
             Path: The Path representing the given Path's primary definition.
@@ -446,7 +451,7 @@ class Path(Mutable):
         was assigned this definition.
 
         Parameters:
-            path (Path or str): The Path or the Path's ID.
+            path (Path | str): The Path or the Path's ID.
 
         Returns:
             Path: The canonical Path, converted from the ID if `path` is a string.
@@ -490,7 +495,7 @@ class Path(Mutable):
             derivs (bool, optional): True to include derivatives in the attributes of the
                 returned Event. The specific derivatives included will depend on the Path
                 subclass and those within the given Event.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -533,7 +538,7 @@ class Path(Mutable):
                 returned Event. The specific derivatives included will depend on the Path
                 subclass and those within the given Event. Time derivatives are always
                 retained.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -572,13 +577,13 @@ class Path(Mutable):
     def _wrt(self, origin, frame=None, *, use_shortcuts=False):
         """This Path relative to the specified origin and frame.
 
-        This is the private version. The public version is `wrt` and does not have the
-        `use_shortcuts` option.
+        This is the private version. The public version is :meth:`wrt` and does not have
+        the `use_shortcuts` option.
 
         Parameters:
-            origin (Path or str): The origin Path defined by a Path object or its
+            origin (Path | str): The origin Path defined by a Path object or its
                 registered ID. Event coordinates are returned relative to this origin.
-            frame (Frame or str, optional): A Frame object or its registered ID. Event
+            frame (Frame | str, optional): A Frame object or its registered ID. Event
                 coordinates are returned in this Frame. The default is to use the Frame of
                 the `origin`.
             use_shortcuts (bool, optional): True to check for a class-specific shortcut;
@@ -646,9 +651,9 @@ class Path(Mutable):
         """This Path relative to the specified origin and frame.
 
         Parameters:
-            origin (Path or str): The origin Path defined by a Path object or its
+            origin (Path | str): The origin Path defined by a Path object or its
                 registered ID.
-            frame (Frame or str, optional): A Frame object or its registered ID. The
+            frame (Frame | str, optional): A Frame object or its registered ID. The
                 default is to use the Frame of the `origin`.
 
         Returns:
@@ -672,7 +677,7 @@ class Path(Mutable):
             frame (Frame): The Frame, which must be a valid wayframe.
 
         Returns:
-            Path or None: The "shortcut" Path if it could be constructed; None otherwise.
+            Path | None: The "shortcut" Path if it could be constructed; None otherwise.
         """
 
         return None
@@ -692,7 +697,7 @@ class Path(Mutable):
 
         Parameters:
             time (ScalarLike): The time(s) at which this path is to be evaluated.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -723,10 +728,10 @@ class NullPath(Path):
         """Constructor for a NullPath.
 
         Parameters:
-            path (Path or str): The Path or Path ID to use as the origin of this Path,
+            path (Path | str): The Path or Path ID to use as the origin of this Path,
                 from which it will always have a zero-valued offset.
-            frame (Frame or str, optional): The Frame or Frame ID to use in this Path; by
-                default, this is the Path's `frame` attribute.
+            frame (Frame | str, optional): The Frame or Frame ID to use in this Path; by
+                default, this is the :attr:`~oops.Path.frame` of `path`.
 
         Raises:
             KeyError: If `path` is an ID string that has not been registered.
@@ -762,7 +767,7 @@ class NullPath(Path):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -829,10 +834,21 @@ class SSBPath(NullPath):
         return 'SSB'
 
     def _show(self, level, indent=0):
+        """The expanded description of this Path used by :meth:`~oops.Path.show`.
+
+        Parameters:
+            level (int): The number of levels of the Path's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Path, always ``"SSB"`` in quotes.
+        """
+
         return '"SSB"'
 
     @property
-    def string_id(self):
+    def string_id(self) -> str:
         """The ID of this Path, always "SSB"."""
 
         return 'SSB'
@@ -848,7 +864,7 @@ class SSBPath(NullPath):
             frame (Frame): The Frame, which must be a valid wayframe.
 
         Returns:
-            Path or None: The "shortcut" Path if it could be constructed.
+            Path | None: The "shortcut" Path if it could be constructed.
         """
 
         if (isinstance(origin, Frame._SpicePath)
@@ -868,9 +884,9 @@ class LinkedPath(Path):
         """Constructor for a LinkedPath.
 
         Parameters:
-            path (Path or str): The Path or ID defining a Path, which must be defined
+            path (Path | str): The Path or ID defining a Path, which must be defined
                 relative to the origin and frame of the given `parent`.
-            parent (Path or str): The Path or ID to which `path` will be linked.
+            parent (Path | str): The Path or ID to which `path` will be linked.
 
         Raises:
             KeyError: If `path` or `parent` is an ID string that has not been registered.
@@ -918,7 +934,7 @@ class LinkedPath(Path):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -947,9 +963,9 @@ class RelativePath(Path):
         """Constructor for a RelativePath.
 
         Parameters:
-            path (Path or str): The Path or ID defining the Path whose position is to be
+            path (Path | str): The Path or ID defining the Path whose position is to be
                 measured relative to `origin`.
-            origin (Path or str): The Path or ID defining the new origin. It must have the
+            origin (Path | str): The Path or ID defining the new origin. It must have the
                 same origin as `path`.
 
         Raises:
@@ -1002,7 +1018,7 @@ class RelativePath(Path):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -1031,7 +1047,7 @@ class ReversedPath(Path):
         """Constructor for a ReversedPath.
 
         Parameters:
-            path (Path or str): The Path or ID defining the Path to reverse.
+            path (Path | str): The Path or ID defining the Path to reverse.
 
         Raises:
             KeyError: If `path` is an ID string that has not been registered.
@@ -1064,7 +1080,7 @@ class ReversedPath(Path):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -1086,8 +1102,8 @@ class RotatedPath(Path):
         """Constructor for a RotatedPath.
 
         Parameters:
-            path (Path or str): The Path or ID defining the Path to rotate.
-            frame (Frame or str): The Frame or ID defining the Frame into which to rotate
+            path (Path | str): The Path or ID defining the Path to rotate.
+            frame (Frame | str): The Frame or ID defining the Frame into which to rotate
                 coordinates when given relative to `path`'s origin and frame.
 
         Raises:
@@ -1131,7 +1147,7 @@ class RotatedPath(Path):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in

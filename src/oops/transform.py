@@ -42,9 +42,10 @@ class Transform(Oops):
         frame (Frame): The target frame, into which this Transform rotates.
         reference (Frame): The reference frame, whose coordinates this Transform rotates
             into the target frame. The reference frame must have shape ().
-        origin (Path or None): The path defining the center of rotation if this is a
+        origin (Path | None): The path defining the center of rotation if this is a
             rotating frame; None otherwise.
-        shape (tuple): The intrinsic shape of the Transform, generated only if needed.
+        shape (tuple[int, ...]): The intrinsic shape of the Transform, generated only if
+            needed.
     """
 
     # Class constants to avoid circular references
@@ -58,10 +59,10 @@ class Transform(Oops):
                 reference frame into the new frame.
             omega (Vector3Like): The spin vector for the coordinate frame, given in
                 coordinates of the reference frame.
-            frame (Frame or str): The frame or frame ID into which this Transform rotates.
-            reference (Frame or str): The frame or frame ID from which this Transform
+            frame (Frame | str): The frame or frame ID into which this Transform rotates.
+            reference (Frame | str): The frame or frame ID from which this Transform
                 rotates.
-            origin (Path or str, optional): The path or path ID of the center of rotation.
+            origin (Path | str, optional): The path or path ID of the center of rotation.
                 If None, it is derived from the `reference` frame.
         """
 
@@ -115,7 +116,7 @@ class Transform(Oops):
         self._clear_cache()
 
     @property
-    def shape(self):
+    def shape(self) -> tuple[int, ...]:
         """The intrinsic shape of the Transform.
 
         This is a bit expensive to generate and used rarely, so it is implemented as a
@@ -128,7 +129,7 @@ class Transform(Oops):
         return self._filled_shape
 
     @property
-    def omega1(self):
+    def omega1(self) -> Vector3:
         """The negative of the rotation vector, transformed into the target frame.
 
         Used for the inverse transform.
@@ -140,7 +141,7 @@ class Transform(Oops):
         return self._filled_omega1
 
     @property
-    def matrix_with_deriv(self):
+    def matrix_with_deriv(self) -> Matrix3:
         """The rotation matrix with its time-derivative filled in."""
 
         if self._filled_matrix_with_deriv is None:
@@ -152,7 +153,7 @@ class Transform(Oops):
         return self._filled_matrix_with_deriv
 
     @property
-    def inverse_matrix(self):
+    def inverse_matrix(self) -> Matrix3:
         """The inverse rotation matrix."""
 
         if self._filled_inverse_matrix is None:
@@ -161,7 +162,7 @@ class Transform(Oops):
         return self._filled_inverse_matrix
 
     @property
-    def inverse_with_deriv(self):
+    def inverse_with_deriv(self) -> Matrix3:
         """The inverse rotation matrix with its time-derivative filled in."""
 
         if self._filled_inverse_with_deriv is None:
@@ -171,7 +172,7 @@ class Transform(Oops):
         return self._filled_inverse_with_deriv
 
     @property
-    def wod(self):
+    def wod(self) -> 'Transform':
         """This Transform without any time-derivatives."""
         if self._filled_wod is None:
             self._filled_wod = Transform(self.matrix, Vector3.ZERO, self.frame,
@@ -192,7 +193,7 @@ class Transform(Oops):
         """An identity transform from a frame to itself.
 
         Parameters:
-            frame (Frame or str): The frame or frame ID that serves as both the target and
+            frame (Frame | str): The frame or frame ID that serves as both the target and
                 the reference of the returned Transform.
 
         Returns:
@@ -211,14 +212,16 @@ class Transform(Oops):
         Optionally, it also rotates any derivatives.
 
         Parameters:
-            pos (Vector3Like, VectorLike, or MatrixLike): The position or matrix to
+            pos (Vector3Like | VectorLike | MatrixLike): The position or matrix to
                 rotate; the size of its leading axis must be 3. Anything not a subclass of
                 Qube (e.g., a list or tuple) is converted to a Vector3 first.
             derivs (bool, optional): True to calculate the time-derivative as well.
 
         Returns:
-            Vector3: An equivalent Vector3 position transformed into the target frame.
-            If `derivs` is True, then the returned position has a time derivative.
+            Vector3 | Vector | Matrix | None: The position or matrix transformed into the
+            target frame, of the same class as `pos` where that is a Qube and a Vector3
+            otherwise; None if `pos` is None. If `derivs` is True, then the returned
+            object has a time derivative.
         """
 
         if pos is None:
@@ -267,15 +270,17 @@ class Transform(Oops):
         """Un-rotate the coordinates of a position into the reference frame.
 
         Parameters:
-            pos (Vector3Like, VectorLike, or MatrixLike): The position or matrix to
+            pos (Vector3Like | VectorLike | MatrixLike): The position or matrix to
                 un-rotate; the size of its leading axis must be 3. Anything not a subclass
                 of Qube (e.g., a list or tuple) is converted to a Vector3 first. Velocity
                 is always assumed zero.
             derivs (bool, optional): True to calculate the time-derivative as well.
 
         Returns:
-            Vector3: The same Vector3 position transformed back into the reference frame.
-            If `derivs` is True, then the returned position has a time derivative.
+            Vector3 | Vector | Matrix | None: The position or matrix transformed back into
+            the reference frame, of the same class as `pos` where that is a Qube and a
+            Vector3 otherwise; None if `pos` is None. If `derivs` is True, then the
+            returned object has a time derivative.
         """
 
         if pos is None:

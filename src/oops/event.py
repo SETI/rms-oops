@@ -63,7 +63,7 @@ class Event(Oops):
         _dep_j2000 (Vector3): As `_dep`, but in J2000 coordinates.
         _dep_ap_j2000 (Vector3): As `_dep_ap`, but in J2000 coordinates.
         _dep_lt (Scalar): The light travel time of a departing photon to its destination.
-        _perp (Vector3 or None): The direction of a normal vector if this event falls on a
+        _perp (Vector3 | None): The direction of a normal vector if this event falls on a
             surface.
         _vflat (Vector3): A velocity component within the surface, which can be used to
             describe winds across a planet or orbital motion within a ring plane.
@@ -115,7 +115,7 @@ class Event(Oops):
 
         Parameters:
             prop_name (str): Name of the property.
-            value: The value to assign, as though it had been assigned directly.
+            value (Any): The value to assign, as though it had been assigned directly.
         """
 
         Event.__dict__[prop_name].fset(self, value)
@@ -129,11 +129,11 @@ class Event(Oops):
                 be included as the time-derivative. However, if specified as a tuple of
                 two objects, the first is interpreted as the position and the second as
                 the velocity.
-            origin (Path or str): The path or path ID identifying the origin of this
+            origin (Path | str): The path or path ID identifying the origin of this
                 event.
-            frame (Frame, optional): The frame or frame ID identifying the coordinate
-                frame of this event. Default is the frame of the origin path.
-            **more: An arbitrary set of properties and subfields that will also be
+            frame (Frame | str, optional): The frame or frame ID identifying the
+                coordinate frame of this event. Default is the frame of the origin path.
+            **more (Any): An arbitrary set of properties and subfields that will also be
                 accessible as attributes of the Event object. Properties have fixed names
                 and purposes; subfields can be anything.
         """
@@ -357,11 +357,19 @@ class Event(Oops):
         self._wod = None
 
     def has_arrivals(self) -> bool:
-        """True if arrival photons have been defined for this event."""
+        """True if arrival photons have been defined for this event.
+
+        Returns:
+            bool: True if either :attr:`arr` or :attr:`arr_ap` has been defined.
+        """
         return self._arr is not None or self._arr_ap is not None
 
     def has_departures(self) -> bool:
-        """True if departure photons have been defined for this event."""
+        """True if departure photons have been defined for this event.
+
+        Returns:
+            bool: True if either :attr:`dep` or :attr:`dep_ap` has been defined.
+        """
         return self._dep is not None or self._dep_ap is not None
 
     ######################################################################################
@@ -496,7 +504,7 @@ class Event(Oops):
 
     @property
     def neg_arr(self) -> Vector3 | None:
-        """The negative of `arr`."""
+        """The negative of :attr:`arr`."""
 
         if self._neg_arr is None and self.arr is not None:
             self._neg_arr = -self.arr
@@ -513,7 +521,7 @@ class Event(Oops):
 
     @property
     def neg_arr_ap(self) -> Vector3 | None:
-        """The negative of `arr_ap`."""
+        """The negative of :attr:`arr_ap`."""
 
         if self._neg_arr_ap is None and self.arr_ap is not None:
             self._neg_arr_ap = -self.arr_ap
@@ -530,7 +538,7 @@ class Event(Oops):
 
     @property
     def neg_arr_j2000(self) -> Vector3 | None:
-        """The negative of `arr_j2000`."""
+        """The negative of :attr:`arr_j2000`."""
 
         return self.ssb.neg_arr
 
@@ -547,7 +555,7 @@ class Event(Oops):
 
     @property
     def neg_arr_ap_j2000(self) -> Vector3 | None:
-        """The negative of `arr_ap_j2000`."""
+        """The negative of :attr:`arr_ap_j2000`."""
 
         return self.ssb.neg_arr_ap
 
@@ -849,8 +857,8 @@ class Event(Oops):
         """A new event with the given function applied to every attribute.
 
         Parameters:
-            func (callable): Function to apply to each Qube attribute of this Event.
-            *args: Additional arguments to pass to `func` after the attribute value.
+            func (Callable): Function to apply to each Qube attribute of this Event.
+            *args (Any): Additional arguments to pass to `func` after the attribute value.
 
         Returns:
             Event: The new Event, with `func` applied to every attribute.
@@ -893,12 +901,24 @@ class Event(Oops):
         """A shallow copy of the Event.
 
         Parameters:
-            omit (list): Names of properties and subfields to omit. Use 'arr' to omit all
-                arrival vectors and 'dep' to omit all departure vectors; other properties
-                and subfields must be named explicitly.
+            omit (str | list[str] | tuple[str, ...], optional): Names of properties and
+                subfields to omit. Use 'arr' to omit all arrival vectors and 'dep' to
+                omit all departure vectors; other properties and subfields must be named
+                explicitly.
+
+        Returns:
+            Event: The copy.
         """
 
         def clone_attr(arg):
+            """A recursive clone of an attribute.
+
+            Parameters:
+                arg (Qube): The attribute to clone.
+
+            Returns:
+                Qube: The clone.
+            """
             return arg.clone(recursive=True)
 
         result = self._apply_this_func(clone_attr)
@@ -954,13 +974,21 @@ class Event(Oops):
     def without_derivs(self):
         """A shallow copy of this Event without any derivatives except time.
 
-        Unlike the `wod` property, this version does not cache the result.
+        Unlike the :attr:`wod` property, this version does not cache the result.
 
         Returns:
             Event: The copy without derivatives.
         """
 
         def remove_derivs(arg):
+            """An attribute without derivatives other than time.
+
+            Parameters:
+                arg (Qube): The attribute.
+
+            Returns:
+                Qube: The attribute with only its time derivative.
+            """
             return arg.without_derivs(preserve='t')
 
         return self._apply_this_func(remove_derivs)
@@ -970,17 +998,25 @@ class Event(Oops):
 
         Parameters:
             origin (Path | str | None, optional): The origin or origin_id of the Event
-                returned; if None, use the `origin` of this Event.
+                returned; if None, use the :attr:`origin` of this Event.
             frame (Frame | str | None, optional): The frame or frame_id of the Event
-                returned; if None, use the `frame` of this Event.
-            broadcast (tuple, optional): The new shape to broadcast the result into; None
-                to leave the shape unchanged.
+                returned; if None, use the :attr:`frame` of this Event.
+            broadcast (tuple[int, ...], optional): The new shape to broadcast the result
+                into; None to leave the shape unchanged.
 
         Returns:
             Event: The new Event.
         """
 
         def fully_masked(arg):
+            """An attribute entirely masked and broadcast to the new shape.
+
+            Parameters:
+                arg (Qube): The attribute.
+
+            Returns:
+                Qube: The masked attribute.
+            """
             return arg.as_all_masked().broadcast_to(broadcast)
 
         if broadcast is None:
@@ -1019,6 +1055,14 @@ class Event(Oops):
         """
 
         def apply_mask_where(arg):
+            """An attribute broadcast to the shape of this Event and then masked.
+
+            Parameters:
+                arg (Qube): The attribute.
+
+            Returns:
+                Qube: The masked attribute.
+            """
             if arg.shape != self.shape:
                 arg = arg.broadcast_to(self.shape)
 
@@ -1038,6 +1082,14 @@ class Event(Oops):
         """
 
         def apply_remask(arg):
+            """An attribute broadcast to the shape of this Event and then remasked.
+
+            Parameters:
+                arg (Qube): The attribute.
+
+            Returns:
+                Qube: The remasked attribute.
+            """
             if arg.shape != self.shape:
                 arg = arg.broadcast_to(self.shape)
 
@@ -1227,6 +1279,14 @@ class Event(Oops):
         """
 
         def shrink1(arg):
+            """An attribute shrunken by the antimask.
+
+            Parameters:
+                arg (Qube): The attribute.
+
+            Returns:
+                Qube: The shrunken attribute.
+            """
             return arg.shrink(antimask)
 
         if antimask is None:
@@ -1254,7 +1314,7 @@ class Event(Oops):
 
         Parameters:
             antimask (BooleanLike | None): None to leave the Event unchanged; otherwise
-                the boolean array whose True values were kept by `shrink`.
+                the boolean array whose True values were kept by :meth:`shrink`.
             shape (tuple[int, ...] | None, optional): Shape to restore; default None to
                 infer it from `antimask`.
 
@@ -1263,6 +1323,16 @@ class Event(Oops):
         """
 
         def unshrink1(arg, mask):
+            """An attribute remasked and then expanded to its original shape.
+
+            Parameters:
+                arg (Qube): The attribute.
+                mask (MaskType): The mask to apply before expanding an attribute that
+                    has a shape.
+
+            Returns:
+                Qube: The expanded attribute.
+            """
             if arg.shape:
                 arg = arg.remask(mask)
             return arg.unshrink(antimask, shape=shape)
@@ -1340,10 +1410,10 @@ class Event(Oops):
         """This SSB/J2000-relative event to a new path and frame.
 
         Parameters:
-            path (Path): Or path ID identifying the new origin; None to leave the origin
-                unchanged.
-            frame (Frame): Or frame ID of the new coordinate frame; None to leave the
-                frame unchanged.
+            path (Path | str | None): The path or path ID identifying the new origin;
+                None to leave the origin unchanged.
+            frame (Frame | str | None): The frame or frame ID of the new coordinate
+                frame; None to leave the frame unchanged.
             derivs (bool, optional): True to include the derivatives in the returned
                 Event; False to exclude them. Time derivatives are always retained.
             quick (dict | bool | None, optional): To override the configured default
@@ -1371,9 +1441,9 @@ class Event(Oops):
         """This event relative to a new path and/or a new coordinate frame.
 
         Parameters:
-            path (Path or str, optional): The new origin path or its ID; None to leave the
+            path (Path | str, optional): The new origin path or its ID; None to leave the
                 origin unchanged.
-            frame (Frame or str, optional): The new coordinate frame or its ID; None to
+            frame (Frame | str, optional): The new coordinate frame or its ID; None to
                 leave the frame unchanged.
             derivs (bool, optional): True to include the derivatives in the returned
                 Event; False to exclude them. Time derivatives are always retained.
@@ -1385,7 +1455,7 @@ class Event(Oops):
                 along with the new event.
 
         Returns:
-            Event or tuple[Event, Transform]: The new Event; if `include_xform` is True, a
+            Event | tuple[Event, Transform]: The new Event; if `include_xform` is True, a
             tuple of the new Event and the Transform from this event's frame to the new
             frame.
         """
@@ -1452,8 +1522,8 @@ class Event(Oops):
         The frame is unchanged.
 
         Parameters:
-            path (Path): Object to be used as the new origin. If the value is None, the
-                event is returned unchanged.
+            path (Path | str | None): The path or path ID to be used as the new origin.
+                If the value is None, the event is returned unchanged.
             derivs (bool, optional): True to include the derivatives in the returned
                 Event; False to exclude them. Time derivatives are always retained.
             quick (dict | bool | None, optional): To override the configured default
@@ -1503,8 +1573,8 @@ class Event(Oops):
         The path is unchanged.
 
         Parameters:
-            frame (Frame): Object to be used as the new reference. If the value is None,
-                the event is returned unchanged.
+            frame (Frame | str | None): The frame or frame ID to be used as the new
+                reference. If the value is None, the event is returned unchanged.
             derivs (bool, optional): True to include the derivatives in the returned
                 Event; False to exclude them. Time derivatives are always retained.
             quick (dict | bool | None, optional): To override the configured default
@@ -1541,11 +1611,11 @@ class Event(Oops):
     def rotate_by_frame(self, frame, *, derivs=True, quick=None, include_xform=False):
         """This event rotated forward into a new `frame`.
 
-        The `origin` is unchanged. Subfields are also rotated into the new frame.
+        The :attr:`origin` is unchanged. Subfields are also rotated into the new frame.
 
         Parameters:
-            frame (Frame): Into which to transform the coordinates. Its reference frame
-                must be the current frame of the event.
+            frame (Frame | str): The frame or frame ID into which to transform the
+                coordinates. Its reference frame must be the current frame of the event.
             derivs (bool, optional): True to include the derivatives in the returned
                 Event; False to exclude them. Time derivatives are always retained.
             quick (dict | bool | None, optional): To override the configured default
@@ -1560,6 +1630,15 @@ class Event(Oops):
         """
 
         def xform_rotate(arg):
+            """An attribute rotated into the new frame, if it can be rotated.
+
+            Parameters:
+                arg (Any): The attribute.
+
+            Returns:
+                Any: The rotated attribute, or the attribute unchanged if it cannot be
+                rotated.
+            """
             try:
                 return xform.rotate(arg, derivs=True)
             except (ValueError, TypeError, KeyError):
@@ -1595,12 +1674,12 @@ class Event(Oops):
     def unrotate_by_frame(self, frame, *, derivs=True, quick=None):
         """This Event unrotated back into the given `frame`.
 
-        The `origin` is unchanged. Subfields are also unrotated.
+        The :attr:`origin` is unchanged. Subfields are also unrotated.
 
         Parameters:
-            frame (Frame): Object to inverse-transform the coordinates. Its target frame
-                must be the current frame of the event. The returned event will use the
-                reference frame instead.
+            frame (Frame | str): The frame or frame ID by which to inverse-transform the
+                coordinates. Its target frame must be the current frame of the event.
+                The returned event will use the reference frame instead.
             derivs (bool, optional): True to include the derivatives in the returned
                 Event; False to exclude them. Time derivatives are always retained.
             quick (dict | bool | None, optional): To override the configured default
@@ -1613,6 +1692,15 @@ class Event(Oops):
         """
 
         def xform_unrotate(arg):
+            """An attribute unrotated into the given frame, if it can be rotated.
+
+            Parameters:
+                arg (Any): The attribute.
+
+            Returns:
+                Any: The unrotated attribute, or the attribute unchanged if it cannot be
+                rotated.
+            """
             try:
                 return xform.unrotate(arg, derivs=True)
             except (ValueError, TypeError, KeyError):
@@ -1660,6 +1748,14 @@ class Event(Oops):
         """
 
         def without_derivs(arg):
+            """An attribute without derivatives.
+
+            Parameters:
+                arg (Qube | None): The attribute.
+
+            Returns:
+                Qube | None: The attribute without derivatives; None if `arg` is None.
+            """
             if arg is None:
                 return arg
             return arg.wod
@@ -1726,6 +1822,15 @@ class Event(Oops):
         """
 
         def ref_unrotate(arg):
+            """An attribute unrotated into the frame of `reference`, if it can be.
+
+            Parameters:
+                arg (Any): The attribute.
+
+            Returns:
+                Any: The unrotated attribute, or the attribute unchanged if it cannot be
+                rotated.
+            """
             try:
                 return reference.xform_to_j2000.unrotate(arg)
             except (ValueError, TypeError, KeyError):
@@ -2132,12 +2237,12 @@ class Event(Oops):
                 of the observer.
             derivs (bool, optional): True to include any derivatives of the light ray in
                 the returned quantities; False to exclude them.
-            subfield (optional): The subfield to use for the calculation, either "arr"
-                or "dep". Note that an arriving direction is reversed.
+            subfield (str, optional): The subfield to use for the calculation, either
+                "arr" or "dep". Note that an arriving direction is reversed.
             quick (dict, optional): To override the configured default parameters for
                 QuickPaths and QuickFrames; False to disable the use of QuickPaths and
                 QuickFrames. The default configuration is defined in config.py.
-            frame (Frame, str, or None, optional): Coordinate frame for RA and dec,
+            frame (Frame | str | None, optional): Coordinate frame for RA and dec,
                 or its registered ID. Default is "J2000"; use None for the frame of
                 this event.
 

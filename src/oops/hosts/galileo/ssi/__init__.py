@@ -27,13 +27,18 @@ def from_file(filespec,
     By default, only the valid image region is returned.
 
     Parameters:
-        filespec (str, Path, or FCPath): The full path to a Galileo SSI file or its PDS
-            label.
+        filespec (str | pathlib.Path | FCPath): The full path to a Galileo SSI file or
+            its PDS label.
         return_all_planets (bool, optional): Include kernels for all planets not just
             Jupiter or Saturn.
         full_fov (bool, optional): If True, the full image is returned with a mask
             describing the regions with no data.
         method (str, optional): Label reading method to be passed to Pds3Label.
+        **parameters (Any): Additional keyword arguments; they are accepted and ignored.
+
+    Returns:
+        Snapshot: The observation, with subfields `spice_kernels`, `spice_to_frame`,
+        `spice_frame_name`, `spice_frame_id`, `abspath` and `image_url` inserted.
     """
 
     SSI.initialize()    # Define everything the first time through; use defaults
@@ -81,10 +86,24 @@ def from_file(filespec,
     return result
 
 def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameters):
-    """A static method to return a list of Snapshot objects.
+    """A list of Snapshot objects, one for each row in an SSI index file.
 
-    One object for each row in an SSI index file. The filespec refers to the
-    label of the index file.
+    Rows whose exposure duration is zero are skipped.
+
+    Parameters:
+        filespec (str | pathlib.Path | FCPath): The full path to the label of the index
+            file.
+        supplemental_filespec (str | pathlib.Path | FCPath, optional): The full path to
+            the label of a supplemental index file whose columns, row by row, augment
+            those of the index file.
+        full_fov (bool, optional): If True, each field of view covers the full image
+            rather than the cutout window.
+        **parameters (Any): Additional keyword arguments; they are accepted and ignored.
+
+    Returns:
+        list[Snapshot]: One observation per row of the index, each with subfields
+        `spice_to_frame`, `spice_frame_name`, `spice_frame_id` and `spice_kernels`
+        inserted.
     """
     SSI.initialize()    # Define everything the first time through
 
@@ -166,8 +185,8 @@ def initialize(planets=None, asof=None,
     Must be called first. After the first call, later calls to this function are ignored.
 
     Parameters:
-        planets (list, optional): A list of planets to pass to define_solar_system. None
-            or 0 means all.
+        planets (list, optional): A list of planets to pass to
+            :meth:`~oops.Body.define_solar_system`. None or 0 means all.
         asof (str, optional): Only use SPICE kernels that existed before this date; None
             to ignore.
         mst_pck (bool, optional): True to include MST PCKs, which update the rotation
@@ -180,10 +199,36 @@ def initialize(planets=None, asof=None,
 
 
 class Metadata(object):
-    """The metadata of a Galileo SSI image, derived from its label."""
+    """The metadata of a Galileo SSI image, derived from its label.
+
+    Attributes:
+        nlines (int): Number of lines in the full image.
+        nsamples (int): Number of samples per line in the full image.
+        exposure (float): Exposure duration in seconds.
+        filter (str): Name of the filter.
+        tstart (float): Image start time in seconds TDB.
+        tstop (float): Image stop time in seconds TDB.
+        target (str): Target name.
+        mode (str): The telemetry format ID; 'NONE' if the label does not give one.
+        window (numpy.ndarray | None): The cutout window from the label as (line,
+            sample, lines, samples), or None if the image has no cutout window.
+        window_origin (numpy.ndarray): The (line, sample) origin of the cutout window,
+            counted from zero; defined only if `window` is not None.
+        window_shape (numpy.ndarray): The (lines, samples) shape of the cutout window;
+            defined only if `window` is not None.
+        window_uv_origin (numpy.ndarray): The (u, v) origin of the cutout window; defined
+            only if `window` is not None.
+        window_uv_shape (numpy.ndarray): The (u, v) shape of the cutout window; defined
+            only if `window` is not None.
+    """
 
     def __init__(self, meta_dict):
-        """Use the label or index dict to assemble the image metadata."""
+        """Use the label or index dict to assemble the image metadata.
+
+        Parameters:
+            meta_dict (dict): The PDS label or the index row as a dictionary. Key
+                'TELEMETRY_FORMAT_ID' is inserted with value 'NONE' if absent.
+        """
 
         info = SSI.instrument_kernel['INS'][-77036]
 
@@ -232,7 +277,7 @@ class Metadata(object):
         """Trim image to label window.
 
         Parameters:
-            data: Numpy array containing the image data.
+            data (numpy.ndarray): Numpy array containing the image data.
             full_fov (bool, optional): If True, the image is not trimmed.
 
         Returns:
@@ -274,7 +319,14 @@ class Metadata(object):
 
 
 class SSI(object):
-    """An instance-free class to hold Galileo SSI instrument parameters."""
+    """An instance-free class to hold Galileo SSI instrument parameters.
+
+    Attributes:
+        instrument_kernel (dict | None): The SSI instrument kernel as a dictionary; None
+            until :meth:`initialize` has been called.
+        fovs (dict[str, FOV]): The field of view for each telemetry format ID.
+        initialized (bool): True after :meth:`initialize` has been called.
+    """
 
     instrument_kernel = None
     fovs = {}
@@ -289,8 +341,8 @@ class SSI(object):
         call, later calls to this function are ignored.
 
         Parameters:
-            planets (list, optional): A list of planets to pass to define_solar_system.
-                None or 0 means all.
+            planets (list, optional): A list of planets to pass to
+                :meth:`~oops.Body.define_solar_system`. None or 0 means all.
             asof (str, optional): Only use SPICE kernels that existed before this date;
                 None to ignore.
             mst_pck (bool, optional): True to include MST PCKs, which update the rotation

@@ -12,9 +12,15 @@ def resolution(self, event_key, axis='u'):
     Defined perpendicular to the line of sight.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         axis (str, optional): 'u' for resolution along the horizontal axis of the
             observation; 'v' for resolution along the vertical axis of the observation.
+
+    Returns:
+        Scalar: The resolution in km per pixel, registered as a backplane.
+
+    Raises:
+        ValueError: If `axis` is neither 'u' nor 'v'.
     """
 
     if axis not in ('u', 'v'):
@@ -38,9 +44,15 @@ def center_resolution(self, event_key, axis='u'):
     Measured at the central path of a body, based on range alone.
 
     Parameters:
-        event_key (str or tuple): Key defining the event at the body's path.
+        event_key (str | tuple): Key defining the event at the body's path.
         axis (str, optional): 'u' for resolution along the horizontal axis of the
             observation; 'v' for resolution along the vertical axis of the observation.
+
+    Returns:
+        Scalar: The resolution in km per pixel, registered as a gridless backplane.
+
+    Raises:
+        ValueError: If `axis` is neither 'u' nor 'v'.
     """
 
     if axis not in ('u', 'v'):
@@ -64,7 +76,10 @@ def finest_resolution(self, event_key):
     Determined at the intercept point on the surface.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
+
+    Returns:
+        Scalar: The finest resolution in km per pixel, registered as a backplane.
     """
 
     self.refresh()
@@ -82,7 +97,10 @@ def coarsest_resolution(self, event_key):
     It is evaluated at the intercept point.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
+
+    Returns:
+        Scalar: The coarsest resolution in km per pixel, registered as a backplane.
     """
 
     self.refresh()
@@ -101,7 +119,7 @@ def _fill_surface_resolution(self, event_key):
     surface intercept points.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
     """
 
     event_key = Backplane.standardize_event_key(event_key)

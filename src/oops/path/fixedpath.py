@@ -20,8 +20,8 @@ class FixedPath(Path):
         Parameters:
             pos (Vector3Like): The position vectors within the frame and relative to the
                 specified origin.
-            origin (Path or str): The Path or the ID of the Path defining the origin.
-            frame (Frame or str, optional): The Frame or the ID of the Frame in which the
+            origin (Path | str): The Path or the ID of the Path defining the origin.
+            frame (Frame | str, optional): The Frame or the ID of the Frame in which the
                 fixed coordinates are defined and in which they are returned; None to use
                 the Frame of the `origin` Path.
             path_id (str, optional): The ID under which to register this Path; None to
@@ -48,6 +48,12 @@ class FixedPath(Path):
         self.refresh()
 
     def _waypoint_key(self):
+        """The key identifying this Path's waypoint, from the attributes that define it.
+
+        Returns:
+            tuple[Vector3, Path, Frame]: The position, origin, and frame.
+        """
+
         return (self._pos, self._origin, self._frame)
 
     ######################################################################################
@@ -72,7 +78,7 @@ class FixedPath(Path):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in

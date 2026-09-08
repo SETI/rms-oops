@@ -29,9 +29,9 @@ class SpinFrame(Frame):
             offset (ScalarLike): The rotation angle in radians at `epoch`.
             rate (ScalarLike): The rotation rate in radians/second.
             epoch (ScalarLike): The time in seconds TDB at which `offset` applies.
-            axis (int or str): The rotation axis: 0, "x", or "X" for *x*; 1, "y", or "Y"
+            axis (int | str): The rotation axis: 0, "x", or "X" for *x*; 1, "y", or "Y"
                 for *y*; 2, "z", or "Z" for *z*.
-            reference (Frame or str): The Frame or the ID of the Frame relative to which
+            reference (Frame | str): The Frame or the ID of the Frame relative to which
                 this rotation is defined.
             frame_id (str, optional): The ID under which to register this Frame; None to
                 leave this Frame unregistered. As a special case, use "+" to automatically
@@ -73,9 +73,25 @@ class SpinFrame(Frame):
         self.refresh()
 
     def _wayframe_key(self):
+        """The key that identifies this Frame's definition in the pool of wayframes.
+
+        Returns:
+            tuple[Scalar, Scalar, Scalar, int, Frame]: The offset, the rate, the epoch,
+            the axis, and the reference Frame.
+        """
         return (self._offset, self._rate, self._epoch, self._axis2, self._reference)
 
     def _show(self, level, indent=0):
+        """The expanded description of this Frame used by :meth:`~oops.Frame.show`.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame.
+        """
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -112,7 +128,7 @@ class SpinFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): Ignored for class SpinFrame.
+            quick (dict | bool, optional): Ignored for class SpinFrame.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the

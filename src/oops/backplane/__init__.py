@@ -7,7 +7,7 @@ import functools
 import numpy as np
 import types
 
-from polymath               import Boolean, Qube, Scalar, Vector3
+from polymath               import Boolean, Pair, Qube, Scalar, Vector3
 from oops.body              import Body
 from oops.config            import LOGGING
 from oops.mutable           import Mutable
@@ -24,6 +24,12 @@ class Backplane(Mutable):
     A backplane is an array of geometry values, one per pixel of an
     :class:`~oops.Observation`: a distance, an angle, a surface coordinate, and so on.
     Intermediate results are cached to speed up calculations.
+
+    Attributes:
+        obs (Observation): The Observation with which this Backplane is associated.
+        meshgrid (Meshgrid): The Meshgrid that defines the sampling of the FOV.
+        inventory (dict | None): The inventory of bodies in the field of view, or None
+            if no inventory is kept.
     """
 
     _DIAGNOSTICS = False    # set True to log diagnostics
@@ -41,7 +47,7 @@ class Backplane(Mutable):
             time (ScalarLike, optional): Time in seconds TDB during the Observation. The
                 shape of this Scalar will be broadcasted with the shape of the meshgrid.
                 Default is to sample the midtime of every pixel.
-            inventory (bool or dict, optional): True to keep an inventory of bodies in the
+            inventory (bool | dict, optional): True to keep an inventory of bodies in the
                 field of view and to keep track of their locations. This option can speed
                 up backplane calculations for bodies that occupy a small fraction of the
                 field of view. If a dictionary is provided, this dictionary is used.
@@ -239,7 +245,7 @@ class Backplane(Mutable):
         """Restore this Backplane and the event caches saved with it.
 
         Parameters:
-            state (tuple): The tuple returned by `__getstate__`.
+            state (tuple): The tuple returned by :meth:`__getstate__`.
         """
 
         (obs, meshgrid, time, inventory, inventory_border,
@@ -257,7 +263,7 @@ class Backplane(Mutable):
     ######################################################################################
 
     @property
-    def dlos_duv(self):
+    def dlos_duv(self) -> Vector3:
         """The derivative of the line of sight with respect to *(u,v)*.
 
         It is evaluated at each pixel of the meshgrid and cached on first use.
@@ -269,7 +275,7 @@ class Backplane(Mutable):
         return self._dlos_duv
 
     @property
-    def dlos_duv1(self):
+    def dlos_duv1(self) -> Vector3:
         """The derivative of the line of sight with respect to *(u1,v1)*.
 
         The coordinates *(u1,v1)* match *(u,v)* but have been forced to be orthogonal.
@@ -303,7 +309,7 @@ class Backplane(Mutable):
         return self._dlos_duv1
 
     @property
-    def duv_dlos(self):
+    def duv_dlos(self) -> Pair:
         """The derivative of *(u,v)* with respect to the line of sight.
 
         It is evaluated at each pixel of the meshgrid and cached on first use. This is the
@@ -316,7 +322,7 @@ class Backplane(Mutable):
         return self._duv_dlos
 
     @property
-    def center_dlos_duv(self):
+    def center_dlos_duv(self) -> Vector3:
         """The derivative of the line of sight with respect to *(u,v)* at the center.
 
         The derivative is evaluated at the center of the field of view and cached on first
@@ -329,7 +335,7 @@ class Backplane(Mutable):
         return self._center_dlos_duv
 
     @property
-    def center_duv_dlos(self):
+    def center_duv_dlos(self) -> Pair:
         """The derivative of *(u,v)* with respect to the line of sight at the center.
 
         The derivative is evaluated at the center of the field of view and cached on first
@@ -357,7 +363,7 @@ class Backplane(Mutable):
         suffix is specified.
 
         Parameters:
-            event_key (str or tuple): The key to repair. A bare surface key string is
+            event_key (str | tuple): The key to repair. A bare surface key string is
                 understood as dispersed illumination from the Sun.
             default (str, optional): "ANSA", "RING", or "LIMB" to append as a suffix to a
                 body name that carries none; default is "", meaning the name is left as
@@ -488,7 +494,7 @@ class Backplane(Mutable):
         """The path-based (gridless) form of an event key.
 
         Parameters:
-            event_key (str or tuple): The key to convert.
+            event_key (str | tuple): The key to convert.
             default (str, optional): "ANSA", "RING", or "LIMB" to append as a suffix to a
                 body name that carries none; default is "".
 
@@ -519,7 +525,7 @@ class Backplane(Mutable):
         argument is a backplane already, the key is extracted from it.
 
         Parameters:
-            backplane_key (str, tuple, or QubeLike): The key to repair, or a backplane
+            backplane_key (str | tuple | QubeLike): The key to repair, or a backplane
                 array that has already been registered.
 
         Returns:
@@ -548,11 +554,11 @@ class Backplane(Mutable):
     def _standardize_backplane_key_if_not_qube(backplane_key):
         """Repair a backplane key that is not itself a backplane array.
 
-        This is the part of `standardize_backplane_key` whose result depends only on the
-        key, so it can be cached.
+        This is the part of :meth:`standardize_backplane_key` whose result depends only
+        on the key, so it can be cached.
 
         Parameters:
-            backplane_key (str or tuple): The key to repair.
+            backplane_key (str | tuple): The key to repair.
 
         Returns:
             tuple: The standardized key, uppercased if it was a string.
@@ -583,7 +589,7 @@ class Backplane(Mutable):
         suffix is specified.
 
         Parameters:
-            event_key (str or tuple): The key to interpret, which may name a backplane
+            event_key (str | tuple): The key to interpret, which may name a backplane
                 and the event it applies to.
             names (tuple, optional): The backplane names to recognize; default is (),
                 meaning every defined Backplane name.
@@ -716,7 +722,7 @@ class Backplane(Mutable):
         Every surface key it names is replaced by its unmasked counterpart.
 
         Parameters:
-            event_key (str or tuple): The key to convert.
+            event_key (str | tuple): The key to convert.
 
         Returns:
             tuple: The standardized key naming the unmasked surfaces.
@@ -739,7 +745,7 @@ class Backplane(Mutable):
         that surfaces sharing an intercept geometry share a cached intercept event.
 
         Parameters:
-            event_key (str or tuple): The key to convert.
+            event_key (str | tuple): The key to convert.
 
         Returns:
             tuple: The intercept dictionary key.
@@ -762,7 +768,7 @@ class Backplane(Mutable):
         """The observation event of photons arriving at the detector.
 
         Parameters:
-            event_key (str or tuple): The event key, which selects the gridded event for
+            event_key (str | tuple): The event key, which selects the gridded event for
                 dispersed illumination and a gridless event otherwise.
             derivs (bool, optional): True for an event carrying its line-of-sight
                 derivatives; False to strip them. Default is False, although the
@@ -864,8 +870,8 @@ class Backplane(Mutable):
             surface_key (str): The surface key.
 
         Returns:
-            numpy.ndarray or bool: A boolean array that is True inside the bounding box,
-            or True if no inventory is in use and the whole meshgrid must be considered.
+            MaskType: A boolean array that is True inside the bounding box, or True if no
+            inventory is in use and the whole meshgrid must be considered.
         """
 
         # Return from the antimask cache if present
@@ -917,7 +923,7 @@ class Backplane(Mutable):
         cached otherwise, so repeated calls for the same key are inexpensive.
 
         Parameters:
-            event_key (str or tuple): The key identifying the event; an empty key returns
+            event_key (str | tuple): The key identifying the event; an empty key returns
                 the observer event, which is what the sky backplanes use.
             derivs (bool, optional): True for an event carrying its time and line-of-sight
                 derivatives; False to strip them. Default is False, although the
@@ -1007,7 +1013,7 @@ class Backplane(Mutable):
         and the coordinates and mask of this particular surface are applied afterward.
 
         Parameters:
-            event_key (str or tuple): The standardized event key.
+            event_key (str | tuple): The standardized event key.
             detection (Event): The event at which the photons are detected.
             derivs (bool): True for an event carrying its time and line-of-sight
                 derivatives.
@@ -1099,7 +1105,7 @@ class Backplane(Mutable):
         lighting.
 
         Parameters:
-            event_key (str or tuple): The event key, which is converted to its
+            event_key (str | tuple): The event key, which is converted to its
                 path-based form.
             derivs (bool, optional): True for an event carrying its time and
                 line-of-sight derivatives; default False.
@@ -1241,13 +1247,16 @@ class Backplane(Mutable):
         `event_key`.
 
         Parameters:
-            backplane_key (str or tuple): The name of a Backplane array method, optionally
+            backplane_key (str | tuple): The name of a Backplane array method, optionally
                 followed by the arguments to pass to it.
             derivs (bool, optional): True to return the array with its derivatives
                 attached; default False.
 
         Returns:
             Qube: The backplane array, computed if it is not already cached.
+
+        Raises:
+            ValueError: If the key does not name a Backplane array method.
         """
 
         if isinstance(backplane_key, str):

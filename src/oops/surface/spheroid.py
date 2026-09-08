@@ -30,9 +30,9 @@ class Spheroid(Ellipsoid):
         """Constructor for a Spheroid surface.
 
         Parameters:
-            origin (Path or str): The Path or the ID of the Path defining the center of
+            origin (Path | str): The Path or the ID of the Path defining the center of
                 the spheroid.
-            frame (Frame or str): The Frame or the ID of the Frame in which the
+            frame (Frame | str): The Frame or the ID of the Frame in which the
                 spheroid is fixed, with the short radius along the *z*-axis.
             radii (tuple[float, ...]): `(a, c)` or `(a, a, c)`, the long and short radii
                 of the spheroid, in km.
@@ -71,7 +71,7 @@ class Spheroid(Ellipsoid):
                 its value is appended to the returned tuple.
 
         Returns:
-            Vector3 or tuple: `intercept` or `(intercept[, p][, hints])`, where:
+            Vector3 | tuple: `intercept` or `(intercept[, p][, hints])`, where:
 
             * `intercept` (Vector3): Surface intercept points relative to this surface's
               origin and frame, in km. Where no intercept exists, values are masked.

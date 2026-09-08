@@ -11,7 +11,7 @@ def longitude(self, event_key, reference='iau', direction='west',
     """Longitude at the surface intercept point in the image.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         reference (str, optional): Defines the location of zero longitude. 'iau' for the
             IAU-defined prime meridian; 'obs' for the sub-observer longitude; 'sun' for
             the sub-solar longitude; 'oha' for the anti-observer longitude; 'sha' for the
@@ -26,6 +26,13 @@ def longitude(self, event_key, reference='iau', direction='west',
             for planetocentric; 'graphic'   for planetographic; 'squashed'  for an
             intermediate longitude type used internally. Note that lon_type is irrelevant
             to Spheroids but matters for Ellipsoids.
+
+    Returns:
+        Scalar: The longitude in radians, registered as a backplane.
+
+    Raises:
+        ValueError: If `reference`, `direction`, `minimum` or `lon_type` is not one of the
+            values listed above.
     """
 
     if reference not in ('iau', 'sun', 'sha', 'obs', 'oha'):
@@ -96,10 +103,16 @@ def latitude(self, event_key, lat_type='centric'):
     """Latitude at the surface intercept point in the image.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         lat_type (str, optional): Defines the type of latitude measurement: 'centric'
             for planetocentric; 'graphic'   for planetographic; 'squashed'  for an
             intermediate latitude type used internally.
+
+    Returns:
+        Scalar: The latitude in radians, registered as a backplane.
+
+    Raises:
+        ValueError: If `lat_type` is not one of the values listed above.
     """
 
     if lat_type not in ('centric', 'graphic', 'squashed'):
@@ -179,7 +192,10 @@ def _sub_observer_longitude(self, event_key):
     Derived from the apparent departure direction seen at the body center, in radians.
 
     Parameters:
-        event_key (str or tuple): Key defining the event at the body's path.
+        event_key (str | tuple): Key defining the event at the body's path.
+
+    Returns:
+        Scalar: The longitude in radians, registered as a gridless backplane.
     """
 
     gridless_key = Backplane.gridless_event_key(event_key)
@@ -200,7 +216,10 @@ def _sub_observer_latitude(self, event_key):
     Derived from the apparent departure direction seen at the body center, in radians.
 
     Parameters:
-        event_key (str or tuple): Key defining the event at the body's path.
+        event_key (str | tuple): Key defining the event at the body's path.
+
+    Returns:
+        Scalar: The latitude in radians, registered as a gridless backplane.
     """
 
     gridless_key = Backplane.gridless_event_key(event_key)
@@ -222,7 +241,10 @@ def _sub_solar_longitude(self, event_key):
     in radians.
 
     Parameters:
-        event_key (str or tuple): Key defining the event at the body's path.
+        event_key (str | tuple): Key defining the event at the body's path.
+
+    Returns:
+        Scalar: The longitude in radians, registered as a gridless backplane.
     """
 
     gridless_key = Backplane.gridless_event_key(event_key)
@@ -244,7 +266,10 @@ def _sub_solar_latitude(self, event_key):
     in radians.
 
     Parameters:
-        event_key (str or tuple): Key defining the event at the body's path.
+        event_key (str | tuple): Key defining the event at the body's path.
+
+    Returns:
+        Scalar: The latitude in radians, registered as a gridless backplane.
     """
 
     gridless_key = Backplane.gridless_event_key(event_key)
@@ -271,7 +296,7 @@ def sub_observer_longitude(self, event_key, reference='iau', direction='west',
     """Gridless sub-observer longitude.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         reference (str, optional): Defines the location of zero longitude. 'iau' for the
             IAU-defined prime meridian; 'obs' for the sub-observer longitude; 'sun' for
             the sub-solar longitude; 'oha' for the anti-observer longitude; 'sha' for the
@@ -282,6 +307,13 @@ def sub_observer_longitude(self, event_key, reference='iau', direction='west',
         minimum (float, optional): The smallest value of the returned longitude,
             given in degrees as either 0 or -180. The returned values are in
             radians, spanning 0 to 2*pi or -pi to pi respectively.
+
+    Returns:
+        Scalar: The longitude in radians, registered as a gridless backplane.
+
+    Raises:
+        ValueError: If `reference`, `direction` or `minimum` is not one of the values
+            listed above.
     """
 
     self.refresh()
@@ -314,7 +346,7 @@ def sub_solar_longitude(self, event_key, reference='iau', direction='west', mini
     graphic or squashed).
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         reference (str, optional): Defines the location of zero longitude. 'iau' for the
             IAU-defined prime meridian; 'obs' for the sub-observer longitude; 'sun' for
             the sub-solar longitude; 'oha' for the anti-observer longitude; 'sha' for the
@@ -325,6 +357,13 @@ def sub_solar_longitude(self, event_key, reference='iau', direction='west', mini
         minimum (float, optional): The smallest value of the returned longitude,
             given in degrees as either 0 or -180. The returned values are in
             radians, spanning 0 to 2*pi or -pi to pi respectively.
+
+    Returns:
+        Scalar: The longitude in radians, registered as a gridless backplane.
+
+    Raises:
+        ValueError: If `reference`, `direction` or `minimum` is not one of the values
+            listed above.
     """
 
     self.refresh()
@@ -357,7 +396,7 @@ def _sub_longitude(self, event_key, longitude, reference='iau', direction='west'
     Re-expresses a longitude relative to the requested reference, direction and range.
 
     Parameters:
-        event_key (str or tuple): Key defining the surface event.
+        event_key (str | tuple): Key defining the surface event.
         longitude (ScalarLike): The longitude to convert, in radians, measured eastward
             from the IAU-defined prime meridian.
         reference (str, optional): Defines the location of zero longitude. 'iau' for the
@@ -369,6 +408,9 @@ def _sub_longitude(self, event_key, longitude, reference='iau', direction='west'
         minimum (float, optional): The smallest value of the returned longitude,
             given in degrees as either 0 or -180. The returned values are in
             radians, spanning 0 to 2*pi or -pi to pi respectively.
+
+    Returns:
+        Scalar: The converted longitude in radians.
 
     Raises:
         ValueError: If `reference`, `direction` or `minimum` is not one of the values
@@ -414,9 +456,15 @@ def sub_observer_latitude(self, event_key, lat_type='centric'):
     """Gridless sub-observer latitude at the center of the disk.
 
     Parameters:
-        event_key (str or tuple): Key defining the event on the body's path.
+        event_key (str | tuple): Key defining the event on the body's path.
         lat_type (str, optional): "centric" for planetocentric latitude; "graphic" for
             planetographic latitude.
+
+    Returns:
+        Scalar: The latitude in radians, registered as a gridless backplane.
+
+    Raises:
+        ValueError: If `lat_type` is neither "centric" nor "graphic".
     """
 
     if lat_type not in ('centric', 'graphic'):
@@ -445,9 +493,15 @@ def sub_solar_latitude(self, event_key, lat_type='centric'):
     """Gridless sub-solar latitude at the center of the disk.
 
     Parameters:
-        event_key (str or tuple): Key defining the event on the body's path.
+        event_key (str | tuple): Key defining the event on the body's path.
         lat_type (str, optional): "centric" for planetocentric latitude; "graphic" for
             planetographic latitude.
+
+    Returns:
+        Scalar: The latitude in radians, registered as a gridless backplane.
+
+    Raises:
+        ValueError: If `lat_type` is neither "centric" nor "graphic".
     """
 
     if lat_type not in ('centric', 'graphic'):

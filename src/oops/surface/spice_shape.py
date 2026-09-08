@@ -17,14 +17,14 @@ def spice_shape(spice_id, frame=None, default_radii=None):
     radii are equal, and an :class:`~oops.surface.Ellipsoid` otherwise.
 
     Parameters:
-        spice_id (str or int): The SPICE body name or integer code.
+        spice_id (str | int): The SPICE body name or integer code.
         frame (Frame, optional): The rotation Frame of the body. By default, this is
             inferred from the `spice_id`.
         default_radii (tuple[float, float, float], optional): Three radius values to
             use if the PCK radius values are not found.
 
     Returns:
-        Spheroid or Ellipsoid: The surface of the body.
+        Spheroid | Ellipsoid: The surface of the body.
 
     Raises:
         IndexError: If `spice_id` is an integer but is not a recognized body code.

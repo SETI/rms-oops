@@ -12,7 +12,7 @@ def orbit_longitude(self, event_key, reference='obs', planet=None):
     """Gridless longitude on an orbit path relative to the central planet.
 
     Parameters:
-        event_key (str or tuple): Key defining the event on the orbit path.
+        event_key (str | tuple): Key defining the event on the orbit path.
         reference (str, optional): Defines the location of zero longitude.
 
             * 'aries' for the First point of Aries;
@@ -22,8 +22,14 @@ def orbit_longitude(self, event_key, reference='obs', planet=None):
             * 'oha'   for the anti-observer longitude;
             * 'sha'   for the anti-solar longitude, returning the solar hour angle.
 
-        planet (optional): ID of the body at the center of the orbit; None for the
-            default, which is the parent of the targeted body.
+        planet (str | None, optional): ID of the body at the center of the orbit; None
+            for the default, which is the parent of the targeted body.
+
+    Returns:
+        Scalar: The longitude in radians, registered as a gridless backplane.
+
+    Raises:
+        ValueError: If `reference` is not one of the values listed above.
     """
 
     if reference not in ('aries', 'node', 'obs', 'oha', 'sun', 'sha'):

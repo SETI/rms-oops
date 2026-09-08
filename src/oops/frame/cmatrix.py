@@ -26,7 +26,7 @@ class Cmatrix(Frame):
         Parameters:
             cmatrix (Matrix3Like): The 3x3 rotation matrix that rotates coordinates from
                 `reference` into this Frame.
-            reference (Frame or str, optional): The Frame or the ID of the Frame relative
+            reference (Frame | str, optional): The Frame or the ID of the Frame relative
                 to which this Frame is defined; None for J2000.
             frame_id (str, optional): The ID under which to register this Frame; None to
                 leave this Frame unregistered.
@@ -47,18 +47,34 @@ class Cmatrix(Frame):
         self.refresh()
 
     @property
-    def transform(self):
+    def transform(self) -> Transform:
         """The fixed Transform from the reference Frame to this Frame."""
         return self._transform
 
     def _refresh(self):
+        """Rebuild the fixed Transform from the rotation matrix."""
         self._transform = Transform(self._cmatrix, Vector3.ZERO, self._wayframe,
                                     self._reference)
 
     def _wayframe_key(self):
+        """The key that identifies this Frame's definition in the pool of wayframes.
+
+        Returns:
+            tuple[Matrix3, Frame]: The rotation matrix and the reference Frame.
+        """
         return (self._cmatrix, self._reference)
 
     def _show(self, level, indent=0):
+        """The expanded description of this Frame used by :meth:`~oops.Frame.show`.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame.
+        """
         skip = indent + 8
         blanks = skip * ' '
 
@@ -96,7 +112,7 @@ class Cmatrix(Frame):
             dec (ScalarLike): The declination of the optic axis in degrees.
             clock (ScalarLike): The angle of celestial north in degrees, measured
                 clockwise from the "up" direction in the observation.
-            reference (Frame or str, optional): The Frame or the ID of the Frame
+            reference (Frame | str, optional): The Frame or the ID of the Frame
                 relative to which this Frame is defined; None for J2000.
             frame_id (str, optional): The ID under which to register this Frame; None to
                 leave this Frame unregistered.
@@ -156,7 +172,7 @@ class Cmatrix(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): Ignored by class Cmatrix.
+            quick (dict | bool, optional): Ignored by class Cmatrix.
 
         Returns:
             Transform: Rotates vectors from the reference frame to this frame at the

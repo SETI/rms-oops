@@ -20,7 +20,7 @@ class ReshapedCadence(Cadence):
 
         Parameters:
             cadence (Cadence): The cadence to re-shape.
-            shape (tuple): The new shape of the cadence.
+            shape (tuple[int, ...]): The new shape of the cadence.
 
         Raises:
             ValueError: If the new shape is incompatible with the size of the given
@@ -71,7 +71,30 @@ class ReshapedCadence(Cadence):
     def _reshape_tstep(tstep, old_shape, old_stride, old_rank,
                               new_shape, new_stride, new_rank, size,
                               remask=False, derivs=False, inclusive=True):
-        """Translate a cadence index from old shape to new."""
+        """Translate a cadence index from old shape to new.
+
+        Parameters:
+            tstep (ScalarLike | PairLike | VectorLike): Time step index values in the old
+                shape.
+            old_shape (tuple[int, ...]): The shape of the cadence being indexed.
+            old_stride (numpy.ndarray): The stride of each axis of the old shape, in time
+                steps of the flattened cadence.
+            old_rank (int): The number of axes in the old shape.
+            new_shape (tuple[int, ...]): The shape of the cadence to index.
+            new_stride (numpy.ndarray): The stride of each axis of the new shape, in time
+                steps of the flattened cadence.
+            new_rank (int): The number of axes in the new shape.
+            size (int): The total number of time steps in either shape.
+            remask (bool, optional): True to mask values outside the time limits.
+            derivs (bool, optional): True to include derivatives of `tstep` in the
+                returned index.
+            inclusive (bool, optional): True to treat the end of the cadence as part of
+                it; False to exclude it.
+
+        Returns:
+            Scalar | Pair | Vector: The equivalent time step index values in the new
+            shape, a Scalar if `new_rank` is 1, a Pair if it is 2 and a Vector otherwise.
+        """
 
         # Convert old tstep to integer offset + fraction; remask for now
         if old_rank == 1:
@@ -164,7 +187,21 @@ class ReshapedCadence(Cadence):
         return new_tstep
 
     def _old_tstep_from_new(self, tstep, remask=False, derivs=False, inclusive=True):
-        """Convert a tstep index for the old cadence to the new."""
+        """Convert a tstep index for this cadence to one for the original cadence.
+
+        Parameters:
+            tstep (ScalarLike | PairLike): Time step index values in this cadence's
+                shape.
+            remask (bool, optional): True to mask values outside the time limits.
+            derivs (bool, optional): True to include derivatives of `tstep` in the
+                returned index.
+            inclusive (bool, optional): True to treat the end of the cadence as part of
+                it; False to exclude it.
+
+        Returns:
+            Scalar | Pair: The equivalent time step index values in the original
+            cadence's shape.
+        """
 
         return ReshapedCadence._reshape_tstep(
                             tstep,
@@ -174,7 +211,20 @@ class ReshapedCadence(Cadence):
                             remask=remask, derivs=derivs, inclusive=inclusive)
 
     def _new_tstep_from_old(self, tstep, remask=False, derivs=False, inclusive=True):
-        """Convert a tstep index for the new cadence to the old."""
+        """Convert a tstep index for the original cadence to one for this cadence.
+
+        Parameters:
+            tstep (ScalarLike | PairLike): Time step index values in the original
+                cadence's shape.
+            remask (bool, optional): True to mask values outside the time limits.
+            derivs (bool, optional): True to include derivatives of `tstep` in the
+                returned index.
+            inclusive (bool, optional): True to treat the end of the cadence as part of
+                it; False to exclude it.
+
+        Returns:
+            Scalar | Pair: The equivalent time step index values in this cadence's shape.
+        """
 
         return ReshapedCadence._reshape_tstep(tstep,
                             self._old_shape, self._old_stride, self._old_rank,
@@ -190,7 +240,7 @@ class ReshapedCadence(Cadence):
         returns the time at the nearest edge of the cadence's shape.
 
         Parameters:
-            tstep (ScalarLike or PairLike): Time step index values.
+            tstep (ScalarLike | PairLike): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
             derivs (bool, optional): True to include derivatives of tstep in the returned
                 time.
@@ -214,7 +264,7 @@ class ReshapedCadence(Cadence):
         returns the time range at the nearest edge.
 
         Parameters:
-            tstep (ScalarLike or PairLike): Time step index values.
+            tstep (ScalarLike | PairLike): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
             inclusive (bool, optional): True to treat the end time as part of this
                 Cadence; False to exclude it.
@@ -247,7 +297,7 @@ class ReshapedCadence(Cadence):
                 Cadence; False to exclude it.
 
         Returns:
-            Scalar or Pair: Time step index values.
+            Scalar | Pair: Time step index values.
         """
 
         time = Scalar.as_scalar(time, recursive=derivs)
@@ -307,7 +357,7 @@ class ReshapedCadence(Cadence):
                 Cadence; False to exclude it.
 
         Returns:
-            tuple[Scalar or Pair, Scalar or Pair]: The range of time step indices active
+            tuple[Scalar | Pair, Scalar | Pair]: The range of time step indices active
             at the given `time`, as (first, last+1); the upper limit is excluded. Values
             are always within the allowed range for the cadence, regardless of any mask.
             If `time` is not sampled by the cadence, the range is empty, meaning that the

@@ -29,7 +29,7 @@ class LightSource(Oops):
         Parameters:
             name (str): Name under which to register this source; it is converted to
                 upper case.
-            source (Path, str, PairLike, or Vector3Like): The location of the source, as
+            source (Path | str | PairLike | Vector3Like): The location of the source, as
                 any of:
 
                 * a Path or the ID of a registered Path, for a source that moves;
@@ -124,10 +124,10 @@ class LightSource(Oops):
             guess (ScalarLike, optional): An initial guess to use as the event time along
                 the path; otherwise None. Should only be used if the event time was
                 already returned from a similar calculation.
-            antimask (numpy.ndarray or bool, optional): If not None, this is a boolean
+            antimask (numpy.ndarray | bool, optional): If not None, this is a boolean
                 array to be applied to event times and positions. Only the indices where
                 antimask=True will be used in the solution.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
@@ -147,7 +147,7 @@ class LightSource(Oops):
                   This prevents the divergence of the solution in some cases.
 
         Returns:
-            tuple[Event or None, Event]: (`departure_event`, `arrival_event`).
+            tuple[Event | None, Event]: (`departure_event`, `arrival_event`).
 
             * `departure_event`: The Event at the source that matches the light travel
               time to `event`. This is None for a LightSource defined by a fixed
@@ -170,7 +170,11 @@ class LightSource(Oops):
         return (None, arrival)
 
     def as_path(self):
-        """This LightSource's path object if it has one; otherwise, None."""
+        """This LightSource's path object if it has one; otherwise, None.
+
+        Returns:
+            Path | None: The Path of a moving source; None for a fixed direction.
+        """
 
         return (self.source if self.source_is_moving else None)
 

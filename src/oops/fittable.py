@@ -94,7 +94,8 @@ class Fittable(Oops):
         This function also refreshes the object.
 
         Parameters:
-            params: Parameter value or values to be applied to this object.
+            params (float | Iterable[float]): Parameter value or values to be applied to
+                this object.
 
         Returns:
             bool: True if this object has changed as a result of this function call.

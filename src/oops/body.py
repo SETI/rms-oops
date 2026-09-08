@@ -132,7 +132,15 @@ for (codes, names) in ALIASES:
 
 # Sometimes you really just want a list, not an iterator
 def lrange(*args):
-    """A list of the integers in the given range."""
+    """A list of the integers in the given range.
+
+    Parameters:
+        *args (int): The arguments of :func:`range`: `stop`; `start, stop`; or `start,
+            stop, step`.
+
+    Returns:
+        list[int]: The integers in the range.
+    """
 
     return list(range(*args))
 
@@ -178,6 +186,23 @@ URANUS_OLD_GRAVITY = OblateGravity(5793939., [3.34343e-3, -2.885e-5],
 
 # Local function to adapt the tabulated elements from French et al. 1991.
 def _uranus_ring_elements(a, e, peri, i, node, da):
+    """The orbital elements of a Uranian ring, adapted from the tabulated values.
+
+    Parameters:
+        a (float): Semimajor axis in km.
+        e (float): Eccentricity.
+        peri (float): Longitude of pericenter in degrees.
+        i (float): Inclination in degrees.
+        node (float): Longitude of the ascending node in degrees.
+        da (float): Radial width of the ring in km.
+
+    Returns:
+        tuple[float, ...]: The ten values `(a, lon, n, e, peri, prec, i, node, regr,
+        rmax)`: the nine orbital elements that :class:`~oops.surface.OrbitPlane` expects,
+        with angles in radians and rates in radians per second, followed by the outer
+        radius `a + da/2` of the ring in km.
+    """
+
     n = URANUS_OLD_GRAVITY.n(a)
     prec = URANUS_OLD_GRAVITY.combo(a, (1,-1, 0))
     regr = URANUS_OLD_GRAVITY.combo(a, (1, 0,-1))
@@ -240,47 +265,79 @@ class Body(Oops):
 
     Attributes:
         name (str): The name of this body.
-        spice_id (int or None): The ID from the SPICE toolkit if the body is found in
+        spice_id (int | None): The ID from the SPICE toolkit if the body is found in
             SPICE; otherwise None.
         path (Path): A Waypoint for the body's path.
         frame (Frame): A Wayframe for the body's frame.
-        parent (Body): The physical body, not necessarily the barycenter, about which this
-            body orbits. If a string is given, the parent is found by looking it up in the
-            BODY_REGISTRY dictionary.
-        barycenter (Body): The body defining the barycenter of motion and the gravity
-            field defining this body's motion. If a string is given, the barycenter is
-            found by looking it up in the BODY_REGISTRY dictionary. If None, this is the
-            parent body.
+        parent (Body | None): The physical body, not necessarily the barycenter, about
+            which this body orbits. If a string is given, the parent is found by looking
+            it up in the BODY_REGISTRY dictionary.
+        barycenter (Body | None): The body defining the barycenter of motion and the
+            gravity field defining this body's motion. If a string is given, the
+            barycenter is found by looking it up in the BODY_REGISTRY dictionary. If None,
+            this is the parent body.
         spice_name (str): Name of the Body within the SPICE toolkit, if it is in SPICE.
-        ring_frame (Frame or None): The Wayframe of a "despun" RingFrame relevant to a
+        spk (str | None): The SPK file furnished for this body, if it is a small body
+            defined by :meth:`define_small_body`; None otherwise.
+        is_standard (bool): True if this body is among the standard bodies of the solar
+            system.
+        is_registered (bool): True if this is the object registered under its name.
+        ring_frame (Frame | None): The Wayframe of a "despun" RingFrame relevant to a
             ring that might orbit this body; None if not (yet) defined.
+        ring_epoch (float | None): The epoch of the ring frame; None if it has none.
         ring_is_retrograde (bool): True if the ring frame is retrograde relative to
             IAU-defined north.
-        ring_body (Body or None): The Body object associated with an equatorial, unbounded
+        ring_pole (Vector3 | None): The pole of the ring frame in J2000 coordinates at
+            its epoch; None if the ring frame has no epoch.
+        ring_body (Body | None): The Body object associated with an equatorial, unbounded
             ring; None if not defined.
-        surface (Surface or None): The Surface object defining the body's surface; None if
+        is_ring (bool): True if this body is itself a ring.
+        invariable_frame (Frame | None): The frame of the invariable plane; None if not
+            (yet) defined.
+        invariable_pole (Vector3 | None): The pole of the invariable plane; None if not
+            (yet) defined.
+        surface (Surface | None): The Surface object defining the body's surface; None if
             the body is a point and has no surface.
         radius (float): A single value in km, defining the radius of a sphere that
             encloses the entire body. Zero for bodies that have no surface.
         inner_radius (float): A single value in km, defining the radius of a sphere that
             is entirely enclosed by the body. Zero for bodies that have no surface.
-        gravity (Gravity or None): The gravity field of the body; None if the gravity
+        gravity (Gravity | None): The gravity field of the body; None if the gravity
             field is undefined or negligible.
-        keywords (list): Keywords associated with the body. Typical values are "PLANET",
-            "BARYCENTER", "SATELLITE", "SPACECRAFT", "RING", and for satellites,
-            "REGULAR", "IRREGULAR", "CLASSICAL". The name of each body appears as a
-            keyword in its own keyword list. In addition, every planet appears as a
-            keyword for its system barycenter and for each of its satellites and rings.
-        children (list): Child bodies associated with this body. Every Body object appears
-            on the list of the children of its parent and also the children of its
-            barycenter.
+        lightsource (LightSource | None): The light source associated with this body;
+            None if it has none.
+        keywords (list[str]): Keywords associated with the body. Typical values are
+            "PLANET", "BARYCENTER", "SATELLITE", "SPACECRAFT", "RING", and for
+            satellites, "REGULAR", "IRREGULAR", "CLASSICAL". The name of each body
+            appears as a keyword in its own keyword list. In addition, every planet
+            appears as a keyword for its system barycenter and for each of its satellites
+            and rings.
+        child_names (list[str]): The names of the child bodies associated with this
+            body. Every Body object appears on the list of the children of its parent and
+            also the children of its barycenter.
+        children (list[Body]): Child bodies associated with this body.
     """
 
     BODY_REGISTRY = {}          # global dictionary of body objects
     STANDARD_BODIES = set()     # Bodies that always have the same definition
 
     def __init__(self, name, path, frame, parent=None, barycenter=None, spice_name=None):
-        """Constructor for a Body object."""
+        """Constructor for a Body object.
+
+        Parameters:
+            name (str): The name of the body; it is converted to upper case.
+            path (Path | str): The path or path ID of the body's center.
+            frame (Frame | str): The frame or frame ID of the body.
+            parent (Body | str, optional): The physical body, or its registered name,
+                about which this body orbits; None if it has no parent.
+            barycenter (Body | str, optional): The body, or its registered name, that
+                defines the barycenter of this body's motion; None to use the parent.
+            spice_name (str, optional): The name of the body within the SPICE toolkit, if
+                it differs from `name`.
+
+        Raises:
+            TypeError: If `name` is not a string.
+        """
 
         if not isinstance(name, str):
             raise TypeError('Body name must be a string: ' + str(name))
@@ -442,7 +499,14 @@ class Body(Oops):
     ######################################################################################
 
     def apply_surface(self, surface, radius, inner_radius=0.):
-        """Add the surface attribute to a Body."""
+        """Add the surface attribute to a Body.
+
+        Parameters:
+            surface (Surface): The surface of the body.
+            radius (float): The radius in km of a sphere that encloses the entire body.
+            inner_radius (float, optional): The radius in km of a sphere that is entirely
+                enclosed by the body.
+        """
 
         self.surface = surface
         self.radius = radius
@@ -451,7 +515,21 @@ class Body(Oops):
         # This assertion is not strictly necessary
 
     def apply_ring_frame(self, epoch=None, retrograde=False, pole=None):
-        """Add the ring and ring_frame attributes to a Body."""
+        """Add the ring and ring_frame attributes to a Body.
+
+        Parameters:
+            epoch (float, optional): The time TDB at which the pole of the ring frame is
+                fixed; None for a frame that follows the body's pole.
+            retrograde (bool, optional): True if the ring is retrograde relative to the
+                body's IAU-defined pole.
+            pole (Vector3Like, optional): If not None, the pole of the invariable plane,
+                in which case the ring frame is a :class:`~oops.frame.PoleFrame` rather
+                than a :class:`~oops.frame.RingFrame`.
+
+        Raises:
+            ValueError: If a ring frame has already been defined for this body with
+                different parameters.
+        """
 
         # On a repeat call, make sure the frames match
         if isinstance(self.ring_frame, RingFrame) and pole is None:
@@ -489,12 +567,21 @@ class Body(Oops):
                 self.invariable_pole = self.ring_pole
 
     def apply_gravity(self, gravity):
-        """Add the gravity attribute to a Body."""
+        """Add the gravity attribute to a Body.
+
+        Parameters:
+            gravity (Gravity | None): The gravity field of the body.
+        """
 
         self.gravity = gravity
 
     def add_keywords(self, keywords):
-        """Add one or more keywords to the list associated with this Body."""
+        """Add one or more keywords to the list associated with this Body.
+
+        Parameters:
+            keywords (str | list[str]): One keyword or a list of keywords; those already
+                present are not duplicated.
+        """
 
         if isinstance(keywords, str):
             keywords = [keywords]
@@ -509,14 +596,30 @@ class Body(Oops):
     ######################################################################################
 
     @property
-    def children(self):
+    def children(self) -> 'list[Body]':
         """The Body objects that are the immediate children of this Body."""
 
         return [Body.BODY_REGISTRY[name] for name in self.child_names]
 
     def select_children(self, include_all=None, include_any=None,
                               exclude=None, radius=None, recursive=False):
-        """A list of body objects based on keywords and size."""
+        """A list of body objects based on keywords and size.
+
+        Parameters:
+            include_all (str | list[str], optional): Keywords, all of which a body must
+                have to be selected.
+            include_any (str | list[str], optional): Keywords, at least one of which a
+                body must have to be selected.
+            exclude (str | list[str], optional): Keywords, any of which disqualifies a
+                body.
+            radius (float | tuple[float, float], optional): The range of body radii in km
+                to select; a single value or a one-element tuple is the minimum radius.
+            recursive (bool, optional): True to select from all the descendants of this
+                body rather than from its immediate children.
+
+        Returns:
+            list[Body]: The selected bodies.
+        """
 
         if recursive:
             bodies = []
@@ -543,6 +646,12 @@ class Body(Oops):
         return bodies
 
     def _recursive_children(self, selection):
+        """Append the descendants of this body to a list.
+
+        Parameters:
+            selection (list[Body]): The list to which each descendant not already present
+                is appended.
+        """
 
         for child in self.children:
             if child not in selection:
@@ -552,7 +661,15 @@ class Body(Oops):
 
     @staticmethod
     def name_in(bodies, names):
-        """Retain bodies if their names ARE found in the list provided."""
+        """Retain bodies if their names ARE found in the list provided.
+
+        Parameters:
+            bodies (list[Body]): The bodies to filter.
+            names (str | list[str]): One name or a list of names.
+
+        Returns:
+            list[Body]: The bodies retained, without duplicates.
+        """
 
         if isinstance(names, str):
             names = [names]
@@ -566,7 +683,15 @@ class Body(Oops):
 
     @staticmethod
     def name_not_in(bodies, names):
-        """Retain bodies only if their names are NOT in the list provided."""
+        """Retain bodies only if their names are NOT in the list provided.
+
+        Parameters:
+            bodies (list[Body]): The bodies to filter.
+            names (str | list[str]): One name or a list of names.
+
+        Returns:
+            list[Body]: The bodies retained, without duplicates.
+        """
 
         if isinstance(names, str):
             names = [names]
@@ -579,7 +704,16 @@ class Body(Oops):
 
     @staticmethod
     def radius_in_range(bodies, min, max=np.inf):
-        """Retain bodies if their radii fall INSIDE the range (min,max)."""
+        """Retain bodies if their radii fall INSIDE the range (min,max).
+
+        Parameters:
+            bodies (list[Body]): The bodies to filter.
+            min (float): The minimum radius in km, inclusive.
+            max (float, optional): The maximum radius in km, inclusive.
+
+        Returns:
+            list[Body]: The bodies retained, without duplicates.
+        """
 
         selection = []
         for body in bodies:
@@ -590,7 +724,16 @@ class Body(Oops):
 
     @staticmethod
     def radius_not_in_range(bodies, min, max=np.inf):
-        """Retain bodies if their radii fall OUTSIDE the range (min,max)."""
+        """Retain bodies if their radii fall OUTSIDE the range (min,max).
+
+        Parameters:
+            bodies (list[Body]): The bodies to filter.
+            min (float): The minimum radius in km of the excluded range.
+            max (float, optional): The maximum radius in km of the excluded range.
+
+        Returns:
+            list[Body]: The bodies retained, without duplicates.
+        """
 
         selection = []
         for body in bodies:
@@ -605,6 +748,13 @@ class Body(Oops):
 
         Note that the name of the surface class is "NoneType" for cases where
         the surface has not been specified.
+
+        Parameters:
+            bodies (list[Body]): The bodies to filter.
+            class_names (str | list[str]): One surface class name or a list of them.
+
+        Returns:
+            list[Body]: The bodies retained, without duplicates.
         """
 
         if isinstance(class_names, str):
@@ -624,6 +774,13 @@ class Body(Oops):
 
         Note that the name of the surface class is "NoneType" for cases where
         the surface has not been specified.
+
+        Parameters:
+            bodies (list[Body]): The bodies to filter.
+            class_names (str | list[str]): One surface class name or a list of them.
+
+        Returns:
+            list[Body]: The bodies retained, without duplicates.
         """
 
         if isinstance(class_names, str):
@@ -639,7 +796,14 @@ class Body(Oops):
 
     @staticmethod
     def has_gravity(bodies):
-        """Retain bodies on the list if they HAVE a defined gravity."""
+        """Retain bodies on the list if they HAVE a defined gravity.
+
+        Parameters:
+            bodies (list[Body]): The bodies to filter.
+
+        Returns:
+            list[Body]: The bodies retained, without duplicates.
+        """
 
         selection = []
         for body in bodies:
@@ -650,7 +814,14 @@ class Body(Oops):
 
     @staticmethod
     def has_no_gravity(bodies):
-        """Retain bodies on the list if they have NO gravity."""
+        """Retain bodies on the list if they have NO gravity.
+
+        Parameters:
+            bodies (list[Body]): The bodies to filter.
+
+        Returns:
+            list[Body]: The bodies retained, without duplicates.
+        """
 
         selection = []
         for body in bodies:
@@ -661,7 +832,14 @@ class Body(Oops):
 
     @staticmethod
     def has_children(bodies):
-        """Retain bodies on the list if they HAVE children."""
+        """Retain bodies on the list if they HAVE children.
+
+        Parameters:
+            bodies (list[Body]): The bodies to filter.
+
+        Returns:
+            list[Body]: The bodies retained, without duplicates.
+        """
 
         selection = []
         for body in bodies:
@@ -672,7 +850,14 @@ class Body(Oops):
 
     @staticmethod
     def has_no_children(bodies):
-        """Retain bodies on the list if they have NO children."""
+        """Retain bodies on the list if they have NO children.
+
+        Parameters:
+            bodies (list[Body]): The bodies to filter.
+
+        Returns:
+            list[Body]: The bodies retained, without duplicates.
+        """
 
         selection = []
         for body in bodies:
@@ -683,7 +868,14 @@ class Body(Oops):
 
     @staticmethod
     def has_ring(bodies):
-        """Retain bodies on the list if they HAVE a defined ring."""
+        """Retain bodies on the list if they HAVE a defined ring.
+
+        Parameters:
+            bodies (list[Body]): The bodies to filter.
+
+        Returns:
+            list[Body]: The bodies retained, without duplicates.
+        """
 
         selection = []
         for body in bodies:
@@ -694,7 +886,14 @@ class Body(Oops):
 
     @staticmethod
     def has_no_ring(bodies):
-        """Retain bodies on the list if they have NO defined ring."""
+        """Retain bodies on the list if they have NO defined ring.
+
+        Parameters:
+            bodies (list[Body]): The bodies to filter.
+
+        Returns:
+            list[Body]: The bodies retained, without duplicates.
+        """
 
         selection = []
         for body in bodies:
@@ -705,7 +904,15 @@ class Body(Oops):
 
     @staticmethod
     def keywords_include_any(bodies, keywords):
-        """Retain bodies that have at least one of the specified keywords."""
+        """Retain bodies that have at least one of the specified keywords.
+
+        Parameters:
+            bodies (list[Body]): The bodies to filter.
+            keywords (str | list[str]): One keyword or a list of keywords.
+
+        Returns:
+            list[Body]: The bodies retained, without duplicates.
+        """
 
         if isinstance(keywords, str):
             keywords = [keywords]
@@ -721,7 +928,15 @@ class Body(Oops):
 
     @staticmethod
     def keywords_include_all(bodies, keywords):
-        """Retain bodies if they have all of the specified keywords."""
+        """Retain bodies if they have all of the specified keywords.
+
+        Parameters:
+            bodies (list[Body]): The bodies to filter.
+            keywords (str | list[str]): One keyword or a list of keywords.
+
+        Returns:
+            list[Body]: The bodies retained, without duplicates.
+        """
 
         if isinstance(keywords, str):
             keywords = [keywords]
@@ -741,7 +956,15 @@ class Body(Oops):
 
     @staticmethod
     def keywords_do_not_include(bodies, keywords):
-        """Retain bodies if they DO NOT have any of the specified keywords."""
+        """Retain bodies if they DO NOT have any of the specified keywords.
+
+        Parameters:
+            bodies (list[Body]): The bodies to filter.
+            keywords (str | list[str]): One keyword or a list of keywords.
+
+        Returns:
+            list[Body]: The bodies retained, without duplicates.
+        """
 
         if isinstance(keywords, str):
             keywords = [keywords]
@@ -767,6 +990,15 @@ class Body(Oops):
 
         The default ID of the path returned is the name of the first body with
         a "+" appended.
+
+        Parameters:
+            bodies (list[Body]): The bodies whose centers the path follows.
+            origin (Path | str, optional): The path or path ID of the origin.
+            frame (Frame | str, optional): The frame or frame ID of the path.
+            path_id (str, optional): The ID of the path; None to use the default.
+
+        Returns:
+            MultiPath: The path of the body centers.
         """
 
         paths = []
@@ -781,19 +1013,43 @@ class Body(Oops):
 
     @staticmethod
     def lookup(key):
-        """A body from the registry given its name."""
+        """A body from the registry given its name.
+
+        Parameters:
+            key (str): The name of the body, in any case.
+
+        Returns:
+            Body: The registered body.
+
+        Raises:
+            KeyError: If no body of that name is registered.
+        """
 
         return Body.BODY_REGISTRY[key.upper()]
 
     @staticmethod
     def exists(key):
-        """True if the body's name exists in the registry."""
+        """True if the body's name exists in the registry.
+
+        Parameters:
+            key (str): The name of the body, in any case.
+
+        Returns:
+            bool: True if a body of that name is registered.
+        """
 
         return key.upper() in Body.BODY_REGISTRY
 
     @staticmethod
     def as_body(body):
         """A body object given the registered name or the object itself.
+
+        Parameters:
+            body (Body | str): A body or the name of a registered body.
+
+        Returns:
+            Body: The registered body of that name if there is one; otherwise the given
+            body.
         """
 
         if isinstance(body, Body):
@@ -810,7 +1066,14 @@ class Body(Oops):
 
     @staticmethod
     def as_body_name(body):
-        """A body name given the registered name or the object itself."""
+        """A body name given the registered name or the object itself.
+
+        Parameters:
+            body (Body | str): A body or the name of a body.
+
+        Returns:
+            str: The name of the body.
+        """
 
         if isinstance(body, Body):
             return body.name
@@ -833,7 +1096,11 @@ class Body(Oops):
         Frame._reset_caches()
 
     def as_path(self):
-        """Path object for this body."""
+        """Path object for this body.
+
+        Returns:
+            Path: The primary path of this body.
+        """
 
         return Path.as_primary_path(self.path)
 
@@ -851,10 +1118,10 @@ class Body(Oops):
             guess (ScalarLike, optional): An initial guess to use as the event time along
                 the path; otherwise None. Should only be used if the event time was
                 already returned from a similar calculation.
-            antimask (numpy.ndarray or bool, optional): If not None, this is a boolean
+            antimask (numpy.ndarray | bool, optional): If not None, this is a boolean
                 array to be applied to event times and positions. Only the indices where
                 antimask=True will be used in the solution.
-            quick (dict or bool, optional): To override the configured default parameters
+            quick (dict | bool, optional): To override the configured default parameters
                 for QuickPaths and QuickFrames; False to disable the use of QuickPaths
                 and QuickFrames. The default configuration is defined in config.py.
             converge (dict, optional): Parameters to override the configured default
@@ -865,9 +1132,11 @@ class Body(Oops):
 
             * `path_event`: The Event at the center of this body that matches the light
               travel time to `event`. It carries the departing photon's line of sight
-              `dep` and the positive light travel time `dep_lt`.
+              :attr:`~oops.Event.dep` and the positive light travel time
+              :attr:`~oops.Event.dep_lt`.
             * `arrival_event`: A copy of the given `event`, carrying the arriving
-              photon's line of sight `arr` and the negative light travel time `arr_lt`.
+              photon's line of sight :attr:`~oops.Event.arr` and the negative light
+              travel time :attr:`~oops.Event.arr_lt`.
         """
 
         return self.path.photon_to_event(event, derivs=derivs, guess=guess,
@@ -887,15 +1156,15 @@ class Body(Oops):
         defined within the spicedb library.
 
         Parameters:
-            start_time (str, optional): The start time of the interval the SPK kernels
-                must cover, as a date string or in seconds TDB; None to ignore the time
-                limits of the kernels.
-            stop_time (str, optional): The stop time of that interval, in the same form as
-                `start_time`.
+            start_time (str | float, optional): The start time of the interval the SPK
+                kernels must cover, as a date string or in seconds TDB; None to ignore the
+                time limits of the kernels.
+            stop_time (str | float, optional): The stop time of that interval, in the same
+                form as `start_time`.
             asof (str, optional): An optional earlier date for which values should be
                 returned, so that a calculation can be repeated with the kernels that were
                 current at that time.
-            **args: Additional keyword options:
+            **args (Any): Additional keyword options:
 
                 * `planets` (int or tuple): The planet number 1-9, or a tuple of planet
                   numbers, to define; the default is all nine.
@@ -905,7 +1174,8 @@ class Body(Oops):
                   default True.
 
         Returns:
-            list: The names of the SPICE kernels furnished, in the order they were loaded.
+            list[str]: The names of the SPICE kernels furnished, in the order they were
+            loaded.
         """
 
         names = []
@@ -991,7 +1261,20 @@ class Body(Oops):
 
     @staticmethod
     def _define_mars(start_time, stop_time, asof=None):
-        """Define components of the Mars system."""
+        """Define components of the Mars system.
+
+        Parameters:
+            start_time (str | float | None): The start time of the interval the SPK
+                kernels must cover, as a date string or in seconds TDB; None to ignore the
+                time limits of the kernels.
+            stop_time (str | float | None): The stop time of that interval, in the same
+                form as `start_time`.
+            asof (str, optional): An optional earlier date for which values should be
+                returned.
+
+        Returns:
+            list[str]: The names of the SPICE kernels furnished.
+        """
 
         Body.MARS_MOONS_LOADED += MARS_ALL_MOONS
         names = spicedb.furnish_spk(Body.MARS_MOONS_LOADED, time=(start_time, stop_time),
@@ -1027,7 +1310,21 @@ class Body(Oops):
 
     @staticmethod
     def _define_jupiter(start_time, stop_time, asof=None, irregulars=False):
-        """Define components of the Jupiter system."""
+        """Define components of the Jupiter system.
+
+        Parameters:
+            start_time (str | float | None): The start time of the interval the SPK
+                kernels must cover, as a date string or in seconds TDB; None to ignore the
+                time limits of the kernels.
+            stop_time (str | float | None): The stop time of that interval, in the same
+                form as `start_time`.
+            asof (str, optional): An optional earlier date for which values should be
+                returned.
+            irregulars (bool, optional): True to include the irregular moons.
+
+        Returns:
+            list[str]: The names of the SPICE kernels furnished.
+        """
 
         # Load Jupiter system SPKs
         Body.JUPITER_MOONS_LOADED += JUPITER_CLASSICAL + JUPITER_REGULAR
@@ -1079,7 +1376,21 @@ class Body(Oops):
 
     @staticmethod
     def _define_saturn(start_time, stop_time, asof=None, irregulars=False):
-        """Define components of the Saturn system."""
+        """Define components of the Saturn system.
+
+        Parameters:
+            start_time (str | float | None): The start time of the interval the SPK
+                kernels must cover, as a date string or in seconds TDB; None to ignore the
+                time limits of the kernels.
+            stop_time (str | float | None): The stop time of that interval, in the same
+                form as `start_time`.
+            asof (str, optional): An optional earlier date for which values should be
+                returned.
+            irregulars (bool, optional): True to include the irregular moons.
+
+        Returns:
+            list[str]: The names of the SPICE kernels furnished.
+        """
 
         # Load Saturn system SPKs
         Body.SATURN_MOONS_LOADED += (SATURN_CLASSICAL_INNER +
@@ -1175,7 +1486,21 @@ class Body(Oops):
 
     @staticmethod
     def _define_uranus(start_time, stop_time, asof=None, irregulars=False):
-        """Define components of the Uranus system."""
+        """Define components of the Uranus system.
+
+        Parameters:
+            start_time (str | float | None): The start time of the interval the SPK
+                kernels must cover, as a date string or in seconds TDB; None to ignore the
+                time limits of the kernels.
+            stop_time (str | float | None): The stop time of that interval, in the same
+                form as `start_time`.
+            asof (str, optional): An optional earlier date for which values should be
+                returned.
+            irregulars (bool, optional): True to include the irregular moons.
+
+        Returns:
+            list[str]: The names of the SPICE kernels furnished.
+        """
 
         # Load Uranus system SPKs
         Body.URANUS_MOONS_LOADED += URANUS_CLASSICAL + URANUS_INNER
@@ -1263,7 +1588,21 @@ class Body(Oops):
 
     @staticmethod
     def _define_neptune(start_time, stop_time, asof=None, irregulars=False):
-        """Define components of the Neptune system."""
+        """Define components of the Neptune system.
+
+        Parameters:
+            start_time (str | float | None): The start time of the interval the SPK
+                kernels must cover, as a date string or in seconds TDB; None to ignore the
+                time limits of the kernels.
+            stop_time (str | float | None): The stop time of that interval, in the same
+                form as `start_time`.
+            asof (str, optional): An optional earlier date for which values should be
+                returned.
+            irregulars (bool, optional): True to include the irregular moons.
+
+        Returns:
+            list[str]: The names of the SPICE kernels furnished.
+        """
 
         # Load Neptune system SPKs
         Body.NEPTUNE_MOONS_LOADED += (NEPTUNE_CLASSICAL_INNER +
@@ -1324,7 +1663,20 @@ class Body(Oops):
 
     @staticmethod
     def _define_pluto(start_time, stop_time, asof=None):
-        """Define components of the Pluto system."""
+        """Define components of the Pluto system.
+
+        Parameters:
+            start_time (str | float | None): The start time of the interval the SPK
+                kernels must cover, as a date string or in seconds TDB; None to ignore the
+                time limits of the kernels.
+            stop_time (str | float | None): The stop time of that interval, in the same
+                form as `start_time`.
+            asof (str, optional): An optional earlier date for which values should be
+                returned.
+
+        Returns:
+            list[str]: The names of the SPICE kernels furnished.
+        """
 
         Body.PLUTO_MOONS_LOADED += CHARON + PLUTO_REGULAR
 
@@ -1369,6 +1721,15 @@ class Body(Oops):
         """Define the path, frame, surface for bodies by name or SPICE ID.
 
         All must share a common parent and barycenter.
+
+        Parameters:
+            spice_ids (list[int | str]): The SPICE IDs or names of the bodies.
+            parent (Body | str | None): The parent body or its name; None if none.
+            barycenter (Body | str | None): The barycenter body or its name; None to use
+                the parent.
+            keywords (list[str]): The keywords to associate with each body.
+            is_standard (bool, optional): True to include the bodies among the standard
+                bodies of the solar system.
         """
 
         for spice_id in spice_ids:
@@ -1378,7 +1739,24 @@ class Body(Oops):
     @staticmethod
     def define_body(spice_id, parent, barycenter, keywords,
                     is_standard=False, name=None):
-        """Define the path, frame, surface for a single body by name or SPICE ID."""
+        """Define the path, frame, surface for a single body by name or SPICE ID.
+
+        A body whose name is already registered is left as it is.
+
+        Parameters:
+            spice_id (int | str): The SPICE ID or name of the body.
+            parent (Body | str | None): The parent body or its name; None if none.
+            barycenter (Body | str | None): The barycenter body or its name; None to use
+                the parent.
+            keywords (list[str]): The keywords to associate with the body.
+            is_standard (bool, optional): True to include the body among the standard
+                bodies of the solar system.
+            name (str, optional): The name under which to register the body; None to use
+                the ID of its path.
+
+        Raises:
+            ValueError: If the body has no name.
+        """
 
         # Define the body's path
         path = SpicePath.get(spice_id, Path.SSB)
@@ -1447,7 +1825,7 @@ class Body(Oops):
         Parameters:
             parent_name (str): The name of the central planet for the ring surface.
             ring_name (str): The name of the surface.
-            radii (tuple, float, or None): If this is a tuple with two values, these are
+            radii (tuple | float | None): If this is a tuple with two values, these are
                 the radial limits of the ring; if it is a scalar, then the ring plane has
                 no defined radial limits, but the radius attribute of the body will be set
                 to this value; if None, then the radius attribute of the body will be set
@@ -1464,6 +1842,10 @@ class Body(Oops):
                 :class:`~oops.frame.RingFrame`.
             is_standard (bool, optional): True to include this ring among the standard
                 bodies of the solar system.
+
+        Returns:
+            Body: The body of the ring; the existing body if one of that name is already
+            registered.
         """
 
         # If the ring body already exists, skip it
@@ -1517,6 +1899,19 @@ class Body(Oops):
         """Define the path, frame, surface and body for ring given orbital elements.
 
         The ring can be inclined or eccentric.
+
+        Parameters:
+            parent_name (str): The name of the central planet.
+            ring_name (str): The name of the ring.
+            elements (tuple[float, ...]): The nine orbital elements that
+                :class:`~oops.surface.OrbitPlane` expects, followed by the outer radius of
+                the ring in km.
+            epoch (float): The time TDB relative to which the orbital elements are
+                defined.
+            reference (Frame | str): The frame or frame ID in which the orbit is defined.
+            keywords (list[str]): The keywords to associate with the ring.
+            is_standard (bool, optional): True to include this ring among the standard
+                bodies of the solar system.
         """
 
         parent = Body.lookup(parent_name)
@@ -1539,6 +1934,17 @@ class Body(Oops):
         """Define the path, frame, surface for a body by SPICE ID.
 
         This body treats the Sun as its parent body and barycenter.
+
+        Parameters:
+            spice_id (int | str): The SPICE ID or name of the body.
+            name (str, optional): The name under which to register the body; None to use
+                the ID of its path.
+            spk (str, optional): The SPK file to furnish for the body.
+            keywords (list[str], optional): The keywords to associate with the body.
+            parent (str, optional): The name of the parent body.
+            barycenter (str, optional): The name of the barycenter body.
+            is_standard (bool, optional): True to include the body among the standard
+                bodies of the solar system.
         """
 
         keywords = keywords or []
@@ -1598,6 +2004,7 @@ class Body(Oops):
 
     @staticmethod
     def _undefine_solar_system():
+        """Clear the body registry and unload every SPICE kernel, for debugging."""
 
         Body.BODY_REGISTRY = {}
         Body.STANDARD_BODIES = set()

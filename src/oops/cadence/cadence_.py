@@ -10,11 +10,11 @@ class Cadence(Mutable):
     """An abstract class defining the timing of an observation.
 
     Attributes:
-        time (tuple): The start time and end time of the observation overall, in seconds
-            TDB.
+        time (tuple[float, float]): The start time and end time of the observation
+            overall, in seconds TDB.
         midtime (float): The mid-time of the observation, in seconds TDB.
         lasttime (float): The start time of the last time step, in seconds TDB.
-        shape (tuple): The shape of the array of time step indices.
+        shape (tuple[int, ...]): The shape of the array of time step indices.
         is_continuous (bool): True if the cadence contains no gaps in time between the
             start and end.
         is_unique (bool): True if no times inside the cadence are associated with more
@@ -38,7 +38,7 @@ class Cadence(Mutable):
         returns the time at the nearest edge of the cadence's shape.
 
         Parameters:
-            tstep (ScalarLike or PairLike): Time step index values.
+            tstep (ScalarLike | PairLike): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
             derivs (bool, optional): True to include derivatives of tstep in the returned
                 time.
@@ -59,7 +59,7 @@ class Cadence(Mutable):
         returns the time range at the nearest edge.
 
         Parameters:
-            tstep (ScalarLike or PairLike): Time step index values.
+            tstep (ScalarLike | PairLike): Time step index values.
             remask (bool, optional): True to mask values outside the time limits.
             inclusive (bool, optional): True to treat the end time as part of this
                 Cadence; False to exclude it.
@@ -89,7 +89,7 @@ class Cadence(Mutable):
                 Cadence; False to exclude it.
 
         Returns:
-            Scalar or Pair: Time step index values.
+            Scalar | Pair: Time step index values.
         """
 
         raise NotImplementedError(f'{type(self).__name__}.tstep_at_time is not '
@@ -106,7 +106,7 @@ class Cadence(Mutable):
                 Cadence; False to exclude it.
 
         Returns:
-            tuple[Scalar or Pair, Scalar or Pair]: The range of time step indices active
+            tuple[Scalar | Pair, Scalar | Pair]: The range of time step indices active
             at the given `time`, as (first, last+1); the upper limit is excluded. Values
             are always within the allowed range for the cadence, regardless of any mask.
             If `time` is not sampled by the cadence, the range is empty, meaning that the
@@ -184,13 +184,13 @@ class Cadence(Mutable):
         """The time interval(s) between the times of adjacent time steps.
 
         Parameters:
-            tstep (ScalarLike or PairLike): Time step index, which need not be integral.
+            tstep (ScalarLike | PairLike): Time step index, which need not be integral.
             sign (int, optional): +1 for the time interval to the next time step; -1 for
                 the time interval since the previous time step.
             remask (bool, optional): True to mask tsteps that are out of range.
 
         Returns:
-            Scalar or Pair: Strides in seconds.
+            Scalar | Pair: Strides in seconds.
 
         Raises:
             NotImplementedError: If the cadence has more than two dimensions.

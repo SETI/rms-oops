@@ -29,7 +29,7 @@ class LaplaceFrame(Frame):
         """Constructor for a LaplaceFrame.
 
         Parameters:
-            orbit (KeplerPath or str): The KeplerPath, or the ID of the KeplerPath,
+            orbit (KeplerPath | str): The KeplerPath, or the ID of the KeplerPath,
                 describing the orbit of the body for which a Laplace Plane is needed.
             tilt (ScalarLike): The tilt in radians of the Laplace Plane's pole from the
                 planet's pole toward or beyond the invariable pole.
@@ -65,14 +65,30 @@ class LaplaceFrame(Frame):
         self.refresh()
 
     def _refresh(self):
+        """Relink the orbit and planet Frames to J2000 and empty the cache."""
         self._orbit_wrt_j2000 = self._orbit._frame.wrt_j2000
         self._planet_wrt_j2000 = self._planet.frame.wrt_j2000
         self._cache = _Cache(self._cache_size)
 
     def _wayframe_key(self):
+        """The key that identifies this Frame's definition in the pool of wayframes.
+
+        Returns:
+            tuple[KeplerPath, Scalar]: The orbit and the tilt.
+        """
         return (self._orbit, self._tilt)
 
     def _show(self, level, indent=0):
+        """The expanded description of this Frame used by :meth:`~oops.Frame.show`.
+
+        Parameters:
+            level (int): The number of levels of the Frame's definition to expand.
+            indent (int, optional): The number of blanks by which to indent each line
+                after the first.
+
+        Returns:
+            str: The description of this Frame.
+        """
         name = type(self).__name__
         skip = indent + len(name) + 1
         blanks = skip * ' '
@@ -105,7 +121,7 @@ class LaplaceFrame(Frame):
 
         Parameters:
             time (ScalarLike): The time in seconds TDB.
-            quick (dict or bool, optional): A dictionary of parameter values to use as
+            quick (dict | bool, optional): A dictionary of parameter values to use as
                 overrides to the configured default :class:`~oops.path.QuickPath` and
                 :class:`~oops.frame.QuickFrame` parameters. Use False to disable the use
                 of QuickPaths and QuickFrames. The default quick dictionary is defined in
