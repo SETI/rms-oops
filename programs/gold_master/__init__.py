@@ -1791,10 +1791,12 @@ class BackplaneTest(object):
                                                mode='constant', cval=1.e-99)
                     distance = comparison.radius
 
-                # Require all offsets to be <= radius and all diffs <= limit
+                # Require all offsets to be <= radius and all diffs <= limit. The
+                # offsets are clamped, not masked, so a pixel whose discrepancy no
+                # allowed offset can explain keeps a residual above the limit.
                 offset_to_zero = diff / grad_vals
                 clipped_offset = offset_to_zero.clip(-comparison.radius,
-                                                     comparison.radius)
+                                                     comparison.radius, remask=False)
                 improved_diff = diff - grad_vals * clipped_offset
                 new_invalid_diff_mask = (improved_diff.abs() > comparison.limit)
 
@@ -1803,7 +1805,7 @@ class BackplaneTest(object):
                     max_diff = improved_diff.abs().max(builtins=True)
 
                     if distance is None:
-                        selected_offsets = clipped_offset[diff_errors]
+                        selected_offsets = clipped_offset[diff_error_mask]
                         distance = selected_offsets.abs().max(builtins=True, masked=0.)
 
                     comparison.max_diff2 = max_diff
