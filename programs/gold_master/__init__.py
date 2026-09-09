@@ -2021,6 +2021,23 @@ class BackplaneTest(object):
             str: A formatted description of the array's range and masking.
         """
 
+        def _builtin(value):
+            """Convert a numpy scalar to the equivalent built-in int or float.
+
+            Parameters:
+                value (int | float | None): The value to convert.
+
+            Returns:
+                int | float | None: The value as a built-in type; any other value is
+                returned unchanged.
+            """
+
+            if isinstance(value, numbers.Integral):
+                return int(value)
+            if isinstance(value, numbers.Real):
+                return float(value)
+            return value
+
         def _summary_text(minval, maxval, masked, total):
             """Save the summary info and return a formatted text string.
 
@@ -2036,6 +2053,9 @@ class BackplaneTest(object):
                 str: The formatted description.
             """
 
+            # Store built-in scalars so that the summary file never holds numpy reprs
+            (minval, maxval, masked, total) = (_builtin(value) for value in
+                                               (minval, maxval, masked, total))
             self.summary[title] = (minval, maxval, masked, total)
 
             message = []
