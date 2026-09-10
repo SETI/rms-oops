@@ -17,6 +17,9 @@ from oops.path.multipath      import MultiPath
 
 class Snapshot(Observation):
     """An Observation consisting of a 2-D image exposed at a single time.
+
+    Attributes:
+        texp (float): Exposure duration of the observation in seconds.
     """
 
     _INVENTORY_IMPLEMENTED = True
@@ -77,10 +80,10 @@ class Snapshot(Observation):
             self.cadence = tstart
             if self.cadence.shape != (1,):
                 raise ValueError('Shape of Snapshot cadence must be (1,)')
-            self._texp = self.cadence.time[1] - self.cadence.time[0]
+            self.texp = self.cadence.time[1] - self.cadence.time[0]
         else:
             self.cadence = SnapCadence(tstart, texp)
-            self._texp = texp
+            self.texp = texp
 
         # Optional subfields
         self.subfields = {}
@@ -89,7 +92,7 @@ class Snapshot(Observation):
 
     def __getstate__(self):
         self.refresh()
-        return (self._axes, self.cadence, self._texp, self.fov, self.path, self.frame,
+        return (self._axes, self.cadence, self.texp, self.fov, self.path, self.frame,
                 self.subfields)
 
     def __setstate__(self, state):
@@ -223,7 +226,7 @@ class Snapshot(Observation):
         """
 
         cadence = self.cadence.time_shift(dtime)
-        return Snapshot(axes=self._axes, tstart=cadence, texp=self._texp, fov=self.fov,
+        return Snapshot(axes=self._axes, tstart=cadence, texp=self.texp, fov=self.fov,
                         path=self.path, frame=self.frame, **self.subfields)
 
     ######################################################################################
