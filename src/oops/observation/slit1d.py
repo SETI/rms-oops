@@ -17,6 +17,9 @@ class Slit1D(Observation):
 
     A subclass of :class:`~oops.Observation` that may still have additional axes, such as
     bands.
+
+    Attributes:
+        texp (float): Exposure duration of the observation in seconds.
     """
 
     def __init__(self, axes, tstart, texp, fov, path, frame, **subfields):
@@ -94,10 +97,10 @@ class Slit1D(Observation):
             self.cadence = tstart
             if self.cadence.shape != (1,):
                 raise ValueError("Shape of a Slit1D's cadence must be (1,)")
-            self._texp = self.cadence.time[1] - self.cadence.time[0]
+            self.texp = self.cadence.time[1] - self.cadence.time[0]
         else:
             self.cadence = SnapCadence(tstart, texp)
-            self._texp = texp
+            self.texp = texp
 
         # Optional subfields
         self.subfields = {}
@@ -106,7 +109,7 @@ class Slit1D(Observation):
 
     def __getstate__(self):
         self.refresh()
-        return (self._axes, self.cadence, self._texp, self.fov, self.path, self.frame,
+        return (self._axes, self.cadence, self.texp, self.fov, self.path, self.frame,
                 self.subfields)
 
     def __setstate__(self, state):
@@ -247,7 +250,7 @@ class Slit1D(Observation):
         """
 
         cadence = self.cadence.time_shift(dtime)
-        return Slit1D(axes=self._axes, tstart=cadence, texp=self._texp, fov=self.fov,
+        return Slit1D(axes=self._axes, tstart=cadence, texp=self.texp, fov=self.fov,
                       path=self.path, frame=self.frame, **self.subfields)
 
 ##########################################################################################
