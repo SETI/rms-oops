@@ -483,11 +483,7 @@ def test_uv_from_path_accepts_overridden_convergence_parameters(
 
 def test_uv_from_path_reports_a_solution_that_did_not_converge(
         timed_obs: TimedImage, capsys: pytest.CaptureFixture[str]) -> None:
-    """Capping the iterations below what is needed leaves a warning behind.
-
-    The pixel is still returned, and is still roughly right, which is what the docstring
-    promises of a solution that stops early.
-    """
+    """Capping the iterations below what is needed leaves a warning and masks the pixel."""
 
     LOGGING.on()
     try:
@@ -497,7 +493,7 @@ def test_uv_from_path_reports_a_solution_that_did_not_converge(
         LOGGING.off()
 
     assert 'Observation.uv_from_path did not converge' in capsys.readouterr().out
-    assert not timed_obs.uv_is_outside(uv)
+    assert np.all(uv.mask)
 
 def test_uv_from_ra_and_dec_accepts_actual_coordinates(timed_obs: TimedImage) -> None:
     """apparent=False interprets the direction before stellar aberration is applied.

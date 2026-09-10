@@ -46,6 +46,14 @@ of the photon methods takes a dictionary overriding any of them for one call. Th
 defaults reach ten-centimeter precision and rarely need changing; raising
 ``max_iterations`` is the first thing to try if a warning reports non-convergence.
 
+Every iterative solver, the photon solvers included, judges each line of sight on its
+own: a ray that has converged takes no further steps, a ray that has no solution cannot
+disturb the others, and a ray that never converges comes back masked rather than holding
+whatever value it reached. The ground-point solvers of :class:`~oops.surface.Spheroid`
+and :class:`~oops.surface.Ellipsoid` find the nearest surface point from any start, so a
+hint carried over from an earlier call only saves iterations, and the result does not
+depend on what was computed before.
+
 :class:`~oops.config.EVENT_CONFIG` ``.collapse_threshold`` (3 s) is the spread of times
 below which an event's time array is replaced by a single value, which keeps the
 interpolation windows short for an observation whose pixels differ in time by

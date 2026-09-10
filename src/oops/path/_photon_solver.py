@@ -5,6 +5,7 @@
 import numpy as np
 
 from polymath              import Qube, Scalar, Vector3
+from oops._convergence     import RayConvergence
 from oops.config           import PATH_PHOTONS, LOGGING
 from oops.constants        import C
 from oops.frame.frame_     import Frame
@@ -313,10 +314,10 @@ def _solve_photon(self, link, sign, *, derivs=False, guess=None, antimask=None,
         path_time = path_time.broadcast_to(shape)
 
     # Iterate a fixed number of times or until the threshold of error
-    # tolerance is reached. Convergence takes just a few iterations.
-    max_dlt = np.inf
+    # tolerance is reached, judging each ray on its own. Convergence takes just a few
+    # iterations.
+    convergence = RayConvergence(precision)
     prev_lt = None
-    converged = False
     for count in range(iters):
 
         # Quicken the path as soon as the range of times indicates that this would
@@ -332,37 +333,31 @@ def _solve_photon(self, link, sign, *, derivs=False, guess=None, antimask=None,
         dlt = ((delta_pos_ssb.norm() - lt * signed_c)
                / (delta_vel_ssb.proj(delta_pos_ssb).norm() - signed_c))
         new_lt = (lt - dlt).clip(lt_min, lt_max, remask=False)
-        dlt = lt - new_lt
+        dlt = convergence.step(lt - new_lt)
 
         prev_lt = lt
-        lt = new_lt
+        lt = lt - dlt
 
         # Re-evaluate the path time
         path_time = link_time + lt
 
-        # Test for convergence
-        prev_max_dlt = max_dlt
-        max_dlt = abs(dlt).max(builtins=True, masked=-1.)
-
         if LOGGING.path_iterations:
             LOGGING.performance(f'Path._solve_photon: iter={count+1}; '
-                                f'change={max_dlt:.6g}')
+                                f'change={convergence.max_change:.6g}')
 
-        if max_dlt <= precision:
-            converged = True
-            break
-
-        if max_dlt >= prev_max_dlt:
+        if convergence.finished:
             break
 
     # END OF LOOP
 
-    if not converged:
+    if convergence.failures:
         LOGGING.warn(f'Path._solve_photon did not converge: iter={count+1}; '
-                     f'change={max_dlt:.6g}')
+                     f'rays={convergence.failures}/{lt.size}')
+        lt = lt.remask_or(convergence.failed)
+        path_time = link_time + lt
 
     # If the link is entirely masked...
-    if max_dlt < 0.:
+    if np.all(lt.mask):
         return fully_masked_results()
 
     # Restore derivatives to path_time if necessary

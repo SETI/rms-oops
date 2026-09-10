@@ -72,6 +72,19 @@ have no place in the public reference. In the private copy they are documented h
            photon_from_coords, photon_normal_to_event, photon_event_to_normal,
            photon_path_to_normal, photon_normal_to_path
 
+   Per-ray convergence
+   ~~~~~~~~~~~~~~~~~~~
+
+   The bookkeeping behind the iterative solvers, which judge every ray on its own: the
+   photon solvers, the ground-point and limb solvers of :class:`~oops.surface.Limb`,
+   :class:`~oops.surface.Spheroid` and :class:`~oops.surface.Ellipsoid`, and the
+   distortion solvers of :class:`~oops.fov.BarrelFOV` and
+   :class:`~oops.fov.PolynomialFOV`.
+
+   .. automodule:: oops._convergence
+       :members:
+       :private-members:
+
    The bounded cache
    ~~~~~~~~~~~~~~~~~
 

@@ -3,6 +3,7 @@
 ##########################################################################################
 
 import pickle
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -274,9 +275,9 @@ CORNER_UV = Pair([(10.5, 20.5), (63.5, 63.5)])
 
 def test_a_barrel_solution_that_runs_out_of_iterations_is_reported(
         capsys: pytest.CaptureFixture[str]) -> None:
-    """Capping the iterations below what is needed leaves a warning behind.
+    """Capping the iterations below what is needed leaves a warning and masks the result.
 
-    The solution is still returned, and is still close.
+    The values behind the mask are still close.
     """
 
     fov = BarrelFOV((1.e-3, 1.e-3), (64, 64), coefft_xy_from_uv=STRONG_BARREL, iters=2)
@@ -289,6 +290,7 @@ def test_a_barrel_solution_that_runs_out_of_iterations_is_reported(
         LOGGING.off()
 
     assert 'BarrelFOV._solve_ratio did not converge' in capsys.readouterr().out
+    assert np.all(uv.mask)
     assert uv.vals == pytest.approx(CORNER_UV.vals, abs=1.e-3)
 
 
@@ -307,5 +309,25 @@ def test_a_polynomial_solution_that_stops_improving_is_reported(
 
     assert 'PolynomialFOV._solve_polynomial did not converge' \
            in capsys.readouterr().out
+
+
+@pytest.mark.parametrize('make_fov', [
+    lambda: BarrelFOV((1.e-3, 1.e-3), (64, 64), coefft_xy_from_uv=STRONG_BARREL, iters=2),
+    lambda: PolynomialFOV((64, 64), coefft_xy_from_uv=STRONG_POLYNOMIAL, iters=4),
+], ids=['barrel', 'polynomial'])
+def test_a_pixel_that_does_not_converge_leaves_the_others_solved(
+        make_fov: Callable[[], FOV]) -> None:
+    """Each pixel converges on its own, so a hard pixel masks only itself."""
+
+    fov = make_fov()
+    uv = Pair([(32.5, 32.5), (63.5, 63.5)])
+    xy = fov.xy_from_uvt(uv)
+
+    LOGGING.reset()
+    solved = fov.uv_from_xyt(xy)
+
+    assert LOGGING.warnings == 1
+    assert solved.mask.tolist() == [False, True]
+    assert np.asarray(solved.vals)[0] == pytest.approx(np.asarray(uv.vals)[0], abs=1.e-6)
 
 ##########################################################################################
