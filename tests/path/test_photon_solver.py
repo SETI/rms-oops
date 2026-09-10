@@ -129,7 +129,7 @@ def test_the_iterations_of_the_solver_can_be_logged(
 
 def test_a_solution_that_runs_out_of_iterations_is_reported(
         capsys: pytest.CaptureFixture[str]) -> None:
-    """Capping the iterations below what is needed leaves a warning behind.
+    """Capping the iterations below what is needed leaves a warning and masks the result.
 
     A moving target needs more than one pass, because the light time depends on where
     the target was when the photon left it.
@@ -146,9 +146,6 @@ def test_a_solution_that_runs_out_of_iterations_is_reported(
         LOGGING.off()
 
     assert 'did not converge' in capsys.readouterr().out
-
-    # The solution it stops at is still within a few microseconds of the converged one
-    (converged, _) = moving.photon_to_event(_arrival())
-    assert path_event.dep_lt.vals == pytest.approx(converged.dep_lt.vals, abs=1.e-4)
+    assert np.all(path_event.dep_lt.mask)
 
 ##########################################################################################

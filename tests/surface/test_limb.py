@@ -7,11 +7,13 @@ import pickle
 import numpy as np
 import pytest
 
-from polymath              import Scalar, Vector3
-from oops.frame.frame_     import Frame
-from oops.path.path_       import Path
-from oops.surface.limb     import Limb
-from oops.surface.spheroid import Spheroid
+from polymath               import Scalar, Vector3
+from oops.config            import LOGGING, SURFACE_PHOTONS
+from oops.frame.frame_      import Frame
+from oops.path.path_        import Path
+from oops.surface.ellipsoid import Ellipsoid
+from oops.surface.limb      import Limb
+from oops.surface.spheroid  import Spheroid
 
 
 def test_limb():
@@ -145,14 +147,16 @@ def test_limb():
         (pos2, t2, _, track2) = limb.intercept(obs-dobs[i], los, derivs=False,
                                                guess=t.wod, hints=hints.wod,
                                                groundtrack=True)
+        # Each ray stops at SURFACE_PHOTONS.km_precision, so the finite differences
+        # carry a residual of a few microns over the 2 km baseline
         dpos_dobs = (pos1 - pos2) / (2*eps)
-        assert abs(dpos_dobs - pos.d_dobs.vals[...,i]).max() < 1.e-9
+        assert abs(dpos_dobs - pos.d_dobs.vals[...,i]).max() < 1.e-8
 
         dt_dobs = (t1 - t2) / (2*eps)
-        assert abs(dt_dobs - t.d_dobs.vals[...,i]).max() < 1.e-9
+        assert abs(dt_dobs - t.d_dobs.vals[...,i]).max() < 1.e-8
 
         dtrack_dobs = (track1 - track2) / (2*eps)
-        assert abs(dtrack_dobs - track.d_dobs.vals[...,i]).max() < 1.e-9
+        assert abs(dtrack_dobs - track.d_dobs.vals[...,i]).max() < 1.e-8
 
     eps = 1.e-7
     dlos = ((eps,0,0), (0,eps,0), (0,0,eps))
@@ -168,9 +172,10 @@ def test_limb():
         scale = dpos_dlos.norm().median()
         assert abs(dpos_dlos - pos.d_dlos.vals[...,i]).max() < scale * 3.e-8
 
+        # The finite difference itself is only good to a few parts in 1e8
         dt_dlos = (t1 - t2) / (2*eps)
         scale = dt_dlos.abs().median()
-        assert abs(dt_dlos - t.d_dlos.vals[...,i]).max() < scale * 3.e-8
+        assert abs(dt_dlos - t.d_dlos.vals[...,i]).max() < scale * 1.e-7
 
         dtrack_dlos = (track1 - track2) / (2*eps)
         scale = dtrack_dlos.norm().median()
@@ -668,5 +673,85 @@ def test_limb_survives_a_pickle_round_trip() -> None:
     assert isinstance(restored, Limb)
     assert restored.limits == limb.limits
     assert restored.ground.origin == limb.ground.origin
+
+
+def _small_moon_rays(du: float = 0., dv: float = 0.) -> tuple[Vector3, Vector3]:
+    """An observer and a grid of lines of sight around a moon a few pixels across.
+
+    Parameters:
+        du: Offset of the grid along the first axis, in pixels.
+        dv: Offset of the grid along the second axis, in pixels.
+
+    Returns:
+        The observer position and the unit lines of sight, shape (48, 48).
+    """
+
+    pixel = 1.e-5
+    u = (np.arange(48) - 23.5 + du) * pixel
+    v = (np.arange(48) - 23.5 + dv) * pixel
+    (uu, vv) = np.meshgrid(u, v, indexing='ij')
+    los = Vector3(np.stack([-np.ones_like(uu), uu, vv], axis=-1))
+    return (Vector3((1.5e6, 0., 0.)), Vector3.as_vector3(los.unit()))
+
+
+def test_intercept_is_independent_of_stale_hints() -> None:
+    """Hints carried over from a different geometry give the same limb intercepts."""
+
+    limb = Limb(Ellipsoid('SSB', 'J2000', (30., 20., 17.)))
+    (obs, los) = _small_moon_rays()
+    (_, shifted_los) = _small_moon_rays(du=3., dv=-2.)
+
+    LOGGING.reset()
+    (_, t_fresh, _) = limb.intercept(obs, los, hints=True)
+    (_, _, stale_hints) = limb.intercept(obs, shifted_los, hints=True)
+    (_, t_hinted, _) = limb.intercept(obs, los, hints=stale_hints)
+
+    assert LOGGING.warnings == 0
+    assert np.array_equal(t_hinted.mask, t_fresh.mask)
+    assert abs(t_hinted - t_fresh).max() < SURFACE_PHOTONS.km_precision
+
+
+def test_intercept_masks_the_rays_that_do_not_converge(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """A ray that runs out of iterations is masked, and the others are still solved."""
+
+    limb = Limb(Ellipsoid('SSB', 'J2000', (30., 20., 17.)))
+    (obs, los) = _small_moon_rays()
+    (_, t_converged, _) = limb.intercept(obs, los, hints=True)
+
+    # One step reaches 3 m only for the rays far from the body
+    monkeypatch.setattr(SURFACE_PHOTONS, 'max_iterations', 1)
+    monkeypatch.setattr(SURFACE_PHOTONS, 'km_precision', 0.003)
+    LOGGING.reset()
+    (_, t, _) = limb.intercept(obs, los, hints=True)
+
+    assert LOGGING.warnings == 1
+    assert 0 < np.count_nonzero(t.mask) < t.size
+
+    solved = np.logical_not(t.mask)
+    assert abs(t - t_converged).vals[solved].max() < SURFACE_PHOTONS.km_precision
+
+
+def test_intercept_from_z_clock_masks_an_undefined_solution() -> None:
+    """An elevation beyond the observer's distance is masked; the other rays are solved.
+
+    An undefined solution is not a failure to converge, so nothing is logged.
+    """
+
+    ground = Spheroid('SSB', 'J2000', (60268., 54364.))
+    limb = Limb(ground)
+    obs = Vector3((4. * 60268., 0., 0.))
+    z = Scalar([1000., 10. * 60268.])
+    clock = Scalar([0.3, 0.3])
+
+    LOGGING.reset()
+    pos = limb.intercept_from_z_clock(z, clock, obs)
+
+    assert LOGGING.warnings == 0
+    assert pos.mask.tolist() == [False, True]
+
+    (z_back, clock_back) = limb.z_clock_from_intercept(pos[0], obs)
+    assert z_back.vals == pytest.approx(1000., abs=1.e-6)
+    assert clock_back.vals == pytest.approx(0.3, abs=1.e-9)
 
 ##########################################################################################

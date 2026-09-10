@@ -7,6 +7,7 @@ import sys
 import numpy as np
 
 from polymath         import Pair
+from oops._convergence import RayConvergence
 from oops.config      import LOGGING
 from oops.fov         import FOV
 from oops.fov.flatfov import FlatFOV
@@ -369,8 +370,7 @@ class PolynomialFOV(FOV):
         # Make sure the initial pq guess is an array copy and uses ab's mask
         pq = Pair(pq_guess.vals.copy(), ab.mask)
 
-        max_dpq = 1.e99
-        converged = False
+        convergence = RayConvergence(eps)
         for count in range(iters):
             ab_test, dab_dpq = PolynomialFOV._eval_polynomial(pq, coefft,
                                                               dcoefft_p,
@@ -378,31 +378,24 @@ class PolynomialFOV(FOV):
                                                               derivs=False,
                                                               d_dpq=True)
 
-            # Perform one step of Newton's Method
+            # Perform one step of Newton's Method, judging each ray on its own
             dpq_dab = dab_dpq.reciprocal(nozeros=True)
             # nozeros=True is safe because dab_dpq can't be zero-valued
-            dpq = dpq_dab.chain(ab.wod - ab_test)
-            new_max_dpq = dpq.norm().max(builtins=True, masked=-1.)
+            dpq = convergence.step(dpq_dab.chain(ab.wod - ab_test))
+            pq += dpq.vals
 
             if LOGGING.fov_iterations or PolynomialFOV.DEBUG:
                 LOGGING.convergence('PolynomialFOV._solve_polynomial:',
-                                    'iter=%d; change=%.6g' % (count+1, new_max_dpq))
+                                    'iter=%d; change=%.6g'
+                                    % (count+1, convergence.max_change))
 
-            # Quit when convergence stops
-            if new_max_dpq <= eps:
-                pq += dpq
-                converged = True
+            if convergence.finished:
                 break
 
-            if new_max_dpq >= max_dpq:
-                break
-
-            pq += dpq.vals
-            max_dpq = new_max_dpq
-
-        if not converged:
+        if convergence.failures:
             LOGGING.warn('PolynomialFOV._solve_polynomial did not converge;',
-                         'iter=%d; change=%.6g' % (count+1, new_max_dpq))
+                         'iter=%d; rays=%d/%d' % (count+1, convergence.failures, pq.size))
+            pq = pq.remask_or(convergence.failed)
 
         # Propagate derivatives if necessary
         if derivs:

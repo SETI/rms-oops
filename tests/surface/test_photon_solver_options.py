@@ -138,7 +138,7 @@ def test_the_iterations_of_the_line_of_sight_solver_can_be_logged(
 
 def test_a_line_of_sight_solution_that_runs_out_of_iterations_is_reported(
         planet: Ellipsoid, capsys: pytest.CaptureFixture[str]) -> None:
-    """Capping the iterations below what is needed leaves a warning behind."""
+    """Capping the iterations below what is needed leaves a warning and masks the result."""
 
     LOGGING.on()
     try:
@@ -148,7 +148,7 @@ def test_a_line_of_sight_solution_that_runs_out_of_iterations_is_reported(
         LOGGING.off()
 
     assert 'did not converge' in capsys.readouterr().out
-    assert not np.any(surface_event.pos.mask)
+    assert np.all(surface_event.pos.mask)
 
 
 ##########################################################################################

@@ -7,6 +7,7 @@ import sys
 import numpy as np
 
 from polymath         import Scalar, Pair
+from oops._convergence import RayConvergence
 from oops.config      import LOGGING
 from oops.fov         import FOV
 from oops.fov.flatfov import FlatFOV
@@ -328,41 +329,33 @@ class BarrelFOV(FOV):
         # Make sure the initial r guess is an array copy and uses f's mask
         r = r_guess.copy().remask(f.mask)
 
-        max_dr = 1.e99
-        converged = False
+        convergence = RayConvergence(precision)
         for count in range(iters):
             (f_over_r, d_f_over_r_dr) = BarrelFOV._eval_ratio(r, coefft, dcoefft,
                                                               derivs=False, d_dr=True)
             f_test = f_over_r * r
             df_dr = f_over_r + r * d_f_over_r_dr
 
-            # Perform one step of Newton's Method
-            dr = (f.wod - f_test) / df_dr
+            # Perform one step of Newton's Method, judging each ray on its own
+            dr = convergence.step((f.wod - f_test) / df_dr, precision=eps[count])
                 # Note that df_dr should never be zero, so this is safe
-            new_max_dr = abs(dr).max(builtins=True, masked=-1.)
+            r += dr
 
             if LOGGING.fov_iterations or BarrelFOV.DEBUG:
                 LOGGING.convergence('BarrelFOV._solve_ratio:',
-                                    'iter=%d; change=%.6g' % (count+1, new_max_dr))
+                                    'iter=%d; change=%.6g'
+                                    % (count+1, convergence.max_change))
 
-            # Quit when convergence stops
-            if new_max_dr <= eps[count]:
-                r += dr
-                converged = True
+            if convergence.finished:
                 break
 
-            if new_max_dr >= max_dr:
-                break
-
-            r += dr
-            max_dr = new_max_dr
-
-        if not converged:
-            LOGGING.warn('BarrelFOV._solve_ratio did not converge;',
-                         'iter=%d; change=%.6g' % (count+1, new_max_dr))
-
-        # Prepare ratio r/f
+        # Prepare ratio r/f, masked where the iteration did not converge
         ratio = 1. / f_over_r   # f_over_r can't be zero
+
+        if convergence.failures:
+            LOGGING.warn('BarrelFOV._solve_ratio did not converge;',
+                         'iter=%d; rays=%d/%d' % (count+1, convergence.failures, r.size))
+            ratio = ratio.remask_or(convergence.failed)
 
         # Propagate derivatives if necessary
         if derivs:

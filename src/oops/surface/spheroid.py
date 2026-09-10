@@ -5,7 +5,8 @@
 import numpy as np
 
 from polymath import Scalar, Vector3
-from oops.config import SURFACE_PHOTONS, LOGGING
+from oops.config import SURFACE_PHOTONS
+from oops._convergence import limited_step, solve
 from oops.surface.ellipsoid import Ellipsoid
 
 
@@ -65,7 +66,8 @@ class Spheroid(Ellipsoid):
             guess (ScalarLike, optional): Optional initial guess at coefficient `p` such
                 that ``intercept + p * normal(intercept) = pos``. Use `guess=True` for
                 the converged value of `p` to be returned even if an initial guess is
-                unavailable.
+                unavailable. The guess is used only where it is closer to a solution
+                than the default estimate.
             hints (Any, optional): Any data that might be useful to carry over from one
                 call to the next; unused by this Surface subclass. If it is not None,
                 its value is appended to the returned tuple.
@@ -74,7 +76,8 @@ class Spheroid(Ellipsoid):
             Vector3 | tuple: `intercept` or `(intercept[, p][, hints])`, where:
 
             * `intercept` (Vector3): Surface intercept points relative to this surface's
-              origin and frame, in km. Where no intercept exists, values are masked.
+              origin and frame, in km. Each position is solved on its own; where no
+              intercept exists, or the solution does not converge, values are masked.
             * `p` (Scalar): The converged solution such that
               ``intercept + p * normal(intercept) = pos``; included if the input value of
               `guess` is not None.
@@ -126,93 +129,61 @@ class Spheroid(Ellipsoid):
 
         # Plug the first two into the third and rearrange:
         #
-        # f(p) = (  X * ((1 + C*p))**2
-        #         + Z * ((1 + p))**2
-        #         - R * ((1 + p) * (1 + C*p))**2)
+        # F(p) = X / (1 + p)**2 + Z / (1 + C*p)**2 - R = 0
         #
-        # This is a fourth-order polynomial, which we need to solve for f(p) = 0.
-        #
-        # Using SymPy, this expands to:
-        #
-        # f(p) = (-C**2*R) * p**4
-        #        + (-2*C**2*R - 2*C*R) * p**3
-        #        + (-C**2*R + C**2*X - 4*C*R - R + Z) * p**2
-        #        + (-2*C*R + 2*C*X - 2*R + 2*Z) * p
-        #        + (- R + X + Z)
-        #
-        # Let f(p) = (((f4*p + f3)*p + f2)*p + f1)*p + f0
+        # F has poles at p = -1 and -1/C. Above the larger pole it decreases from
+        # +infinity to -R and is convex, so it has exactly one root there, and that root
+        # is the nearest surface point: p > 0 for a position outside the surface and
+        # p < 0 for one inside. Newton's method from any start in that interval converges
+        # to the root as long as no step crosses the pole. (The equivalent fourth-order
+        # polynomial has further roots below the pole, which are surface points whose
+        # normals pass through the position from the far side.)
 
-        C2 = C**2
+        lower = -1. / max(1., C)
 
-        # For efficiency, we segregate all the array ops (involving X and Z)
-        f4 = -C2 * R
-        f3 = -2 * R * (C2 + C)
-        f2 = C2 * X + Z - R * (C2 + 4*C + 1)
-        f1 = (2*C) * X + 2 * Z - 2 * R * (C + 1)
-        f0 = X + Z - R
+        def newton_step(p):
+            """One step of Newton's method on F(p) = 0 from the given value of p.
 
-        g3 = 4 * f4
-        g2 = 3 * f3
-        g1 = 2 * f2
-        g0 = f1
+            The step is limited to half the distance to the pole below.
+            """
 
-        # Make an initial guess at p if necessary
+            d1 = 1. + p
+            dC = 1. + C * p
+            f = X / d1**2 + Z / dC**2 - R
+            df_dp = -2. * (X / d1**3 + C * Z / dC**3)
+            return limited_step(f / df_dp, p, lower)
+
+        # Make an initial estimate of p
+
+        # Unsquash into coordinates where the surface is a sphere
+        pos_unsq = pos.wod.element_mul(self._unsquash)   # without derivs!
+
+        # Estimate the intercept point as on a straight line to the origin
+        # (Note that this estimate is exact for points at the surface.)
+        cept_guess_unsq = pos_unsq.with_norm(self._req)
+
+        # Make a guess at the normal vector in unsquashed coordinates
+        normal_guess_unsq = cept_guess_unsq.element_mul(self._unsquash_sq)
+
+        # Estimate p
+        p = ((pos_unsq.norm() - cept_guess_unsq.norm()) / normal_guess_unsq.norm())
+
+        # Iterate from the supplied guess where there is one and it lies above the pole.
+        # The precision of p should match the default geometric accuracy defined by
+        # SURFACE_PHOTONS.km_precision; set our precision goal on p accordingly. Each
+        # position converges on its own.
+        p = Scalar.maximum(p, 0.5 * lower)
         if isinstance(guess, (type(None), bool, np.bool_)):
-
-            # Unsquash into coordinates where the surface is a sphere
-            pos_unsq = pos.wod.element_mul(self._unsquash)   # without derivs!
-
-            # Estimate the intercept point as on a straight line to the origin
-            # (Note that this estimate is exact for points at the surface.)
-            cept_guess_unsq = pos_unsq.with_norm(self._req)
-
-            # Make a guess at the normal vector in unsquashed coordinates
-            normal_guess_unsq = cept_guess_unsq.element_mul(self._unsquash_sq)
-
-            # Estimate p
-            p = ((pos_unsq.norm() - cept_guess_unsq.norm()) / normal_guess_unsq.norm())
-
+            start = None
         else:
-            p = guess.wod.copy()
+            start = Scalar.as_scalar(guess).wod
+            start = start.remask_or(start.vals <= lower)
 
-        # The precision of p should match the default geometric accuracy defined
-        # by SURFACE_PHOTONS.km_precision. Set our precision goal on p
-        # accordingly.
         km_scale = self._req
         precision = SURFACE_PHOTONS.km_precision / km_scale
-
-        # Iterate until convergence stops
-        max_dp = 1.e99
-        converged = False
-
-        # We typically need a few extra iterations to reach desired precision
-        for count in range(SURFACE_PHOTONS.max_iterations + 5):
-
-            # Calculate f and df/dp
-            f = (((f4*p + f3)*p + f2)*p + f1)*p + f0
-            df_dp = ((g3*p + g2)*p + g1)*p + g0
-
-            # One step of Newton's method
-            dp = f / df_dp
-            p -= dp
-
-            prev_max_dp = max_dp
-            max_dp = dp.abs().max(builtins=True, masked=-1.)
-
-            if LOGGING.surface_iterations or Ellipsoid._DEBUG:
-                LOGGING.convergence(f'{type(self).__name__}.intercept_normal_to: '
-                                    f'iter={count+1}; change[km]={max_dp*km_scale:.6g}')
-
-            if max_dp <= precision:
-                converged = True
-                break
-
-            if max_dp >= prev_max_dp:
-                break
-
-        if not converged:
-            LOGGING.warn(f'{type(self).__name__}.intercept_normal_to did not converge: '
-                         f'iter={count+1}; change[km]={max_dp*km_scale:.6g}')
+        p = solve(newton_step, p, start, precision, SURFACE_PHOTONS.max_iterations + 5,
+                  name=f'{type(self).__name__}.intercept_normal_to', km_scale=km_scale,
+                  debug=Ellipsoid._DEBUG)
 
         cept_x = pos_x / (1. + p)
         cept_z = pos_z / (1. + C * p)

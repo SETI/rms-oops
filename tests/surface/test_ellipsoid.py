@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from polymath               import Scalar, Vector3
+from oops.config            import LOGGING, SURFACE_PHOTONS
 from oops.surface.ellipsoid import Ellipsoid
 
 
@@ -298,5 +299,85 @@ def test_intercept_rejects_an_unrecognized_direction() -> None:
 
     with pytest.raises(ValueError, match='invalid direction'):
         surface.intercept(obs, los, direction='ARR')
+
+def _points_off_the_surface(surface: Ellipsoid) -> Vector3:
+    """A ring of points at twice the equatorial radius, above and below the equator."""
+
+    angle = np.linspace(0., 2. * np.pi, 12, endpoint=False)
+    radius = 2. * surface.radii[0]
+    return Vector3(np.stack([radius * np.cos(angle), radius * np.sin(angle),
+                             0.5 * radius * np.sin(3. * angle)], axis=-1))
+
+
+def test_intercept_normal_to_recovers_from_a_bad_guess() -> None:
+    """A guess far from any solution gives the same result as no guess, without a warning."""
+
+    surface = Ellipsoid('SSB', 'J2000', (1000., 800., 600.))
+    pos = _points_off_the_surface(surface)
+
+    LOGGING.reset()
+    (cept, p) = surface.intercept_normal_to(pos, guess=True)
+    (cept_bad, p_bad) = surface.intercept_normal_to(pos, guess=Scalar(1.e4))
+
+    assert LOGGING.warnings == 0
+    assert not np.any(cept_bad.mask)
+    assert (cept_bad - cept).norm().max() < SURFACE_PHOTONS.km_precision
+
+
+def test_intercept_normal_to_rejects_the_far_side_of_the_body() -> None:
+    """A guess that leads to the surface point facing away from a position is rejected."""
+
+    surface = Ellipsoid('SSB', 'J2000', (1000., 800., 600.))
+    pos = _points_off_the_surface(surface)
+
+    (cept, p) = surface.intercept_normal_to(pos, guess=True)
+    (cept_far, p_far) = surface.intercept_normal_to(pos, guess=Scalar(-2.))
+
+    assert p.min() > 0.
+    assert p_far.min() > 0.
+    assert (cept_far - cept).norm().max() < SURFACE_PHOTONS.km_precision
+
+
+def test_intercept_normal_to_ignores_a_masked_guess() -> None:
+    """A masked guess counts as no guess rather than masking the result."""
+
+    surface = Ellipsoid('SSB', 'J2000', (1000., 800., 600.))
+    pos = _points_off_the_surface(surface)
+    guess = Scalar(np.zeros(12), mask=(np.arange(12) % 3 == 0))
+
+    (cept, p) = surface.intercept_normal_to(pos, guess=True)
+    (cept_masked, _) = surface.intercept_normal_to(pos, guess=guess)
+
+    assert not np.any(cept_masked.mask)
+    assert (cept_masked - cept).norm().max() < SURFACE_PHOTONS.km_precision
+
+def test_intercept_normal_to_finds_the_nearest_point_in_every_direction() -> None:
+    """Positions all around the body, near and far, resolve to the nearest surface point."""
+
+    surface = Ellipsoid('SSB', 'J2000', (1000., 800., 600.))
+    rng = np.random.default_rng(3)
+    directions = rng.normal(size=(300, 3))
+    directions /= np.linalg.norm(directions, axis=1)[:, np.newaxis]
+    distances = np.array([1.05, 1.5, 3., 30., 3000.]) * surface.radii[0]
+    pos = Vector3(distances[:, np.newaxis, np.newaxis] * directions)
+
+    lon = Scalar(rng.uniform(0., 2. * np.pi, 4000))
+    lat = Scalar(np.arcsin(rng.uniform(-1., 1., 4000)))
+    samples = surface.vector3_from_coords((lon, lat)).vals
+
+    LOGGING.reset()
+    (cept, p) = surface.intercept_normal_to(pos, guess=True)
+
+    assert LOGGING.warnings == 0
+    assert not np.any(cept.mask)
+    assert p.min() > 0.
+
+    closure = (cept + p * surface.normal(cept) - pos).norm().max()
+    assert closure < SURFACE_PHOTONS.km_precision
+
+    nearest = (pos - cept).norm().vals
+    pos_vals = np.asarray(pos.vals)
+    sampled = np.linalg.norm(pos_vals[..., np.newaxis, :] - samples, axis=-1).min(axis=-1)
+    assert np.all(nearest <= sampled + SURFACE_PHOTONS.km_precision)
 
 ##########################################################################################

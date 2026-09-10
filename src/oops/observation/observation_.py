@@ -7,6 +7,7 @@ import numbers
 
 from polymath              import Matrix3, Scalar, Pair, Vector, Vector3, Qube
 from oops                  import mutable
+from oops._convergence import RayConvergence
 from oops.config           import LOGGING, PATH_PHOTONS
 from oops.event            import Event
 from oops.frame            import Frame
@@ -1081,17 +1082,15 @@ class Observation(Mutable):
             converge = PATH_PHOTONS.__dict__
 
         # Take a guess at the observation time
-        converged = False
         if time is None:
             obs_time = self.time[0] + tfrac * (self.time[1] - self.time[0])
             iters = converge['max_iterations']
-            dlt_precision = converge['dlt_precision']
-            max_dt = 1.e99
+            convergence = RayConvergence(converge['dlt_precision'], mask=False)
         else:
             # In this case, no guessing is needed
             obs_time = time
             iters = 0
-            converged = True
+            convergence = None
 
         for count in range(iters):
 
@@ -1105,29 +1104,24 @@ class Observation(Mutable):
             uv = self.fov.uv_from_los_t(obs_event.neg_arr_ap, time=obs_event.time,
                                         derivs=derivs)
 
-            # Update the observation time based on pixel midtime
+            # Update the observation time based on pixel midtime, judging each pixel on
+            # its own
             (t0, t1) = self.time_range_at_uv(uv)
             new_obs_time = t0 + tfrac * (t1 - t0)
-
-            # Test for convergence
-            prev_max_dt = max_dt
-            max_dt = (new_obs_time - obs_time).abs().max(builtins=True, masked=-1.)
-            obs_time = new_obs_time
+            obs_time = obs_time + convergence.step(new_obs_time - obs_time)
 
             if LOGGING.observation_iterations or Observation._DEBUG:
                 LOGGING.convergence('Observation.uv_from_path',
-                                    f'iter={count+1}; change[s]={max_dt:.6g}')
+                                    f'iter={count+1}; '
+                                    f'change[s]={convergence.max_change:.6g}')
 
-            if max_dt <= dlt_precision:
-                converged = True
+            if convergence.finished:
                 break
 
-            if max_dt >= prev_max_dt:
-                break
-
-        if not converged:
+        if convergence is not None and convergence.failures:
             LOGGING.warn('Observation.uv_from_path did not converge: ',
-                         f'iter={count+1}; change[s]={max_dt:.6g}')
+                         f'iter={count+1}; rays={convergence.failures}/{obs_time.size}')
+            obs_time = obs_time.remask_or(convergence.failed)
 
         # Return the results
         obs_event = Event(obs_time, Vector3.ZERO, self.path, self.frame)

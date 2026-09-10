@@ -7,6 +7,7 @@ import numpy as np
 from polymath import Scalar, Vector3
 from oops.config import SURFACE_PHOTONS, LOGGING
 from oops.constants import HALFPI, TWOPI
+from oops._convergence import RayConvergence
 from oops.surface.surface_ import Surface
 
 
@@ -256,7 +257,8 @@ class Limb(Surface):
             tuple: Two to four values, where:
 
             * `pos` (Vector3): Intercept points on the Surface relative to this surface's
-              origin and frame, in km.
+              origin and frame, in km. Each line of sight is solved on its own, and one
+              whose solution does not converge is masked.
             * `t` (Scalar): Value such that ``intercept = obs + t * los``.
             * `p` (Scalar): The converged solution such that::
 
@@ -299,12 +301,13 @@ class Limb(Surface):
             ground_guess = hints.wod
 
         # The precision of t should match the default geometric accuracy defined by
-        # SURFACE_PHOTONS.km_precision. Set our precision goal on t accordingly.
-        km_scale = los.norm().max().vals
+        # SURFACE_PHOTONS.km_precision. Set our precision goal on t accordingly, for each
+        # line of sight, and judge convergence one line of sight at a time so that a ray
+        # with no solution cannot disturb the rays that have one.
+        km_scale = los_wod.norm()
         precision = SURFACE_PHOTONS.km_precision / km_scale
+        convergence = RayConvergence(precision)
 
-        max_abs_dt = 1.e99
-        converged = False
         for count in range(SURFACE_PHOTONS.max_iterations):
             pos = obs + t * los
             pos.insert_deriv('_pos_', Vector3.IDENTITY)
@@ -316,26 +319,21 @@ class Limb(Surface):
 
             f = normal.dot(los)
             df_dt = normal.d_d_pos_.chain(los).dot(los)
-            dt = f / df_dt
+            dt = convergence.step(f / df_dt)
             t = t - dt.without_deriv('_pos_')
 
-            prev_max_abs_dt = max_abs_dt
-            max_abs_dt = abs(dt).max(builtins=True, masked=-1.)
-
             if LOGGING.surface_iterations or Limb._DEBUG:
+                change = convergence.max_change * km_scale.max(builtins=True, masked=0.)
                 LOGGING.convergence(f'{type(self).__name__}.intercept: iter={count+1}; '
-                                    f'change[km]={max_abs_dt*km_scale:.6g}')
+                                    f'change[km]={change:.6g}')
 
-            if max_abs_dt <= precision:
-                converged = True
+            if convergence.finished:
                 break
 
-            if max_abs_dt >= prev_max_abs_dt:
-                break
-
-        if not converged:
+        if convergence.failures:
             LOGGING.warn(f'{type(self).__name__}.intercept did not converge: '
-                         f'iter={count+1}; change[km]={max_abs_dt*km_scale:.6g}')
+                         f'iter={count+1}; rays={convergence.failures}/{t.size}')
+            t = t.remask_or(convergence.failed)
 
         # Make sure all values are consistent with t
         pos = obs + t * los
@@ -583,11 +581,8 @@ class Limb(Surface):
             # This is the approximate body radius on axis1
         p = ((req + z.wod) / obs.wod.norm()).arcsin()
 
-        # Iterate until convergence stops
-        max_dp = 1.e99
-        converged = False
-
-        # Extra steps are often needed for convergence
+        # Iterate until each ray converges; extra steps are often needed
+        convergence = RayConvergence(SURFACE_PHOTONS.rel_precision)
         for count in range(SURFACE_PHOTONS.max_iterations + 10):
 
             p.insert_deriv('_p_', Scalar.ONE)
@@ -597,33 +592,27 @@ class Limb(Surface):
             surface = s2.element_mul(self._ground._squash)
 
             # The solution is undefined if obs is closer than z!
-            mask = ((obs - surface).norm() <= z).vals | surface.mask
+            undefined = ((obs - surface).norm() <= z).vals | surface.mask
 
             # One step of Newton's method
             f = normal.dot(surface - obs) + z
-            dp = f.without_deriv('_p_') / f.d_d_p_
-            dp[mask] = 0
+            dp = convergence.step((f.without_deriv('_p_') / f.d_d_p_).remask_or(undefined))
             p -= dp
-
-            prev_max_dp = max_dp
-            max_dp = dp.abs().max(builtins=True, masked=-1.)
 
             if LOGGING.surface_iterations or Limb._DEBUG:
                 LOGGING.convergence('%s.intercept_from_z_clock(): '
                                     'iter=%d; change=%.6g'
-                                    % (type(self).__name__, count+1, max_dp))
+                                    % (type(self).__name__, count+1,
+                                       convergence.max_change))
 
-            if max_dp <= SURFACE_PHOTONS.rel_precision:
-                converged = True
+            if convergence.finished:
                 break
 
-            if max_dp >= prev_max_dp:
-                break
-
-        if not converged:
+        if convergence.failures:
             LOGGING.warn('%s.intercept_from_z_clock() did not converge: '
-                         'iter=%d; change=%.6g'
-                         % (type(self).__name__, count+1, max_dp))
+                         'iter=%d; rays=%d/%d'
+                         % (type(self).__name__, count+1, convergence.failures, p.size))
+            p = p.remask_or(convergence.failed)
 
         p = p.without_deriv('_p_')
         normal = p.cos() * axis1 + p.sin() * axis2

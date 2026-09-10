@@ -5,6 +5,7 @@
 import numpy as np
 
 from polymath              import Qube, Scalar, Vector3
+from oops._convergence     import RayConvergence
 from oops.config           import SURFACE_PHOTONS, LOGGING
 from oops.constants        import C
 from oops.event            import Event
@@ -282,10 +283,9 @@ def _solve_photon_by_los(self, link, sign, *, derivs=False, guess=None, antimask
     lt_min = lt.min(builtins=True) - limit
     lt_max = lt.max(builtins=True) + limit
 
-    # Iterate to solve for lt and surface time. Convergence is rapid because all speeds
-    # are non-relativistic.
-    max_dlt = np.inf
-    converged = False
+    # Iterate to solve for lt and surface time, judging each ray on its own. Convergence
+    # is rapid because all speeds are non-relativistic.
+    convergence = RayConvergence(precision)
     hints = True                    # speeds up some calculations
     for count in range(iters):
 
@@ -318,22 +318,14 @@ def _solve_photon_by_los(self, link, sign, *, derivs=False, guess=None, antimask
 
         # Clip time
         new_lt = new_lt.clip(lt_min, lt_max, remask=False)
-        dlt = new_lt - lt
-        lt = new_lt
-
-        # Test for convergence
-        prev_max_dlt = max_dlt
-        max_dlt = abs(dlt).max(builtins=True, masked=-1.)
+        dlt = convergence.step(new_lt - lt)
+        lt = lt + dlt
 
         if LOGGING.surface_iterations or DEBUG:
             LOGGING.convergence(f'{type(self).__name__}._solve_photon_by_los: '
-                                f'iter={count+1}; change[s]={max(max_dlt, 0.):.6g}')
+                                f'iter={count+1}; change[s]={convergence.max_change:.6g}')
 
-        if max_dlt <= precision:        # converged or fully masked
-            converged = True
-            break
-
-        if max_dlt >= prev_max_dlt:     # failure to converge
+        if convergence.finished:
             break
 
         # Re-evaluate the surface time
@@ -341,9 +333,10 @@ def _solve_photon_by_los(self, link, sign, *, derivs=False, guess=None, antimask
 
     # END OF LOOP
 
-    if not converged:
+    if convergence.failures:
         LOGGING.warn('Surface._solve_photon_by_los did not converge;',
-                     f'iter={count+1}; change={max_dlt:.6g}')
+                     f'iter={count+1}; rays={convergence.failures}/{lt.size}')
+        lt = lt.remask_or(convergence.failed)
 
     # One last iteration with derivatives included
     surface_time = link.time + lt
@@ -380,7 +373,7 @@ def _solve_photon_by_los(self, link, sign, *, derivs=False, guess=None, antimask
         lt = lt.remask_or(new_mask)
 
     # If the link is entirely masked, return masked results
-    if max_dlt < 0. or np.all(surface_time.mask):
+    if np.all(surface_time.mask):
         return _fully_masked_result(self, link_with_derivs, link_key, coords=True)
 
     # Create the surface event in its own frame
@@ -761,10 +754,9 @@ def _solve_photon_by_coords(self, link, coords, sign, *, derivs=False, guess=Non
         pos_wrt_origin_frame = self.vector3_from_coords(coords, time=surface_time,
                                                         derivs=True)
 
-    # Iterate to solve for lt. Convergence is rapid because all speeds are
-    # non-relativistic.
-    max_dlt = np.inf
-    converged = False
+    # Iterate to solve for lt, judging each ray on its own. Convergence is rapid because
+    # all speeds are non-relativistic.
+    convergence = RayConvergence(precision)
     for count in range(iters+1):
 
         # Quicken the path and frame as soon as the range of surface times indicates that
@@ -797,22 +789,14 @@ def _solve_photon_by_coords(self, link, coords, sign, *, derivs=False, guess=Non
         los_in_j2000 = pos_wrt_origin_j2000 - obs_wrt_origin_j2000
         new_lt = los_in_j2000.norm() / signed_c
         new_lt = new_lt.clip(lt_min, lt_max, remask=False)
-        dlt = new_lt - lt
-        lt = new_lt
-
-        # Test for convergence
-        prev_max_dlt = max_dlt
-        max_dlt = abs(dlt).max(builtins=True, masked=-1.)
+        dlt = convergence.step(new_lt - lt)
+        lt = lt + dlt
 
         if LOGGING.surface_iterations or DEBUG:
             LOGGING.convergence('Surface._solve_photon_by_coords',
-                                f'iter={count+1}; change={max_dlt:.6g}')
+                                f'iter={count+1}; change={convergence.max_change:.6g}')
 
-        if max_dlt <= precision:
-            converged = True
-            break
-
-        if max_dlt >= prev_max_dlt:
+        if convergence.finished:
             break
 
         # Re-evaluate the surface time
@@ -820,9 +804,10 @@ def _solve_photon_by_coords(self, link, coords, sign, *, derivs=False, guess=Non
 
     # END OF LOOP
 
-    if not converged:
+    if convergence.failures:
         LOGGING.warn('Surface._solve_photon_by_coords did not converge;',
-                     f'iter={count+1}; change={max_dlt:.6g}')
+                     f'iter={count+1}; rays={convergence.failures}/{lt.size}')
+        lt = lt.remask_or(convergence.failed)
 
     # Update the mask on light time to hide intercepts outside the defined limits
     new_mask = (lt.values * sign < 0.) | (lt.values == lt_min) | (lt.values == lt_max)
@@ -832,7 +817,7 @@ def _solve_photon_by_coords(self, link, coords, sign, *, derivs=False, guess=Non
     surface_time = link.time + lt
 
     # If the link is entirely masked, return masked results
-    if max_dlt < 0. or np.all(surface_time.mask):
+    if np.all(surface_time.mask):
         return _fully_masked_result(self, unshrunk_link, link_key)
 
     # Determine the line of sight vector in J2000
@@ -1157,9 +1142,8 @@ def _solve_photon_event_normal(self, link, sign, *, derivs=False, guess=None,
     lt_max = lt.max(builtins=True) + limit
 
     # Iterate to solve for lt. Convergence is rapid because all speeds are
-    # non-relativistic
-    max_dlt = np.inf
-    converged = False
+    # non-relativistic, and each ray is judged on its own.
+    convergence = RayConvergence(precision)
     hints = True                    # Speeds up some calculations
     p_guess = True                  # Coefficient carried between intercept calls
     for count in range(iters):
@@ -1187,22 +1171,14 @@ def _solve_photon_event_normal(self, link, sign, *, derivs=False, guess=None,
         # link event. Distances are frame-independent, so this works in the surface frame.
         new_lt = (cept_in_frame - obs_wrt_origin_frame).norm() / signed_c
         new_lt = new_lt.clip(lt_min, lt_max, remask=False)
-        dlt = new_lt - lt
-        lt = new_lt
-
-        # Test for convergence
-        prev_max_dlt = max_dlt
-        max_dlt = abs(dlt).max(builtins=True, masked=-1.)
+        dlt = convergence.step(new_lt - lt)
+        lt = lt + dlt
 
         if LOGGING.surface_iterations or DEBUG:
             LOGGING.convergence('Surface._solve_photon_event_normal',
-                                f'iter={count+1}; change={max_dlt:.6g}')
+                                f'iter={count+1}; change={convergence.max_change:.6g}')
 
-        if max_dlt <= precision:
-            converged = True
-            break
-
-        if max_dlt >= prev_max_dlt:
+        if convergence.finished:
             break
 
         # Re-evaluate the surface time
@@ -1210,9 +1186,10 @@ def _solve_photon_event_normal(self, link, sign, *, derivs=False, guess=None,
 
     # END OF LOOP
 
-    if not converged:
+    if convergence.failures:
         LOGGING.warn('Surface._solve_photon_event_normal did not converge;',
-                     f'iter={count+1}; change={max_dlt:.6g}')
+                     f'iter={count+1}; rays={convergence.failures}/{lt.size}')
+        lt = lt.remask_or(convergence.failed)
 
     # Update the mask on light time to hide intercepts outside the defined limits
     new_mask = (lt.values * sign < 0.) | (lt.values == lt_min) | (lt.values == lt_max)
@@ -1222,7 +1199,7 @@ def _solve_photon_event_normal(self, link, sign, *, derivs=False, guess=None,
     surface_time = link.time + lt
 
     # If the link is entirely masked, return masked results
-    if max_dlt < 0. or np.all(surface_time.mask):
+    if np.all(surface_time.mask):
         return _fully_masked_result(self, unshrunk_link, link_key, coords=True)
 
     # Create the surface event in its own frame
@@ -1567,8 +1544,7 @@ def _solve_photon_path_normal(self, time, path, sign, *, derivs=False, guess=Non
 
     # Iterate to solve for lt. Convergence is rapid because all speeds are
     # non-relativistic.
-    max_dlt = np.inf
-    converged = False
+    convergence = RayConvergence(precision)
     hints = True                # Speeds up some calculations
     p_guess = True              # Coefficient carried between intercept_normal_to calls
     for count in range(iters):
@@ -1594,22 +1570,14 @@ def _solve_photon_path_normal(self, time, path, sign, *, derivs=False, guess=Non
         # Update the light travel time from the separation between the intercept and the
         # remote path. Distances are frame-independent, so the surface frame will do.
         new_lt = (pos_wrt_origin_frame - cept_in_frame).norm() / signed_c
-        dlt = new_lt - lt
-        lt = new_lt
-
-        # Test for convergence
-        prev_max_dlt = max_dlt
-        max_dlt = abs(dlt).max(builtins=True, masked=-1.)
+        dlt = convergence.step(new_lt - lt)
+        lt = lt + dlt
 
         if LOGGING.surface_iterations or DEBUG:
             LOGGING.convergence('Surface._solve_photon_path_normal',
-                                f'iter={count+1}; change={max_dlt:.6g}')
+                                f'iter={count+1}; change={convergence.max_change:.6g}')
 
-        if max_dlt <= precision:
-            converged = True
-            break
-
-        if max_dlt >= prev_max_dlt:
+        if convergence.finished:
             break
 
         # Re-evaluate the path time. `lt` is the offset of the surface event relative
@@ -1618,12 +1586,14 @@ def _solve_photon_path_normal(self, time, path, sign, *, derivs=False, guess=Non
 
     #### END OF LOOP
 
-    if not converged:
+    if convergence.failures:
         LOGGING.warn('Surface._solve_photon_path_normal did not converge;',
-                     f'iter={count+1}; change={max_dlt:.6g}')
+                     f'iter={count+1}; rays={convergence.failures}/{lt.size}')
+        lt = lt.remask_or(convergence.failed)
+        path_time = surface_time - lt
 
     # If the result is entirely masked, return masked results
-    if max_dlt < 0. or np.all(path_time.mask):
+    if np.all(path_time.mask):
         # This is a fake, fully masked link
         vec = Vector3.ZERO.broadcast_to(path_time.shape)
         link = Event(path_time.remask(True), (vec, vec), path, frame=Frame.J2000)
