@@ -177,7 +177,7 @@ After ``python tests/hosts/cassini/iss/gold_master.py --preview -o /tmp/preview`
 
     with open(f'{root}/summary.py') as f:
         text = ''.join(line for line in f if not line.startswith('#'))
-    summary = ast.literal_eval(text.replace('np.float64', '').replace('np.int64', ''))
+    summary = ast.literal_eval(text)
     print(summary['SATURN incidence angle, actual (deg)'])
 
 The pickles are ``polymath`` arrays, so ``vals``, ``mask`` and ``antimask`` work as they

@@ -263,7 +263,7 @@ def test_a_cadence_can_stand_in_for_the_start_time() -> None:
                     texp=None)
 
     assert obs.time == (5., 25.)
-    assert obs._texp == 20.
+    assert obs.texp == 20.
 
 
 def test_a_cadence_of_more_than_one_step_is_rejected() -> None:

@@ -219,6 +219,7 @@ class Snapshot(Observation):
     shape: list | tuple
     cadence: Cadence
     subfields: dict
+    texp: float
     def __init__(self, axes: list | tuple, tstart: float, texp: float, fov: FOV,
         path: Path, frame: Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
