@@ -4,8 +4,9 @@
 
 import numpy as np
 
-from polymath     import Scalar, Qube
-from oops.cadence import Cadence
+from polymath         import Scalar, Qube
+from oops._exceptions import OopsValueError
+from oops.cadence     import Cadence
 
 
 class Metronome(Cadence):
@@ -23,7 +24,24 @@ class Metronome(Cadence):
             steps (int): The number of time steps.
             clip (bool, optional): If True (the default), times and index values are
                 always clipped into the valid range.
+
+        Raises:
+            OopsValueError: If `steps` is not positive.
+            OopsValueError: If steps > 1 and `tstride` or `texp` is not positive.
         """
+
+        if steps < 1:
+            raise OopsValueError(f'Metronome steps must be positive: {steps}')
+        if texp <= 0.:
+            if steps > 1:
+                raise OopsValueError(f'Metronome texp must be positive: {texp}')
+            else:
+                texp = 0.
+        if tstride <= 0.:
+            if steps > 1:
+                raise OopsValueError(f'Metronome tstride must be positive: {tstride}')
+            else:
+                tstride = 0.
 
         self._tstart = float(tstart)
         self._tstride = float(tstride)
@@ -45,8 +63,8 @@ class Metronome(Cadence):
         self.max_tstride = self._tstride
 
         self._gapless = (self._texp == self._tstride)
-        self._tscale = self._tstride / self._texp
-        self._tspan = self._texp / self._tstride
+        self._tscale = self._tstride / (self._texp or 1.)
+        self._tspan = self._texp / (self._tstride or 1.)
         self._tspan1 = self._tspan - 1
         self._max_step = self._steps - 1
 
@@ -139,6 +157,12 @@ class Metronome(Cadence):
         """
 
         time = Scalar.as_scalar(time, recursive=derivs)
+
+        # A zero tstride implies steps == 1 and stop time == start time
+        if self._tstride == 0.:
+            return Scalar(np.zeros(time.shape),
+                          time.mask | (time.vals != self._tstart))
+
         tstep = (time - self.time[0]) / self._tstride
 
         if self._gapless:
@@ -215,6 +239,19 @@ class Metronome(Cadence):
         """
 
         time = Scalar.as_scalar(time, recursive=False)
+
+        # A zero tstride implies steps == 1 and stop time == start time. The single
+        # tstep is active only at that instant; elsewhere the range is empty.
+        if self._tstride == 0.:
+            not_at_tstart = (time.vals != self._tstart)
+            tstep_min = Scalar(np.zeros(time.shape, dtype='int'), time.mask)
+            tstep_max = Scalar(np.where(not_at_tstart, 0, 1), time.mask)
+            if remask:
+                new_mask = time.mask | not_at_tstart
+                tstep_min = tstep_min.remask(new_mask)
+                tstep_max = tstep_max.remask(new_mask)
+            return (tstep_min, tstep_max)
+
         tstep = (time - self.time[0]) / self._tstride
 
         # Set mask=True here; restore mask later if remask is False

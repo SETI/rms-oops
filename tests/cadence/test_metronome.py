@@ -3,6 +3,7 @@
 ##########################################################################################
 
 import numpy as np
+import pytest
 
 from polymath import Boolean, Scalar
 import oops
@@ -861,5 +862,76 @@ def test_for_array1d_defaults_to_a_gapless_cadence() -> None:
 
     assert cad.is_continuous
     assert cad.time == (100., 140.)
+
+##########################################################################################
+# Zero exposure time with a single step (e.g. GOSSI images with texp == 0)
+##########################################################################################
+
+def test_a_single_step_metronome_accepts_a_zero_exposure_time() -> None:
+    """A single-step cadence with texp == 0 has a zero-width time span."""
+
+    cad = oops.cadence.Metronome(100., 0., 0., 1)
+
+    assert cad.time == (100., 100.)
+    assert cad.shape == (1,)
+    assert cad.is_continuous
+    assert cad.is_unique
+
+
+def test_a_single_step_metronome_locates_the_exact_start_time() -> None:
+    """With a zero-width cadence, only the exact start time is unmasked."""
+
+    cad = oops.cadence.Metronome(100., 0., 0., 1)
+
+    tstep = cad.tstep_at_time(Scalar([100., 99., 101.]), remask=True)
+
+    assert list(tstep.vals) == [0., 0., 0.]
+    assert list(tstep.mask) == [False, True, True]
+
+
+def test_a_single_step_metronome_range_is_empty_away_from_the_start_time() -> None:
+    """Away from the start time, the active tstep range is empty."""
+
+    cad = oops.cadence.Metronome(100., 0., 0., 1)
+
+    (tstep_min, tstep_max) = cad.tstep_range_at_time(Scalar([100., 99.]))
+
+    assert list(tstep_min.vals) == [0, 0]
+    assert list(tstep_max.vals) == [1, 0]
+
+
+def test_a_single_step_metronome_reports_the_start_time_as_not_outside() -> None:
+    """The single sampled instant is inside the cadence; every other time is outside."""
+
+    cad = oops.cadence.Metronome(100., 0., 0., 1)
+
+    outside = cad.time_is_outside(Scalar([100., 99.]))
+
+    assert list(outside.vals) == [False, True]
+
+
+##########################################################################################
+# Input validation
+##########################################################################################
+
+def test_metronome_rejects_a_non_positive_step_count() -> None:
+    """A Metronome must have at least one time step."""
+
+    with pytest.raises(ValueError, match='Metronome steps must be positive'):
+        oops.cadence.Metronome(100., 10., 10., 0)
+
+
+def test_metronome_rejects_a_non_positive_texp_with_multiple_steps() -> None:
+    """A multi-step cadence cannot have a zero or negative exposure time."""
+
+    with pytest.raises(ValueError, match='Metronome texp must be positive'):
+        oops.cadence.Metronome(100., 10., 0., 4)
+
+
+def test_metronome_rejects_a_non_positive_tstride_with_multiple_steps() -> None:
+    """A multi-step cadence cannot have a zero or negative stride."""
+
+    with pytest.raises(ValueError, match='Metronome tstride must be positive'):
+        oops.cadence.Metronome(100., 0., 10., 4)
 
 ##########################################################################################
