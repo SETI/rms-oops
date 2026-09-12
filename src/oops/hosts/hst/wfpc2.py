@@ -166,7 +166,7 @@ class WFPC2(HST):
             unavailable.
 
         Raises:
-            ValueError: If the `mask` option is not one of the values above.
+            OopsValueError: If the `mask` option is not one of the values above.
             IOError: If the mask is required but unavailable.
         """
 
@@ -188,7 +188,8 @@ class WFPC2(HST):
             return
 
         if mask_option not in {'require', 'required', 'optional'}:
-            raise ValueError(f'Illegal value for "mask" parameter: "{mask_option}"')
+            raise oops.OopsValueError(f'Illegal value for "mask" parameter: '
+                                      f'"{mask_option}"')
 
         # Get the full path to the image file
         data_filespec = self.filespec(hdulist)
@@ -378,7 +379,7 @@ class WFPC2(HST):
             identifying the image.
 
         Raises:
-            ValueError: If `ccd` and `layer` are incompatible.
+            OopsValueError: If `ccd` and `layer` are incompatible.
         """
 
         # Check parameters
@@ -407,7 +408,8 @@ class WFPC2(HST):
                         derived_layer = layer
                         break
             except IndexError:
-                raise ValueError(f'CCD {given_ccd} not found: ' + this.filespec(hdulist))
+                raise oops.OopsValueError(f'CCD {given_ccd} not found: ' +
+                                          this.filespec(hdulist))
         else:
             given_ccd = None
             derived_layer = None
@@ -417,8 +419,8 @@ class WFPC2(HST):
 
         if derived_ccd not in (None, ccd) or \
            derived_layer not in (None, layer):
-            raise ValueError('layer and ccd parameters are incompatible: ' +
-                             this.filespec(hdulist))
+            raise oops.OopsValueError('layer and ccd parameters are incompatible: ' +
+                                      this.filespec(hdulist))
 
         parameters = parameters.copy()
         parameters['ccd'] = ccd

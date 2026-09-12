@@ -186,7 +186,7 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         `headers` when the headers are loaded.
 
     Raises:
-        ValueError: If the binning mode of the image is not recognized.
+        OopsValueError: If the binning mode of the image is not recognized.
         IOError: If the calibration requires the solar range and it cannot be
             determined.
     """
@@ -216,7 +216,7 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
     elif shape[0] == 256:
         binning_mode = '4X4'
     else:
-        raise ValueError('Unrecognized binning mode; shape =', str(shape))
+        raise oops.OopsValueError('Unrecognized binning mode; shape =', str(shape))
 
     fov = LORRI.fovs[binning_mode, fov_type]
 

@@ -4,10 +4,11 @@
 
 import numpy as np
 
-from polymath       import Matrix3, Vector3
-from oops.fittable  import Fittable
-from oops.frame     import Frame
-from oops.transform import Transform
+from polymath         import Matrix3, Vector3
+from oops._exceptions import OopsValueError
+from oops.fittable    import Fittable
+from oops.frame       import Frame
+from oops.transform   import Transform
 
 
 class Navigation(Frame, Fittable):
@@ -42,7 +43,7 @@ class Navigation(Frame, Fittable):
 
         Raises:
             KeyError: If `reference` is an ID string that has not been registered.
-            ValueError: If `arg` does not provide either two or three angles.
+            OopsValueError: If `arg` does not provide either two or three angles.
         """
 
         # Linking to a frozen object yields a frozen object
@@ -64,7 +65,7 @@ class Navigation(Frame, Fittable):
 
         self.nparams = len(self._angles)
         if self.nparams not in {2, 3}:
-            raise ValueError('two or three Navigation angles must be provided')
+            raise OopsValueError('two or three Navigation angles must be provided')
 
         self._reference = Frame.as_wayframe(reference)
         self._origin = self._reference._origin

@@ -2,8 +2,9 @@
 # oops/backplane/resolution.py
 ##########################################################################################
 
-from oops.backplane import Backplane
-from oops.surface   import Surface
+from oops._exceptions import OopsValueError
+from oops.backplane   import Backplane
+from oops.surface     import Surface
 
 
 def resolution(self, event_key, axis='u'):
@@ -20,11 +21,11 @@ def resolution(self, event_key, axis='u'):
         Scalar: The resolution in km per pixel, registered as a backplane.
 
     Raises:
-        ValueError: If `axis` is neither 'u' nor 'v'.
+        OopsValueError: If `axis` is neither 'u' nor 'v'.
     """
 
     if axis not in ('u', 'v'):
-        raise ValueError('invalid axis: ' + repr(axis))
+        raise OopsValueError('invalid axis: ' + repr(axis))
 
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
@@ -52,11 +53,11 @@ def center_resolution(self, event_key, axis='u'):
         Scalar: The resolution in km per pixel, registered as a gridless backplane.
 
     Raises:
-        ValueError: If `axis` is neither 'u' nor 'v'.
+        OopsValueError: If `axis` is neither 'u' nor 'v'.
     """
 
     if axis not in ('u', 'v'):
-        raise ValueError('invalid axis: ' + repr(axis))
+        raise OopsValueError('invalid axis: ' + repr(axis))
 
     self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)

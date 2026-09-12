@@ -6,6 +6,7 @@ import numpy as np
 
 from polymath              import Qube, Scalar, Vector3
 from oops._convergence     import RayConvergence
+from oops._exceptions      import OopsValueError
 from oops.config           import SURFACE_PHOTONS, LOGGING
 from oops.constants        import C
 from oops.event            import Event
@@ -1051,8 +1052,8 @@ def _solve_photon_event_normal(self, link, sign, *, derivs=False, guess=None,
     """
 
     if self.IS_VIRTUAL:
-        raise ValueError('Surface._solve_photon_event_normal does not support '
-                         f'virtual surface class {type(self).__name__}')
+        raise OopsValueError('Surface._solve_photon_event_normal does not support '
+                             f'virtual surface class {type(self).__name__}')
 
     # Handle derivatives
     if not derivs:
@@ -1456,8 +1457,8 @@ def _solve_photon_path_normal(self, time, path, sign, *, derivs=False, guess=Non
     """
 
     if self.IS_VIRTUAL:
-        raise ValueError('Surface._solve_photon_path_normal does not support '
-                         f'virtual surface class {type(self).__name__}')
+        raise OopsValueError('Surface._solve_photon_path_normal does not support '
+                             f'virtual surface class {type(self).__name__}')
 
     # Handle derivatives
     if not derivs:

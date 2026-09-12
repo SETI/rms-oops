@@ -5,6 +5,7 @@
 import numpy as np
 
 from polymath                 import Scalar, Pair
+from oops._exceptions         import OopsValueError
 from oops.observation         import Observation
 from oops.cadence             import Cadence
 from oops.cadence.snapcadence import SnapCadence
@@ -48,7 +49,7 @@ class Slit1D(Observation):
                 included as needed.
 
         Raises:
-            ValueError: If `axes` does not contain exactly one of 'u' and 'v', if the
+            OopsValueError: If `axes` does not contain exactly one of 'u' and 'v', if the
                 cross-slit axis of the FOV does not have length 1, or if `tstart` is a
                 Cadence whose shape is not (1,).
         """
@@ -64,8 +65,8 @@ class Slit1D(Observation):
         # Axes / Shape / Size
         self._axes = list(axes)
         if ('u' in self._axes) == ('v' in self._axes):
-            raise ValueError('axes are incompatible with Slit1D: '
-                             + repr(tuple(axes)))
+            raise OopsValueError('axes are incompatible with Slit1D: '
+                                 + repr(tuple(axes)))
         self.shape = len(axes) * [0]
 
         if 'u' in self._axes:
@@ -88,7 +89,7 @@ class Slit1D(Observation):
         self.swap_uv = False
 
         if self.uv_shape[self._cross_slit_uv_axis] != 1:
-            raise ValueError('Slit1D cross-slit FOV axis must have length 1')
+            raise OopsValueError('Slit1D cross-slit FOV axis must have length 1')
 
         self.t_axis = -1
 
@@ -96,7 +97,7 @@ class Slit1D(Observation):
         if isinstance(tstart, Cadence):
             self.cadence = tstart
             if self.cadence.shape != (1,):
-                raise ValueError("Shape of a Slit1D's cadence must be (1,)")
+                raise OopsValueError("Shape of a Slit1D's cadence must be (1,)")
             self.texp = self.cadence.time[1] - self.cadence.time[0]
         else:
             self.cadence = SnapCadence(tstart, texp)

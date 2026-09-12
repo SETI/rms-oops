@@ -314,7 +314,7 @@ def get_time_series(filespec, tstart, label, data):
         and, if the data are loaded, `data`.
 
     Raises:
-        ValueError: If the product is neither HSP nor HDAC.
+        OopsValueError: If the product is neither HSP nor HDAC.
     """
 
     # Determine the detector
@@ -324,7 +324,7 @@ def get_time_series(filespec, tstart, label, data):
     elif product_id.startswith('HDAC'):
         detector = 'HDAC'
     else:
-        raise ValueError('Time series is neither HSP nor HDAC: ' + filespec)
+        raise oops.OopsValueError('Time series is neither HSP nor HDAC: ' + filespec)
 
     # Define the instrument frame
     frame_id = UVIS.frame_ids[detector]
@@ -591,7 +591,7 @@ class UVIS(object):
                 u_angle = 2. * info['FOV_REF_ANGLE'] * oops.RPD
                 v_angle = u_angle
             else:
-                raise ValueError('Unrecognized FOV_SHAPE: ' + info['FOV_SHAPE'])
+                raise oops.OopsValueError('Unrecognized FOV_SHAPE: ' + info['FOV_SHAPE'])
 
             # Define the frame for 1 or 64 lines
             # Not every combination is really used but that doesn't matter

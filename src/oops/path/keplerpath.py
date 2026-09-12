@@ -6,6 +6,7 @@ import numpy as np
 
 from polymath          import Scalar, Vector3, Matrix3
 from oops._cache       import _Cache
+from oops._exceptions  import OopsValueError
 from oops.event        import Event
 from oops.fittable     import Fittable
 from oops.frame.frame_ import Frame
@@ -101,15 +102,15 @@ class KeplerPath(Path, Fittable):
 
         Raises:
             KeyError: If `observer` is an ID string that has not been registered.
-            ValueError: If `wobbles` contains an unrecognized name or if `observer` is not
-                shapeless.
+            OopsValueError: If `wobbles` contains an unrecognized name or if `observer` is
+                not shapeless.
         """
 
         self._wobbles = (wobbles,) if isinstance(wobbles, str) else wobbles
         self._nwobbles = len(self._wobbles)
         for name in self._wobbles:
             if name not in {'mean', 'peri', 'node', 'a', 'e', 'i', 'e2d', 'i2d', 'pole'}:
-                raise ValueError(f'invalid name for wobble in KeplerPath: {name}')
+                raise OopsValueError(f'invalid name for wobble in KeplerPath: {name}')
 
         self._nelements = _NELEMENTS + self._nwobbles * _NWOBBLES
         self.nparams = self._nelements
@@ -128,7 +129,7 @@ class KeplerPath(Path, Fittable):
         else:
             self._observer = Path.as_waypoint(observer)
             if self._observer._shape:
-                raise ValueError('KeplerPath requires a shapeless observer')
+                raise OopsValueError('KeplerPath requires a shapeless observer')
 
             self._origin = self._observer
             self._frame = Frame.J2000

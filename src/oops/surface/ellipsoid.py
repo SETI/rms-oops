@@ -5,11 +5,12 @@
 import numpy as np
 
 from polymath              import Boolean, Matrix, Scalar, Vector3
+from oops._convergence     import limited_step, solve
+from oops._exceptions      import OopsValueError
 from oops.config           import SURFACE_PHOTONS
 from oops.constants        import HALFPI, TWOPI
 from oops.frame.frame_     import Frame
 from oops.path.path_       import Path
-from oops._convergence import limited_step, solve
 from oops.surface.surface_ import Surface
 
 # A `z`-coordinate measured normal to the surface becomes poorly behaved near the evolute
@@ -324,7 +325,7 @@ class Ellipsoid(Surface):
             * `hints` (Any): The input value of `hints`, included if it is not None.
 
         Raises:
-            ValueError: If `direction` is neither "arr" nor "dep".
+            OopsValueError: If `direction` is neither "arr" nor "dep".
         """
 
         # Convert to Vector3 and un-squash
@@ -386,7 +387,7 @@ class Ellipsoid(Surface):
         elif direction == 'arr':                # Case 2
             t = (d_div4.sqrt() - b_div2) / a
         else:
-            raise ValueError('invalid direction: ' + repr(direction))
+            raise OopsValueError('invalid direction: ' + repr(direction))
 
         pos = obs + t*los
 

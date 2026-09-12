@@ -4,7 +4,8 @@
 
 from polymath import Scalar, Pair
 
-from oops.backplane import Backplane
+from oops._exceptions import OopsValueError
+from oops.backplane   import Backplane
 
 # Backplane names that can be "nested", such that the array mask propagates
 # forward to each new backplane array that refers to it.
@@ -29,11 +30,11 @@ def ansa_radius(self, event_key, radius_type='positive', rmax=None):
         Scalar: The ansa radius in km, registered as a backplane.
 
     Raises:
-        ValueError: If `radius_type` is not one of the values listed above.
+        OopsValueError: If `radius_type` is not one of the values listed above.
     """
 
     if radius_type not in ('right', 'left', 'positive'):
-        raise ValueError('invalid radius_type: ' + repr(radius_type))
+        raise OopsValueError('invalid radius_type: ' + repr(radius_type))
 
     # Look up under the desired radius type and maximum
     self.refresh()
@@ -117,11 +118,11 @@ def ansa_longitude(self, event_key, reference='node'):
         registered as a backplane.
 
     Raises:
-        ValueError: If `reference` is not one of the values listed above.
+        OopsValueError: If `reference` is not one of the values listed above.
     """
 
     if reference not in ('aries', 'node', 'obs', 'oha', 'sun', 'sha'):
-        raise ValueError('invalid longitude reference: ' + repr(reference))
+        raise OopsValueError('invalid longitude reference: ' + repr(reference))
 
     self.refresh()
     (event_key,
@@ -167,14 +168,14 @@ def _fill_ansa_intercepts(self, event_key):
         event_key (tuple): Standardized key defining the ansa surface event.
 
     Raises:
-        ValueError: If the surface does not use cylindrical coordinates.
+        OopsValueError: If the surface does not use cylindrical coordinates.
     """
 
     # Validate the surface type
     surface = Backplane.get_surface(event_key[1])
     if surface.COORDINATE_TYPE != 'cylindrical':
-        raise ValueError('invalid coordinate type for ansa geometry: '
-                         + surface.COORDINATE_TYPE)
+        raise OopsValueError('invalid coordinate type for ansa geometry: '
+                             + surface.COORDINATE_TYPE)
 
     # Get the ansa intercept coordinates
     event = self.get_surface_event(event_key)
@@ -196,15 +197,15 @@ def _fill_ansa_longitudes(self, event_key):
         event_key (tuple): Standardized key defining the ansa surface event.
 
     Raises:
-        ValueError: If the event key does not describe a surface using cylindrical
+        OopsValueError: If the event key does not describe a surface using cylindrical
             coordinates.
     """
 
     # Validate the surface type
     surface = Backplane.get_surface(event_key[1])
     if surface.COORDINATE_TYPE != 'cylindrical':
-        raise ValueError('invalid coordinate type for ansa geometry: '
-                         + surface.COORDINATE_TYPE)
+        raise OopsValueError('invalid coordinate type for ansa geometry: '
+                             + surface.COORDINATE_TYPE)
 
     # Get the ansa intercept event
     event = self.get_surface_event(event_key)
@@ -227,7 +228,7 @@ def ansa_radial_resolution(self, event_key):
         Scalar: The radial resolution in km per pixel, registered as a backplane.
 
     Raises:
-        ValueError: If the surface does not use cylindrical coordinates.
+        OopsValueError: If the surface does not use cylindrical coordinates.
     """
 
     self.refresh()
@@ -245,8 +246,8 @@ def ansa_radial_resolution(self, event_key):
 
     event = self.get_surface_event(event_key, derivs=True)
     if event.surface.COORDINATE_TYPE != 'cylindrical':
-        raise ValueError('invalid coordinate type for ansa geometry: '
-                         + event.surface.COORDINATE_TYPE)
+        raise OopsValueError('invalid coordinate type for ansa geometry: '
+                             + event.surface.COORDINATE_TYPE)
 
     radius = event.coord1
     dr_duv = radius.d_dlos.chain(self.dlos_duv)
@@ -267,7 +268,7 @@ def ansa_vertical_resolution(self, event_key):
         Scalar: The vertical resolution in km per pixel, registered as a backplane.
 
     Raises:
-        ValueError: If the surface does not use cylindrical coordinates.
+        OopsValueError: If the surface does not use cylindrical coordinates.
     """
 
     self.refresh()
@@ -285,8 +286,8 @@ def ansa_vertical_resolution(self, event_key):
 
     event = self.get_surface_event(event_key, derivs=True)
     if event.surface.COORDINATE_TYPE != 'cylindrical':
-        raise ValueError('invalid coordinate type for ansa geometry: '
-                         + event.surface.COORDINATE_TYPE)
+        raise OopsValueError('invalid coordinate type for ansa geometry: '
+                             + event.surface.COORDINATE_TYPE)
 
     altitude = event.coord2
     dz_duv = altitude.d_dlos.chain(self.dlos_duv)

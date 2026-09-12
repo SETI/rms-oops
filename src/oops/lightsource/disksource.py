@@ -5,6 +5,7 @@
 import numpy as np
 
 from polymath         import Scalar, Vector3, Matrix3
+from oops._exceptions import OopsValueError
 from oops.body        import Body
 from oops.constants   import C, RPS
 from oops.event       import Event
@@ -36,7 +37,7 @@ class DiskSource(LightSource):
                 default, keeps the source as a 2-D image for later use.
 
         Raises:
-            ValueError: If `source` does not describe a single, unshaped direction.
+            OopsValueError: If `source` does not describe a single, unshaped direction.
         """
 
         # Start with the default LightSource
@@ -45,8 +46,8 @@ class DiskSource(LightSource):
         # Make sure this one is un-shaped
         if lightsource.shape != ():
             del Body.BODY_REGISTRY[lightsource.name]
-            raise ValueError('DiskSource source must have shape (), not ' +
-                             str(lightsource.shape))
+            raise OopsValueError('DiskSource source must have shape (), not ' +
+                                 str(lightsource.shape))
 
         # At this point, the LightSource internals are filled in and valid
         self.name = lightsource.name

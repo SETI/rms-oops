@@ -2,8 +2,9 @@
 # oops/transform.py: Class Transform
 ##########################################################################################
 
-from polymath import Qube, Vector3, Matrix3
-from oops.oops import Oops
+from polymath         import Qube, Vector3, Matrix3
+from oops._exceptions import OopsValueError
+from oops.oops         import Oops
 
 
 class Transform(Oops):
@@ -355,8 +356,8 @@ class Transform(Oops):
             that origin is used; where both do, this Transform's origin is used.
 
         Raises:
-            ValueError: If the target frame of `arg` is not the reference frame of this
-                Transform.
+            OopsValueError: If the target frame of `arg` is not the reference frame of
+                this Transform.
         """
 
         # Two tranforms
@@ -374,8 +375,8 @@ class Transform(Oops):
         #      = N M [(V0 - [omega + MT kappa] x P0)]
 
         if self.reference != arg.frame:
-            raise ValueError('frame mismatch in rotate_transform: %s, %s'
-                             % (self.reference, arg.frame))
+            raise OopsValueError('frame mismatch in rotate_transform: %s, %s'
+                                 % (self.reference, arg.frame))
 
         if self.origin is None:
             origin = arg.origin

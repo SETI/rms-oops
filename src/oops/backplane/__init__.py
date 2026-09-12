@@ -8,6 +8,7 @@ import numpy as np
 import types
 
 from polymath               import Boolean, Pair, Qube, Scalar, Vector3
+from oops._exceptions       import OopsValueError
 from oops.body              import Body
 from oops.config            import LOGGING
 from oops.mutable           import Mutable
@@ -376,7 +377,7 @@ class Backplane(Mutable):
             item. An empty key is returned as an empty tuple.
 
         Raises:
-            ValueError: If the number of items does not suit the kind of illumination:
+            OopsValueError: If the number of items does not suit the kind of illumination:
                 two or three for dispersed illumination, two for occultation or
                 path-based illumination.
         """
@@ -414,14 +415,14 @@ class Backplane(Mutable):
 
         # Check length
         if Backplane._is_dispersed(event_key) and len(event_key) not in (2,3):
-            raise ValueError('illegal surface event key: ' + repr(event_key))
+            raise OopsValueError('illegal surface event key: ' + repr(event_key))
 
         if Backplane._is_occultation(event_key) and len(event_key) != 2:
-            raise ValueError('illegal occultation event key: '
+            raise OopsValueError('illegal occultation event key: '
                              + repr(event_key))
 
         if Backplane._is_gridless(event_key) and len(event_key) != 2:
-            raise ValueError('illegal gridless event key: ' + repr(event_key))
+            raise OopsValueError('illegal gridless event key: ' + repr(event_key))
 
         return event_key
 
@@ -505,7 +506,7 @@ class Backplane(Mutable):
             empty `event_key` is returned unchanged.
 
         Raises:
-            ValueError: If the key describes shadowing, which a path-based event cannot.
+            OopsValueError: If the key describes shadowing, which a path-based event cannot.
         """
 
         event_key = Backplane.standardize_event_key(event_key, default=default)
@@ -516,7 +517,7 @@ class Backplane(Mutable):
         # check in standardize_event_key says the same thing, but it runs before the
         # light source is rewritten below, so it would not see this key as gridless.
         if Backplane._is_shadowing(event_key):
-            raise ValueError('illegal gridless event key: ' + repr(event_key))
+            raise OopsValueError('illegal gridless event key: ' + repr(event_key))
 
         return (event_key[0][:-1] + '-',) + event_key[1:]
 
@@ -534,7 +535,7 @@ class Backplane(Mutable):
             tuple: The standardized key.
 
         Raises:
-            ValueError: If the argument is neither a string nor a tuple, or is an array
+            OopsValueError: If the argument is neither a string nor a tuple, or is an array
                 that is not a registered backplane.
         """
 
@@ -546,7 +547,7 @@ class Backplane(Mutable):
                 if value is backplane_key:
                     return key
 
-            raise ValueError('illegal backplane key type: ' +
+            raise OopsValueError('illegal backplane key type: ' +
                              type(backplane_key).__name__)
 
         return Backplane._standardize_backplane_key_if_not_qube(backplane_key)
@@ -566,7 +567,7 @@ class Backplane(Mutable):
             tuple: The standardized key, uppercased if it was a string.
 
         Raises:
-            ValueError: If the key is neither a string nor a tuple.
+            OopsValueError: If the key is neither a string nor a tuple.
         """
 
         if isinstance(backplane_key, str):
@@ -576,7 +577,7 @@ class Backplane(Mutable):
             pass
 
         else:
-            raise ValueError('illegal backplane key type: ' +
+            raise OopsValueError('illegal backplane key type: ' +
                              type(backplane_key).__name__)
 
         return backplane_key
@@ -837,7 +838,7 @@ class Backplane(Mutable):
             Surface: The surface that the key identifies.
 
         Raises:
-            ValueError: If the key carries a modifier that is not recognized.
+            OopsValueError: If the key carries a modifier that is not recognized.
         """
 
         (body, modifier) = Backplane._get_body_and_modifier(surface_key)
@@ -860,7 +861,7 @@ class Backplane(Mutable):
         if modifier == 'LIMB':
             return Limb(body.surface)
 
-        raise ValueError(f'unrecognized surface modifier: {surface_key}')
+        raise OopsValueError(f'unrecognized surface modifier: {surface_key}')
 
     def get_antimask(self, surface_key):
         """Prepare a rectangular antimask for a particular surface event.
@@ -1268,7 +1269,7 @@ class Backplane(Mutable):
             Qube: The backplane array, computed if it is not already cached.
 
         Raises:
-            ValueError: If the key does not name a Backplane array method.
+            OopsValueError: If the key does not name a Backplane array method.
         """
 
         if isinstance(backplane_key, str):
@@ -1276,7 +1277,7 @@ class Backplane(Mutable):
 
         func = backplane_key[0]
         if func not in Backplane._CALLABLES:
-            raise ValueError('unrecognized backplane function: ' + func)
+            raise OopsValueError('unrecognized backplane function: ' + func)
 
         # Evaluate...
         backplane = Backplane.__dict__[func].__call__(self, *backplane_key[1:])
