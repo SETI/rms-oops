@@ -30,6 +30,8 @@ class Backplane(Mutable):
         meshgrid (Meshgrid): The Meshgrid that defines the sampling of the FOV.
         inventory (dict | None): The inventory of bodies in the field of view, or None
             if no inventory is kept.
+        shape (tuple[int, ...]): The shape of the arrays returned by this Backplane's
+            methods.
     """
 
     _DIAGNOSTICS = False    # set True to log diagnostics
@@ -170,7 +172,7 @@ class Backplane(Mutable):
 
         # Define events
         self._obs_event = self.obs.event_at_grid(self.meshgrid, time=self._time)
-        self._shape = self._obs_event.shape
+        self.shape = self._obs_event.shape
 
         # dict[derivs] = event
         self._obs_events = {
@@ -1164,13 +1166,13 @@ class Backplane(Mutable):
         backplane = backplane.collapse_mask()
 
         # Under some circumstances a derived backplane can be a scalar
-        if expand and backplane.shape == () and self._shape != ():
+        if expand and backplane.shape == () and self.shape != ():
             if isinstance(backplane, Boolean):
-                vals = np.empty(self._shape, dtype='bool')
+                vals = np.empty(self.shape, dtype='bool')
                 vals[...] = backplane.vals
                 backplane = Boolean(vals, backplane.mask)
             else:
-                vals = np.empty(self._shape, dtype='float')
+                vals = np.empty(self.shape, dtype='float')
                 vals[...] = backplane.vals
                 backplane = Scalar(vals, backplane.mask)
 

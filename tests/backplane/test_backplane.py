@@ -177,7 +177,7 @@ def test_an_unregistered_array_is_not_a_backplane_key(bp: Backplane) -> None:
     """An array that was never registered has no key to extract."""
 
     with pytest.raises(ValueError):
-        bp.standardize_backplane_key(Scalar(np.zeros(bp._shape)))
+        bp.standardize_backplane_key(Scalar(np.zeros(bp.shape)))
 
 
 def test_a_backplane_key_must_be_a_string_or_a_tuple(bp: Backplane) -> None:
@@ -207,7 +207,7 @@ def test_evaluate_passes_the_extra_arguments(bp: Backplane) -> None:
 def test_backplane_samples_every_pixel_by_default(saturn_obs: Snapshot) -> None:
     """The default meshgrid samples the center of every pixel."""
 
-    assert Backplane(saturn_obs)._shape == tuple(saturn_obs.uv_shape)
+    assert Backplane(saturn_obs).shape == tuple(saturn_obs.uv_shape)
 
 
 def test_backplane_accepts_a_meshgrid(saturn_obs: Snapshot) -> None:
@@ -216,7 +216,7 @@ def test_backplane_accepts_a_meshgrid(saturn_obs: Snapshot) -> None:
     meshgrid = saturn_obs.meshgrid(undersample=4)
     backplane = Backplane(saturn_obs, meshgrid=meshgrid)
 
-    assert backplane._shape == meshgrid.shape
+    assert backplane.shape == meshgrid.shape
 
 
 def test_backplane_accepts_a_time(saturn_obs: Snapshot) -> None:
@@ -224,7 +224,7 @@ def test_backplane_accepts_a_time(saturn_obs: Snapshot) -> None:
 
     backplane = Backplane(saturn_obs, time=Scalar(saturn_obs.midtime))
 
-    assert backplane.right_ascension().shape == backplane._shape
+    assert backplane.right_ascension().shape == backplane.shape
 
 
 def test_an_inventory_gives_the_same_geometry(saturn_obs: Snapshot) -> None:
@@ -245,7 +245,7 @@ def test_backplane_survives_a_pickle_round_trip(saturn_obs: Snapshot) -> None:
 
     restored = pickle.loads(pickle.dumps(backplane))
 
-    assert restored._shape == backplane._shape
+    assert restored.shape == backplane.shape
     assert restored.ring_radius(RING) == expected
 
 
@@ -444,10 +444,10 @@ def test_a_plain_boolean_is_registered_as_a_backplane(bp: Backplane) -> None:
 def test_a_numpy_array_is_registered_as_a_scalar(bp: Backplane) -> None:
     """A bare NumPy array becomes a Scalar of the same shape."""
 
-    registered = bp.register_backplane(('_test_array',), np.zeros(bp._shape))
+    registered = bp.register_backplane(('_test_array',), np.zeros(bp.shape))
 
     assert isinstance(registered, Scalar)
-    assert registered.shape == bp._shape
+    assert registered.shape == bp.shape
 
 
 def test_a_shapeless_boolean_can_be_expanded_to_the_grid(bp: Backplane) -> None:
@@ -456,7 +456,7 @@ def test_a_shapeless_boolean_can_be_expanded_to_the_grid(bp: Backplane) -> None:
     registered = bp.register_backplane(('_test_expanded_flag',), Boolean(True),
                                        expand=True)
 
-    assert registered.shape == bp._shape
+    assert registered.shape == bp.shape
     assert np.all(registered.vals)
 
 
@@ -466,7 +466,7 @@ def test_a_shapeless_scalar_can_be_expanded_to_the_grid(bp: Backplane) -> None:
     registered = bp.register_backplane(('_test_expanded_value',), Scalar(2.5),
                                        expand=True)
 
-    assert registered.shape == bp._shape
+    assert registered.shape == bp.shape
     assert np.all(registered.vals == 2.5)
 
 
@@ -521,7 +521,7 @@ def test_an_empty_event_key_gives_the_observer_event(bp: Backplane) -> None:
 
     event = bp.get_surface_event(())
 
-    assert event.shape == bp._shape
+    assert event.shape == bp.shape
     assert event.origin is bp.obs.path.waypoint
 
 
@@ -569,7 +569,7 @@ def test_a_body_inside_the_field_is_masked_to_its_own_footprint(
 
     antimask = backplane.get_antimask(PLANET)
 
-    assert antimask.shape == backplane._shape
+    assert antimask.shape == backplane.shape
     assert np.any(antimask)
     assert not np.all(antimask)
 
