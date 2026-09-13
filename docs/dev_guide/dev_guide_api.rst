@@ -119,7 +119,8 @@ have no place in the public reference. In the private copy they are documented h
    ~~~~~~~~~~~~~~~~~~~~~
 
    The private class that carries one comparison through the gold master framework. The
-   public API is on the :doc:`gold master page </gold_master>`.
+   public API is on the :doc:`gold master page </gold_master>`, whose ``automodule``
+   directive excludes this class so that this is its one, canonical entry.
 
    .. autoclass:: programs.gold_master._BackplaneComparison
        :members:

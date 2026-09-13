@@ -6,7 +6,8 @@
 from collections.abc import Iterable
 from typing import Any
 
-from oops.oops import Oops
+from oops._exceptions import OopsValueError
+from oops.oops         import Oops
 
 
 class Fittable(Oops):
@@ -101,7 +102,8 @@ class Fittable(Oops):
             bool: True if this object has changed as a result of this function call.
 
         Raises:
-            ValueError: If the number of parameters is incorrect or the object is frozen.
+            OopsValueError: If the number of parameters is incorrect or the object is
+                frozen.
         """
 
         # Convert params to tuple if necessary
@@ -112,18 +114,19 @@ class Fittable(Oops):
 
         # Check for valid parameters
         if not params:
-            raise ValueError(f'missing parameters for {type(self).__name__}.set_params()')
+            raise OopsValueError(
+                f'missing parameters for {type(self).__name__}.set_params()')
 
         if params == self.params:
             return False
         if len(params) != self.nparams:
             plural = 's' if self.nparams > 1 else ''
-            raise ValueError(f'{type(self).__name__} object requires {self.nparams} fit '
-                             f'parameter{plural}')
+            raise OopsValueError(f'{type(self).__name__} object requires {self.nparams} '
+                                 f'fit parameter{plural}')
 
         # Check for frozen object
         if self.is_frozen:
-            raise ValueError(f'{type(self).__name__} object is frozen')
+            raise OopsValueError(f'{type(self).__name__} object is frozen')
 
         # Update, increment, refresh
         self._set_params(params)

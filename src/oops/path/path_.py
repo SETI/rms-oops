@@ -6,6 +6,7 @@ import re
 
 from polymath              import Qube, Vector3
 from oops._cache           import _Cache
+from oops._exceptions      import OopsValueError
 from oops.config           import PICKLE_CONFIG
 from oops.event            import Event
 from oops.frame.frame_     import Frame, J2000Frame
@@ -505,16 +506,16 @@ class Path(Mutable):
             Event: The given `event` relative to this Path.
 
         Raises:
-            ValueError: If the Event's origin does not match this Path's origin, or if the
-                two objects do not use the same frame.
+            OopsValueError: If the Event's origin does not match this Path's origin, or if
+                the two objects do not use the same frame.
         """
 
         # Check for compatibility
         if self._origin._waypoint != event.origin._waypoint:
-            raise ValueError('Events must have a common origin for path subtraction')
+            raise OopsValueError('Events must have a common origin for path subtraction')
 
         if self._frame._wayframe != event.frame._wayframe:
-            raise ValueError('Events must share a common frame for path subtraction')
+            raise OopsValueError('Events must share a common frame for path subtraction')
 
         # Create the path event
         path_event = self.event_at_time(event.time, quick=quick)
@@ -548,16 +549,17 @@ class Path(Mutable):
             Event: The given `event` relative to the origin of this Path.
 
         Raises:
-            ValueError: If the Event's origin is not this Path, or if the two objects do
-                not use the same frame.
+            OopsValueError: If the Event's origin is not this Path, or if the two objects
+                do not use the same frame.
         """
 
         # Check for compatibility
         if self._waypoint != event.origin._waypoint:
-            raise ValueError("An Event's origin must match this path for path addition")
+            raise OopsValueError("An Event's origin must match this path for path "
+                                 "addition")
 
         if self._frame._wayframe != event.frame._wayframe:
-            raise ValueError('Events must share a common frame for path addition')
+            raise OopsValueError('Events must share a common frame for path addition')
 
         # Create the path event
         path_event = self.event_at_time(event.time, quick=quick)
@@ -890,15 +892,15 @@ class LinkedPath(Path):
 
         Raises:
             KeyError: If `path` or `parent` is an ID string that has not been registered.
-            ValueError: If `path`'s origin does not match `parent` or if the object shapes
-                cannot be broadcasted.
+            OopsValueError: If `path`'s origin does not match `parent` or if the object
+                shapes cannot be broadcasted.
         """
 
         path = Path.as_path(path)
         parent = Path.as_path(parent)
         if path._origin != parent._waypoint:
-            raise ValueError(f'LinkedPath path mismatch: {path._origin}, '
-                             f'{parent._waypoint}')
+            raise OopsValueError(f'LinkedPath path mismatch: {path._origin}, '
+                                 f'{parent._waypoint}')
 
         self._path = path
         self._parent = parent
@@ -970,15 +972,15 @@ class RelativePath(Path):
 
         Raises:
             KeyError: If `path` or `origin` is an ID string that has not been registered.
-            ValueError: If `path` and `origin` have different origins or if the object
+            OopsValueError: If `path` and `origin` have different origins or if the object
                 shapes cannot be broadcasted.
         """
 
         path = Path.as_path(path)
         origin = Path.as_path(origin)
         if path._origin != origin._origin:
-            raise ValueError(f'RelativePath origin mismatch: {path._origin}, '
-                             f'{origin._origin}')
+            raise OopsValueError(f'RelativePath origin mismatch: {path._origin}, '
+                                 f'{origin._origin}')
 
         self._path = path
         # Retain the origin Path itself, not just its waypoint. The waypoint is the

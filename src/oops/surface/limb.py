@@ -5,9 +5,10 @@
 import numpy as np
 
 from polymath import Scalar, Vector3
+from oops._convergence import RayConvergence
+from oops._exceptions import OopsValueError
 from oops.config import SURFACE_PHOTONS, LOGGING
 from oops.constants import HALFPI, TWOPI
-from oops._convergence import RayConvergence
 from oops.surface.surface_ import Surface
 
 
@@ -52,7 +53,7 @@ class Limb(Surface):
         """
 
         if ground.COORDINATE_TYPE != 'spherical':
-            raise ValueError('Limb requires an ellipsoidal ground surface')
+            raise OopsValueError('Limb requires an ellipsoidal ground surface')
 
         self._ground = ground
         self.origin = ground.origin

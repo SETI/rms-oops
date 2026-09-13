@@ -9,6 +9,8 @@ from scipy.interpolate import UnivariateSpline
 import cspyce
 
 from polymath              import Matrix3, Quaternion, Scalar, Vector3
+from oops._exceptions      import (OopsIndexError, OopsKeyError, OopsTypeError,
+                                   OopsValueError)
 from oops.frame            import Frame, J2000Frame, LinkedFrame, NullFrame
 from oops.frame.quickframe import QuickFrame
 from oops.transform        import Transform
@@ -54,8 +56,8 @@ class SpiceFrame(Frame):
             KeyError: If `spice_frame` defines a known SPICE body but its rotation frame
                 is undefined.
             TypeError: If `spice_frame` is not an integer or string.
-            ValueError: If `reference` is not a SpiceFrame or J2000, or if `omega_type`
-                does not have a recognized value.
+            OopsValueError: If `reference` is not a SpiceFrame or J2000, or if
+                `omega_type` does not have a recognized value.
         """
 
         self._fill_spice_info(spice_frame, reference)
@@ -74,7 +76,7 @@ class SpiceFrame(Frame):
         self._omega_numerical = (omega_type == 'numerical')
         self._omega_zero = (omega_type == 'zero')
         if self._omega_type not in {'tabulated', 'numerical', 'zero'}:
-            raise ValueError(f'invalid SpiceFrame omega_type: {self._omega_type}')
+            raise OopsValueError(f'invalid SpiceFrame omega_type: {self._omega_type}')
 
         # If the reference is J2000, register as normal
         if self._reference == Frame.J2000:
@@ -115,7 +117,7 @@ class SpiceFrame(Frame):
             tuple[int, str]: The SPICE frame code and name.
 
         Raises:
-            ValueError: If the frame is neither a SpiceFrame nor J2000.
+            OopsValueError: If the frame is neither a SpiceFrame nor J2000.
         """
 
         if reference == Frame.J2000:
@@ -124,7 +126,7 @@ class SpiceFrame(Frame):
         if isinstance(reference, SpiceFrame):
             return (reference._spice_frame_code, reference._spice_frame_name)
 
-        raise ValueError(f'{cls.__name__} reference must be a SpiceFrame or J2000')
+        raise OopsValueError(f'{cls.__name__} reference must be a SpiceFrame or J2000')
 
     def _fill_spice_info(self, spice_frame, reference):
         """Fill in this object's SPICE codes and names, plus the origin and reference.
@@ -218,13 +220,13 @@ class SpiceFrame(Frame):
             Toolkit.
 
         Raises:
-            IndexError: If `arg` is an integer but is not a recognized frame ID or body
-                ID.
-            KeyError: If `arg` is a string but is not a recognized frame name or body
+            OopsIndexError: If `arg` is an integer but is not a recognized frame ID or
+                body ID.
+            OopsKeyError: If `arg` is a string but is not a recognized frame name or body
                 name.
-            KeyError: If `arg` defines a known SPICE body but its rotation frame is
+            OopsKeyError: If `arg` defines a known SPICE body but its rotation frame is
                 undefined.
-            TypeError: If `arg` is not an integer or string.
+            OopsTypeError: If `arg` is not an integer or string.
         """
 
         # A trapped cspyce error is suppressed with `from None`; its traceback ends inside
@@ -242,13 +244,13 @@ class SpiceFrame(Frame):
 
             # Otherwise, perhaps it is a body code
             if not cspyce.bodfnd(arg, 'POLE_RA'):
-                raise IndexError(f'unrecognized SPICE frame {arg}')
+                raise OopsIndexError(f'unrecognized SPICE frame {arg}')
 
             # It's a body code, so return its frame info
             try:
                 return tuple(cspyce.cidfrm_error(arg))
             except (IndexError, KeyError, RuntimeError):
-                raise KeyError(f'frame for body {arg} is undefined') from None
+                raise OopsKeyError(f'frame for body {arg} is undefined') from None
 
         # Interpret a string input
         elif isinstance(arg, str):
@@ -261,27 +263,27 @@ class SpiceFrame(Frame):
                 # Frame code exists; If it's a body frame, make sure the frame is defined
                 body_code = cspyce.frinfo(frame_code)[0]
                 if body_code > 0 and not cspyce.bodfnd(body_code, 'POLE_RA'):
-                    raise KeyError(f'frame "{arg}" is undefined')
+                    raise OopsKeyError(f'frame "{arg}" is undefined')
                 return (frame_code, cspyce.frmnam(frame_code))
 
             # See if this is the name of a body
             try:
                 body_code = cspyce.bodn2c_error(arg)
             except (IndexError, KeyError, RuntimeError):
-                raise KeyError(f'unrecognized SPICE frame "{arg}"') from None
+                raise OopsKeyError(f'unrecognized SPICE frame "{arg}"') from None
 
             # Make sure the body's frame is defined
             if not cspyce.bodfnd(body_code, 'POLE_RA'):
-                raise KeyError(f'frame for body "{arg}" is undefined')
+                raise OopsKeyError(f'frame for body "{arg}" is undefined')
 
             # Return the name of the associated frame
             try:
                 return tuple(cspyce.cidfrm_error(body_code))
             except (IndexError, KeyError, RuntimeError):
-                raise KeyError(f'frame for body "{arg}" is undefined') from None
+                raise OopsKeyError(f'frame for body "{arg}" is undefined') from None
 
         else:
-            raise TypeError(f'invalid SPICE frame: {arg!r}')
+            raise OopsTypeError(f'invalid SPICE frame: {arg!r}')
 
     @staticmethod
     def _omega_from_quaternions(quat, qdot):

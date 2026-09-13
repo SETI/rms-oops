@@ -4,7 +4,8 @@
 
 import astropy.io.fits as pyfits
 
-from . import ACS
+from .                import ACS
+from oops._exceptions import OopsValueError
 
 from filecache import FCPath
 
@@ -193,7 +194,7 @@ class WFC(ACS):
             image.
 
         Raises:
-            ValueError: If neither `ccd` nor `layer` is given, or the two are
+            OopsValueError: If neither `ccd` nor `layer` is given, or the two are
                 incompatible.
         """
 
@@ -222,7 +223,8 @@ class WFC(ACS):
                         pass
 
             except IndexError:
-                raise ValueError(f'CCD {given_ccd} not found: ' + this.filespec(hdulist))
+                raise OopsValueError(f'CCD {given_ccd} not found: ' +
+                                     this.filespec(hdulist))
 
         else:
             given_ccd = None
@@ -232,13 +234,13 @@ class WFC(ACS):
         layer = given_layer or derived_layer
 
         if ccd is None or layer is None:
-            raise ValueError('layer and ccd parameters are undefined: ' +
-                             this.filespec(hdulist))
+            raise OopsValueError('layer and ccd parameters are undefined: ' +
+                                 this.filespec(hdulist))
 
         if derived_ccd not in (None, ccd) or \
            derived_layer not in (None, layer):
-            raise ValueError('layer and ccd parameters are incompatible: ' +
-                             this.filespec(hdulist))
+            raise OopsValueError('layer and ccd parameters are incompatible: ' +
+                                 this.filespec(hdulist))
 
         parameters = parameters.copy()
         parameters['ccd'] = ccd

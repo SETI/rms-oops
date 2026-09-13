@@ -7,7 +7,8 @@ import numbers
 
 from polymath              import Matrix3, Scalar, Pair, Vector, Vector3, Qube
 from oops                  import mutable
-from oops._convergence import RayConvergence
+from oops._convergence     import RayConvergence
+from oops._exceptions      import OopsIndexError, OopsValueError
 from oops.config           import LOGGING, PATH_PHOTONS
 from oops.event            import Event
 from oops.frame            import Frame
@@ -575,7 +576,7 @@ class Observation(Mutable):
         # nothing to freeze, so both tests are needed to single out an observation that
         # was frozen deliberately
         if mutable.is_mutable(self) and mutable.is_frozen(self):
-            raise ValueError(f'{type(self).__name__} object is frozen')
+            raise OopsValueError(f'{type(self).__name__} object is frozen')
 
         self.frame = frame
 
@@ -613,7 +614,7 @@ class Observation(Mutable):
             else:
                 time = self.cadence.time_at_tstep(tstep)
         elif tstep is not None:
-            raise ValueError('tstep and time cannot both be specified')
+            raise OopsValueError('tstep and time cannot both be specified')
 
         frame = self.frame.wrt(Frame.J2000)
         xform = frame.transform_at_time(time)
@@ -926,7 +927,8 @@ class Observation(Mutable):
             Scalar: The selected Scalar; None if `axis` is negative.
 
         Raises:
-            IndexError: If `indices` is a single number but `axis` is neither 0 nor -1.
+            OopsIndexError: If `indices` is a single number but `axis` is neither 0
+                nor -1.
         """
 
         if axis < 0:
@@ -937,7 +939,7 @@ class Observation(Mutable):
 
         if isinstance(indices, numbers.Real):
             if axis not in (0, -1):
-                raise IndexError('index out of range: ' + str(indices))
+                raise OopsIndexError('index out of range: ' + str(indices))
             return Scalar(indices)
 
         indices = np.array(indices)

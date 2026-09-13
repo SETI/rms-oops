@@ -5,6 +5,7 @@
 import numpy as np
 
 from polymath                  import Pair, Vector, Qube
+from oops._exceptions          import OopsValueError
 from oops.observation          import Observation
 from oops.observation.snapshot import Snapshot
 from oops.frame                import Frame
@@ -64,7 +65,7 @@ class TimedImage(Observation):
         u_axes = [k for k in range(len(self._axes)) if self._axes[k].startswith('u')]
         v_axes = [k for k in range(len(self._axes)) if self._axes[k].startswith('v')]
         if len(u_axes) != 1 or len(v_axes) != 1:
-            raise ValueError(f'invalid axis labels for TimedImage: {self._axes}')
+            raise OopsValueError(f'invalid axis labels for TimedImage: {self._axes}')
 
         self.u_axis = u_axes[0]
         self.v_axis = v_axes[0]
@@ -85,9 +86,9 @@ class TimedImage(Observation):
             self.t_axis = (self.u_axis, self.v_axis)
             self._fast_t_uv_axis = 1
         else:
-            raise ValueError('invalid axis labels for TimedImage: '
-                             f'"{self._axes[self.u_axis]}", '
-                             f'"{self._axes[self.v_axis]}"')
+            raise OopsValueError('invalid axis labels for TimedImage: '
+                                 f'"{self._axes[self.u_axis]}", '
+                                 f'"{self._axes[self.v_axis]}"')
 
         self.swap_uv = (self.u_axis > self.v_axis)
         self._time_is_1d = not isinstance(self.t_axis, tuple)
@@ -96,10 +97,10 @@ class TimedImage(Observation):
         self.cadence = cadence
         if self._time_is_1d:
             if len(self.cadence.shape) != 1:
-                raise ValueError('TimedImage axes requires 1-D cadence')
+                raise OopsValueError('TimedImage axes requires 1-D cadence')
         else:
             if len(self.cadence.shape) != 2:
-                raise ValueError('TimedImage axes requires 2-D cadence')
+                raise OopsValueError('TimedImage axes requires 2-D cadence')
 
         # Shape / Size
         self.shape = len(axes) * [0]
@@ -115,16 +116,19 @@ class TimedImage(Observation):
         if self._time_is_1d:
             t_size = self.cadence.shape[0]
             if t_size < self.shape[self.t_axis]:
-                raise ValueError('TimedImage FOV and cadence have incompatible shapes')
+                raise OopsValueError('TimedImage FOV and cadence have incompatible '
+                                     'shapes')
             self._extended_fov = (t_size > self.shape[self.t_axis])
             self.shape[self.t_axis] = t_size
             self.uv_shape[self._t_uv_axis] = t_size
         else:
             if self.shape[self.t_axis[0]] not in (self.cadence.shape[0], 1):
-                raise ValueError('TimedImage FOV and cadence have incompatible shapes')
+                raise OopsValueError('TimedImage FOV and cadence have incompatible '
+                                     'shapes')
             t_size = self.cadence.shape[1]
             if t_size < self.shape[self.t_axis[1]]:
-                raise ValueError('TimedImage FOV and cadence have incompatible shapes')
+                raise OopsValueError('TimedImage FOV and cadence have incompatible '
+                                     'shapes')
             self._extended_fov = (t_size > self.shape[self.t_axis[1]])
             self.shape[self.t_axis[1]] = t_size
             self.uv_shape[self._fast_t_uv_axis] = t_size

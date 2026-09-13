@@ -5,11 +5,12 @@
 
 import numpy as np
 
-from polymath       import Scalar, Pair, Vector3
-from oops.body      import Body
-from oops.constants import RPD
-from oops.oops      import Oops
-from oops.path      import Path
+from polymath         import Scalar, Pair, Vector3
+from oops._exceptions import OopsTypeError, OopsValueError
+from oops.body        import Body
+from oops.constants   import RPD
+from oops.oops        import Oops
+from oops.path        import Path
 
 
 class LightSource(Oops):
@@ -45,21 +46,21 @@ class LightSource(Oops):
                 weighting.
 
         Raises:
-            TypeError: If `name` is not a string.
-            ValueError: If `name` is already the name of a Body, or if `source` is not
+            OopsTypeError: If `name` is not a string.
+            OopsValueError: If `name` is already the name of a Body, or if `source` is not
                 one of the forms above.
         """
 
         # Check and validate the name
         if not isinstance(name, str):
-            raise TypeError(f'LightSource name must be a string: {name!r}')
+            raise OopsTypeError(f'LightSource name must be a string: {name!r}')
 
         self.name = name.upper()
 
         if Body.exists(self.name):
             thing = Body.lookup(self.name)
             if isinstance(thing, Body):
-                raise ValueError(f'LightSource name is also a Body name: {self.name}')
+                raise OopsValueError(f'LightSource name is also a Body name: {self.name}')
 
         # Interpret the source. Each form is recognized explicitly rather than by trying
         # them in turn, so that an input matching none of them is rejected instead of
@@ -85,8 +86,8 @@ class LightSource(Oops):
             elif items == 3:
                 self.source = Vector3.as_vector3(source).unit()
             else:
-                raise ValueError('LightSource source must be a Path, a path ID, an '
-                                 f'(RA, dec) pair, or a line of sight: {source!r}')
+                raise OopsValueError('LightSource source must be a Path, a path ID, an '
+                                     f'(RA, dec) pair, or a line of sight: {source!r}')
 
             self.source_is_moving = False
 

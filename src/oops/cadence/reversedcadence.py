@@ -2,8 +2,9 @@
 # oops/cadence/reversedcadence.py
 ##########################################################################################
 
-from polymath     import Scalar
-from oops.cadence import Cadence
+from polymath         import Scalar
+from oops._exceptions import OopsValueError
+from oops.cadence     import Cadence
 
 
 class ReversedCadence(Cadence):
@@ -21,16 +22,16 @@ class ReversedCadence(Cadence):
             axis (int, optional): The axis to reverse. Only axis 0 is supported.
 
         Raises:
-            ValueError: If the given cadence is not 1-D, or if `axis` is not 0.
+            OopsValueError: If the given cadence is not 1-D, or if `axis` is not 0.
         """
 
         self._cadence = cadence
         if len(self._cadence.shape) != 1:
-            raise ValueError('ReversedCadence must be based on a 1-D cadence')
+            raise OopsValueError('ReversedCadence must be based on a 1-D cadence')
 
         self._axis = int(axis)
         if self._axis != 0:
-            raise ValueError(f'ReversedCadence axis must be 0, not {axis}')
+            raise OopsValueError(f'ReversedCadence axis must be 0, not {axis}')
 
         # Required attributes
         self.shape         = self._cadence.shape

@@ -93,15 +93,15 @@ def _load_data(datspec, meta):
         zero.
 
     Raises:
-        ValueError: If the shape of the data array does not match the label.
+        OopsValueError: If the shape of the data array does not match the label.
     """
     local_path = datspec.retrieve()
     with pyfits.open(local_path) as hdulist:
         data = hdulist[0].data
 
     if data.shape != (meta.nlines, meta.nsamples):
-        raise ValueError('SRU data shape %s does not match label (%d,%d)'
-                         % (data.shape, meta.nlines, meta.nsamples))
+        raise oops.OopsValueError('SRU data shape %s does not match label (%d,%d)'
+                                  % (data.shape, meta.nlines, meta.nsamples))
 
     return data
 

@@ -2,8 +2,9 @@
 # oops/fov/tdifov.py
 ##########################################################################################
 
-from polymath import Scalar, Pair
-from oops.fov import FOV
+from polymath          import Scalar, Pair
+from oops._exceptions  import OopsValueError
+from oops.fov          import FOV
 
 
 class TDIFOV(FOV):
@@ -23,7 +24,7 @@ class TDIFOV(FOV):
                 direction.
 
         Raises:
-            ValueError: If `tdi_axis` is not one of the recognized values.
+            OopsValueError: If `tdi_axis` is not one of the recognized values.
         """
 
         self.fov = fov
@@ -34,7 +35,7 @@ class TDIFOV(FOV):
 
         # Validation
         if tdi_axis not in ('u', 'v', '-u', '-v', '+u', '+v'):
-            raise ValueError('invalid tdi_axis value: ' + repr(tdi_axis))
+            raise OopsValueError('invalid tdi_axis value: ' + repr(tdi_axis))
 
         # Interpret the axis
         if self.tdi_axis[-1] == 'u':

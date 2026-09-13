@@ -306,7 +306,7 @@ class JWST(object):
             "calibration", "reference", "target", "frame_suffix" and "path_suffix".
 
         Raises:
-            ValueError: If both `navigation` and `offset` are specified.
+            OopsValueError: If both `navigation` and `offset` are specified.
         """
 
         astrometry_mode = options.get('astrometry', False)
@@ -318,7 +318,8 @@ class JWST(object):
         options['path_suffix' ] = options.get('path_suffix' , '')
 
         if options.get('navigation', False) and options.get('offset', False):
-            raise ValueError('navigation and offset values cannot both be specified')
+            raise oops.OopsValueError('navigation and offset values cannot both be '
+                                      'specified')
 
         return options
 

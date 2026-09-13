@@ -4,9 +4,10 @@
 
 import numpy as np
 
-from oops.constants import C
-from oops.backplane import Backplane
-from oops.body import Body
+from oops._exceptions import OopsValueError
+from oops.constants   import C
+from oops.backplane   import Backplane
+from oops.body        import Body
 
 
 def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
@@ -25,14 +26,14 @@ def body_diameter_in_pixels(self, event_key, radius=0, axis="max"):
 
     Raises:
         NotImplementedError: If the observation does not support an inventory.
-        ValueError: If `axis` is not one of the values listed above.
+        OopsValueError: If `axis` is not one of the values listed above.
     """
     if not self.obs._INVENTORY_IMPLEMENTED:
         raise NotImplementedError('body_diameter_in_pixels not defined for '
                                   + type(self.obs).__name__)
 
     if axis not in {'u', 'v', 'min', 'max'}:
-        raise ValueError('invalid axis: ' + repr(axis))
+        raise OopsValueError('invalid axis: ' + repr(axis))
 
     self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
@@ -77,10 +78,10 @@ def center_coordinate(self, event_key, axis="u"):
         as a gridless backplane.
 
     Raises:
-        ValueError: If `axis` is neither 'u' nor 'v'.
+        OopsValueError: If `axis` is neither 'u' nor 'v'.
     """
     if axis not in {'u', 'v'}:
-        raise ValueError('invalid axis: ' + repr(axis))
+        raise OopsValueError('invalid axis: ' + repr(axis))
 
     self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)

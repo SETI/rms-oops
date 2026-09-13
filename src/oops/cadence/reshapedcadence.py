@@ -4,8 +4,9 @@
 
 import numpy as np
 
-from polymath     import Qube, Scalar, Pair, Vector
-from oops.cadence import Cadence
+from polymath         import Qube, Scalar, Pair, Vector
+from oops._exceptions import OopsValueError
+from oops.cadence     import Cadence
 
 
 class ReshapedCadence(Cadence):
@@ -23,7 +24,7 @@ class ReshapedCadence(Cadence):
             shape (tuple[int, ...]): The new shape of the cadence.
 
         Raises:
-            ValueError: If the new shape is incompatible with the size of the given
+            OopsValueError: If the new shape is incompatible with the size of the given
                 cadence, or if it has more than two dimensions.
         """
 
@@ -33,10 +34,10 @@ class ReshapedCadence(Cadence):
         self._size = int(np.prod(self.shape))
 
         if self._size != np.prod(self._cadence.shape):
-            raise ValueError('ReshapedCadence size and shape are incompatible')
+            raise OopsValueError('ReshapedCadence size and shape are incompatible')
 
         if self._rank > 2:
-            raise ValueError('%d-D cadences are not supported' % self._rank)
+            raise OopsValueError('%d-D cadences are not supported' % self._rank)
 
         self.time = self._cadence.time
         self.midtime = self._cadence.midtime
@@ -364,7 +365,7 @@ class ReshapedCadence(Cadence):
             second value equals the first.
 
         Raises:
-            ValueError: If the reshaping would make the range of active time steps
+            OopsValueError: If the reshaping would make the range of active time steps
                 discontinuous.
         """
 
@@ -426,8 +427,8 @@ class ReshapedCadence(Cadence):
                         minval = new_tstep_min[problems][0]
                         maxval = new_tstep_max[problems][0]
 
-                    raise ValueError('returned tstep range is discontinuous at '
-                                     f'{timeval}: {minval}, {maxval}')
+                    raise OopsValueError('returned tstep range is discontinuous at '
+                                         f'{timeval}: {minval}, {maxval}')
 
         # Make sure that the old tstep range was continuous
         if not self.is_unique and self._old_rank > 1:
@@ -447,8 +448,8 @@ class ReshapedCadence(Cadence):
                     minval = old_tstep_min[problems][0]
                     maxval = old_tstep_max[problems][0]
 
-                raise ValueError('input tstep range is discontinuous at ' +
-                                 f'{timeval}: {minval}, {maxval}')
+                raise OopsValueError('input tstep range is discontinuous at ' +
+                                     f'{timeval}: {minval}, {maxval}')
 
         # Restore the original mask if necessary
         if not remask:

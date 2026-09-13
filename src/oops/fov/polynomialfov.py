@@ -8,6 +8,7 @@ import numpy as np
 
 from polymath         import Pair
 from oops._convergence import RayConvergence
+from oops._exceptions  import OopsValueError
 from oops.config      import LOGGING
 from oops.fov         import FOV
 from oops.fov.flatfov import FlatFOV
@@ -85,8 +86,8 @@ class PolynomialFOV(FOV):
 
         if (self.coefft_xy_from_uv is None and
             self.coefft_uv_from_xy is None):
-                raise ValueError('at least one of coefft_xy_from_uv and '
-                                 + 'coefft_uv_from_xy must be specified')
+                raise OopsValueError('at least one of coefft_xy_from_uv and '
+                                     + 'coefft_uv_from_xy must be specified')
 
         self.iters = max(int(iters), 2)
         self.fast = bool(fast) and (self.coefft_uv_from_xy is not None)

@@ -6,11 +6,12 @@ import re
 
 from typing import TYPE_CHECKING
 
-from polymath       import Matrix3, Qube, Scalar, Vector3
-from oops._cache    import _Cache
-from oops.config    import PICKLE_CONFIG
-from oops.mutable   import Mutable
-from oops.transform import Transform
+from polymath         import Matrix3, Qube, Scalar, Vector3
+from oops._cache      import _Cache
+from oops._exceptions import OopsValueError
+from oops.config      import PICKLE_CONFIG
+from oops.mutable     import Mutable
+from oops.transform   import Transform
 
 if TYPE_CHECKING:                       # `oops.path` imports this module
     from oops.path import Path
@@ -838,21 +839,21 @@ class LinkedFrame(Frame):
 
         Raises:
             KeyError: If `frame` or `parent` is an ID string that has not been registered.
-            ValueError: If `frame` is not defined relative to `parent`, or if the two
+            OopsValueError: If `frame` is not defined relative to `parent`, or if the two
                 Frames have conflicting origins.
         """
 
         frame  = Frame.as_frame(frame)
         parent = Frame.as_frame(parent)
         if frame._reference != parent._wayframe:
-            raise ValueError(f'LinkedFrame mismatch: {frame}, {parent._wayframe}')
+            raise OopsValueError(f'LinkedFrame mismatch: {frame}, {parent._wayframe}')
         # A frame without an origin is not rotating, so it inherits the origin of the
         # other frame; see the assignment of _origin below. Only two conflicting,
         # non-null origins are a genuine mismatch.
         if (frame._origin is not None and parent._origin is not None
                 and frame._origin != parent._origin):
-            raise ValueError(f'LinkedFrame origin mismatch: {frame._origin}, '
-                             f'{parent._origin}')
+            raise OopsValueError(f'LinkedFrame origin mismatch: {frame._origin}, '
+                                 f'{parent._origin}')
 
         self._frame     = frame
         self._parent    = parent

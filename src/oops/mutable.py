@@ -53,9 +53,10 @@ from typing import Any
 
 import numpy as np
 
-from polymath import Qube
-from oops.fittable import Fittable
-from oops.oops import Oops
+from polymath         import Qube
+from oops._exceptions import OopsValueError
+from oops.fittable    import Fittable
+from oops.oops        import Oops
 
 _Info = namedtuple('_Info', ['is_fittable', 'is_mutable', 'is_frozen', 'mutable_names',
                              'unfrozen_names', 'versions'])
@@ -311,32 +312,32 @@ def set_param_order(obj: Any, names: list[str]) -> None:
             parameters of `obj` if it is Fittable.
 
     Raises:
-        ValueError: If a name in `names` is not a recognized sub-object or if parameter
-            values have already been set.
+        OopsValueError: If a name in `names` is not a recognized sub-object or if
+            parameter values have already been set.
         AttributeError: If this object or a sub-object is not mutable.
     """
 
     if hasattr(obj, '_MUTABLE_params'):
-        raise ValueError('parameter order was already defined: '
-                         f'{obj._MUTABLE_param_names}')
+        raise OopsValueError('parameter order was already defined: '
+                             f'{obj._MUTABLE_param_names}')
 
     nparams = 0
     params = []
     for name in names:
         if name:
             if name not in obj.__dict__:
-                raise ValueError(f'no attribute {name}')
+                raise OopsValueError(f'no attribute {name}')
             temp_obj = obj.__dict__[name]
         else:
             if not isinstance(obj, Fittable):
-                raise ValueError('object is not Fittable')
+                raise OopsValueError('object is not Fittable')
             temp_obj = obj
 
         nparams += temp_obj.nparams
         params += list(get_params(temp_obj))
 
     if nparams == 0:
-        raise ValueError('no fittable parameters')
+        raise OopsValueError('no fittable parameters')
 
     obj._MUTABLE_param_names = list(names)
     obj._MUTABLE_nparams = nparams
@@ -392,7 +393,7 @@ def set_params(obj: Any, params: Any) -> bool:
         bool: True if the given object has changed as a result of this function call.
 
     Raises:
-        ValueError: If the number of parameters is incorrect or the object is frozen.
+        OopsValueError: If the number of parameters is incorrect or the object is frozen.
     """
 
     # Convert params to tuple if necessary
@@ -403,7 +404,7 @@ def set_params(obj: Any, params: Any) -> bool:
 
     # Check parameter count
     if len(params) != get_nparams(obj):
-        raise ValueError('incorrect parameter count for mutable.set_params()')
+        raise OopsValueError('incorrect parameter count for mutable.set_params()')
     if len(params) == 0:
         return False
 
@@ -411,7 +412,7 @@ def set_params(obj: Any, params: Any) -> bool:
     if not hasattr(obj, '_MUTABLE_param_names'):
         if isinstance(obj, Fittable):
             return obj.set_params(params)
-        raise ValueError(f'unknown parameter order for {obj}')
+        raise OopsValueError(f'unknown parameter order for {obj}')
 
     obj._MUTABLE_params = params
 

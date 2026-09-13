@@ -5,6 +5,7 @@
 import numpy as np
 
 from polymath               import Qube
+from oops._exceptions       import OopsValueError
 from oops.backplane         import Backplane
 from oops.surface.polarlimb import PolarLimb
 
@@ -71,14 +72,14 @@ def _fill_limb_intercepts(self, event_key):
         event_key (str | tuple): Key defining the limb surface event.
 
     Raises:
-        ValueError: If the surface does not use limb coordinates.
+        OopsValueError: If the surface does not use limb coordinates.
     """
 
     # Validate the surface type
     surface = Backplane.get_surface(event_key[1])
     if surface.COORDINATE_TYPE != 'limb':
-        raise ValueError('invalid coordinate type for limb geometry: '
-                         + surface.COORDINATE_TYPE)
+        raise OopsValueError('invalid coordinate type for limb geometry: '
+                             + surface.COORDINATE_TYPE)
 
     # Get the limb intercept coordinates
     self.refresh()

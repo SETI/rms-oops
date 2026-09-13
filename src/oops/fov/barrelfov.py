@@ -8,6 +8,7 @@ import numpy as np
 
 from polymath         import Scalar, Pair
 from oops._convergence import RayConvergence
+from oops._exceptions  import OopsValueError
 from oops.config      import LOGGING
 from oops.fov         import FOV
 from oops.fov.flatfov import FlatFOV
@@ -101,8 +102,8 @@ class BarrelFOV(FOV):
 
         if (self.coefft_xy_from_uv is None and
             self.coefft_uv_from_xy is None):
-                raise ValueError('at least one of coefft_xy_from_uv and '
-                                 'coefft_uv_from_xy must be specified')
+                raise OopsValueError('at least one of coefft_xy_from_uv and '
+                                     'coefft_uv_from_xy must be specified')
 
         self.uv_scale = Pair.as_pair(uv_scale).as_readonly()
         self.uv_shape = Pair.as_pair(uv_shape).as_readonly()

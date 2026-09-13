@@ -6,8 +6,9 @@ import numbers
 
 import numpy as np
 
-from polymath import Scalar, Pair, Vector3
-from oops.oops import Oops
+from polymath         import Scalar, Pair, Vector3
+from oops._exceptions import OopsValueError
+from oops.oops         import Oops
 
 
 class Meshgrid(Oops):
@@ -166,7 +167,7 @@ class Meshgrid(Oops):
             Meshgrid: A Meshgrid broadcastable to the given shape.
 
         Raises:
-            ValueError: If `undersample` or `oversample` is less than one, or if both
+            OopsValueError: If `undersample` or `oversample` is less than one, or if both
                 differ from one.
         """
 
@@ -195,13 +196,13 @@ class Meshgrid(Oops):
 
         # Valid value checks
         if np.any(undersample < 1):
-            raise ValueError('invalid undersample: ' + repr(undersample))
+            raise OopsValueError('invalid undersample: ' + repr(undersample))
 
         if np.any(oversample < 1):
-            raise ValueError('invalid oversample: ' + repr(oversample))
+            raise OopsValueError('invalid oversample: ' + repr(oversample))
 
         if np.any(np.minimum(undersample, oversample) != 1):
-            raise ValueError('undersample and oversample cannot both be != 1')
+            raise OopsValueError('undersample and oversample cannot both be != 1')
 
         step = undersample/oversample
 

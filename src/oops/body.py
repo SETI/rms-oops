@@ -9,6 +9,7 @@ import cspyce
 import spicedb
 
 from polymath                    import Vector3
+from oops._exceptions            import OopsTypeError, OopsValueError
 from oops.frame.frame_           import Frame
 from oops.frame.poleframe        import PoleFrame
 from oops.frame.ringframe        import RingFrame
@@ -336,11 +337,11 @@ class Body(Oops):
                 it differs from `name`.
 
         Raises:
-            TypeError: If `name` is not a string.
+            OopsTypeError: If `name` is not a string.
         """
 
         if not isinstance(name, str):
-            raise TypeError('Body name must be a string: ' + str(name))
+            raise OopsTypeError('Body name must be a string: ' + str(name))
 
         self.name = name.upper()
         self.is_standard = False        # overridden where necessary
@@ -527,7 +528,7 @@ class Body(Oops):
                 than a :class:`~oops.frame.RingFrame`.
 
         Raises:
-            ValueError: If a ring frame has already been defined for this body with
+            OopsValueError: If a ring frame has already been defined for this body with
                 different parameters.
         """
 
@@ -535,14 +536,14 @@ class Body(Oops):
         if isinstance(self.ring_frame, RingFrame) and pole is None:
             if (self.ring_frame._epoch != epoch or
                 self.ring_frame._retrograde != retrograde):
-                    raise ValueError('re-definition of RingFrame is incompatible with '
-                                     'the original')
+                    raise OopsValueError('re-definition of RingFrame is incompatible '
+                                         'with the original')
 
         if isinstance(self.ring_frame, PoleFrame) and pole is not None:
             if (self.ring_frame._retrograde != retrograde or
                 self.ring_frame._invariable_pole != pole):
-                    raise ValueError('re-definition of PoleFrame is incompatible with '
-                                     'the original')
+                    raise OopsValueError('re-definition of PoleFrame is incompatible '
+                                         'with the original')
 
         if pole is not None:
             pole = Vector3.as_vector3(pole)
@@ -1755,7 +1756,7 @@ class Body(Oops):
                 the ID of its path.
 
         Raises:
-            ValueError: If the body has no name.
+            OopsValueError: If the body has no name.
         """
 
         # Define the body's path
@@ -1764,7 +1765,7 @@ class Body(Oops):
         if not name:
             name = path.path_id
         if not name:
-            raise ValueError('missing name for Body {spice_id}')
+            raise OopsValueError('missing name for Body {spice_id}')
 
         # If the body already exists, skip it
         if name in Body.BODY_REGISTRY:
