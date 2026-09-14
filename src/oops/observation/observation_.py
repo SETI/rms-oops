@@ -633,13 +633,22 @@ class Observation(Mutable):
             matrix (Matrix3Like): The C matrix rotating J2000 coordinates into the SPICE
                 frame of the instrument, as a Matrix3 or as anything that can be converted
                 to one.
+
+        Raises:
+            AttributeError: If attribute `spice_to_frame` is not defined for this
+                Observation.
         """
 
         if not hasattr(self, 'spice_to_frame'):
             raise AttributeError(f'{type(self).__name__} does not have a '
                                  '"spice_to_frame" attribute')
 
-        frame = Cmatrix(self.spice_to_frame * Matrix3.as_matrix3(matrix))
+        try:
+            matrix = Matrix3.as_matrix3(matrix, validate=True, tol=1.e-6)
+        except ValueError as err:
+            raise OopsValueError(str(err)) from err
+
+        frame = Cmatrix(self.spice_to_frame * matrix)
         self.set_frame(frame)
 
     ######################################################################################
