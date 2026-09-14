@@ -2,9 +2,12 @@
 # tests/test_fittable.py
 ##########################################################################################
 
+from dataclasses import dataclass
+
 import pytest
 
 from oops.fittable import Fittable
+from oops.oops     import Oops
 import oops.mutable as mutable
 
 
@@ -25,7 +28,7 @@ class A(Fittable):
     def params(self):
         return (self.x,)
 
-class B:
+class B(Oops):
     def __init__(self, x, a):
         self.x = x
         self.a = a
@@ -56,9 +59,13 @@ class C(Fittable):
                                            + self.c.c.x)
 
 
-class D:
-    def __init__(self, x):
-        self.x = x
+@dataclass(frozen=True)
+class D(Oops):
+    """An Oops object that cannot accept a new attribute, since a frozen dataclass
+    raises on every assignment; exercises oops's own fallback when its cache-write
+    attempt fails on an object it does own."""
+
+    x: object
 
 
 def test_fittable():
