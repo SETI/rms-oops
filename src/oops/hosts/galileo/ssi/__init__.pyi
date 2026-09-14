@@ -37,6 +37,7 @@ class Metadata:
     filter: str
     tstart: float
     tstop: float
+    time_from_sclk: bool
     target: str
     mode: str
     window: ndarray | None
@@ -45,6 +46,8 @@ class Metadata:
     window_uv_origin: ndarray
     window_uv_shape: ndarray
     def __init__(self, meta_dict: dict) -> None: ...
+    @staticmethod
+    def time_from_sclk_count(sclk_count: str) -> float: ...
     def trim(self, data: ndarray, full_fov: bool = False) -> ndarray: ...
     def fov(self, full_fov: bool = False) -> FOV: ...
 

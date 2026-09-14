@@ -1,7 +1,6 @@
 ##########################################################################################
 # oops/hosts/galileo/ssi/__init__.py
 ##########################################################################################
-import sys
 import os
 import numpy as np
 import julian
@@ -72,6 +71,7 @@ def from_file(filespec,
                                data = data,             # Add the data array
                                instrument = 'SSI',
                                filter = meta.filter,
+                               time_from_sclk = meta.time_from_sclk,
                                filespec = filespec,
                                basename = filespec.name)
 
@@ -167,6 +167,7 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
                                  dict = row_dict,         # Add the index dict
                                  instrument = 'SSI',
                                  filter = meta.filter,
+                                 time_from_sclk = meta.time_from_sclk,
                                  filespec = filepath,
                                  basename = basename)
 
@@ -209,6 +210,9 @@ class Metadata(object):
         filter (str): Name of the filter.
         tstart (float): Image start time in seconds TDB.
         tstop (float): Image stop time in seconds TDB.
+        time_from_sclk (bool): True if the label gives no IMAGE_TIME and the times
+            were derived from SPACECRAFT_CLOCK_START_COUNT instead; such times are
+            accurate to a few seconds.
         target (str): Target name.
         mode (str): The telemetry format ID; 'NONE' if the label does not give one.
         window (numpy.ndarray | None): The cutout window from the label as (line,
@@ -246,11 +250,20 @@ class Metadata(object):
 
         #TODO: determine whether IMAGE_TIME is the start time or the mid time..
         if meta_dict['IMAGE_TIME'] == 'UNK':
-            self.tstart = self.tstop = sys.float_info.min
+            # Some RAW_CAL frames in GO_0002 and GO_0003 have no IMAGE_TIME, but
+            # every label carries the spacecraft clock count, which the SCLK
+            # kernel converts to within a few seconds of IMAGE_TIME wherever
+            # both are given. Never fall back to a placeholder time: it silently
+            # places the frame at the J2000 epoch.
+            self.tstart = Metadata.time_from_sclk_count(
+                                    meta_dict['SPACECRAFT_CLOCK_START_COUNT'])
+            self.time_from_sclk = True
         else:
             self.tstart = julian.tdb_from_tai(
                             julian.tai_from_iso(meta_dict['IMAGE_TIME']))
-            self.tstop = self.tstart + self.exposure
+            self.time_from_sclk = False
+
+        self.tstop = self.tstart + self.exposure
 
         # Target
         self.target = meta_dict['TARGET_NAME']
@@ -273,6 +286,22 @@ class Metadata(object):
                 self.window_shape = self.window[2:]
                 self.window_uv_origin = np.flip(self.window_origin)
                 self.window_uv_shape = np.flip(self.window_shape)
+
+    @staticmethod
+    def time_from_sclk_count(sclk_count):
+        """Convert a Galileo spacecraft clock count from a label to seconds TDB.
+
+        Parameters:
+            sclk_count (str): The SPACECRAFT_CLOCK_START_COUNT label value, in the
+                form "RRRRRRRR.MM" (RIM count and mod-91 count).
+
+        Returns:
+            float: The corresponding time in seconds TDB, as given by the Galileo
+            SCLK kernel.
+        """
+
+        rim, mod91 = sclk_count.split('.')
+        return cspyce.scs2e(-77, f'{int(rim)}:{int(mod91)}:0:0')
 
     def trim(self, data, full_fov=False):
         """Trim image to label window.
