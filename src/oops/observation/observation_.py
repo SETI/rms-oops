@@ -637,6 +637,7 @@ class Observation(Mutable):
         Raises:
             AttributeError: If attribute `spice_to_frame` is not defined for this
                 Observation.
+            OopsValueError: If `matrix` is not a valid rotation matrix or has a shape.
         """
 
         if not hasattr(self, 'spice_to_frame'):
@@ -646,7 +647,11 @@ class Observation(Mutable):
         try:
             matrix = Matrix3.as_matrix3(matrix, validate=True, tol=1.e-6)
         except ValueError as err:
-            raise OopsValueError(str(err)) from err
+            raise OopsValueError('set_spice_cmatrix() input is not a valid rotation '
+                                 'matrix') from err
+
+        if matrix.shape != ():
+            raise OopsValueError('shape of set_spice_cmatrix() input matrix must be ()')
 
         frame = Cmatrix(self.spice_to_frame * matrix)
         self.set_frame(frame)
