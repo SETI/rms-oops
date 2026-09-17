@@ -8,6 +8,7 @@ import numpy as np
 
 from polymath          import Qube, Scalar, Vector3
 from polymath.typedefs import MaskType
+from oops._exceptions  import OopsValueError
 from oops.config       import EVENT_CONFIG, LOGGING
 from oops.constants    import C_INVERSE
 from oops.frame.frame_ import Frame
@@ -396,7 +397,7 @@ class Event(Oops):
     @arr.setter
     def arr(self, value) -> None:
         if (self._arr is not None) or (self._arr_ap is not None):
-            raise ValueError(f'arriving photons were already defined in {self}')
+            raise OopsValueError(f'arriving photons were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
         arr = Vector3.as_vector3(value).as_readonly()
@@ -422,7 +423,7 @@ class Event(Oops):
     @arr_ap.setter
     def arr_ap(self, value) -> None:
         if (self._arr_ap is not None) or (self._arr is not None):
-            raise ValueError(f'arriving photons were already defined in {self}')
+            raise OopsValueError(f'arriving photons were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
         arr_ap = Vector3.as_vector3(value).as_readonly()
@@ -480,7 +481,7 @@ class Event(Oops):
     @arr_lt.setter
     def arr_lt(self, value) -> None:
         if self._arr_lt is not None:
-            raise ValueError(f'arriving photons were already defined in {self}')
+            raise OopsValueError(f'arriving photons were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
         arr_lt = Scalar.as_scalar(value).as_readonly()
@@ -594,7 +595,7 @@ class Event(Oops):
     @dep.setter
     def dep(self, value) -> None:
         if (self._dep is not None) or (self._dep_ap is not None):
-            raise ValueError(f'departing photons were already defined in {self}')
+            raise OopsValueError(f'departing photons were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
         dep = Vector3.as_vector3(value).as_readonly()
@@ -620,7 +621,7 @@ class Event(Oops):
     @dep_ap.setter
     def dep_ap(self, value) -> None:
         if (self._dep_ap is not None) or (self._dep is not None):
-            raise ValueError(f'departing photons were already defined in {self}')
+            raise OopsValueError(f'departing photons were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
         dep_ap = Vector3.as_vector3(value).as_readonly()
@@ -680,7 +681,7 @@ class Event(Oops):
     @dep_lt.setter
     def dep_lt(self, value) -> None:
         if self._dep_lt is not None:
-            raise ValueError(f'departing photons were already defined in {self}')
+            raise OopsValueError(f'departing photons were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
         dep_lt = Scalar.as_scalar(value).as_readonly()
@@ -706,7 +707,7 @@ class Event(Oops):
     @perp.setter
     def perp(self, value) -> None:
         if self._perp is not None:
-            raise ValueError(f'perpendiculars were already defined in {self}')
+            raise OopsValueError(f'perpendiculars were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
         perp = Vector3.as_vector3(value).as_readonly()
@@ -740,7 +741,7 @@ class Event(Oops):
     @vflat.setter
     def vflat(self, value) -> None:
         if self._vflat is not None:
-            raise ValueError(f'surface velocities were already defined in {self}')
+            raise OopsValueError(f'surface velocities were already defined in {self}')
 
         # Raise a ValueError if the shape is incompatible
         vflat = Vector3.as_vector3(value).as_readonly()
@@ -1426,7 +1427,7 @@ class Event(Oops):
         """
 
         if self._frame != Frame.J2000 or self._origin != Event.SSB:
-            raise ValueError('Event.from_ssb requires a SSB/J2000 event')
+            raise OopsValueError('Event.from_ssb requires a SSB/J2000 event')
 
         event = self.wrt(path, frame, derivs=True, quick=quick)
         event._ssb = self
@@ -2136,10 +2137,10 @@ class Event(Oops):
         """
 
         if self._arr is None and self._arr_ap is None:
-            raise ValueError(f'undefined arrival vector in {self}')
+            raise OopsValueError(f'undefined arrival vector in {self}')
 
         if self._perp is None:
-            raise ValueError(f'undefined perpendicular vector in {self}')
+            raise OopsValueError(f'undefined perpendicular vector in {self}')
 
         shrunk = self.shrink(self.antimask)
         _ = shrunk.wrt_ssb(derivs=True, quick=quick)
@@ -2172,10 +2173,10 @@ class Event(Oops):
         """
 
         if self._dep is None and self._dep_ap is None:
-            raise ValueError(f'undefined departure vector in {self}')
+            raise OopsValueError(f'undefined departure vector in {self}')
 
         if self._perp is None:
-            raise ValueError(f'undefined perpendicular vector in {self}')
+            raise OopsValueError(f'undefined perpendicular vector in {self}')
 
         shrunk = self.shrink(self.antimask)
         _ = shrunk.wrt_ssb(derivs=True, quick=quick)
@@ -2208,10 +2209,10 @@ class Event(Oops):
         """
 
         if self._arr is None and self._arr_ap is None:
-            raise ValueError(f'undefined arrival vector in {self}')
+            raise OopsValueError(f'undefined arrival vector in {self}')
 
         if self._dep is None and self._dep_ap is None:
-            raise ValueError(f'undefined departure vector in {self}')
+            raise OopsValueError(f'undefined departure vector in {self}')
 
         shrunk = self.shrink(self.antimask)
         _ = shrunk.wrt_ssb(derivs=True, quick=quick)
@@ -2252,7 +2253,7 @@ class Event(Oops):
 
         # Validate the inputs
         if subfield not in ('arr', 'dep'):
-            raise ValueError(f'invalid input value for subfield: {subfield!r}')
+            raise OopsValueError(f'invalid input value for subfield: {subfield!r}')
 
         # Identify the frame
         if frame == 'J2000' or frame == Frame.J2000:
@@ -2275,7 +2276,7 @@ class Event(Oops):
                 ray = event.dep_ap
 
         if ray is None:
-            raise ValueError(f'undefined light ray vector in {self}')
+            raise OopsValueError(f'undefined light ray vector in {self}')
 
         # Convert to RA and dec
         return ray.to_ra_dec_length(recursive=derivs)[:2]

@@ -3,6 +3,7 @@
 ##########################################################################################
 
 from polymath               import Scalar, Pair
+from oops._exceptions       import OopsValueError
 from oops.cadence           import Cadence
 from oops.cadence.metronome import Metronome
 
@@ -20,7 +21,7 @@ class DualCadence(Cadence):
                 break up the outer cadence, including the exposure time.
 
         Raises:
-            ValueError: If either cadence is not 1-D.
+            OopsValueError: If either cadence is not 1-D.
         """
 
         self._long = long
@@ -28,7 +29,7 @@ class DualCadence(Cadence):
 
         self.shape = self._long.shape + self._short.shape
         if len(self._long.shape) != 1 or len(self._short.shape) != 1:
-            raise ValueError('long and short cadences must be 1-D')
+            raise OopsValueError('long and short cadences must be 1-D')
 
         self.time = (self._long.time[0], self._long.lasttime + self._short.time[1])
         self.midtime = (self.time[0] + self.time[1]) * 0.5
@@ -281,16 +282,16 @@ class DualCadence(Cadence):
             DualCadence: The continuous cadence.
 
         Raises:
-            ValueError: If the short cadence cannot be extended far enough to make this
-                DualCadence continuous.
+            OopsValueError: If the short cadence cannot be extended far enough to make
+                this DualCadence continuous.
         """
 
         short = self._short.as_continuous()
         if short.time[1] >= self._long.max_tstride:
             return DualCadence(self._long, short)
 
-        raise ValueError('short internal cadence cannot be extended to make ' +
-                         'this DualCadence continuous')
+        raise OopsValueError('short internal cadence cannot be extended to make ' +
+                             'this DualCadence continuous')
 
     @staticmethod
     def for_array2d(samples, lines, tstart, texp, intersample_delay=0.,

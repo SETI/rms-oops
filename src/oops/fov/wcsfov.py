@@ -5,6 +5,7 @@
 import numpy as np
 
 from polymath               import Pair, Matrix
+from oops._exceptions       import OopsValueError
 from oops.fov               import FOV
 from oops.fov.flatfov       import FlatFOV
 from oops.fov.polynomialfov import PolynomialFOV
@@ -48,8 +49,8 @@ class WCSFOV(FOV):
                 point for an exact reverse transform using Newton's method.
 
         Raises:
-            ValueError: If `ref_axis` is not "x" or "y", if the header's CTYPE values are
-                not "RA---TAN" and "DEC--TAN", or if its CUNIT values are not "deg".
+            OopsValueError: If `ref_axis` is not "x" or "y", if the header's CTYPE values
+                are not "RA---TAN" and "DEC--TAN", or if its CUNIT values are not "deg".
         """
 
         # Description of the WCS parameters is found here:
@@ -62,7 +63,7 @@ class WCSFOV(FOV):
         self.fast = bool(fast)
 
         if ref_axis not in ('x', 'y'):
-            raise ValueError('invalid value of ref_axis: ' + repr(ref_axis))
+            raise OopsValueError('invalid value of ref_axis: ' + repr(ref_axis))
 
         self.uv_shape = Pair([header['NAXIS1'], header['NAXIS2']])
         self.uv_los = Pair([header['CRPIX1'] - 0.5, header['CRPIX2'] - 0.5])
@@ -70,10 +71,10 @@ class WCSFOV(FOV):
         # We require that x_wcs = RA and y_wcs = dec
         if (header['CTYPE1'][:8] != 'RA---TAN' or
             header['CTYPE2'][:8] != 'DEC--TAN'):
-                raise ValueError('only WCS CTYPEs "RA---TAN" and "DEC--TAN" '
-                                 + 'are supported')
+                raise OopsValueError('only WCS CTYPEs "RA---TAN" and "DEC--TAN" '
+                                     + 'are supported')
         if header['CUNIT1'] != 'deg' or header['CUNIT2'] != 'deg':
-            raise ValueError('only CUNIT = "deg" is supported')
+            raise OopsValueError('only CUNIT = "deg" is supported')
 
         # The FITS formula is:
         #   (x_wcs, y_wcs) = [[CD1_1,CD1_2],[CD2_1,CD2_2]] (u+f(u,v), v+g(u,v))

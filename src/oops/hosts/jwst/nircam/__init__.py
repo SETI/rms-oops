@@ -192,7 +192,7 @@ class NIRCam(JWST):
             TimedImage: The observation described by the file.
 
         Raises:
-            ValueError: If the file is not a "_uncal", "_cal" or "_i2d" file.
+            OopsValueError: If the file is not a "_uncal", "_cal" or "_i2d" file.
         """
 
         nircam = NIRCam()
@@ -203,8 +203,8 @@ class NIRCam(JWST):
             return Uncal.from_hdulist(hdulist, **options)
 
         if basename_lc[-9:] not in ('_cal.fits', '_i2d.fits'):
-            raise ValueError('unsupported NIRCam file type: ' +
-                             nircam.basename(hdulist))
+            raise oops.OopsValueError('unsupported NIRCam file type: ' +
+                                      nircam.basename(hdulist))
 
         options = nircam.check_options(options)
         subfields = nircam.header_subfields(hdulist, **options)

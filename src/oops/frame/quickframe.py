@@ -7,10 +7,11 @@ from types import NoneType
 import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
 
-from polymath       import Matrix3, Quaternion, Scalar, Vector3
-from oops.config    import QUICK, LOGGING
-from oops.frame     import Frame
-from oops.transform import Transform
+from polymath         import Matrix3, Quaternion, Scalar, Vector3
+from oops._exceptions import OopsValueError
+from oops.config      import QUICK, LOGGING
+from oops.frame       import Frame
+from oops.transform   import Transform
 
 
 class QuickFrame(Frame):
@@ -39,9 +40,10 @@ class QuickFrame(Frame):
 
         frame = Frame.as_frame(frame)
         if frame._shape != ():
-            raise ValueError('shape of QuickFrame must be ()')
+            raise OopsValueError('shape of QuickFrame must be ()')
         if isinstance(frame, QuickFrame):
-            raise ValueError('QuickFrame cannot be constructed from another QuickFrame')
+            raise OopsValueError('QuickFrame cannot be constructed from another '
+                                 'QuickFrame')
 
         frame.refresh()
         self._slowframe = frame
@@ -95,13 +97,13 @@ class QuickFrame(Frame):
                 error = max(error, domega.max(builtins=True))
 
             if error > precision:
-                raise ValueError(f'precision failure: {error:.3f} > {precision}')
+                raise OopsValueError(f'precision failure: {error:.3f} > {precision}')
 
     def _refresh(self):
         """Tabulate the Transforms of the slow Frame across the time range.
 
         Raises:
-            ValueError: If the slow Frame returns a Transform that is independent of
+            OopsValueError: If the slow Frame returns a Transform that is independent of
                 time, because such a Transform cannot be tabulated.
         """
 
@@ -114,8 +116,8 @@ class QuickFrame(Frame):
         # entire tabulation, which cannot be interpolated. Such a Frame has nothing to
         # gain from a QuickFrame anyway, so it should not have set _USE_QUICKFRAMES.
         if self._xforms.shape != times.shape:
-            raise ValueError(f'{self._slowframe} returns a Transform independent of '
-                             'time; it cannot be tabulated by a QuickFrame')
+            raise OopsValueError(f'{self._slowframe} returns a Transform independent of '
+                                 'time; it cannot be tabulated by a QuickFrame')
 
         self._times = times.vals
 
@@ -535,7 +537,7 @@ class QuickFrame(Frame):
         # Compare with != rather than `is not`, because a numpy False is not the
         # False singleton and `is not False` would wrongly accept it
         if not isinstance(quick, (dict, NoneType)) and quick != False:  # noqa: E712
-            raise ValueError('invalid `quick` input, must be dict, None, or False')
+            raise OopsValueError('invalid `quick` input, must be dict, None, or False')
 
         if isinstance(frame, QuickFrame):    # a QuickFrame is already quick
             return frame

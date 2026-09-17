@@ -4,8 +4,9 @@
 
 import numpy as np
 
-from polymath       import Boolean
-from oops.backplane import Backplane
+from polymath         import Boolean
+from oops._exceptions import OopsValueError
+from oops.backplane   import Backplane
 
 
 def border_above(self, backplane_key, value):
@@ -163,7 +164,7 @@ def _border_outside_or_inside(self, backplane_key, is_inside=True):
         Boolean: True at the pixels forming the border, registered as a backplane.
 
     Raises:
-        ValueError: If the given backplane is not boolean.
+        OopsValueError: If the given backplane is not boolean.
     """
 
     self.refresh()
@@ -179,8 +180,8 @@ def _border_outside_or_inside(self, backplane_key, is_inside=True):
 
     backplane = self.evaluate(backplane_key)
     if backplane.dtype() != 'bool':
-        raise ValueError('border operation requires boolean mask, not '
-                         + backplane.dtype())
+        raise OopsValueError('border operation requires boolean mask, not '
+                             + backplane.dtype())
 
     # Reverse the backplane if is_inside is False
     if not is_inside:

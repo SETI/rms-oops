@@ -53,9 +53,10 @@ from typing import Any
 
 import numpy as np
 
-from polymath import Qube
-from oops.fittable import Fittable
-from oops.oops import Oops
+from polymath         import Qube
+from oops._exceptions import OopsValueError
+from oops.fittable    import Fittable
+from oops.oops        import Oops
 
 _Info = namedtuple('_Info', ['is_fittable', 'is_mutable', 'is_frozen', 'mutable_names',
                              'unfrozen_names', 'versions'])
@@ -135,8 +136,10 @@ def _refresh_internal(obj: Any, /, memo: dict, info_memo: dict) -> bool:
 
     # Check for an object that has never been refreshed or whose own version number has
     # been incremented since the last refresh, as happens when a Fittable is given new
-    # parameter values
-    if info.versions.get('', _NEVER_REFRESHED) < version(obj):
+    # parameter values. An object oops does not own has nowhere to cache that version
+    # number, so it is never considered changed on its own account; only its Oops
+    # sub-objects, handled above, can mark it as needing a refresh.
+    if isinstance(obj, Oops) and info.versions.get('', _NEVER_REFRESHED) < version(obj):
         changed = True
 
     # Refresh the given object
@@ -216,8 +219,10 @@ def _needs_refresh_internal(obj: Any, info_memo: dict,
     if info is _IMMUTABLE:
         return False
 
-    # If this object has never been refreshed or is stale, return True
-    if info.versions.get('', _NEVER_REFRESHED) < version(obj):
+    # If this object has never been refreshed or is stale, return True. An object oops
+    # does not own has nowhere to cache that version number, so it is never considered
+    # stale on its own account; only its Oops sub-objects, checked below, can make it so.
+    if isinstance(obj, Oops) and info.versions.get('', _NEVER_REFRESHED) < version(obj):
         return True
 
     # If any unfrozen subobject is stale, return True
@@ -283,13 +288,14 @@ def _freeze_internal(obj: Any, /, memo: dict, info_memo: dict) -> bool:
             obj._freeze()
         changed = True
 
-    # Save the info if possible
+    # Save the info if possible, but only on an object oops owns
     if changed:
         info = _Info(info.is_fittable, info.is_mutable, True, info.mutable_names, [], {})
-        try:
-            obj._MUTABLE_info = info
-        except (AttributeError, TypeError):
-            _IMMUTABLE_OBJECTS.add(obj_id)
+        if isinstance(obj, Oops):
+            try:
+                obj._MUTABLE_info = info
+            except (AttributeError, TypeError):
+                _IMMUTABLE_OBJECTS.add(obj_id)
 
     memo[obj_id] = None         # record that this object has been frozen
     memo[0] = changed
@@ -311,32 +317,32 @@ def set_param_order(obj: Any, names: list[str]) -> None:
             parameters of `obj` if it is Fittable.
 
     Raises:
-        ValueError: If a name in `names` is not a recognized sub-object or if parameter
-            values have already been set.
+        OopsValueError: If a name in `names` is not a recognized sub-object or if
+            parameter values have already been set.
         AttributeError: If this object or a sub-object is not mutable.
     """
 
     if hasattr(obj, '_MUTABLE_params'):
-        raise ValueError('parameter order was already defined: '
-                         f'{obj._MUTABLE_param_names}')
+        raise OopsValueError('parameter order was already defined: '
+                             f'{obj._MUTABLE_param_names}')
 
     nparams = 0
     params = []
     for name in names:
         if name:
             if name not in obj.__dict__:
-                raise ValueError(f'no attribute {name}')
+                raise OopsValueError(f'no attribute {name}')
             temp_obj = obj.__dict__[name]
         else:
             if not isinstance(obj, Fittable):
-                raise ValueError('object is not Fittable')
+                raise OopsValueError('object is not Fittable')
             temp_obj = obj
 
         nparams += temp_obj.nparams
         params += list(get_params(temp_obj))
 
     if nparams == 0:
-        raise ValueError('no fittable parameters')
+        raise OopsValueError('no fittable parameters')
 
     obj._MUTABLE_param_names = list(names)
     obj._MUTABLE_nparams = nparams
@@ -392,7 +398,7 @@ def set_params(obj: Any, params: Any) -> bool:
         bool: True if the given object has changed as a result of this function call.
 
     Raises:
-        ValueError: If the number of parameters is incorrect or the object is frozen.
+        OopsValueError: If the number of parameters is incorrect or the object is frozen.
     """
 
     # Convert params to tuple if necessary
@@ -403,7 +409,7 @@ def set_params(obj: Any, params: Any) -> bool:
 
     # Check parameter count
     if len(params) != get_nparams(obj):
-        raise ValueError('incorrect parameter count for mutable.set_params()')
+        raise OopsValueError('incorrect parameter count for mutable.set_params()')
     if len(params) == 0:
         return False
 
@@ -411,7 +417,7 @@ def set_params(obj: Any, params: Any) -> bool:
     if not hasattr(obj, '_MUTABLE_param_names'):
         if isinstance(obj, Fittable):
             return obj.set_params(params)
-        raise ValueError(f'unknown parameter order for {obj}')
+        raise OopsValueError(f'unknown parameter order for {obj}')
 
     obj._MUTABLE_params = params
 
@@ -543,10 +549,15 @@ def _get_info(obj: Any, /, memo: dict | None = None) -> _Info:
     is_frozen = not (bool(unfrozen_names) or (is_fittable and not obj.is_frozen))
     info = _Info(is_fittable, is_mutable, is_frozen, mutable_names, unfrozen_names,
                  versions)
-    try:
-        obj._MUTABLE_info = info
-    except (AttributeError, TypeError):
-        _IMMUTABLE_OBJECTS.add(obj_id)
+
+    # Cache the info on the object itself, but only if oops owns it; an object that
+    # merely happens to be reachable from one oops owns, such as a subfield attached to
+    # an Observation, is never a valid place to leave a cache the caller did not ask for.
+    if isinstance(obj, Oops):
+        try:
+            obj._MUTABLE_info = info
+        except (AttributeError, TypeError):
+            _IMMUTABLE_OBJECTS.add(obj_id)
 
     memo[obj_id] = info
     return info
@@ -654,7 +665,7 @@ def version(obj: Any, /) -> int:
     if hasattr(obj, '_MUTABLE_version'):
         return obj._MUTABLE_version
 
-    if not hasattr(obj, '__dict__'):
+    if not isinstance(obj, Oops):
         return 0
 
     try:
@@ -679,7 +690,7 @@ def _increment(obj: Any, /) -> int:
         obj._MUTABLE_version += 1
         return obj._MUTABLE_version
 
-    if not hasattr(obj, '__dict__'):
+    if not isinstance(obj, Oops):
         return 0
 
     try:

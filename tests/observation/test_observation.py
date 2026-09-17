@@ -568,6 +568,37 @@ def test_set_spice_cmatrix_fixes_the_pointing() -> None:
     assert obs.get_spice_cmatrix() == Matrix3.IDENTITY
 
 
+@pytest.mark.parametrize('matrix',
+                         [np.diag([1., 1., -1.]),
+                          np.eye(3) * 2 ** (1 / 3),
+                          np.zeros((3, 3)),
+                          np.full((3, 3), np.nan),
+                          np.array([[1., 0.5, 0.], [0., 1., 0.], [0., 0., 1.]])],
+                         ids=['reflection', 'scaled', 'singular', 'nan', 'sheared'])
+def test_set_spice_cmatrix_rejects_a_matrix_that_is_not_a_rotation(
+        matrix: np.ndarray) -> None:
+    """A matrix that is not a proper rotation to within tolerance is refused."""
+
+    obs = _snapshot()
+    obs.insert_subfield('spice_to_frame', Matrix3.IDENTITY)
+
+    with pytest.raises(ValueError):
+        obs.set_spice_cmatrix(matrix)
+
+
+def test_set_spice_cmatrix_leaves_the_frame_unchanged_after_a_rejection() -> None:
+    """A rejected matrix does not modify the observation."""
+
+    obs = _snapshot()
+    obs.insert_subfield('spice_to_frame', Matrix3.IDENTITY)
+    original_frame = obs.frame
+
+    with pytest.raises(ValueError):
+        obs.set_spice_cmatrix(np.zeros((3, 3)))
+
+    assert obs.frame is original_frame
+
+
 ##########################################################################################
 # meshgrid and timegrid
 ##########################################################################################

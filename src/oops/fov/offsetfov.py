@@ -2,9 +2,10 @@
 # oops/fov/offsetfov.py
 ##########################################################################################
 
-from polymath      import Pair
-from oops.fittable import Fittable
-from oops.fov      import FOV
+from polymath          import Pair
+from oops._exceptions  import OopsValueError
+from oops.fittable     import Fittable
+from oops.fov          import FOV
 
 
 class OffsetFOV(FOV, Fittable):
@@ -28,15 +29,15 @@ class OffsetFOV(FOV, Fittable):
                 minus `xy_offset`.
 
         Raises:
-            ValueError: If both `uv_offset` and `xy_offset` are specified.
+            OopsValueError: If both `uv_offset` and `xy_offset` are specified.
         """
 
         self.fov = fov
 
         # Deal with alternative inputs:
         if (uv_offset is not None) and (xy_offset is not None):
-            raise ValueError('only one of uv_offset and xy_offset can be '
-                             + 'specified')
+            raise OopsValueError('only one of uv_offset and xy_offset can be '
+                                 + 'specified')
 
         # Coerce to Pair so that the Fittable interface, which reads
         # uv_offset.vals, works regardless of how the offset was given

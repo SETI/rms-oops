@@ -5,6 +5,7 @@
 import numpy as np
 
 from polymath         import Scalar, Pair, Vector3
+from oops._exceptions import OopsValueError
 from oops.observation import Observation
 from oops.event       import Event
 from oops.frame       import Frame
@@ -42,7 +43,8 @@ class Pixel(Observation):
                 included as needed.
 
         Raises:
-            ValueError: If the FOV does not have shape (1,1) or if the cadence is not 1-D.
+            OopsValueError: If the FOV does not have shape (1,1) or if the cadence is not
+                1-D.
         """
 
         # Basic properties
@@ -52,7 +54,7 @@ class Pixel(Observation):
         # FOV
         self.fov = fov
         if self.fov.uv_shape != (1,1):
-            raise ValueError('Pixel observation FOV must have shape (1,1)')
+            raise OopsValueError('Pixel observation FOV must have shape (1,1)')
 
         self.uv_shape = (1,1)
 
@@ -69,7 +71,7 @@ class Pixel(Observation):
         # Cadence
         self.cadence = cadence
         if len(self.cadence.shape) != 1:
-            raise ValueError('Pixel observation requires a 1-D cadence')
+            raise OopsValueError('Pixel observation requires a 1-D cadence')
 
         samples = self.cadence.shape[0]
 

@@ -7,10 +7,11 @@ from types import NoneType
 import numpy as np
 import scipy.interpolate as interp
 
-from polymath        import Scalar, Vector3
-from oops.config     import QUICK, LOGGING
-from oops.event      import Event
-from oops.path.path_ import Path
+from polymath          import Scalar, Vector3
+from oops._exceptions  import OopsValueError
+from oops.config       import QUICK, LOGGING
+from oops.event        import Event
+from oops.path.path_   import Path
 
 
 class QuickPath(Path):
@@ -27,15 +28,16 @@ class QuickPath(Path):
             quickdict (dict): A dictionary containing all the QuickPath parameters.
 
         Raises:
-            ValueError: If `path` does not have shape (), if `path` is itself a QuickPath,
-                or if the interpolation fails the "path_self_check" precision test.
+            OopsValueError: If `path` does not have shape (), if `path` is itself a
+                QuickPath, or if the interpolation fails the "path_self_check" precision
+                test.
         """
 
         path = Path.as_path(path)
         if path._shape != ():
-            raise ValueError('shape of QuickPath must be ()')
+            raise OopsValueError('shape of QuickPath must be ()')
         if isinstance(path, QuickPath):
-            raise ValueError('QuickPath cannot be constructed from another QuickPath')
+            raise OopsValueError('QuickPath cannot be constructed from another QuickPath')
 
         path.refresh()
         self._slowpath = path
@@ -71,13 +73,13 @@ class QuickPath(Path):
             dvel = (true_event.vel - vel).norm() / (true_event.vel).norm()
             error = max(np.max(dpos.vals), np.max(dvel.vals))
             if error > precision:
-                raise ValueError(f'precision failure: {error:.3f} > {precision}')
+                raise OopsValueError(f'precision failure: {error:.3f} > {precision}')
 
     def _refresh(self):
         """Tabulate the emulated Path over the time range and rebuild the splines.
 
         Raises:
-            ValueError: If the emulated Path returns a state independent of time.
+            OopsValueError: If the emulated Path returns a state independent of time.
         """
 
         times = np.arange(self._tmin, self._tmax + self._tstep/2., self._tstep)
@@ -90,8 +92,8 @@ class QuickPath(Path):
         # _USE_QUICKPATHS. Note that the Event still takes its shape from the times, so
         # it is the state that has to be checked.
         if self._events.pos.shape != times.shape:
-            raise ValueError(f'{self._slowpath} returns a state independent of time; '
-                             'it cannot be tabulated by a QuickPath')
+            raise OopsValueError(f'{self._slowpath} returns a state independent of time; '
+                                 'it cannot be tabulated by a QuickPath')
 
         self._times = times
         self._spline_setup()
@@ -375,7 +377,7 @@ class QuickPath(Path):
         # Compare with != rather than `is not`, because a numpy False is not the
         # False singleton and `is not False` would wrongly accept it
         if not isinstance(quick, (dict, NoneType)) and quick != False:  # noqa: E712
-            raise ValueError('invalid `quick` input, must be dict, None, or False')
+            raise OopsValueError('invalid `quick` input, must be dict, None, or False')
 
         if isinstance(path, QuickPath):     # a QuickPath is already quick
             return path

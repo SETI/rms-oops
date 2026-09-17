@@ -2,8 +2,9 @@
 # oops/backplane/where.py
 ##########################################################################################
 
-from polymath       import Boolean, Scalar
-from oops.backplane import Backplane
+from polymath         import Boolean, Scalar
+from oops._exceptions import OopsValueError
+from oops.backplane   import Backplane
 
 ##########################################################################################
 # Boolean Masks
@@ -103,13 +104,13 @@ def _where_inside_or_outside_shadow(self, event_key, surface_key, tvl, inside):
         masked if `tvl` is True and False otherwise.
 
     Raises:
-        ValueError: If the standardized event key does not contain exactly two items.
+        OopsValueError: If the standardized event key does not contain exactly two items.
     """
 
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     if len(event_key) != 2:
-        raise ValueError('invalid event key for shadowing: ' + repr(event_key))
+        raise OopsValueError('invalid event key for shadowing: ' + repr(event_key))
 
     surface_key = surface_key.upper()
     if inside:
@@ -412,14 +413,14 @@ def _where_inside_or_outside(self, event_key, surface_key, tvl, inside):
         masked if `tvl` is True and False otherwise.
 
     Raises:
-        ValueError: If the standardized event key does not contain exactly two items.
+        OopsValueError: If the standardized event key does not contain exactly two items.
     """
 
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
     if len(event_key) != 2:
-        raise ValueError('invalid event key for inside/outside calculations: '
-                         + repr(event_key))
+        raise OopsValueError('invalid event key for inside/outside calculations: '
+                             + repr(event_key))
 
     surface_key = surface_key.upper()
     if inside:

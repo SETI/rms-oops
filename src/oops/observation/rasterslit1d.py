@@ -5,6 +5,7 @@
 import numpy as np
 
 from polymath               import Pair
+from oops._exceptions       import OopsTypeError, OopsValueError
 from oops.observation       import Observation
 from oops.cadence           import Cadence
 from oops.cadence.metronome import Metronome
@@ -47,10 +48,10 @@ class RasterSlit1D(Observation):
                 included as needed.
 
         Raises:
-            ValueError: If `axes` does not contain exactly one of 'ut' and 'vt', if it
+            OopsValueError: If `axes` does not contain exactly one of 'ut' and 'vt', if it
                 also contains 't', if the cross-slit axis of the FOV does not have length
                 1, or if the shapes of the cadence and the FOV are incompatible.
-            TypeError: If `cadence` is not a Cadence, tuple, list, or dictionary.
+            OopsTypeError: If `cadence` is not a Cadence, tuple, list, or dictionary.
         """
 
         # Basic properties
@@ -66,7 +67,7 @@ class RasterSlit1D(Observation):
         count1 = ('ut' in self._axes) + ('vt' in self._axes)
         count2 = ('t' in self._axes)
         if (count1, count2) != (1,0):
-            raise ValueError('invalid axes for RasterSlit1D: ' + repr(self._axes))
+            raise OopsValueError('invalid axes for RasterSlit1D: ' + repr(self._axes))
 
         self.shape = len(axes) * [0]
 
@@ -91,7 +92,7 @@ class RasterSlit1D(Observation):
 
         self._along_slit_len = fov_uv_shape[self._along_slit_uv_index]
         if fov_uv_shape[self._cross_slit_uv_index] != 1:
-            raise ValueError('RasterSlit1D cross-slit axis must have length 1')
+            raise OopsValueError('RasterSlit1D cross-slit axis must have length 1')
 
         # Cadence
         samples = self._along_slit_len
@@ -103,11 +104,11 @@ class RasterSlit1D(Observation):
         elif isinstance(cadence, Cadence):
             self.cadence = cadence
             if self.cadence.shape != (samples,):
-                raise ValueError('RasterSlit1D input Cadence and FOV shapes '
-                                 'are incompatible: %s, %s'
-                                 % (cadence.shape, tuple(fov.uv_shape.vals)))
+                raise OopsValueError('RasterSlit1D input Cadence and FOV shapes '
+                                     'are incompatible: %s, %s'
+                                     % (cadence.shape, tuple(fov.uv_shape.vals)))
         else:
-            raise TypeError('Invalid cadence class: ' + type(cadence).__name__)
+            raise OopsTypeError('Invalid cadence class: ' + type(cadence).__name__)
 
         # Optional subfields
         self.subfields = {}
