@@ -12,6 +12,7 @@ import julian
 import pytest
 
 import oops.hosts.galileo.ssi as ssi
+from programs.gold_master.test_support import TEST_DATA_PREFIX
 
 # GO_0002/RAW_CAL/C0003061200R.LBL: a post-launch checkout frame with no IMAGE_TIME
 UNKNOWN_TIME_LABEL: dict = {
@@ -32,6 +33,9 @@ KNOWN_TIME_LABEL: dict = {
     'TARGET_NAME': 'VENUS',
     'TELEMETRY_FORMAT_ID': 'IM4',
 }
+
+# The same checkout frame in the shared test-data tree, for the from_file path
+UNKNOWN_TIME_IMAGE = 'galileo/GO_0002/RAW_CAL/C0003061200R.IMG'
 
 GALILEO_LAUNCH_TDB = julian.tdb_from_tai(julian.tai_from_iso('1989-10-18'))
 
@@ -75,5 +79,23 @@ def test_known_image_time_is_untouched() -> None:
     from_sclk = ssi.Metadata.time_from_sclk_count(
                                     KNOWN_TIME_LABEL['SPACECRAFT_CLOCK_START_COUNT'])
     assert abs(from_sclk - expected) < 10.
+
+
+def test_from_file_carries_sclk_time_onto_snapshot() -> None:
+    """from_file forwards the derived time and the time_from_sclk flag to the Snapshot."""
+
+    path = TEST_DATA_PREFIX / UNKNOWN_TIME_IMAGE
+    try:
+        path.retrieve()
+        path.with_suffix('.LBL').retrieve()
+        obs = ssi.from_file(path)
+    except (FileNotFoundError, OSError) as e:
+        pytest.skip('Galileo test data unavailable: ' + str(e))
+
+    assert obs.time_from_sclk
+    assert obs.texp == pytest.approx(0.8)
+    assert obs.time[0] == cspyce.scs2e(-77, '30612:0:0:0')
+    iso = julian.iso_from_tai(julian.tai_from_tdb(obs.time[0]), digits=0)
+    assert iso.startswith('1989-10-27T21:11:')
 
 ##########################################################################################
