@@ -21,6 +21,8 @@ class Galileo:
     START_TIME: str
     STOP_TIME: str
     MONTHS: int
+    SPACECRAFT_ID: int
+    SCLK_KERNEL: str
     TDB0: float
     TDB1: float
     DTDB: float
@@ -33,6 +35,7 @@ class Galileo:
     SPK_DICT: dict[str, KernelInfo]
     loaded_instruments: list[str]
     initialized: bool
+    sclk_loaded: bool
     @staticmethod
     def initialize(planets: list | None = None, asof: str | None = None,
         mst_pck: bool = True, irregulars: bool = True) -> None: ...
@@ -40,6 +43,10 @@ class Galileo:
     def reset() -> None: ...
     @staticmethod
     def load_kernels() -> None: ...
+    @staticmethod
+    def load_sclk() -> None: ...
+    @staticmethod
+    def tdb_from_sclk(count: str) -> float: ...
     @staticmethod
     def initialize_kernels(kernels: list[KernelInfo], lists: ndarray) -> None: ...
     @staticmethod

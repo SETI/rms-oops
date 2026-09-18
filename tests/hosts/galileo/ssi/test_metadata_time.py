@@ -12,6 +12,7 @@ import julian
 import pytest
 
 import oops.hosts.galileo.ssi as ssi
+from oops.hosts.galileo import Galileo
 from programs.gold_master.test_support import TEST_DATA_PREFIX
 
 # GO_0002/RAW_CAL/C0003061200R.LBL: a post-launch checkout frame with no IMAGE_TIME
@@ -76,8 +77,7 @@ def test_known_image_time_is_untouched() -> None:
     assert meta.tstop == pytest.approx(expected + 0.8)
 
     # The conversion used for unknown times lands within seconds of IMAGE_TIME
-    from_sclk = ssi.Metadata.time_from_sclk_count(
-                                    KNOWN_TIME_LABEL['SPACECRAFT_CLOCK_START_COUNT'])
+    from_sclk = Galileo.tdb_from_sclk(KNOWN_TIME_LABEL['SPACECRAFT_CLOCK_START_COUNT'])
     assert abs(from_sclk - expected) < 10.
 
 
@@ -88,9 +88,10 @@ def test_from_file_carries_sclk_time_onto_snapshot() -> None:
     try:
         path.retrieve()
         path.with_suffix('.LBL').retrieve()
-        obs = ssi.from_file(path)
     except (FileNotFoundError, OSError) as e:
         pytest.skip('Galileo test data unavailable: ' + str(e))
+
+    obs = ssi.from_file(path)
 
     assert obs.time_from_sclk
     assert obs.texp == pytest.approx(0.8)

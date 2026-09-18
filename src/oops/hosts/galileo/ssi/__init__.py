@@ -255,8 +255,7 @@ class Metadata(object):
             # kernel converts to within a few seconds of IMAGE_TIME wherever
             # both are given. Never fall back to a placeholder time: it silently
             # places the frame at the J2000 epoch.
-            self.tstart = Metadata.time_from_sclk_count(
-                                    meta_dict['SPACECRAFT_CLOCK_START_COUNT'])
+            self.tstart = Galileo.tdb_from_sclk(meta_dict['SPACECRAFT_CLOCK_START_COUNT'])
             self.time_from_sclk = True
         else:
             self.tstart = julian.tdb_from_tai(
@@ -286,22 +285,6 @@ class Metadata(object):
                 self.window_shape = self.window[2:]
                 self.window_uv_origin = np.flip(self.window_origin)
                 self.window_uv_shape = np.flip(self.window_shape)
-
-    @staticmethod
-    def time_from_sclk_count(sclk_count):
-        """Convert a Galileo spacecraft clock count from a label to seconds TDB.
-
-        Parameters:
-            sclk_count (str): The SPACECRAFT_CLOCK_START_COUNT label value, in the
-                form "RRRRRRRR.MM" (RIM count and mod-91 count).
-
-        Returns:
-            float: The corresponding time in seconds TDB, as given by the Galileo
-            SCLK kernel.
-        """
-
-        rim, mod91 = sclk_count.split('.')
-        return cspyce.scs2e(-77, f'{int(rim)}:{int(mod91)}:0:0')
 
     def trim(self, data, full_fov=False):
         """Trim image to label window.
