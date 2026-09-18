@@ -4,6 +4,8 @@
 # Utility functions for managing SPICE kernels while working with Galileo data
 # sets.
 ##########################################################################################
+import re
+
 import numpy as np
 
 import julian
@@ -58,6 +60,8 @@ class Galileo(object):
         STOP_TIME (str): The end of the mission as an ISO date.
         MONTHS (int): The number of equal "months" into which the mission is divided
             for the purpose of loading kernels.
+        SPACECRAFT_ID (int): The NAIF ID of the Galileo spacecraft.
+        SCLK_KERNEL (str): The spacecraft clock kernel, relative to the SPICE root.
         TDB0 (float): The mission start time in seconds TDB.
         TDB1 (float): The mission stop time in seconds TDB.
         DTDB (float): The duration of one "month" in seconds.
@@ -76,11 +80,15 @@ class Galileo(object):
         loaded_instruments (list[str]): The names of the instruments whose kernels have
             been loaded.
         initialized (bool): True after :meth:`initialize` has been called.
+        sclk_loaded (bool): True after the spacecraft clock kernel has been furnished.
     """
 
     START_TIME = '1989-10-18'
     STOP_TIME  = '2003-09-21'
     MONTHS = 167        # 14 years * 12 months/year - 1 month
+
+    SPACECRAFT_ID = -77
+    SCLK_KERNEL = 'Galileo/SCLK/mk00062a.tsc'
 
     TDB0 = julian.tdb_from_tai(julian.tai_from_iso(START_TIME))
     TDB1 = julian.tdb_from_tai(julian.tai_from_iso(STOP_TIME))
@@ -99,6 +107,7 @@ class Galileo(object):
     loaded_instruments = []
 
     initialized = False
+    sclk_loaded = False
 
     ######################################################################################
 
@@ -163,10 +172,13 @@ class Galileo(object):
         Galileo.SPK_DICT = {}
 
         Galileo.initialized = False
+        Galileo.sclk_loaded = False
 
     @staticmethod
     def load_kernels():
         """Furnish the fixed set of SPICE kernels needed by the Galileo mission."""
+
+        Galileo.load_sclk()
 
         from spicedb import get_spice_filecache_prefix
 
@@ -174,7 +186,6 @@ class Galileo(object):
 
         paths = SPICE_FILECACHE_PFX.retrieve([
             'General/LSK/naif0012.tls',
-            'Galileo/SCLK/mk00062a.tsc',
             'Galileo/IK/gll36001.ti',
             'Galileo/FK/gll_v0.tf',
             'Galileo/SPK/de421.bsp',
@@ -246,6 +257,57 @@ class Galileo(object):
         ])
         for path in paths:
             cspyce.furnsh(path)
+
+    @staticmethod
+    def load_sclk():
+        """Furnish the leap-second and Galileo spacecraft clock kernels if not yet loaded.
+
+        Unlike :meth:`initialize`, this loads nothing else, so a clock conversion costs
+        two text kernels rather than the full mission kernel set.
+        """
+
+        if Galileo.sclk_loaded:
+            return
+
+        oops.spice.load_leap_seconds()
+
+        path = spicedb.get_spice_filecache_prefix().retrieve(Galileo.SCLK_KERNEL)
+        cspyce.furnsh(path)
+
+        Galileo.sclk_loaded = True
+
+    @staticmethod
+    def tdb_from_sclk(count):
+        """Convert a Galileo spacecraft clock count to seconds TDB.
+
+        The kernels needed are furnished on the first call through :meth:`load_sclk`, so
+        no call to :meth:`initialize` is required. The count marks the start of the
+        frame; on images whose label also gives IMAGE_TIME, the result agrees with that
+        time to within a few seconds.
+
+        Parameters:
+            count (str): The clock count as one to four integer fields (RIM, mod-91,
+                mod-10 and mod-8), separated by any non-alphanumeric characters, as in
+                the label form "RRRRRRRR.MM" or the SPICE form "RRRRRRRR:MM:S:T".
+                Missing trailing fields are taken as zero.
+
+        Returns:
+            float: The time in seconds TDB.
+
+        Raises:
+            ValueError: If the count has more than four fields or a field is not an
+                unsigned integer.
+        """
+
+        Galileo.load_sclk()
+
+        fields = re.split(r'[^0-9A-Za-z]+', count.strip())
+        if len(fields) > 4 or not all(field.isdigit() for field in fields):
+            raise ValueError(f'invalid Galileo spacecraft clock count: {count!r}')
+
+        fields += ['0'] * (4 - len(fields))
+        return cspyce.scs2e(Galileo.SPACECRAFT_ID,
+                            ':'.join(str(int(field)) for field in fields))
 
     ######################################################################################
     # Initialize the kernel lists
