@@ -20,7 +20,7 @@ class Pixel(Observation):
     Generalization to other FOV shapes is TODO.
     """
 
-    def __init__(self, axes, cadence, fov, path, frame, **subfields):
+    def __init__(self, axes, *, cadence, fov, path, frame, **subfields):
         """Constructor for a Pixel observation.
 
         Parameters:
@@ -90,7 +90,9 @@ class Pixel(Observation):
                 self.subfields)
 
     def __setstate__(self, state):
-        self.__init__(*state[:-1], **state[-1])
+        (axes, cadence, fov, path, frame, subfields) = state
+        self.__init__(axes, cadence=cadence, fov=fov, path=path, frame=frame,
+                      **subfields)
         self.freeze()
 
     def uvt(self, indices, *, remask=False, derivs=True):

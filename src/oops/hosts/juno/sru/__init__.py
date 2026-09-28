@@ -64,8 +64,10 @@ def from_file(filespec, return_all_planets=False, method='strict', **parameters)
 
     # Construct the Snapshot
     obs = oops.obs.Snapshot(('v','u'),
-                            meta.tstart, meta.exposure, SRU.fov(),
-                            'JUNO', frame,
+                            meta.tstart, meta.exposure,
+                            fov = SRU.fov(),
+                            path = 'JUNO',
+                            frame = frame,
                             instrument = 'SRU' + str(meta.unit),
                             target = meta.target,
                             tdi_on = meta.tdi_on,

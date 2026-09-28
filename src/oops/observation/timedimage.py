@@ -24,7 +24,7 @@ class TimedImage(Observation):
 
     _INVENTORY_IMPLEMENTED = True
 
-    def __init__(self, axes, cadence, fov, path, frame, **subfields):
+    def __init__(self, axes, *, cadence, fov, path, frame, **subfields):
         """Constructor for a TimedImage.
 
         Parameters:
@@ -168,7 +168,9 @@ class TimedImage(Observation):
                 Frame.as_primary_frame(self.frame), self.subfields)
 
     def __setstate__(self, state):
-        self.__init__(*state[:-1], **state[-1])
+        (axes, cadence, fov, path, frame, subfields) = state
+        self.__init__(axes, cadence=cadence, fov=fov, path=path, frame=frame,
+                      **subfields)
         self.freeze()
 
     def uvt(self, indices, *, remask=False, derivs=True):
@@ -355,8 +357,9 @@ class TimedImage(Observation):
             Observation: A (shallow) copy of the object with a new time.
         """
 
-        return TimedImage(self._axes, self.cadence.time_shift(dtime), fov=self.fov,
-                          path=self.path, frame=self.frame, **self.subfields)
+        return TimedImage(self._axes, cadence=self.cadence.time_shift(dtime),
+                          fov=self.fov, path=self.path, frame=self.frame,
+                          **self.subfields)
 
     def inventory(self, bodies, **kwargs):
         """Info about the bodies that appear unobscured inside the FOV.

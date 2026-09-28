@@ -55,8 +55,10 @@ def from_file(filespec, label, fast_distortion=True,
         fmeta = _Metadata(flabels[i])
 
         item = oops.obs.Snapshot(('v','u'),
-                                 fmeta.tstart, fmeta.exposure, fmeta.fov,
-                                 'JUNO', 'JUNO_JIRAM_I_' + fmeta.filter_frame,
+                                 fmeta.tstart, fmeta.exposure,
+                                 fov = fmeta.fov,
+                                 path = 'JUNO',
+                                 frame = 'JUNO_JIRAM_I_' + fmeta.filter_frame,
                                  instrument = 'JIRAM_I',
                                  filter = fmeta.filter,
                                  data = framelets[:,:,i])

@@ -178,7 +178,8 @@ def from_file(filespec, astrometry=False, action='error', method='strict',
                                             override=True)
 
     # Create a Snapshot
-    result = oops.obs.Snapshot(('v','u'), tstart, texp, fovs[camera],
+    result = oops.obs.Snapshot(('v','u'), tstart, texp,
+                               fov = fovs[camera],
                                path = spacecraft,
                                frame = image_frame,
                                dict = vicar_dict,              # the VICAR dict

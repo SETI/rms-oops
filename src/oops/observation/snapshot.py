@@ -24,7 +24,7 @@ class Snapshot(Observation):
 
     _INVENTORY_IMPLEMENTED = True
 
-    def __init__(self, axes, tstart, texp, fov, path, frame, **subfields):
+    def __init__(self, axes, tstart, texp, *, fov, path, frame, **subfields):
         """Constructor for a Snapshot.
 
         Parameters:
@@ -96,7 +96,9 @@ class Snapshot(Observation):
                 self.subfields)
 
     def __setstate__(self, state):
-        self.__init__(*state[:-1], **state[-1])
+        (axes, tstart, texp, fov, path, frame, subfields) = state
+        self.__init__(axes, tstart, texp, fov=fov, path=path, frame=frame,
+                      **subfields)
         self.freeze()
 
     def uvt(self, indices, *, remask=False, derivs=True):

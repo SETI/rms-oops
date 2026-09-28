@@ -21,7 +21,7 @@ class RasterSlit1D(Observation):
     The FOV describes the 1-D slit.
     """
 
-    def __init__(self, axes, cadence, fov, path, frame, **subfields):
+    def __init__(self, axes, *, cadence, fov, path, frame, **subfields):
         """Constructor for a RasterSlit1D observation.
 
         Parameters:
@@ -119,7 +119,9 @@ class RasterSlit1D(Observation):
         return (self._axes, self.cadence, self.fov, self.path, self.frame, self.subfields)
 
     def __setstate__(self, state):
-        self.__init__(*state[:-1], **state[-1])
+        (axes, cadence, fov, path, frame, subfields) = state
+        self.__init__(axes, cadence=cadence, fov=fov, path=path, frame=frame,
+                      **subfields)
         self.freeze()
 
     def uvt(self, indices, *, remask=False, derivs=True):

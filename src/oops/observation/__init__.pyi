@@ -104,7 +104,8 @@ class Observation(Mutable):
         time: ScalarLike | None = None, derivs: bool = False) -> Vector3: ...
     def parallel_uv(self, parallel: Observation, uv: PairLike, *,
         time: ScalarLike | None = None, derivs: bool = False) -> Pair: ...
-    def parallel_offset_angles(self, parallel: Observation, angles: tuple | list, *,
+    def parallel_offset_angles(self, parallel: Observation | tuple[Frame, FOV],
+        angles: tuple[float, float], *,
         time: ScalarLike | None = None) -> tuple[Scalar, Scalar]: ...
     def parallel_offset_duv(self, parallel: Observation, duv: PairLike, *,
         time: ScalarLike | None = None, origin: PairLike | None = None) -> Pair: ...
@@ -136,7 +137,7 @@ class Pixel(Observation):
     cadence: Cadence
     shape: list | tuple
     subfields: dict
-    def __init__(self, axes: list | tuple, cadence: Cadence, fov: FOV, path: Path,
+    def __init__(self, axes: list | tuple, *, cadence: Cadence, fov: FOV, path: Path,
         frame: Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
         derivs: bool = True) -> tuple[Pair, Scalar]: ...
@@ -166,7 +167,7 @@ class RasterSlit1D(Observation):
     swap_uv: bool
     cadence: Cadence
     subfields: dict
-    def __init__(self, axes: list | tuple, cadence: Cadence, fov: FOV, path: Path,
+    def __init__(self, axes: list | tuple, *, cadence: Cadence, fov: FOV, path: Path,
         frame: Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
         derivs: bool = True) -> tuple[Pair, Scalar]: ...
@@ -193,7 +194,7 @@ class Slit1D(Observation):
     cadence: Cadence
     subfields: dict
     texp: float
-    def __init__(self, axes: list | tuple, tstart: float, texp: float, fov: FOV,
+    def __init__(self, axes: list | tuple, tstart: float, texp: float, *, fov: FOV,
         path: Path, frame: Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
         derivs: bool = True) -> tuple[Pair, Scalar]: ...
@@ -220,7 +221,7 @@ class Snapshot(Observation):
     cadence: Cadence
     subfields: dict
     texp: float
-    def __init__(self, axes: list | tuple, tstart: float, texp: float, fov: FOV,
+    def __init__(self, axes: list | tuple, tstart: float, texp: float, *, fov: FOV,
         path: Path, frame: Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
         derivs: bool = True) -> tuple[Pair, Scalar]: ...
@@ -261,7 +262,7 @@ class TimedImage(Observation):
     shape: list | tuple
     uv_shape: tuple[int, ...]
     subfields: dict
-    def __init__(self, axes: list | tuple, cadence: Cadence, fov: FOV, path: Path,
+    def __init__(self, axes: list | tuple, *, cadence: Cadence, fov: FOV, path: Path,
         frame: Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
         derivs: bool = True) -> tuple[Pair, Scalar]: ...
