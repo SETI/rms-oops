@@ -1262,8 +1262,8 @@ def test_a_two_dimensional_cadence_shorter_than_the_fast_axis_is_rejected() -> N
 def test_the_axes_can_be_named_fast_then_slow() -> None:
     """"ufast" with "vslow" puts the slow index on the v-axis."""
 
-    obs = TimedImage(('ufast', 'vslow'), DualCadence(SLOW, ROWS),
-                     FlatFOV((0.001, 0.001), (20, 10)), 'SSB', 'J2000')
+    obs = TimedImage(('ufast', 'vslow'), cadence=DualCadence(SLOW, ROWS),
+                     fov=FlatFOV((0.001, 0.001), (20, 10)), path='SSB', frame='J2000')
 
     assert obs.t_axis == (1, 0)
     assert obs.shape == (20, 10)

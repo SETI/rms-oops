@@ -30,13 +30,19 @@ def _observations() -> dict[str, Observation]:
     slow  = Metronome(tstart=0., tstride=20., texp=20., steps=10)
 
     return {
-        'Snapshot':     Snapshot(('u','v'), 0., 10., image_fov, 'SSB', 'J2000'),
-        'Pixel':        Pixel(('t',), steps, pixel_fov, 'SSB', 'J2000'),
-        'Slit1D':       Slit1D(('u',), 0., 10., slit_fov, 'SSB', 'J2000'),
-        'RasterSlit1D': RasterSlit1D(('ut',), steps, sweep_fov, 'SSB', 'J2000'),
-        'TimedImage':   TimedImage(('u','vt'), rows, image_fov, 'SSB', 'J2000'),
-        'TimedImage2D': TimedImage(('uslow','vfast'), DualCadence(slow, rows),
-                                   image_fov, 'SSB', 'J2000'),
+        'Snapshot':     Snapshot(('u','v'), 0., 10., fov=image_fov, path='SSB',
+                                 frame='J2000'),
+        'Pixel':        Pixel(('t',), cadence=steps, fov=pixel_fov, path='SSB',
+                              frame='J2000'),
+        'Slit1D':       Slit1D(('u',), 0., 10., fov=slit_fov, path='SSB',
+                               frame='J2000'),
+        'RasterSlit1D': RasterSlit1D(('ut',), cadence=steps, fov=sweep_fov,
+                                     path='SSB', frame='J2000'),
+        'TimedImage':   TimedImage(('u','vt'), cadence=rows, fov=image_fov,
+                                   path='SSB', frame='J2000'),
+        'TimedImage2D': TimedImage(('uslow','vfast'),
+                                   cadence=DualCadence(slow, rows), fov=image_fov,
+                                   path='SSB', frame='J2000'),
         'InSitu':       InSitu(steps, 'SSB'),
     }
 
@@ -68,8 +74,8 @@ def _parallel_pair() -> tuple[Snapshot, Snapshot]:
     """
 
     fov = FlatFOV((1.e-4, 1.e-4), (64, 64))
-    return (Snapshot(('u','v'), 0., 10., fov, 'SSB', 'J2000'),
-            Snapshot(('u','v'), 0., 10., fov, 'SSB', 'J2000'))
+    return (Snapshot(('u','v'), 0., 10., fov=fov, path='SSB', frame='J2000'),
+            Snapshot(('u','v'), 0., 10., fov=fov, path='SSB', frame='J2000'))
 
 
 def test_parallel_offset_duv_maps_an_offset_through_an_identical_fov() -> None:
@@ -129,7 +135,7 @@ def test_uv_from_ra_and_dec_accepts_any_shape_of_tfrac(tfrac) -> None:
     """
 
     fov = FlatFOV((1.e-4, 1.e-4), (64, 64))
-    obs = Snapshot(('u','v'), 0., 10., fov, 'SSB', 'J2000')
+    obs = Snapshot(('u','v'), 0., 10., fov=fov, path='SSB', frame='J2000')
 
     # The FlatFOV axis is +Z, which is a declination of 90 degrees: the FOV center.
     uv = obs.uv_from_ra_and_dec(0., np.pi/2, tfrac=tfrac)
@@ -281,7 +287,7 @@ IMAGE_FOV = FlatFOV((0.001, 0.001), (10, 20))
 def _snapshot() -> Snapshot:
     """A Snapshot: two spatial axes and no time-dependence."""
 
-    return Snapshot(('u', 'v'), 0., 10., IMAGE_FOV, 'SSB', 'J2000')
+    return Snapshot(('u', 'v'), 0., 10., fov=IMAGE_FOV, path='SSB', frame='J2000')
 
 
 def _timed_image() -> TimedImage:
@@ -289,7 +295,8 @@ def _timed_image() -> TimedImage:
 
     rows = Metronome(tstart=0., tstride=1., texp=1., steps=20)
 
-    return TimedImage(('u', 'vt'), rows, IMAGE_FOV, 'SSB', 'J2000')
+    return TimedImage(('u', 'vt'), cadence=rows, fov=IMAGE_FOV, path='SSB',
+                      frame='J2000')
 
 
 def _timed_image_2d() -> TimedImage:
@@ -298,8 +305,8 @@ def _timed_image_2d() -> TimedImage:
     slow = Metronome(tstart=0., tstride=20., texp=20., steps=10)
     fast = Metronome(tstart=0., tstride=1., texp=1., steps=20)
 
-    return TimedImage(('uslow', 'vfast'), DualCadence(slow, fast), IMAGE_FOV,
-                      'SSB', 'J2000')
+    return TimedImage(('uslow', 'vfast'), cadence=DualCadence(slow, fast),
+                      fov=IMAGE_FOV, path='SSB', frame='J2000')
 
 
 def test_time_and_midtime_come_from_the_cadence() -> None:
@@ -841,7 +848,7 @@ def test_timegrid_samples_a_time_axis_of_its_own() -> None:
 
     pixel_fov = FlatFOV((0.001, 0.001), (1, 1))
     steps = Metronome(tstart=0., tstride=10., texp=10., steps=5)
-    obs = Pixel(('t',), steps, pixel_fov, 'SSB', 'J2000')
+    obs = Pixel(('t',), cadence=steps, fov=pixel_fov, path='SSB', frame='J2000')
 
     times = obs.timegrid(obs.meshgrid())
 
