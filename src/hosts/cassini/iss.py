@@ -11,7 +11,6 @@ from pdsparser import Pds3Label
 from vicar     import VicarImage
 
 import oops
-from oops.lightsource import star_lookup
 from . import _Cassini
 from hosts import Host
 from hosts._pds3_support import _read_pds3_image_array
@@ -153,7 +152,7 @@ _TARGET_NAME_REPAIRS = {
     'UNK'      : 'NONE',
 }
 
-# These are defined as LightSources if
+# These are star targets and need to be defined as LightSources
 _TARGET_STARS = {'FOMALHAUT', 'SPICA'}
 
 
@@ -354,9 +353,12 @@ class ISS(Host):
             gain_mode = 3
 
         label_target = dict_['TARGET_NAME']
-        label_target = _TARGET_NAME_REPAIRS.get(label_target, label_target)
         if label_target in _TARGET_STARS:
-            label_target = star_lookup(label_target)
+            label_lightsource = oops.lightsource.star_lookup(label_target)
+            label_target = 'NONE'
+        else:
+            label_target = _TARGET_NAME_REPAIRS.get(label_target, label_target)
+            label_lightsource = 'SUN'
 
         # Make sure the SPICE kernels are loaded; construct the frame
         _Cassini.load_spks(tstart, tstart + texp)
@@ -364,16 +366,15 @@ class ISS(Host):
         if using_cks:
             _Cassini.load_cks(tstart, tstart + texp)
             ISS._define_camera_frames()
-            frame = oops.Frame.as_frame('CASSINI_ISS_' + camera)
 
         # Define the Snapshot parameters
         params = {
             'cadence'     : oops.cadence.SnapCadence(tstart, texp),
             'fov'         : ISS._FOVS[camera, mode, fast_distortion],
             'path'        : 'CASSINI',
-            'frame'       : frame,      # uses overload frame if defined
+            'frame'       : 'CASSINI_ISS_' + camera,
             'target'      : label_target,
-            'lightsource' : 'SUN',
+            'lightsource' : label_lightsource,
             'calibrations': [],         # TBD
         }
 
