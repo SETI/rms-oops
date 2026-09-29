@@ -64,7 +64,22 @@ def _initialize_star_lookup():
 
 
 def star_lookup(key):
-    """The LightSource object associated with the given star identifier."""
+    """The LightSource object associated with the given star identifier.
+
+    Parameters:
+        key (str): The star's formal name (e.g., "Alpha Canis Majoris"), its abbreviated
+            name (e.g., "alf CMa"), or its common name (e.g., "Sirius"). Case is ignored.
+
+    Returns:
+        LightSource: The LightSource already registered under `key`, if any; otherwise, a
+        new :class:`~oops.lightsource.LightSource` at the star's J2000 position,
+        registered under `key` in upper case.
+
+    Raises:
+        KeyError: If `key` does not identify one of the stars in the table.
+        ValueError: If `key` is already the name of a Body that is not a LightSource.
+    """
+
     if not _STAR_LOOKUP:
         _initialize_star_lookup()
     key_upper = key.upper()
@@ -72,7 +87,10 @@ def star_lookup(key):
         raise KeyError(f'unknown star "{key}"')
     (_, _, ra, dec, _, _) = _STAR_LOOKUP[key_upper]
     if Body.exists(key):
-        return Body.lookup(key)
+        lightsource = Body.lookup(key)
+        if not isinstance(lightsource, LightSource):
+            raise ValueError(f'LightSource name is also a Body name: {key_upper}')
+        return lightsource
     return LightSource(key, (ra, dec))
 
 ##########################################################################################
