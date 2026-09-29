@@ -72,7 +72,7 @@ def from_file(filespec,
                                data = data,             # Add the data array
                                instrument = 'SSI',
                                filter = meta.filter,
-                               filespec = filespec,
+                               filepath = filespec,
                                basename = filespec.name)
 
     result.insert_subfield('spice_kernels',
@@ -167,7 +167,7 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
                                  dict = row_dict,         # Add the index dict
                                  instrument = 'SSI',
                                  filter = meta.filter,
-                                 filespec = filepath,
+                                 filepath = filepath,
                                  basename = basename)
 
         item.insert_subfield('spice_to_frame', oops.Matrix3.IDENTITY)

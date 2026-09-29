@@ -34,7 +34,7 @@ def from_file(filespec, label, fast_distortion=True,
         **parameters (Any): Additional keyword arguments; they are accepted and ignored.
 
     Returns:
-        list[Snapshot]: One Snapshot per framelet, each with subfields `filespec` and
+        list[Snapshot]: One Snapshot per framelet, each with subfields `filepath` and
         `basename` inserted.
     """
 
@@ -65,7 +65,7 @@ def from_file(filespec, label, fast_distortion=True,
 
 #        item.insert_subfield('spice_kernels', \
 #                   Juno.used_kernels(item.time, 'jiram', return_all_planets))
-        item.insert_subfield('filespec', filespec)
+        item.insert_subfield('filepath', filespec)
         item.insert_subfield('basename', filespec.name)
         obs.append(item)
 

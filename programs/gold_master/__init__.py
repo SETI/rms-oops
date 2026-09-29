@@ -1161,14 +1161,14 @@ class BackplaneTest(object):
         # directory of generated backplanes can serve as the masters of a later run.
         # Each is named for the mission and instrument alone, not for the module's place
         # in any import tree, so the files stay put when the module moves.
-        # filespec: $OOPS_TEST_DATA_PATH/cassini/ISS/N1460072401_1.IMG
+        # filepath: $OOPS_TEST_DATA_PATH/cassini/ISS/N1460072401_1.IMG
         # masters:  $OOPS_GOLD_MASTER_PATH/cassini.iss/N1460072401_1/arrays
         # arrays:   $OOPS_BACKPLANE_OUTPUT_PATH/cassini.iss/N1460072401_1/arrays
         # browse:   $OOPS_BACKPLANE_OUTPUT_PATH/cassini.iss/N1460072401_1/browse
         # gold masters sampled at the undersampling grid:
         #           $OOPS_BACKPLANE_OUTPUT_PATH/cassini.iss/N1460072401_1/sampled_gold
 
-        self.abspath = TEST_DATA_PREFIX / obs.filespec
+        self.abspath = TEST_DATA_PREFIX / obs.filepath
         basename_prefix = self.abspath.stem
         dirname = module_dirname(args.module)
 
