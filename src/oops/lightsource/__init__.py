@@ -182,7 +182,8 @@ class LightSource(Oops):
 # Imported at the bottom because DiskSource subclasses LightSource, so this module must
 # be fully defined before its subclass module can be imported.
 from oops.lightsource.disksource import DiskSource
+from oops.lightsource.star_lookup import star_lookup
 
-__all__ = ['LightSource', 'DiskSource']
+__all__ = ['LightSource', 'DiskSource', 'star_lookup']
 
 ##########################################################################################
