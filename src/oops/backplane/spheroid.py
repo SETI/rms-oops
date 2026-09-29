@@ -2,8 +2,9 @@
 # oops/backplane/spheroid.py
 ##########################################################################################
 
-from polymath       import Scalar
-from oops.backplane import Backplane
+from polymath         import Scalar
+from oops._exceptions import OopsValueError
+from oops.backplane   import Backplane
 
 
 def longitude(self, event_key, reference='iau', direction='west',
@@ -31,18 +32,18 @@ def longitude(self, event_key, reference='iau', direction='west',
         Scalar: The longitude in radians, registered as a backplane.
 
     Raises:
-        ValueError: If `reference`, `direction`, `minimum` or `lon_type` is not one of the
-            values listed above.
+        OopsValueError: If `reference`, `direction`, `minimum` or `lon_type` is not one of
+            the values listed above.
     """
 
     if reference not in ('iau', 'sun', 'sha', 'obs', 'oha'):
-        raise ValueError('invalid longitude reference: ' + repr(reference))
+        raise OopsValueError('invalid longitude reference: ' + repr(reference))
     if direction not in ('east', 'west'):
-        raise ValueError('invalid longitude direction: ' + repr(direction))
+        raise OopsValueError('invalid longitude direction: ' + repr(direction))
     if minimum not in (0, -180):
-        raise ValueError('invalid longitude minimum: ' + repr(minimum))
+        raise OopsValueError('invalid longitude minimum: ' + repr(minimum))
     if lon_type not in ('centric', 'graphic', 'squashed'):
-        raise ValueError('invalid longitude type: ' + repr(lon_type))
+        raise OopsValueError('invalid longitude type: ' + repr(lon_type))
 
     # Look up under the desired reference
     self.refresh()
@@ -112,11 +113,11 @@ def latitude(self, event_key, lat_type='centric'):
         Scalar: The latitude in radians, registered as a backplane.
 
     Raises:
-        ValueError: If `lat_type` is not one of the values listed above.
+        OopsValueError: If `lat_type` is not one of the values listed above.
     """
 
     if lat_type not in ('centric', 'graphic', 'squashed'):
-        raise ValueError('invalid latitude type: ' + repr(lat_type))
+        raise OopsValueError('invalid latitude type: ' + repr(lat_type))
 
     # Look up under the desired reference
     self.refresh()
@@ -161,8 +162,8 @@ def _fill_surface_intercepts(self, event_key):
         event_key (tuple): Standardized key defining the surface event.
 
     Raises:
-        ValueError: If the event key describes a surface that uses neither spherical nor
-            limb coordinates.
+        OopsValueError: If the event key describes a surface that uses neither spherical
+            nor limb coordinates.
     """
 
     surface = Backplane.get_surface(event_key[1])
@@ -174,8 +175,8 @@ def _fill_surface_intercepts(self, event_key):
 
     # Validate the surface type
     if surface.COORDINATE_TYPE != 'spherical':
-        raise ValueError('invalid coordinate type for spheroidal geometry: '
-                         + surface.COORDINATE_TYPE)
+        raise OopsValueError('invalid coordinate type for spheroidal geometry: '
+                             + surface.COORDINATE_TYPE)
 
     # Get the surface intercept coordinates
     event = self.get_surface_event(event_key)
@@ -413,18 +414,18 @@ def _sub_longitude(self, event_key, longitude, reference='iau', direction='west'
         Scalar: The converted longitude in radians.
 
     Raises:
-        ValueError: If `reference`, `direction` or `minimum` is not one of the values
+        OopsValueError: If `reference`, `direction` or `minimum` is not one of the values
             listed above.
     """
 
     if reference not in ('iau', 'sun', 'sha', 'obs', 'oha'):
-        raise ValueError('invalid longitude reference: ' + repr(reference))
+        raise OopsValueError('invalid longitude reference: ' + repr(reference))
 
     if direction not in ('east', 'west'):
-        raise ValueError('invalid longitude direction: ' + repr(direction))
+        raise OopsValueError('invalid longitude direction: ' + repr(direction))
 
     if minimum not in (0, -180):
-        raise ValueError('invalid longitude minimum: ' + repr(minimum))
+        raise OopsValueError('invalid longitude minimum: ' + repr(minimum))
 
     # Define the longitude relative to the reference value
     event_key = Backplane.standardize_event_key(event_key)
@@ -464,11 +465,11 @@ def sub_observer_latitude(self, event_key, lat_type='centric'):
         Scalar: The latitude in radians, registered as a gridless backplane.
 
     Raises:
-        ValueError: If `lat_type` is neither "centric" nor "graphic".
+        OopsValueError: If `lat_type` is neither "centric" nor "graphic".
     """
 
     if lat_type not in ('centric', 'graphic'):
-        raise ValueError('invalid latitude type: ' + repr(lat_type))
+        raise OopsValueError('invalid latitude type: ' + repr(lat_type))
 
     self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)
@@ -501,11 +502,11 @@ def sub_solar_latitude(self, event_key, lat_type='centric'):
         Scalar: The latitude in radians, registered as a gridless backplane.
 
     Raises:
-        ValueError: If `lat_type` is neither "centric" nor "graphic".
+        OopsValueError: If `lat_type` is neither "centric" nor "graphic".
     """
 
     if lat_type not in ('centric', 'graphic'):
-        raise ValueError('invalid latitude type: ' + repr(lat_type))
+        raise OopsValueError('invalid latitude type: ' + repr(lat_type))
 
     self.refresh()
     gridless_key = Backplane.gridless_event_key(event_key)

@@ -2,10 +2,11 @@
 # oops/backplane/orbit.py
 ##########################################################################################
 
-from polymath       import Scalar, Vector3, Matrix3
-from oops.backplane import Backplane
-from oops.body      import Body
-from oops.frame     import Frame
+from polymath         import Scalar, Vector3, Matrix3
+from oops._exceptions import OopsValueError
+from oops.backplane   import Backplane
+from oops.body        import Body
+from oops.frame       import Frame
 
 
 def orbit_longitude(self, event_key, reference='obs', planet=None):
@@ -29,11 +30,11 @@ def orbit_longitude(self, event_key, reference='obs', planet=None):
         Scalar: The longitude in radians, registered as a gridless backplane.
 
     Raises:
-        ValueError: If `reference` is not one of the values listed above.
+        OopsValueError: If `reference` is not one of the values listed above.
     """
 
     if reference not in ('aries', 'node', 'obs', 'oha', 'sun', 'sha'):
-        raise ValueError('invalid longitude reference: ' + repr(reference))
+        raise OopsValueError('invalid longitude reference: ' + repr(reference))
 
     # Determine/validate the planet
     self.refresh()

@@ -5,6 +5,7 @@
 import numpy as np
 
 from polymath                 import Scalar, Vector3
+from oops._exceptions         import OopsValueError
 from oops.constants           import PI, TWOPI
 from oops.frame.frame_        import Frame
 from oops.frame.inclinedframe import InclinedFrame
@@ -81,7 +82,7 @@ class OrbitPlane(Surface):
         self._defined_origin = Path.as_waypoint(origin)
         self._defined_frame  = Frame.as_wayframe(frame)
         if self._defined_frame.origin is not None:
-            raise ValueError('frame of an OrbitPlane must be inertial')
+            raise OopsValueError('frame of an OrbitPlane must be inertial')
 
         # We will update the Surface's actual path and frame as needed
         self._internal_origin = self._defined_origin
@@ -429,7 +430,7 @@ class OrbitPlane(Surface):
             Scalar: The mean anomaly in radians.
 
         Raises:
-            ValueError: If the iteration does not converge. The derivative of
+            OopsValueError: If the iteration does not converge. The derivative of
                 ``lon = anom + 2e sin(anom)`` is ``1 + 2e cos(anom)``, which approaches
                 zero as the eccentricity approaches 0.5, so the iteration becomes
                 ill-conditioned near that value and fails at and beyond it. Such an orbit
@@ -467,9 +468,9 @@ class OrbitPlane(Surface):
                 break
 
         if max_abs_dx > _ANOMALY_PRECISION:
-            raise ValueError(f'{type(self).__name__}.to_mean_anomaly() did not converge '
-                             f'for eccentricity {self._e}: remaining change is '
-                             f'{max_abs_dx:.6g} radians')
+            raise OopsValueError(f'{type(self).__name__}.to_mean_anomaly() did not '
+                                 f'converge for eccentricity {self._e}: remaining '
+                                 f'change is {max_abs_dx:.6g} radians')
 
         return x
 

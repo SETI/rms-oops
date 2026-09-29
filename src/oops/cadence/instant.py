@@ -4,8 +4,9 @@
 
 import numpy as np
 
-from polymath     import Boolean, Qube, Scalar, Vector
-from oops.cadence import Cadence
+from polymath         import Boolean, Qube, Scalar, Vector
+from oops._exceptions import OopsValueError
+from oops.cadence     import Cadence
 
 
 class Instant(Cadence):
@@ -27,7 +28,7 @@ class Instant(Cadence):
             tdb (ScalarLike): A time Scalar in seconds TDB.
 
         Raises:
-            ValueError: If every time in `tdb` is masked.
+            OopsValueError: If every time in `tdb` is masked.
         """
 
         self._tdb = Scalar.as_scalar(tdb, recursive=False).as_float()
@@ -38,7 +39,8 @@ class Instant(Cadence):
             vals = vals[np.asarray(self._tdb.antimask).ravel()]
 
         if vals.size == 0:
-            raise ValueError('Instant tdb input must include at least one unmasked time')
+            raise OopsValueError('Instant tdb input must include at least one '
+                                 'unmasked time')
 
         self.shape = self._tdb.shape
         self.time = (float(vals.min()), float(vals.max()))

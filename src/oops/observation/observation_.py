@@ -7,7 +7,8 @@ import numbers
 
 from polymath              import Matrix3, Scalar, Pair, Vector, Vector3, Qube
 from oops                  import mutable
-from oops._convergence import RayConvergence
+from oops._convergence     import RayConvergence
+from oops._exceptions      import OopsIndexError, OopsValueError
 from oops.config           import LOGGING, PATH_PHOTONS
 from oops.event            import Event
 from oops.frame            import Frame
@@ -575,7 +576,7 @@ class Observation(Mutable):
         # nothing to freeze, so both tests are needed to single out an observation that
         # was frozen deliberately
         if mutable.is_mutable(self) and mutable.is_frozen(self):
-            raise ValueError(f'{type(self).__name__} object is frozen')
+            raise OopsValueError(f'{type(self).__name__} object is frozen')
 
         self.frame = frame
 
@@ -613,7 +614,7 @@ class Observation(Mutable):
             else:
                 time = self.cadence.time_at_tstep(tstep)
         elif tstep is not None:
-            raise ValueError('tstep and time cannot both be specified')
+            raise OopsValueError('tstep and time cannot both be specified')
 
         frame = self.frame.wrt(Frame.J2000)
         xform = frame.transform_at_time(time)
@@ -632,13 +633,27 @@ class Observation(Mutable):
             matrix (Matrix3Like): The C matrix rotating J2000 coordinates into the SPICE
                 frame of the instrument, as a Matrix3 or as anything that can be converted
                 to one.
+
+        Raises:
+            AttributeError: If attribute `spice_to_frame` is not defined for this
+                Observation.
+            OopsValueError: If `matrix` is not a valid rotation matrix or has a shape.
         """
 
         if not hasattr(self, 'spice_to_frame'):
             raise AttributeError(f'{type(self).__name__} does not have a '
                                  '"spice_to_frame" attribute')
 
-        frame = Cmatrix(self.spice_to_frame * Matrix3.as_matrix3(matrix))
+        try:
+            matrix = Matrix3.as_matrix3(matrix, validate=True, tol=1.e-6)
+        except ValueError as err:
+            raise OopsValueError('set_spice_cmatrix() input is not a valid rotation '
+                                 'matrix') from err
+
+        if matrix.shape != ():
+            raise OopsValueError('shape of set_spice_cmatrix() input matrix must be ()')
+
+        frame = Cmatrix(self.spice_to_frame * matrix)
         self.set_frame(frame)
 
     ######################################################################################
@@ -926,7 +941,8 @@ class Observation(Mutable):
             Scalar: The selected Scalar; None if `axis` is negative.
 
         Raises:
-            IndexError: If `indices` is a single number but `axis` is neither 0 nor -1.
+            OopsIndexError: If `indices` is a single number but `axis` is neither 0
+                nor -1.
         """
 
         if axis < 0:
@@ -937,7 +953,7 @@ class Observation(Mutable):
 
         if isinstance(indices, numbers.Real):
             if axis not in (0, -1):
-                raise IndexError('index out of range: ' + str(indices))
+                raise OopsIndexError('index out of range: ' + str(indices))
             return Scalar(indices)
 
         indices = np.array(indices)

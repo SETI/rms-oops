@@ -4,8 +4,9 @@
 
 import numpy as np
 
-from polymath     import Boolean, Scalar, Qube
-from oops.cadence import Cadence
+from polymath         import Boolean, Scalar, Qube
+from oops._exceptions import OopsRuntimeError, OopsValueError
+from oops.cadence     import Cadence
 
 
 class Sequence(Cadence):
@@ -29,7 +30,7 @@ class Sequence(Cadence):
                   number of time steps is len(tlist)-1 rather than len(tlist).
 
         Raises:
-            ValueError: If `tlist` is not 1-D, if `tlist` or `texp` is masked, if the
+            OopsValueError: If `tlist` is not 1-D, if `tlist` or `texp` is masked, if the
                 shapes of `tlist` and `texp` do not match, or if any exposure time is not
                 positive.
         """
@@ -37,17 +38,17 @@ class Sequence(Cadence):
         # Work with Numpy arrays initially
         if isinstance(tlist, Scalar):
             if np.any(tlist.mask):
-                raise ValueError('Sequence tlist input must be unmasked')
+                raise OopsValueError('Sequence tlist input must be unmasked')
             tlist = tlist.vals
 
         if isinstance(texp, Scalar):
             if np.any(texp.mask):
-                raise ValueError('Sequence texp input must be unmasked')
+                raise OopsValueError('Sequence texp input must be unmasked')
             texp = texp.vals
 
         tlist = np.asarray(tlist, dtype=np.float64)
         if np.ndim(tlist) != 1 or tlist.size <= 1:
-            raise ValueError('Sequence tlist must be 1-D')
+            raise OopsValueError('Sequence tlist must be 1-D')
 
         tstrides = np.diff(tlist)
 
@@ -57,9 +58,9 @@ class Sequence(Cadence):
         if np.shape(texp):          # texp is an array
             texp = np.asarray(texp, dtype=np.float64)
             if texp.shape != tlist.shape:
-                raise ValueError('Shape mismatch between texp and tlist')
+                raise OopsValueError('Sequence shape mismatch between texp and tlist')
             if np.any(texp <= 0.):
-                raise ValueError('All texp values must be positive')
+                raise OopsValueError('All Sequence texp values must be positive')
 
             self.min_tstride = np.min(tstrides)
             self.max_tstride = np.max(tstrides)
@@ -71,7 +72,7 @@ class Sequence(Cadence):
 
         elif texp:                  # texp is a nonzero constant
             if (texp <= 0.):
-                raise ValueError('All texp values must be positive')
+                raise OopsValueError(f'Sequence texp must be positive: {texp}')
             self.min_tstride = np.min(tstrides)
             self.max_tstride = np.max(tstrides)
             self.is_continuous = (texp >= self.max_tstride)
@@ -90,7 +91,7 @@ class Sequence(Cadence):
             tstop = tlist[1:]
             tlist = tlist[:-1]      # last time is not a time step
             if np.any(texp <= 0.):
-                raise ValueError('Sequence tlist inputs must be monotonic')
+                raise OopsValueError('Sequence tlist inputs must be monotonic')
 
             tstrides = tstrides[:-1]
             self.min_tstride = np.min(tstrides)
@@ -255,12 +256,13 @@ class Sequence(Cadence):
             equals the first.
 
         Raises:
-            RuntimeError: If the stop times of the sequence are not strictly ordered.
+            OopsRuntimeError: If the stop times of the sequence are not strictly ordered
+                at the `time` given.
         """
 
         if not self._tstop_is_ordered:
-            raise RuntimeError('tstep_range_at_time failure in Sequence; '
-                               'stop times are not strictly ordered')
+            raise OopsRuntimeError('Sequence.tstep_range_at_time() failure; '
+                                   'stop times are not strictly ordered at given time')
 
         time = Scalar.as_scalar(time, recursive=False)
 
@@ -276,8 +278,7 @@ class Sequence(Cadence):
 
         # Identify points outside the range for adjustment and masking
         # For all points outside range, tstep_max == tstep_min.
-        # This also applies to times between time steps for discontinuous
-        # cadences.
+        # This also applies to times between time steps for discontinuous cadences.
         if inclusive:
             mask = (time.vals < self.time[0]) | (time.vals > self.time[1])
             if not self.is_continuous:

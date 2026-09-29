@@ -8,6 +8,8 @@ import numpy as np
 import cspyce
 
 from polymath              import Scalar
+from oops._exceptions      import (OopsIndexError, OopsKeyError, OopsTypeError,
+                                   OopsValueError)
 from oops.event            import Event
 from oops.frame.frame_     import Frame, J2000Frame
 from oops.frame.spiceframe import SpiceFrame
@@ -43,7 +45,7 @@ class SpicePath(Path):
             KeyError: If `spice_path` is a string but is not a recognized SPICE body name.
             KeyError: If `origin` or `frame` is an ID string that has not been registered.
             TypeError: If `spice_path` is not an integer or string.
-            ValueError: If `origin` is not a SpicePath or `frame` is not a SpiceFrame.
+            OopsValueError: If `origin` is not a SpicePath or `frame` is not a SpiceFrame.
         """
 
         # Interpret the SPICE path
@@ -53,7 +55,7 @@ class SpicePath(Path):
         # Fill in the origin info
         self._origin = Path.as_waypoint(origin)
         if not isinstance(self._origin, (SpicePath, SSBPath)):
-            raise ValueError('SpicePath origin must be a SpicePath or SSB')
+            raise OopsValueError('SpicePath origin must be a SpicePath or SSB')
         if self._origin == Path.SSB:
             self._spice_origin_code = 0
             self._spice_origin_name = 'SSB'
@@ -64,7 +66,7 @@ class SpicePath(Path):
         # Fill in the frame info
         self._frame = Frame.as_wayframe(frame)
         if not isinstance(self._frame, (SpiceFrame, J2000Frame)):
-            raise ValueError('SpicePath frame must be a SpiceFrame or J2000')
+            raise OopsValueError('SpicePath frame must be a SpiceFrame or J2000')
         if self._frame == Frame.J2000:
             self._spice_frame_code = 1
             self._spice_frame_name = 'J2000'
@@ -142,9 +144,10 @@ class SpicePath(Path):
             Toolkit.
 
         Raises:
-            IndexError: If `arg` is an integer but is not a recognized SPICE body code.
-            KeyError: If `arg` is a string but is not a recognized SPICE body name.
-            TypeError: If `arg` is not an integer or string.
+            OopsIndexError: If `arg` is an integer but is not a recognized SPICE body
+                code.
+            OopsKeyError: If `arg` is a string but is not a recognized SPICE body name.
+            OopsTypeError: If `arg` is not an integer or string.
         """
 
         # A trapped cspyce error carries no information the caller can act on: its
@@ -157,7 +160,7 @@ class SpicePath(Path):
             try:
                 name = cspyce.bodc2n_error(arg)
             except (KeyError, IndexError):
-                raise IndexError(f'unrecognized SPICE body {arg}') from None
+                raise OopsIndexError(f'unrecognized SPICE body {arg}') from None
 
             return (arg, name)
 
@@ -167,12 +170,12 @@ class SpicePath(Path):
                 body_code = cspyce.bodn2c_error(arg)
                 name = cspyce.bodc2n_error(body_code)
             except (KeyError, IndexError):
-                raise KeyError(f'unrecognized SPICE body "{arg}"') from None
+                raise OopsKeyError(f'unrecognized SPICE body "{arg}"') from None
 
             return (body_code, name)
 
         else:
-            raise TypeError(f'invalid SPICE body: {arg!r}')
+            raise OopsTypeError(f'invalid SPICE body: {arg!r}')
 
     ######################################################################################
     # Serialization support

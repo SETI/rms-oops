@@ -5,9 +5,10 @@
 import numbers
 import numpy as np
 
-from polymath     import Boolean, Scalar, Vector3
-from oops.event   import Event
-from oops.mutable import Mutable
+from polymath         import Boolean, Scalar, Vector3
+from oops._exceptions import OopsValueError
+from oops.event       import Event
+from oops.mutable     import Mutable
 
 
 class Surface(Mutable):
@@ -71,12 +72,12 @@ class Surface(Mutable):
             axes (int): The number of coordinates requested.
 
         Raises:
-            ValueError: If `axes` is not 2 or 3.
+            OopsValueError: If `axes` is not 2 or 3.
         """
 
         if not isinstance(axes, numbers.Integral) or axes not in (2, 3):
-            raise ValueError(f'axes must be 2 or 3 in {type(self).__name__}'
-                             '.coords_from_vector3()')
+            raise OopsValueError(f'axes must be 2 or 3 in {type(self).__name__}'
+                                 '.coords_from_vector3()')
 
     def _vector3_from_coords_check(self, coords):
         """Validate coords as a tuple of 2 or 3 Scalars.
@@ -85,12 +86,12 @@ class Surface(Mutable):
             coords (tuple[ScalarLike, ...] | list[ScalarLike]): The coordinates given.
 
         Raises:
-            ValueError: If `coords` is not a tuple or list of length 2 or 3.
+            OopsValueError: If `coords` is not a tuple or list of length 2 or 3.
         """
 
         if not isinstance(coords, (tuple, list)) or len(coords) not in (2, 3):
-            raise ValueError(f'2 or 3 coords required in {type(self).__name__}'
-                             '.vector3_from_coords()')
+            raise OopsValueError(f'2 or 3 coords required in {type(self).__name__}'
+                                 '.vector3_from_coords()')
 
     ######################################################################################
     # Each subclass must override...

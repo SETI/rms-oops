@@ -2,8 +2,9 @@
 # oops/backplane/distance.py
 ##########################################################################################
 
-from oops.backplane import Backplane
-from oops.constants import C
+from oops._exceptions import OopsValueError
+from oops.backplane   import Backplane
+from oops.constants   import C
 
 
 def distance(self, event_key, direction='dep'):
@@ -18,11 +19,11 @@ def distance(self, event_key, direction='dep'):
         Scalar: The distance in km, registered as a backplane.
 
     Raises:
-        ValueError: If `direction` is neither 'arr' nor 'dep'.
+        OopsValueError: If `direction` is neither 'arr' nor 'dep'.
     """
 
     if direction not in ('dep', 'arr'):
-        raise ValueError('invalid photon direction: ' + repr(direction))
+        raise OopsValueError('invalid photon direction: ' + repr(direction))
 
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)
@@ -46,11 +47,11 @@ def light_time(self, event_key, direction='dep'):
         Scalar: The light travel time in seconds, registered as a backplane.
 
     Raises:
-        ValueError: If `direction` is neither 'arr' nor 'dep'.
+        OopsValueError: If `direction` is neither 'arr' nor 'dep'.
     """
 
     if direction not in ('dep', 'arr'):
-        raise ValueError('invalid photon direction: ' + repr(direction))
+        raise OopsValueError('invalid photon direction: ' + repr(direction))
 
     self.refresh()
     event_key = Backplane.standardize_event_key(event_key)

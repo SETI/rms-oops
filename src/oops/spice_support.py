@@ -7,7 +7,8 @@ import numbers
 import cspyce
 import spicedb
 
-from oops.path.path_ import Path
+from oops._exceptions import OopsTypeError
+from oops.path.path_  import Path
 
 # Maintain dictionaries that translate names in the SPICE toolkit into their
 # corresponding names in the Frame and Path registries.
@@ -54,7 +55,7 @@ def body_id_and_name(arg):
 
     Raises:
         LookupError: If the argument is neither a recognized name nor an integer.
-        TypeError: If the argument names a registered Path that is not a SpicePath.
+        OopsTypeError: If the argument names a registered Path that is not a SpicePath.
     """
 
     # First see if the path is already registered
@@ -64,8 +65,8 @@ def body_id_and_name(arg):
             return (0, 'SSB')
 
         if type(path).__name__ != 'SpicePath':
-            raise TypeError('path ' + repr(path.path_id) + ' is a '
-                            + type(path).__name__ + ', not a SpicePath')
+            raise OopsTypeError('path ' + repr(path.path_id) + ' is a '
+                                + type(path).__name__ + ', not a SpicePath')
 
         return (path._spice_path_code, path._spice_path_name)
     except KeyError:

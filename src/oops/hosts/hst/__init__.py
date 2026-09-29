@@ -842,7 +842,7 @@ class HST(object):
                 elif 'f' in dtype:
                     value = float(value)
                 else:
-                    raise ValueError('Unrecognized dtype: ' + dtype)
+                    raise oops.OopsValueError('Unrecognized dtype: ' + dtype)
 
                 # Add to the row's dictionary
                 row_dict[names[c]] = value

@@ -697,8 +697,8 @@ def _clean_up_args(args):
         args (argparse.Namespace): The parsed command-line arguments, modified in place.
 
     Returns:
-        Namespace: The same object, with the module, observation, planet, moon, ring, and
-        test suite values filled in and validated.
+        argparse.Namespace: The same object, with the module, observation, planet, moon,
+        ring, and test suite values filled in and validated.
 
     Raises:
         ValueError: If the given arguments are inconsistent, such as an observation file

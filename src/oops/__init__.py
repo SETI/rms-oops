@@ -28,6 +28,9 @@ import cspyce.aliases
 cspyce.use_errors()
 cspyce.use_aliases()
 
+from oops._exceptions import (OopsException, OopsIndexError, OopsKeyError,
+                              OopsRuntimeError, OopsTypeError, OopsValueError)
+
 import oops.cadence
 import oops.calibration
 import oops.fov
@@ -76,7 +79,8 @@ __all__ = ['cadence', 'calibration', 'fov', 'gravity', 'frame', 'observation', '
            'Fittable', 'Meshgrid', 'Transform', 'constants', 'spice', 'config', 'mutable',
            'C', 'C_INVERSE', 'RPD', 'DPR', 'SPR', 'RPS', 'SPD', 'AU', 'PI', 'TWOPI',
            'HALFPI', 'Boolean', 'Matrix', 'Matrix3', 'Pair', 'Quaternion', 'Qube',
-           'Scalar', 'Vector', 'Vector3']
+           'Scalar', 'Vector', 'Vector3', 'OopsException', 'OopsIndexError', 'OopsKeyError',
+           'OopsRuntimeError', 'OopsTypeError', 'OopsValueError']
 
 try:
     from ._version import __version__

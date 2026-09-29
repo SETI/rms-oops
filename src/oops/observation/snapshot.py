@@ -5,6 +5,7 @@
 import numpy as np
 
 from polymath                 import Scalar, Pair, Vector, Vector3, Qube
+from oops._exceptions         import OopsValueError
 from oops.observation         import Observation
 from oops.body                import Body
 from oops.cadence             import Cadence
@@ -50,8 +51,8 @@ class Snapshot(Observation):
                 included as needed.
 
         Raises:
-            ValueError: If `axes` does not contain both 'u' and 'v', or if `tstart` is a
-                Cadence whose shape is not (1,).
+            OopsValueError: If `axes` does not contain both 'u' and 'v', or if `tstart`
+                is a Cadence whose shape is not (1,).
         """
 
         # Basic properties
@@ -79,7 +80,7 @@ class Snapshot(Observation):
         if isinstance(tstart, Cadence):
             self.cadence = tstart
             if self.cadence.shape != (1,):
-                raise ValueError('Shape of Snapshot cadence must be (1,)')
+                raise OopsValueError('Shape of Snapshot cadence must be (1,)')
             self.texp = self.cadence.time[1] - self.cadence.time[0]
         else:
             self.cadence = SnapCadence(tstart, texp)
@@ -436,16 +437,16 @@ class Snapshot(Observation):
                   the *v* pixels.
 
         Raises:
-            ValueError: If `return_type` is not one of "list", "flags", or "full", or if
-                both `trac` and `time` are defined.
+            OopsValueError: If `return_type` is not one of "list", "flags", or "full", or
+                if both `trac` and `time` are defined.
         """
 
         if return_type not in ('list', 'flags', 'full'):
-            raise ValueError('invalid return_type for Observation.inventory: '
-                             + repr(return_type))
+            raise OopsValueError('invalid return_type for Observation.inventory: '
+                                 + repr(return_type))
 
         if tfrac is not None and time is not None:
-            raise ValueError('tfrac and time cannot both be specified')
+            raise OopsValueError('tfrac and time cannot both be specified')
 
         if fov is None:
             fov = self.fov

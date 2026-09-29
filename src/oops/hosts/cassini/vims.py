@@ -579,7 +579,7 @@ def from_file(filespec, data=True, method='strict'):
 #                                 ir_cadence)
 
     else:
-        raise ValueError(f'unsupported VIMS format in file {filespec}')
+        raise oops.OopsValueError(f'unsupported VIMS format in file {filespec}')
 
     # Insert the data array
     if vis_obs is not None:
@@ -675,7 +675,7 @@ def _load_data_and_times(filespec, label):
     elif 'PC_' in core_item_type or  'LSB_' in core_item_type:
         core_dtype = '<'
     else:
-        raise TypeError('Unrecognized byte order: ' + core_item_type)
+        raise oops.OopsTypeError('Unrecognized byte order: ' + core_item_type)
 
     if 'UNSIGNED' in core_item_type:
         core_dtype += 'u'
@@ -687,7 +687,7 @@ def _load_data_and_times(filespec, label):
         core_dtype += 'f'
         native_dtype = 'float'
     else:
-        raise TypeError('Unrecognized core data type: ' + core_item_type)
+        raise oops.OopsTypeError('Unrecognized core data type: ' + core_item_type)
 
     core_dtype += str(core_item_bytes)
 
@@ -719,7 +719,7 @@ def _load_data_and_times(filespec, label):
     elif 'PC_' in core_item_type or  'LSB_' in suffix_item_type:
         suffix_item_dtype = '<'
     else:
-        raise TypeError('Unrecognized byte order: ' + suffix_item_type)
+        raise oops.OopsTypeError('Unrecognized byte order: ' + suffix_item_type)
 
     if 'UNSIGNED' in suffix_item_type:
         suffix_item_dtype += 'u'
@@ -731,7 +731,7 @@ def _load_data_and_times(filespec, label):
         suffix_item_dtype += 'f'
         native_dtype = 'float'
     else:
-        raise TypeError('Unrecognized suffix data type: ' + suffix_item_type)
+        raise oops.OopsTypeError('Unrecognized suffix data type: ' + suffix_item_type)
 
     suffix_item_dtype += str(suffix_item_bytes)
 

@@ -108,21 +108,21 @@ def test_the_time_list_must_be_one_dimensional_with_more_than_one_value(tlist) -
 def test_an_exposure_list_of_the_wrong_length_is_rejected() -> None:
     """One exposure time per time step, and no more."""
 
-    with pytest.raises(ValueError, match='Shape mismatch between texp and tlist'):
+    with pytest.raises(ValueError, match='Sequence shape mismatch between texp and tlist'):
         oops.cadence.Sequence(TLIST, [10., 10., 10.])
 
 
 def test_a_non_positive_exposure_in_a_list_is_rejected() -> None:
     """A time step of zero or negative duration samples nothing."""
 
-    with pytest.raises(ValueError, match='All texp values must be positive'):
+    with pytest.raises(ValueError, match='All Sequence texp values must be positive'):
         oops.cadence.Sequence(TLIST, [10., 10., 0., 10.])
 
 
 def test_a_non_positive_constant_exposure_is_rejected() -> None:
     """The same applies when one exposure time is given for every step."""
 
-    with pytest.raises(ValueError, match='All texp values must be positive'):
+    with pytest.raises(ValueError, match='Sequence texp must be positive'):
         oops.cadence.Sequence(TLIST, -10.)
 
 
