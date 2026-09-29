@@ -80,7 +80,7 @@ class Snapshot(Observation):
             self.cadence = tstart
             if self.cadence.shape != (1,):
                 raise ValueError('Shape of Snapshot cadence must be (1,)')
-            self.texp = self.cadence.time[1] - self.cadence.time[0]
+            self.texp = self.cadence.texp or (self.cadence.time[1] - self.cadence.time[0])
         else:
             self.cadence = SnapCadence(tstart, texp)
             self.texp = texp

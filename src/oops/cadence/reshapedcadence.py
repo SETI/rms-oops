@@ -41,6 +41,7 @@ class ReshapedCadence(Cadence):
         self.time = self._cadence.time
         self.midtime = self._cadence.midtime
         self.lasttime = self._cadence.lasttime
+        self.texp = self._cadence.texp
         self.is_continuous = self._cadence.is_continuous
         self.is_unique = self._cadence.is_unique
         self.min_tstride = self._cadence.min_tstride

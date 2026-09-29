@@ -44,6 +44,7 @@ class Instant(Cadence):
         self.time = (float(vals.min()), float(vals.max()))
         self.midtime = 0.5 * (self.time[0] + self.time[1])
         self.lasttime = self.time[1]
+        self.texp = 0.
 
         # Each time step is instantaneous, so the cadence is never continuous, and a
         # time falls in more than one time step only where a time is tabulated twice.

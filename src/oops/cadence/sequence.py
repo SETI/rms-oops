@@ -61,6 +61,7 @@ class Sequence(Cadence):
             if np.any(texp <= 0.):
                 raise ValueError('All texp values must be positive')
 
+            self.texp = None    # exposure time is not fixed
             self.min_tstride = np.min(tstrides)
             self.max_tstride = np.max(tstrides)
             self.is_continuous = np.all(texp[:-1] >= tstrides)
@@ -72,6 +73,7 @@ class Sequence(Cadence):
         elif texp:                  # texp is a nonzero constant
             if (texp <= 0.):
                 raise ValueError('All texp values must be positive')
+            self.texp = float(texp)
             self.min_tstride = np.min(tstrides)
             self.max_tstride = np.max(tstrides)
             self.is_continuous = (texp >= self.max_tstride)
@@ -93,6 +95,7 @@ class Sequence(Cadence):
                 raise ValueError('Sequence tlist inputs must be monotonic')
 
             tstrides = tstrides[:-1]
+            self.texp = None        # exposure time is not fixed
             self.min_tstride = np.min(tstrides)
             self.max_tstride = np.max(tstrides)
             self.is_continuous = True
@@ -100,8 +103,8 @@ class Sequence(Cadence):
             self._tstop_is_ordered = True
 
         # Convert back to Scalar and save
-        # as_readonly() ensures that these inputs cannot be modified by
-        # something external to the object.
+        # as_readonly() ensures that these inputs cannot be modified by something external
+        # to the object.
         self._tlist  = Scalar(tlist).as_readonly()
         self._texp   = Scalar(texp).as_readonly()
         self._tstop = Scalar(tstop).as_readonly()

@@ -33,10 +33,11 @@ class ReversedCadence(Cadence):
             raise ValueError(f'ReversedCadence axis must be 0, not {axis}')
 
         # Required attributes
-        self.shape         = self._cadence.shape
-        self.lasttime      = self._cadence.lasttime
         self.time          = self._cadence.time
         self.midtime       = self._cadence.midtime
+        self.lasttime      = self._cadence.lasttime
+        self.texp          = self._cadence.texp
+        self.shape         = self._cadence.shape
         self.is_continuous = self._cadence.is_continuous
         self.is_unique     = self._cadence.is_unique
         self.min_tstride   = self._cadence.min_tstride

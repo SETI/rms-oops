@@ -37,6 +37,7 @@ class TimeShift(Cadence, Fittable):
         self._refresh()
 
         self.shape = cadence.shape
+        self.texp = cadence.texp
         self.is_continuous = cadence.is_continuous
         self.is_unique = cadence.is_unique
         self.min_tstride = cadence.min_tstride

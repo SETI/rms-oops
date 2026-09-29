@@ -33,6 +33,7 @@ class DualCadence(Cadence):
         self.time = (self._long.time[0], self._long.lasttime + self._short.time[1])
         self.midtime = (self.time[0] + self.time[1]) * 0.5
         self.lasttime = self._long.lasttime + self._short.lasttime
+        self.texp = self._short.texp    # the short cadence defines the exposure
 
         # self._short begins at time zero, so self._short.time[1] is the duration
         # spanned within each long time step. The cadence is continuous only if that
