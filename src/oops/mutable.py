@@ -47,6 +47,7 @@ Notes:
     frozen.
 """
 
+import weakref
 from collections import namedtuple
 from collections.abc import Iterable
 from typing import Any
@@ -71,7 +72,46 @@ _NEVER_REFRESHED = -1
 # the first call to `refresh` always applies `_refresh`. This is what initializes the
 # derived attributes of an object at the end of its constructor.
 
-_IMMUTABLE_OBJECTS = set()  # for objects with __dict__ that can't have attributes set
+_IMMUTABLE_OBJECTS: dict[int, weakref.ref] = {}
+# For objects with __dict__ that can't have attributes set, keyed by id() and holding a
+# weak reference to the object itself. The id alone is not enough: once the object is
+# freed, CPython can hand the same id to a new, unrelated object, which would then be
+# reported as immutable.
+
+
+def _mark_immutable(obj: Any, /) -> None:
+    """Record that an object cannot hold its own cached mutable state.
+
+    Parameters:
+        obj (Any): An object whose attributes cannot be set.
+    """
+
+    obj_id = id(obj)
+
+    def _forget(ref: weakref.ref) -> None:
+        if _IMMUTABLE_OBJECTS.get(obj_id) is ref:
+            del _IMMUTABLE_OBJECTS[obj_id]
+
+    # An object that cannot be weakly referenced is simply not recorded; the record is
+    # only a shortcut, and _get_info reaches the same answer without it
+    try:
+        _IMMUTABLE_OBJECTS[obj_id] = weakref.ref(obj, _forget)
+    except TypeError:
+        pass
+
+
+def _is_marked_immutable(obj: Any, /) -> bool:
+    """True if :func:`_mark_immutable` recorded this object, and not merely its id.
+
+    Parameters:
+        obj (Any): The object to test.
+
+    Returns:
+        bool: True if this object was recorded as unable to hold its own state.
+    """
+
+    ref = _IMMUTABLE_OBJECTS.get(id(obj))
+    return ref is not None and ref() is obj
 
 
 def refresh(obj: Any, /) -> bool:
@@ -295,7 +335,7 @@ def _freeze_internal(obj: Any, /, memo: dict, info_memo: dict) -> bool:
             try:
                 obj._MUTABLE_info = info
             except (AttributeError, TypeError):
-                _IMMUTABLE_OBJECTS.add(obj_id)
+                _mark_immutable(obj)
 
     memo[obj_id] = None         # record that this object has been frozen
     memo[0] = changed
@@ -510,7 +550,7 @@ def _get_info(obj: Any, /, memo: dict | None = None) -> _Info:
     if obj_id in memo:
         return memo[obj_id]
 
-    if obj_id in _IMMUTABLE_OBJECTS:
+    if _is_marked_immutable(obj):
         memo[obj_id] = _IMMUTABLE
         return _IMMUTABLE
 
@@ -557,7 +597,7 @@ def _get_info(obj: Any, /, memo: dict | None = None) -> _Info:
         try:
             obj._MUTABLE_info = info
         except (AttributeError, TypeError):
-            _IMMUTABLE_OBJECTS.add(obj_id)
+            _mark_immutable(obj)
 
     memo[obj_id] = info
     return info

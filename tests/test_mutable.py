@@ -2,10 +2,15 @@
 # tests/test_mutable.py
 ##########################################################################################
 
+import gc
+import weakref
+from dataclasses import dataclass
+
 import pytest
 
 from oops          import mutable
 from oops.fov      import FlatFOV, OffsetFOV, SliceFOV
+from oops.oops     import Oops
 
 def _flat() -> FlatFOV:
     """A plain FlatFOV, which carries no fittable parameters.
@@ -475,5 +480,41 @@ def test_a_foreign_holder_is_never_tested_for_a_change_of_its_own() -> None:
     mutable.set_params(holder.config, (7., 8.))     # the sub-object refreshes itself
 
     assert not mutable.refresh(holder)      # holder's own account is never re-tested
+
+
+@dataclass(frozen=True)
+class _FrozenOops(Oops):
+    """An Oops object that refuses every attribute assignment, so oops cannot cache on it."""
+
+    x: object
+
+
+def test_an_object_that_refuses_a_cache_is_recorded_until_it_is_freed() -> None:
+    """The record of an object that cannot hold a cache disappears along with it."""
+
+    frozen = _FrozenOops(int)
+    frozen_id = id(frozen)
+    mutable.is_frozen(frozen)
+
+    assert frozen_id in mutable._IMMUTABLE_OBJECTS
+
+    del frozen
+    gc.collect()
+
+    assert frozen_id not in mutable._IMMUTABLE_OBJECTS
+
+
+def test_a_recorded_id_does_not_mark_a_different_object_immutable() -> None:
+    """A new object that is given the id of a recorded one is judged on its own."""
+
+    holder = _ForeignHolder(_fittable())
+    stand_in = _FrozenOops(int)
+    try:
+        # Simulate the id of a freed object being reused for holder
+        mutable._IMMUTABLE_OBJECTS[id(holder)] = weakref.ref(stand_in)
+
+        assert mutable.is_mutable(holder)
+    finally:
+        mutable._IMMUTABLE_OBJECTS.pop(id(holder), None)
 
 ##########################################################################################
