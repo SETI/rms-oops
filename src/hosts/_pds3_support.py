@@ -266,30 +266,49 @@ def _read_pds3_image_array(label, index=0):
     return array
 
 
-def _resolve_pds3_filename(base_dir, name):
+def _resolve_pds3_filename(parent, basename):
     """Return the path to a data file, tolerating case differences.
 
     The name recorded in a PDS3 label may not match the case used on disk. We first try
-    the name exactly as given, then its all-uppercase form, then its all-lowercase form,
-    all within `base_dir`.
+    the name exactly as given, then its various uppercase, lowercase, and mixed-case
+    forms.
 
     Parameters:
-        base_dir (pathlib.Path): The directory in which to look for the file.
-        name (str): The file name as recorded in the label.
+        parent (pathlib.Path | FCPath): The directory in which to look for the file.
+        basename (str): The file basename as recorded in the label.
 
     Returns:
-        Path: Path of the first matching file that exists.
+        pathlib.Path | FCPath: Path of the matching file that exists, of the same type
+        as `parent`.
 
     Raises:
-        FileNotFoundError: If no matching file is found in `base_dir`.
+        FileNotFoundError: If no matching file is found in `parent`.
     """
 
-    for candidate in (name, name.upper(), name.lower()):
-        path = base_dir / candidate
+    stem, dot, suffix = basename.rpartition('.')
+    if dot:
+        suffix = '.' + suffix
+    else:
+        stem = basename
+        suffix = ''
+
+    # Define all options
+    stems = [stem, stem.upper(), stem.lower()]
+    suffixes = [suffix, suffix.upper(), suffix.lower()]
+
+    options = [basename]
+    for stem in stems:
+        for suffix in suffixes:
+            option = stem + suffix
+            if option not in options:
+                options.append(option)
+
+    # Check the file system
+    for option in options:
+        path = parent / option
         if path.is_file():
             return path
 
-    raise FileNotFoundError(f'Could not find data file {name!r} in {base_dir} '
-                            '(tried original, uppercase, and lowercase forms)')
+    raise FileNotFoundError(f'Data file {basename!r} not found in {parent}')
 
 ##########################################################################################
