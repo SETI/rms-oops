@@ -1,5 +1,5 @@
 ##########################################################################################
-# hosts/_CONSTELLATIONS.py
+# oops/lightsource/_CONSTELLATIONS.py
 ##########################################################################################
 
 # From https://archive.aavso.org/constellation-names-and-abbreviations
