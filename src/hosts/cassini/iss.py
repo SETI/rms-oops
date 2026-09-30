@@ -11,7 +11,7 @@ from pdsparser import Pds3Label
 from vicar     import VicarImage
 
 import oops
-from . import TOUR, _Cassini
+from . import _Cassini
 from hosts import Host
 from hosts._pds3_support import _read_pds3_image_array
 
@@ -474,7 +474,7 @@ class ISS(Host):
         if len(parts) < 3:
             return target
         if parts[1][-2:] in {'RI', 'RA', 'RB', 'RC', 'RD', 'RE', 'RF', 'RG'}:
-            if tstart < TOUR:
+            if tstart < _Cassini.TOUR:
                 return 'JUPITER_RING_PLANE'
             return 'SATURN_RING_PLANE'
 

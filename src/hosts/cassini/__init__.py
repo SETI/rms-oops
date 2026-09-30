@@ -11,13 +11,13 @@ import oops
 
 from oops.body import Body
 
-TOUR = (2003 - 2000) * 365 * 86400      # Rough ET dividing Saturn from Jupiter
-
 
 class _Cassini:
     """An instance-free class to hold Cassini-specific parameters.
 
     Attributes:
+        TOUR (int): A rough time in seconds TDB dividing the Jupiter flyby from the
+            Saturn tour; observations before it are treated as Jupiter observations.
         START_TIME (str): The start of the mission as an ISO date.
         STOP_TIME (str): The end of the mission as an ISO date.
         MONTHS (int): The number of equal "months" into which the mission is divided for
@@ -42,6 +42,7 @@ class _Cassini:
         initialized (bool): True after :meth:`initialize` has been called.
     """
 
+    TOUR = (2003 - 2000) * 365 * 86400      # Rough ET dividing Saturn from Jupiter
     START_TIME = '1997-10-01'
     STOP_TIME  = '2017-10-01'
     MONTHS = 240        # 20 years * 12 months/year
@@ -409,12 +410,12 @@ class _Cassini:
         """
         if return_all_planets:
             bodies = [1, 199, 2, 299, 3, 399, 4, 499, 5, 599, 6, 699, 7, 799, 8, 899]
-            if time[0] >= TOUR:
+            if time[0] >= _Cassini.TOUR:
                 bodies += Body.SATURN_MOONS_LOADED
             else:
                 bodies += Body.JUPITER_MOONS_LOADED
         else:
-            if time[0] >= TOUR:
+            if time[0] >= _Cassini.TOUR:
                 bodies = [6, 699] + Body.SATURN_MOONS_LOADED
             else:
                 bodies = [5, 599] + Body.JUPITER_MOONS_LOADED
