@@ -11,7 +11,7 @@ from pdsparser import Pds3Label
 from vicar     import VicarImage
 
 import oops
-from . import _Cassini
+from . import TOUR, _Cassini
 from hosts import Host
 from hosts._pds3_support import _read_pds3_image_array
 
@@ -336,11 +336,23 @@ class ISS(Host):
         mode   = dict_['INSTRUMENT_MODE_ID']        # "FULL", "SUM2", or "SUM4"
         camera = 'WAC' if 'WIDE' in dict_['INSTRUMENT_NAME'] else 'NAC'
 
+        # Merge filter names, ignoring "CL1" and "CL2"
         if 'FILTER_NAME' in dict_:
             filter1, filter2 = dict_['FILTER_NAME']
         else:
             filter1 = dict_['FILTER1_NAME']
             filter2 = dict_['FILTER2_NAME']
+
+        if filter1[:2] == 'CL':
+            if filter2[:2] == 'CL':
+                filter_ = 'CLEAR'
+            else:
+                filter_ = filter2
+        else:
+            if filter2[:2] == 'CL':
+                filter_ = filter1
+            else:
+                filter_ = '+'.join(sorted((filter1, filter2)))
 
         gain_mode = None
         if dict_['GAIN_MODE_ID'][:3] == '215':
@@ -352,12 +364,13 @@ class ISS(Host):
         elif dict_['GAIN_MODE_ID'][:2] == '12':
             gain_mode = 3
 
-        label_target = dict_['TARGET_NAME']
+        label_target = _TARGET_NAME_REPAIRS.get(dict_['TARGET_NAME'],
+                                                dict_['TARGET_NAME'])
         if label_target in _TARGET_STARS:
             label_lightsource = oops.lightsource.star_lookup(label_target)
             label_target = 'NONE'
         else:
-            label_target = _TARGET_NAME_REPAIRS.get(label_target, label_target)
+            label_target = ISS._fix_cassini_iss_target(label_target, dict_, tstart)
             label_lightsource = 'SUN'
 
         # Make sure the SPICE kernels are loaded; construct the frame
@@ -396,9 +409,11 @@ class ISS(Host):
         obs.insert_subfield('instrument', 'ISS')
         obs.insert_subfield('detector', camera)
         obs.insert_subfield('sampling', mode)
+        obs.insert_subfield('filter', filter_)
         obs.insert_subfield('filter1', filter1)
         obs.insert_subfield('filter2', filter2)
         obs.insert_subfield('gain_mode', gain_mode)
+        obs.insert_subfield('label_target', dict_['TARGET_NAME'])
 
         # With a custom frame, pointing never came from a CK, so any CK that happens to be
         # furnished (e.g. the gapfill CKs loaded unconditionally by _Cassini.initialize())
@@ -434,6 +449,36 @@ class ISS(Host):
         """True if the given VicarLabel describes this host's data."""
 
         return ISS._detect_in_pds3(label)   # PDS3 and VICAR use the same names
+
+    @staticmethod
+    def _fix_cassini_iss_target(target, dict_, tstart):
+        """The target of a ring observation, or the given target otherwise.
+
+        The observation is identified as a ring observation by the target code in its
+        OBSERVATION_ID, which has the form "ISS_<orbit><code>_<activity>_<suffix>" (e.g.,
+        "ISS_053RI_PHOTOMDRK002_PRIME"); the ring codes are RI and RA through RG.
+
+        Parameters:
+            target (str): The target name from the label, after repairs.
+            dict_ (dict): The label or index row, from which OBSERVATION_ID is read.
+            tstart (float): The observation start time in seconds TDB, which determines
+                whether a ring observation is of Jupiter's rings or Saturn's.
+
+        Returns:
+            str: "JUPITER_RING_PLANE" for a ring observation before the Saturn tour,
+            "SATURN_RING_PLANE" for one during it, and `target` for any other observation
+            or if OBSERVATION_ID is absent or not of the expected form.
+        """
+
+        parts = dict_.get('OBSERVATION_ID', '').split('_')
+        if len(parts) < 3:
+            return target
+        if parts[1][-2:] in {'RI', 'RA', 'RB', 'RC', 'RD', 'RE', 'RF', 'RG'}:
+            if tstart < TOUR:
+                return 'JUPITER_RING_PLANE'
+            return 'SATURN_RING_PLANE'
+
+        return target
 
     @staticmethod
     def _initialize(*, ck='reconstructed', planets=None, asof=None, spk='reconstructed',
