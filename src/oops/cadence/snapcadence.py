@@ -22,7 +22,7 @@ class SnapCadence(Metronome):
 
     def __getstate__(self):
         self.refresh()
-        return (self._tstart, self._texp, self._clip)
+        return (self._tstart, self.texp, self._clip)
 
     def __setstate__(self, state):
         (tstart, texp, clip) = state

@@ -178,7 +178,8 @@ def from_file(filespec, astrometry=False, action='error', method='strict',
                                             override=True)
 
     # Create a Snapshot
-    result = oops.obs.Snapshot(('v','u'), tstart, texp, fovs[camera],
+    result = oops.obs.Snapshot(('v','u'), tstart, texp,
+                               fov = fovs[camera],
                                path = spacecraft,
                                frame = image_frame,
                                dict = vicar_dict,              # the VICAR dict
@@ -188,7 +189,7 @@ def from_file(filespec, astrometry=False, action='error', method='strict',
                                filter = filter,
                                planet = planet,
                                target = target,
-                               filespec = filespec,
+                               filepath = filespec,
                                basename = filespec.name)
     result.insert_subfield('spice_to_frame', oops.Matrix3.IDENTITY)
     result.insert_subfield('spice_frame_name', f'VG{ivgr}_ISS{camera[:2]}')
@@ -222,7 +223,7 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
 
     Returns:
         list[Snapshot]: One observation per row of the index, each with subfields
-        `filespec`, `basename`, `spice_to_frame`, `spice_frame_name` and
+        `filepath`, `basename`, `spice_to_frame`, `spice_frame_name` and
         `spice_frame_id` inserted.
     """
     ISS.initialize()    # Define everything the first time through
@@ -324,7 +325,7 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
 
         filepath = label_dict['VOLUME_ID'] + '/' + label_dict['FILE_SPECIFICATION_NAME']
         basename = label_dict['FILE_SPECIFICATION_NAME'].rpartition('/')[-1]
-        item.insert_subfield('filespec', filepath)
+        item.insert_subfield('filepath', filepath)
         item.insert_subfield('basename', basename)
         item.insert_subfield('spice_to_frame', oops.Matrix3.IDENTITY)
         item.insert_subfield('spice_frame_name', f'VG{ivgr}_ISS{camera[:2]}')

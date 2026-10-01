@@ -68,7 +68,7 @@ For the Cassini image above:
 ``subfields``
     Everything else the host attached, each also available as an attribute: for Cassini,
     ``instrument``, ``detector``, ``filter1``, ``filter2``, ``sampling``, ``gain_mode``,
-    the label dictionary ``dict``, the ``filespec`` and ``basename``, and the list of
+    the label dictionary ``dict``, the ``filepath`` and ``basename``, and the list of
     ``spice_kernels`` used.
 
 Pixels, lines of sight and times

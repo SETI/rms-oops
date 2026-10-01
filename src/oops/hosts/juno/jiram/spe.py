@@ -38,7 +38,7 @@ def from_file(filespec, label, fast_distortion=True,
         * `obs`: The Slit1D covering all bands.
         * `slits`: One Snapshot per band.
 
-        Each observation has subfields `filespec` and `basename` inserted.
+        Each observation has subfields `filepath` and `basename` inserted.
     """
 
     filespec = FCPath(filespec)
@@ -56,13 +56,15 @@ def from_file(filespec, label, fast_distortion=True,
     slits = []
     for i in range(meta.nsamples):
         item = oops.obs.Snapshot(('v','u'),
-                                 meta.tstart, meta.exposure, meta.fov,
-                                 'JUNO', 'JUNO_JIRAM_S',
+                                 meta.tstart, meta.exposure,
+                                 fov = meta.fov,
+                                 path = 'JUNO',
+                                 frame = 'JUNO_JIRAM_S',
                                  data=np.reshape(data[:,i],(1,meta.nlines)) )
 
 #        item.insert_subfield('spice_kernels',
 #                   Juno.used_kernels(item.time, 'jiram', return_all_planets))
-        item.insert_subfield('filespec', filespec)
+        item.insert_subfield('filepath', filespec)
         item.insert_subfield('basename', filespec.name)
         slits.append(item)
 
@@ -70,12 +72,15 @@ def from_file(filespec, label, fast_distortion=True,
 
     # Construct Slit1D for all bands
     obs = oops.obs.Slit1D(('u','b'),
-                          meta.tstart, meta.exposure, meta.fov,
-                          'JUNO', 'JUNO_JIRAM_S', data=data )
+                          meta.tstart, meta.exposure,
+                          fov = meta.fov,
+                          path = 'JUNO',
+                          frame = 'JUNO_JIRAM_S',
+                          data = data)
 
 #    obs.insert_subfield('spice_kernels',
 #               Juno.used_kernels(item.time, 'jiram', return_all_planets))
-    obs.insert_subfield('filespec', filespec)
+    obs.insert_subfield('filepath', filespec)
     obs.insert_subfield('basename', filespec.name)
 
     return (obs, slits)

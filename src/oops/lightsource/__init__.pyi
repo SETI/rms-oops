@@ -21,7 +21,7 @@ from polymath.typedefs import PairLike, ScalarLike, Vector3Like
 from oops.oops import Oops as Oops
 from oops.path import Path as Path
 
-__all__ = ['LightSource', 'DiskSource']
+__all__ = ['LightSource', 'DiskSource', 'star_lookup', 'add_star']
 
 class LightSource(Oops):
     name: str
@@ -51,5 +51,9 @@ class DiskSource(LightSource):
         guess: ScalarLike | None = None, antimask: ndarray | bool | None = None,
         quick: dict | bool | None = None,
         converge: dict | None = None) -> tuple[None, Event]: ...
+
+def star_lookup(key: str) -> LightSource: ...
+def add_star(names: str | list[str], ra: float, dec: float,
+    mag: float | None = None, type_info: str | None = None) -> None: ...
 
 ##########################################################################################

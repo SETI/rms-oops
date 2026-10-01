@@ -28,7 +28,7 @@ def from_file(filespec, return_all_planets=False, method='strict', **parameters)
         **parameters (Any): Additional keyword arguments; they are accepted and ignored.
 
     Returns:
-        Snapshot: The observation, with subfields `filespec`, `basename` and `dict`
+        Snapshot: The observation, with subfields `filepath`, `basename` and `dict`
         inserted.
     """
     SRU.initialize()    # Define everything the first time through; use
@@ -64,8 +64,10 @@ def from_file(filespec, return_all_planets=False, method='strict', **parameters)
 
     # Construct the Snapshot
     obs = oops.obs.Snapshot(('v','u'),
-                            meta.tstart, meta.exposure, SRU.fov(),
-                            'JUNO', frame,
+                            meta.tstart, meta.exposure,
+                            fov = SRU.fov(),
+                            path = 'JUNO',
+                            frame = frame,
                             instrument = 'SRU' + str(meta.unit),
                             target = meta.target,
                             tdi_on = meta.tdi_on,
@@ -73,7 +75,7 @@ def from_file(filespec, return_all_planets=False, method='strict', **parameters)
 
 #    obs.insert_subfield('spice_kernels', \
 #                   Juno.used_kernels(obs.time, 'sru', return_all_planets))
-    obs.insert_subfield('filespec', filespec)
+    obs.insert_subfield('filepath', filespec)
     obs.insert_subfield('basename', filespec.name)
     obs.insert_subfield('dict', label)
 

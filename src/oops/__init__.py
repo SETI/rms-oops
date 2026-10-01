@@ -36,6 +36,7 @@ import oops.calibration
 import oops.fov
 import oops.gravity
 import oops.frame
+import oops.lightsource
 import oops.observation
 import oops.path
 import oops.surface

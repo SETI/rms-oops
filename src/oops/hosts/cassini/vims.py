@@ -447,7 +447,8 @@ def from_file(filespec, data=True, method='strict'):
         if ir_data is not None:
             ir_data = ir_data.reshape((frames, 256))
 
-        ir_obs = oops.obs.Pixel(('t','b'), ir_cadence, ir_fov, 'CASSINI', ir_frame_id)
+        ir_obs = oops.obs.Pixel(('t','b'), cadence=ir_cadence, fov=ir_fov,
+                                path='CASSINI', frame=ir_frame_id)
 
     # Single LINE case
     elif swath_length == 1:
@@ -455,8 +456,8 @@ def from_file(filespec, data=True, method='strict'):
             if vis_data is not None:
                 vis_data = vis_data.reshape((samples, 96))
 
-            vis_obs = oops.obs.Slit1D(('u','b'), tstart, vis_texp_nonzero, vis_fov,
-                                       'CASSINI', vis_frame_id)
+            vis_obs = oops.obs.Slit1D(('u','b'), tstart, vis_texp_nonzero, fov=vis_fov,
+                                       path='CASSINI', frame=vis_frame_id)
 
         if not ir_is_off:
             if ir_data is not None:
@@ -465,14 +466,16 @@ def from_file(filespec, data=True, method='strict'):
             if backplane_cadence is not None:
                 ir_fast_cadence = backplane_cadence
 
-            ir_obs = oops.obs.RasterSlit1D(('ut','b'), ir_fast_cadence, ir_fov,
-                                           'CASSINI', ir_frame_id)
+            ir_obs = oops.obs.RasterSlit1D(('ut','b'), cadence=ir_fast_cadence,
+                                           fov=ir_fov, path='CASSINI',
+                                           frame=ir_frame_id)
 
     # Single 2-D IMAGE case
     elif samples == swath_width and lines == swath_length:
         if not vis_is_off:
-            vis_obs = oops.obs.TimedImage(('vt','u','b'), vis_header_cadence, vis_fov,
-                                          'CASSINI', vis_frame_id)
+            vis_obs = oops.obs.TimedImage(('vt','u','b'), cadence=vis_header_cadence,
+                                          fov=vis_fov, path='CASSINI',
+                                          frame=vis_frame_id)
 
         if not ir_is_off:
             if backplane_cadence is None:
@@ -482,14 +485,16 @@ def from_file(filespec, data=True, method='strict'):
                 ir_cadence = oops.cadence.ReshapedCadence(backplane_cadence,
                                                          (lines,samples))
 
-            ir_obs = oops.obs.TimedImage(('vslow','ufast','b'), ir_cadence, ir_fov,
-                                         'CASSINI', ir_frame_id)
+            ir_obs = oops.obs.TimedImage(('vslow','ufast','b'), cadence=ir_cadence,
+                                         fov=ir_fov, path='CASSINI',
+                                         frame=ir_frame_id)
 
     # Multiple LINE case
     elif swath_length == 1 and swath_length == lines:
         if not vis_is_off:
-            vis_obs = oops.obs.TimedImage(('vt','u','b'), frame_cadence, vis_fov,
-                                          'CASSINI', vis_frame_id)
+            vis_obs = oops.obs.TimedImage(('vt','u','b'), cadence=frame_cadence,
+                                          fov=vis_fov, path='CASSINI',
+                                          frame=vis_frame_id)
 
         if not ir_is_off:
             if backplane_cadence is None:
@@ -498,8 +503,9 @@ def from_file(filespec, data=True, method='strict'):
                 ir_cadence = oops.cadence.ReshapedCadence(backplane_cadence,
                                                          (lines,samples))
 
-            ir_obs = oops.obs.TimedImage(('vslow','ufast','b'), ir_cadence, ir_fov,
-                                         'CASSINI', ir_frame_id)
+            ir_obs = oops.obs.TimedImage(('vslow','ufast','b'), cadence=ir_cadence,
+                                         fov=ir_fov, path='CASSINI',
+                                         frame=ir_frame_id)
 
 # 1/9/15 broken code no longer needed
 #     # Multiple 2-D IMAGE case

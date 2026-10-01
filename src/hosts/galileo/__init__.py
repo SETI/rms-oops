@@ -1,9 +1,7 @@
 ##########################################################################################
-# oops/hosts/galileo/__init__.py: Galileo class
-#
-# Utility functions for managing SPICE kernels while working with Galileo data
-# sets.
+# hosts/galileo/__init__.py
 ##########################################################################################
+
 import re
 
 import numpy as np
@@ -14,8 +12,7 @@ import cspyce
 import oops
 
 from oops.body import Body
-
-__all__ = ['Galileo']
+from spicedb   import get_spice_filecache_prefix
 
 # Mission targets, rough time divisions
 TIMELINE = [
@@ -28,38 +25,92 @@ TIMELINE = [
     {'ET': 0, 'UTC': '1994-07-22T12:00:00.00', 'target': 'JUPITER', 'moons': True}
 ]
 
-for i in range(len(TIMELINE)):
-    TIMELINE[i]['ET'] = \
-        julian.tdb_from_tai(julian.tai_from_iso(TIMELINE[i]['UTC']))
+for _phase in TIMELINE:
+    _phase['ET'] = julian.tdb_from_tai(julian.tai_from_iso(_phase['UTC']))
 
-##########################################################################################
-# Routines for managing the loading of C and SP kernels
-##########################################################################################
+# The fixed set of kernels furnished by _Galileo.load_kernels(), relative to the SPICE
+# file cache prefix
+_KERNELS = [
+    'General/LSK/naif0012.tls',
+    'Galileo/IK/gll36001.ti',
+    'Galileo/FK/gll_v0.tf',
+    'Galileo/SPK/de421.bsp',
+    'Galileo/SPK/de432s.bsp',
+    'Galileo/CK/ckc03b_plt.bc',
+    'Galileo/CK/ckc09b_plt.bc',
+    'Galileo/CK/ckc10b_plt.bc',
+    'Galileo/CK/ckc20f_plt.bc',
+    'Galileo/CK/ckc21f_plt.bc',
+    'Galileo/CK/ckc22f_plt.bc',
+    'Galileo/CK/ckc23f_plt.bc',
+    'Galileo/CK/ckc30f_plt.bc',
+    'Galileo/CK/cke04b_plt.bc',
+    'Galileo/CK/cke06b_plt.bc',
+    'Galileo/CK/cke11b_plt.bc',
+    'Galileo/CK/cke12f_plt.bc',
+    'Galileo/CK/cke14f_plt.bc',
+    'Galileo/CK/cke15f_plt.bc',
+    'Galileo/CK/cke16f_plt.bc',
+    'Galileo/CK/cke17f_plt.bc',
+    'Galileo/CK/cke18f_plt.bc',
+    'Galileo/CK/cke19f_plt.bc',
+    'Galileo/CK/cke26f_plt.bc',
+    'Galileo/CK/ckg01b_plt.bc',
+    'Galileo/CK/ckg02b_plt.bc',
+    'Galileo/CK/ckg07b_plt.bc',
+    'Galileo/CK/ckg08b_plt.bc',
+    'Galileo/CK/ckg28f_plt.bc',
+    'Galileo/CK/ckg29f_plt.bc',
+    'Galileo/CK/cki24f_plt.bc',
+    'Galileo/CK/cki25f_plt.bc',
+    'Galileo/CK/cki27f_plt.bc',
+    'Galileo/CK/cki31f_plt.bc',
+    'Galileo/CK/cki32f_plt.bc',
+    'Galileo/CK/ckj0cav3_plt.bc',
+    'Galileo/CK/ckj0cduh_plt.bc',
+    'Galileo/CK/ckj0cv3_plt.bc',
+    'Galileo/CK/ckj0eav3_plt.bc',
+    'Galileo/CK/ckj0ebv3_plt.bc',
+    'Galileo/CK/ckj0ecv3_plt.bc',
+    'Galileo/CK/ckjaap_plt.bc',
+    'Galileo/CK/ckjaav3_plt.bc',
+    'Galileo/CK/ckjabp_plt.bc',
+    'Galileo/CK/ckjabv3_plt.bc',
+    'Galileo/CK/gll_plt_pre_1990_v00.bc',
+    'Galileo/CK/gll_plt_pre_1991_v00.bc',
+    'Galileo/CK/gll_plt_pre_1992_v00.bc',
+    'Galileo/CK/gll_plt_pre_1993_v00.bc',
+    'Galileo/CK/gll_plt_pre_1994_v00.bc',
+    'Galileo/CK/gll_plt_pre_1995_v00.bc',
+    'Galileo/CK/gll_plt_pre_1996_v00.bc',
+    'Galileo/CK/gll_plt_pre_1997_v00.bc',
+    'Galileo/CK/gll_plt_pre_1998_v00.bc',
+    'Galileo/CK/gll_plt_pre_1999_v00.bc',
+    'Galileo/CK/gll_plt_pre_2000_v00.bc',
+    'Galileo/CK/gll_plt_pre_2001_v00.bc',
+    'Galileo/SPK/de421.bsp',
+    'Galileo/SPK/de432s.bsp',
+    'Galileo/SPK/gll_951120_021126_raj2007.bsp',
+    'Galileo/SPK/gll_951120_021126_raj2021.bsp',
+    'Galileo/SPK/s000131a.bsp',
+    'Galileo/SPK/s000615a.bsp',
+    'Galileo/SPK/s020128a.bsp',
+    'Galileo/SPK/s030916a.bsp',
+    'Galileo/SPK/s960730a.bsp',
+    'Galileo/SPK/s970311a.bsp',
+    'Galileo/SPK/s971125a.bsp',
+    'Galileo/SPK/s980326a.bsp',
+]
 
-# Make sure the leap seconds have been loaded
-oops.spice.load_leap_seconds()
 
-# We load CK and SPK files on a very rough month-by-month basis. This is simpler
-# than a more granular approach involving detailed calendar calculations. We
-# divide the period October 18, 1989 to September 21, 2003 up into "months" of
-# equal length. Given any TDB, we quickly determine the month within which it
-# falls. Each month is associated with a list of kernels that should be loaded
-# whenever information is needed about any time within that month +/- 12 hours.
-# The kernels needed for a given month only get loaded when they are needed, and
-# are only loaded once. For any geometry calculation involving Galileo, a quick
-# call to load_ck(time) or load_spk(time) will ensure that the information is
-# available.
-
-##########################################################################################
-
-class Galileo(object):
+class _Galileo:
     """An instance-free class to hold Galileo-specific parameters.
 
     Attributes:
         START_TIME (str): The start of the mission as an ISO date.
         STOP_TIME (str): The end of the mission as an ISO date.
-        MONTHS (int): The number of equal "months" into which the mission is divided
-            for the purpose of loading kernels.
+        MONTHS (int): The number of equal "months" into which the mission is divided for
+            the purpose of loading kernels.
         SPACECRAFT_ID (int): The NAIF ID of the Galileo spacecraft.
         SCLK_KERNEL (str): The spacecraft clock kernel, relative to the SPICE root.
         TDB0 (float): The mission start time in seconds TDB.
@@ -72,8 +123,8 @@ class Galileo(object):
         CK_LIST (numpy.ndarray): Object array holding, for each month, the list of
             KernelInfo objects for the C kernels needed within that month.
         CK_DICT (dict[str, KernelInfo]): The furnished C kernels, keyed by filespec.
-        SPK_LOADED (numpy.ndarray): Boolean array with one flag per month, True if the
-            SP kernels for that month have been furnished.
+        SPK_LOADED (numpy.ndarray): Boolean array with one flag per month, True if the SP
+            kernels for that month have been furnished.
         SPK_LIST (numpy.ndarray): Object array holding, for each month, the list of
             KernelInfo objects for the SP kernels needed within that month.
         SPK_DICT (dict[str, KernelInfo]): The furnished SP kernels, keyed by filespec.
@@ -95,6 +146,15 @@ class Galileo(object):
     DTDB = (TDB1 - TDB0) / MONTHS
     SLOP = 43200.
 
+    # We load CK and SPK files on a very rough month-by-month basis. This is simpler than
+    # a more granular approach involving detailed calendar calculations. We divide the
+    # period October 18, 1989 to September 21, 2003 up into "months" of equal length.
+    # Given any TDB, we quickly determine the month within which it falls. Each month is
+    # associated with a list of kernels that should be loaded whenever information is
+    # needed about any time within that month +/- 12 hours. Galileo does not yet use this
+    # mechanism: initialize() leaves the monthly lists empty and load_kernels() furnishes
+    # a fixed set of kernels instead.
+
     CK_LOADED = np.zeros(MONTHS, dtype='bool')      # True if month was loaded
     CK_LIST   = np.empty(MONTHS, dtype='object')    # Kernels needed by month
     CK_DICT   = {}      # Dictionary keyed by filespec returns kernel info
@@ -109,11 +169,8 @@ class Galileo(object):
     initialized = False
     sclk_loaded = False
 
-    ######################################################################################
-
     @staticmethod
-    def initialize(planets=None, asof=None,
-                   mst_pck=True, irregulars=True):
+    def initialize(planets=None, asof=None, mst_pck=True, irregulars=True):
         """Intialize the Galileo mission internals.
 
         After the first call, later calls to this function are ignored.
@@ -129,31 +186,31 @@ class Galileo(object):
                 otherwise.
         """
 
-        if Galileo.initialized:
+        if _Galileo.initialized:
             return
 
+        # Make sure the leap seconds have been loaded
+        oops.spice.load_leap_seconds()
+
         # Define some important paths and frames
-        Body.define_solar_system(Galileo.START_TIME, Galileo.STOP_TIME,
-                                 asof=asof,
-                                 planets=planets,
-                                 mst_pck=mst_pck,
-                                 irregulars=irregulars)
+        Body.define_solar_system(_Galileo.START_TIME, _Galileo.STOP_TIME, asof=asof,
+                                 planets=planets, mst_pck=mst_pck, irregulars=irregulars)
 
         _ = oops.path.SpicePath('GLL', 'JUPITER')
 
         spicedb.open_db()
 
         # This means no SPK will ever be loaded; handling is manual
-        Galileo.initialize_kernels([], Galileo.SPK_LIST)
-        Galileo.SPK_LOADED = np.ones(Galileo.MONTHS, dtype='bool')
+        _Galileo.initialize_kernels([], _Galileo.SPK_LIST)
+        _Galileo.SPK_LOADED = np.ones(_Galileo.MONTHS, dtype='bool')
 
         # This means no CK will ever be loaded; handling is manual
-        Galileo.initialize_kernels([], Galileo.CK_LIST)
-        Galileo.CK_LOADED = np.ones(Galileo.MONTHS, dtype='bool')
+        _Galileo.initialize_kernels([], _Galileo.CK_LIST)
+        _Galileo.CK_LOADED = np.ones(_Galileo.MONTHS, dtype='bool')
 
         spicedb.close_db()
 
-        Galileo.initialized = True
+        _Galileo.initialized = True
 
     @staticmethod
     def reset():
@@ -161,100 +218,26 @@ class Galileo(object):
 
         Can be useful for debugging.
         """
-        Galileo.loaded_instruments = []
+        _Galileo.loaded_instruments = []
 
-        Galileo.CK_LOADED = np.zeros(Galileo.MONTHS, dtype='bool')
-        Galileo.CK_LIST = np.empty(Galileo.MONTHS, dtype='object')
-        Galileo.CK_DICT = {}
+        _Galileo.CK_LOADED = np.zeros(_Galileo.MONTHS, dtype='bool')
+        _Galileo.CK_LIST = np.empty(_Galileo.MONTHS, dtype='object')
+        _Galileo.CK_DICT = {}
 
-        Galileo.SPK_LOADED = np.zeros(Galileo.MONTHS, dtype='bool')
-        Galileo.SPK_LIST = np.empty(Galileo.MONTHS, dtype='object')
-        Galileo.SPK_DICT = {}
+        _Galileo.SPK_LOADED = np.zeros(_Galileo.MONTHS, dtype='bool')
+        _Galileo.SPK_LIST = np.empty(_Galileo.MONTHS, dtype='object')
+        _Galileo.SPK_DICT = {}
 
-        Galileo.initialized = False
-        Galileo.sclk_loaded = False
+        _Galileo.initialized = False
+        _Galileo.sclk_loaded = False
 
     @staticmethod
     def load_kernels():
         """Furnish the fixed set of SPICE kernels needed by the Galileo mission."""
 
-        Galileo.load_sclk()
+        _Galileo.load_sclk()
 
-        from spicedb import get_spice_filecache_prefix
-
-        SPICE_FILECACHE_PFX = get_spice_filecache_prefix()
-
-        paths = SPICE_FILECACHE_PFX.retrieve([
-            'General/LSK/naif0012.tls',
-            'Galileo/IK/gll36001.ti',
-            'Galileo/FK/gll_v0.tf',
-            'Galileo/SPK/de421.bsp',
-            'Galileo/SPK/de432s.bsp',
-            'Galileo/CK/ckc03b_plt.bc',
-            'Galileo/CK/ckc09b_plt.bc',
-            'Galileo/CK/ckc10b_plt.bc',
-            'Galileo/CK/ckc20f_plt.bc',
-            'Galileo/CK/ckc21f_plt.bc',
-            'Galileo/CK/ckc22f_plt.bc',
-            'Galileo/CK/ckc23f_plt.bc',
-            'Galileo/CK/ckc30f_plt.bc',
-            'Galileo/CK/cke04b_plt.bc',
-            'Galileo/CK/cke06b_plt.bc',
-            'Galileo/CK/cke11b_plt.bc',
-            'Galileo/CK/cke12f_plt.bc',
-            'Galileo/CK/cke14f_plt.bc',
-            'Galileo/CK/cke15f_plt.bc',
-            'Galileo/CK/cke16f_plt.bc',
-            'Galileo/CK/cke17f_plt.bc',
-            'Galileo/CK/cke18f_plt.bc',
-            'Galileo/CK/cke19f_plt.bc',
-            'Galileo/CK/cke26f_plt.bc',
-            'Galileo/CK/ckg01b_plt.bc',
-            'Galileo/CK/ckg02b_plt.bc',
-            'Galileo/CK/ckg07b_plt.bc',
-            'Galileo/CK/ckg08b_plt.bc',
-            'Galileo/CK/ckg28f_plt.bc',
-            'Galileo/CK/ckg29f_plt.bc',
-            'Galileo/CK/cki24f_plt.bc',
-            'Galileo/CK/cki25f_plt.bc',
-            'Galileo/CK/cki27f_plt.bc',
-            'Galileo/CK/cki31f_plt.bc',
-            'Galileo/CK/cki32f_plt.bc',
-            'Galileo/CK/ckj0cav3_plt.bc',
-            'Galileo/CK/ckj0cduh_plt.bc',
-            'Galileo/CK/ckj0cv3_plt.bc',
-            'Galileo/CK/ckj0eav3_plt.bc',
-            'Galileo/CK/ckj0ebv3_plt.bc',
-            'Galileo/CK/ckj0ecv3_plt.bc',
-            'Galileo/CK/ckjaap_plt.bc',
-            'Galileo/CK/ckjaav3_plt.bc',
-            'Galileo/CK/ckjabp_plt.bc',
-            'Galileo/CK/ckjabv3_plt.bc',
-            'Galileo/CK/gll_plt_pre_1990_v00.bc',
-            'Galileo/CK/gll_plt_pre_1991_v00.bc',
-            'Galileo/CK/gll_plt_pre_1992_v00.bc',
-            'Galileo/CK/gll_plt_pre_1993_v00.bc',
-            'Galileo/CK/gll_plt_pre_1994_v00.bc',
-            'Galileo/CK/gll_plt_pre_1995_v00.bc',
-            'Galileo/CK/gll_plt_pre_1996_v00.bc',
-            'Galileo/CK/gll_plt_pre_1997_v00.bc',
-            'Galileo/CK/gll_plt_pre_1998_v00.bc',
-            'Galileo/CK/gll_plt_pre_1999_v00.bc',
-            'Galileo/CK/gll_plt_pre_2000_v00.bc',
-            'Galileo/CK/gll_plt_pre_2001_v00.bc',
-            'Galileo/SPK/de421.bsp',
-            'Galileo/SPK/de432s.bsp',
-            'Galileo/SPK/gll_951120_021126_raj2007.bsp',
-            'Galileo/SPK/gll_951120_021126_raj2021.bsp',
-            'Galileo/SPK/s000131a.bsp',
-            'Galileo/SPK/s000615a.bsp',
-            'Galileo/SPK/s020128a.bsp',
-            'Galileo/SPK/s030916a.bsp',
-            'Galileo/SPK/s960730a.bsp',
-            'Galileo/SPK/s970311a.bsp',
-            'Galileo/SPK/s971125a.bsp',
-            'Galileo/SPK/s980326a.bsp',
-        ])
+        paths = get_spice_filecache_prefix().retrieve(_KERNELS)
         for path in paths:
             cspyce.furnsh(path)
 
@@ -266,24 +249,25 @@ class Galileo(object):
         two text kernels rather than the full mission kernel set.
         """
 
-        if Galileo.sclk_loaded:
+        if _Galileo.sclk_loaded:
             return
 
         oops.spice.load_leap_seconds()
 
-        path = spicedb.get_spice_filecache_prefix().retrieve(Galileo.SCLK_KERNEL)
+        path = get_spice_filecache_prefix().retrieve(_Galileo.SCLK_KERNEL)
         cspyce.furnsh(path)
 
-        Galileo.sclk_loaded = True
+        _Galileo.sclk_loaded = True
 
     @staticmethod
     def tdb_from_sclk(count):
         """Convert a Galileo spacecraft clock count to seconds TDB.
 
         The kernels needed are furnished on the first call through :meth:`load_sclk`, so
-        no call to :meth:`initialize` is required. The count marks the start of the
-        frame; on images whose label also gives IMAGE_TIME, the result agrees with that
-        time to within a few seconds.
+        no call to :meth:`initialize` is required. The result is the start of the frame
+        that the count names, which is not the start of the exposure: the shutter opens
+        up to 6.5 s later, depending on the frame duration, or one frame earlier for an
+        extended exposure.
 
         Parameters:
             count (str): The clock count as one to four integer fields (RIM, mod-91,
@@ -299,7 +283,7 @@ class Galileo(object):
                 unsigned integer.
         """
 
-        Galileo.load_sclk()
+        _Galileo.load_sclk()
 
         fields = re.split(r'[^0-9A-Za-z]+', count.strip())
         if len(fields) > 4 or not all(field.isdigit() for field in fields):
@@ -307,7 +291,7 @@ class Galileo(object):
                                       f'{count!r}')
 
         fields += ['0'] * (4 - len(fields))
-        return cspyce.scs2e(Galileo.SPACECRAFT_ID,
+        return cspyce.scs2e(_Galileo.SPACECRAFT_ID,
                             ':'.join(str(int(field)) for field in fields))
 
     ######################################################################################
@@ -328,27 +312,27 @@ class Galileo(object):
                 replaced by the list of KernelInfo objects that apply within that month,
                 extended by :attr:`SLOP` at each end.
         """
-        for i in range(Galileo.MONTHS):
+        for i in range(_Galileo.MONTHS):
             lists[i] = []
 
         for kernel in kernels:
 
             # Find the range of months applicable, extended by 12 hours
-            t0 = cspyce.str2et(kernel.start_time) - Galileo.SLOP
-            t1 = cspyce.str2et(kernel.stop_time)  + Galileo.SLOP
+            t0 = cspyce.str2et(kernel.start_time) - _Galileo.SLOP
+            t1 = cspyce.str2et(kernel.stop_time)  + _Galileo.SLOP
 
-            m1 = int((t0 - Galileo.TDB0) // Galileo.DTDB)
-            m2 = int((t1 - Galileo.TDB0) // Galileo.DTDB) + 1
+            m1 = int((t0 - _Galileo.TDB0) // _Galileo.DTDB)
+            m2 = int((t1 - _Galileo.TDB0) // _Galileo.DTDB) + 1
 
             m1 = max(m1, 0)     # ignore time limits outside mission duration
-            m2 = min(m2, Galileo.MONTHS - 1)
+            m2 = min(m2, _Galileo.MONTHS - 1)
 
             # Add this kernel to each month's list
             for m in range(m1, m2+1):
                 lists[m] += [kernel]
 
     ######################################################################################
-    # Routines for managing the loading of other kernels
+    # Routines for managing the loading other kernels
     ######################################################################################
 
     @staticmethod
@@ -368,8 +352,8 @@ class Galileo(object):
         """
 
         # Load the default instruments on the first pass
-        if Galileo.loaded_instruments == []:
-           instruments += ['SSI']
+        if _Galileo.loaded_instruments == []:
+            instruments += ['SSI']
 
         # On later calls, return quickly if there's nothing to do
         if instruments == []:
@@ -406,7 +390,7 @@ class Galileo(object):
             and the name of the kernel.
         """
         if asof is not None:
-            (day,sec) = julian.day_sec_from_iso(stop_time)
+            (day,sec) = julian.day_sec_from_iso(asof)
             asof = julian.ymdhms_format_from_day_sec(day, sec)
 
         spicedb.open_db()
@@ -417,7 +401,7 @@ class Galileo(object):
         return (spicedb.as_dict(kernel_info), spicedb.as_names(kernel_info)[0])
 
     @staticmethod
-    def used_kernels(time, inst, return_all_planets=False):
+    def used_kernels(time, inst, return_all_planets=False, ck=True):
         """The kernels associated with a Galileo observation.
 
         The list covers a selected range of times.
@@ -425,8 +409,12 @@ class Galileo(object):
         Parameters:
             time (tuple[float, float]): A (start, stop) tuple of times in seconds TDB.
             inst (str | list | tuple): The instrument name, e.g., 'ssi'.
-            return_all_planets (bool, optional): Include kernels for all planets not
-                just the target of the mission phase containing the start time.
+            return_all_planets (bool, optional): Include kernels for all planets, not just
+                the target of the mission phase containing the start time.
+            ck (bool, optional): True (default) to include CK (pointing) kernels; False to
+                exclude them, e.g. for an observation whose pointing came from a custom
+                frame rather than SPICE, where any furnished CK is unrelated to how the
+                observation was actually pointed.
 
         Returns:
             list[str]: The basenames of the furnished kernels that apply to the
@@ -438,14 +426,14 @@ class Galileo(object):
                        'URANUS', 'NEPTUNE']
             moons = [False, False, True, True, True, True, True, True]
         else:
-            times = np.array([TIMELINE[i]['ET'] for i in range(len(TIMELINE))])
+            times = np.array([phase['ET'] for phase in TIMELINE])
             i = np.max(np.where(time[0] >= times))
             targets = [TIMELINE[i]['target']]
             moons = [TIMELINE[i]['moons']]
 
         # Specify desired body ids
         bodies = []
-        for target,moon in zip(targets, moons):
+        for target, moon in zip(targets, moons):
             if target == 'SL9':       ### TODO find a kernel for SL9
                 continue
             body = cspyce.bodn2c(target)
@@ -455,12 +443,16 @@ class Galileo(object):
             # Add moons if requested; note special treament for Earth
             if moon:
                 try:
-                    bodies += getattr(Body, target+'_MOONS_LOADED')
+                    bodies += getattr(Body, target + '_MOONS_LOADED')
                 except AttributeError:
                     bodies += [301]
 
+        types = None
+        if not ck:
+            types = [t for t in spicedb.KERNEL_TYPE_SORT_ORDER if t != 'CK']
+
         # Return relevent used kernels
-        return spicedb.used_basenames(time=time, inst=inst, sc=-77,
+        return spicedb.used_basenames(types=types, time=time, inst=inst, sc=-77,
                                       bodies=bodies)
 
 ##########################################################################################

@@ -74,7 +74,8 @@ def saturn_obs(solar_system: None) -> Snapshot:
                    frame_id='TEST_SATURN_CAMERA')
     fov = FlatFOV((PIXEL, PIXEL), SHAPE)
 
-    return Snapshot(('u', 'v'), TIME, TEXP, fov, 'EARTH', 'TEST_SATURN_CAMERA')
+    return Snapshot(('u', 'v'), TIME, TEXP, fov=fov, path='EARTH',
+                    frame='TEST_SATURN_CAMERA')
 
 
 @pytest.fixture(scope='package')

@@ -145,8 +145,8 @@ def _snapshot_facing_the_moon() -> Snapshot:
     """
 
     frame = Cmatrix.from_ra_dec(222.447, -10.900, 0., 'J2000')
-    return Snapshot(('u','v'), 0., 10., FlatFOV((1.e-3, 1.e-3), (100, 100)),
-                    'EARTH', frame)
+    return Snapshot(('u','v'), 0., 10., fov=FlatFOV((1.e-3, 1.e-3), (100, 100)),
+                    path='EARTH', frame=frame)
 
 
 # The keys of a "full" inventory entry, with the types the docstring documents.
@@ -322,8 +322,8 @@ def _snapshot_facing_jupiter() -> Snapshot:
 
     frame = Cmatrix.from_ra_dec(JUPITER_RA, JUPITER_DEC, 0., 'J2000')
 
-    return Snapshot(('u','v'), OCCULTATION_TIME, 10., FlatFOV((1.e-4, 1.e-4), (100, 100)),
-                    'EARTH', frame)
+    return Snapshot(('u','v'), OCCULTATION_TIME, 10.,
+                    fov=FlatFOV((1.e-4, 1.e-4), (100, 100)), path='EARTH', frame=frame)
 
 
 def test_a_body_hidden_behind_another_is_left_out_of_the_inventory() -> None:
