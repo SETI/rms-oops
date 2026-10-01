@@ -2,8 +2,9 @@
 # oops/cadence/tdicadence.py
 ##########################################################################################
 
-from polymath     import Scalar
-from oops.cadence import Cadence
+from polymath         import Scalar
+from oops._exceptions import OopsValueError
+from oops.cadence     import Cadence
 
 
 class TDICadence(Cadence):
@@ -29,8 +30,15 @@ class TDICadence(Cadence):
                 negative direction. Default is -1, suitable for JunoCam.
 
         Raises:
-            ValueError: If `tdi_stages` is not between 1 and `lines`, inclusive.
+            OopsValueError: If `tdi_stages` is not between 1 and `lines`, inclusive.
+            OopsValueError: If `tdi_texp` is not positive.
         """
+
+        if tdi_stages < 1 or tdi_stages > lines:
+            raise OopsValueError('invalid TDICadence inputs: '
+                                 f'lines={lines}; tdi_stages={tdi_stages}')
+        if tdi_texp <= 0.:
+            raise OopsValueError(f'invalid tdi_texp in TDICadence: {tdi_texp}')
 
         # Save the input parameters
         self._lines = int(lines)
@@ -38,10 +46,6 @@ class TDICadence(Cadence):
         self._tdi_texp = float(tdi_texp)
         self._tdi_stages = int(tdi_stages)
         self._tdi_sign = 1 if tdi_sign > 0 else -1
-
-        if self._tdi_stages < 1 or self._tdi_stages > self._lines:
-            raise ValueError('invalid TDICadence inputs: '
-                             f'lines={lines}; tdi_stages={tdi_stages}')
 
         self._tdi_upward = (self._tdi_sign > 0)
         self._max_shifts = self._tdi_stages - 1

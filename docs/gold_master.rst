@@ -100,7 +100,8 @@ API reference
     :member-order: bysource
     :members:
     :show-inheritance:
-    :exclude-members: __dict__, __hash__, __module__, __weakref__, __annotations__
+    :exclude-members: __dict__, __hash__, __module__, __weakref__, __annotations__,
+                      _BackplaneComparison
 
 ``programs.gold_master.test_support``
 -------------------------------------

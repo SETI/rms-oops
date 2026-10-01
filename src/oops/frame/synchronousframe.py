@@ -2,9 +2,10 @@
 # oops/frame/synchronousframe.py
 ##########################################################################################
 
-from polymath       import Matrix3
-from oops.frame     import Frame
-from oops.transform import Transform
+from polymath         import Matrix3
+from oops._exceptions import OopsValueError
+from oops.frame       import Frame
+from oops.transform   import Transform
 
 
 class SynchronousFrame(Frame):
@@ -35,7 +36,7 @@ class SynchronousFrame(Frame):
         Raises:
             KeyError: If `orbit_path` or `planet_path` is an ID string that has not been
                 registered.
-            ValueError: If `planet_path` is not shapeless.
+            OopsValueError: If `planet_path` is not shapeless.
         """
 
         self._orbit_path = Frame._Path.as_path(orbit_path)
@@ -45,7 +46,7 @@ class SynchronousFrame(Frame):
         self._orbit_wrt_planet = self._orbit_path.wrt(self._planet_path)
 
         if self._planet_path._shape:
-            raise ValueError('SynchronousFrame requires a shapeless body path')
+            raise OopsValueError('SynchronousFrame requires a shapeless body path')
 
         self._reference = Frame.as_wayframe(self._planet_path._frame)
         self._USE_QUICKFRAMES = (self._reference._USE_QUICKFRAMES

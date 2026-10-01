@@ -3,6 +3,7 @@
 ##########################################################################################
 """Support for stars as LightSource objects."""
 
+from oops._exceptions import OopsKeyError, OopsValueError
 from oops.body import Body
 from oops.lightsource import LightSource
 
@@ -102,8 +103,8 @@ def star_lookup(key):
         registered under `key` in upper case and with spaces replaced with underscores.
 
     Raises:
-        KeyError: If `key` does not identify one of the stars in the table.
-        ValueError: If `key` is already the name of a Body that is not a LightSource.
+        OopsKeyError: If `key` does not identify one of the stars in the table.
+        OopsValueError: If `key` is already the name of a Body that is not a LightSource.
     """
 
     if not _STAR_LOOKUP:
@@ -115,7 +116,7 @@ def star_lookup(key):
         if (5 <= len(key) <= 7) and '_' not in key:
             alt_key = key[:-3] + '_' + key[-3]
             if alt_key not in _STAR_LOOKUP:
-                raise KeyError(f'unknown star "{key}"')
+                raise OopsKeyError(f'unknown star "{key}"')
             key = alt_key
 
     (_, _, ra, dec, _, _) = _STAR_LOOKUP[key]
@@ -123,7 +124,7 @@ def star_lookup(key):
     if Body.exists(key):
         lightsource = Body.lookup(key)
         if not isinstance(lightsource, LightSource):
-            raise ValueError(f'Star name is also a Body name: {key}')
+            raise OopsValueError(f'Star name is also a Body name: {key}')
         return lightsource
 
     return LightSource(key, (ra, dec))
@@ -145,7 +146,7 @@ def add_star(names, ra, dec, mag=None, type_info=None):
         type_info (str, optional): Star type information.
 
     Raises:
-        ValueError: If any of `names` is already in the catalog at a different right
+        OopsValueError: If any of `names` is already in the catalog at a different right
             ascension or declination. No names are added in that case.
     """
 
@@ -164,7 +165,7 @@ def add_star(names, ra, dec, mag=None, type_info=None):
 
     for key in keys:
         if key in _STAR_LOOKUP and _STAR_LOOKUP[key][2:4] != result[2:4]:
-            raise ValueError(f'Star {key} already exists with different coordinates')
+            raise OopsValueError(f'Star {key} already exists with different coordinates')
 
     for key in keys:
         _STAR_LOOKUP.setdefault(key, result)

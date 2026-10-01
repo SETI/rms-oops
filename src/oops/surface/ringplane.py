@@ -5,11 +5,12 @@
 import numpy as np
 
 from polymath                   import Scalar, Vector3
+from oops._exceptions           import OopsValueError
 from oops.constants             import TWOPI
 from oops.frame.frame_          import Frame
+from oops.gravity.oblategravity import OblateGravity
 from oops.path.path_            import Path
 from oops.surface.surface_      import Surface
-from oops.gravity.oblategravity import OblateGravity
 
 
 class RingPlane(Surface):
@@ -416,13 +417,15 @@ class RingPlane(Surface):
             `(offset, dr_dt, dlon_dt)` if `rates` is True.
 
         Raises:
-            ValueError: If this RingPlane contains radial modes and no `time` is given.
+            OopsValueError: If this RingPlane contains radial modes and no `time` is
+                given.
         """
 
         # The modes vary with time, so there is no sensible value to assume for one that
         # was not given.
         if self._modes and time is None:
-            raise ValueError(f'{type(self).__name__} with radial modes requires a time')
+            raise OopsValueError(f'{type(self).__name__} with radial modes requires a '
+                                 f'time')
 
         offset = 0.
         dr_dt = 0.

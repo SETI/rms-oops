@@ -4,9 +4,10 @@
 
 import numpy as np
 
-from polymath       import Vector3
-from oops.backplane import Backplane
-from oops.frame     import Frame
+from polymath         import Vector3
+from oops._exceptions import OopsValueError
+from oops.backplane   import Backplane
+from oops.frame       import Frame
 
 
 def right_ascension(self, event_key=(), apparent=True, direction='arr'):
@@ -78,11 +79,11 @@ def _fill_ra_dec(self, event_key, apparent, direction):
             it on a departing photon.
 
     Raises:
-        ValueError: If `direction` is neither 'arr' nor 'dep'.
+        OopsValueError: If `direction` is neither 'arr' nor 'dep'.
     """
 
     if direction not in ('arr', 'dep'):
-        raise ValueError('invalid photon direction: ' + direction)
+        raise OopsValueError('invalid photon direction: ' + direction)
 
     if not event_key:
         event = self.get_obs_event(event_key)
@@ -262,11 +263,11 @@ def _fill_center_ra_dec(self, event_key, apparent, direction):
             it on a departing photon.
 
     Raises:
-        ValueError: If `direction` is neither 'arr' nor 'dep'.
+        OopsValueError: If `direction` is neither 'arr' nor 'dep'.
     """
 
     if direction not in ('arr', 'dep'):
-        raise ValueError('invalid photon direction: ' + direction)
+        raise OopsValueError('invalid photon direction: ' + direction)
 
     gridless_key = Backplane.gridless_event_key(event_key)
     event = self.get_obs_event(gridless_key)

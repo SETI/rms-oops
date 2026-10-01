@@ -1465,7 +1465,7 @@ def test_the_description_abbreviates_a_long_array(size: int, expected: str) -> N
     """One value is printed alone, two together, and more as the first and the last."""
 
     times = np.arange(float(size))
-    event = Event(Scalar(times), Vector3(np.zeros((size, 3))), 'SSB', 'J2000')
+    event = Event(Scalar(times), Vector3(np.zeros((size, 3)).tolist()), 'SSB', 'J2000')
 
     assert expected in str(event)
 

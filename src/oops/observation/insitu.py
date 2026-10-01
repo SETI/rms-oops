@@ -3,6 +3,7 @@
 ##########################################################################################
 
 from polymath             import Scalar
+from oops._exceptions     import OopsTypeError
 from oops.cadence         import Cadence
 from oops.cadence.instant import Instant
 from oops.fov.nullfov     import NullFOV
@@ -36,7 +37,7 @@ class InSitu(Observation):
                 included as needed.
 
         Raises:
-            TypeError: If `cadence` is neither a Cadence nor a Scalar.
+            OopsTypeError: If `cadence` is neither a Cadence nor a Scalar.
         """
 
         # Basic properties
@@ -52,7 +53,7 @@ class InSitu(Observation):
         elif isinstance(cadence, Scalar):
             self.cadence = Instant(cadence)
         else:
-            raise TypeError('Invalid cadence class: ' + type(cadence).__name__)
+            raise OopsTypeError('Invalid cadence class: ' + type(cadence).__name__)
 
         # Axes / Shape / Size
         self.u_axis = -1

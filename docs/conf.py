@@ -134,6 +134,23 @@ nitpick_ignore = [
     # link to.
     ('py:class', 'FCPath'),
     ('py:class', 'FileCache'),
+    # Each of these is a `polymath.typedefs` `TypeAlias`, so autodoc documents it as a
+    # `py:data` object (see `automodule:: polymath.typedefs` in oops.rst); Napoleon,
+    # however, renders every `Parameters:`/`Returns:` type as a `py:class` reference, and
+    # Sphinx's Python domain never resolves a `class` role against a `data` object. The
+    # target exists and is documented; only the role mismatch is unresolvable.
+    ('py:class', 'BooleanLike'),
+    ('py:class', 'IntValsType'),
+    ('py:class', 'MaskType'),
+    ('py:class', 'Matrix3Like'),
+    ('py:class', 'MatrixLike'),
+    ('py:class', 'PairLike'),
+    ('py:class', 'QuaternionLike'),
+    ('py:class', 'QubeLike'),
+    ('py:class', 'ScalarLike'),
+    ('py:class', 'ValsType'),
+    ('py:class', 'Vector3Like'),
+    ('py:class', 'VectorLike'),
 ]
 
 # The arithmetic docstrings of `polymath.Qube` cross-reference its operator methods, which
@@ -162,6 +179,11 @@ _PRIVATE = tags.has('private')                                              # no
 if _PRIVATE:
     autodoc_default_options['private-members'] = True
     napoleon_include_private_with_doc = True
+else:
+    # `_BackplaneComparison` is documented only in the private build (see the Developer's
+    # Guide's API reference), but public methods of `programs.gold_master` still type a
+    # parameter as it in their docstrings. The public build has no target for it.
+    nitpick_ignore.append(('py:class', '_BackplaneComparison'))
 
 
 class _PrivateOnly(Directive):

@@ -5,6 +5,7 @@
 import numpy as np
 
 from polymath          import Qube, Scalar, Vector3
+from oops._exceptions  import OopsValueError
 from oops.event        import Event
 from oops.frame.frame_ import Frame
 from oops.path.path_   import Path
@@ -30,7 +31,7 @@ class MultiPath(Path):
         Raises:
             KeyError: If `paths`, `origin`, or `frame` contains an ID string that has not
                 been registered.
-            ValueError: If `paths` is not one-dimensional.
+            OopsValueError: If `paths` is not one-dimensional.
         """
 
         # Interpret the inputs
@@ -39,7 +40,7 @@ class MultiPath(Path):
 
         self._input_paths = np.array(paths, dtype='object')
         if self._input_paths.ndim != 1:
-            raise ValueError('a MultiPath cannot be multidimensional')
+            raise OopsValueError('a MultiPath cannot be multidimensional')
 
         for k, path in enumerate(self._input_paths):
             self._input_paths[k] = Path.as_path(path)

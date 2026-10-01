@@ -31,6 +31,7 @@ class Backplane(Mutable):
     obs: Any
     meshgrid: Any
     inventory: Any
+    shape: tuple[int, ...]
     _inventory_border: Any
     def __init__(self, obs: Observation, meshgrid: Meshgrid | None = None,
         time: ScalarLike | None = None, *, inventory: bool | dict | None = None,

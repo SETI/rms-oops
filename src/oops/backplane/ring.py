@@ -4,10 +4,11 @@
 
 import numpy as np
 
-from polymath       import Pair, Qube, Scalar
-from oops.backplane import Backplane
-from oops.body      import Body
-from oops.frame     import Frame
+from polymath         import Pair, Qube, Scalar
+from oops._exceptions import OopsValueError
+from oops.backplane   import Backplane
+from oops.body        import Body
+from oops.frame       import Frame
 
 # Backplane names that can be "nested", such that the array mask propagates
 # forward to each new backplane array that refers to it.
@@ -75,7 +76,7 @@ def ring_longitude(self, event_key, reference='node'):
         Scalar: The longitude in radians, registered as a backplane.
 
     Raises:
-        ValueError: If `reference` is not one of the values listed above.
+        OopsValueError: If `reference` is not one of the values listed above.
     """
 
     self.refresh()
@@ -91,7 +92,7 @@ def ring_longitude(self, event_key, reference='node'):
 
     # Check inputs
     if reference not in ('aries', 'node', 'obs', 'oha', 'sun', 'sha'):
-        raise ValueError('invalid longitude reference: ' + repr(reference))
+        raise OopsValueError('invalid longitude reference: ' + repr(reference))
 
     # If this backplane array is already defined, return it
     if key in self._backplanes:
@@ -148,7 +149,8 @@ def radial_mode(self, backplane_key, cycles, epoch, amp, peri0, speed, a0=0., dp
         Scalar: The shifted radius in km, registered as a backplane.
 
     Raises:
-        ValueError: If `backplane_key` is not based on a :meth:`ring_radius` backplane.
+        OopsValueError: If `backplane_key` is not based on a :meth:`ring_radius`
+            backplane.
     """
 
     self.refresh()
@@ -167,7 +169,7 @@ def radial_mode(self, backplane_key, cycles, epoch, amp, peri0, speed, a0=0., dp
     # Get the original ring_radius key; save rmin and rmax for later
     (backplane_type, event_key, rmin, rmax) = ring_radius_key
     if backplane_type != 'ring_radius':
-        raise ValueError('radial modes only apply to ring_radius backplanes')
+        raise OopsValueError('radial modes only apply to ring_radius backplanes')
 
     # Get the referenced backplane without its mask
     if backplane_key[0] == 'ring_radius':
@@ -255,12 +257,12 @@ def ring_azimuth(self, event_key, direction='obs', apparent=True):
         Scalar: The azimuth in radians, registered as a backplane.
 
     Raises:
-        ValueError: If `direction` is neither 'obs' nor 'sun'.
+        OopsValueError: If `direction` is neither 'obs' nor 'sun'.
     """
 
     self.refresh()
     if direction not in ('obs', 'sun'):
-        raise ValueError('invalid azimuth direction: ' + repr(direction))
+        raise OopsValueError('invalid azimuth direction: ' + repr(direction))
 
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
@@ -323,12 +325,12 @@ def ring_elevation(self, event_key, direction='obs', pole='prograde', apparent=T
         Scalar: The elevation in radians, registered as a backplane.
 
     Raises:
-        ValueError: If `direction` is neither 'obs' nor 'sun'.
+        OopsValueError: If `direction` is neither 'obs' nor 'sun'.
     """
 
     self.refresh()
     if direction not in ('obs', 'sun'):
-        raise ValueError('invalid elevation direction: ' + repr(direction))
+        raise OopsValueError('invalid elevation direction: ' + repr(direction))
 
     (event_key,
      backplane_key) = self._event_and_backplane_keys(event_key, RING_BACKPLANES,
@@ -362,14 +364,14 @@ def _fill_ring_intercepts(self, event_key):
         event_key (str | tuple): Key defining the ring surface event.
 
     Raises:
-        ValueError: If the surface does not use polar coordinates.
+        OopsValueError: If the surface does not use polar coordinates.
     """
 
     # Validate the surface type
     surface = Backplane.get_surface(event_key[1])
     if surface.COORDINATE_TYPE != 'polar':
-        raise ValueError('invalid coordinate type for ring geometry: '
-                         + surface.COORDINATE_TYPE)
+        raise OopsValueError('invalid coordinate type for ring geometry: '
+                             + surface.COORDINATE_TYPE)
 
     # Get the ring intercept coordinates
     event = self.get_surface_event(event_key)
@@ -405,11 +407,11 @@ def ring_incidence_angle(self, event_key, pole='sunward', apparent=True):
         Scalar: The incidence angle in radians, registered as a backplane.
 
     Raises:
-        ValueError: If `pole` is not one of the values listed above.
+        OopsValueError: If `pole` is not one of the values listed above.
     """
 
     if pole not in ('sunward', 'observed', 'north', 'prograde'):
-        raise ValueError('invalid incidence angle pole: ' + repr(pole))
+        raise OopsValueError('invalid incidence angle pole: ' + repr(pole))
 
     self.refresh()
     (event_key,
@@ -480,11 +482,11 @@ def ring_emission_angle(self, event_key, pole='sunward', apparent=True):
         Scalar: The emission angle in radians, registered as a backplane.
 
     Raises:
-        ValueError: If `pole` is not one of the values listed above.
+        OopsValueError: If `pole` is not one of the values listed above.
     """
 
     if pole not in ('sunward', 'observed', 'north', 'prograde'):
-        raise ValueError('invalid emission angle pole: ' + repr(pole))
+        raise OopsValueError('invalid emission angle pole: ' + repr(pole))
 
     self.refresh()
     (event_key,
@@ -544,11 +546,11 @@ def ring_sub_observer_longitude(self, event_key, reference='node'):
         Scalar: The longitude in radians, registered as a gridless backplane.
 
     Raises:
-        ValueError: If `reference` is not one of the values listed above.
+        OopsValueError: If `reference` is not one of the values listed above.
     """
 
     if reference not in ('aries', 'node', 'obs', 'oha', 'sun', 'sha'):
-        raise ValueError('invalid longitude reference: ' + repr(reference))
+        raise OopsValueError('invalid longitude reference: ' + repr(reference))
 
     # Look up under the desired reference
     self.refresh()
@@ -603,11 +605,11 @@ def ring_sub_solar_longitude(self, event_key, reference='node'):
         Scalar: The longitude in radians, registered as a gridless backplane.
 
     Raises:
-        ValueError: If `reference` is not one of the values listed above.
+        OopsValueError: If `reference` is not one of the values listed above.
     """
 
     if reference not in ('aries', 'node', 'obs', 'oha', 'sun', 'sha'):
-        raise ValueError('invalid longitude reference: ' + repr(reference))
+        raise OopsValueError('invalid longitude reference: ' + repr(reference))
 
     # Look up under the desired reference
     self.refresh()
@@ -717,7 +719,7 @@ def ring_radial_resolution(self, event_key):
         Scalar: The radial resolution in km per pixel, registered as a backplane.
 
     Raises:
-        ValueError: If the surface does not use polar coordinates.
+        OopsValueError: If the surface does not use polar coordinates.
     """
 
     self.refresh()
@@ -734,8 +736,8 @@ def ring_radial_resolution(self, event_key):
 
     event = self.get_surface_event(event_key, derivs=True)
     if event.surface.COORDINATE_TYPE != 'polar':
-        raise ValueError('invalid coordinate type for ring geometry: '
-                         + event.surface.COORDINATE_TYPE)
+        raise OopsValueError('invalid coordinate type for ring geometry: '
+                             + event.surface.COORDINATE_TYPE)
 
     radius = event.coord1
     drad_duv = radius.d_dlos.chain(self.dlos_duv)
@@ -758,12 +760,12 @@ def ring_angular_resolution(self, event_key, units="rad"):
         is "km", registered as a backplane.
 
     Raises:
-        ValueError: If `units` is neither "rad" nor "km", or if the surface does not use
-            polar coordinates.
+        OopsValueError: If `units` is neither "rad" nor "km", or if the surface does not
+            use polar coordinates.
     """
 
     if units not in {'rad', 'km'}:
-        raise ValueError('invalid units: ' + repr(units))
+        raise OopsValueError('invalid units: ' + repr(units))
 
     self.refresh()
     (event_key,
@@ -780,8 +782,8 @@ def ring_angular_resolution(self, event_key, units="rad"):
 
     event = self.get_surface_event(event_key, derivs=True)
     if event.surface.COORDINATE_TYPE != 'polar':
-        raise ValueError('invalid coordinate type for ring geometry: '
-                         + event.surface.COORDINATE_TYPE)
+        raise OopsValueError('invalid coordinate type for ring geometry: '
+                             + event.surface.COORDINATE_TYPE)
 
     longitude = event.coord2
     dlon_duv = longitude.d_dlos.chain(self.dlos_duv)
@@ -806,7 +808,7 @@ def ring_gradient_angle(self, event_key):
         Scalar: The direction of the gradient in radians, registered as a backplane.
 
     Raises:
-        ValueError: If the surface does not use polar coordinates.
+        OopsValueError: If the surface does not use polar coordinates.
     """
 
     self.refresh()
@@ -824,8 +826,8 @@ def ring_gradient_angle(self, event_key):
 
     event = self.get_surface_event(event_key, derivs=True)
     if event.surface.COORDINATE_TYPE != 'polar':
-        raise ValueError('invalid coordinate type for ring geometry: '
-                         + event.surface.COORDINATE_TYPE)
+        raise OopsValueError('invalid coordinate type for ring geometry: '
+                             + event.surface.COORDINATE_TYPE)
 
     rad = event.coord1
     drad_duv = rad.d_dlos.chain(self.dlos_duv)
