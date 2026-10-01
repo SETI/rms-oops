@@ -207,7 +207,7 @@ class ISS(Host):
             path (str | oops.Path, optional): Override for the Path of the observer.
             frame (str | oops.Frame, optional): Override for the Frame of the observing
                 instrument.
-            fov (oops.Frame, optional): Override for the default FOV of the observing
+            fov (oops.FOV, optional): Override for the default FOV of the observing
                 instrument.
             calibrations (oops.Calibration | list[oops.Calibration], optional): Override
                 for the calibration or list of calibrations.
@@ -270,7 +270,9 @@ class ISS(Host):
 
     @staticmethod
     def from_index(filepath, *, fast_distortion=True, return_all_planets=False,
-                   calibrations=[], timeshift=None, navigation=None):
+                   target=None, lightsource=None, path=None, frame=None,
+                   calibrations=[], timeshift=None, navigation=None, tracker=None,
+                   **kwargs):
         """A list of Snapshot objects, one for each row of a Cassini ISS index file.
 
         Parameters:
@@ -281,6 +283,14 @@ class ISS(Host):
                 :class:`~oops.fov.FlatFOV`.
             return_all_planets (bool, optional): Include kernels for all planets, not just
                 Jupiter or Saturn.
+            target (str | oops.Body, optional): Override for the default target Body of
+                every observation. Use "NONE" for inertial pointing, indicating that no
+                Solar System body was tracked.
+            lightsource (oops.Lightsource, optional): Override for the default Lightsource
+                of every observation.
+            path (str | oops.Path, optional): Override for the Path of the observer.
+            frame (str | oops.Frame, optional): Override for the Frame of the observing
+                instrument.
             calibrations (oops.Calibration | list[oops.Calibration], optional): Override
                 for the calibration or list of calibrations.
             timeshift (tuple[float, str], optional): Assign a Fittable time shift to one
@@ -295,31 +305,45 @@ class ISS(Host):
                 wraps the default frame. Specify three angles to include a rotation about
                 the optic axis or two for a pointing offset without rotation. Use (0,0) or
                 (0,0,0) as the input if you have no starting guess.
+            tracker (str, optional): Assign a TrackerFrame to the Observation, to ensure
+                that the target body remains at a fixed position within the FOV. Use one
+                of "start", "midtime", and "end", indicating the time within the
+                Observation at which the target body's calculated position within the FOV
+                is accurate.
+            **kwargs: Additional keyword arguments, ignored here except as noted below.
 
         Returns:
             list[Snapshot]: One observation per row of the index, each with subfields
             `spice_kernels`, `filepath`, `basename`, `spice_to_frame`, `spice_frame_name`
             and `spice_frame_id` inserted.
+
+        Raises:
+            ValueError: If `fov` or `parallel` is given; neither can apply to every row.
         """
+
+        # Check for unsupported options
+        for key in ('fov', 'parallel'):
+            if kwargs.get(key) is not None:
+                raise ValueError(f'disallowed Cassini ISS.from_index() option {key}')
 
         ISS._initialize()
         ISS._define_camera_frames()
 
-        filepath = FCPath(filepath)
-
         # Read the index file
-        table = pdstable.PdsTable(filepath, columns=[])
+        table = pdstable.PdsTable(FCPath(filepath), columns=[])
         row_dicts = table.dicts_by_row()
 
         # Create the list of Snapshot objects
         snapshots = []
         for row_dict in row_dicts:
-            filepath = row_dict['VOLUME_ID'] + '/' + row_dict['FILE_SPECIFICATION_NAME']
-            obs = ISS._make_snapshot(row_dict, filepath=filepath, data=None,
+            fpath = row_dict['VOLUME_ID'] + '/' + row_dict['FILE_SPECIFICATION_NAME']
+            obs = ISS._make_snapshot(row_dict, filepath=fpath, data=None,
                                      fast_distortion=fast_distortion,
                                      return_all_planets=return_all_planets,
-                                     calibrations=calibrations, timeshift=timeshift,
-                                     navigation=navigation)
+                                     target=target, lightsource=lightsource, path=path,
+                                     frame=frame, calibrations=calibrations,
+                                     timeshift=timeshift, navigation=navigation,
+                                     tracker=tracker)
             snapshots.append(obs)
 
         return snapshots

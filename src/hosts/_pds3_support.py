@@ -278,8 +278,7 @@ def _resolve_pds3_filename(parent, basename):
         basename (str): The file basename as recorded in the label.
 
     Returns:
-        pathlib.Path | FCPath: Path of the matching file that exists, of the same type
-        as `parent`.
+        pathlib.Path | FCPath: Path of the matching file that exists.
 
     Raises:
         FileNotFoundError: If no matching file is found in `parent`.

@@ -99,7 +99,7 @@ class SSI(Host):
             path (str | oops.Path, optional): Override for the Path of the observer.
             frame (str | oops.Frame, optional): Override for the Frame of the observing
                 instrument.
-            fov (oops.Frame, optional): Override for the default FOV of the observing
+            fov (oops.FOV, optional): Override for the default FOV of the observing
                 instrument.
             calibrations (oops.Calibration | list[oops.Calibration], optional): Override
                 for the calibration or list of calibrations.
@@ -124,7 +124,7 @@ class SSI(Host):
                 Observation at which the target body's calculated position within the FOV
                 is accurate. Note that no more than one of `parallel` and `tracker` can be
                 specified.
-            **kwargs: Additional keyword arguments; they are accepted and ignored.
+            **kwargs: Additional keyword arguments, ignored here.
 
         Returns:
             Snapshot: The observation, with subfields `spice_kernels`, `filepath`,
@@ -172,11 +172,10 @@ class SSI(Host):
 
     @staticmethod
     def from_index(filepath, supplemental_filepath=None, *, full_fov=False,
-                   return_all_planets=False, calibrations=[], timeshift=None,
-                   navigation=None):
+                   return_all_planets=False, target=None, lightsource=None, path=None,
+                   frame=None, fov=None, calibrations=[], timeshift=None, navigation=None,
+                   tracker=None, **kwargs):
         """A list of Snapshot objects, one for each row in an SSI index file.
-
-        Rows whose exposure duration is zero are skipped.
 
         Parameters:
             filepath (str | pathlib.Path | FCPath): The full path to the label of the
@@ -188,6 +187,17 @@ class SSI(Host):
                 rather than the cutout window.
             return_all_planets (bool, optional): Include kernels for all planets, not just
                 the target of the mission phase.
+            target (str | oops.Body, optional): Override for the default target Body of
+                every observation. Use "NONE" for inertial pointing, indicating that no
+                Solar System body was tracked.
+            lightsource (oops.Lightsource, optional): Override for the default Lightsource
+                of every observation.
+            path (str | oops.Path, optional): Override for the Path of the observer.
+            frame (str | oops.Frame, optional): Override for the Frame of the observing
+                instrument.
+            fov (oops.FOV, optional): Override for the FOV of every observation,
+                replacing the FOV that each row's telemetry format and cutout window would
+                otherwise define.
             calibrations (oops.Calibration | list[oops.Calibration], optional): Override
                 for the calibration or list of calibrations.
             timeshift (tuple[float, str], optional): Assign a Fittable time shift to one
@@ -202,12 +212,26 @@ class SSI(Host):
                 wraps the default frame. Specify three angles to include a rotation about
                 the optic axis or two for a pointing offset without rotation. Use (0,0) or
                 (0,0,0) as the input if you have no starting guess.
+            tracker (str, optional): Assign a TrackerFrame to the Observation, to ensure
+                that the target body remains at a fixed position within the FOV. Use one
+                of "start", "midtime", and "end", indicating the time within the
+                Observation at which the target body's calculated position within the FOV
+                is accurate.
+            **kwargs: Additional keyword arguments, ignored here except as noted below.
 
         Returns:
             list[Snapshot]: One observation per row of the index, each with subfields
             `spice_kernels`, `filepath`, `basename`, `spice_to_frame`, `spice_frame_name`
             and `spice_frame_id` inserted.
+
+        Raises:
+            ValueError: If `parallel` is given; it cannot apply to every row.
         """
+
+        # Check for unsupported options
+        for key in ('parallel',):
+            if kwargs.get(key) is not None:
+                raise ValueError(f'disallowed Galileo SSI.from_index() option {key}')
 
         SSI._initialize()
         SSI._define_camera_frame()
@@ -225,15 +249,14 @@ class SSI(Host):
         # Create the list of Snapshot objects
         snapshots = []
         for row_dict in row_dicts:
-            if row_dict['EXPOSURE_DURATION'] == 0:
-                continue
-
-            filepath = row_dict['VOLUME_ID'] + '/' + row_dict['FILE_SPECIFICATION_NAME']
-            obs = SSI._make_snapshot(row_dict, filepath=filepath, data=None,
+            fpath = row_dict['VOLUME_ID'] + '/' + row_dict['FILE_SPECIFICATION_NAME']
+            obs = SSI._make_snapshot(row_dict, filepath=fpath, data=None,
                                      full_fov=full_fov,
                                      return_all_planets=return_all_planets,
+                                     target=target, lightsource=lightsource,
+                                     path=path, frame=frame, fov=fov,
                                      calibrations=calibrations, timeshift=timeshift,
-                                     navigation=navigation)
+                                     navigation=navigation, tracker=tracker)
             snapshots.append(obs)
 
         return snapshots
@@ -256,8 +279,8 @@ class SSI(Host):
         mode = dict_.get('TELEMETRY_FORMAT_ID', 'NONE')
         filter_ = dict_['FILTER_NAME']
 
-        label_target = _TARGET_NAME_REPAIRS.get(dict_['TARGET_NAME'],
-                                                dict_['TARGET_NAME'])
+        label_target = dict_['TARGET_NAME']
+        label_target = _TARGET_NAME_REPAIRS.get(label_target, label_target)
         if _TARGET_STARS.match(label_target):
             label_lightsource = oops.lightsource.star_lookup(label_target)
             label_target = 'NONE'
@@ -341,11 +364,10 @@ class SSI(Host):
     def _detect_in_pds3(label):
         """True if the given parsed PDS3 label describes this host's data."""
 
-        # Labels spell the instrument as "SOLID STATE IMAGING SYSTEM" or
+        # Labels spell the INSTRUMENT_NAME as "SOLID STATE IMAGING SYSTEM" or
         # "SOLID_STATE_IMAGING"
-        instrument = label.get('INSTRUMENT_NAME', '').replace('_', ' ')
         return (label.get('SPACECRAFT_NAME', '').startswith('GALILEO')
-                and instrument.startswith('SOLID STATE IMAGING'))
+                and label.get('INSTRUMENT_NAME', '').startswith('SOLID'))
 
     @staticmethod
     def _detect_in_vicar(label):
@@ -396,8 +418,7 @@ class SSI(Host):
         assert info['MAX_SAMPLE'] == 800
         assert info['MAX_LINE'] == 800
 
-        fov_full = oops.fov.BarrelFOV(scale,
-                                      (info['MAX_SAMPLE'], info['MAX_LINE']),
+        fov_full = oops.fov.BarrelFOV(scale, (info['MAX_SAMPLE'], info['MAX_LINE']),
                                       coefft_uv_from_xy=distortion_coeff,
                                       uv_los=(cxy[0], cxy[1]))
         fov_summed = oops.fov.SubsampledFOV(fov_full, 2)

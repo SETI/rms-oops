@@ -89,7 +89,7 @@ class Host:
             path (str | oops.Path, optional): Override for the Path of the observer.
             frame (str | oops.Frame, optional): Override for the Frame of the observing
                 instrument.
-            fov (oops.Frame, optional): Override for the default FOV of the observing
+            fov (oops.FOV, optional): Override for the default FOV of the observing
                 instrument.
             calibrations (oops.Calibration | list[oops.Calibration], optional): Override
                 for the calibration or list of calibrations.
@@ -451,7 +451,7 @@ class Host:
             path (str | oops.Path, optional): Override for the Path of the observer.
             frame (str | oops.Frame, optional): Override for the Frame of the observing
                 instrument.
-            fov (oops.Frame, optional): Override for the default FOV of the observing
+            fov (oops.FOV, optional): Override for the default FOV of the observing
                 instrument.
             calibrations (oops.Calibration | list[oops.Calibration], optional): Override
                 for the calibration or list of calibrations.
