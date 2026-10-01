@@ -264,9 +264,10 @@ class _Galileo:
         """Convert a Galileo spacecraft clock count to seconds TDB.
 
         The kernels needed are furnished on the first call through :meth:`load_sclk`, so
-        no call to :meth:`initialize` is required. The count marks the start of the
-        frame; on images whose label also gives IMAGE_TIME, the result agrees with that
-        time to within a few seconds.
+        no call to :meth:`initialize` is required. The result is the start of the frame
+        that the count names, which is not the start of the exposure: the shutter opens
+        up to 6.5 s later, depending on the frame duration, or one frame earlier for an
+        extended exposure.
 
         Parameters:
             count (str): The clock count as one to four integer fields (RIM, mod-91,

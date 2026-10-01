@@ -15,7 +15,7 @@ from vicar     import VicarImage
 
 import oops
 from . import _Galileo
-from hosts import Host, PdsHostError
+from hosts import Host, HostFormatError, PdsHostError
 from hosts._pds3_support import _read_pds3_image_array
 
 # The SSI camera frame is the scan platform frame, whose C kernels are sampled at discrete
@@ -30,6 +30,21 @@ _NAIF_ID = -77036
 
 # The CUT_OUT_WINDOW value written in the supplemental index when the label has none
 _NO_WINDOW = [-1, -1, -1, -1]
+
+# Seconds from the start of the frame named by SPACECRAFT_CLOCK_START_COUNT to the opening
+# of the shutter, keyed by FRAME_DURATION in seconds. These are the median offsets between
+# IMAGE_TIME, the middle of the exposure, and the clock count across the 14,585 images of
+# GO_0002-GO_0023 that give both; about 90% of images agree to within 1/3 s, the
+# resolution of a count given to the mod-91 field. An EXTENDED exposure opens its shutter
+# one frame earlier, in the frame before the one the count names.
+_SHUTTER_DELAY = {
+     2.333: 0.225,
+     8.667: 1.149,
+    15.167: 1.150,
+    30.333: 2.817,
+    60.667: 6.483,
+}
+_FRAME_DURATION_TOLERANCE = 0.05
 
 # Target name as found in PDS label -> correct name
 _TARGET_NAME_REPAIRS = {
@@ -269,16 +284,16 @@ class SSI(Host):
         # Note that PDS3 labels and index rows use the same names.
         texp = dict_['EXPOSURE_DURATION'] / 1000.
 
-        #TODO: determine whether IMAGE_TIME is the start time or the mid time..
+        # IMAGE_TIME is the middle of the exposure. Some RAW_CAL frames in GO_0002 and
+        # GO_0003 have no IMAGE_TIME, but every label carries the spacecraft clock count.
+        # Never fall back to a placeholder time: it silently places the frame at the
+        # J2000 epoch.
         if dict_['IMAGE_TIME'] == 'UNK':
-            # Some RAW_CAL frames in GO_0002 and GO_0003 have no IMAGE_TIME, but every
-            # label carries the spacecraft clock count, which the SCLK kernel converts to
-            # within a few seconds of IMAGE_TIME wherever both are given. Never fall back
-            # to a placeholder time: it silently places the frame at the J2000 epoch.
-            tstart = _Galileo.tdb_from_sclk(dict_['SPACECRAFT_CLOCK_START_COUNT'])
+            tstart = SSI._tstart_from_sclk(dict_)
             time_from_sclk = True
         else:
-            tstart = julian.tdb_from_tai(julian.tai_from_iso(dict_['IMAGE_TIME']))
+            tmid = julian.tdb_from_tai(julian.tai_from_iso(dict_['IMAGE_TIME']))
+            tstart = tmid - texp / 2.
             time_from_sclk = False
 
         mode = dict_.get('TELEMETRY_FORMAT_ID', 'NONE')
@@ -365,6 +380,40 @@ class SSI(Host):
             obs.insert_subfield('image_url', filepath.absolute().as_posix())
 
         return obs
+
+    @staticmethod
+    def _tstart_from_sclk(dict_):
+        """The start of the exposure derived from the spacecraft clock count.
+
+        The count names the frame in which the image was read out. The shutter opens a
+        fixed delay after the start of that frame, which depends on FRAME_DURATION, or
+        one frame earlier for an EXTENDED exposure. The result agrees with the start of
+        the exposure implied by IMAGE_TIME to within about 1/3 s for most images.
+
+        Parameters:
+            dict_ (dict): The PDS3 label or index row. It must give
+                SPACECRAFT_CLOCK_START_COUNT and FRAME_DURATION; EXPOSURE_TYPE, if absent,
+                is taken as "NORMAL".
+
+        Returns:
+            float: The start of the exposure in seconds TDB.
+
+        Raises:
+            HostFormatError: If FRAME_DURATION is not one of the SSI frame durations.
+        """
+
+        frame_duration = float(dict_['FRAME_DURATION'])
+        nominal = min(_SHUTTER_DELAY, key=lambda key: abs(key - frame_duration))
+        if abs(nominal - frame_duration) > _FRAME_DURATION_TOLERANCE:
+            raise HostFormatError(f'unrecognized Galileo SSI FRAME_DURATION: '
+                                  f'{frame_duration}')
+
+        tstart = (_Galileo.tdb_from_sclk(dict_['SPACECRAFT_CLOCK_START_COUNT'])
+                  + _SHUTTER_DELAY[nominal])
+        if dict_.get('EXPOSURE_TYPE', 'NORMAL') == 'EXTENDED':
+            tstart -= nominal
+
+        return tstart
 
     @staticmethod
     def _detect_in_pds3(label):
