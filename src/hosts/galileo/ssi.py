@@ -3,7 +3,6 @@
 ##########################################################################################
 
 import re
-import sys
 
 import numpy as np
 import julian
@@ -272,9 +271,15 @@ class SSI(Host):
 
         #TODO: determine whether IMAGE_TIME is the start time or the mid time..
         if dict_['IMAGE_TIME'] == 'UNK':
-            tstart = sys.float_info.min
+            # Some RAW_CAL frames in GO_0002 and GO_0003 have no IMAGE_TIME, but every
+            # label carries the spacecraft clock count, which the SCLK kernel converts to
+            # within a few seconds of IMAGE_TIME wherever both are given. Never fall back
+            # to a placeholder time: it silently places the frame at the J2000 epoch.
+            tstart = _Galileo.tdb_from_sclk(dict_['SPACECRAFT_CLOCK_START_COUNT'])
+            time_from_sclk = True
         else:
             tstart = julian.tdb_from_tai(julian.tai_from_iso(dict_['IMAGE_TIME']))
+            time_from_sclk = False
 
         mode = dict_.get('TELEMETRY_FORMAT_ID', 'NONE')
         filter_ = dict_['FILTER_NAME']
@@ -337,6 +342,7 @@ class SSI(Host):
         obs.insert_subfield('dict', dict_)
         obs.insert_subfield('instrument', 'SSI')
         obs.insert_subfield('filter', filter_)
+        obs.insert_subfield('time_from_sclk', time_from_sclk)
         obs.insert_subfield('label_target', dict_['TARGET_NAME'])
 
         # With a custom frame, pointing never came from a CK, so any CK that happens to be
