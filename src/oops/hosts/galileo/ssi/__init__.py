@@ -377,8 +377,11 @@ class SSI(object):
         px = cspyce.gdpool(px_var, 0)[0]
         cxy = cspyce.gdpool(cxy_var, 0)
 
+        # The IK distortion model is R - r = cf * r**3, with R and r the actual and ideal
+        # distances from the field center in pixels, so cf is in pixels**-2. BarrelFOV
+        # evaluates its polynomial in radians, where r_pixels = r_radians / scale.
         scale = px/fo
-        distortion_coeff = [1, 0, cf]
+        distortion_coeff = [1, 0, cf / scale**2]
 
         # Construct FOVs
         assert info['MAX_SAMPLE'] == 800
