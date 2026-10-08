@@ -34,8 +34,9 @@ from oops._exceptions import (OopsException, OopsIndexError, OopsKeyError,
 import oops.cadence
 import oops.calibration
 import oops.fov
-import oops.gravity
 import oops.frame
+import oops.gravity
+import oops.host
 import oops.lightsource
 import oops.observation
 import oops.path
@@ -47,8 +48,9 @@ oops.obs = oops.observation         # handy abbreviation
 Cadence     = oops.cadence.Cadence
 Calibration = oops.calibration.Calibration
 FOV         = oops.fov.FOV
-Gravity     = oops.gravity.Gravity
 Frame       = oops.frame.Frame
+Gravity     = oops.gravity.Gravity
+Host        = oops.host.Host
 Observation = oops.observation.Observation
 Path        = oops.path.Path
 Surface     = oops.surface.Surface

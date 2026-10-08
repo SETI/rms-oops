@@ -1,5 +1,5 @@
 ##########################################################################################
-# hosts/_pds3_support.py
+# oops/host/_pds3_support.py
 ##########################################################################################
 """Shared PDS3 tools."""
 
@@ -7,12 +7,12 @@ import numpy as np
 import vax
 from pdsparser import PdsError
 
-from . import HostError
+from ._errors import HostError
 
-__all__ = ['_read_pds3_image_array']
+__all__ = ['read_pds3_image_array']
 
 
-def _read_pds3_image_array(label, index=0):
+def read_pds3_image_array(label, index=0):
     """Return the image array(s) described by a PDS3 label.
 
     Parameters:

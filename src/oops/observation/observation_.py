@@ -671,6 +671,17 @@ class Observation(Mutable):
         self.subfields[key] = value
         self.__dict__[key] = value      # This makes it an attribute as well
 
+    def insert_subfields(self, dict_):
+        """Insert a dictionary of subfields into this observation, also making them
+        attributes.
+
+        Parameters:
+            dict_ (dict): Dictionary of subfield names and values.
+        """
+
+        for key, value in dict_.items():
+            self.insert_subfield(key, value)
+
     def delete_subfield(self, key):
         """Delete a subfield of this observation, if it is present.
 

@@ -1,11 +1,11 @@
 ##########################################################################################
-# hosts/_fits_support.py
+# oops/host/_fits_support.py
 ##########################################################################################
 """Shared FITS tools."""
 
-from . import HostError
+from ._errors import HostError
 
-__all__ = ['_get_fits_image_hdu']
+__all__ = ['get_fits_image_hdu']
 
 
 def _hdu_is_image(hdu):
@@ -19,7 +19,7 @@ def _hdu_is_image(hdu):
     return True
 
 
-def _get_fits_image_hdu(hdulist, index=None):
+def get_fits_image_hdu(hdulist, index=None):
     """The selected HDU from a FITS HDUList.
 
     Parameters:
