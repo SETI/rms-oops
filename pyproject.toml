@@ -25,7 +25,8 @@ dependencies = [
   "rms-solar",
   "rms-tabulation",
   "rms-vax",
-  "rms-vicar",
+  # 1.3.0 adds VicarLabel.is_vicar_file, which oops uses to identify VICAR files.
+  "rms-vicar>=1.3.0",
   "scipy"
 ]
 license = {text = "Apache-2.0"}

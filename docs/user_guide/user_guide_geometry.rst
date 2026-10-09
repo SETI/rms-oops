@@ -168,7 +168,7 @@ distortion-free camera at Saturn from Earth:
 
     TwoVectorFrame(Frame.J2000, los, 'z', Vector3.XAXIS, 'x', frame_id='MY_CAMERA')
     fov = FlatFOV((4.6e-6, 4.6e-6), (40, 40))     # radians per pixel, pixels
-    obs = Snapshot(('u', 'v'), time, 10., fov, 'EARTH', 'MY_CAMERA')
+    obs = Snapshot(('u', 'v'), time, 10., fov=fov, path='EARTH', frame='MY_CAMERA')
 
     bp = oops.Backplane(obs)
     bp.ring_radius('SATURN:RING')

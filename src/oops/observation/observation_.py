@@ -671,6 +671,17 @@ class Observation(Mutable):
         self.subfields[key] = value
         self.__dict__[key] = value      # This makes it an attribute as well
 
+    def insert_subfields(self, dict_):
+        """Insert a dictionary of subfields into this observation, also making them
+        attributes.
+
+        Parameters:
+            dict_ (dict): Dictionary of subfield names and values.
+        """
+
+        for key, value in dict_.items():
+            self.insert_subfield(key, value)
+
     def delete_subfield(self, key):
         """Delete a subfield of this observation, if it is present.
 
@@ -1326,11 +1337,11 @@ class Observation(Mutable):
         """The offset angles in a parallel observation's FOV and frame.
 
         Parameters:
-            parallel (Observation): A parallel observation (same `origin` and `time`,
-                different `frame` and `fov`). Alternatively, a tuple of two values:
-                `(frame, fov)`.
-            angles (tuple | list): Two offset angles in radians. The first rotation is
-                about the *y* axis of this observation's frame and the second is about the
+            parallel (Observation | tuple[Frame, FOV]): A parallel observation (same
+                origin and time, different frame and FOV). Alternatively, a tuple of two
+                values `(frame, fov)`.
+            angles (tuple[float, float]): Two offset angles in radians. The first rotation
+                is about the *y* axis of this observation's frame; the second is about the
                 *x* axis.
             time (ScalarLike, optional): Absolute time in seconds TDB; None to assume this
                 observation's midtime.
@@ -1358,8 +1369,8 @@ class Observation(Mutable):
         los0 = xform.unrotate(los0_parallel)
 
         # Perform the rotations in this frame
-        # The angles refer to rotations of the axes, not the vectors, so they
-        # need to be reversed here.
+        # The angles refer to rotations of the axes, not the vectors, so they need to be
+        # reversed here.
         los1 = los0.spin(Vector3.YAXIS, angles[0])
         los1 = los1.spin(Vector3.XAXIS, angles[1])
 

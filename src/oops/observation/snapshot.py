@@ -25,7 +25,7 @@ class Snapshot(Observation):
 
     _INVENTORY_IMPLEMENTED = True
 
-    def __init__(self, axes, tstart, texp, fov, path, frame, **subfields):
+    def __init__(self, axes, tstart, texp, *, fov, path, frame, **subfields):
         """Constructor for a Snapshot.
 
         Parameters:
@@ -81,7 +81,7 @@ class Snapshot(Observation):
             self.cadence = tstart
             if self.cadence.shape != (1,):
                 raise OopsValueError('Shape of Snapshot cadence must be (1,)')
-            self.texp = self.cadence.time[1] - self.cadence.time[0]
+            self.texp = self.cadence.texp or (self.cadence.time[1] - self.cadence.time[0])
         else:
             self.cadence = SnapCadence(tstart, texp)
             self.texp = texp
@@ -97,7 +97,9 @@ class Snapshot(Observation):
                 self.subfields)
 
     def __setstate__(self, state):
-        self.__init__(*state[:-1], **state[-1])
+        (axes, tstart, texp, fov, path, frame, subfields) = state
+        self.__init__(axes, tstart, texp, fov=fov, path=path, frame=frame,
+                      **subfields)
         self.freeze()
 
     def uvt(self, indices, *, remask=False, derivs=True):

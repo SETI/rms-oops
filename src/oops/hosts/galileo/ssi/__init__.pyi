@@ -37,6 +37,7 @@ class Metadata:
     filter: str
     tstart: float
     tstop: float
+    time_from_sclk: bool
     target: str
     mode: str
     window: ndarray | None

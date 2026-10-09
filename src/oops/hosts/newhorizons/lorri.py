@@ -180,7 +180,7 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
             for calibration.
 
     Returns:
-        Snapshot: The observation, with subfields `filespec`, `basename`,
+        Snapshot: The observation, with subfields `filepath`, `basename`,
         `spice_to_frame`, `spice_frame_name`, `spice_frame_id`, `abspath` and `image_url`
         inserted, plus `data`, `error` and `quality` when the data is loaded and
         `headers` when the headers are loaded.
@@ -305,7 +305,7 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
                                  target = target_name,
                                  instrument = 'LORRI')
 
-    snapshot.insert_subfield('filespec', filespec)
+    snapshot.insert_subfield('filepath', filespec)
     snapshot.insert_subfield('basename', filespec.name)
     snapshot.insert_subfield('spice_to_frame', SPICE_TO_FRAME)
     snapshot.insert_subfield('spice_frame_name', 'NH_LORRI')
@@ -416,7 +416,7 @@ def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
 
     Returns:
         list[Snapshot]: One observation per row of the index, each with subfields
-        `filespec`, `basename`, `spice_to_frame`, `spice_frame_name` and
+        `filepath`, `basename`, `spice_to_frame`, `spice_frame_name` and
         `spice_frame_id` inserted.
     """
 
@@ -452,7 +452,7 @@ def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
         # PATH_NAME carries a leading slash, which would otherwise be doubled
         filepath = (dict['VOLUME_ID'] + '/' + dict['PATH_NAME'].strip('/') + '/'
                     + dict['FILE_NAME'])
-        item.insert_subfield('filespec', filepath)
+        item.insert_subfield('filepath', filepath)
         item.insert_subfield('basename', dict['FILE_NAME'])
         item.insert_subfield('spice_to_frame', SPICE_TO_FRAME)
         item.insert_subfield('spice_frame_name', 'NH_LORRI')
