@@ -115,8 +115,9 @@ class Host:
 
         host, fileinfo = Host._identify_host(filepath, astrometry=astrometry,
                                              pds3_method=pds3_method)
-        return host.from_file(fileinfo, pds3_method=pds3_method, astrometry=astrometry,
-                              target=target, lightsource=lightsource, path=path,
+        return host.from_file(fileinfo, pds3_method=pds3_method, select=select,
+                              astrometry=astrometry, target=target,
+                              lightsource=lightsource, path=path,
                               frame=frame, fov=fov, calibrations=calibrations,
                               timeshift=timeshift, navigation=navigation,
                               parallel=parallel, tracker=tracker, **kwargs)
@@ -238,7 +239,7 @@ class Host:
                                select=select, target=target, lightsource=lightsource,
                                path=path, frame=frame, fov=fov, calibrations=calibrations,
                                timeshift=timeshift, navigation=navigation,
-                               tracker=tracker, **kwargs)
+                               tracker=tracker, parallel=parallel, **kwargs)
 
     @staticmethod
     def _read_index_rows(filepath, *, supplement=None, pds3_method='fast', label=None):
@@ -359,7 +360,8 @@ class Host:
 
     @staticmethod
     def _detect_in_pds3(label):
-        """True if the given parsed PDS3 label describes data from this host/instrument.
+        """True if the given parsed PDS3 label describes data from this host or
+        instrument.
 
         The developer must override this method for any data set that might use
         PDS3-labeled data files. It must return True if `label` indicates that the file
@@ -376,11 +378,11 @@ class Host:
 
     @staticmethod
     def _detect_in_vicar(label):
-        """True if the given VicarLabel describes data from this host/instrument.
+        """True if the given VicarLabel describes data from this host or instrument.
 
         The developer must override this method for any data set that might use VICAR
         format data files. It must return True if `label` indicates that the file
-        was obtained from this host/instrument.
+        was obtained from this host or instrument.
 
         Parameters:
             label (vicar.VicarLabel): A parsed VICAR label.
@@ -393,11 +395,11 @@ class Host:
 
     @staticmethod
     def _detect_in_fits(hdulist):
-        """True if the given FITS HDUList describes data from this host/instrument.
+        """True if the given FITS HDUList describes data from this host or instrument.
 
         The developer must override this method for any data set that might use FITS
         format data files. It must return True if `label` indicates that the file was
-        obtained from this host/instrument.
+        obtained from this host or instrument.
 
         Parameters:
             hdulist (HDUList): A FITS HDUList.
@@ -410,11 +412,11 @@ class Host:
 
     @staticmethod
     def _detect_in_file(filepath):
-        """True if the given parsed PDS4 label describes data from this host/instrument.
+        """True if the given file describes data from this host or instrument.
 
         The developer must override this method for any data set that might be recognized
         by the name or if the file is not in one of PDS3, VICAR, or FITS format. It must
-        return True if the file was obtained from this host/instrument.
+        return True if the file was obtained from this host or instrument.
 
         Parameters:
             filepath (str | pathlib.Path | FCPath): Path to the data file.
@@ -427,25 +429,42 @@ class Host:
 
     @staticmethod
     def _detect_in_index(label):
-        """True if the given index label describes data from this host/instrument.
+        """True if the given PDS3 label describes an index table for this host or
+        instrument.
 
-        Return None if the host/instrument cannot be inferred from the label, only from
+        Return None if the host or instrument cannot be inferred from the label, only from
         individual records.
 
         The developer must override this method for any data set in which method
         :meth:`~from_index` is defined. It must return True if the the index describes
-        data from the host/instrument.
+        data from the host or instrument.
+
+        Parameters:
+            label (Pds3Label): The parsed PDS label of an index file.
+
+        Returns:
+            bool | None: True if `label` describes an index of data from the host or
+            instrument; False if it definitely does not; None if the host or instrument
+            cannot be inferred from the label.
         """
 
-        return False
+        return None
 
     @staticmethod
     def _detect_in_row(row_dict):
-        """True if the given row of an index file label refers to this host/instrument.
+        """True if the given row of an index file refers to this host or instrument.
 
         The developer must override this method for any data set in which
         :meth:`~_detect_in_index` returns None. It must return True if the information in
-        a row of the index describes data from the host/instrument.
+        a row of the index describes data from the host or instrument.
+
+        Parameters:
+            row_dict (dict): A dictionary containing the content of one row of an index
+                file.
+
+        Returns:
+            bool: True if this label describes data from the host/instrument; False
+            otherwise.
         """
 
         return False
@@ -616,7 +635,7 @@ class Host:
                 raise PdsHostError(str(err)) from err
             else:
                 for host in hosts:
-                    if host._detect_in_pds3(label):
+                    if hasattr(host, '_detect_in_pds3') and host._detect_in_pds3(label):
                         return host, label
                 raise UnknownHostError(f'unrecognized host in PDS3 label: {filepath}')
 
@@ -628,7 +647,7 @@ class Host:
                 raise HostFormatError(f'not a valid FITS file: {filepath}') from err
             else:
                 for host in hosts:
-                    if host._detect_in_fits(hdulist):
+                    if hasattr(host, '_detect_in_fits') and host._detect_in_fits(hdulist):
                         return host, hdulist
                 raise UnknownHostError(f'unrecognized host in FITS file: {filepath}')
 
@@ -644,7 +663,7 @@ class Host:
                 raise VicarHostError(str(err)) from err
             else:
                 for host in hosts:
-                    if host._detect_in_vicar(vic):
+                    if hasattr(host, '_detect_in_vicar') and host._detect_in_vicar(vic):
                         return host, vic
                 raise UnknownHostError(f'unrecognized host in VICAR header: {filepath}')
 
@@ -656,14 +675,14 @@ class Host:
                 raise PdsHostError(str(err)) from err
             else:
                 for host in hosts:
-                    if host._detect_in_pds3(label):
+                    if hasattr(host, '_detect_in_pds3') and host._detect_in_pds3(label):
                         return host, label
                 raise UnknownHostError(f'unrecognized host in PDS3 file: {filepath}')
 
         # Handle another file format
         if 'O' in formats:
             for host in hosts:
-                if host._detect_in_file(filepath):
+                if hasattr(host, '_detect_in_file') and host._detect_in_file(filepath):
                     return host, filepath
 
         if len(hosts) == 1:
