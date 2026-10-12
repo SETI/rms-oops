@@ -130,13 +130,19 @@ unshaped light source and spreads its arrival direction over a uniform, circular
 finite angular size, with a radius in km around a path or in arcseconds around a fixed
 direction, and :class:`~oops.lightsource.StarSource` is a star: a single
 barycentric direction, given as a right ascension and declination in degrees at an
-``epoch``, that also carries the star's ``magnitude``,
-``stellar_type``, ``parallax`` (radians) and ``proper_motion`` (the rate of change of
-right ascension and declination, in radians per second). Its ``photon_to_event`` moves
+``epoch``, that also carries the star's ``magnitude``, the band of that magnitude
+``mag_type`` (such as ``"V"``), ``stellar_type``, ``parallax`` (radians) and
+``proper_motion`` (the rate of change of right ascension and declination, in radians
+per second). Its ``photon_to_event`` moves
 the star by its proper motion to the mean time of the event, then shifts it by parallax
 according to the observer's position relative to the Solar System Barycenter.
 :func:`~oops.lightsource.star_lookup` returns one for a star in the built-in catalog,
-identified by its common name or its abbreviated designation. Light sources are stored in ``Body.BODY_REGISTRY`` under their
+identified by its common name or its abbreviated designation, with the catalog's
+parallax and proper motion: from Hipparcos for stars (or Gaia DR3 for the few infrared
+stars Hipparcos lacks), and from Gaia DR3 for Messier clusters and the central stars of
+Messier nebulae. Galaxies and the Messier objects without a catalog value have zero
+parallax and proper motion, and a star whose catalog parallax is not positive is given
+none. Light sources are stored in ``Body.BODY_REGISTRY`` under their
 keys, in the same namespace as bodies, so that a backplane's source key can name either;
 the constructor refuses a name a body already has. The subclasses are imported at the
 bottom of the package module to break the cycle.

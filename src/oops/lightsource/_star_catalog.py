@@ -3,14 +3,31 @@
 ##########################################################################################
 """Support for stars as LightSource objects."""
 
+from collections import namedtuple
+
+import numpy as np
+
 from oops._exceptions import OopsKeyError, OopsValueError
 from oops.body import Body
+from oops.constants import RPD, RPS, SPD
 from oops.lightsource import LightSource
 from oops.lightsource.starsource import StarSource
 
 __all__ = ['star_lookup', 'add_star']
 
-_STAR_LOOKUP = {}
+# One catalog entry: the star's primary name, its common name or None, its J2000 right
+# ascension and declination in degrees, its type information or None, its magnitude or
+# None, the band of that magnitude ("V", "Ks" or "UV1565") or None, its parallax in
+# radians, and its proper motion as d(ra,dec)/dt in radians per second (the rate of right
+# ascension not scaled by cos(dec)) or None.
+_StarEntry = namedtuple('_StarEntry', ['name', 'common_name', 'ra', 'dec', 'type_info',
+                                       'magnitude', 'mag_type', 'parallax',
+                                       'proper_motion'])
+
+_STAR_LOOKUP = {}           # _StarEntry keyed by every upper-case name of the star
+
+_RADIANS_PER_MAS = RPS / 1000.
+_SECONDS_PER_YEAR = 365.25 * SPD        # the Julian year of catalog proper motions
 
 _GREEK_LETTER_ABBREVS = {
     'Alpha'  : ('alf', 'alp'),
@@ -53,7 +70,8 @@ def _initialize_star_lookup():
     stars = (_BRIGHTEST_IR_STARS + _BRIGHTEST_UV_STARS + _BRIGHTEST_STARS
              + _MESSIER_OBJECTS)
     alt_keys = {}
-    for (full_name, common_name, ra, dec, type_info, vmag) in stars:
+    for (full_name, common_name, ra, dec, type_info, mag, mag_type, pm_ra, pm_dec,
+         parallax_mas) in stars:
         keys = []
         if common_name:
             keys.append(common_name)
@@ -95,7 +113,14 @@ def _initialize_star_lookup():
 
         keys += short_names
 
-        result = (short_names[0], common_name, ra, dec, type_info, vmag)
+        # The catalog's RA rate is scaled by cos(dec), as is conventional; StarSource's
+        # is not
+        scale = _RADIANS_PER_MAS / _SECONDS_PER_YEAR
+        proper_motion = (pm_ra / np.cos(dec * RPD) * scale, pm_dec * scale)
+        parallax = max(parallax_mas, 0.) * _RADIANS_PER_MAS
+
+        result = _StarEntry(short_names[0], common_name, ra, dec, type_info, mag,
+                            mag_type, parallax, proper_motion)
         for key in keys:
             _STAR_LOOKUP[key.upper().replace(' ', '_')] = result
 
@@ -114,8 +139,9 @@ def star_lookup(key):
     Returns:
         LightSource: The LightSource already registered under `key`, if any; otherwise, a
         new :class:`~oops.lightsource.StarSource` at the star's J2000 position, with the
-        catalog's magnitude and type, registered under `key` in upper case and with
-        spaces replaced with underscores.
+        catalog's magnitude, magnitude type, type, parallax and proper motion, registered
+        under `key` in upper case and with spaces replaced with underscores. A star whose
+        catalog parallax is not positive is given zero parallax.
 
     Raises:
         OopsKeyError: If `key` does not identify one of the stars in the table.
@@ -134,7 +160,7 @@ def star_lookup(key):
                 raise OopsKeyError(f'unknown star "{key}"')
             key = alt_key
 
-    (_, _, ra, dec, type_info, vmag) = _STAR_LOOKUP[key]
+    entry = _STAR_LOOKUP[key]
 
     if Body.exists(key):
         lightsource = Body.lookup(key)
@@ -142,16 +168,20 @@ def star_lookup(key):
             raise OopsValueError(f'Star name is also a Body name: {key}')
         return lightsource
 
-    return StarSource(key, ra, dec, magnitude=vmag, stellar_type=type_info)
+    return StarSource(key, entry.ra, entry.dec, magnitude=entry.magnitude,
+                      mag_type=entry.mag_type, stellar_type=entry.type_info,
+                      parallax=entry.parallax, proper_motion=entry.proper_motion)
 
 
-def add_star(names, ra, dec, mag=None, type_info=None):
+def add_star(names, ra, dec, mag=None, type_info=None, *, mag_type=None, parallax=0.,
+             proper_motion=None):
     """Add one star to the catalog.
 
     Each name is registered in upper case with spaces replaced by underscores. A name
     already in the catalog at the same coordinates is left unchanged, keeping its
-    existing names, magnitude, and type information; any new names are added. A host can
-    therefore add its stars every time it is initialized.
+    existing names, magnitude, magnitude type, type information, parallax, and proper
+    motion; any new names are added. A host can therefore add its stars every time it is
+    initialized.
 
     Parameters:
         names (str | list[str]): One or more names for the star.
@@ -159,6 +189,13 @@ def add_star(names, ra, dec, mag=None, type_info=None):
         dec (float): Declination in degrees.
         mag (float, optional): Star magnitude.
         type_info (str, optional): Star type information.
+        mag_type (str, optional): The band of `mag`, such as "V" for a visual magnitude.
+        parallax (float, optional): The annual parallax of the star in radians; default
+            zero.
+        proper_motion (PairLike, optional): The time derivative of the star's (right
+            ascension, declination) in radians per second, as
+            :class:`~oops.lightsource.StarSource` takes it; default zero. The rate of
+            right ascension is not scaled by the cosine of the declination.
 
     Raises:
         OopsValueError: If any of `names` is already in the catalog at a different right
@@ -173,13 +210,13 @@ def add_star(names, ra, dec, mag=None, type_info=None):
 
     keys = [name.upper().replace(' ', '_') for name in names]
 
-    names = list(names)
-    while len(names) < 2:
-        names.append(None)
-    result = tuple(names[:2] + [ra, dec, type_info, mag])
+    common_name = names[1] if len(names) > 1 else None
+    result = _StarEntry(names[0], common_name, ra, dec, type_info, mag, mag_type,
+                        parallax, proper_motion)
 
     for key in keys:
-        if key in _STAR_LOOKUP and _STAR_LOOKUP[key][2:4] != result[2:4]:
+        entry = _STAR_LOOKUP.get(key)
+        if entry and (entry.ra, entry.dec) != (ra, dec):
             raise OopsValueError(f'Star {key} already exists with different coordinates')
 
     for key in keys:

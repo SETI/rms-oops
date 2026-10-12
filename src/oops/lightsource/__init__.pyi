@@ -66,12 +66,14 @@ class StarSource(LightSource):
     shape: tuple[int, ...]
     weight: Scalar
     magnitude: float | None
+    mag_type: str | None
     stellar_type: str | None
     parallax: float
     proper_motion: Pair
     epoch: float
     def __init__(self, name: str, ra: float, dec: float, *,
-        magnitude: float | None = None, stellar_type: str | None = None,
+        magnitude: float | None = None, mag_type: str | None = None,
+        stellar_type: str | None = None,
         parallax: float = 0.0, proper_motion: PairLike | None = None,
         epoch: float = 0.0) -> None: ...
     def photon_to_event(self, event: Event, *, derivs: bool = False,
@@ -81,6 +83,8 @@ class StarSource(LightSource):
 
 def star_lookup(key: str) -> LightSource: ...
 def add_star(names: str | list[str], ra: float, dec: float,
-    mag: float | None = None, type_info: str | None = None) -> None: ...
+    mag: float | None = None, type_info: str | None = None, *,
+    mag_type: str | None = None, parallax: float = 0.,
+    proper_motion: PairLike | None = None) -> None: ...
 
 ##########################################################################################

@@ -13,7 +13,10 @@ from polymath import Pair, Scalar, Vector3
 from oops.body        import Body
 from oops.constants   import AU, RPD, RPS
 from oops.event       import Event
-from oops.lightsource import DiskSource, LightSource, StarSource, star_lookup
+from oops.lightsource import (DiskSource, LightSource, StarSource, add_star,
+                              star_lookup)
+from oops.lightsource._MESSIER_OBJECTS import _MESSIER_OBJECTS
+from oops.lightsource._star_catalog import _STAR_LOOKUP
 from oops.path        import Path
 
 
@@ -330,7 +333,8 @@ def test_a_fixed_disk_source_keeps_the_derivatives_of_the_event() -> None:
 def test_a_star_source_is_a_fixed_lightsource_with_star_attributes() -> None:
     """A StarSource points along its RA and dec and carries a magnitude and a type."""
 
-    star = StarSource('Test Star', 30., 45., magnitude=2.5, stellar_type='G2V')
+    star = StarSource('Test Star', 30., 45., magnitude=2.5, mag_type='V',
+                      stellar_type='G2V')
     fixed = LightSource('TEST_STAR_REFERENCE', (30., 45.))
 
     assert isinstance(star, LightSource)
@@ -338,6 +342,7 @@ def test_a_star_source_is_a_fixed_lightsource_with_star_attributes() -> None:
     assert star.source == fixed.source
     assert star.as_path() is None
     assert star.magnitude == 2.5
+    assert star.mag_type == 'V'
     assert star.stellar_type == 'G2V'
     assert Body.lookup('TEST_STAR') is star
 
@@ -357,6 +362,7 @@ def test_a_star_source_magnitude_and_type_default_to_none() -> None:
     star = StarSource('TEST_STAR_BARE', 0., 90.)
 
     assert star.magnitude is None
+    assert star.mag_type is None
     assert star.stellar_type is None
     assert star.parallax == 0.
     assert star.proper_motion == Pair.ZEROS
@@ -391,7 +397,7 @@ def test_a_star_source_must_name_a_single_direction(ra: float | list[float],
 def test_a_star_source_survives_a_round_trip_through_pickle() -> None:
     """Unpickling rebuilds the star with its direction, magnitude and type."""
 
-    star = StarSource('TEST_STAR_PICKLED', 30., 45., magnitude=-1.4,
+    star = StarSource('TEST_STAR_PICKLED', 30., 45., magnitude=-1.4, mag_type='Ks',
                       stellar_type='A1Vm', parallax=1.e-6, proper_motion=(1.e-15, 2.e-15),
                       epoch=100.)
 
@@ -401,6 +407,7 @@ def test_a_star_source_survives_a_round_trip_through_pickle() -> None:
     assert revived.name == star.name
     assert revived.source == star.source
     assert revived.magnitude == -1.4
+    assert revived.mag_type == 'Ks'
     assert revived.stellar_type == 'A1Vm'
     assert revived.parallax == 1.e-6
     assert revived.proper_motion == Pair((1.e-15, 2.e-15))
@@ -415,8 +422,151 @@ def test_star_lookup_returns_a_star_source_from_the_catalog() -> None:
     assert isinstance(star, StarSource)
     assert star.key == 'SIRIUS'
     assert star.magnitude == -1.44
+    assert star.mag_type == 'V'
     assert star.stellar_type == 'A1Vm'
     assert star_lookup('sirius') is star
+
+
+def test_star_lookup_entries_name_their_fields() -> None:
+    """Each catalog entry is a named tuple whose fields are in the catalog's units."""
+
+    star_lookup('Sirius')
+    entry = _STAR_LOOKUP['SIRIUS']
+
+    assert entry.name == 'alf_CMa'
+    assert entry.common_name == 'Sirius'
+    assert entry.ra == 101.287214
+    assert entry.dec == -16.716116
+    assert entry.type_info == 'A1Vm'
+    assert entry.magnitude == -1.44
+    assert entry.mag_type == 'V'
+    assert entry.parallax == pytest.approx(379.21 * RPS / 1000.)
+    assert entry.proper_motion[1] == pytest.approx(-1223.07 * RPS / 1000.
+                                                   / (365.25 * 86400.))
+
+
+@pytest.mark.parametrize(('name', 'mag_type'),
+                         [('Betelgeuse', 'V'), ('W Hya', 'Ks'),
+                          ('ups Ori', 'UV1565'), ('M31', 'V')])
+def test_star_lookup_entries_record_the_band_of_the_magnitude(name: str,
+                                                              mag_type: str) -> None:
+    """An entry's magnitude type names the band its magnitude was measured in.
+
+    Betelgeuse is in every table, so its visual magnitude takes precedence.
+    """
+
+    star = star_lookup(name)
+    entry = _STAR_LOOKUP[name.upper().replace(' ', '_')]
+
+    assert entry.mag_type == mag_type
+    assert star.mag_type == mag_type
+
+
+_MAS = RPS / 1000.
+_JULIAN_YEAR = 365.25 * 86400.
+
+
+def test_star_lookup_applies_the_catalog_parallax_and_proper_motion() -> None:
+    """A catalog star carries its parallax and its proper motion converted to radians."""
+
+    star = star_lookup('Sirius')
+
+    # The catalog gives the RA rate scaled by cos(dec); StarSource takes it unscaled
+    cos_dec = np.cos(-16.716116 * RPD)
+    assert star.parallax == pytest.approx(379.21 * _MAS)
+    assert star.proper_motion.vals[0] == pytest.approx(-546.01 * _MAS / _JULIAN_YEAR
+                                                       / cos_dec)
+    assert star.proper_motion.vals[1] == pytest.approx(-1223.07 * _MAS / _JULIAN_YEAR)
+
+
+def test_star_lookup_uses_gaia_values_for_a_star_hipparcos_lacks() -> None:
+    """IK Tauri has no Hipparcos entry, so its astrometry comes from Gaia DR3."""
+
+    star = star_lookup('IK Tau')
+
+    assert star.parallax == pytest.approx(3.84 * _MAS)
+
+
+def test_star_lookup_ignores_a_parallax_that_is_not_positive() -> None:
+    """HR 4352's published parallax is negative, so the star gets none."""
+
+    star = star_lookup('HR 4352')
+
+    assert star.parallax == 0.
+    assert star.proper_motion.vals[1] == pytest.approx(2.15 * _MAS / _JULIAN_YEAR)
+
+
+def test_star_lookup_applies_a_messier_cluster_parallax_and_proper_motion() -> None:
+    """A Messier cluster carries the mean astrometry of its members."""
+
+    cluster = star_lookup('Pleiades')
+
+    cos_dec = np.cos(cluster.source.to_ra_dec_length(recursive=False)[1].vals)
+    assert cluster.parallax == pytest.approx(7.378 * _MAS)
+    assert cluster.proper_motion.vals[0] == pytest.approx(19.955 * _MAS / _JULIAN_YEAR
+                                                          / cos_dec)
+    assert cluster.proper_motion.vals[1] == pytest.approx(-45.457 * _MAS / _JULIAN_YEAR)
+
+
+def test_messier_galaxies_have_zero_parallax_and_proper_motion() -> None:
+    """A galaxy is too distant to move or show parallax, so its catalog values are zero."""
+
+    galaxies = [row for row in _MESSIER_OBJECTS if row[4].startswith('Galaxy')]
+
+    assert len(galaxies) == 40
+    assert all(row[7:] == (0., 0., 0.) for row in galaxies)
+
+
+@pytest.mark.parametrize('name', ['Messier 17', 'Messier 20', 'Messier 24', 'Messier 40',
+                                  'Messier 42', 'Messier 43', 'Messier 73'])
+def test_messier_objects_without_cluster_astrometry_have_zero_values(name: str) -> None:
+    """A Messier object with no catalog astrometry is given zeros, not None."""
+
+    (row,) = [row for row in _MESSIER_OBJECTS if row[0] == name]
+
+    assert row[7:] == (0., 0., 0.)
+
+
+def test_star_lookup_gives_a_galaxy_no_parallax_or_proper_motion() -> None:
+    """A galaxy has no catalog astrometry, so it is fixed."""
+
+    galaxy = star_lookup('M31')
+
+    assert galaxy.parallax == 0.
+    assert galaxy.proper_motion == Pair.ZEROS
+
+
+def test_add_star_records_magnitude_type_parallax_and_proper_motion() -> None:
+    """A star added with these values comes back from star_lookup with them unchanged."""
+
+    add_star(['TEST ADDED STAR'], 10., 20., mag=5., type_info='G2V', mag_type='Ks',
+             parallax=1.e-6, proper_motion=(1.e-15, -2.e-15))
+
+    star = star_lookup('test added star')
+
+    assert star.parallax == 1.e-6
+    assert star.proper_motion == Pair((1.e-15, -2.e-15))
+    assert star.magnitude == 5.
+    assert star.mag_type == 'Ks'
+
+
+def test_add_star_defaults_to_no_parallax_or_proper_motion() -> None:
+    """A star added without astrometry is fixed."""
+
+    add_star('TEST ADDED FIXED STAR', 10., 20.)
+
+    star = star_lookup('TEST_ADDED_FIXED_STAR')
+
+    assert star.mag_type is None
+    assert star.parallax == 0.
+    assert star.proper_motion == Pair.ZEROS
+
+
+def test_add_star_astrometry_is_keyword_only() -> None:
+    """Parallax and proper motion must be passed by keyword."""
+
+    with pytest.raises(TypeError, match='positional argument'):
+        add_star('TEST POSITIONAL STAR', 10., 20., 5., 'G2V', 1.e-6)
 
 
 def _ra_dec_of(los: Vector3) -> tuple[float, float]:

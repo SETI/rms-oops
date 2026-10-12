@@ -16,11 +16,14 @@ class StarSource(LightSource):
 
     A subclass of LightSource whose source is always a single direction in J2000
     coordinates, defined by a right ascension and declination, so `source_is_moving` is
-    always False. The direction is barycentric and applies at the epoch; :meth:`photon_to_event` corrects it for the star's proper motion
-    and for the parallax seen from the observer.
+    always False. The direction is barycentric and applies at the epoch;
+    :meth:`photon_to_event` corrects it for the star's proper motion and for the parallax
+    seen from the observer.
 
     Attributes:
-        magnitude (float | None): The visual magnitude of the star; None if unknown.
+        magnitude (float | None): The magnitude of the star; None if unknown.
+        mag_type (str | None): The band of the magnitude, such as "V" for a visual
+            magnitude; None if unknown.
         stellar_type (str | None): The stellar type or other descriptive type of the
             object, such as "A1Vm" or "Globular cluster"; None if unknown.
         parallax (float): The annual parallax of the star in radians; zero for an object
@@ -31,8 +34,8 @@ class StarSource(LightSource):
             given by its right ascension and declination.
     """
 
-    def __init__(self, name, ra, dec, *, magnitude=None, stellar_type=None, parallax=0.,
-                 proper_motion=None, epoch=0.):
+    def __init__(self, name, ra, dec, *, magnitude=None, mag_type=None, stellar_type=None,
+                 parallax=0., proper_motion=None, epoch=0.):
         """Constructor for a StarSource.
 
         Parameters:
@@ -43,7 +46,9 @@ class StarSource(LightSource):
                 degrees.
             dec (float): The barycentric J2000 declination of the star at `epoch`, in
                 degrees.
-            magnitude (float, optional): The visual magnitude of the star.
+            magnitude (float, optional): The magnitude of the star.
+            mag_type (str, optional): The band of the magnitude, such as "V" for a visual
+                magnitude.
             stellar_type (str, optional): The stellar type or other descriptive type of
                 the object.
             parallax (float, optional): The annual parallax of the star in radians;
@@ -67,6 +72,7 @@ class StarSource(LightSource):
         LightSource.__init__(self, name, (ra, dec))
 
         self.magnitude = magnitude
+        self.mag_type = mag_type
         self.stellar_type = stellar_type
         self.parallax = parallax
         self.proper_motion = (Pair.ZEROS if proper_motion is None
@@ -79,14 +85,16 @@ class StarSource(LightSource):
         self._dec = dec * RPD
 
     def __getstate__(self):
-        return (self.name,) + self._ra_dec_degrees + (self.magnitude, self.stellar_type,
-                                                      self.parallax, self.proper_motion,
-                                                      self.epoch)
+        return (self.name,) + self._ra_dec_degrees + (self.magnitude, self.mag_type,
+                                                      self.stellar_type, self.parallax,
+                                                      self.proper_motion, self.epoch)
 
     def __setstate__(self, state):
-        (name, ra, dec, magnitude, stellar_type, parallax, proper_motion, epoch) = state
-        self.__init__(name, ra, dec, magnitude=magnitude, stellar_type=stellar_type,
-                      parallax=parallax, proper_motion=proper_motion, epoch=epoch)
+        (name, ra, dec, magnitude, mag_type, stellar_type, parallax, proper_motion,
+         epoch) = state
+        self.__init__(name, ra, dec, magnitude=magnitude, mag_type=mag_type,
+                      stellar_type=stellar_type, parallax=parallax,
+                      proper_motion=proper_motion, epoch=epoch)
 
     def photon_to_event(self, event, *, derivs=False, guess=None, antimask=None,
                         quick=None, converge=None):
