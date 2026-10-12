@@ -84,15 +84,16 @@ on), and for a planet with rings the ``ring_body``, the registered body whose su
 the unbounded ring plane. Ring bodies such as ``SATURN_MAIN_RINGS`` are bodies whose
 surface is a bounded :class:`~oops.surface.RingPlane` and whose ``is_ring`` is true.
 
-The class holds the registry: ``Body.BODY_REGISTRY`` maps upper-case names to bodies,
-``lookup`` and ``as_body`` read it and raise ``KeyError`` for an unknown name, and
-``reset_registry`` clears it along with the path and frame registries.
+The class holds the registry: ``Body.BODY_REGISTRY`` maps each body's ``key`` (its
+``name`` in upper case, with underscores in place of spaces) to the body, ``lookup`` and
+``as_body`` read it, accepting a name or a key, and raise ``KeyError`` for an unknown one,
+and ``reset_registry`` clears it along with the path and frame registries.
 :meth:`~oops.Body.define_solar_system` populates it from SPICE through :mod:`spicedb`:
 the leap seconds, the planetary constants, the ephemerides covering the requested time
 range, then one body per planet, satellite and barycenter with its
 :class:`~oops.path.SpicePath` and :class:`~oops.frame.SpiceFrame`, the ring bodies and
 ring frames of the ringed planets, the gravity fields, and the ``SOLAR_DISK`` light
-source. The per-planet definitions are private helpers in ``body.py``, and the module
+source, a disk around the point source ``SOLAR_CENTER``. The per-planet definitions are private helpers in ``body.py``, and the module
 constants there record the ring boundaries. The lower-level ``define_body``,
 ``define_ring``, ``define_orbit`` and ``define_small_body`` add one body at a time.
 
@@ -124,8 +125,18 @@ LightSource
 A :class:`~oops.lightsource.LightSource` is a named source of photons: a path, for a
 source that moves, or a fixed J2000 direction given as a vector or as right ascension
 and declination in degrees. Its ``photon_to_event`` fills in the arrival direction of an
-event the way a path's does, and :class:`~oops.lightsource.DiskSource` adds a disk of
-finite angular size. Light sources are stored in ``Body.BODY_REGISTRY`` under their
-names, in the same namespace as bodies, so that a backplane's source key can name either;
-the constructor refuses a name a body already has. The subclass is imported at the bottom
-of the package module to break the cycle.
+event the way a path's does. :class:`~oops.lightsource.DiskSource` wraps another,
+unshaped light source and spreads its arrival direction over a uniform, circular disk of
+finite angular size, with a radius in km around a path or in arcseconds around a fixed
+direction, and :class:`~oops.lightsource.StarSource` is a star: a single
+barycentric direction, given as a right ascension and declination in degrees at an
+``epoch``, that also carries the star's ``magnitude``,
+``stellar_type``, ``parallax`` (radians) and ``proper_motion`` (the rate of change of
+right ascension and declination, in radians per second). Its ``photon_to_event`` moves
+the star by its proper motion to the mean time of the event, then shifts it by parallax
+according to the observer's position relative to the Solar System Barycenter.
+:func:`~oops.lightsource.star_lookup` returns one for a star in the built-in catalog,
+identified by its common name or its abbreviated designation. Light sources are stored in ``Body.BODY_REGISTRY`` under their
+keys, in the same namespace as bodies, so that a backplane's source key can name either;
+the constructor refuses a name a body already has. The subclasses are imported at the
+bottom of the package module to break the cycle.

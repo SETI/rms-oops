@@ -31,7 +31,7 @@ moons and rings. A body holds everything the library knows about a target:
     ('SATURN', 'IAU_SATURN')
     >>> type(saturn.surface).__name__, saturn.ring_body.name
     ('Spheroid', 'SATURN_RING_PLANE')
-    >>> saturn.child_names[:6], len(saturn.child_names)
+    >>> saturn.child_keys[:6], len(saturn.child_keys)
     (['MIMAS', 'ENCELADUS', 'TETHYS', 'DIONE', 'RHEA', 'TITAN'], 68)
     >>> Body.lookup('EPIMETHEUS').keywords
     ['EPIMETHEUS', 'SATELLITE', 'REGULAR', 'SATURN']
@@ -39,8 +39,9 @@ moons and rings. A body holds everything the library knows about a target:
     True
 
 ``select_children`` filters a body's moons by keyword, radius or ring, and
-``Body.BODY_REGISTRY`` is the whole registry. Names are case-insensitive on lookup and
-upper case in the registry.
+``Body.BODY_REGISTRY`` is the whole registry. Each body has a ``name``, capitalized as
+it is written, and a ``key``, the name in upper case with underscores in place of
+spaces. The registry is indexed by key, and a lookup accepts either form in any case.
 
 Spacecraft need their own kernels. ``define_solar_system`` loads planets and moons
 only; a mission's host module furnishes the spacecraft trajectory and pointing when it

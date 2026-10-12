@@ -205,6 +205,15 @@ def test_inventory_full_agrees_with_the_other_return_types() -> None:
         assert bool(full[name]['inside']) == (name in names)
 
 
+def test_inventory_is_indexed_by_body_key() -> None:
+    """Bodies given by name in any case are reported under their keys."""
+
+    obs = _snapshot_facing_the_moon()
+
+    assert obs.inventory(['Moon', 'mars'], return_type='list') == ['MOON']
+    assert sorted(obs.inventory(['Moon', 'mars'], return_type='full')) == ['MARS', 'MOON']
+
+
 @pytest.mark.parametrize('key,expected', sorted(INVENTORY_KEYS.items()))
 def test_inventory_full_entry_matches_its_documented_type(key: str, expected) -> None:
     """Each documented key is present and holds a value of its documented type."""

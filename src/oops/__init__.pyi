@@ -73,7 +73,9 @@ class OopsValueError(ValueError, OopsException): ...
 class Body(Oops):
     BODY_REGISTRY: dict[str, Body]
     STANDARD_BODIES: set[str]
+    key: str
     name: str
+    alt_names: list[str]
     is_standard: bool
     spk: str | None
     spice_name: str
@@ -96,7 +98,7 @@ class Body(Oops):
     gravity: Gravity | None
     lightsource: LightSource | None
     keywords: list[str]
-    child_names: list[str]
+    child_keys: list[str]
     is_registered: bool
     def __init__(self, name: str, path: Path | str, frame: Frame | str,
         parent: Body | str | None = None, barycenter: Body | str | None = None,
@@ -161,7 +163,7 @@ class Body(Oops):
     @staticmethod
     def as_body(body: Body | str) -> Body: ...
     @staticmethod
-    def as_body_name(body: Body | str) -> str: ...
+    def as_body_key(body: Body | str) -> str: ...
     @staticmethod
     def reset_registry() -> None: ...
     def as_path(self) -> Path: ...

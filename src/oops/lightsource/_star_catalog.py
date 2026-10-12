@@ -6,6 +6,7 @@
 from oops._exceptions import OopsKeyError, OopsValueError
 from oops.body import Body
 from oops.lightsource import LightSource
+from oops.lightsource.starsource import StarSource
 
 __all__ = ['star_lookup', 'add_star']
 
@@ -51,6 +52,7 @@ def _initialize_star_lookup():
     # IR and UV stars first so a matching star's V magnitude takes precedence
     stars = (_BRIGHTEST_IR_STARS + _BRIGHTEST_UV_STARS + _BRIGHTEST_STARS
              + _MESSIER_OBJECTS)
+    alt_keys = {}
     for (full_name, common_name, ra, dec, type_info, vmag) in stars:
         keys = []
         if common_name:
@@ -65,12 +67,14 @@ def _initialize_star_lookup():
 
         # For stars, generate short names with and without "." and "0"
         else:
+            letter_plus_digit = False
             if first.isdigit():                         # a number alone is unchanged
                 letter = ''
                 nums = [first]
             elif first[-1].isdigit():                   # separate a trailing digit
                 nums = ['0' + first[-1], first[-1]]     # "1" might be "01"
                 letter = first[:-1]
+                letter_plus_digit = True
             else:
                 letter = first
                 nums = ['']
@@ -82,6 +86,12 @@ def _initialize_star_lookup():
                 for num in nums:
                     short_name = letter + num + '_' + constellation
                     short_names.append(short_name)
+                if letter_plus_digit:                   # include desig without digit
+                    alt_key = (letter + '_' + constellation).upper()
+                    if alt_key in alt_keys:             # ...but only if unambiguous
+                        alt_keys[alt_key] = ''          # sentinel value
+                    else:
+                        alt_keys[alt_key] = short_name.upper()
 
         keys += short_names
 
@@ -89,9 +99,13 @@ def _initialize_star_lookup():
         for key in keys:
             _STAR_LOOKUP[key.upper().replace(' ', '_')] = result
 
+        for alt_key, key in alt_keys.items():
+            if key:  # if not sentinel value
+                _STAR_LOOKUP[alt_key] = _STAR_LOOKUP[key]
+
 
 def star_lookup(key):
-    """The LightSource object associated with the given star identifier.
+    """The light source associated with the given star identifier.
 
     Parameters:
         key (str): The star's abbreviated name (e.g., "alf CMa"), or its common name
@@ -99,8 +113,9 @@ def star_lookup(key):
 
     Returns:
         LightSource: The LightSource already registered under `key`, if any; otherwise, a
-        new :class:`~oops.lightsource.LightSource` at the star's J2000 position,
-        registered under `key` in upper case and with spaces replaced with underscores.
+        new :class:`~oops.lightsource.StarSource` at the star's J2000 position, with the
+        catalog's magnitude and type, registered under `key` in upper case and with
+        spaces replaced with underscores.
 
     Raises:
         OopsKeyError: If `key` does not identify one of the stars in the table.
@@ -113,13 +128,13 @@ def star_lookup(key):
     key = key.upper().replace(' ', '_')
     if key not in _STAR_LOOKUP:
         # Try missing underscore, e.g., "ALPVIR" -> "ALP_VIR"
-        if (5 <= len(key) <= 7) and '_' not in key:
-            alt_key = key[:-3] + '_' + key[-3]
+        if (4 <= len(key) <= 6) and '_' not in key:
+            alt_key = key[:-3] + '_' + key[-3:]
             if alt_key not in _STAR_LOOKUP:
                 raise OopsKeyError(f'unknown star "{key}"')
             key = alt_key
 
-    (_, _, ra, dec, _, _) = _STAR_LOOKUP[key]
+    (_, _, ra, dec, type_info, vmag) = _STAR_LOOKUP[key]
 
     if Body.exists(key):
         lightsource = Body.lookup(key)
@@ -127,7 +142,7 @@ def star_lookup(key):
             raise OopsValueError(f'Star name is also a Body name: {key}')
         return lightsource
 
-    return LightSource(key, (ra, dec))
+    return StarSource(key, ra, dec, magnitude=vmag, stellar_type=type_info)
 
 
 def add_star(names, ra, dec, mag=None, type_info=None):

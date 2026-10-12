@@ -23,13 +23,13 @@ class LightSource(Oops):
         The source can have arbitrary shape, making it possible to describe an extended
         source via an array of nearby paths or directions.
 
-        LightSource objects are stored by name in the Body registry, so they share the
+        LightSource objects are stored by key in the Body registry, so they share the
         same name space as the Body class. This is necessary so they can be used as keys
         in Backplanes.
 
         Parameters:
-            name (str): Name under which to register this source; it is converted to
-                upper case.
+            name (str): Name of this source. It is registered under its key, the name in
+                upper case with underscores replacing spaces.
             source (Path | str | PairLike | Vector3Like): The location of the source, as
                 any of:
 
@@ -47,20 +47,11 @@ class LightSource(Oops):
 
         Raises:
             OopsTypeError: If `name` is not a string.
-            OopsValueError: If `name` is already the name of a Body, or if `source` is not
+            OopsValueError: If `name` already names a Body, or if `source` is not
                 one of the forms above.
         """
 
-        # Check and validate the name
-        if not isinstance(name, str):
-            raise OopsTypeError(f'LightSource name must be a string: {name!r}')
-
-        self.name = name.upper()
-
-        if Body.exists(self.name):
-            thing = Body.lookup(self.name)
-            if isinstance(thing, Body):
-                raise OopsValueError(f'LightSource name is also a Body name: {self.name}')
+        self._set_name(name)
 
         # Interpret the source. Each form is recognized explicitly rather than by trying
         # them in turn, so that an input matching none of them is rejected instead of
@@ -103,7 +94,30 @@ class LightSource(Oops):
         self.weight /= self.weight.sum()
 
         # Register as a Body
-        Body.BODY_REGISTRY[self.name] = self
+        Body.BODY_REGISTRY[self.key] = self
+
+    def _set_name(self, name):
+        """Validate a name and set the name, key and alternative names of this source.
+
+        Parameters:
+            name (str): The name of this source.
+
+        Raises:
+            OopsTypeError: If `name` is not a string.
+            OopsValueError: If `name` is already the name of a Body.
+        """
+
+        if not isinstance(name, str):
+            raise OopsTypeError(f'LightSource name must be a string: {name!r}')
+
+        self.name = name
+        self.key = Body.as_body_key(name)
+        self.alt_names = []
+
+        if Body.exists(self.key):
+            thing = Body.lookup(self.key)
+            if isinstance(thing, Body):
+                raise OopsValueError(f'LightSource name is also a Body name: {self.name}')
 
     def __getstate__(self):
         return (self.name, self.source, self.weight)
@@ -111,8 +125,8 @@ class LightSource(Oops):
     def __setstate__(self, state):
         self.__init__(*state)
 
-    def photon_to_event(self, event, derivs=False, guess=None, antimask=None, quick=None,
-                        converge=None):
+    def photon_to_event(self, event, *, derivs=False, guess=None, antimask=None,
+                        quick=None, converge=None):
         """Solve for a photon arrival event from this lightsource.
 
         Input parameters are identical to the Path method of the same name, but for
@@ -180,11 +194,12 @@ class LightSource(Oops):
         return (self.source if self.source_is_moving else None)
 
 
-# Imported at the bottom because DiskSource subclasses LightSource, so this module must
-# be fully defined before its subclass module can be imported.
+# Imported at the bottom because DiskSource and StarSource subclass LightSource, so this
+# module must be fully defined before its subclass modules can be imported.
 from oops.lightsource.disksource import DiskSource
+from oops.lightsource.starsource import StarSource
 from oops.lightsource._star_catalog import star_lookup, add_star
 
-__all__ = ['LightSource', 'DiskSource', 'star_lookup', 'add_star']
+__all__ = ['LightSource', 'DiskSource', 'StarSource', 'star_lookup', 'add_star']
 
 ##########################################################################################

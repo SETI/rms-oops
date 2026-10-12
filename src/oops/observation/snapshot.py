@@ -366,7 +366,8 @@ class Snapshot(Observation):
         specified by `tfrac` or `time`. All bodies are assumed to be spherical.
 
         Parameters:
-            bodies (list): The names of the body objects to be included in the inventory.
+            bodies (list[Body | str]): The bodies, or their names or keys, to be included
+                in the inventory.
             tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where 0 refers to the beginning and 1 refers to the end of each sample's
                 integration interval. The default is 0.5, referring to the midtime of each
@@ -378,11 +379,11 @@ class Snapshot(Observation):
                 uncertainties.
             return_type (str, optional): One of "list", "flags", or "full":
 
-                * "list": Return the inventory as a list of names.
+                * "list": Return the inventory as a list of body keys.
                 * "flags": Return the inventory as an array of boolean flag values in the
                   same order as bodies.
                 * "full": Return the inventory as a dictionary of dictionaries. The main
-                  dictionary is indexed by body name. The subdictionaries contain
+                  dictionary is indexed by body key. The subdictionaries contain
                   attributes of the body in the FOV.
 
             fov (FOV, optional): Use this fov; if None, use `self.fov`.
@@ -398,7 +399,7 @@ class Snapshot(Observation):
             list | numpy.ndarray | dict: The inventory, in the form named by
             `return_type`.
 
-            * If return_type is "list", it returns a list of the names of all the body
+            * If return_type is "list", it returns a list of the keys of all the body
               objects that fall at least partially inside the FOV and are not completely
               obscured by another object in the list.
 
@@ -453,7 +454,6 @@ class Snapshot(Observation):
         if fov is None:
             fov = self.fov
 
-        body_names = [Body.as_body_name(body) for body in bodies]
         bodies  = [Body.as_body(body) for body in bodies]
         nbodies = len(bodies)
 
@@ -517,7 +517,7 @@ class Snapshot(Observation):
             ret_list = []
             for i in range(nbodies):
                 if flags[i]:
-                    ret_list.append(body_names[i])
+                    ret_list.append(bodies[i].key)
             return ret_list
 
         # Return full info
@@ -528,7 +528,7 @@ class Snapshot(Observation):
         body_uv = fov.uv_from_los_t(arrival_event.neg_arr_ap, time=obs_time).vals
         for i in range(nbodies):
             body_data = {}
-            body_data['name'] = body_names[i]
+            body_data['name'] = bodies[i].name
             body_data['inside'] = flags[i]
             body_data['center_uv'] = body_uv[i]
             body_data['center'] = centers[i].vals
@@ -560,7 +560,7 @@ class Snapshot(Observation):
             body_data['u_pixel_size'] = radius_angles[i].vals/u_scale*2
             body_data['v_pixel_size'] = radius_angles[i].vals/v_scale*2
 
-            returned_dict[body_names[i]] = body_data
+            returned_dict[bodies[i].key] = body_data
 
         return returned_dict
 

@@ -51,6 +51,7 @@ FOV         = oops.fov.FOV
 Frame       = oops.frame.Frame
 Gravity     = oops.gravity.Gravity
 Host        = oops.host.Host
+LightSource = oops.lightsource.LightSource
 Observation = oops.observation.Observation
 Path        = oops.path.Path
 Surface     = oops.surface.Surface

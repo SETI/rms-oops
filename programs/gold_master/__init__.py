@@ -1100,7 +1100,7 @@ class BackplaneTest(object):
 
         for moon in moons:
             if moon:
-                planet = oops.Body.lookup(moon).parent.name.upper()
+                planet = oops.Body.lookup(moon).parent.key
                 self.planet_moon_pairs.append((planet, moon))
 
         for ring in rings:
@@ -1108,7 +1108,7 @@ class BackplaneTest(object):
                 self.ring_names.append(ring)
                 self.ansa_names.append(ring + ':ANSA')
 
-                planet = oops.Body.lookup(ring).parent.name.upper()
+                planet = oops.Body.lookup(ring).parent.key
                 pair = (planet, ring)
                 if pair not in self.planet_ring_pairs:
                     self.planet_ring_pairs.append(pair)
