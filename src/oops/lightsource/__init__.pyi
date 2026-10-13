@@ -33,6 +33,7 @@ class LightSource(Oops):
     weight: Scalar
     def __init__(self, name: str, source: Path | str | PairLike | Vector3Like,
         weight: ScalarLike | None = None) -> None: ...
+    def add_name(self, names: str | list[str]) -> None: ...
     def photon_to_event(self, event: Event, *, derivs: bool = False,
         guess: ScalarLike | None = None, antimask: ndarray | bool | None = None,
         quick: dict | bool | None = None,
