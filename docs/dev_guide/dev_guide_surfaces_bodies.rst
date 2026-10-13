@@ -131,9 +131,9 @@ finite angular size, with a radius in km around a path or in arcseconds around a
 direction, and :class:`~oops.lightsource.StarSource` is a star: a single
 barycentric direction, given as a right ascension and declination in degrees at an
 ``epoch``, that also carries the star's ``magnitude``, the band of that magnitude
-``mag_type`` (such as ``"V"``), ``stellar_type``, ``parallax`` (radians) and
-``proper_motion`` (the rate of change of right ascension and declination, in radians
-per second). Its ``photon_to_event`` moves
+``mag_type`` (such as ``"V"``), ``stellar_type``, ``parallax`` (milliarcseconds) and
+``proper_motion`` (milliarcseconds per year, with the rate of right ascension scaled by
+the cosine of the declination, as catalogs give it). Its ``photon_to_event`` moves
 the star by its proper motion to the mean time of the event, then shifts it by parallax
 according to the observer's position relative to the Solar System Barycenter.
 :func:`~oops.lightsource.star_lookup` returns one for a star in the built-in catalog,
@@ -142,7 +142,14 @@ parallax and proper motion: from Hipparcos for stars (or Gaia DR3 for the few in
 stars Hipparcos lacks), and from Gaia DR3 for Messier clusters and the central stars of
 Messier nebulae. Galaxies and the Messier objects without a catalog value have zero
 parallax and proper motion, and a star whose catalog parallax is not positive is given
-none. Light sources are stored in ``Body.BODY_REGISTRY`` under their
+none. The source is named and registered under the star's primary designation (such as
+"alf CMa"), with its other catalog names as alternative names, so every name of the star
+returns the same source. Light sources are stored in ``Body.BODY_REGISTRY`` under their
 keys, in the same namespace as bodies, so that a backplane's source key can name either;
-the constructor refuses a name a body already has. The subclasses are imported at the
+the constructor refuses a name a body already has. A light source's key comes from
+:meth:`~oops.lightsource.LightSource.as_key` rather than from the body rule: it is the
+name in upper case with underscores in place of spaces, except that a designation
+starting with a lowercase letter keeps that letter, because stars such as "b Cen" and
+"B Cen" are different stars. Their keys are ``b_CEN`` and ``B_CEN``, so a source with
+such a key must be read from the registry directly; ``Body.lookup`` would upper-case it. The subclasses are imported at the
 bottom of the package module to break the cycle.

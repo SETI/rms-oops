@@ -3,6 +3,8 @@
 ##########################################################################################
 """LightSource classes, which define a source of illumination."""
 
+import re
+
 import numpy as np
 
 from polymath         import Scalar, Pair, Vector3
@@ -11,6 +13,9 @@ from oops.body        import Body
 from oops.constants   import RPD
 from oops.oops        import Oops
 from oops.path        import Path
+
+# A lowercase letter, optionally numbered, that starts a designation such as "b Cen"
+_LOWERCASE_LETTER = re.compile(r'[a-z]\d*')
 
 
 class LightSource(Oops):
@@ -28,8 +33,8 @@ class LightSource(Oops):
         in Backplanes.
 
         Parameters:
-            name (str): Name of this source. It is registered under its key, the name in
-                upper case with underscores replacing spaces.
+            name (str): Name of this source. It is registered under its key, as given by
+                :meth:`as_key`.
             source (Path | str | PairLike | Vector3Like): The location of the source, as
                 any of:
 
@@ -111,13 +116,60 @@ class LightSource(Oops):
             raise OopsTypeError(f'LightSource name must be a string: {name!r}')
 
         self.name = name
-        self.key = Body.as_body_key(name)
+        self.key = LightSource.as_key(name)
         self.alt_names = []
 
         if Body.exists(self.key):
             thing = Body.lookup(self.key)
             if isinstance(thing, Body):
                 raise OopsValueError(f'LightSource name is also a Body name: {self.name}')
+
+    @staticmethod
+    def as_key(source):
+        """The registry key for a light source, given the source or its name.
+
+        A key is the name in upper case with underscores replacing spaces, except that a
+        designation beginning with a lowercase letter, optionally numbered, keeps that
+        letter lowercase. Stars such as "b Cen" and "B Cen" are distinct, so their keys
+        are "b_CEN" and "B_CEN". A name of one word is always upper case.
+
+        Parameters:
+            source (LightSource | str): A light source, or the name or key of one, with
+                spaces or underscores between words.
+
+        Returns:
+            str: The key of the light source.
+        """
+
+        if isinstance(source, LightSource):
+            return source.key
+
+        key = Body.as_body_key(source)
+        (first, _, rest) = source.replace(' ', '_').partition('_')
+        if rest and _LOWERCASE_LETTER.fullmatch(first):
+            return first + key[len(first):]
+
+        return key
+
+    def add_name(self, names):
+        """Add one or more names to this object.
+
+        Parameters:
+            names (str | list[str]): One or more names.
+
+        Raises:
+            OopsTypeError: If `name` is not a string.
+        """
+
+        if isinstance(names, str):
+            names = [names]
+
+        for name in names:
+            if not isinstance(name, str):
+                raise OopsTypeError(f'LightSource name must be a string: {name!r}')
+            if name == self.name or name in self.alt_names:
+                continue
+            self.alt_names.append(name)
 
     def __getstate__(self):
         return (self.name, self.source, self.weight)

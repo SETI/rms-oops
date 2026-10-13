@@ -7,8 +7,11 @@ import numpy as np
 
 from polymath         import Pair, Vector3
 from oops._exceptions import OopsValueError
-from oops.constants   import AU, RPD
+from oops.constants   import AU, RPD, RPS, SPD
 from oops.lightsource import LightSource
+
+_RADIANS_PER_MAS = RPS / 1000.
+_SECONDS_PER_YEAR = 365.25 * SPD        # the Julian year of catalog proper motions
 
 
 class StarSource(LightSource):
@@ -26,10 +29,10 @@ class StarSource(LightSource):
             magnitude; None if unknown.
         stellar_type (str | None): The stellar type or other descriptive type of the
             object, such as "A1Vm" or "Globular cluster"; None if unknown.
-        parallax (float): The annual parallax of the star in radians; zero for an object
-            at infinite distance.
-        proper_motion (Pair): The time derivative of the star's (right ascension,
-            declination) in radians per second.
+        parallax (float): The annual parallax of the star in milliarcseconds; zero for an
+            object at infinite distance.
+        proper_motion (Pair): The proper motion of the star in milliarcseconds per year,
+            as (d(ra)/dt * cos(dec), d(dec)/dt).
         epoch (float): The time in seconds TDB at which the star is at the position
             given by its right ascension and declination.
     """
@@ -40,8 +43,7 @@ class StarSource(LightSource):
 
         Parameters:
             name (str): Name of this source. It is registered in the Body dictionary
-                under its key, the name in upper case with underscores replacing
-                spaces.
+                under its key, as given by :meth:`~oops.lightsource.LightSource.as_key`.
             ra (float): The barycentric J2000 right ascension of the star at `epoch`, in
                 degrees.
             dec (float): The barycentric J2000 declination of the star at `epoch`, in
@@ -51,11 +53,11 @@ class StarSource(LightSource):
                 magnitude.
             stellar_type (str, optional): The stellar type or other descriptive type of
                 the object.
-            parallax (float, optional): The annual parallax of the star in radians;
-                default zero.
-            proper_motion (PairLike, optional): The time derivative of the star's (right
-                ascension, declination) in radians per second; default zero. The rate of
-                right ascension is not scaled by the cosine of the declination.
+            parallax (float, optional): The annual parallax of the star in
+                milliarcseconds; default zero.
+            proper_motion (PairLike, optional): The proper motion of the star in
+                milliarcseconds per year, as (d(ra)/dt * cos(dec), d(dec)/dt), the form in
+                which catalogs give it; default zero.
             epoch (float, optional): The time in seconds TDB at which the star is at the
                 position given by `ra` and `dec`; default zero, which is J2000.
 
@@ -83,6 +85,14 @@ class StarSource(LightSource):
         self._ra_dec_degrees = (ra, dec)
         self._ra = ra * RPD
         self._dec = dec * RPD
+
+        # The rates of (ra, dec) in radians per second, with the RA rate not scaled by
+        # cos(dec), and the parallax in radians, for photon_to_event
+        (pm_ra, pm_dec) = self.proper_motion.vals
+        scale = _RADIANS_PER_MAS / _SECONDS_PER_YEAR
+        self._ra_rate = pm_ra / np.cos(self._dec) * scale
+        self._dec_rate = pm_dec * scale
+        self._parallax = parallax * _RADIANS_PER_MAS
 
     def __getstate__(self):
         return (self.name,) + self._ra_dec_degrees + (self.magnitude, self.mag_type,
@@ -133,19 +143,19 @@ class StarSource(LightSource):
             arrival = event.wod.copy()
 
         # Proper motion, evaluated once at the mean time of the event
-        if np.any(self.proper_motion.vals):
+        if self._ra_rate or self._dec_rate:
             dt = arrival.time.wod.mean() - self.epoch
-            (ra_rate, dec_rate) = self.proper_motion.to_scalars()
-            los = Vector3.from_ra_dec_length(self._ra + ra_rate * dt,
-                                             self._dec + dec_rate * dt, recursive=False)
+            los = Vector3.from_ra_dec_length(self._ra + self._ra_rate * dt,
+                                             self._dec + self._dec_rate * dt,
+                                             recursive=False)
         else:
             los = self.source
 
         # Parallax: the star sits at distance AU/tan(parallax) from the barycenter, so the
         # observer's offset from the barycenter, scaled by tan(parallax)/AU, shifts it
-        if self.parallax:
+        if self._parallax:
             obs_pos = arrival.wrt_ssb(derivs=derivs, quick=quick).pos.wod
-            los = (los - obs_pos * (np.tan(self.parallax) / AU)).unit()
+            los = (los - obs_pos * (np.tan(self._parallax) / AU)).unit()
 
         arrival.neg_arr_j2000 = los
         return (None, arrival)

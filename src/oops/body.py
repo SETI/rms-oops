@@ -410,6 +410,26 @@ class Body(Oops):
         else:
             self.is_registered = False
 
+    def add_name(self, names):
+        """Add one or more names to this object.
+
+        Parameters:
+            names (str | list[str]): One or more names.
+
+        Raises:
+            OopsTypeError: If `name` is not a string.
+        """
+
+        if isinstance(names, str):
+            names = [names]
+
+        for name in names:
+            if not isinstance(name, str):
+                raise OopsTypeError(f'Body name must be a string: {name!r}')
+            if name == self.name or name in self.alt_names:
+                continue
+            self.alt_names.append(name)
+
     def __str__(self):
         return 'Body(' + self.key + ')'
 

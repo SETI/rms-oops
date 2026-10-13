@@ -33,8 +33,7 @@ class DiskSource(LightSource):
 
         Parameters:
             name (str): Name of this source. It is registered in the Body dictionary
-                under its key, the name in upper case with underscores replacing
-                spaces.
+                under its key, as given by :meth:`~oops.lightsource.LightSource.as_key`.
             source (LightSource): The source at the center of the disk. It must be
                 unshaped, and it remains registered under its own key.
             radius (float): Radius of the disk, in km if `source` moves along a path or
