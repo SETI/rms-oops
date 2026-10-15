@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from oops             import mutable
-from oops.cadence     import DualCadence, Metronome
+from oops.cadence     import DualCadence, Metronome, SnapCadence
 from oops.fov         import FlatFOV
 from oops.frame       import Frame, Navigation
 from oops.observation import (InSitu, Observation, Pixel, RasterSlit1D, Slit1D,
@@ -30,11 +30,11 @@ def _observations() -> dict[str, Observation]:
     slow  = Metronome(tstart=0., tstride=20., texp=20., steps=10)
 
     return {
-        'Snapshot':     Snapshot(('u','v'), 0., 10., fov=image_fov, path='SSB',
+        'Snapshot':     Snapshot(('u','v'), cadence=SnapCadence(0., 10.), fov=image_fov, path='SSB',
                                  frame='J2000'),
         'Pixel':        Pixel(('t',), cadence=steps, fov=pixel_fov, path='SSB',
                               frame='J2000'),
-        'Slit1D':       Slit1D(('u',), 0., 10., fov=slit_fov, path='SSB',
+        'Slit1D':       Slit1D(('u',), cadence=SnapCadence(0., 10.), fov=slit_fov, path='SSB',
                                frame='J2000'),
         'RasterSlit1D': RasterSlit1D(('ut',), cadence=steps, fov=sweep_fov,
                                      path='SSB', frame='J2000'),
@@ -74,8 +74,8 @@ def _parallel_pair() -> tuple[Snapshot, Snapshot]:
     """
 
     fov = FlatFOV((1.e-4, 1.e-4), (64, 64))
-    return (Snapshot(('u','v'), 0., 10., fov=fov, path='SSB', frame='J2000'),
-            Snapshot(('u','v'), 0., 10., fov=fov, path='SSB', frame='J2000'))
+    return (Snapshot(('u','v'), cadence=SnapCadence(0., 10.), fov=fov, path='SSB', frame='J2000'),
+            Snapshot(('u','v'), cadence=SnapCadence(0., 10.), fov=fov, path='SSB', frame='J2000'))
 
 
 def test_parallel_offset_duv_maps_an_offset_through_an_identical_fov() -> None:
@@ -135,7 +135,7 @@ def test_uv_from_ra_and_dec_accepts_any_shape_of_tfrac(tfrac) -> None:
     """
 
     fov = FlatFOV((1.e-4, 1.e-4), (64, 64))
-    obs = Snapshot(('u','v'), 0., 10., fov=fov, path='SSB', frame='J2000')
+    obs = Snapshot(('u','v'), cadence=SnapCadence(0., 10.), fov=fov, path='SSB', frame='J2000')
 
     # The FlatFOV axis is +Z, which is a declination of 90 degrees: the FOV center.
     uv = obs.uv_from_ra_and_dec(0., np.pi/2, tfrac=tfrac)
@@ -287,7 +287,8 @@ IMAGE_FOV = FlatFOV((0.001, 0.001), (10, 20))
 def _snapshot() -> Snapshot:
     """A Snapshot: two spatial axes and no time-dependence."""
 
-    return Snapshot(('u', 'v'), 0., 10., fov=IMAGE_FOV, path='SSB', frame='J2000')
+    return Snapshot(('u', 'v'), cadence=SnapCadence(0., 10.), fov=IMAGE_FOV, path='SSB',
+                    frame='J2000')
 
 
 def _timed_image() -> TimedImage:

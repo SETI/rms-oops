@@ -456,8 +456,9 @@ def from_file(filespec, data=True, method='strict'):
             if vis_data is not None:
                 vis_data = vis_data.reshape((samples, 96))
 
-            vis_obs = oops.obs.Slit1D(('u','b'), tstart, vis_texp_nonzero, fov=vis_fov,
-                                       path='CASSINI', frame=vis_frame_id)
+            vis_cadence = oops.cadence.SnapCadence(tstart, vis_texp_nonzero)
+            vis_obs = oops.obs.Slit1D(('u','b'), cadence=vis_cadence, fov=vis_fov,
+                                      path='CASSINI', frame=vis_frame_id)
 
         if not ir_is_off:
             if ir_data is not None:

@@ -194,8 +194,8 @@ class Slit1D(Observation):
     cadence: Cadence
     subfields: dict
     texp: float
-    def __init__(self, axes: list | tuple, tstart: float, texp: float, *, fov: FOV,
-        path: Path, frame: Frame, **subfields: dict) -> None: ...
+    def __init__(self, axes: list | tuple, *, cadence: Cadence, fov: FOV, path: Path,
+        frame: Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
         derivs: bool = True) -> tuple[Pair, Scalar]: ...
     def uvt_range(self, indices: ScalarLike | VectorLike, *,
@@ -221,8 +221,8 @@ class Snapshot(Observation):
     cadence: Cadence
     subfields: dict
     texp: float
-    def __init__(self, axes: list | tuple, tstart: float, texp: float, *, fov: FOV,
-        path: Path, frame: Frame, **subfields: dict) -> None: ...
+    def __init__(self, axes: list | tuple, *, cadence: Cadence, fov: FOV, path: Path,
+        frame: Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
         derivs: bool = True) -> tuple[Pair, Scalar]: ...
     def uvt_range(self, indices: ScalarLike | VectorLike, *,

@@ -101,7 +101,8 @@ def from_file(filespec, *, fast_distortion=True,
         frame = oops.frame.Navigation((0.,0.), frame)
 
     # Create a Snapshot
-    result = oops.obs.Snapshot(('v','u'), tstart, texp,
+    result = oops.obs.Snapshot(('v','u'),
+                               cadence = oops.cadence.SnapCadence(tstart, texp),
                                fov = ISS.fovs[camera, mode, fast_distortion],
                                path = 'CASSINI',
                                frame = frame,
@@ -175,7 +176,8 @@ def from_index(filespec, fast_distortion=True, return_all_planets=False,
         if navigation:
             frame = oops.frame.Navigation((0., 0.), frame)
 
-        item = oops.obs.Snapshot(('v','u'), tstart, texp,
+        item = oops.obs.Snapshot(('v','u'),
+                                 cadence = oops.cadence.SnapCadence(tstart, texp),
                                  fov = ISS.fovs[camera, mode, fast_distortion],
                                  path = 'CASSINI',
                                  frame = frame,

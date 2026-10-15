@@ -7,8 +7,6 @@ import numpy as np
 from polymath                 import Scalar, Pair
 from oops._exceptions         import OopsValueError
 from oops.observation         import Observation
-from oops.cadence             import Cadence
-from oops.cadence.snapcadence import SnapCadence
 from oops.frame               import Frame
 from oops.path                import Path
 
@@ -23,7 +21,7 @@ class Slit1D(Observation):
         texp (float): Exposure duration of the observation in seconds.
     """
 
-    def __init__(self, axes, tstart, texp, *, fov, path, frame, **subfields):
+    def __init__(self, axes, *, cadence, fov, path, frame, **subfields):
         """Constructor for a Slit1D observation.
 
         Parameters:
@@ -31,11 +29,8 @@ class Slit1D(Observation):
                 data array. A value of 'u' should appear at the location of the array's
                 *u*-axis if any; 'v' should appear at the location of the array's *v*-axis
                 if any. Only one of 'u' or 'v' can appear in a Slit1D.
-            tstart (float): The start time of the observation in seconds TDB.
-                Alternatively, a Cadence object with shape (1,) defining `tstart` and
-                `texp`.
-            texp (float): Exposure duration of the observation in seconds. Ignored if
-                `tstart` is specified as a Cadence.
+            cadence (Cadence): The Cadence defining the start time and exposure duration.
+                It must have shape (1,).
             fov (FOV): (field-of-view) object, which describes the field of view including
                 any spatial distortion. It maps between spatial coordinates *(u,v)* and
                 instrument coordinates *(x,y)*. For a Slit1D object, one of the axes of
@@ -50,8 +45,8 @@ class Slit1D(Observation):
 
         Raises:
             OopsValueError: If `axes` does not contain exactly one of 'u' and 'v', if the
-                cross-slit axis of the FOV does not have length 1, or if `tstart` is a
-                Cadence whose shape is not (1,).
+                cross-slit axis of the FOV does not have length 1, or if the shape of
+                `cadence` is not (1,).
         """
 
         # Basic properties
@@ -94,14 +89,10 @@ class Slit1D(Observation):
         self.t_axis = -1
 
         # Cadence
-        if isinstance(tstart, Cadence):
-            self.cadence = tstart
-            if self.cadence.shape != (1,):
-                raise OopsValueError("Shape of a Slit1D's cadence must be (1,)")
-            self.texp = self.cadence.texp or (self.cadence.time[1] - self.cadence.time[0])
-        else:
-            self.cadence = SnapCadence(tstart, texp)
-            self.texp = texp
+        self.cadence = cadence
+        if self.cadence.shape != (1,):
+            raise OopsValueError("Shape of a Slit1D's cadence must be (1,)")
+        self.texp = self.cadence.texp or (self.cadence.time[1] - self.cadence.time[0])
 
         # Optional subfields
         self.subfields = {}
@@ -110,12 +101,11 @@ class Slit1D(Observation):
 
     def __getstate__(self):
         self.refresh()
-        return (self._axes, self.cadence, self.texp, self.fov, self.path, self.frame,
-                self.subfields)
+        return (self._axes, self.cadence, self.fov, self.path, self.frame, self.subfields)
 
     def __setstate__(self, state):
-        (axes, tstart, texp, fov, path, frame, subfields) = state
-        self.__init__(axes, tstart, texp, fov=fov, path=path, frame=frame,
+        (axes, cadence, fov, path, frame, subfields) = state
+        self.__init__(axes, cadence=cadence, fov=fov, path=path, frame=frame,
                       **subfields)
         self.freeze()
 
@@ -253,7 +243,7 @@ class Slit1D(Observation):
         """
 
         cadence = self.cadence.time_shift(dtime)
-        return Slit1D(axes=self._axes, tstart=cadence, texp=self.texp, fov=self.fov,
+        return Slit1D(axes=self._axes, cadence=cadence, fov=self.fov,
                       path=self.path, frame=self.frame, **self.subfields)
 
 ##########################################################################################

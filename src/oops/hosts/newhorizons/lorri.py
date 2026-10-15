@@ -298,7 +298,8 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         los = event.neg_arr_ap_j2000
 
     # Create a Snapshot
-    snapshot = oops.obs.Snapshot(('v','u'), tstart, texp,
+    snapshot = oops.obs.Snapshot(('v','u'),
+                                 cadence = oops.cadence.SnapCadence(tstart, texp),
                                  fov = fov,
                                  path = path,
                                  frame = frame,
@@ -440,7 +441,8 @@ def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
         target_name = dict['TARGET_NAME']
 
         # Create a Snapshot
-        item = oops.obs.Snapshot(('v','u'), tstart, texp,
+        item = oops.obs.Snapshot(('v','u'),
+                                 cadence = oops.cadence.SnapCadence(tstart, texp),
                                  fov = fov,
                                  path = 'NEW HORIZONS',
                                  frame = 'NH_LORRI',

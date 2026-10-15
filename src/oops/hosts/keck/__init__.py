@@ -250,12 +250,11 @@ class Keck(object):
 
         return oops.obs.Snapshot(
                         axes = ("v","u"),
-                        tstart = times[0],
-                        texp = times[1] - times[0],
+                        cadence = oops.cadence.SnapCadence(times[0],
+                                                           times[1] - times[0]),
                         fov = fov,
+                        path = "EARTH",
                         frame = frame,
-                        path_id = "EARTH",
-                        frame_id = frame_id,
                         data = self.data_array(keck_file, **parameters),
                         target = self.target_body(keck_file),
                         telescope = self.telescope_name(keck_file),

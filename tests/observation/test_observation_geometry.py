@@ -14,7 +14,7 @@ import pytest
 from polymath                          import Scalar, Vector, Vector3
 from oops.backplane                    import Backplane
 from oops.body                         import Body
-from oops.cadence                     import Metronome
+from oops.cadence                     import Metronome, SnapCadence
 from oops.config                       import LOGGING
 from oops.event                        import Event
 from oops.fov                          import FlatFOV
@@ -64,8 +64,9 @@ def obs(solar_system: None) -> Snapshot:
     TwoVectorFrame(Frame.J2000, los, 'z', Vector3.XAXIS, 'x',
                    frame_id='TEST_GEOMETRY_CAMERA')
 
-    return Snapshot(('u', 'v'), TIME, TEXP, fov=FlatFOV((PIXEL, PIXEL), SHAPE),
-                    path='EARTH', frame='TEST_GEOMETRY_CAMERA')
+    return Snapshot(('u', 'v'), cadence=SnapCadence(TIME, TEXP),
+                    fov=FlatFOV((PIXEL, PIXEL), SHAPE), path='EARTH',
+                    frame='TEST_GEOMETRY_CAMERA')
 
 
 ##########################################################################################
@@ -274,8 +275,9 @@ def test_uv_from_coords_masks_the_far_side(obs: Snapshot) -> None:
 def _fresh_obs(solar_system: None) -> Snapshot:
     """A Snapshot identical to the `obs` fixture, but with an empty body cache."""
 
-    return Snapshot(('u', 'v'), TIME, TEXP, fov=FlatFOV((PIXEL, PIXEL), SHAPE),
-                    path='EARTH', frame='TEST_GEOMETRY_CAMERA')
+    return Snapshot(('u', 'v'), cadence=SnapCadence(TIME, TEXP),
+                    fov=FlatFOV((PIXEL, PIXEL), SHAPE), path='EARTH',
+                    frame='TEST_GEOMETRY_CAMERA')
 
 
 # Of these bodies, only Saturn falls inside the field of view; the others are placed

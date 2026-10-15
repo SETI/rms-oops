@@ -64,7 +64,7 @@ def from_file(filespec, return_all_planets=False, method='strict', **parameters)
 
     # Construct the Snapshot
     obs = oops.obs.Snapshot(('v','u'),
-                            meta.tstart, meta.exposure,
+                            cadence = oops.cadence.SnapCadence(meta.tstart, meta.exposure),
                             fov = SRU.fov(),
                             path = 'JUNO',
                             frame = frame,

@@ -55,7 +55,8 @@ def from_file(filespec, label, fast_distortion=True,
         fmeta = _Metadata(flabels[i])
 
         item = oops.obs.Snapshot(('v','u'),
-                                 fmeta.tstart, fmeta.exposure,
+                                 cadence = oops.cadence.SnapCadence(fmeta.tstart,
+                                                                    fmeta.exposure),
                                  fov = fmeta.fov,
                                  path = 'JUNO',
                                  frame = 'JUNO_JIRAM_I_' + fmeta.filter_frame,

@@ -68,7 +68,8 @@ def from_file(filespec, fast_distortion=True,
 
         if snap:
             item = oops.obs.Snapshot(('v','u'),
-                                     fmeta.tstart, fmeta.tdi_texp,
+                                     cadence = oops.cadence.SnapCadence(fmeta.tstart,
+                                                                        fmeta.tdi_texp),
                                      fov = fmeta.fov,
                                      path = 'JUNO',
                                      frame = 'JUNO_JUNOCAM',

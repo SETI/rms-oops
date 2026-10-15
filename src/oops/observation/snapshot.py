@@ -8,8 +8,6 @@ from polymath                 import Scalar, Pair, Vector, Vector3, Qube
 from oops._exceptions         import OopsValueError
 from oops.observation         import Observation
 from oops.body                import Body
-from oops.cadence             import Cadence
-from oops.cadence.snapcadence import SnapCadence
 from oops.event               import Event
 from oops.frame               import Frame
 from oops.path                import Path
@@ -25,7 +23,7 @@ class Snapshot(Observation):
 
     _INVENTORY_IMPLEMENTED = True
 
-    def __init__(self, axes, tstart, texp, *, fov, path, frame, **subfields):
+    def __init__(self, axes, *, cadence, fov, path, frame, **subfields):
         """Constructor for a Snapshot.
 
         Parameters:
@@ -34,25 +32,22 @@ class Snapshot(Observation):
                 *u*-axis; 'v' should appear at the location of the array's *v*-axis. For
                 example, ('v','u'), is correct for a 2-D array read from an image file in
                 FITS or VICAR format.
-            tstart (float): The start time of the observation in seconds TDB.
-                Alternatively, a Cadence object with shape (1,) defining `tstart` and
-                `texp`.
-            texp (float): Exposure duration of the observation in seconds. Ignored if
-                `tstart` is specified as a Cadence.
+            cadence (Cadence): The Cadence defining the start time and exposure duration.
+                It must have shape (1,).
             fov (FOV): (field-of-view) object, which describes the field of view including
                 any spatial distortion. It maps between spatial coordinates *(u,v)* and
                 instrument coordinates *(x,y)*.
-            path (Path): The path waypoint co-located with the instrument.
-            frame (Frame): The wayframe of a coordinate frame fixed to the optics of the
-                instrument. This frame should have its *z*-axis pointing outward near the
-                center of the line of sight, with the *x*-axis pointing rightward and the
-                *y*-axis pointing downward.
+            path (str | Path): The waypoint or Path name co-located with the instrument.
+            frame (str | Frame): The wayframe or Frame name of a coordinate frame fixed to
+                the optics of the instrument. This frame should have its *z*-axis pointing
+                outward near the center of the line of sight, with the *x*-axis pointing
+                rightward and the *y*-axis pointing downward.
             subfields (dict): All of the optional attributes. Additional subfields may be
                 included as needed.
 
         Raises:
-            OopsValueError: If `axes` does not contain both 'u' and 'v', or if `tstart`
-                is a Cadence whose shape is not (1,).
+            OopsValueError: If `axes` does not contain both 'u' and 'v', or if the shape
+                of `cadence` is not (1,).
         """
 
         # Basic properties
@@ -77,14 +72,10 @@ class Snapshot(Observation):
         self.shape[self.v_axis] = self.uv_shape[1]
 
         # Cadence
-        if isinstance(tstart, Cadence):
-            self.cadence = tstart
-            if self.cadence.shape != (1,):
-                raise OopsValueError('Shape of Snapshot cadence must be (1,)')
-            self.texp = self.cadence.texp or (self.cadence.time[1] - self.cadence.time[0])
-        else:
-            self.cadence = SnapCadence(tstart, texp)
-            self.texp = texp
+        self.cadence = cadence
+        if self.cadence.shape != (1,):
+            raise OopsValueError('Shape of Snapshot cadence must be (1,)')
+        self.texp = self.cadence.texp or (self.cadence.time[1] - self.cadence.time[0])
 
         # Optional subfields
         self.subfields = {}
@@ -93,12 +84,11 @@ class Snapshot(Observation):
 
     def __getstate__(self):
         self.refresh()
-        return (self._axes, self.cadence, self.texp, self.fov, self.path, self.frame,
-                self.subfields)
+        return (self._axes, self.cadence, self.fov, self.path, self.frame, self.subfields)
 
     def __setstate__(self, state):
-        (axes, tstart, texp, fov, path, frame, subfields) = state
-        self.__init__(axes, tstart, texp, fov=fov, path=path, frame=frame,
+        (axes, cadence, fov, path, frame, subfields) = state
+        self.__init__(axes, cadence=cadence, fov=fov, path=path, frame=frame,
                       **subfields)
         self.freeze()
 
@@ -229,7 +219,7 @@ class Snapshot(Observation):
         """
 
         cadence = self.cadence.time_shift(dtime)
-        return Snapshot(axes=self._axes, tstart=cadence, texp=self.texp, fov=self.fov,
+        return Snapshot(axes=self._axes, cadence=cadence, fov=self.fov,
                         path=self.path, frame=self.frame, **self.subfields)
 
     ######################################################################################

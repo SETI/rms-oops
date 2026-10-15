@@ -63,7 +63,9 @@ def from_file(filespec,
     data = meta.trim(vic.data_2d, full_fov=full_fov)
 
     # Create a Snapshot
-    result = oops.obs.Snapshot(('v','u'), meta.tstart, meta.exposure,
+    result = oops.obs.Snapshot(('v','u'),
+                               cadence = oops.cadence.SnapCadence(meta.tstart,
+                                                                  meta.exposure),
                                fov = FOV,
                                path = 'GLL',
                                frame = 'GLL_SCAN_PLATFORM',
@@ -160,7 +162,9 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
         FOV = meta.fov(full_fov=full_fov)
 
         # Create a Snapshot
-        item = oops.obs.Snapshot(('v','u'), meta.tstart, meta.exposure,
+        item = oops.obs.Snapshot(('v','u'),
+                                 cadence = oops.cadence.SnapCadence(meta.tstart,
+                                                                    meta.exposure),
                                  fov = FOV,
                                  path = 'GLL',
                                  frame = 'GLL_SCAN_PLATFORM',

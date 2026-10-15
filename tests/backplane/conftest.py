@@ -12,6 +12,7 @@ import pytest
 from polymath                          import Scalar, Vector3
 from oops.backplane                    import Backplane
 from oops.body                         import Body
+from oops.cadence                      import SnapCadence
 from oops.fov                          import FlatFOV
 from oops.frame                        import Frame, TwoVectorFrame
 from oops.observation                  import Snapshot
@@ -74,7 +75,7 @@ def saturn_obs(solar_system: None) -> Snapshot:
                    frame_id='TEST_SATURN_CAMERA')
     fov = FlatFOV((PIXEL, PIXEL), SHAPE)
 
-    return Snapshot(('u', 'v'), TIME, TEXP, fov=fov, path='EARTH',
+    return Snapshot(('u', 'v'), cadence=SnapCadence(TIME, TEXP), fov=fov, path='EARTH',
                     frame='TEST_SATURN_CAMERA')
 
 

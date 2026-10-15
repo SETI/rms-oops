@@ -178,7 +178,8 @@ def from_file(filespec, astrometry=False, action='error', method='strict',
                                             override=True)
 
     # Create a Snapshot
-    result = oops.obs.Snapshot(('v','u'), tstart, texp,
+    result = oops.obs.Snapshot(('v','u'),
+                               cadence = oops.cadence.SnapCadence(tstart, texp),
                                fov = fovs[camera],
                                path = spacecraft,
                                frame = image_frame,
@@ -312,7 +313,8 @@ def from_index(filespec, geomed=False, action='ignore', omit=True,
 
             image_frame = spacecraft + '_ISS_' + camera
 
-        item = oops.obs.Snapshot(('v','u'), tstart, texp,
+        item = oops.obs.Snapshot(('v','u'),
+                                 cadence = oops.cadence.SnapCadence(tstart, texp),
                                  fov = fovs[camera],
                                  path = spacecraft,
                                  frame = image_frame,

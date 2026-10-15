@@ -8,6 +8,7 @@ from polymath                  import Pair, Vector, Qube
 from oops._exceptions          import OopsValueError
 from oops.observation          import Observation
 from oops.observation.snapshot import Snapshot
+from oops.cadence.snapcadence  import SnapCadence
 from oops.frame                import Frame
 from oops.path                 import Path
 
@@ -162,7 +163,8 @@ class TimedImage(Observation):
                 subfields['texp_'] = subfields['texp']
                 del subfields['texp']
 
-            self._snapshot = Snapshot(snapshot_axes, snapshot_tstart, snapshot_texp,
+            snapshot_cadence = SnapCadence(snapshot_tstart, snapshot_texp)
+            self._snapshot = Snapshot(snapshot_axes, cadence=snapshot_cadence,
                                       fov=self.fov, path=self.path, frame=self.frame,
                                       **subfields)
 

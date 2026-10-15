@@ -56,7 +56,8 @@ def from_file(filespec, label, fast_distortion=True,
     slits = []
     for i in range(meta.nsamples):
         item = oops.obs.Snapshot(('v','u'),
-                                 meta.tstart, meta.exposure,
+                                 cadence = oops.cadence.SnapCadence(meta.tstart,
+                                                                    meta.exposure),
                                  fov = meta.fov,
                                  path = 'JUNO',
                                  frame = 'JUNO_JIRAM_S',
@@ -72,7 +73,7 @@ def from_file(filespec, label, fast_distortion=True,
 
     # Construct Slit1D for all bands
     obs = oops.obs.Slit1D(('u','b'),
-                          meta.tstart, meta.exposure,
+                          cadence = oops.cadence.SnapCadence(meta.tstart, meta.exposure),
                           fov = meta.fov,
                           path = 'JUNO',
                           frame = 'JUNO_JIRAM_S',
