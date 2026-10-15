@@ -245,8 +245,8 @@ class SynchronousFrame(Frame):
         quick: dict | bool | None = None) -> Transform: ...
 
 class TrackerFrame(Frame):
-    def __init__(self, frame: Frame | str, target: Path | str, observer: Path | str,
-        epoch: ScalarLike, *, frame_id: str | None = None,
+    def __init__(self, frame: Frame | str, target: Path | str | None,
+        observer: Path | str, epoch: ScalarLike, *, frame_id: str | None = None,
         cache_size: int = 100) -> None: ...
     def transform_at_time(self, time: ScalarLike, *,
         quick: dict | bool | None = None) -> Transform: ...
