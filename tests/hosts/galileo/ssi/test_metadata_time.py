@@ -66,19 +66,20 @@ def test_unknown_image_time_comes_from_sclk() -> None:
     assert iso.startswith('1989-10-27T21:11:')
 
 
-def test_known_image_time_is_untouched() -> None:
-    """A label with IMAGE_TIME keeps it, and the clock count agrees to seconds."""
+def test_known_image_time_is_mid_exposure() -> None:
+    """A label's IMAGE_TIME is the middle of the exposure, and the clock count agrees
+    with it to seconds."""
 
     meta = ssi.Metadata(dict(KNOWN_TIME_LABEL))
 
     assert not meta.time_from_sclk
-    expected = julian.tdb_from_tai(julian.tai_from_iso(KNOWN_TIME_LABEL['IMAGE_TIME']))
-    assert meta.tstart == expected
-    assert meta.tstop == pytest.approx(expected + 0.8)
+    tmid = julian.tdb_from_tai(julian.tai_from_iso(KNOWN_TIME_LABEL['IMAGE_TIME']))
+    assert meta.tstart == pytest.approx(tmid - 0.4, abs=1.e-6)
+    assert meta.tstop == pytest.approx(tmid + 0.4, abs=1.e-6)
 
     # The conversion used for unknown times lands within seconds of IMAGE_TIME
     from_sclk = Galileo.tdb_from_sclk(KNOWN_TIME_LABEL['SPACECRAFT_CLOCK_START_COUNT'])
-    assert abs(from_sclk - expected) < 10.
+    assert abs(from_sclk - tmid) < 10.
 
 
 def test_from_file_carries_sclk_time_onto_snapshot() -> None:

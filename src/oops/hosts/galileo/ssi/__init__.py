@@ -252,7 +252,6 @@ class Metadata(object):
         # Filters
         self.filter = meta_dict['FILTER_NAME']
 
-        #TODO: determine whether IMAGE_TIME is the start time or the mid time..
         if meta_dict['IMAGE_TIME'] == 'UNK':
             # Some RAW_CAL frames in GO_0002 and GO_0003 have no IMAGE_TIME, but
             # every label carries the spacecraft clock count, which the SCLK
@@ -262,8 +261,7 @@ class Metadata(object):
             self.tstart = Galileo.tdb_from_sclk(meta_dict['SPACECRAFT_CLOCK_START_COUNT'])
             self.time_from_sclk = True
         else:
-            self.tstart = julian.tdb_from_tai(
-                            julian.tai_from_iso(meta_dict['IMAGE_TIME']))
+            self.tstart = julian.tdb_from_iso(meta_dict['IMAGE_TIME']) - self.exposure/2.
             self.time_from_sclk = False
 
         self.tstop = self.tstart + self.exposure
@@ -279,7 +277,7 @@ class Metadata(object):
         # Window
         self.window = None
         if 'CUT_OUT_WINDOW' in meta_dict:
-            window = np.array(meta_dict['CUT_OUT_WINDOW'])
+            window = np.array(meta_dict['CUT_OUT_WINDOW_list'])
 
             # check for [-1,-1,-1,-1].  This is the value written in the
             # supplemental index when there is no CUT_OUT_WINDOW in the label.
@@ -394,7 +392,7 @@ class SSI(object):
         cxy = cspyce.gdpool(cxy_var, 0)
 
         scale = px/fo
-        distortion_coeff = [1, 0, cf]
+        distortion_coeff = [1, 0, cf / scale**2]  # corrected distortion!
 
         # Construct FOVs
         assert info['MAX_SAMPLE'] == 800
