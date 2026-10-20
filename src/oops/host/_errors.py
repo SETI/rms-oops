@@ -5,17 +5,27 @@
 from pdsparser  import PdsError
 from vicar      import VicarError
 
-__all__ = ['HostError', 'HostFormatError', 'PdsHostError', 'UnknownHostError',
-           'VicarHostError']
+__all__ = ['HostError', 'HostFormatError', 'HostIndexError', 'PdsHostError',
+           'UnknownHostError', 'VicarHostError', 'WrongHostError']
 
 
-class HostError(OSError):
-    """Exception arising from the content of a data file or label."""
+class HostError(ValueError):
+    """Exception arising from the content of a data file, index, or label."""
     pass
 
 
 class UnknownHostError(HostError):
     """If a data file is not associated with any registered Host subclass."""
+    pass
+
+
+class WrongHostError(HostError):
+    """If a data file is not associated with a specified Host subclass."""
+    pass
+
+
+class HostIndexError(HostError):
+    """Exception arising from the content of an index or its label."""
     pass
 
 

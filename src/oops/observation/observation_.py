@@ -63,8 +63,13 @@ class Observation(Mutable):
             pointing downward.
         subfields (dict): All of the optional attributes. Additional subfields may be
             included as needed.
-        data (numpy.ndarray): This subfield is reserved to contain the array of data from
-            the Observation.
+        data (numpy.ndarray): Reserved subfield for the array of data of the Observation.
+        target (Body | None): Reserved subfield for the default target of this
+            Observation.
+        lightsource (LightSource): Reserved subfield for the default LightSource of this
+            Observation.
+        calibrations (list[Calibration]): Reserved subfield for the list of relevant
+            Calibrations for this Observation.
     """
 
     _INVENTORY_IMPLEMENTED = False

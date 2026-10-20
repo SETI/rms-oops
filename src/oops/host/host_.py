@@ -13,13 +13,14 @@ from pdsparser  import Pds3Label, PdsError, is_pds3_file
 from pdstable   import PdsTable
 from vicar      import VicarError, VicarImage, VicarLabel
 
+from oops._exceptions import OopsIndexError, OopsTypeError, OopsValueError
 from oops.body        import Body
 from oops.cadence     import TimeShift
 from oops.frame       import Cmatrix, Frame, FrameShift, Navigation, TrackerFrame
 from oops.observation import Observation
 from oops.path        import PathShift
 
-from ._errors import (HostError, HostFormatError, PdsHostError, UnknownHostError,
+from ._errors import (HostFormatError, HostIndexError, PdsHostError, UnknownHostError,
                       VicarHostError)
 
 ObsArray: TypeAlias = (np.ndarray[tuple[int, ...], np.dtype[np.object_]]
@@ -32,6 +33,8 @@ class Host:
     _HOSTS = []     # A list of all registered Host subclasses.
     _LOOKUP = {}    # name -> subclass
     NAME = 'none'   # Each subclass must define
+
+    SUPPLEMENT = object()  # Sentinel so from_index() searches for a supplemental index
 
     @staticmethod
     def from_file(filepath, *, pds3_options=None, select=None, astrometry=False,
@@ -95,13 +98,15 @@ class Host:
             from the file.
 
         Raises:
-            HostError: If `filepath` is not associated with any registered Host subclass.
-            HostFormatError: If `filepath` has invalid syntax for format. Note that
-                subclass :class:`~PdsHostError` is returned for PDS-formatted files and
-                :class:`~VicarHostError` is returned for VICAR files.
+            HostFormatError: If `filepath` has invalid syntax or uses an unsupported
+                option. Note that subclass :class:`~PdsHostError` is raised for a PDS3
+                syntax error and :class:`~VicarHostError` is raised for a VICAR syntax
+                error.
             OSError: If `filepath` cannot be read; one of FileNotFoundError,
                 IsADirectoryError, PermissionError, etc.
-            ValueError: If a value in `pds3_options` is invalid.
+            UnknownHostError: If `filepath` is not associated with any registered Host
+                subclass.
+            OopsValueError: If a value in `pds3_options` is invalid.
         """
 
         # Set the default Pds3Label options to method='fast', sources=True
@@ -118,7 +123,7 @@ class Host:
                               **kwargs)
 
     @staticmethod
-    def from_index(filepath, *, supplement=None, label=None, row_dicts=None,
+    def from_index(filepath, *, supplement=SUPPLEMENT, label=None, row_dicts=None,
                    pds3_options=None, filter=None, select=None, target=None,
                    lightsource=None, path=None, frame=None, cadence=None, fov=None,
                    calibrations=None, timeshift=None, navigation=None, tracker=None,
@@ -128,9 +133,12 @@ class Host:
         Parameters:
             filepath (str | pathlib.Path | FCPath): The full path to the PDS label of a
                 data file index.
-            supplement (str | pathlib.Path | FCPath, optional): The path to the PDS label
-                of a supplemental index file. If provided, this file must have the same
-                records in the same order as the table described by `filepath`.
+            supplement (str | pathlib.Path | FCPath | object, optional): The path to the
+                PDS label of a supplemental index file, if any. If specified, this file
+                must have the same records in the same order as the table described by
+                `filepath`. Use the sentinel value `Host.SUPPLEMENT` to search the
+                directory of `filepath` for a file whose name matches except that "_index"
+                is replaced by "_supplemental_index" in upper or lower case.
             label (PdsLabel, optional): The PDS label of `filepath` if it has already been
                 read.
             row_dicts (list[dict[str, Any]], optional): A list of dictionaries, one per
@@ -187,11 +195,12 @@ class Host:
             Observations, one for each filtered row of the index file.
 
         Raises:
-            HostError: If `filepath` is not associated with any registered Host subclass.
-            PdsHostError: If `filepath` has invalid PDS label syntax.
+            OopsValueError: If a value in `pds3_options` is invalid.
             OSError: If `filepath` or `supplement` cannot be read; one of
                 FileNotFoundError, IsADirectoryError, PermissionError, etc.
-            ValueError: If a value in `pds3_options` is invalid.
+            PdsHostError: If `filepath` uses invalid PDS label syntax.
+            UnknownHostError: If `filepath` is not associated with any registered Host
+                subclass.
         """
 
         filepath = FCPath(filepath)
@@ -204,6 +213,8 @@ class Host:
                 label = Pds3Label(filepath, **pds3_options)
             except PdsError as err:
                 raise PdsHostError(str(err)) from err
+            except (TypeError, ValueError) as err:
+                raise OopsValueError(str(err)) from err
 
         # Read and filter the rows
         if row_dicts is None:
@@ -221,7 +232,7 @@ class Host:
             elif status:
                 break
         else:
-            raise HostError(f'index is not associated with any known host: {filepath}')
+            raise UnknownHostError(f'unknown host in index {filepath}')
 
         # Process the host-specific index
         return host.from_index(filepath, supplement=None, row_dicts=row_dicts,
@@ -232,14 +243,29 @@ class Host:
                                **kwargs)
 
     @staticmethod
-    def _read_index_rows(filepath, *, supplement=None, pds3_options=None, label=None):
+    def _read_index_rows(filepath, *, supplement=SUPPLEMENT, validate=None,
+                         pds3_options=None, label=None):
         """Read the index rows and return one dictionary per row, with supplementary index
         content merged.
 
         Parameters:
             filepath (str | pathlib.Path | FCPath): Path to the index label.
-            supplement (str | pathlib.Path | FCPath): Path to the supplemental index
-                label.
+            supplement (str | pathlib.Path | FCPath | object, optional): The path to the
+                PDS label of a supplemental index file, if any. If specified, this file
+                must have the same records in the same order as the table described by
+                `filepath`. Use the sentinel value `Host.SUPPLEMENT` to search the
+                directory of `filepath` for a file whose name matches except that "_index"
+                is replaced by "_supplemental_index" in upper or lower case.
+            validate (str | list[str] | Callable[[dict[str, Any], dict[str, Any]], bool],
+                optional): The mechanism to use to verify that each pair of rows from
+                `filepath` and `supplement` match. If a string or list of strings, it
+                identifies column names that the two row dictionaries must share. (Tests
+                of strings are case-insensitive and they need not match exactly, provided
+                one string falls inside the other.) Alternatively, a function that
+                receives the row dictionaries from each file and returns True if the rows
+                match and either returns False or raises an exception if they do not
+                match. If unspecified, the common column names of the two indices are
+                used.
             pds3_options (dict[str, Any], optional): Any keyword arguments and their
                 values to be passed to the :class:`~pdsparser.Pds3Label` parser.
             label (PdsLabel, optional): The PDS label of `filepath` if it has already been
@@ -249,42 +275,88 @@ class Host:
             list[dict[str, Any]]: One dictionary per row.
 
         Raises:
-            ValueError: If `supplement` does not have the same records in the same order
-                as `filepath`.
+            HostIndexError: If `supplement` does not have the same records in the same
+                order as `filepath` or if no columns can be used for cross-validation of
+                the index and supplement.
         """
 
+        def column_validator_func(names):
+            """Return a function that tests the rows based on a list of column names."""
+
+            if not names:
+                raise HostIndexError('a list of column names is needed for validation')
+
+            def column_validator(indx_dict, supp_dict):
+                for name in names:
+                    indx_val = indx_dict[name]
+                    supp_val = supp_dict[name]
+                    if indx_val == supp_val:
+                        continue
+                    if isinstance(indx_val, str) and isinstance(supp_val, str):
+                        indx_upper = indx_val.upper()
+                        supp_upper = supp_val.upper()
+                        if supp_upper in indx_upper or indx_upper in supp_upper:
+                            continue
+                    raise HostIndexError(f'{name} value mismatch: {indx_val!r}, '
+                                         f'{supp_val!r}')
+                return True
+            return column_validator
+
+        # Read the index
         filepath = FCPath(filepath)
         pds3_method = (pds3_options or {}).get('method', 'fast')
-        row_dicts = PdsTable(filepath, label_method=pds3_method).dicts_by_row()
+        row_table = PdsTable(filepath, label_method=pds3_method)
+        row_dicts = row_table.dicts_by_row()
 
-        # Merge supplement if any
         if not supplement:
             return row_dicts
 
-        supplement = FCPath(supplement)
-        supp_dicts = PdsTable(supplement, label_method=pds3_method).dicts_by_row()
+        # Look for supplemental index
+        if supplement is Host.SUPPLEMENT:
+            supp_name = (filepath.name.replace('_index', '_supplemental_index')
+                                      .replace('_INDEX', '_SUPPLEMENTAL_INDEX'))
+            if supp_name == filepath.name:
+                return row_dicts
+            supplement = filepath.with_name(supp_name)
+            if not supplement.exists():
+                return row_dicts
+        else:
+            supplement = FCPath(supplement)
+
+        # Merge the supplement
+        supp_table = PdsTable(supplement, label_method=pds3_method)
+        supp_dicts = supp_table.dicts_by_row()
         if len(supp_dicts) != len(row_dicts):
-            raise ValueError('index files have different record counts: '
-                             f'{filepath}, {supplement}')
+            raise HostIndexError('index files have different record counts: '
+                                 f'{filepath}, {supplement}')
 
         # Make sure records are in the same order
-        common_keys = []
-        if row_dicts:
-            common_keys = list(set(row_dicts[0].keys()) & set(supp_dicts[0].keys()))
-        if common_keys:
-            for i, row_dict in enumerate(row_dicts):
-                supp_dict = supp_dicts[i]
-                supp_vals = [supp_dict[key] for key in common_keys]
-                row_vals = [row_dict[key] for key in common_keys]
-                if row_vals != supp_vals:
-                    raise ValueError(f'index files mismatch at record [{i}]: '
+        if validate is None:
+            validate = list(set(row_table.get_keys()) & set(supp_table.get_keys()))
+            if not validate:
+                raise HostIndexError('index files have no columns in common: '
+                                     f'{filepath}, {supplement}')
+        elif isinstance(validate, str):
+            validate = [validate]
+        if isinstance(validate, (list, tuple)):
+            validate = column_validator_func(validate)
+
+        for i, row_dict in enumerate(row_dicts):
+            try:
+                status = validate(row_dict, supp_dicts[i])
+            except Exception as err:
+                raise HostIndexError(str(err)
+                                     + (f'\nindex file mismatch at record [{i}]: '
+                                        f'{filepath}, {supplement}')) from err
+            if not status:
+                raise HostIndexError(f'index file mismatch at record [{i}]: '
                                      f'{filepath}, {supplement}')
 
         # Merge dictionaries
         for i, row_dict in enumerate(row_dicts):
-            row_dict = row_dict.copy()
-            row_dict.update(supp_dicts[i])
-            row_dicts[i] = row_dict
+            dict_ = supp_dicts[i].copy()
+            dict_.update(row_dict)
+            row_dicts[i] = dict_
 
         return row_dicts
 
@@ -474,13 +546,14 @@ class Host:
             second returned item is None.
 
         Raises:
-            HostError: If `filepath` is not associated with any registered Host subclass.
+            UnknownHostError: If `filepath` is not associated with any registered Host
+                subclass.
             HostFormatError: If `filepath` has invalid syntax for format. Note that
                 subclass :class:`~PdsHostError` is returned for PDS-formatted files and
                 :class:`~VicarHostError` is returned for VICAR files.
             OSError: If `filepath` cannot be read; one of FileNotFoundError,
                 IsADirectoryError, PermissionError, etc.
-            ValueError: If a value in `pds3_options` is invalid.
+            OopsValueError: If a value in `pds3_options` is invalid.
         """
 
         # Check every registered host and every defined file format
@@ -519,7 +592,7 @@ class Host:
                 :class:`~VicarHostError` is returned for VICAR files.
             OSError: If the file cannot be read; one of FileNotFoundError,
                 IsADirectoryError, PermissionError, etc.
-            ValueError: If the value in `pds3_options` is invalid.
+            OopsValueError: If the value in `pds3_options` is invalid.
         """
 
         # If the file was already parsed, just return this info
@@ -558,13 +631,15 @@ class Host:
             second returned item is the FCPath.
 
         Raises:
-            HostError: If `filepath` is not associated with any listed Host subclass.
-            HostFormatError: If `filepath` has invalid syntax for format. Note that
+            UnknownHostError: If `filepath` is not associated with any of several listed
+                Host subclasses.
+            HostFormatError: If `filepath` is not in a recognized format of the one listed
+                Host subclass, or has invalid syntax for its format. Note that
                 subclass :class:`~PdsHostError` is returned for PDS-formatted files and
                 :class:`~VicarHostError` is returned for VICAR files.
             OSError: If `filepath` cannot be read; one of FileNotFoundError,
                 IsADirectoryError, PermissionError, etc.
-            ValueError: If the value in `pds3_options` is invalid.
+            OopsValueError: If the value in `pds3_options` is invalid.
         """
 
         filepath = FCPath(filepath)
@@ -583,6 +658,8 @@ class Host:
                 label = Pds3Label(filepath, **pds3_options)
             except PdsError as err:
                 raise PdsHostError(str(err)) from err
+            except (TypeError, ValueError) as err:
+                raise OopsValueError(str(err)) from err
             else:
                 for host in hosts:
                     if hasattr(host, '_detect_in_pds3') and host._detect_in_pds3(label):
@@ -623,6 +700,8 @@ class Host:
                 label = Pds3Label(filepath, **pds3_options)
             except PdsError as err:
                 raise PdsHostError(str(err)) from err
+            except (TypeError, ValueError) as err:
+                raise OopsValueError(str(err)) from err
             else:
                 for host in hosts:
                     if hasattr(host, '_detect_in_pds3') and host._detect_in_pds3(label):
@@ -636,8 +715,8 @@ class Host:
                     return host, filepath
 
         if len(hosts) == 1:
-            raise HostError(f'unrecognized file format for {hosts[0].NAME}: '
-                            f'{filepath}')
+            raise HostFormatError(f'unrecognized file format for {hosts[0].NAME}: '
+                                  f'{filepath}')
         raise UnknownHostError(f'unrecognized host in file: {filepath}')
 
     _TIMESHIFT_CLASS = {'T': TimeShift, 'P': PathShift, 'F': FrameShift}
@@ -692,6 +771,9 @@ class Host:
 
         Returns:
             dict: The `params` dictionary, modified in place.
+
+        Raises:
+            OopsValueError: If an input parameter is invalid.
         """
 
         # Fill in the file/URL info
@@ -714,9 +796,9 @@ class Host:
             dt, letters = timeshift
             letters = letters.upper()
             if not letters:
-                raise ValueError('the timeshift must specify one or more of T/P/F')
+                raise OopsValueError('the timeshift must specify one or more of T/P/F')
             if set(letters) - set('TPF'):
-                raise ValueError(f'invalid timeshift letters: {letters}')
+                raise OopsValueError(f'invalid timeshift letters: {letters}')
             arg = None
             for letter in letters:
                 attr = Host._TIMESHIFT_ATTR[letter]
@@ -729,7 +811,7 @@ class Host:
         # Apply frame adjustments
         if parallel is not None:
             if tracker is not None:
-                raise ValueError('parallel and tracker cannot both be specified')
+                raise OopsValueError('parallel and tracker cannot both be specified')
 
             frame = Frame.as_frame(params['frame']).wrt(parallel.frame)
             xform = frame.transform_at_time(params['cadence'].midtime)
@@ -739,8 +821,8 @@ class Host:
             try:
                 tfrac = {'start': 0., 'midtime': 0.5, 'end': 1.}[tracker]
             except KeyError:
-                raise ValueError('invalid tracker, should be "start", "midtime", or '
-                                 f'"end": {tracker!r}')
+                raise OopsValueError('invalid tracker, should be "start", "midtime", or '
+                                     f'"end": {tracker!r}')
             times = params['cadence'].time
             epoch = times[0] + tfrac * (times[1] - times[0])
 
@@ -770,53 +852,82 @@ class Host:
         inefficient approach, especially if `astrometry` is True.
 
         Parameters:
-            observations (tuple[Observation | None, ...]): The observations from one file.
+            observations (tuple[Observation | None, ...] | ObsArray): The observations
+                from one file.
             select (int | slice | str | tuple[int | slice | str, ...] | None): An index, a
                 slice, or the name of one observation, or a tuple of these; None to choose
-                them all.
+                all the `observations`. A tuple indexes the observations as NumPy indexes
+                an array, one item per axis, so `(0, 0)` chooses the first observation of
+                a 2x2 array and `(slice(None), 0)` chooses its first column.
             names (dict[str, int], optional): The host-specific names of the observations,
                 in upper case, each mapped to its index in `observations`. Names in
-                `select` are matched without regard to case.
+                `select` are matched without regard to case. In a tuple, a name may stand
+                for the index on any axis.
 
         Returns:
             Observation | None | tuple[Observation | None, ...] | ObsArray: `observations`
-            itself if `select` is None; the one observation chosen by an index or a name;
-            or a tuple of the observations chosen by a slice or by a tuple, in the order
-            given, with each slice in a tuple contributing all of its observations.
+            itself if `select` is None; the one observation or row chosen by an index or a
+            name; the tuple or array of the observations chosen by a slice; or, for a
+            tuple, the observation or the array of observations it indexes, which is a
+            tuple if `observations` is one.
 
         Raises:
-            IndexError: If an index is out of range.
-            ValueError: If a name is not one of `names`.
-            TypeError: If `select`, or an item of a tuple, is not an int, slice or str.
+            OopsIndexError: If an index is out of range, or if a tuple has more items than
+                `observations` has axes.
+            OopsValueError: If a name is not one of `names`.
+            OopsTypeError: If `select`, or an item of a tuple, is not an int, slice or
+                str.
         """
+
+        def name_index(name):
+            if name.upper() not in (names or {}):
+                raise OopsValueError(f'unrecognized select name: {name!r}')
+            return names[name.upper()]
 
         if select is None:
             return observations
 
         if isinstance(select, tuple):
-            chosen = []
+            indices = []
             for item in select:
-                if isinstance(item, tuple):
-                    raise TypeError(f'invalid select item: {item!r}')
-                if isinstance(item, slice):
-                    chosen += observations[item]
+                if isinstance(item, str):
+                    indices.append(name_index(item))
+                elif (isinstance(item, slice)
+                      or (isinstance(item, numbers.Integral)
+                          and not isinstance(item, bool))):
+                    indices.append(item)
                 else:
-                    chosen.append(Host._apply_select(observations, item, names))
-            return tuple(chosen)
+                    raise OopsTypeError(f'invalid select item: {item!r}')
+
+            # A tuple of observations is indexed as a 1-D object array, and any array it
+            # yields is returned as a tuple again
+            array = observations
+            if not isinstance(array, np.ndarray):
+                array = np.empty(len(observations), dtype=np.object_)
+                for i, obs in enumerate(observations):
+                    array[i] = obs
+            try:
+                chosen = array[tuple(indices)]
+            except IndexError as err:
+                raise OopsIndexError(f'invalid select {select!r}: {err}') from err
+            if isinstance(chosen, np.ndarray) and not isinstance(observations,
+                                                                 np.ndarray):
+                return tuple(chosen)
+            return chosen
 
         if isinstance(select, slice):
             return observations[select]
 
         if isinstance(select, str):
-            names = names or {}
-            if select.upper() not in names:
-                raise ValueError(f'unrecognized select name: {select!r}')
-            return observations[names[select.upper()]]
+            return observations[name_index(select)]
 
         if isinstance(select, numbers.Integral) and not isinstance(select, bool):
-            return observations[select]
+            try:
+                return observations[select]
+            except IndexError as err:
+                raise OopsIndexError(f'select index out of range: {select}') from err
 
-        raise TypeError(f'invalid select: {select!r}')
+        raise OopsTypeError(f'invalid select: {select!r}')
 
     @staticmethod
     def _pds3_options_with_defaults(options):
