@@ -19,7 +19,9 @@ dependencies = [
   "rms-fpzip",
   "rms-interval",
   "rms-julian",
-  "rms-pdsparser",
+  # 2.4.0 adds PdsError, which oops.host raises and catches, and the "_list" keys of
+  # Pds3Label.as_dict, which preserve the order of a braced set such as CUT_OUT_WINDOW.
+  "rms-pdsparser>=2.4.0",
   "rms-pdstable",
   "rms-polymath>=2.1.1",
   "rms-solar",
