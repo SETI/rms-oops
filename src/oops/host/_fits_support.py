@@ -3,7 +3,8 @@
 ##########################################################################################
 """Shared FITS tools."""
 
-from ._errors import HostError
+from oops._exceptions import OopsIndexError, OopsKeyError
+from ._errors import HostFormatError
 
 __all__ = ['get_fits_image_hdu']
 
@@ -31,20 +32,28 @@ def get_fits_image_hdu(hdulist, index=None):
         HDU: The selected image HDUs.
 
     Raises:
-        HostError: If `hdulist` does not contain an image array.
-        IndexError: If the integer value of `index` is out of range.
-        KeyError: If the string value of `index` is not the name of an IMAGE object.
+        HostFormatError: If `hdulist` does not contain an image array.
+        OopsIndexError: If the integer value of `index` is out of range.
+        OopsKeyError: If the string value of `index` is not the name of an IMAGE object.
     """
 
     if index is None:
         image_hdus = [hdu for hdu in hdulist if _hdu_is_image(hdu)]
         if not image_hdus:
-            raise HostError(f'FITS file does not contain an image: {hdulist.filename}')
+            raise HostFormatError('FITS file does not contain an image: '
+                                  f'{hdulist.filename()}')
         return image_hdus[0]
 
-    hdu = hdulist[index]    # forward IndexError or KeyError
+    try:
+        hdu = hdulist[index]
+    except IndexError as err:
+        raise OopsIndexError(*err.args) from err
+    except KeyError as err:
+        raise OopsKeyError(*err.args) from err
+
     if not _hdu_is_image(hdu):
-        raise HostError(f'HDU {index!r} does not contain an image: {hdulist.filename}')
+        raise HostFormatError(f'HDU {index!r} does not contain an image: '
+                              f'{hdulist.filename()}')
 
     return hdu
 

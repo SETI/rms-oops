@@ -5,9 +5,9 @@
 
 import numpy as np
 import vax
-from pdsparser import PdsError
 
-from ._errors import HostError
+from oops._exceptions import OopsIndexError, OopsKeyError
+from ._errors import HostFormatError, PdsHostError
 
 __all__ = ['read_pds3_image_array']
 
@@ -27,10 +27,10 @@ def read_pds3_image_array(label, index=0):
         file, but has been converted to native byte order.
 
     Raises:
-        HostError: If the PDS3 label does not contain an image array.
-        IndexError: If the integer value of `index` is out of range.
-        KeyError: If the string value of `index` is not the name of an IMAGE object.
-        PdsError: If the PDS3 label does not correctly describe the image array.
+        HostFormatError: If the PDS3 label does not contain an image array.
+        OopsIndexError: If the integer value of `index` is out of range.
+        OopsKeyError: If the string value of `index` is not the name of an IMAGE object.
+        PdsHostError: If the PDS3 label does not correctly describe the image array.
     """
 
     ######################################################################################
@@ -47,14 +47,17 @@ def read_pds3_image_array(label, index=0):
     image_keys = [key for key, value in label.items()
                   if key.endswith('IMAGE') and isinstance(value, dict)]
     if not image_keys:
-        raise HostError('PDS3 label does contain an IMAGE object')
+        raise HostFormatError('PDS3 label does not contain an IMAGE object')
 
     if isinstance(index, str):
         if index not in image_keys:
-            raise KeyError(f'IMAGE "{index}" not found')
+            raise OopsKeyError(f'IMAGE "{index}" not found')
         image_key = index
     else:
-        image_key = image_keys[index]   # forward IndexError
+        try:
+            image_key = image_keys[index]
+        except IndexError as err:
+            raise OopsIndexError(f'IMAGE index out of range: {index}') from err
 
     ######################################################################################
     # Locate the data file and the byte offset at which the IMAGE begins.
@@ -78,7 +81,7 @@ def read_pds3_image_array(label, index=0):
     image = label[image_key]
     pointer_key = '^' + image_key
     if pointer_key not in label:
-        raise PdsError(f'Label has no pointer {pointer_key!r} for the IMAGE object')
+        raise PdsHostError(f'Label has no pointer {pointer_key!r} for the IMAGE object')
 
     pointer = label[pointer_key]
     unit = label.get(pointer_key + '_unit', '')
@@ -210,8 +213,8 @@ def read_pds3_image_array(label, index=0):
         records = np.fromfile(f, dtype=record_dtype, count=record_count)
 
     if len(records) != record_count:
-        raise PdsError(f'File {data_path} contains fewer image records than the label '
-                       'describes')
+        raise PdsHostError(f'File {data_path} contains fewer image records than the '
+                           'label describes')
 
     samples = records['samples']    # shape (record_count, samples)
 
