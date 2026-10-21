@@ -29,7 +29,7 @@ def get_fits_image_hdu(hdulist, index=None):
             The default is to return the first IMAGE HDU.
 
     Returns:
-        HDU: The selected image HDUs.
+        PrimaryHDU | ImageHDU: The selected image HDU.
 
     Raises:
         HostFormatError: If `hdulist` does not contain an image array.

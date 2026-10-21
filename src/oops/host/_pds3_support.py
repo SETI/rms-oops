@@ -21,8 +21,8 @@ def read_pds3_image_array(label, index=0):
             return, needed if the file describes more than one.
 
     Returns:
-        np.ndarray: The data array. It is 3-D if the IMAGE object specifies BANDS and 2-D
-        otherwise. The axes are always ordered as BANDS (if present), then LINES and
+        numpy.ndarray: The data array. It is 3-D if the IMAGE object specifies BANDS and
+        2-D otherwise. The axes are always ordered as BANDS (if present), then LINES and
         SAMPLES. The array preserves the data type and byte size of the samples in the
         file, but has been converted to native byte order.
 

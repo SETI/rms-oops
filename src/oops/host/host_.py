@@ -24,7 +24,7 @@ from ._errors import (HostFormatError, HostIndexError, PdsHostError, UnknownHost
                       VicarHostError, WrongHostError)
 
 ObsArray: TypeAlias = (np.ndarray[tuple[int, ...], np.dtype[np.object_]]
-                       | tuple[Observation, ...])
+                       | tuple[Observation | None, ...])
 
 
 class Host:
@@ -94,8 +94,9 @@ class Host:
                 Any other instrument-specific parameters, as needed.
 
         Returns:
-            Observation | ObsArray: The Observation or array of Observations retrieved
-            from the file.
+            Observation | ObsArray | None: An Observation or a tuple or array of
+            Observations retrieved from the file. None if a selected Observation is
+            absent.
 
         Raises:
             HostFormatError: If `filepath` has invalid syntax or uses an unsupported
@@ -139,8 +140,8 @@ class Host:
                 the directory of `filepath` whose name matches except that "_index" is
                 replaced by "_supplemental_index" in upper or lower case, if that file
                 exists.
-            label (PdsLabel, optional): The PDS label of `filepath` if it has already been
-                read.
+            label (Pds3Label, optional): The PDS label of `filepath` if it has already
+                been read.
             row_dicts (list[dict[str, Any]], optional): A list of dictionaries, one per
                 row of the index, if `filepath` and `supplement` have already been read.
                 If provided, `supplement` is ignored.
@@ -192,8 +193,9 @@ class Host:
             **kwargs: Additional keyword arguments, ignored here except as noted below.
 
         Returns:
-            list[Observation | ObsArray]: The list of Observations or arrays of
-            Observations, one for each filtered row of the index file.
+            list[Observation | ObsArray | None]: The list of Observations or tuples
+            or arrays of Observations for each filtered row of the index file. None where
+            a selected Observation is absent from that row.
 
         Raises:
             OopsValueError: If a value in `pds3_options` is invalid.
@@ -590,20 +592,20 @@ class Host:
                 the supplement file must exist. If False, a supplement file that is
                 missing, or that cannot be named because the name of `filepath` contains
                 no "_index", is ignored.
-            validate (str | list[str] | Callable[[dict[str, Any], dict[str, Any]], bool],
-                optional): The mechanism to use to verify that each pair of rows from
-                `filepath` and `supplement` match. If a string or list of strings, it
-                identifies column names that the two row dictionaries must share. (Tests
-                of strings are case-insensitive and they need not match exactly, provided
-                one string falls inside the other.) Alternatively, a function that
-                receives the row dictionaries from each file and returns True if the rows
-                match and either returns False or raises an exception if they do not
-                match. If unspecified, the common column names of the two indices are
-                used.
+            validate (str | list[str] | collections.abc.Callable, optional): The
+                mechanism to use to verify that each pair of rows from `filepath` and
+                `supplement` match. If a string or list of strings, it identifies column
+                names that the two row dictionaries must share. (Tests of strings are
+                case-insensitive and they need not match exactly, provided one string
+                falls inside the other.) Alternatively, a function with the signature
+                ``(dict[str, Any], dict[str, Any]) -> bool`` that receives the row
+                dictionaries from each file and returns True if the rows match and either
+                returns False or raises an exception if they do not match. If
+                unspecified, the common column names of the two indices are used.
             pds3_options (dict[str, Any], optional): Any keyword arguments and their
                 values to be passed to the :class:`~pdsparser.Pds3Label` parser.
-            label (PdsLabel, optional): The PDS label of `filepath` if it has already been
-                read.
+            label (Pds3Label, optional): The PDS label of `filepath` if it has already
+                been read.
 
         Returns:
             list[dict[str, Any]]: One dictionary per row.
@@ -914,8 +916,7 @@ class Host:
         inefficient approach, especially if `astrometry` is True.
 
         Parameters:
-            observations (tuple[Observation | None, ...] | ObsArray): The observations
-                from one file.
+            observations (ObsArray): The observations from one file.
             select (int | slice | str | tuple[int | slice | str, ...] | None): An index, a
                 slice, or the name of one observation, or a tuple of these; None to choose
                 all the `observations`. A tuple indexes the observations as NumPy indexes
@@ -927,11 +928,10 @@ class Host:
                 for the index on any axis.
 
         Returns:
-            Observation | None | tuple[Observation | None, ...] | ObsArray: `observations`
-            itself if `select` is None; the one observation or row chosen by an index or a
-            name; the tuple or array of the observations chosen by a slice; or, for a
-            tuple, the observation or the array of observations it indexes, which is a
-            tuple if `observations` is one.
+            Observation | ObsArray | None: `observations` itself if `select` is None; the
+            one observation or row chosen by an index or a name; the tuple or array of
+            the observations chosen by a slice; or, for a tuple, the observation or the
+            array of observations it indexes, which is a tuple if `observations` is one.
 
         Raises:
             OopsIndexError: If an index is out of range, or if a tuple has more items than

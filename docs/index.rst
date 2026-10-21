@@ -35,6 +35,7 @@ test it.
    oops_fov
    oops_frame
    oops_gravity
+   oops_host
    oops_lightsource
    oops_observation
    oops_path
