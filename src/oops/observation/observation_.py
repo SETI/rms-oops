@@ -16,6 +16,7 @@ from oops.frame.cmatrix    import Cmatrix
 from oops.frame.navigation import Navigation
 from oops.meshgrid         import Meshgrid
 from oops.mutable          import Mutable
+from oops.path             import Path
 
 
 class Observation(Mutable):
@@ -1074,7 +1075,7 @@ class Observation(Mutable):
         WARNING: this method is not well tested.
 
         Parameters:
-            path (Path): Object.
+            path (str | Path): The Path or Path name defining the object.
             tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where 0 refers to the beginning and 1 refers to the end of each sample's
                 integration interval. The default is 0.5, referring to the midtime of each
@@ -1104,6 +1105,8 @@ class Observation(Mutable):
             crossing that gap. However, even then, it should select roughly the correct
             location. It could also fail to converge during a fast slew.
         """
+
+        path = Path.as_path(path)
 
         # Assemble convergence parameters
         if converge:

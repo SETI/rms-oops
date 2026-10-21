@@ -60,9 +60,9 @@ class Host:
             target (str | Body, optional): Override for the default target Body of the
                 observation. Use "NONE" for inertial pointing, indicating that no Solar
                 System body was tracked.
-            lightsource (Lightsource, optional): Override for the default Lightsource of
+            lightsource (LightSource, optional): Override for the default LightSource of
                 the observation.
-            path (str | oops.Path, optional): Override for the Path of the observer.
+            path (str | Path, optional): Override for the Path of the observer.
             frame (str | Frame, optional): Override for the Frame of the observing
                 instrument.
             cadence (Cadence, optional): Override for the Cadence of the observation.
@@ -156,18 +156,18 @@ class Host:
                 Observation objects. For example, if the file contains two Observations
                 but `select=1`, only the second Observation will be returned.
                 Alternatively, specify one or more host-specific names of the data arrays.
-            target (str | oops.Body, optional): Override for the default target Body of
-                every observation. Use "NONE" for inertial pointing, indicating that no
-                Solar System body was tracked.
-            lightsource (oops.Lightsource, optional): Override for the default Lightsource
-                of every observation.
-            path (str | oops.Path, optional): Override for the Path of the observer.
-            frame (str | oops.Frame, optional): Override for the Frame of the observing
+            target (str | Body, optional): Override for the default target Body of every
+                observation. Use "NONE" for inertial pointing, indicating that no Solar
+                System body was tracked.
+            lightsource (LightSource, optional): Override for the default LightSource of
+                every observation.
+            path (str | Path, optional): Override for the Path of the observer.
+            frame (str | Frame, optional): Override for the Frame of the observing
                 instrument.
             cadence (Cadence, optional): Override for the Cadence of the observation.
             fov (FOV, optional): Override for the default FOV of the observing instrument.
-            calibrations (oops.Calibration | list[oops.Calibration], optional): Override
-                for the calibration or list of calibrations.
+            calibrations (Calibration | list[Calibration], optional): Override for the
+                calibration or list of calibrations.
             timeshift (tuple[float, str], optional): Assign a Fittable time shift to one
                 or more attributes of the Observation. The first item is the initial time
                 shift in seconds. The second item is a string indicating which attributes
@@ -799,9 +799,9 @@ class Host:
             target (str | Body, optional): Override for the default target Body of the
                 observation. Use "NONE" for inertial pointing, indicating that no Solar
                 System body was tracked.
-            lightsource (Lightsource, optional): Override for the default Lightsource of
+            lightsource (LightSource, optional): Override for the default LightSource of
                 the observation.
-            path (str | oops.Path, optional): Override for the Path of the observer.
+            path (str | Path, optional): Override for the Path of the observer.
             frame (str | Frame, optional): Override for the Frame of the observing
                 instrument.
             cadence (Cadence, optional): Override for the Cadence of the observation.

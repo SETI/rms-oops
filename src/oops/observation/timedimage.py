@@ -41,11 +41,11 @@ class TimedImage(Observation):
             fov (FOV): (field-of-view) object, which describes the field of view including
                 any spatial distortion and possible time-dependence. It maps between
                 spatial coordinates *(u,v)* and instrument coordinates *(x,y)*.
-            path (Path): The path waypoint co-located with the instrument.
-            frame (Frame): The wayframe of a coordinate frame fixed to the optics of the
-                instrument. This frame should have its *z*-axis pointing outward near the
-                center of the line of sight, with the *x*-axis pointing rightward and the
-                *y*-axis pointing downward.
+            path (str | Path): The Path or Path name co-located with the instrument.
+            frame (str | Frame): The Frame or name of a coordinate frame fixed to the
+                optics of the instrument. This frame should have its *z*-axis pointing
+                outward near the center of the line of sight, with the *x*-axis pointing
+                rightward and the *y*-axis pointing downward.
             subfields (dict): All of the optional attributes. Additional subfields may be
                 included as needed. The subfield `shape` overrides the shape derived from
                 the FOV and the cadence.

@@ -37,9 +37,9 @@ class Snapshot(Observation):
             fov (FOV): (field-of-view) object, which describes the field of view including
                 any spatial distortion. It maps between spatial coordinates *(u,v)* and
                 instrument coordinates *(x,y)*.
-            path (str | Path): The waypoint or Path name co-located with the instrument.
-            frame (str | Frame): The wayframe or Frame name of a coordinate frame fixed to
-                the optics of the instrument. This frame should have its *z*-axis pointing
+            path (str | Path): The Path or Path name co-located with the instrument.
+            frame (str | Frame): The Frame or name of a coordinate frame fixed to the
+                optics of the instrument. This frame should have its *z*-axis pointing
                 outward near the center of the line of sight, with the *x*-axis pointing
                 rightward and the *y*-axis pointing downward.
             subfields (dict): All of the optional attributes. Additional subfields may be
@@ -269,7 +269,7 @@ class Snapshot(Observation):
         converted to an absolute time and no iteration is required.
 
         Parameters:
-            path (Path): Object.
+            path (str | Path): The Path or Path name defining the object.
             tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where 0 refers to the beginning and 1 refers to the end of each sample's
                 integration interval. The default is 0.5, referring to the midtime of each
