@@ -13,7 +13,7 @@ defaults. Types are given where they are unambiguous and are `Any` elsewhere.
 
 from oops import Body as Body, Event as Event, RPD as RPD
 from numpy import ndarray
-from polymath import Scalar, Vector3
+from polymath import Pair, Scalar, Vector3
 # Parameters documented as a polymath type are passed through `as_scalar` and its
 # siblings, so each accepts the class, a number, or a nested sequence of numbers.
 # `polymath.typedefs` names each of those unions.
@@ -21,35 +21,73 @@ from polymath.typedefs import PairLike, ScalarLike, Vector3Like
 from oops.oops import Oops as Oops
 from oops.path import Path as Path
 
-__all__ = ['LightSource', 'DiskSource']
+__all__ = ['LightSource', 'DiskSource', 'StarSource', 'star_lookup', 'add_star']
 
 class LightSource(Oops):
+    key: str
     name: str
+    alt_names: list[str]
     source: Path | Vector3
     source_is_moving: bool
     shape: tuple[int, ...]
     weight: Scalar
     def __init__(self, name: str, source: Path | str | PairLike | Vector3Like,
         weight: ScalarLike | None = None) -> None: ...
-    def photon_to_event(self, event: Event, derivs: bool = False,
+    def add_name(self, names: str | list[str]) -> None: ...
+    def photon_to_event(self, event: Event, *, derivs: bool = False,
         guess: ScalarLike | None = None, antimask: ndarray | bool | None = None,
         quick: dict | bool | None = None,
         converge: dict | None = None) -> tuple[Event | None, Event]: ...
     def as_path(self) -> Path | None: ...
+    @staticmethod
+    def as_key(source: LightSource | str) -> str: ...
 
 class DiskSource(LightSource):
+    key: str
     name: str
+    alt_names: list[str]
+    lightsource: LightSource
     source: Path | Vector3
     source_is_moving: bool
     xy_grid: Vector3
     shape: tuple[int, ...]
     radius: float
     weight: Scalar
-    def __init__(self, name: str, source: Path | PairLike | Vector3Like, radius: float,
+    def __init__(self, name: str, source: LightSource, radius: float, *,
         size: int = 11, compress: bool = False) -> None: ...
-    def photon_to_event(self, event: Event, derivs: bool = False,
+    def photon_to_event(self, event: Event, *, derivs: bool = False,
         guess: ScalarLike | None = None, antimask: ndarray | bool | None = None,
         quick: dict | bool | None = None,
         converge: dict | None = None) -> tuple[None, Event]: ...
+
+class StarSource(LightSource):
+    key: str
+    name: str
+    alt_names: list[str]
+    source: Vector3
+    source_is_moving: bool
+    shape: tuple[int, ...]
+    weight: Scalar
+    magnitude: float | None
+    mag_type: str | None
+    stellar_type: str | None
+    parallax: float
+    proper_motion: Pair
+    epoch: float
+    def __init__(self, name: str, ra: float, dec: float, *,
+        magnitude: float | None = None, mag_type: str | None = None,
+        stellar_type: str | None = None,
+        parallax: float = 0.0, proper_motion: PairLike | None = None,
+        epoch: float = 0.0) -> None: ...
+    def photon_to_event(self, event: Event, *, derivs: bool = False,
+        guess: ScalarLike | None = None, antimask: ndarray | bool | None = None,
+        quick: dict | bool | None = None,
+        converge: dict | None = None) -> tuple[None, Event]: ...
+
+def star_lookup(name: str) -> LightSource: ...
+def add_star(names: str | list[str], ra: float, dec: float,
+    mag: float | None = None, type_info: str | None = None, *,
+    mag_type: str | None = None, parallax: float = 0.,
+    proper_motion: tuple[float, float] = (0., 0.)) -> None: ...
 
 ##########################################################################################

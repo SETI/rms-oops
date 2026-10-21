@@ -3,6 +3,8 @@
 ##########################################################################################
 """LightSource classes, which define a source of illumination."""
 
+import re
+
 import numpy as np
 
 from polymath         import Scalar, Pair, Vector3
@@ -11,6 +13,9 @@ from oops.body        import Body
 from oops.constants   import RPD
 from oops.oops        import Oops
 from oops.path        import Path
+
+# A lowercase letter, optionally numbered, that starts a designation such as "b Cen"
+_LOWERCASE_LETTER = re.compile(r'[a-z]\d*')
 
 
 class LightSource(Oops):
@@ -23,13 +28,13 @@ class LightSource(Oops):
         The source can have arbitrary shape, making it possible to describe an extended
         source via an array of nearby paths or directions.
 
-        LightSource objects are stored by name in the Body registry, so they share the
+        LightSource objects are stored by key in the Body registry, so they share the
         same name space as the Body class. This is necessary so they can be used as keys
         in Backplanes.
 
         Parameters:
-            name (str): Name under which to register this source; it is converted to
-                upper case.
+            name (str): Name of this source. It is registered under its key, as given by
+                :meth:`as_key`.
             source (Path | str | PairLike | Vector3Like): The location of the source, as
                 any of:
 
@@ -47,20 +52,11 @@ class LightSource(Oops):
 
         Raises:
             OopsTypeError: If `name` is not a string.
-            OopsValueError: If `name` is already the name of a Body, or if `source` is not
+            OopsValueError: If `name` already names a Body, or if `source` is not
                 one of the forms above.
         """
 
-        # Check and validate the name
-        if not isinstance(name, str):
-            raise OopsTypeError(f'LightSource name must be a string: {name!r}')
-
-        self.name = name.upper()
-
-        if Body.exists(self.name):
-            thing = Body.lookup(self.name)
-            if isinstance(thing, Body):
-                raise OopsValueError(f'LightSource name is also a Body name: {self.name}')
+        self._set_name(name)
 
         # Interpret the source. Each form is recognized explicitly rather than by trying
         # them in turn, so that an input matching none of them is rejected instead of
@@ -103,7 +99,77 @@ class LightSource(Oops):
         self.weight /= self.weight.sum()
 
         # Register as a Body
-        Body.BODY_REGISTRY[self.name] = self
+        Body.BODY_REGISTRY[self.key] = self
+
+    def _set_name(self, name):
+        """Validate a name and set the name, key and alternative names of this source.
+
+        Parameters:
+            name (str): The name of this source.
+
+        Raises:
+            OopsTypeError: If `name` is not a string.
+            OopsValueError: If `name` is already the name of a Body.
+        """
+
+        if not isinstance(name, str):
+            raise OopsTypeError(f'LightSource name must be a string: {name!r}')
+
+        self.name = name
+        self.key = LightSource.as_key(name)
+        self.alt_names = []
+
+        if Body.exists(self.key):
+            thing = Body.lookup(self.key)
+            if isinstance(thing, Body):
+                raise OopsValueError(f'LightSource name is also a Body name: {self.name}')
+
+    @staticmethod
+    def as_key(source):
+        """The registry key for a light source, given the source or its name.
+
+        A key is the name in upper case with underscores replacing spaces, except that a
+        designation beginning with a lowercase letter, optionally numbered, keeps that
+        letter lowercase. Stars such as "b Cen" and "B Cen" are distinct, so their keys
+        are "b_CEN" and "B_CEN". A name of one word is always upper case.
+
+        Parameters:
+            source (LightSource | str): A light source, or the name or key of one, with
+                spaces or underscores between words.
+
+        Returns:
+            str: The key of the light source.
+        """
+
+        if isinstance(source, LightSource):
+            return source.key
+
+        key = Body.as_body_key(source)
+        (first, _, rest) = source.replace(' ', '_').partition('_')
+        if rest and _LOWERCASE_LETTER.fullmatch(first):
+            return first + key[len(first):]
+
+        return key
+
+    def add_name(self, names):
+        """Add one or more names to this object.
+
+        Parameters:
+            names (str | list[str]): One or more names.
+
+        Raises:
+            OopsTypeError: If `name` is not a string.
+        """
+
+        if isinstance(names, str):
+            names = [names]
+
+        for name in names:
+            if not isinstance(name, str):
+                raise OopsTypeError(f'LightSource name must be a string: {name!r}')
+            if name == self.name or name in self.alt_names:
+                continue
+            self.alt_names.append(name)
 
     def __getstate__(self):
         return (self.name, self.source, self.weight)
@@ -111,8 +177,8 @@ class LightSource(Oops):
     def __setstate__(self, state):
         self.__init__(*state)
 
-    def photon_to_event(self, event, derivs=False, guess=None, antimask=None, quick=None,
-                        converge=None):
+    def photon_to_event(self, event, *, derivs=False, guess=None, antimask=None,
+                        quick=None, converge=None):
         """Solve for a photon arrival event from this lightsource.
 
         Input parameters are identical to the Path method of the same name, but for
@@ -180,10 +246,12 @@ class LightSource(Oops):
         return (self.source if self.source_is_moving else None)
 
 
-# Imported at the bottom because DiskSource subclasses LightSource, so this module must
-# be fully defined before its subclass module can be imported.
+# Imported at the bottom because DiskSource and StarSource subclass LightSource, so this
+# module must be fully defined before its subclass modules can be imported.
 from oops.lightsource.disksource import DiskSource
+from oops.lightsource.starsource import StarSource
+from oops.lightsource._star_catalog import star_lookup, add_star
 
-__all__ = ['LightSource', 'DiskSource']
+__all__ = ['LightSource', 'DiskSource', 'StarSource', 'star_lookup', 'add_star']
 
 ##########################################################################################

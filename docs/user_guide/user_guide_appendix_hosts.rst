@@ -39,6 +39,11 @@ Cassini
 Galileo
 -------
 
+``oops.hosts.galileo``
+    ``Galileo.tdb_from_sclk(count)`` converts a spacecraft clock count such as
+    ``00030612.00`` to seconds TDB. It furnishes the leap-second and clock kernels on its
+    first call and needs no ``initialize``, so an index generator can use it without
+    loading the mission kernels.
 ``oops.hosts.galileo.ssi``
     ``from_file(filespec, return_all_planets=False, full_fov=False, method='strict',
     **parameters)`` returns a :class:`~oops.observation.Snapshot`; ``full_fov`` returns the

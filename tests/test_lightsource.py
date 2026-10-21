@@ -10,9 +10,14 @@ import pytest
 import numpy as np
 
 from polymath import Pair, Scalar, Vector3
+from oops._exceptions import OopsKeyError
 from oops.body        import Body
+from oops.constants   import AU, RPD, RPS
 from oops.event       import Event
-from oops.lightsource import DiskSource, LightSource
+from oops.lightsource import (DiskSource, LightSource, StarSource, add_star,
+                              star_lookup)
+from oops.lightsource._MESSIER_OBJECTS import _MESSIER_OBJECTS
+from oops.lightsource._star_catalog import _STAR_LOOKUP, _find_star
 from oops.path        import Path
 
 
@@ -24,6 +29,10 @@ def _restore_body_registry() -> Iterator[None]:
     yield
     for name in set(Body.BODY_REGISTRY) - saved:
         del Body.BODY_REGISTRY[name]
+
+
+_MAS = RPS / 1000.
+_JULIAN_YEAR = 365.25 * 86400.
 
 
 def _observer_event() -> Event:
@@ -62,7 +71,8 @@ def test_lightsource_from_a_path_solves_for_the_photon() -> None:
 def test_disksource_from_a_path_returns_a_grid_of_lines_of_sight() -> None:
     """A moving DiskSource spreads the arrival direction over its disk."""
 
-    disk = DiskSource('TEST_DISK_PATH', Path.SSB, 695990., size=5)
+    disk = DiskSource('TEST_DISK_PATH', LightSource('TEST_DISK_PATH_CENTER', Path.SSB),
+                      695990., size=5)
 
     assert disk.shape == (5, 5)
 
@@ -72,11 +82,20 @@ def test_disksource_from_a_path_returns_a_grid_of_lines_of_sight() -> None:
     assert isinstance(arrival, Event)
     assert arrival.neg_arr_ap_j2000.shape == (5, 5)
 
+    # The observer is 1e6 km along +X, so the center of the disk lies along -X
+    center = arrival.neg_arr_ap_j2000[2, 2]
+    assert center.sep(-Vector3.XAXIS).vals == pytest.approx(0., abs=1.e-12)
+    # On a 5x5 grid the outermost pixel centers lie at 0.8 of the radius
+    edge = arrival.neg_arr_ap_j2000[2, 4]
+    assert edge.sep(center).vals == pytest.approx(np.arctan(0.8 * 695990. / 1.e6),
+                                                  rel=1.e-6)
+
 
 def test_disksource_from_a_direction_spreads_over_the_disk() -> None:
     """A fixed-direction DiskSource spreads the arrival direction over its disk."""
 
-    disk = DiskSource('TEST_DISK_FIXED', (30., 45.), 2.0, size=5)
+    center = LightSource('TEST_DISK_FIXED_CENTER', (30., 45.))
+    disk = DiskSource('TEST_DISK_FIXED', center, 2.0, size=5)
 
     assert disk.shape == (5, 5)
 
@@ -91,7 +110,8 @@ def test_disksource_compress_keeps_the_pixels_inside_the_circle() -> None:
     """Compressing discards the corners outside the circle, not the disk itself."""
 
     # A 5x5 grid has four corners outside the unit circle, so 21 pixels remain.
-    disk = DiskSource('TEST_DISK_SMALL', Path.SSB, 695990., size=5, compress=True)
+    disk = DiskSource('TEST_DISK_SMALL', LightSource('TEST_DISK_SMALL_CENTER', Path.SSB),
+                      695990., size=5, compress=True)
 
     assert disk.shape == (21,)
 
@@ -99,7 +119,8 @@ def test_disksource_compress_keeps_the_pixels_inside_the_circle() -> None:
 def test_disksource_weight_matches_the_lightsource_contract() -> None:
     """DiskSource publishes `weight` as a normalized Scalar, as LightSource does."""
 
-    disk = DiskSource('TEST_DISK_WEIGHT', Path.SSB, 695990., size=5)
+    center = LightSource('TEST_DISK_WEIGHT_CENTER', Path.SSB)
+    disk = DiskSource('TEST_DISK_WEIGHT', center, 695990., size=5)
 
     assert isinstance(disk.weight, Scalar)
     assert disk.weight.shape == (5, 5)
@@ -181,6 +202,47 @@ def test_weights_are_normalized_to_sum_to_one() -> None:
     assert source.weight.vals[1] == pytest.approx(0.75, abs=1.e-12)
 
 
+def test_a_lightsource_is_registered_under_its_key() -> None:
+    """The name keeps its capitalization; the registry holds the source by key."""
+
+    source = LightSource('Test Lamp', (30., 45.))
+
+    assert source.name == 'Test Lamp'
+    assert source.key == 'TEST_LAMP'
+    assert Body.lookup('test lamp') is source
+
+
+@pytest.mark.parametrize(('name', 'key'),
+                         [('Sirius', 'SIRIUS'), ('alf CMa', 'ALF_CMA'),
+                          ('V744 Cen', 'V744_CEN'), ('B Cen', 'B_CEN'), ('b Cen', 'b_CEN'),
+                          ('b cen', 'b_CEN'), ('b_Centauri', 'b_CENTAURI'),
+                          ('k1 Pup', 'k1_PUP'), ('e', 'E')])
+def test_a_lightsource_key_keeps_a_lowercase_letter_designation(name: str,
+                                                                 key: str) -> None:
+    """A lowercase letter starting a designation keeps its case; the rest is upper case."""
+
+    assert LightSource.as_key(name) == key
+
+
+def test_the_key_of_a_lightsource_is_its_own_key() -> None:
+    """Given a light source rather than a name, as_key returns the source's key."""
+
+    source = LightSource('b Test', (30., 45.))
+
+    assert source.key == 'b_TEST'
+    assert LightSource.as_key(source) == 'b_TEST'
+
+
+def test_lightsources_differing_only_in_letter_case_are_registered_apart() -> None:
+    """Sources named by an upper- and a lowercase letter are separate registry entries."""
+
+    upper = LightSource('A Test', (30., 45.))
+    lower = LightSource('a Test', (40., 45.))
+
+    assert Body.BODY_REGISTRY['A_TEST'] is upper
+    assert Body.BODY_REGISTRY['a_TEST'] is lower
+
+
 def test_a_lightsource_survives_a_round_trip_through_pickle() -> None:
     """Unpickling rebuilds the source from its name, its location and its weights."""
 
@@ -209,16 +271,91 @@ def test_a_fixed_lightsource_keeps_the_derivatives_of_the_event() -> None:
 def test_a_disk_source_must_name_a_single_direction() -> None:
     """A disk has one center, so a shaped source is refused."""
 
+    shaped = LightSource('TEST_SHAPED_CENTER', Vector3([(1., 0., 0.), (0., 1., 0.)]))
+
     with pytest.raises(ValueError, match=r'source must have shape \(\)'):
-        DiskSource('TEST_SHAPED_DISK', Vector3([(1., 0., 0.), (0., 1., 0.)]), 0.01)
+        DiskSource('TEST_SHAPED_DISK', shaped, 0.01)
 
     assert 'TEST_SHAPED_DISK' not in Body.BODY_REGISTRY
+
+
+@pytest.mark.parametrize('source', [Path.SSB, (30., 45.)], ids=['path', 'pair'])
+def test_a_disk_source_must_wrap_a_lightsource(source: Path | tuple[float, float]
+                                               ) -> None:
+    """The center of the disk is another LightSource, not a raw path or direction."""
+
+    with pytest.raises(TypeError, match='DiskSource source must be a LightSource'):
+        DiskSource('TEST_UNWRAPPED_DISK', source, 0.01)
+
+    assert 'TEST_UNWRAPPED_DISK' not in Body.BODY_REGISTRY
+
+
+def test_disk_source_size_and_compress_are_keyword_only() -> None:
+    """The grid size and compress flag must be passed by keyword."""
+
+    center = LightSource('TEST_POSITIONAL_DISK_CENTER', Path.SSB)
+    with pytest.raises(TypeError, match='positional argument'):
+        DiskSource('TEST_POSITIONAL_DISK', center, 0.01, 5)
+
+    assert 'TEST_POSITIONAL_DISK' not in Body.BODY_REGISTRY
+
+
+def test_a_disk_source_keeps_the_lightsource_it_wraps() -> None:
+    """The wrapped source stays registered under its own key and drives the disk."""
+
+    center = LightSource('TEST_WRAPPED_CENTER', Path.SSB)
+
+    disk = DiskSource('TEST_WRAPPING_DISK', center, 695990., size=5)
+
+    assert disk.lightsource is center
+    assert disk.source is center.source
+    assert disk.source_is_moving is True
+    assert Body.lookup('TEST_WRAPPED_CENTER') is center
+    assert Body.lookup('TEST_WRAPPING_DISK') is disk
+
+
+def test_a_disk_source_is_centered_on_a_moving_star() -> None:
+    """The disk follows the wrapped star's proper motion and parallax."""
+
+    star = StarSource('TEST_DISK_STAR', 90., 0., parallax=2000., proper_motion=(0., 100.))
+    disk = DiskSource('TEST_STAR_DISK', star, 2.0, size=5)
+    event = _ssb_event(1.e9, (AU, 0., 0.))
+
+    star_los = star.photon_to_event(event)[1].neg_arr_j2000
+    disk_los = disk.photon_to_event(event)[1].neg_arr_j2000
+
+    assert disk_los[2, 2].sep(star_los).vals == pytest.approx(0., abs=1.e-15)
+    assert disk_los[2, 4].sep(star_los).vals == pytest.approx(np.arctan(0.8 * 2.0 * RPS),
+                                                              rel=1.e-6)
+
+
+@pytest.mark.parametrize('source', [(30., 45.), Path.SSB], ids=['fixed', 'moving'])
+@pytest.mark.parametrize('compress', [False, True], ids=['full', 'compressed'])
+def test_a_disk_source_survives_a_round_trip_through_pickle(source: tuple[float, float]
+                                                            | Path,
+                                                            compress: bool) -> None:
+    """Unpickling rebuilds the disk with its radius, grid size and compression."""
+
+    center = LightSource('TEST_DISK_PICKLED_CENTER', source)
+    disk = DiskSource('TEST_DISK_PICKLED', center, 0.01, size=5, compress=compress)
+
+    revived = pickle.loads(pickle.dumps(disk))
+
+    assert isinstance(revived, DiskSource)
+    assert revived.name == disk.name
+    assert revived.source_is_moving == disk.source_is_moving
+    assert revived.radius == disk.radius
+    assert revived.shape == disk.shape
+    assert revived.xy_grid == disk.xy_grid
+    assert revived.weight == disk.weight
+    assert revived.lightsource.name == center.name
 
 
 def test_a_fixed_disk_source_keeps_the_derivatives_of_the_event() -> None:
     """With derivs, the derivatives of the observation event survive into the result."""
 
-    source = DiskSource('TEST_FIXED_DISK', (30., 45.), 0.01)
+    source = DiskSource('TEST_FIXED_DISK', LightSource('TEST_FIXED_CENTER', (30., 45.)),
+                        0.01)
     event = _observer_event()
     event.state.insert_deriv('pos', Vector3.IDENTITY)
 
@@ -226,5 +363,363 @@ def test_a_fixed_disk_source_keeps_the_derivatives_of_the_event() -> None:
 
     assert 'pos' in arrival.state.derivs
     assert 'pos' not in source.photon_to_event(event)[1].state.derivs
+
+
+def test_a_star_source_is_a_fixed_lightsource_with_star_attributes() -> None:
+    """A StarSource points along its RA and dec and carries a magnitude and a type."""
+
+    star = StarSource('Test Star', 30., 45., magnitude=2.5, mag_type='V',
+                      stellar_type='G2V')
+    fixed = LightSource('TEST_STAR_REFERENCE', (30., 45.))
+
+    assert isinstance(star, LightSource)
+    assert star.source_is_moving is False
+    assert star.source == fixed.source
+    assert star.as_path() is None
+    assert star.magnitude == 2.5
+    assert star.mag_type == 'V'
+    assert star.stellar_type == 'G2V'
+    assert Body.lookup('TEST_STAR') is star
+
+
+def test_star_source_inputs_after_dec_are_keyword_only() -> None:
+    """Only the name, RA and dec may be given by position."""
+
+    with pytest.raises(TypeError, match='positional argument'):
+        StarSource('TEST_STAR_POSITIONAL', 30., 45., 2.5)
+
+    assert 'TEST_STAR_POSITIONAL' not in Body.BODY_REGISTRY
+
+
+def test_a_star_source_magnitude_and_type_default_to_none() -> None:
+    """A star of unknown brightness and type is still a usable source."""
+
+    star = StarSource('TEST_STAR_BARE', 0., 90.)
+
+    assert star.magnitude is None
+    assert star.mag_type is None
+    assert star.stellar_type is None
+    assert star.parallax == 0.
+    assert star.proper_motion == Pair.ZEROS
+    assert star.epoch == 0.
+
+
+def test_a_star_source_solves_for_the_photon_like_a_fixed_lightsource() -> None:
+    """The arrival direction is the star's line of sight and there is no departure."""
+
+    star = StarSource('TEST_STAR_PHOTON', 30., 45.)
+
+    (departure, arrival) = star.photon_to_event(_observer_event())
+
+    assert departure is None
+    assert arrival.neg_arr_j2000 == star.source
+
+
+@pytest.mark.parametrize('ra,dec', [([30., 40.], 45.), (30., [45., 50.])],
+                         ids=['ra', 'dec'])
+def test_a_star_source_must_name_a_single_direction(ra: float | list[float],
+                                                    dec: float | list[float]) -> None:
+    """A star has one position, so an array of coordinates is refused."""
+
+    with pytest.raises(ValueError, match='StarSource ra and dec must be single values'):
+        StarSource('TEST_STAR_SHAPED', ra, dec)
+
+    assert 'TEST_STAR_SHAPED' not in Body.BODY_REGISTRY
+
+    assert 'TEST_STAR_SHAPED' not in Body.BODY_REGISTRY
+
+
+def test_a_star_source_survives_a_round_trip_through_pickle() -> None:
+    """Unpickling rebuilds the star with its direction, magnitude and type."""
+
+    star = StarSource('TEST_STAR_PICKLED', 30., 45., magnitude=-1.4, mag_type='Ks',
+                      stellar_type='A1Vm', parallax=10., proper_motion=(1., 2.),
+                      epoch=100.)
+
+    revived = pickle.loads(pickle.dumps(star))
+
+    assert isinstance(revived, StarSource)
+    assert revived.name == star.name
+    assert revived.source == star.source
+    assert revived.magnitude == -1.4
+    assert revived.mag_type == 'Ks'
+    assert revived.stellar_type == 'A1Vm'
+    assert revived.parallax == 10.
+    assert revived.proper_motion == Pair((1., 2.))
+    assert revived.epoch == 100.
+
+
+def test_star_lookup_returns_a_star_source_from_the_catalog() -> None:
+    """A catalog star comes back under its primary name, with its other names."""
+
+    star = star_lookup('Sirius')
+
+    assert isinstance(star, StarSource)
+    assert star.name == 'alf CMa'
+    assert star.key == 'ALF_CMA'
+    assert star.alt_names == ['alp CMa', 'Alpha Canis Majoris', 'Sirius']
+    assert star.magnitude == -1.44
+    assert star.mag_type == 'V'
+    assert star.stellar_type == 'A1Vm'
+    assert star_lookup('sirius') is star
+
+
+def test_star_lookup_entries_name_their_fields() -> None:
+    """Each catalog entry is a named tuple with the catalog's values and units."""
+
+    star_lookup('Sirius')
+    entry = _STAR_LOOKUP['SIRIUS']
+
+    assert entry.name == 'alf CMa'
+    assert entry.more == ['alp CMa', 'Alpha Canis Majoris', 'Sirius']
+    assert entry.ra == 101.287214
+    assert entry.dec == -16.716116
+    assert entry.type_info == 'A1Vm'
+    assert entry.magnitude == -1.44
+    assert entry.mag_type == 'V'
+    assert entry.ra_prop == -546.01
+    assert entry.dec_prop == -1223.07
+    assert entry.parallax == 379.21
+
+
+@pytest.mark.parametrize(('name', 'mag_type'),
+                         [('Betelgeuse', 'V'), ('W Hya', 'Ks'),
+                          ('ups Ori', 'UV1565'), ('M31', 'V')])
+def test_star_lookup_entries_record_the_band_of_the_magnitude(name: str,
+                                                              mag_type: str) -> None:
+    """An entry's magnitude type names the band its magnitude was measured in.
+
+    Betelgeuse is in every table, so its visual magnitude takes precedence.
+    """
+
+    star = star_lookup(name)
+    entry = _STAR_LOOKUP[name.upper().replace(' ', '_')]
+
+    assert entry.mag_type == mag_type
+    assert star.mag_type == mag_type
+
+
+def test_star_lookup_applies_the_catalog_parallax_and_proper_motion() -> None:
+    """A catalog star carries the catalog's parallax and proper motion."""
+
+    star = star_lookup('Sirius')
+
+    assert star.parallax == 379.21
+    assert star.proper_motion == Pair((-546.01, -1223.07))
+
+
+def test_star_lookup_uses_gaia_values_for_a_star_hipparcos_lacks() -> None:
+    """IK Tauri has no Hipparcos entry, so its astrometry comes from Gaia DR3."""
+
+    star = star_lookup('IK Tau')
+
+    assert star.parallax == 3.84
+
+
+def test_star_lookup_ignores_a_parallax_that_is_not_positive() -> None:
+    """HR 4352's published parallax is negative, so the star gets none."""
+
+    star = star_lookup('HR 4352')
+
+    assert star.parallax == 0.
+    assert star.proper_motion == Pair((-5.68, 2.15))
+
+
+@pytest.mark.parametrize('name', ['V744 Cen', 'V744 Centauri', 'HR 5134'])
+def test_star_lookup_names_a_variable_star_by_its_designation(name: str) -> None:
+    """A star with a numbered variable-star designation is found by it or its HR number."""
+
+    star = star_lookup(name)
+
+    assert star.name == 'V744 Cen'
+    assert star.alt_names == ['V744 Centauri', 'HR 5134']
+
+
+@pytest.mark.parametrize(('upper', 'upper_hr', 'lower', 'lower_hr'),
+                         [('B Cen', 4546, 'b Cen', 5471), ('J Cen', 5035, 'j Cen', 4537),
+                          ('B Vel', 3294, 'b Vel', 3445), ('D Vel', 3476, 'd Vel', 3477),
+                          ('M Vel', 3836, 'm Vel', 3912), ('G Car', 3643, 'g Car', 3696),
+                          ('I Car', 4102, 'i Car', 3663), ('R Car', 3816, 'r Car', 4159)])
+def test_star_lookup_tells_apart_letters_that_differ_only_in_case(upper: str,
+                                                                  upper_hr: int,
+                                                                  lower: str,
+                                                                  lower_hr: int) -> None:
+    """An upper- and a lowercase letter designation in one constellation are two stars."""
+
+    assert star_lookup(upper) is star_lookup(f'HR {upper_hr}')
+    assert star_lookup(lower) is star_lookup(f'HR {lower_hr}')
+    assert star_lookup(upper) is not star_lookup(lower)
+
+
+def test_star_lookup_keeps_the_case_of_a_letter_without_an_underscore() -> None:
+    """A designation run together, such as "bCen", keeps its lowercase letter."""
+
+    assert star_lookup('bCen') is star_lookup('b Cen')
+    assert star_lookup('BCen') is star_lookup('B Cen')
+
+
+@pytest.mark.parametrize('name', ['t cep', 't_cep', 'T CEP', 'tCep'])
+def test_star_lookup_ignores_case_when_only_one_star_matches(name: str) -> None:
+    """A letter designation in the wrong case finds the one star it can mean."""
+
+    assert star_lookup(name) is star_lookup('T Cep')
+
+
+def test_star_lookup_rejects_a_key_that_matches_two_stars_ignoring_case() -> None:
+    """A key matching no name exactly but two stars ignoring case is ambiguous."""
+
+    star_lookup('Sirius')       # populates the catalog
+
+    with pytest.raises(OopsKeyError, match='ambiguous star "b cen": could be B Cen, b Cen'):
+        _find_star('b_cen', 'b cen')
+
+
+def test_star_lookup_applies_a_messier_cluster_parallax_and_proper_motion() -> None:
+    """A Messier cluster carries the mean astrometry of its members."""
+
+    cluster = star_lookup('Pleiades')
+
+    assert cluster.parallax == 7.378
+    assert cluster.proper_motion == Pair((19.955, -45.457))
+
+
+def test_messier_galaxies_have_zero_parallax_and_proper_motion() -> None:
+    """A galaxy is too distant to show motion or parallax, so its values are zero."""
+
+    galaxies = [row for row in _MESSIER_OBJECTS if row[4].startswith('Galaxy')]
+
+    assert len(galaxies) == 40
+    assert all(row[7:] == (0., 0., 0.) for row in galaxies)
+
+
+@pytest.mark.parametrize('name', ['Messier 17', 'Messier 20', 'Messier 24', 'Messier 40',
+                                  'Messier 42', 'Messier 43', 'Messier 73'])
+def test_messier_objects_without_cluster_astrometry_have_zero_values(name: str) -> None:
+    """A Messier object with no catalog astrometry is given zeros, not None."""
+
+    (row,) = [row for row in _MESSIER_OBJECTS if row[0] == name]
+
+    assert row[7:] == (0., 0., 0.)
+
+
+def test_star_lookup_gives_a_galaxy_no_parallax_or_proper_motion() -> None:
+    """A galaxy has no catalog astrometry, so it is fixed."""
+
+    galaxy = star_lookup('M31')
+
+    assert galaxy.parallax == 0.
+    assert galaxy.proper_motion == Pair.ZEROS
+
+
+def test_add_star_records_magnitude_type_parallax_and_proper_motion() -> None:
+    """A star added with these values comes back from star_lookup with them unchanged."""
+
+    add_star(['TEST ADDED STAR'], 10., 60., mag=5., type_info='G2V', mag_type='Ks',
+             parallax=100., proper_motion=(50., -200.))
+
+    star = star_lookup('test added star')
+
+    assert star.parallax == 100.
+    assert star.proper_motion == Pair((50., -200.))
+    assert star.magnitude == 5.
+    assert star.mag_type == 'Ks'
+
+
+def test_add_star_defaults_to_no_parallax_or_proper_motion() -> None:
+    """A star added without astrometry is fixed."""
+
+    add_star('TEST ADDED FIXED STAR', 10., 20.)
+
+    star = star_lookup('TEST_ADDED_FIXED_STAR')
+
+    assert star.mag_type is None
+    assert star.parallax == 0.
+    assert star.proper_motion == Pair.ZEROS
+
+
+def test_add_star_astrometry_is_keyword_only() -> None:
+    """Parallax and proper motion must be passed by keyword."""
+
+    with pytest.raises(TypeError, match='positional argument'):
+        add_star('TEST POSITIONAL STAR', 10., 20., 5., 'G2V', 100.)
+
+
+def _ra_dec_of(los: Vector3) -> tuple[float, float]:
+    """The right ascension and declination in radians of a single line of sight."""
+
+    (ra, dec, _) = los.to_ra_dec_length(recursive=False)
+    return (float(ra.vals), float(dec.vals))
+
+
+def _ssb_event(time: float | list[float], pos: tuple[float, float, float]
+               = (0., 0., 0.)) -> Event:
+    """An observation event at the given time and SSB-relative J2000 position."""
+
+    return Event(Scalar(time), Vector3(pos), Path.SSB, 'J2000')
+
+
+def test_a_star_source_moves_by_its_proper_motion() -> None:
+    """The (RA, dec) advances from the epoch by a proper motion given as RA * cos(dec)."""
+
+    star = StarSource('TEST_STAR_PM', 30., 45., proper_motion=(100., -200.), epoch=1.e7)
+
+    (_, arrival) = star.photon_to_event(_ssb_event(1.e9))
+
+    years = (1.e9 - 1.e7) / _JULIAN_YEAR
+    (ra, dec) = _ra_dec_of(arrival.neg_arr_j2000)
+    assert ra == pytest.approx(30. * RPD + 100. / np.cos(45. * RPD) * _MAS * years,
+                               abs=1.e-14)
+    assert dec == pytest.approx(45. * RPD - 200. * _MAS * years, abs=1.e-14)
+
+
+def test_a_star_source_applies_proper_motion_at_the_mean_event_time() -> None:
+    """An event with many times gets the one direction at the mean of those times."""
+
+    star = StarSource('TEST_STAR_MEAN', 30., 45., proper_motion=(100., 0.))
+    single = star.photon_to_event(_ssb_event(1.e9))[1].neg_arr_j2000
+
+    (_, arrival) = star.photon_to_event(_ssb_event([0., 1.e9, 3.e9]))
+
+    assert arrival.neg_arr_j2000.shape == ()
+    assert arrival.neg_arr_j2000.sep(single).vals > 1.e-6
+
+    (_, arrival) = star.photon_to_event(_ssb_event([0., 1.e9, 2.e9]))
+
+    assert arrival.neg_arr_j2000.sep(single).vals == pytest.approx(0., abs=1.e-15)
+
+
+def test_a_star_source_is_displaced_by_parallax_from_the_observer() -> None:
+    """An observer 1 AU off the line of sight sees the star shifted by the parallax."""
+
+    star = StarSource('TEST_STAR_PARALLAX', 90., 0., parallax=2000.)
+
+    (_, arrival) = star.photon_to_event(_ssb_event(0., (AU, 0., 0.)))
+
+    assert arrival.neg_arr_j2000.sep(star.source).vals == pytest.approx(2000. * _MAS,
+                                                                         rel=1.e-9)
+    assert arrival.neg_arr_j2000.vals[0] < 0.
+
+
+def test_a_star_source_has_no_parallax_shift_at_the_barycenter() -> None:
+    """The catalog direction is barycentric, so an observer at the SSB sees it as is."""
+
+    star = StarSource('TEST_STAR_AT_SSB', 90., 0., parallax=2000.)
+
+    (_, arrival) = star.photon_to_event(_ssb_event(0.))
+
+    assert arrival.neg_arr_j2000.sep(star.source).vals == pytest.approx(0., abs=1.e-15)
+
+
+def test_a_star_source_parallax_follows_each_observer_position() -> None:
+    """Observers at different positions each see their own parallax shift."""
+
+    star = StarSource('TEST_STAR_POSITIONS', 90., 0., parallax=2000.)
+    event = Event(0., Vector3([(AU, 0., 0.), (0., 0., 0.)]), Path.SSB, 'J2000')
+
+    (_, arrival) = star.photon_to_event(event)
+
+    seps = arrival.neg_arr_j2000.sep(star.source).vals
+    assert seps[0] == pytest.approx(2000. * _MAS, rel=1.e-9)
+    assert seps[1] == pytest.approx(0., abs=1.e-15)
 
 ##########################################################################################

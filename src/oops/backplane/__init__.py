@@ -682,7 +682,7 @@ class Backplane(Mutable):
             if body.surface.COORDINATE_TYPE == 'polar':
                 body = body.parent
 
-        body_name = body.name.upper()
+        body_name = body.key
 
         # If the string has a modifier, it must be the default surface
         if modifier:
@@ -890,7 +890,7 @@ class Backplane(Mutable):
             return True
 
         # Update the inventory if necessary
-        body_name = surface_key
+        body_name = Body.as_body_key(surface_key)
         if body_name not in self.inventory:
             self.inventory.update(self.obs.inventory([body_name],
                                                      return_type='full'))

@@ -3,8 +3,8 @@
 
 This page documents the classes of the ``oops.lightsource`` subpackage, which describe a
 source of illumination. The base class :class:`~oops.lightsource.LightSource` is defined
-by the subpackage itself; :class:`~oops.lightsource.DiskSource` is the concrete class
-that extends it.
+by the subpackage itself; :class:`~oops.lightsource.DiskSource` and
+:class:`~oops.lightsource.StarSource` are the concrete classes that extend it.
 
 .. automodule:: oops.lightsource
     :member-order: bysource

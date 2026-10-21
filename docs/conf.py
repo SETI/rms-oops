@@ -9,6 +9,7 @@ import sys
 
 from docutils import nodes
 from docutils.parsers.rst import Directive
+from sphinx.ext import intersphinx
 from sphinx.util.nodes import nested_parse_with_titles
 
 # Anchored to this file rather than to the working directory, so that autodoc imports the
@@ -112,6 +113,32 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
     'polymath': ('https://rms-polymath.readthedocs.io/en/latest/', None),
+    'pdsparser': ('https://rms-pdsparser.readthedocs.io/en/latest/', None),
+    'vicar': ('https://rms-vicar.readthedocs.io/en/latest/', None),
+    'astropy': ('https://docs.astropy.org/en/stable/', None),
+    'filecache': ('https://rms-filecache.readthedocs.io/en/latest/', None),
+}
+
+# Docstrings name the classes of other packages by their short names, as in
+# `filepath (str | FCPath)` or `label (Pds3Label)`, and autodoc's `:show-inheritance:`
+# names the bases of the `oops.host` errors by their defining modules, which are private.
+# Intersphinx matches only the name that an inventory lists, so `_resolve_external_type`
+# retries each of these under that name. Each package's inventory lists a class under
+# whatever name its own documentation gives it: the public name for pdsparser, vicar and
+# astropy, but the defining module for filecache, which documents `FCPath` and
+# `FileCache` there. Writing the full names into the docstrings would push their type
+# unions past 90 columns.
+_EXTERNAL_TYPES = {
+    'FCPath': 'filecache.file_cache_path.FCPath',
+    'FileCache': 'filecache.file_cache.FileCache',
+    'Pds3Label': 'pdsparser.Pds3Label',
+    'pdsparser._utils.PdsError': 'pdsparser.PdsError',
+    'VicarImage': 'vicar.VicarImage',
+    'VicarLabel': 'vicar.VicarLabel',
+    'vicar.vicarlabel.VicarError': 'vicar.VicarError',
+    'HDUList': 'astropy.io.fits.HDUList',
+    'ImageHDU': 'astropy.io.fits.ImageHDU',
+    'PrimaryHDU': 'astropy.io.fits.PrimaryHDU',
 }
 
 # Nitpicky mode resolves every type named in a `Parameters:` or `Returns:` block. These
@@ -130,10 +157,6 @@ nitpick_ignore = [
     # `polymath` internals that its own docstrings mention but do not publish.
     ('py:class', 'QubeNDIterator'),
     ('py:class', 'Unit'),
-    # `filecache.FCPath` and `filecache.FileCache`, which have no Sphinx inventory to
-    # link to.
-    ('py:class', 'FCPath'),
-    ('py:class', 'FileCache'),
     # Each of these is a `polymath.typedefs` `TypeAlias`, so autodoc documents it as a
     # `py:data` object (see `automodule:: polymath.typedefs` in oops.rst); Napoleon,
     # however, renders every `Parameters:`/`Returns:` type as a `py:class` reference, and
@@ -207,7 +230,19 @@ class _PrivateOnly(Directive):
         return node.children
 
 
+def _resolve_external_type(app, env, node, contnode):
+    """Resolve a type named in `_EXTERNAL_TYPES` through intersphinx by its full name."""
+
+    target = _EXTERNAL_TYPES.get(node.get('reftarget'))
+    if node.get('refdomain') != 'py' or target is None:
+        return None
+    node = node.deepcopy()
+    node['reftarget'] = target
+    return intersphinx.missing_reference(app, env, node, contnode)
+
+
 def setup(app):
     app.add_directive('private-only', _PrivateOnly)
+    app.connect('missing-reference', _resolve_external_type)
 
 ##########################################################################################

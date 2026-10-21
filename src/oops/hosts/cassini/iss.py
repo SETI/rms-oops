@@ -48,7 +48,7 @@ def from_file(filespec, *, fast_distortion=True,
         **kwargs (Any): Additional keyword arguments; they are accepted and ignored.
 
     Returns:
-        Snapshot: The observation, with subfields `spice_kernels`, `filespec`,
+        Snapshot: The observation, with subfields `spice_kernels`, `filepath`,
         `basename`, `spice_to_frame`, `spice_frame_name`, `spice_frame_id`, `abspath`
         and `image_url` inserted.
     """
@@ -101,7 +101,8 @@ def from_file(filespec, *, fast_distortion=True,
         frame = oops.frame.Navigation((0.,0.), frame)
 
     # Create a Snapshot
-    result = oops.obs.Snapshot(('v','u'), tstart, texp,
+    result = oops.obs.Snapshot(('v','u'),
+                               cadence = oops.cadence.SnapCadence(tstart, texp),
                                fov = ISS.fovs[camera, mode, fast_distortion],
                                path = 'CASSINI',
                                frame = frame,
@@ -122,7 +123,7 @@ def from_file(filespec, *, fast_distortion=True,
                            Cassini.used_kernels(result.time, 'iss',
                                                 return_all_planets=return_all_planets,
                                                 ck=using_cks))
-    result.insert_subfield('filespec', filespec)
+    result.insert_subfield('filepath', filespec)
     result.insert_subfield('basename', filespec.name)
     result.insert_subfield('spice_to_frame', CMATRIX_ROTATION)
     result.insert_subfield('spice_frame_name', 'CASSINI_ISS_' + camera)
@@ -149,7 +150,7 @@ def from_index(filespec, fast_distortion=True, return_all_planets=False,
 
     Returns:
         list[Snapshot]: One observation per row of the index, each with subfields
-        `spice_kernels`, `filespec`, `basename`, `spice_to_frame`, `spice_frame_name`
+        `spice_kernels`, `filepath`, `basename`, `spice_to_frame`, `spice_frame_name`
         and `spice_frame_id` inserted.
     """
     ISS.initialize()    # Define everything the first time through
@@ -175,7 +176,8 @@ def from_index(filespec, fast_distortion=True, return_all_planets=False,
         if navigation:
             frame = oops.frame.Navigation((0., 0.), frame)
 
-        item = oops.obs.Snapshot(('v','u'), tstart, texp,
+        item = oops.obs.Snapshot(('v','u'),
+                                 cadence = oops.cadence.SnapCadence(tstart, texp),
                                  fov = ISS.fovs[camera, mode, fast_distortion],
                                  path = 'CASSINI',
                                  frame = frame,
@@ -189,7 +191,7 @@ def from_index(filespec, fast_distortion=True, return_all_planets=False,
                              Cassini.used_kernels(item.time, 'iss',
                                                   return_all_planets=return_all_planets))
         filepath = row_dict['VOLUME_ID'] + '/' + row_dict['FILE_SPECIFICATION_NAME']
-        item.insert_subfield('filespec', filepath)
+        item.insert_subfield('filepath', filepath)
         item.insert_subfield('basename', row_dict['FILE_NAME'])
         item.insert_subfield('spice_to_frame', CMATRIX_ROTATION)
         item.insert_subfield('spice_frame_name', 'CASSINI_ISS_' + camera)

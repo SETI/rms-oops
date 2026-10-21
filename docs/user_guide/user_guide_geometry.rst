@@ -31,7 +31,7 @@ moons and rings. A body holds everything the library knows about a target:
     ('SATURN', 'IAU_SATURN')
     >>> type(saturn.surface).__name__, saturn.ring_body.name
     ('Spheroid', 'SATURN_RING_PLANE')
-    >>> saturn.child_names[:6], len(saturn.child_names)
+    >>> saturn.child_keys[:6], len(saturn.child_keys)
     (['MIMAS', 'ENCELADUS', 'TETHYS', 'DIONE', 'RHEA', 'TITAN'], 68)
     >>> Body.lookup('EPIMETHEUS').keywords
     ['EPIMETHEUS', 'SATELLITE', 'REGULAR', 'SATURN']
@@ -39,8 +39,9 @@ moons and rings. A body holds everything the library knows about a target:
     True
 
 ``select_children`` filters a body's moons by keyword, radius or ring, and
-``Body.BODY_REGISTRY`` is the whole registry. Names are case-insensitive on lookup and
-upper case in the registry.
+``Body.BODY_REGISTRY`` is the whole registry. Each body has a ``name``, capitalized as
+it is written, and a ``key``, the name in upper case with underscores in place of
+spaces. The registry is indexed by key, and a lookup accepts either form in any case.
 
 Spacecraft need their own kernels. ``define_solar_system`` loads planets and moons
 only; a mission's host module furnishes the spacecraft trajectory and pointing when it
@@ -156,6 +157,7 @@ distortion-free camera at Saturn from Earth:
 .. code-block:: python
 
     from oops.fov import FlatFOV
+    from oops.cadence import SnapCadence
     from oops.frame import Frame, TwoVectorFrame
     from oops.observation import Snapshot
     from oops.path import Path
@@ -168,7 +170,8 @@ distortion-free camera at Saturn from Earth:
 
     TwoVectorFrame(Frame.J2000, los, 'z', Vector3.XAXIS, 'x', frame_id='MY_CAMERA')
     fov = FlatFOV((4.6e-6, 4.6e-6), (40, 40))     # radians per pixel, pixels
-    obs = Snapshot(('u', 'v'), time, 10., fov, 'EARTH', 'MY_CAMERA')
+    obs = Snapshot(('u', 'v'), cadence=SnapCadence(time, 10.), fov=fov, path='EARTH',
+                   frame='MY_CAMERA')
 
     bp = oops.Backplane(obs)
     bp.ring_radius('SATURN:RING')

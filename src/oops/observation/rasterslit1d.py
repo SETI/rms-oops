@@ -22,7 +22,7 @@ class RasterSlit1D(Observation):
     The FOV describes the 1-D slit.
     """
 
-    def __init__(self, axes, cadence, fov, path, frame, **subfields):
+    def __init__(self, axes, *, cadence, fov, path, frame, **subfields):
         """Constructor for a RasterSlit1D observation.
 
         Parameters:
@@ -39,11 +39,11 @@ class RasterSlit1D(Observation):
                 any spatial distortion. It maps between spatial coordinates *(u,v)* and
                 instrument coordinates *(x,y)*. For a RasterSlit1D object, one of the axes
                 of the FOV must have length 1.
-            path (Path): The path waypoint co-located with the instrument.
-            frame (Frame): The wayframe of a coordinate frame fixed to the optics of the
-                instrument. This frame should have its *z*-axis pointing outward near the
-                center of the line of sight, with the *x*-axis pointing rightward and the
-                *y*-axis pointing downward.
+            path (str | Path): The Path or Path name co-located with the instrument.
+            frame (str | Frame): The Frame or name of a coordinate frame fixed to the
+                optics of the instrument. This frame should have its *z*-axis pointing
+                outward near the center of the line of sight, with the *x*-axis pointing
+                rightward and the *y*-axis pointing downward.
             subfields (dict): All of the optional attributes. Additional subfields may be
                 included as needed.
 
@@ -120,7 +120,9 @@ class RasterSlit1D(Observation):
         return (self._axes, self.cadence, self.fov, self.path, self.frame, self.subfields)
 
     def __setstate__(self, state):
-        self.__init__(*state[:-1], **state[-1])
+        (axes, cadence, fov, path, frame, subfields) = state
+        self.__init__(axes, cadence=cadence, fov=fov, path=path, frame=frame,
+                      **subfields)
         self.freeze()
 
     def uvt(self, indices, *, remask=False, derivs=True):

@@ -8,8 +8,6 @@ from polymath                 import Scalar, Pair, Vector, Vector3, Qube
 from oops._exceptions         import OopsValueError
 from oops.observation         import Observation
 from oops.body                import Body
-from oops.cadence             import Cadence
-from oops.cadence.snapcadence import SnapCadence
 from oops.event               import Event
 from oops.frame               import Frame
 from oops.path                import Path
@@ -25,7 +23,7 @@ class Snapshot(Observation):
 
     _INVENTORY_IMPLEMENTED = True
 
-    def __init__(self, axes, tstart, texp, fov, path, frame, **subfields):
+    def __init__(self, axes, *, cadence, fov, path, frame, **subfields):
         """Constructor for a Snapshot.
 
         Parameters:
@@ -34,25 +32,22 @@ class Snapshot(Observation):
                 *u*-axis; 'v' should appear at the location of the array's *v*-axis. For
                 example, ('v','u'), is correct for a 2-D array read from an image file in
                 FITS or VICAR format.
-            tstart (float): The start time of the observation in seconds TDB.
-                Alternatively, a Cadence object with shape (1,) defining `tstart` and
-                `texp`.
-            texp (float): Exposure duration of the observation in seconds. Ignored if
-                `tstart` is specified as a Cadence.
+            cadence (Cadence): The Cadence defining the start time and exposure duration.
+                It must have shape (1,).
             fov (FOV): (field-of-view) object, which describes the field of view including
                 any spatial distortion. It maps between spatial coordinates *(u,v)* and
                 instrument coordinates *(x,y)*.
-            path (Path): The path waypoint co-located with the instrument.
-            frame (Frame): The wayframe of a coordinate frame fixed to the optics of the
-                instrument. This frame should have its *z*-axis pointing outward near the
-                center of the line of sight, with the *x*-axis pointing rightward and the
-                *y*-axis pointing downward.
+            path (str | Path): The Path or Path name co-located with the instrument.
+            frame (str | Frame): The Frame or name of a coordinate frame fixed to the
+                optics of the instrument. This frame should have its *z*-axis pointing
+                outward near the center of the line of sight, with the *x*-axis pointing
+                rightward and the *y*-axis pointing downward.
             subfields (dict): All of the optional attributes. Additional subfields may be
                 included as needed.
 
         Raises:
-            OopsValueError: If `axes` does not contain both 'u' and 'v', or if `tstart`
-                is a Cadence whose shape is not (1,).
+            OopsValueError: If `axes` does not contain both 'u' and 'v', or if the shape
+                of `cadence` is not (1,).
         """
 
         # Basic properties
@@ -77,14 +72,10 @@ class Snapshot(Observation):
         self.shape[self.v_axis] = self.uv_shape[1]
 
         # Cadence
-        if isinstance(tstart, Cadence):
-            self.cadence = tstart
-            if self.cadence.shape != (1,):
-                raise OopsValueError('Shape of Snapshot cadence must be (1,)')
-            self.texp = self.cadence.time[1] - self.cadence.time[0]
-        else:
-            self.cadence = SnapCadence(tstart, texp)
-            self.texp = texp
+        self.cadence = cadence
+        if self.cadence.shape != (1,):
+            raise OopsValueError('Shape of Snapshot cadence must be (1,)')
+        self.texp = self.cadence.texp or (self.cadence.time[1] - self.cadence.time[0])
 
         # Optional subfields
         self.subfields = {}
@@ -93,11 +84,12 @@ class Snapshot(Observation):
 
     def __getstate__(self):
         self.refresh()
-        return (self._axes, self.cadence, self.texp, self.fov, self.path, self.frame,
-                self.subfields)
+        return (self._axes, self.cadence, self.fov, self.path, self.frame, self.subfields)
 
     def __setstate__(self, state):
-        self.__init__(*state[:-1], **state[-1])
+        (axes, cadence, fov, path, frame, subfields) = state
+        self.__init__(axes, cadence=cadence, fov=fov, path=path, frame=frame,
+                      **subfields)
         self.freeze()
 
     def uvt(self, indices, *, remask=False, derivs=True):
@@ -227,7 +219,7 @@ class Snapshot(Observation):
         """
 
         cadence = self.cadence.time_shift(dtime)
-        return Snapshot(axes=self._axes, tstart=cadence, texp=self.texp, fov=self.fov,
+        return Snapshot(axes=self._axes, cadence=cadence, fov=self.fov,
                         path=self.path, frame=self.frame, **self.subfields)
 
     ######################################################################################
@@ -277,7 +269,7 @@ class Snapshot(Observation):
         converted to an absolute time and no iteration is required.
 
         Parameters:
-            path (Path): Object.
+            path (str | Path): The Path or Path name defining the object.
             tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where 0 refers to the beginning and 1 refers to the end of each sample's
                 integration interval. The default is 0.5, referring to the midtime of each
@@ -364,7 +356,8 @@ class Snapshot(Observation):
         specified by `tfrac` or `time`. All bodies are assumed to be spherical.
 
         Parameters:
-            bodies (list): The names of the body objects to be included in the inventory.
+            bodies (list[Body | str]): The bodies, or their names or keys, to be included
+                in the inventory.
             tfrac (ScalarLike, optional): Scalar of fractional times during the exposure,
                 where 0 refers to the beginning and 1 refers to the end of each sample's
                 integration interval. The default is 0.5, referring to the midtime of each
@@ -376,11 +369,11 @@ class Snapshot(Observation):
                 uncertainties.
             return_type (str, optional): One of "list", "flags", or "full":
 
-                * "list": Return the inventory as a list of names.
+                * "list": Return the inventory as a list of body keys.
                 * "flags": Return the inventory as an array of boolean flag values in the
                   same order as bodies.
                 * "full": Return the inventory as a dictionary of dictionaries. The main
-                  dictionary is indexed by body name. The subdictionaries contain
+                  dictionary is indexed by body key. The subdictionaries contain
                   attributes of the body in the FOV.
 
             fov (FOV, optional): Use this fov; if None, use `self.fov`.
@@ -396,7 +389,7 @@ class Snapshot(Observation):
             list | numpy.ndarray | dict: The inventory, in the form named by
             `return_type`.
 
-            * If return_type is "list", it returns a list of the names of all the body
+            * If return_type is "list", it returns a list of the keys of all the body
               objects that fall at least partially inside the FOV and are not completely
               obscured by another object in the list.
 
@@ -451,7 +444,6 @@ class Snapshot(Observation):
         if fov is None:
             fov = self.fov
 
-        body_names = [Body.as_body_name(body) for body in bodies]
         bodies  = [Body.as_body(body) for body in bodies]
         nbodies = len(bodies)
 
@@ -515,7 +507,7 @@ class Snapshot(Observation):
             ret_list = []
             for i in range(nbodies):
                 if flags[i]:
-                    ret_list.append(body_names[i])
+                    ret_list.append(bodies[i].key)
             return ret_list
 
         # Return full info
@@ -526,7 +518,7 @@ class Snapshot(Observation):
         body_uv = fov.uv_from_los_t(arrival_event.neg_arr_ap, time=obs_time).vals
         for i in range(nbodies):
             body_data = {}
-            body_data['name'] = body_names[i]
+            body_data['name'] = bodies[i].name
             body_data['inside'] = flags[i]
             body_data['center_uv'] = body_uv[i]
             body_data['center'] = centers[i].vals
@@ -558,7 +550,7 @@ class Snapshot(Observation):
             body_data['u_pixel_size'] = radius_angles[i].vals/u_scale*2
             body_data['v_pixel_size'] = radius_angles[i].vals/v_scale*2
 
-            returned_dict[body_names[i]] = body_data
+            returned_dict[bodies[i].key] = body_data
 
         return returned_dict
 

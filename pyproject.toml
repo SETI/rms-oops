@@ -19,13 +19,16 @@ dependencies = [
   "rms-fpzip",
   "rms-interval",
   "rms-julian",
-  "rms-pdsparser",
+  # 2.4.0 adds PdsError, which oops.host raises and catches, and the "_list" keys of
+  # Pds3Label.as_dict, which preserve the order of a braced set such as CUT_OUT_WINDOW.
+  "rms-pdsparser>=2.4.0",
   "rms-pdstable",
   "rms-polymath>=2.1.1",
   "rms-solar",
   "rms-tabulation",
   "rms-vax",
-  "rms-vicar",
+  # 1.3.0 adds VicarLabel.is_vicar_file, which oops uses to identify VICAR files.
+  "rms-vicar>=1.3.0",
   "scipy"
 ]
 license = {text = "Apache-2.0"}
@@ -50,6 +53,8 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Operating System :: MacOS :: MacOS X",
   "Operating System :: POSIX :: Linux",
   "Operating System :: Microsoft :: Windows"
@@ -65,7 +70,11 @@ dev = [
   # the imported packages.
   "mypy>=1.0",
   "pip-audit>=2.7",
-  "pymarkdownlnt>=0.9.35",
+  # pymarkdownlnt depends on pyjson5, which has no wheel for Python 3.15 yet and fails to
+  # build on the CI runner, which has no C++ compiler. The PyMarkdown gate is off in
+  # scripts/run-all-checks.sh (ENABLE_PYMARKDOWN), so 3.15 loses nothing. Drop the marker
+  # once pyjson5 publishes a cp315 wheel.
+  "pymarkdownlnt>=0.9.35; python_version < '3.15'",
   "pyroma>=4.2",
   "pytest>=7.0",
   "pytest-cov>=4.0",

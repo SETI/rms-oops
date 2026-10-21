@@ -14,6 +14,8 @@ class Cadence(Mutable):
             overall, in seconds TDB.
         midtime (float): The mid-time of the observation, in seconds TDB.
         lasttime (float): The start time of the last time step, in seconds TDB.
+        texp (float | None): The integration time during the cadence if it has a fixed
+            value; None otherwise.
         shape (tuple[int, ...]): The shape of the array of time step indices.
         is_continuous (bool): True if the cadence contains no gaps in time between the
             start and end.

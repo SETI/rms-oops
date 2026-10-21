@@ -30,7 +30,8 @@ gold master tool under ``programs``, outside the library and outside the wheel.
     │   │   ├── gravity/           Gravity and OblateGravity: orbital frequencies.
     │   │   ├── hosts/             One package per mission and instrument; each exports
     │   │   │                      from_file(). Not covered by this guide.
-    │   │   ├── lightsource/       LightSource and DiskSource: the Sun and the stars.
+    │   │   ├── lightsource/       LightSource, DiskSource and StarSource: the Sun and
+    │   │   │                      the stars.
     │   │   ├── meshgrid.py        Meshgrid: the pixel grid a Backplane evaluates over.
     │   │   ├── mutable.py         Mutable: the refresh/freeze protocol for objects that
     │   │   │                      may contain a Fittable.

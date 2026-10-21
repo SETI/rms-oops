@@ -45,32 +45,32 @@ class Metronome(Cadence):
 
         self._tstart = float(tstart)
         self._tstride = float(tstride)
-        self._texp = float(texp)
+        self.texp = float(texp)
         self._steps = int(steps)
         self._clip = bool(clip)
 
         if self._steps == 1:
-            self._tstride = self._texp
+            self._tstride = self.texp
 
         # Required attributes
         self.lasttime = self._tstart + self._tstride * (self._steps - 1)
-        self.time = (self._tstart, self.lasttime + self._texp)
+        self.time = (self._tstart, self.lasttime + self.texp)
         self.midtime = (self.time[0] + self.time[1]) * 0.5
         self.shape = (self._steps,)
-        self.is_continuous = (self._texp >= self._tstride)
-        self.is_unique = (self._texp <= self._tstride)
+        self.is_continuous = (self.texp >= self._tstride)
+        self.is_unique = (self.texp <= self._tstride)
         self.min_tstride = self._tstride
         self.max_tstride = self._tstride
 
-        self._gapless = (self._texp == self._tstride)
-        self._tscale = self._tstride / (self._texp or 1.)
-        self._tspan = self._texp / (self._tstride or 1.)
+        self._gapless = (self.texp == self._tstride)
+        self._tscale = self._tstride / (self.texp or 1.)
+        self._tspan = self.texp / (self._tstride or 1.)
         self._tspan1 = self._tspan - 1
         self._max_step = self._steps - 1
 
     def __getstate__(self):
         self.refresh()
-        return (self._tstart, self._tstride, self._texp, self._steps, self._clip)
+        return (self._tstart, self._tstride, self.texp, self._steps, self._clip)
 
     def __setstate__(self, state):
         self.__init__(*state[:-1], clip=state[-1])
@@ -113,7 +113,7 @@ class Metronome(Cadence):
             tstep_frac[mask] = tstep[mask] - self._max_step
                 # this sets the value to 1 but preserves derivatives
 
-        return self.time[0] + tstep_int * self._tstride + tstep_frac * self._texp
+        return self.time[0] + tstep_int * self._tstride + tstep_frac * self.texp
 
     def time_range_at_tstep(self, tstep, *, remask=False, inclusive=True, shift=True):
         """The range of times for the given time step.
@@ -136,7 +136,7 @@ class Metronome(Cadence):
                               inclusive=inclusive, clip=self._clip, shift=shift)
         time_min = self.time[0] + tstep_int * self._tstride
 
-        return (time_min, time_min + self._texp)
+        return (time_min, time_min + self.texp)
 
     def tstep_at_time(self, time, *, remask=False, derivs=False, inclusive=True):
         """Time step for the given time.
@@ -270,10 +270,10 @@ class Metronome(Cadence):
 
                 # Mask times when integration is not happening
                 if inclusive:       # extra care needed at end time
-                    not_integrating = ((time_frac >= self._texp) &
+                    not_integrating = ((time_frac >= self.texp) &
                                        (time.vals != self.time[1]))
                 else:
-                    not_integrating = (time_frac >= self._texp)
+                    not_integrating = (time_frac >= self.texp)
 
                 new_mask = Qube.or_(new_mask, not_integrating)
 
@@ -324,11 +324,11 @@ class Metronome(Cadence):
 
         # Use TVL comparison to propagate the mask of time_mod
         if inclusive:
-            return (time_mod.tvl_gt(self._texp) | time.tvl_lt(self.time[0])
-                                                | time.tvl_gt(self.time[1]))
+            return (time_mod.tvl_gt(self.texp) | time.tvl_lt(self.time[0])
+                                               | time.tvl_gt(self.time[1]))
         else:
-            return (time_mod.tvl_gt(self._texp) | time.tvl_lt(self.time[0])
-                                                | time.tvl_ge(self.time[1]))
+            return (time_mod.tvl_gt(self.texp) | time.tvl_lt(self.time[0])
+                                               | time.tvl_ge(self.time[1]))
 
     def time_shift(self, secs):
         """A duplicate of this Cadence with all times shifted by the given amount.
@@ -340,7 +340,7 @@ class Metronome(Cadence):
             Metronome: The time-shifted cadence.
         """
 
-        return Metronome(self._tstart + secs, self._tstride, self._texp, self._steps,
+        return Metronome(self._tstart + secs, self._tstride, self.texp, self._steps,
                          clip=self._clip)
 
     def as_continuous(self):

@@ -40,7 +40,7 @@ def from_file(filespec, fast_distortion=True,
 
     Returns:
         list[Observation]: One observation per framelet, a Snapshot if `snap` is True
-        and a TimedImage otherwise, each with subfields `filespec` and `basename`
+        and a TimedImage otherwise, each with subfields `filepath` and `basename`
         inserted.
     """
     JUNOCAM.initialize()    # Define everything the first time through; use
@@ -68,7 +68,8 @@ def from_file(filespec, fast_distortion=True,
 
         if snap:
             item = oops.obs.Snapshot(('v','u'),
-                                     fmeta.tstart, fmeta.tdi_texp,
+                                     cadence = oops.cadence.SnapCadence(fmeta.tstart,
+                                                                        fmeta.tdi_texp),
                                      fov = fmeta.fov,
                                      path = 'JUNO',
                                      frame = 'JUNO_JUNOCAM',
@@ -100,7 +101,7 @@ def from_file(filespec, fast_distortion=True,
 
 #        item.insert_subfield('spice_kernels', \
 #                   Juno.used_kernels(item.time, 'junocam', return_all_planets))
-        item.insert_subfield('filespec', filespec)
+        item.insert_subfield('filepath', filespec)
         item.insert_subfield('basename', filespec.name)
         obs.append(item)
 
