@@ -70,7 +70,11 @@ dev = [
   # the imported packages.
   "mypy>=1.0",
   "pip-audit>=2.7",
-  "pymarkdownlnt>=0.9.35",
+  # pymarkdownlnt depends on pyjson5, which has no wheel for Python 3.15 yet and fails to
+  # build on the CI runner, which has no C++ compiler. The PyMarkdown gate is off in
+  # scripts/run-all-checks.sh (ENABLE_PYMARKDOWN), so 3.15 loses nothing. Drop the marker
+  # once pyjson5 publishes a cp315 wheel.
+  "pymarkdownlnt>=0.9.35; python_version < '3.15'",
   "pyroma>=4.2",
   "pytest>=7.0",
   "pytest-cov>=4.0",
