@@ -65,6 +65,13 @@ class Observation(Mutable):
         subfields (dict): All of the optional attributes. Additional subfields may be
             included as needed.
         data (numpy.ndarray): Reserved subfield for the array of data of the Observation.
+        mask (numpy.ndarray): Reserved subfield for a boolean array broadcastable to the
+            shape of `data`, where True indicates that the corresponding data value should
+            be ignored.
+        weights (numpy.ndarray): Reserved subfield for an int or float array broadcastable
+            to the shape of `data`, indicating the relative weight of the corresponding
+            data value. Values of zero are equivalent to mask = True; negative values are
+            disallowed.
         target (Body | None): Reserved subfield for the default target of this
             Observation.
         lightsource (LightSource): Reserved subfield for the default LightSource of this
