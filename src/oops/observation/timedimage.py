@@ -8,6 +8,7 @@ from polymath                  import Pair, Vector, Qube
 from oops._exceptions          import OopsValueError
 from oops.observation          import Observation
 from oops.observation.snapshot import Snapshot
+from oops.cadence.snapcadence  import SnapCadence
 from oops.frame                import Frame
 from oops.path                 import Path
 
@@ -25,7 +26,7 @@ class TimedImage(Observation):
 
     _INVENTORY_IMPLEMENTED = True
 
-    def __init__(self, axes, cadence, fov, path, frame, **subfields):
+    def __init__(self, axes, *, cadence, fov, path, frame, **subfields):
         """Constructor for a TimedImage.
 
         Parameters:
@@ -40,11 +41,11 @@ class TimedImage(Observation):
             fov (FOV): (field-of-view) object, which describes the field of view including
                 any spatial distortion and possible time-dependence. It maps between
                 spatial coordinates *(u,v)* and instrument coordinates *(x,y)*.
-            path (Path): The path waypoint co-located with the instrument.
-            frame (Frame): The wayframe of a coordinate frame fixed to the optics of the
-                instrument. This frame should have its *z*-axis pointing outward near the
-                center of the line of sight, with the *x*-axis pointing rightward and the
-                *y*-axis pointing downward.
+            path (str | Path): The Path or Path name co-located with the instrument.
+            frame (str | Frame): The Frame or name of a coordinate frame fixed to the
+                optics of the instrument. This frame should have its *z*-axis pointing
+                outward near the center of the line of sight, with the *x*-axis pointing
+                rightward and the *y*-axis pointing downward.
             subfields (dict): All of the optional attributes. Additional subfields may be
                 included as needed. The subfield `shape` overrides the shape derived from
                 the FOV and the cadence.
@@ -162,7 +163,8 @@ class TimedImage(Observation):
                 subfields['texp_'] = subfields['texp']
                 del subfields['texp']
 
-            self._snapshot = Snapshot(snapshot_axes, snapshot_tstart, snapshot_texp,
+            snapshot_cadence = SnapCadence(snapshot_tstart, snapshot_texp)
+            self._snapshot = Snapshot(snapshot_axes, cadence=snapshot_cadence,
                                       fov=self.fov, path=self.path, frame=self.frame,
                                       **subfields)
 
@@ -172,7 +174,9 @@ class TimedImage(Observation):
                 Frame.as_primary_frame(self.frame), self.subfields)
 
     def __setstate__(self, state):
-        self.__init__(*state[:-1], **state[-1])
+        (axes, cadence, fov, path, frame, subfields) = state
+        self.__init__(axes, cadence=cadence, fov=fov, path=path, frame=frame,
+                      **subfields)
         self.freeze()
 
     def uvt(self, indices, *, remask=False, derivs=True):
@@ -359,8 +363,9 @@ class TimedImage(Observation):
             Observation: A (shallow) copy of the object with a new time.
         """
 
-        return TimedImage(self._axes, self.cadence.time_shift(dtime), fov=self.fov,
-                          path=self.path, frame=self.frame, **self.subfields)
+        return TimedImage(self._axes, cadence=self.cadence.time_shift(dtime),
+                          fov=self.fov, path=self.path, frame=self.frame,
+                          **self.subfields)
 
     def inventory(self, bodies, **kwargs):
         """Info about the bodies that appear unobscured inside the FOV.

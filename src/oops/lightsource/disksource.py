@@ -1,11 +1,12 @@
 ##########################################################################################
 # oops/lightsource/disksource.py
 ##########################################################################################
+"""DiskSource class, which spreads another light source over a uniform, circular disk."""
 
 import numpy as np
 
 from polymath         import Scalar, Vector3, Matrix3
-from oops._exceptions import OopsValueError
+from oops._exceptions import OopsTypeError, OopsValueError
 from oops.body        import Body
 from oops.constants   import C, RPS
 from oops.event       import Event
@@ -13,21 +14,30 @@ from oops.lightsource import LightSource
 
 
 class DiskSource(LightSource):
-    """An extended, circular disk with uniform illumination.
+    """An extended, circular disk with uniform illumination, centered on another source.
 
-    A subclass of LightSource.
+    A subclass of LightSource that wraps a single, unshaped LightSource and spreads its
+    arrival direction over a disk of lines of sight.
+
+    Attributes:
+        lightsource (LightSource): The source at the center of the disk.
+        xy_grid (Vector3): The lines of sight across the disk, as offsets in the X/Y
+            plane within the unit circle, before they are scaled to the radius of the
+            disk and rotated to its center.
+        radius (float): The radius of the disk, in km for a moving source or in radians
+            for a fixed direction.
     """
 
-    def __init__(self, name, source, radius, size=11, compress=False):
+    def __init__(self, name, source, radius, *, size=11, compress=False):
         """Constructor for a DiskSource.
 
         Parameters:
-            name (str): Name to register in the Body dictionary.
-            source (Path | PairLike | Vector3Like): A Path, or a fixed direction in J2000
-                coordinates given either as a (right ascension, declination) pair in
-                degrees or as a single line of sight.
-            radius (float): Radius of the source, in km for a path or in arcseconds for a
-                fixed J2000 source.
+            name (str): Name of this source. It is registered in the Body dictionary
+                under its key, as given by :meth:`~oops.lightsource.LightSource.as_key`.
+            source (LightSource): The source at the center of the disk. It must be
+                unshaped, and it remains registered under its own key.
+            radius (float): Radius of the disk, in km if `source` moves along a path or
+                in arcseconds if it is a fixed direction.
             size (int, optional): Number of pixels along the side of the square array
                 defining the lines of sight; default 11. Use an odd number so that the
                 central pixel falls at the center of the source.
@@ -37,22 +47,22 @@ class DiskSource(LightSource):
                 default, keeps the source as a 2-D image for later use.
 
         Raises:
-            OopsValueError: If `source` does not describe a single, unshaped direction.
+            OopsTypeError: If `name` is not a string or `source` is not a LightSource.
+            OopsValueError: If `name` is already the name of a Body, or if `source` is
+                shaped.
         """
 
-        # Start with the default LightSource
-        lightsource = LightSource(name, source)
+        if not isinstance(source, LightSource):
+            raise OopsTypeError(f'DiskSource source must be a LightSource: {source!r}')
 
-        # Make sure this one is un-shaped
-        if lightsource.shape != ():
-            del Body.BODY_REGISTRY[lightsource.name]
-            raise OopsValueError('DiskSource source must have shape (), not ' +
-                                 str(lightsource.shape))
+        if source.shape != ():
+            raise OopsValueError('DiskSource source must have shape (), not '
+                                 + str(source.shape))
 
-        # At this point, the LightSource internals are filled in and valid
-        self.name = lightsource.name
-        self.source = lightsource.source
-        self.source_is_moving = lightsource.source_is_moving
+        self._set_name(name)
+        self.lightsource = source
+        self.source = source.source
+        self.source_is_moving = source.source_is_moving
 
         # Create a masked, circular array of vectors in the X/Y plane, inside
         # unit radius
@@ -69,28 +79,33 @@ class DiskSource(LightSource):
             self.xy_grid = Vector3(array, mask=mask)
 
         self.shape = self.xy_grid.shape
-        self.radius = radius
-
-        # For a fixed line of sight, rotate and scale the vectors now
-        if not self.source_is_moving:
-            self.radius *= RPS
-            matrix = Matrix3.twovec(lightsource.source, 2, Vector3.YAXIS, 1)
-            self.xy_grid = matrix * (Vector3.ZAXIS + self.radius * self.xy_grid)
+        self.radius = radius if self.source_is_moving else radius * RPS
 
         # Define the weights
         weight = 1. - np.asarray(mask, dtype=np.float64)
         self.weight = Scalar(weight / np.sum(weight))
 
-        # Re-register as a Body
-        Body.BODY_REGISTRY[self.name] = self
+        # Keep the constructor inputs so that pickling can rebuild the disk
+        self._init_args = (radius, size, compress)
 
-    def photon_to_event(self, event, derivs=False, guess=None, antimask=None, quick=None,
-                        converge=None):
+        # Re-register as a Body
+        Body.BODY_REGISTRY[self.key] = self
+
+    def __getstate__(self):
+        return (self.name, self.lightsource) + self._init_args
+
+    def __setstate__(self, state):
+        (name, source, radius, size, compress) = state
+        self.__init__(name, source, radius, size=size, compress=compress)
+
+    def photon_to_event(self, event, *, derivs=False, guess=None, antimask=None,
+                        quick=None, converge=None):
         """Solve for a photon arrival event from this lightsource.
 
-        Input parameters are identical to the Path method of the same name. The disk
-        spreads the arrival direction across an array of lines of sight, so no single
-        departure event corresponds to them and the departure is always None.
+        Input parameters are identical to the Path method of the same name. The wrapped
+        source supplies the direction to the center of the disk, and the disk spreads it
+        across an array of lines of sight, so no single departure event corresponds to
+        them and the departure is always None.
 
         Parameters:
             event (Event): The event of the observation.
@@ -130,25 +145,30 @@ class DiskSource(LightSource):
               photon's line of sight spread across the disk.
         """
 
-        if self.source_is_moving:
-            arrival = self.source.photon_to_event(event, derivs=derivs, guess=guess,
-                                                  antimask=antimask, quick=quick,
-                                                  converge=converge)[1]
+        arrival = self.lightsource.photon_to_event(event, derivs=derivs, guess=guess,
+                                                   antimask=antimask, quick=quick,
+                                                   converge=converge)[1]
 
-            rad = self.radius / (C * arrival.arr_lt)
-            los = arrival.neg_arr_ap_j2000
-            matrix = Matrix3.twovec(los, 2, Vector3.YAXIS, 1)
-            new_los = matrix * (Vector3.ZAXIS + rad * self.xy_grid)
+        # A disk around a path has a radius in km, so its angular size depends on range
+        if self.source_is_moving:
+            radius = self.radius / (C * arrival.arr_lt)
+            center = arrival.neg_arr_ap_j2000
+        else:
+            radius = self.radius
+            center = arrival.neg_arr_j2000
+
+        # The twovec matrix rotates the center onto the Z-axis, so its transpose carries
+        # the grid around the Z-axis to the center
+        matrix = Matrix3.twovec(center, 2, Vector3.YAXIS, 1)
+        new_los = matrix.T * (Vector3.ZAXIS + radius * self.xy_grid)
+
+        if self.source_is_moving:
             new_event = Event(event.time, event.state, event.origin, event.frame)
             new_event.neg_arr_ap_j2000 = new_los
-            return (None, new_event)
-
-        if derivs:
-            new_event = event.copy()
         else:
-            new_event = event.wod.copy()
+            new_event = event.copy() if derivs else event.wod.copy()
+            new_event.neg_arr_j2000 = new_los
 
-        new_event.neg_arr_j2000 = self.xy_grid
         return (None, new_event)
 
 ##########################################################################################

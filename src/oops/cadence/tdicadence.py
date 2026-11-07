@@ -60,6 +60,7 @@ class TDICadence(Cadence):
         self.lasttime = self.time[1] - self._tdi_texp
         self.shape = (self._lines,)
         self.is_continuous = True
+        self.texp = None        # integration times are not fixed
 
         # Every line is still integrating at the end of the exposure, whatever the stage
         # count, so a time falls in as many time steps as there are lines.

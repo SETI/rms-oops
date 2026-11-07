@@ -46,6 +46,7 @@ class DualCadence(Cadence):
     time: tuple[float, float]
     midtime: float
     lasttime: float
+    texp: float | None
     is_continuous: bool
     is_unique: bool
     min_tstride: float
@@ -74,6 +75,7 @@ class Instant(Cadence):
     time: tuple[float, float]
     midtime: float
     lasttime: float
+    texp: float
     is_continuous: bool
     is_unique: bool
     min_tstride: float
@@ -93,6 +95,7 @@ class Instant(Cadence):
 
 class Metronome(Cadence):
     lasttime: float
+    texp: float
     time: tuple[float, float]
     midtime: float
     shape: tuple[int, ...]
@@ -126,6 +129,7 @@ class ReshapedCadence(Cadence):
     time: tuple[float, float]
     midtime: float
     lasttime: float
+    texp: float | None
     is_continuous: bool
     is_unique: bool
     min_tstride: float
@@ -146,6 +150,7 @@ class ReshapedCadence(Cadence):
 class ReversedCadence(Cadence):
     shape: tuple[int, ...]
     lasttime: float
+    texp: float | None
     time: tuple[float, float]
     midtime: float
     is_continuous: bool
@@ -173,6 +178,7 @@ class Sequence(Cadence):
     is_continuous: bool
     is_unique: bool
     lasttime: float
+    texp: float | None
     time: tuple[float, float]
     midtime: float
     shape: tuple[int, ...]
@@ -199,6 +205,7 @@ class TDICadence(Cadence):
     time: tuple[float, float]
     midtime: float
     lasttime: float
+    texp: float | None
     shape: tuple[int, ...]
     is_continuous: bool
     is_unique: bool
@@ -226,6 +233,7 @@ class TDICadence(Cadence):
 
 class TimeShift(Cadence, Fittable):
     shape: tuple[int, ...]
+    texp: float | None
     is_continuous: bool
     is_unique: bool
     min_tstride: float

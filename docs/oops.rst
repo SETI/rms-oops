@@ -11,7 +11,8 @@ This page documents the classes of the top-level ``oops`` namespace, in alphabet
 order. The concrete subclasses of each abstract base are documented on their own pages:
 :doc:`oops.cadence <oops_cadence>`, :doc:`oops.calibration <oops_calibration>`,
 :doc:`oops.fov <oops_fov>`, :doc:`oops.frame <oops_frame>`,
-:doc:`oops.gravity <oops_gravity>`, :doc:`oops.lightsource <oops_lightsource>`,
+:doc:`oops.gravity <oops_gravity>`, :doc:`oops.host <oops_host>`,
+:doc:`oops.lightsource <oops_lightsource>`,
 :doc:`oops.observation <oops_observation>`, :doc:`oops.path <oops_path>`, and
 :doc:`oops.surface <oops_surface>`.
 

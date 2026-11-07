@@ -273,9 +273,11 @@ def get_one_qube(label, detector, resolution,
 
     # Create the Observation
     if lines == 1:
-        obs = oops.obs.Pixel(('t','b'), cadence, fov, 'CASSINI', frame_id)
+        obs = oops.obs.Pixel(('t','b'), cadence=cadence, fov=fov, path='CASSINI',
+                             frame=frame_id)
     else:
-        obs = oops.obs.TimedImage(('v','ut','b'), cadence, fov, 'CASSINI', frame_id)
+        obs = oops.obs.TimedImage(('v','ut','b'), cadence=cadence, fov=fov,
+                                  path='CASSINI', frame=frame_id)
 
     obs.insert_subfield('dict', label)
     obs.insert_subfield('instrument', 'UVIS')
@@ -343,7 +345,8 @@ def get_time_series(filespec, tstart, label, data):
 
     # Define the observation
     fov = UVIS.fovs[(detector, '', 1)]
-    obs = oops.obs.Pixel(('t',), cadence, fov, 'CASSINI', frame_id)
+    obs = oops.obs.Pixel(('t',), cadence=cadence, fov=fov, path='CASSINI',
+                         frame=frame_id)
 
     obs.insert_subfield('dict', label)
     obs.insert_subfield('instrument', 'UVIS')
@@ -417,7 +420,8 @@ def get_spectrum(filespec, tstart, label, data):
         fov = oops.fov.SubsampledFOV(fov, (1,line_bin))
 
     # Define the observation
-    obs = oops.obs.Pixel(('b',), cadence, fov, 'CASSINI', frame_id)
+    obs = oops.obs.Pixel(('b',), cadence=cadence, fov=fov, path='CASSINI',
+                         frame=frame_id)
 
     obs.insert_subfield('dict', label)
     obs.insert_subfield('instrument', 'UVIS')

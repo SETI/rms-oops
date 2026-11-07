@@ -1,7 +1,6 @@
 ##########################################################################################
 # oops/hosts/galileo/ssi/__init__.py
 ##########################################################################################
-import sys
 import os
 import numpy as np
 import julian
@@ -64,7 +63,9 @@ def from_file(filespec,
     data = meta.trim(vic.data_2d, full_fov=full_fov)
 
     # Create a Snapshot
-    result = oops.obs.Snapshot(('v','u'), meta.tstart, meta.exposure,
+    result = oops.obs.Snapshot(('v','u'),
+                               cadence = oops.cadence.SnapCadence(meta.tstart,
+                                                                  meta.exposure),
                                fov = FOV,
                                path = 'GLL',
                                frame = 'GLL_SCAN_PLATFORM',
@@ -72,7 +73,8 @@ def from_file(filespec,
                                data = data,             # Add the data array
                                instrument = 'SSI',
                                filter = meta.filter,
-                               filespec = filespec,
+                               time_from_sclk = meta.time_from_sclk,
+                               filepath = filespec,
                                basename = filespec.name)
 
     result.insert_subfield('spice_kernels',
@@ -160,14 +162,17 @@ def from_index(filespec, supplemental_filespec=None, full_fov=False, **parameter
         FOV = meta.fov(full_fov=full_fov)
 
         # Create a Snapshot
-        item = oops.obs.Snapshot(('v','u'), meta.tstart, meta.exposure,
+        item = oops.obs.Snapshot(('v','u'),
+                                 cadence = oops.cadence.SnapCadence(meta.tstart,
+                                                                    meta.exposure),
                                  fov = FOV,
                                  path = 'GLL',
                                  frame = 'GLL_SCAN_PLATFORM',
                                  dict = row_dict,         # Add the index dict
                                  instrument = 'SSI',
                                  filter = meta.filter,
-                                 filespec = filepath,
+                                 time_from_sclk = meta.time_from_sclk,
+                                 filepath = filepath,
                                  basename = basename)
 
         item.insert_subfield('spice_to_frame', oops.Matrix3.IDENTITY)
@@ -209,6 +214,9 @@ class Metadata(object):
         filter (str): Name of the filter.
         tstart (float): Image start time in seconds TDB.
         tstop (float): Image stop time in seconds TDB.
+        time_from_sclk (bool): True if the label gives no IMAGE_TIME and the times
+            were derived from SPACECRAFT_CLOCK_START_COUNT instead; such times are
+            accurate to a few seconds.
         target (str): Target name.
         mode (str): The telemetry format ID; 'NONE' if the label does not give one.
         window (numpy.ndarray | None): The cutout window from the label as (line,
@@ -244,13 +252,19 @@ class Metadata(object):
         # Filters
         self.filter = meta_dict['FILTER_NAME']
 
-        #TODO: determine whether IMAGE_TIME is the start time or the mid time..
         if meta_dict['IMAGE_TIME'] == 'UNK':
-            self.tstart = self.tstop = sys.float_info.min
+            # Some RAW_CAL frames in GO_0002 and GO_0003 have no IMAGE_TIME, but
+            # every label carries the spacecraft clock count, which the SCLK
+            # kernel converts to within a few seconds of IMAGE_TIME wherever
+            # both are given. Never fall back to a placeholder time: it silently
+            # places the frame at the J2000 epoch.
+            self.tstart = Galileo.tdb_from_sclk(meta_dict['SPACECRAFT_CLOCK_START_COUNT'])
+            self.time_from_sclk = True
         else:
-            self.tstart = julian.tdb_from_tai(
-                            julian.tai_from_iso(meta_dict['IMAGE_TIME']))
-            self.tstop = self.tstart + self.exposure
+            self.tstart = julian.tdb_from_iso(meta_dict['IMAGE_TIME']) - self.exposure/2.
+            self.time_from_sclk = False
+
+        self.tstop = self.tstart + self.exposure
 
         # Target
         self.target = meta_dict['TARGET_NAME']
@@ -263,7 +277,7 @@ class Metadata(object):
         # Window
         self.window = None
         if 'CUT_OUT_WINDOW' in meta_dict:
-            window = np.array(meta_dict['CUT_OUT_WINDOW'])
+            window = np.array(meta_dict['CUT_OUT_WINDOW_list'])
 
             # check for [-1,-1,-1,-1].  This is the value written in the
             # supplemental index when there is no CUT_OUT_WINDOW in the label.
@@ -378,7 +392,7 @@ class SSI(object):
         cxy = cspyce.gdpool(cxy_var, 0)
 
         scale = px/fo
-        distortion_coeff = [1, 0, cf]
+        distortion_coeff = [1, 0, cf / scale**2]  # corrected distortion!
 
         # Construct FOVs
         assert info['MAX_SAMPLE'] == 800

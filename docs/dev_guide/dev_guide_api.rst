@@ -7,8 +7,8 @@ the :doc:`oops package </oops>` with its abstract classes, :class:`~oops.Body`,
 :class:`~oops.Transform` and the PolyMath types; the subpackage pages
 :doc:`oops.cadence </oops_cadence>`, :doc:`oops.calibration </oops_calibration>`,
 :doc:`oops.config </oops_config>`, :doc:`oops.fov </oops_fov>`, :doc:`oops.frame
-</oops_frame>`, :doc:`oops.gravity </oops_gravity>`, :doc:`oops.lightsource
-</oops_lightsource>`, :doc:`oops.observation </oops_observation>`, :doc:`oops.path
+</oops_frame>`, :doc:`oops.gravity </oops_gravity>`, :doc:`oops.host </oops_host>`,
+:doc:`oops.lightsource </oops_lightsource>`, :doc:`oops.observation </oops_observation>`, :doc:`oops.path
 </oops_path>` and :doc:`oops.surface </oops_surface>`; the :doc:`gold master framework
 </gold_master>`; and :doc:`spicedb </spicedb>`.
 

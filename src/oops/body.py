@@ -265,7 +265,10 @@ class Body(Oops):
     :class:`~oops.Gravity` field.
 
     Attributes:
-        name (str): The name of this body.
+        key (str): The lookup key of this body, upper case and with underscores replacing
+            spaces.
+        name (str): The name of this body, properly capitalized.
+        alt_names (list[str]): Alternative names of this body.
         spice_id (int | None): The ID from the SPICE toolkit if the body is found in
             SPICE; otherwise None.
         path (Path): A Waypoint for the body's path.
@@ -282,7 +285,7 @@ class Body(Oops):
             defined by :meth:`define_small_body`; None otherwise.
         is_standard (bool): True if this body is among the standard bodies of the solar
             system.
-        is_registered (bool): True if this is the object registered under its name.
+        is_registered (bool): True if this is the object registered under its key.
         ring_frame (Frame | None): The Wayframe of a "despun" RingFrame relevant to a
             ring that might orbit this body; None if not (yet) defined.
         ring_epoch (float | None): The epoch of the ring frame; None if it has none.
@@ -309,11 +312,11 @@ class Body(Oops):
             None if it has none.
         keywords (list[str]): Keywords associated with the body. Typical values are
             "PLANET", "BARYCENTER", "SATELLITE", "SPACECRAFT", "RING", and for
-            satellites, "REGULAR", "IRREGULAR", "CLASSICAL". The name of each body
-            appears as a keyword in its own keyword list. In addition, every planet
+            satellites, "REGULAR", "IRREGULAR", "CLASSICAL". The key and the name of each
+            body appear as keywords in its own keyword list. In addition, every planet
             appears as a keyword for its system barycenter and for each of its satellites
             and rings.
-        child_names (list[str]): The names of the child bodies associated with this
+        child_keys (list[str]): The keys of the child bodies associated with this
             body. Every Body object appears on the list of the children of its parent and
             also the children of its barycenter.
         children (list[Body]): Child bodies associated with this body.
@@ -326,13 +329,13 @@ class Body(Oops):
         """Constructor for a Body object.
 
         Parameters:
-            name (str): The name of the body; it is converted to upper case.
+            name (str): The name of the body.
             path (Path | str): The path or path ID of the body's center.
             frame (Frame | str): The frame or frame ID of the body.
-            parent (Body | str, optional): The physical body, or its registered name,
-                about which this body orbits; None if it has no parent.
-            barycenter (Body | str, optional): The body, or its registered name, that
-                defines the barycenter of this body's motion; None to use the parent.
+            parent (Body | str, optional): The physical body, or its name or key, about
+                which this body orbits; None if it has no parent.
+            barycenter (Body | str, optional): The body, or its name or key, that defines
+                the barycenter of this body's motion; None to use the parent.
             spice_name (str, optional): The name of the body within the SPICE toolkit, if
                 it differs from `name`.
 
@@ -343,7 +346,9 @@ class Body(Oops):
         if not isinstance(name, str):
             raise OopsTypeError('Body name must be a string: ' + str(name))
 
-        self.name = name.upper()
+        self.name = name
+        self.key = Body._name_to_key(name)
+        self.alt_names = []
         self.is_standard = False        # overridden where necessary
         self.spk = None
 
@@ -385,27 +390,48 @@ class Body(Oops):
 
         self.gravity = None
         self.lightsource = None
-        self.keywords = [self.name]
-        self.child_names = []
+        self.keywords = [self.key]
+        self.add_keywords(self.name)
+        self.child_keys = []
 
         # Append this to the appropriate child lists
         if self.parent is not None:
-            if self.name not in self.parent.child_names:
-                self.parent.child_names.append(self.name)
+            if self.key not in self.parent.child_keys:
+                self.parent.child_keys.append(self.key)
 
         if self.barycenter is not None:
-            if self.name not in self.barycenter.child_names:
-                self.barycenter.child_names.append(self.name)
+            if self.key not in self.barycenter.child_keys:
+                self.barycenter.child_keys.append(self.key)
 
-        # Register only the first occurrence of this name
-        if self.name not in Body.BODY_REGISTRY:
-            Body.BODY_REGISTRY[self.name] = self
+        # Register only the first occurrence of this key
+        if self.key not in Body.BODY_REGISTRY:
+            Body.BODY_REGISTRY[self.key] = self
             self.is_registered = True
         else:
             self.is_registered = False
 
+    def add_name(self, names):
+        """Add one or more names to this object.
+
+        Parameters:
+            names (str | list[str]): One or more names.
+
+        Raises:
+            OopsTypeError: If `name` is not a string.
+        """
+
+        if isinstance(names, str):
+            names = [names]
+
+        for name in names:
+            if not isinstance(name, str):
+                raise OopsTypeError(f'Body name must be a string: {name!r}')
+            if name == self.name or name in self.alt_names:
+                continue
+            self.alt_names.append(name)
+
     def __str__(self):
-        return 'Body(' + self.name + ')'
+        return 'Body(' + self.key + ')'
 
     def __repr__(self):
         return self.__str__()
@@ -421,10 +447,10 @@ class Body(Oops):
         # Avoid links to other bodies if they are standard
         # This prevents serialization from saving the entire Solar System
         if self.parent and self.parent.is_standard:
-            body_dict['parent'] = self.parent.name
+            body_dict['parent'] = self.parent.key
 
         if self.barycenter and self.barycenter.is_standard:
-            body_dict['barycenter'] = self.barycenter.name
+            body_dict['barycenter'] = self.barycenter.key
 
         body_dict['is_registered'] = False
 
@@ -435,8 +461,8 @@ class Body(Oops):
         self.__dict__ = state
 
         # Register if necessary
-        if self.name not in Body.BODY_REGISTRY:
-            Body.BODY_REGISTRY[self.name] = self
+        if self.key not in Body.BODY_REGISTRY:
+            Body.BODY_REGISTRY[self.key] = self
             self.is_registered = True
         else:
             self.is_registered = False
@@ -444,13 +470,13 @@ class Body(Oops):
         # Register with parent and barycenter
         if isinstance(self.parent, str):
             self.parent = Body.BODY_REGISTRY[self.parent]
-        if self.parent and self.name not in self.parent.child_names:
-            self.parent.child_names.append(self.name)
+        if self.parent and self.key not in self.parent.child_keys:
+            self.parent.child_keys.append(self.key)
 
         if isinstance(self.barycenter, str):
             self.barycenter = Body.BODY_REGISTRY[self.barycenter]
-        if self.barycenter and self.name not in self.barycenter.child_names:
-            self.barycenter.child_names.append(self.name)
+        if self.barycenter and self.key not in self.barycenter.child_keys:
+            self.barycenter.child_keys.append(self.key)
 
         # Load SPICE kernels if necessary
         if 'EARTH' not in Body.BODY_REGISTRY:
@@ -600,7 +626,7 @@ class Body(Oops):
     def children(self) -> 'list[Body]':
         """The Body objects that are the immediate children of this Body."""
 
-        return [Body.BODY_REGISTRY[name] for name in self.child_names]
+        return [Body.BODY_REGISTRY[key] for key in self.child_keys]
 
     def select_children(self, include_all=None, include_any=None,
                               exclude=None, radius=None, recursive=False):
@@ -666,7 +692,7 @@ class Body(Oops):
 
         Parameters:
             bodies (list[Body]): The bodies to filter.
-            names (str | list[str]): One name or a list of names.
+            names (str | list[str]): One name or key, or a list of them, in any case.
 
         Returns:
             list[Body]: The bodies retained, without duplicates.
@@ -675,9 +701,11 @@ class Body(Oops):
         if isinstance(names, str):
             names = [names]
 
+        keys = {Body._name_to_key(name) for name in names}
+
         selection = []
         for body in bodies:
-            if body.name in names and body not in selection:
+            if body.key in keys and body not in selection:
                 selection.append(body)
 
         return selection
@@ -688,7 +716,7 @@ class Body(Oops):
 
         Parameters:
             bodies (list[Body]): The bodies to filter.
-            names (str | list[str]): One name or a list of names.
+            names (str | list[str]): One name or key, or a list of them, in any case.
 
         Returns:
             list[Body]: The bodies retained, without duplicates.
@@ -697,9 +725,11 @@ class Body(Oops):
         if isinstance(names, str):
             names = [names]
 
+        keys = {Body._name_to_key(name) for name in names}
+
         selection = []
         for body in bodies:
-            if body.name not in names and body not in selection:
+            if body.key not in keys and body not in selection:
                 selection.append(body)
         return selection
 
@@ -844,7 +874,7 @@ class Body(Oops):
 
         selection = []
         for body in bodies:
-            if body.child_names and body not in selection:
+            if body.child_keys and body not in selection:
                 selection.append(body)
 
         return selection
@@ -862,7 +892,7 @@ class Body(Oops):
 
         selection = []
         for body in bodies:
-            if not body.child_names and body not in selection:
+            if not body.child_keys and body not in selection:
                 selection.append(body)
 
         return selection
@@ -1013,11 +1043,25 @@ class Body(Oops):
     ######################################################################################
 
     @staticmethod
-    def lookup(key):
-        """A body from the registry given its name.
+    def _name_to_key(name):
+        """The registry key for a body name.
 
         Parameters:
-            key (str): The name of the body, in any case.
+            name (str): The name or key of a body, in any case.
+
+        Returns:
+            str: The name in upper case, with underscores replacing spaces.
+        """
+
+        return name.upper().replace(' ', '_')
+
+    @staticmethod
+    def lookup(key):
+        """A body from the registry given its name or key.
+
+        Parameters:
+            key (str): The name or key of the body, in any case and with spaces or
+                underscores between words.
 
         Returns:
             Body: The registered body.
@@ -1026,30 +1070,31 @@ class Body(Oops):
             KeyError: If no body of that name is registered.
         """
 
-        return Body.BODY_REGISTRY[key.upper()]
+        return Body.BODY_REGISTRY[Body._name_to_key(key)]
 
     @staticmethod
     def exists(key):
-        """True if the body's name exists in the registry.
+        """True if the body's name or key exists in the registry.
 
         Parameters:
-            key (str): The name of the body, in any case.
+            key (str): The name or key of the body, in any case and with spaces or
+                underscores between words.
 
         Returns:
             bool: True if a body of that name is registered.
         """
 
-        return key.upper() in Body.BODY_REGISTRY
+        return Body._name_to_key(key) in Body.BODY_REGISTRY
 
     @staticmethod
     def as_body(body):
         """A body object given the registered name or the object itself.
 
         Parameters:
-            body (Body | str): A body or the name of a registered body.
+            body (Body | str): A body or the name or key of a registered body.
 
         Returns:
-            Body: The registered body of that name if there is one; otherwise the given
+            Body: The registered body of that key if there is one; otherwise the given
             body.
         """
 
@@ -1059,27 +1104,28 @@ class Body(Oops):
 
             # If Body is unregistered, try to return a registered version.
             try:
-                return Body.lookup(body.name)
+                return Body.lookup(body.key)
             except KeyError:
                 return body
 
         return Body.lookup(body)
 
     @staticmethod
-    def as_body_name(body):
-        """A body name given the registered name or the object itself.
+    def as_body_key(body):
+        """A body key given a body, or the name or key of a body.
 
         Parameters:
-            body (Body | str): A body or the name of a body.
+            body (Body | str): A body, or the name or key of a body in any case. The body
+                need not be registered.
 
         Returns:
-            str: The name of the body.
+            str: The key of the body, upper case with underscores replacing spaces.
         """
 
         if isinstance(body, Body):
-            return body.name
+            return body.key
 
-        return body
+        return Body._name_to_key(body)
 
     @staticmethod
     def reset_registry():
@@ -1246,11 +1292,12 @@ class Body(Oops):
 
         spicedb.close_db()
 
-        # Also define the solar disk as a light source. The import of the LightSource
-        # class is local to this function because a file-level import would result in a
-        # recursive import.
-        from oops.lightsource import DiskSource
-        _ = DiskSource('SOLAR_DISK', SpicePath(10), 695990., 11)
+        # Also define the solar disk as a light source, centered on a point source at the
+        # Sun. The import of the LightSource classes is local to this function because a
+        # file-level import would result in a recursive import.
+        from oops.lightsource import DiskSource, LightSource
+        center = LightSource('SOLAR_CENTER', SpicePath(10))
+        _ = DiskSource('SOLAR_DISK', center, 695990., size=11)
 
         return names
 
@@ -1738,11 +1785,10 @@ class Body(Oops):
                              keywords=keywords, is_standard=is_standard)
 
     @staticmethod
-    def define_body(spice_id, parent, barycenter, keywords,
-                    is_standard=False, name=None):
+    def define_body(spice_id, parent, barycenter, keywords, is_standard=False, name=None):
         """Define the path, frame, surface for a single body by name or SPICE ID.
 
-        A body whose name is already registered is left as it is.
+        A body whose key is already registered is left as it is.
 
         Parameters:
             spice_id (int | str): The SPICE ID or name of the body.
@@ -1752,8 +1798,7 @@ class Body(Oops):
             keywords (list[str]): The keywords to associate with the body.
             is_standard (bool, optional): True to include the body among the standard
                 bodies of the solar system.
-            name (str, optional): The name under which to register the body; None to use
-                the ID of its path.
+            name (str, optional): The name of the body; None to use the ID of its path.
 
         Raises:
             OopsValueError: If the body has no name.
@@ -1768,7 +1813,7 @@ class Body(Oops):
             raise OopsValueError('missing name for Body {spice_id}')
 
         # If the body already exists, skip it
-        if name in Body.BODY_REGISTRY:
+        if Body.exists(name):
             return
 
         # Sometimes a frame is undefined for a new moon; in this case assume a regular
@@ -1782,13 +1827,12 @@ class Body(Oops):
                 frame = SynchronousFrame(path, Body.as_body(parent).path)
 
         # Define the planet's body
-        # Note that this will overwrite any registered body of the same name
-        body = Body(name, name, frame, parent, barycenter)
+        body = Body(name, path, frame, parent, barycenter)
         body.add_keywords(keywords)
 
         # Add the gravity object if it exists
         try:
-            body.apply_gravity(Gravity.lookup(name))
+            body.apply_gravity(Gravity.lookup(body.key))
         except KeyError:
             pass
 
@@ -1808,10 +1852,10 @@ class Body(Oops):
 
         # Add a planet name to any satellite or barycenter
         if 'SATELLITE' in body.keywords and parent is not None:
-            body.add_keywords([parent])
+            body.add_keywords(body.parent.key)
 
         if 'BARYCENTER' in body.keywords and parent is not None:
-            body.add_keywords([parent])
+            body.add_keywords(body.parent.key)
 
         body.is_standard = bool(is_standard)
 
@@ -1824,7 +1868,8 @@ class Body(Oops):
         has limits but a defined ring plane does not.
 
         Parameters:
-            parent_name (str): The name of the central planet for the ring surface.
+            parent_name (str): The name or lookup key of the central planet for the ring
+                surface.
             ring_name (str): The name of the surface.
             radii (tuple | float | None): If this is a tuple with two values, these are
                 the radial limits of the ring; if it is a scalar, then the ring plane has
@@ -1845,13 +1890,13 @@ class Body(Oops):
                 bodies of the solar system.
 
         Returns:
-            Body: The body of the ring; the existing body if one of that name is already
+            Body: The body of the ring; the existing body if one of that key is already
             registered.
         """
 
         # If the ring body already exists, skip it
-        if ring_name in Body.BODY_REGISTRY:
-            return Body.BODY_REGISTRY[ring_name]
+        if Body.exists(ring_name):
+            return Body.lookup(ring_name)
 
         # Identify the parent
         parent = Body.lookup(parent_name)
@@ -1876,7 +1921,6 @@ class Body(Oops):
                 radii = None
 
         # Create the ring body
-        # Note that this will overwrite any registered ring of the same name
         body = Body(ring_name, barycenter.path, parent.ring_frame, parent)
         body.apply_gravity(barycenter.gravity)
         body.apply_ring_frame(retrograde=retrograde, pole=pole)
@@ -1888,7 +1932,7 @@ class Body(Oops):
         body.ring_body = body
         body.is_ring = True
 
-        body.add_keywords([parent, 'RING', ring_name])
+        body.add_keywords([parent.key, 'RING'])
         body.add_keywords(keywords)
 
         body.is_standard = bool(is_standard)
@@ -1902,7 +1946,7 @@ class Body(Oops):
         The ring can be inclined or eccentric.
 
         Parameters:
-            parent_name (str): The name of the central planet.
+            parent_name (str): The name or lookup key of the central planet.
             ring_name (str): The name of the ring.
             elements (tuple[float, ...]): The nine orbital elements that
                 :class:`~oops.surface.OrbitPlane` expects, followed by the outer radius of
@@ -1918,14 +1962,14 @@ class Body(Oops):
         parent = Body.lookup(parent_name)
 
         orbit = OrbitPlane(elements, epoch, parent.path, reference,
-                           path_id=ring_name)
+                           path_id=Body._name_to_key(ring_name))
 
         body = Body(ring_name, orbit._internal_origin, orbit._internal_frame, parent,
                     parent)
         body.apply_surface(orbit, elements[9], 0.)
         orbit.body = body
 
-        body.add_keywords([parent, 'RING', 'ORBIT', ring_name])
+        body.add_keywords([parent.key, 'RING', 'ORBIT'])
         body.add_keywords(keywords)
         body.is_standard = bool(is_standard)
 
@@ -1938,12 +1982,11 @@ class Body(Oops):
 
         Parameters:
             spice_id (int | str): The SPICE ID or name of the body.
-            name (str, optional): The name under which to register the body; None to use
-                the ID of its path.
+            name (str, optional): The name of this body; None to use the ID of its path.
             spk (str, optional): The SPK file to furnish for the body.
             keywords (list[str], optional): The keywords to associate with the body.
-            parent (str, optional): The name of the parent body.
-            barycenter (str, optional): The name of the barycenter body.
+            parent (Body | str, optional): The parent body, or its name or key.
+            barycenter (Body | str, optional): The barycenter body, or its name or key.
             is_standard (bool, optional): True to include the body among the standard
                 bodies of the solar system.
         """
@@ -1955,14 +1998,18 @@ class Body(Oops):
             cspyce.furnsh(spk)
 
         # Define the body's path
-        path = SpicePath(spice_id, 'SSB', path_id=name)
+        path_id = Body._name_to_key(name) if name else None
+        path = SpicePath(spice_id, 'SSB', path_id=path_id)
 
         # The name of the path is the name of the body
         name = name or path.path_id
 
         # If the body already exists, skip it
-        if name in Body.BODY_REGISTRY:
+        if Body.exists(name):
             return
+
+        parent = Body.as_body(parent)
+        barycenter = Body.as_body(barycenter)
 
         # Sometimes a frame is undefined for a new moon; in this case assume it is
         # synchronous
@@ -1975,13 +2022,12 @@ class Body(Oops):
                 frame = SynchronousFrame(path, parent.path, frame_id='+')
 
         # Define the planet's body
-        body = Body(name, path, frame, parent=Body.lookup(parent),
-                    barycenter=Body.lookup(barycenter))
+        body = Body(name, path, frame, parent=parent, barycenter=barycenter)
         body.add_keywords(keywords)
 
         # Add the gravity object if it exists
         try:
-            body.apply_gravity(Gravity.lookup(name))
+            body.apply_gravity(Gravity.lookup(body.key))
         except KeyError:
             pass
 

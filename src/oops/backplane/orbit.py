@@ -41,7 +41,7 @@ def orbit_longitude(self, event_key, reference='obs', planet=None):
     event_key = Backplane.standardize_event_key(event_key)
     if planet is None:
         (body,_) = self._get_body_and_modifier(event_key[1])
-        planet = body.parent.name
+        planet = body.parent.key
 
     # Look up under the reference
     key0 = ('orbit_longitude', event_key)

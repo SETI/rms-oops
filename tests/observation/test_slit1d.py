@@ -6,14 +6,15 @@ import numpy as np
 import pytest
 
 from polymath         import Pair, Scalar, Vector
-from oops.cadence     import Metronome
+from oops.cadence     import Metronome, SnapCadence
 from oops.observation import Slit1D
 from oops.fov         import FlatFOV
 
 
 def test_slit1d():
     fov = FlatFOV((0.001,0.001), (20,1))
-    obs = Slit1D(('u'), tstart=0., texp=10., fov=fov, path='SSB', frame='J2000')
+    obs = Slit1D(('u'), cadence=SnapCadence(0., 10.), fov=fov, path='SSB',
+                 frame='J2000')
 
     indices = Vector([(0,0),(1,0),(20,0),(21,0)])
     indices_ = indices.copy()       # clipped at 20
@@ -89,7 +90,7 @@ def test_slit1d():
     # Alternative axis order ('a','u','b')
 
     fov = FlatFOV((0.001,0.001), (20,1))
-    obs = Slit1D(('a','u', 'b'), tstart=0., texp=10.,
+    obs = Slit1D(('a','u', 'b'), cadence=SnapCadence(0., 10.),
                  fov=fov, path='SSB', frame='J2000')
 
     indices = Vector([(0,0,0),(0,1,99),(0,19,99),(10,20,99),(10,21,99)])
@@ -112,7 +113,7 @@ def test_slit1d():
     assert time_max == 10.
 
 ##########################################################################################
-# Constructor validation, a cadence in place of a start time, subfields, and time_shift
+# Constructor validation, cadences, subfields, and time_shift
 ##########################################################################################
 
 SLIT_FOV = FlatFOV((0.001, 0.001), (20, 1))
@@ -128,7 +129,7 @@ def _slit(**kwargs) -> Slit1D:
         Slit1D: The observation.
     """
 
-    args = {'axes': ('u',), 'tstart': 0., 'texp': 10., 'fov': SLIT_FOV,
+    args = {'axes': ('u',), 'cadence': SnapCadence(0., 10.), 'fov': SLIT_FOV,
             'path': 'SSB', 'frame': 'J2000'}
     args.update(kwargs)
 
@@ -160,10 +161,10 @@ def test_a_slit_along_the_v_axis_runs_the_other_way() -> None:
     assert tuple(obs.shape) == (20,)
 
 
-def test_a_cadence_can_stand_in_for_the_start_time() -> None:
-    """A one-step Cadence defines both the start time and the exposure."""
+def test_any_one_step_cadence_defines_the_time_and_exposure() -> None:
+    """A one-step Cadence other than a SnapCadence defines the time and exposure."""
 
-    obs = _slit(tstart=Metronome(tstart=5., tstride=20., texp=20., steps=1), texp=None)
+    obs = _slit(cadence=Metronome(tstart=5., tstride=20., texp=20., steps=1))
 
     assert obs.time == (5., 25.)
     assert obs.texp == 20.
@@ -175,7 +176,7 @@ def test_a_cadence_of_more_than_one_step_is_rejected() -> None:
     cadence = Metronome(tstart=0., tstride=10., texp=10., steps=2)
 
     with pytest.raises(ValueError, match="cadence must be \\(1,\\)"):
-        _slit(tstart=cadence)
+        _slit(cadence=cadence)
 
 
 def test_a_subfield_becomes_an_attribute() -> None:

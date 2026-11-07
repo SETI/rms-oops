@@ -32,7 +32,7 @@ class InSitu(Observation):
                 Cadence of subclass Instant, making this observation suitable for
                 evaluating any gridless backplane. The shape of this cadence defines the
                 shape of the observation.
-            path (Path): The path waypoint co-located with the observer.
+            path (str | Path): The Path or Path name co-located with the instrument.
             subfields (dict): All of the optional attributes. Additional subfields may be
                 included as needed.
 

@@ -88,7 +88,7 @@ class Observation(Mutable):
     def uv_from_ra_and_dec(self, ra: ScalarLike, dec: ScalarLike, *,
         tfrac: ScalarLike = 0.5, time: ScalarLike | None = None, apparent: bool = True,
         derivs: bool = False, iters: int = 2, quick: dict | None = None) -> Pair: ...
-    def uv_from_path(self, path: Path, *, tfrac: ScalarLike = 0.5,
+    def uv_from_path(self, path: str | Path, *, tfrac: ScalarLike = 0.5,
         time: ScalarLike | None = None, derivs: bool = False,
         guess: ScalarLike | None = None, quick: dict | None = None,
         converge: dict | None = None) -> Pair: ...
@@ -104,7 +104,8 @@ class Observation(Mutable):
         time: ScalarLike | None = None, derivs: bool = False) -> Vector3: ...
     def parallel_uv(self, parallel: Observation, uv: PairLike, *,
         time: ScalarLike | None = None, derivs: bool = False) -> Pair: ...
-    def parallel_offset_angles(self, parallel: Observation, angles: tuple | list, *,
+    def parallel_offset_angles(self, parallel: Observation | tuple[Frame, FOV],
+        angles: tuple[float, float], *,
         time: ScalarLike | None = None) -> tuple[Scalar, Scalar]: ...
     def parallel_offset_duv(self, parallel: Observation, duv: PairLike, *,
         time: ScalarLike | None = None, origin: PairLike | None = None) -> Pair: ...
@@ -121,7 +122,7 @@ class InSitu(Observation):
     shape: list | tuple
     t_axis: int | list
     subfields: dict
-    def __init__(self, cadence: Cadence, path: Path, **subfields: dict) -> None: ...
+    def __init__(self, cadence: Cadence, path: str | Path, **subfields: dict) -> None: ...
     def time_shift(self, dtime: float) -> Observation: ...
 
 class Pixel(Observation):
@@ -136,8 +137,8 @@ class Pixel(Observation):
     cadence: Cadence
     shape: list | tuple
     subfields: dict
-    def __init__(self, axes: list | tuple, cadence: Cadence, fov: FOV, path: Path,
-        frame: Frame, **subfields: dict) -> None: ...
+    def __init__(self, axes: list | tuple, *, cadence: Cadence, fov: FOV,
+        path: str | Path, frame: str | Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
         derivs: bool = True) -> tuple[Pair, Scalar]: ...
     def uvt_range(self, indices: ScalarLike | VectorLike, *,
@@ -166,8 +167,8 @@ class RasterSlit1D(Observation):
     swap_uv: bool
     cadence: Cadence
     subfields: dict
-    def __init__(self, axes: list | tuple, cadence: Cadence, fov: FOV, path: Path,
-        frame: Frame, **subfields: dict) -> None: ...
+    def __init__(self, axes: list | tuple, *, cadence: Cadence, fov: FOV,
+        path: str | Path, frame: str | Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
         derivs: bool = True) -> tuple[Pair, Scalar]: ...
     def uvt_range(self, indices: ScalarLike | VectorLike, *,
@@ -193,8 +194,8 @@ class Slit1D(Observation):
     cadence: Cadence
     subfields: dict
     texp: float
-    def __init__(self, axes: list | tuple, tstart: float, texp: float, fov: FOV,
-        path: Path, frame: Frame, **subfields: dict) -> None: ...
+    def __init__(self, axes: list | tuple, *, cadence: Cadence, fov: FOV,
+        path: str | Path, frame: str | Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
         derivs: bool = True) -> tuple[Pair, Scalar]: ...
     def uvt_range(self, indices: ScalarLike | VectorLike, *,
@@ -220,8 +221,8 @@ class Snapshot(Observation):
     cadence: Cadence
     subfields: dict
     texp: float
-    def __init__(self, axes: list | tuple, tstart: float, texp: float, fov: FOV,
-        path: Path, frame: Frame, **subfields: dict) -> None: ...
+    def __init__(self, axes: list | tuple, *, cadence: Cadence, fov: FOV,
+        path: str | Path, frame: str | Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
         derivs: bool = True) -> tuple[Pair, Scalar]: ...
     def uvt_range(self, indices: ScalarLike | VectorLike, *,
@@ -236,7 +237,7 @@ class Snapshot(Observation):
     def uv_from_ra_and_dec(self, ra: ScalarLike, dec: ScalarLike, *,
         tfrac: ScalarLike = 0.5, time: ScalarLike | None = None, apparent: bool = True,
         derivs: bool = False, iters: int = 2, quick: dict | None = None) -> Pair: ...
-    def uv_from_path(self, path: Path, *, tfrac: ScalarLike = 0.5,
+    def uv_from_path(self, path: str | Path, *, tfrac: ScalarLike = 0.5,
         time: ScalarLike | None = None, derivs: bool = False,
         guess: ScalarLike | None = None, quick: dict | None = None,
         converge: dict | None = None) -> Pair: ...
@@ -261,8 +262,8 @@ class TimedImage(Observation):
     shape: list | tuple
     uv_shape: tuple[int, ...]
     subfields: dict
-    def __init__(self, axes: list | tuple, cadence: Cadence, fov: FOV, path: Path,
-        frame: Frame, **subfields: dict) -> None: ...
+    def __init__(self, axes: list | tuple, *, cadence: Cadence, fov: FOV,
+        path: str | Path, frame: str | Frame, **subfields: dict) -> None: ...
     def uvt(self, indices: ScalarLike | VectorLike, *, remask: bool = False,
         derivs: bool = True) -> tuple[Pair, Scalar]: ...
     def uvt_range(self, indices: ScalarLike | VectorLike, *,

@@ -180,7 +180,7 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
             for calibration.
 
     Returns:
-        Snapshot: The observation, with subfields `filespec`, `basename`,
+        Snapshot: The observation, with subfields `filepath`, `basename`,
         `spice_to_frame`, `spice_frame_name`, `spice_frame_id`, `abspath` and `image_url`
         inserted, plus `data`, `error` and `quality` when the data is loaded and
         `headers` when the headers are loaded.
@@ -298,14 +298,15 @@ def from_file(filespec, geom='spice', pointing='spice', fov_type='fast',
         los = event.neg_arr_ap_j2000
 
     # Create a Snapshot
-    snapshot = oops.obs.Snapshot(('v','u'), tstart, texp,
+    snapshot = oops.obs.Snapshot(('v','u'),
+                                 cadence = oops.cadence.SnapCadence(tstart, texp),
                                  fov = fov,
                                  path = path,
                                  frame = frame,
                                  target = target_name,
                                  instrument = 'LORRI')
 
-    snapshot.insert_subfield('filespec', filespec)
+    snapshot.insert_subfield('filepath', filespec)
     snapshot.insert_subfield('basename', filespec.name)
     snapshot.insert_subfield('spice_to_frame', SPICE_TO_FRAME)
     snapshot.insert_subfield('spice_frame_name', 'NH_LORRI')
@@ -416,7 +417,7 @@ def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
 
     Returns:
         list[Snapshot]: One observation per row of the index, each with subfields
-        `filespec`, `basename`, `spice_to_frame`, `spice_frame_name` and
+        `filepath`, `basename`, `spice_to_frame`, `spice_frame_name` and
         `spice_frame_id` inserted.
     """
 
@@ -440,7 +441,8 @@ def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
         target_name = dict['TARGET_NAME']
 
         # Create a Snapshot
-        item = oops.obs.Snapshot(('v','u'), tstart, texp,
+        item = oops.obs.Snapshot(('v','u'),
+                                 cadence = oops.cadence.SnapCadence(tstart, texp),
                                  fov = fov,
                                  path = 'NEW HORIZONS',
                                  frame = 'NH_LORRI',
@@ -452,7 +454,7 @@ def from_index(filespec, fov_type='fast', asof=None, meta=None, **parameters):
         # PATH_NAME carries a leading slash, which would otherwise be doubled
         filepath = (dict['VOLUME_ID'] + '/' + dict['PATH_NAME'].strip('/') + '/'
                     + dict['FILE_NAME'])
-        item.insert_subfield('filespec', filepath)
+        item.insert_subfield('filepath', filepath)
         item.insert_subfield('basename', dict['FILE_NAME'])
         item.insert_subfield('spice_to_frame', SPICE_TO_FRAME)
         item.insert_subfield('spice_frame_name', 'NH_LORRI')

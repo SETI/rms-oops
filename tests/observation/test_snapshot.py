@@ -7,7 +7,7 @@ import pytest
 
 from polymath         import Pair, Scalar, Vector
 from oops.body        import Body
-from oops.cadence     import Metronome
+from oops.cadence     import Metronome, SnapCadence
 from oops.fov         import FlatFOV
 from oops.frame       import Cmatrix, Frame
 from oops.observation import Snapshot
@@ -16,7 +16,7 @@ from oops.path        import Path
 
 def test_snapshot():
     fov = FlatFOV((0.001,0.001), (10,20))
-    obs = Snapshot(('u','v'), tstart=98., texp=2.,
+    obs = Snapshot(('u','v'), cadence=SnapCadence(98., 2.),
                    fov=fov, path='SSB', frame='J2000')
 
     indices = Vector([(0.,0.),(0.,20.),(10.,0.),(10.,20.),(10.,21.)])
@@ -96,7 +96,7 @@ def test_snapshot():
     assert time1[:4] == 100.
 
     # Alternative axis order ('v','u')
-    obs = Snapshot(('v','u'), tstart=98., texp=2.,
+    obs = Snapshot(('v','u'), cadence=SnapCadence(98., 2.),
                    fov=fov, path='SSB', frame='J2000')
 
     indices = Pair([(0,0),(0,10),(20,0),(20,10),(20,11)])
@@ -111,7 +111,7 @@ def test_snapshot():
     assert np.all(uv.mask == 4*[False] + [True])
 
     # Alternative axis order ('v', 'a', 'u')
-    obs = Snapshot(('v','a','u'), tstart=98., texp=2.,
+    obs = Snapshot(('v','a','u'), cadence=SnapCadence(98., 2.),
                    fov=fov, path='SSB', frame='J2000')
 
     indices = Vector([(0,-1,0),(0,99,10),(20,-9,0),(20,77,10),(20,44,11)])
@@ -145,8 +145,8 @@ def _snapshot_facing_the_moon() -> Snapshot:
     """
 
     frame = Cmatrix.from_ra_dec(222.447, -10.900, 0., 'J2000')
-    return Snapshot(('u','v'), 0., 10., FlatFOV((1.e-3, 1.e-3), (100, 100)),
-                    'EARTH', frame)
+    return Snapshot(('u','v'), cadence=SnapCadence(0., 10.),
+                    fov=FlatFOV((1.e-3, 1.e-3), (100, 100)), path='EARTH', frame=frame)
 
 
 # The keys of a "full" inventory entry, with the types the docstring documents.
@@ -205,6 +205,15 @@ def test_inventory_full_agrees_with_the_other_return_types() -> None:
         assert bool(full[name]['inside']) == (name in names)
 
 
+def test_inventory_is_indexed_by_body_key() -> None:
+    """Bodies given by name in any case are reported under their keys."""
+
+    obs = _snapshot_facing_the_moon()
+
+    assert obs.inventory(['Moon', 'mars'], return_type='list') == ['MOON']
+    assert sorted(obs.inventory(['Moon', 'mars'], return_type='full')) == ['MARS', 'MOON']
+
+
 @pytest.mark.parametrize('key,expected', sorted(INVENTORY_KEYS.items()))
 def test_inventory_full_entry_matches_its_documented_type(key: str, expected) -> None:
     """Each documented key is present and holds a value of its documented type."""
@@ -249,18 +258,17 @@ def _snapshot(**kwargs) -> Snapshot:
         Snapshot: The observation.
     """
 
-    args = {'axes': ('u', 'v'), 'tstart': 98., 'texp': 2., 'fov': IMAGE_FOV,
+    args = {'axes': ('u', 'v'), 'cadence': SnapCadence(98., 2.), 'fov': IMAGE_FOV,
             'path': 'SSB', 'frame': 'J2000'}
     args.update(kwargs)
 
     return Snapshot(**args)
 
 
-def test_a_cadence_can_stand_in_for_the_start_time() -> None:
-    """A one-step Cadence defines both the start time and the exposure."""
+def test_any_one_step_cadence_defines_the_time_and_exposure() -> None:
+    """A one-step Cadence other than a SnapCadence defines the time and exposure."""
 
-    obs = _snapshot(tstart=Metronome(tstart=5., tstride=20., texp=20., steps=1),
-                    texp=None)
+    obs = _snapshot(cadence=Metronome(tstart=5., tstride=20., texp=20., steps=1))
 
     assert obs.time == (5., 25.)
     assert obs.texp == 20.
@@ -272,7 +280,7 @@ def test_a_cadence_of_more_than_one_step_is_rejected() -> None:
     cadence = Metronome(tstart=0., tstride=10., texp=10., steps=2)
 
     with pytest.raises(ValueError, match=r'cadence must be \(1,\)'):
-        _snapshot(tstart=cadence)
+        _snapshot(cadence=cadence)
 
 
 def test_a_subfield_becomes_an_attribute() -> None:
@@ -322,8 +330,8 @@ def _snapshot_facing_jupiter() -> Snapshot:
 
     frame = Cmatrix.from_ra_dec(JUPITER_RA, JUPITER_DEC, 0., 'J2000')
 
-    return Snapshot(('u','v'), OCCULTATION_TIME, 10., FlatFOV((1.e-4, 1.e-4), (100, 100)),
-                    'EARTH', frame)
+    return Snapshot(('u','v'), cadence=SnapCadence(OCCULTATION_TIME, 10.),
+                    fov=FlatFOV((1.e-4, 1.e-4), (100, 100)), path='EARTH', frame=frame)
 
 
 def test_a_body_hidden_behind_another_is_left_out_of_the_inventory() -> None:

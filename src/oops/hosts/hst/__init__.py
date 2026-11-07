@@ -646,11 +646,10 @@ class HST(object):
         fov = self.define_fov(hdulist, **parameters)
 
         times = self.time_limits(hdulist, **parameters)
-
+        texp = times[1] - times[0]
         snapshot = oops.obs.Snapshot(
                         axes = ('v','u'),
-                        tstart = times[0],
-                        texp = times[1] - times[0],
+                        cadence = oops.cadence.SnapCadence(times[0], texp),
                         fov = fov,
                         path = 'EARTH',
                         frame = self.register_frame(hdulist, fov,

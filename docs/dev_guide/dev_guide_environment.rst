@@ -155,9 +155,9 @@ Two workflows run on every push and pull request:
 
 ``run-tests.yml``
     The three test suites, through ``scripts/automated_tests/oops_main_test.sh``, on the
-    self-hosted runner under Python 3.11, 3.12 and 3.13, with coverage uploaded from the
-    3.13 job. The script reinstalls the dependencies and needs ``SPICE_PATH``,
-    ``SPICE_SQLITE_DB_NAME`` and ``OOPS_RESOURCES`` from the runner.
+    self-hosted runner under Python 3.11, 3.12, 3.13, 3.14 and 3.15, with coverage
+    uploaded from the 3.13 job. The script reinstalls the dependencies and needs
+    ``SPICE_PATH``, ``SPICE_SQLITE_DB_NAME`` and ``OOPS_RESOURCES`` from the runner.
 
 ``run-windows-tests.yml`` covers Windows. When the set of gates changes, change the check
 script first and bring the workflow into step in the same change.
