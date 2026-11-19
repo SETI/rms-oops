@@ -42,9 +42,7 @@ class Host:
     A host does not check SPICE, and does not raise :class:`~oops.OopsSpiceError`, when
     the caller supplies the pointing: when ``from_file`` is given a `frame` override,
     whether a :class:`~oops.frame.Cmatrix` or any other :class:`~oops.Frame`, or when the
-    caller chooses a pointing source that is not SPICE, through an option of the host. A
-    host's ``from_index`` does not check, and does not leave out a row for missing
-    pointing.
+    caller chooses a pointing source that is not SPICE, through an option of the host.
     """
 
     _HOSTS = []     # A list of all registered Host subclasses.
