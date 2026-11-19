@@ -654,8 +654,8 @@ class Host:
                 function with the signature ``(dict[str, Any], dict[str, Any]) -> bool``
                 that receives the row dictionaries from each file and returns True if the
                 rows match and either returns False or raises an exception if they do
-                not match. If unspecified, the common column names of the two indices are
-                used.
+                not match. If unspecified, the column names the two tables share are used,
+                except those of the file key, which the pairing compares as paths.
             file_key (str | tuple[str, ...] | collections.abc.Callable, optional): How
                 a row of the index names its file: a column name; a tuple of column
                 names, whose values are joined with "/", such as ``("VOLUME_ID",
@@ -798,11 +798,17 @@ class Host:
                 supp_dicts = Host._pair_by_file(row_paths, supp_paths, supp_dicts,
                                                 files=files)
 
-        # Check each pair
+        # Check each pair. By default, the columns that name the file are left out,
+        # because the pairing has compared them already, as paths, and the two tables may
+        # name the same product by its label and by its data file.
         if validate is None:
-            validate = list(set(row_table.get_keys()) & set(supp_table.get_keys()))
-            if not validate:
+            shared = set(row_table.get_keys()) & set(supp_table.get_keys())
+            if not shared:
                 raise HostIndexError(f'index files have no columns in common: {files}')
+            validate = sorted(shared - Host._key_columns(file_key, supplement_key))
+            if not validate:
+                return Host._merge_rows(row_dicts, supp_dicts,
+                                        prefer_supplement=prefer_supplement)
         elif isinstance(validate, str):
             validate = [validate]
         if isinstance(validate, (list, tuple)):
@@ -818,12 +824,50 @@ class Host:
             if not status:
                 raise HostIndexError(f'index file mismatch at record [{i}]: {files}')
 
-        # Merge dictionaries
+        return Host._merge_rows(row_dicts, supp_dicts,
+                                prefer_supplement=prefer_supplement)
+
+    @staticmethod
+    def _key_columns(file_key, supplement_key):
+        """The names of the columns that make up the file keys of two tables.
+
+        Parameters:
+            file_key (str | tuple[str, ...] | collections.abc.Callable | None): The key of
+                the index.
+            supplement_key (str | tuple[str, ...] | collections.abc.Callable | None): The
+                key of the supplement.
+
+        Returns:
+            set[str]: Every column named by either key; a function names none.
+        """
+
+        names = set()
+        for key in (file_key, supplement_key):
+            if isinstance(key, str):
+                names.add(key)
+            elif isinstance(key, (list, tuple)):
+                names.update(key)
+        return names
+
+    @staticmethod
+    def _merge_rows(row_dicts, supp_dicts, *, prefer_supplement):
+        """Each index row merged with its paired supplement row.
+
+        Parameters:
+            row_dicts (list[dict[str, Any]]): The index rows.
+            supp_dicts (list[dict[str, Any]]): The supplement row for each index row.
+            prefer_supplement (bool): True to keep the supplement's value of a column that
+                both tables have; False to keep the index's.
+
+        Returns:
+            list[dict[str, Any]]: The merged rows, in index order.
+        """
+
         if prefer_supplement:
             return [row_dict | supp_dict
-                    for (row_dict, supp_dict) in zip(row_dicts, supp_dicts)]
+                    for (row_dict, supp_dict) in zip(row_dicts, supp_dicts, strict=True)]
         return [supp_dict | row_dict
-                for (row_dict, supp_dict) in zip(row_dicts, supp_dicts)]
+                for (row_dict, supp_dict) in zip(row_dicts, supp_dicts, strict=True)]
 
     @staticmethod
     def _default_file_key(row_names, supp_names):

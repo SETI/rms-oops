@@ -95,16 +95,23 @@ def test_from_index_returns_the_hosts_iterator_unconsumed(index_label: Path) -> 
 
 
 def test_from_index_leaves_the_supplement_to_the_host(index_label: Path) -> None:
-    """The host reads and checks the supplement, so a column that the two tables write
-    differently fails only the default check, which the host does not use."""
+    """The host reads, checks, and filters the rows merged with the supplement's. NUM,
+    which the two tables write differently, fails only the default check, which the host
+    does not use."""
 
     supplement = index_label.with_name('supplement.lbl')
-    supplement.with_suffix('.tab').write_bytes(b'A,9\r\nB,8\r\nC,7\r\n')
-    supplement.write_text(INDEX_LABEL.replace('index.tab', 'supplement.tab'))
+    supplement.with_suffix('.tab').write_bytes(b'A,9,x\r\nB,8,y\r\nC,7,z\r\n')
+    val = ('  OBJECT = COLUMN\n    NAME = VAL\n    DATA_TYPE = CHARACTER\n'
+           '    START_BYTE = 5\n    BYTES = 1\n  END_OBJECT = COLUMN\n')
+    supplement.write_text(INDEX_LABEL.replace('index.tab', 'supplement.tab')
+                                     .replace('BYTES = 5', 'BYTES = 7')
+                                     .replace('COLUMNS = 2', 'COLUMNS = 3')
+                                     .replace('END_OBJECT = INDEX_TABLE',
+                                              val + 'END_OBJECT = INDEX_TABLE'))
 
-    result = Host.from_index(index_label, supplement=supplement)
+    result = Host.from_index(index_label, supplement=supplement, filter={'VAL': 'y'})
 
-    assert list(result) == ['A', 'B', 'C']
+    assert list(result) == ['B']
 
 
 def test_from_index_raises_an_argument_error_at_call_time(index_label: Path) -> None:

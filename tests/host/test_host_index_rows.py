@@ -78,6 +78,19 @@ def test_rows_in_another_order_pair_by_file(tmp_path: Path) -> None:
                                                          ('3', 'c')]
 
 
+@pytest.mark.parametrize('order', [[0, 1], [1, 0]], ids=['same-order', 'reversed'])
+def test_default_validation_accepts_a_label_and_its_data_file(tmp_path: Path,
+                                                              order: list[int]) -> None:
+    """The index names each data file and the supplement its label."""
+
+    labels = ['DATA/A.LBL', 'DATA/B.LBL']
+    rows = _read(tmp_path, {'FILE_SPECIFICATION_NAME': ['DATA/A.QUB', 'DATA/B.QUB'],
+                            'NUM': ['1', '2']},
+                 {'FILE_SPECIFICATION_NAME': [labels[i] for i in order],
+                  'VAL': [['a', 'b'][i] for i in order]})
+    assert [(row['NUM'], row['VAL']) for row in rows] == [('1', 'a'), ('2', 'b')]
+
+
 def test_an_index_row_without_a_supplement_row_raises(tmp_path: Path) -> None:
     with pytest.raises(HostIndexError,
                        match=r"no supplement row for an index row \(1\): \['B.LBL'\]"):
