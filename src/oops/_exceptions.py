@@ -48,16 +48,7 @@ class OopsRuntimeError(RuntimeError, OopsException):
 # SpiceFrame raises when the kernels lack the data for a time; the condition is a property
 # of the kernels loaded at run time rather than of any argument value.
 class OopsSpiceError(RuntimeError, OopsException):
-    """The SPICE kernels cannot supply data that an `oops` operation needs.
-
-    Raise it when a SPICE query fails because the loaded kernels do not hold what was
-    asked for: no C-kernel record for the pointing at a time, no frame connection between
-    two frames, no ephemeris for a body. It is not for a failure that has nothing to do
-    with the content of the kernels, such as an invalid argument.
-
-    One user is the host packages: a host raises this exception, and only this one, when
-    SPICE cannot supply the pointing of an observation it is building. A host does not
-    raise it when the caller supplies the pointing; see :class:`~oops.host.Host`.
+    """A SPICE query failed.
 
     Build it with :meth:`from_spice_error` from the exception that cspyce raised, so that
     every caller produces the same message form, and raise it ``from`` that exception so
