@@ -18,6 +18,9 @@ class SpiceType1Frame(SpiceFrame):
 
     _FRAME_LOOKUP = {}  # (name, reference name, tick_tolerance, cache_size) -> SpiceFrame
 
+    # The SPICE frame system cannot evaluate this frame at an arbitrary time; see Frame
+    _ONLY_SELF_EVALUATED = True
+
     def __init__(self, spice_frame, tick_tolerance, reference=None, *, frame_id=None,
                  cache_size=100):
         """Constructor for a SpiceType1Frame.

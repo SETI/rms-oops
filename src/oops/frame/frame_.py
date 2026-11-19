@@ -116,6 +116,20 @@ class Frame(Mutable):
     # shadow it and leave part of the hierarchy still taking shortcuts.
     _USE_SHORTCUTS = True
 
+    # True for a frame that only its own `transform_at_time` can evaluate, because the
+    # SPICE frame system (sxform, pxform, spkez) cannot reach it at an arbitrary time.
+    # SpiceType1Frame sets it: a type 1 C kernel holds discrete pointing with no angular
+    # velocity. Four shortcuts check it. J2000Frame._get_shortcut and
+    # SpiceFrame._get_shortcut return the inverse of the frame's own transform.
+    # SpicePath._get_shortcut computes the state in the frame's reference (J2000 for a
+    # registered SpiceType1Frame) and links the frame's own transform after it.
+    # SSBPath._get_shortcut declines such a frame, leaving the request to the general
+    # route in Path._wrt, which rotates the state into the frame. A SpiceFrame or
+    # SpicePath constructed directly with such a frame as its reference or frame, a
+    # SpiceType1Frame relative to another one, and a SPICE frame whose own kernel
+    # definition passes through a type 1 C kernel are not handled.
+    _ONLY_SELF_EVALUATED = False
+
     ######################################################################################
     # Serialization support
     ######################################################################################
@@ -812,10 +826,16 @@ class J2000Frame(NullFrame):
 
         Returns:
             Frame | None: The "shortcut" SpiceFrame if `reference` is a SpiceFrame; None
-            otherwise.
+            otherwise. If `reference` is a :class:`~oops.frame.SpiceType1Frame`, the
+            shortcut is a ReversedFrame of it instead.
         """
 
         if isinstance(reference, Frame._SpiceFrame):
+            # The SPICE frame system cannot evaluate J2000 relative to a type 1 C kernel
+            # frame, so invert that frame's own transform
+            if reference._ONLY_SELF_EVALUATED:
+                return ReversedFrame(reference._get_shortcut(self))
+
             return Frame._SpiceFrame.get('J2000', reference)
 
         return None

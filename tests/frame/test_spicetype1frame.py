@@ -5,6 +5,7 @@
 import pickle
 
 import cspyce
+import numpy as np
 import pytest
 
 from spicedb                       import get_spice_filecache_prefix
@@ -12,10 +13,12 @@ from polymath                      import Scalar
 from oops.frame                    import (Frame, LinkedFrame, Rotation, SpiceFrame,
                                            SpinFrame)
 from oops.frame.spicetype1frame    import SpiceType1Frame
+from oops.path                     import Path
+from oops.path.spicepath           import SpicePath
 
 # Galileo's scan platform is defined by a Type 1 C kernel. Its frame definition and its
-# spacecraft clock are all these tests need; none of them evaluates a transform, so no C
-# kernel is required.
+# spacecraft clock are all that the tests of construction and lookup need; the tests that
+# evaluate a transform also furnish the C kernel named by CK_KERNEL below.
 GALILEO_KERNELS = ['General/LSK/naif0012.tls',
                    'Galileo/SCLK/mk00062a.tsc',
                    'Galileo/FK/gll_v0.tf']
@@ -121,7 +124,8 @@ def test_get_rejects_a_reference_that_is_not_a_spice_frame(galileo_kernels) -> N
 
 
 # The C kernel covering Galileo's scan platform in November 1996. Evaluating a transform
-# needs it; the tests above do not.
+# needs it; the tests above do not. Its pointing instances are 36400 ticks (about five
+# minutes) apart.
 CK_KERNEL = 'Galileo/CK/ckc03b_plt.bc'
 
 
@@ -384,5 +388,199 @@ def test_a_shortcut_through_a_rotating_reference_needs_a_common_origin(galileo_k
 
     with pytest.raises(ValueError, match='LinkedFrame origin mismatch'):
         frame._get_shortcut(spinning.wayframe)
+
+
+# Connections made toward the type 1 frame, which take the inverse of its transform
+# (#229).
+# The SPICE frame system cannot evaluate the frame at these times: the C kernel above
+# carries no angular velocity, so cspyce.sxform fails, and its pointing is discrete, so
+# cspyce.pxform finds nothing away from a pointing instance. Only ckgp, given the frame's
+# tick tolerance, can.
+
+# Seconds away from each pointing instance; 12 clock ticks, inside the frame's tolerance
+OFF_INSTANCE = 0.1
+
+
+@pytest.fixture
+def inverse_times(galileo_pointing):
+    """Furnish a C kernel, define the frame, and return times just off its pointing.
+
+    Yields:
+        list[float]: Four times in seconds TDB, each offset from a pointing instance by
+        less than the frame's tick tolerance.
+    """
+
+    SpiceType1Frame(FRAME, TICKS)
+
+    yield [time + OFF_INSTANCE for time in galileo_pointing]
+
+
+def _cmatrices(times: list[float], reference: str = 'J2000') -> np.ndarray:
+    """The C matrices from `reference` to the scan platform, straight from ckgp.
+
+    Parameters:
+        times (list[float]): Times in seconds TDB.
+        reference (str, optional): The SPICE name of the reference frame.
+
+    Returns:
+        numpy.ndarray: One 3x3 matrix per time.
+    """
+
+    matrices = []
+    for time in times:
+        ticks = cspyce.sce2c(GALILEO_SCLK, time)
+        (matrix, _) = cspyce.ckgp(-77001, ticks, TICKS, reference)
+        matrices.append(matrix)
+
+    return np.array(matrices)
+
+
+def test_j2000_relative_to_the_frame_inverts_its_transform(inverse_times) -> None:
+    """J2000 relative to a type 1 frame transposes the C matrix and has no rotation rate.
+    """
+
+    xform = Frame.J2000.wrt(FRAME).transform_at_time(Scalar(inverse_times))
+
+    expected = _cmatrices(inverse_times).swapaxes(-1, -2)
+    assert np.abs(xform.matrix.vals - expected).max() < 1.e-15
+    assert np.all(xform.omega.vals == 0.)
+
+
+def test_a_spice_frame_relative_to_the_frame_inverts_its_transform(inverse_times) -> None:
+    """Any other SpiceFrame relative to a type 1 frame transposes the C matrix as well."""
+
+    b1950 = SpiceFrame.get('B1950')
+
+    xform = b1950.wrt(FRAME).transform_at_time(Scalar(inverse_times))
+
+    expected = _cmatrices(inverse_times, 'B1950').swapaxes(-1, -2)
+    assert np.abs(xform.matrix.vals - expected).max() < 1.e-15
+
+
+# Seconds from a pointing instance to a time 36 and 48 ticks away: inside and just beyond
+# the frame's tolerance of 40 ticks
+INSIDE_TOLERANCE = 0.3
+BEYOND_TOLERANCE = 0.4
+
+
+def test_the_inverse_reaches_a_time_inside_the_frame_tolerance(inverse_times) -> None:
+    """The inverse finds the pointing instance from a time inside the frame's tolerance.
+
+    A single time is used, so the query cannot take the shortcut for an array of nearly
+    equal times.
+    """
+
+    time = inverse_times[0] - OFF_INSTANCE + INSIDE_TOLERANCE
+
+    xform = Frame.J2000.wrt(FRAME).transform_at_time(Scalar(time))
+
+    expected = _cmatrices([time])[0].T
+    assert np.abs(xform.matrix.vals - expected).max() < 1.e-15
+
+
+def test_the_inverse_fails_just_beyond_the_frame_tolerance(inverse_times) -> None:
+    """The inverse uses the frame's own tolerance, so a time just beyond it finds nothing.
+    """
+
+    time = inverse_times[0] - OFF_INSTANCE + BEYOND_TOLERANCE
+
+    with pytest.raises(OSError, match='CKINSUFFDATA'):
+        Frame.J2000.wrt(FRAME).transform_at_time(Scalar(time))
+
+
+def test_a_spice_frame_fails_just_beyond_the_frame_tolerance(inverse_times) -> None:
+    """Another SpiceFrame relative to the frame uses the frame's own tolerance as well.
+
+    The test of a time 12 ticks off the pointing above shows that a time inside the
+    tolerance succeeds through this connection.
+    """
+
+    time = inverse_times[0] - OFF_INSTANCE + BEYOND_TOLERANCE
+
+    with pytest.raises(OSError, match='CKINSUFFDATA'):
+        SpiceFrame.get('B1950').wrt(FRAME).transform_at_time(Scalar(time))
+
+
+@pytest.fixture
+def earth_times(core_kernels, inverse_times):
+    """The times just off the pointing, with the planetary ephemeris and Earth defined.
+
+    Yields:
+        list[float]: The times that `inverse_times` yields.
+    """
+
+    # Both fixtures clear the registries, so make sure the frame survived the second
+    SpiceType1Frame.get(FRAME, TICKS)
+    SpicePath('EARTH', 'SSB')
+    SpicePath('MOON', 'EARTH')
+
+    yield inverse_times
+
+
+def _earth_from_ssb(times: list[float]) -> np.ndarray:
+    """The J2000 position of the Earth relative to the SSB, straight from spkez.
+
+    Parameters:
+        times (list[float]): Times in seconds TDB.
+
+    Returns:
+        numpy.ndarray: One position vector per time.
+    """
+
+    return np.array([cspyce.spkez(399, time, 'J2000', 'NONE', 0)[0][:3]
+                     for time in times])
+
+
+def _moon_from_earth(times: list[float]) -> np.ndarray:
+    """The J2000 state of the Moon relative to the Earth, straight from spkez.
+
+    Parameters:
+        times (list[float]): Times in seconds TDB.
+
+    Returns:
+        numpy.ndarray: One six-element state per time.
+    """
+
+    return np.array([cspyce.spkez(301, time, 'J2000', 'NONE', 399)[0]
+                     for time in times])
+
+
+def test_a_spice_path_in_the_frame_is_rotated_by_the_c_matrix(earth_times) -> None:
+    """A SpicePath expressed in a type 1 frame is the J2000 state rotated by the C matrix.
+    """
+
+    event = Path.as_path('EARTH').wrt('SSB', FRAME).event_at_time(Scalar(earth_times))
+
+    expected = np.einsum('kij,kj->ki', _cmatrices(earth_times),
+                         _earth_from_ssb(earth_times))
+    assert np.abs(event.pos.vals - expected).max() < 1.e-6
+
+
+def test_the_ssb_in_the_frame_is_rotated_by_the_c_matrix(earth_times) -> None:
+    """The SSB relative to a SpicePath, in a type 1 frame, is rotated the same way."""
+
+    event = Path.SSB.wrt('EARTH', FRAME).event_at_time(Scalar(earth_times))
+
+    expected = -np.einsum('kij,kj->ki', _cmatrices(earth_times),
+                          _earth_from_ssb(earth_times))
+    assert np.abs(event.pos.vals - expected).max() < 1.e-6
+
+
+def test_a_spice_path_from_another_body_keeps_its_origin(earth_times) -> None:
+    """A SpicePath relative to a body other than the SSB stays relative to that body.
+
+    The position and the velocity are the J2000 state rotated by the C matrix; the frame
+    reports no rotation rate, so the velocity needs no other term.
+    """
+
+    event = Path.as_path('MOON').wrt('EARTH', FRAME).event_at_time(Scalar(earth_times))
+
+    cmatrices = _cmatrices(earth_times)
+    state = _moon_from_earth(earth_times)
+    expected_pos = np.einsum('kij,kj->ki', cmatrices, state[:, :3])
+    expected_vel = np.einsum('kij,kj->ki', cmatrices, state[:, 3:])
+    assert event.origin == Path.as_path('EARTH').waypoint
+    assert np.abs(event.pos.vals - expected_pos).max() < 1.e-8
+    assert np.abs(event.vel.vals - expected_vel).max() < 1.e-12
 
 ##########################################################################################

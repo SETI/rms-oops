@@ -11,7 +11,7 @@ import cspyce
 from polymath    import Scalar, Vector3
 from oops.config import QUICK
 from oops.event  import Event
-from oops.frame  import Frame, SpiceFrame
+from oops.frame  import Frame, Rotation, SpiceFrame
 from oops.path   import (Path, LinkedPath, NullPath, ReversedPath, RelativePath,
                          RotatedPath, QuickPath, LinearPath, SpicePath)
 from tests.conftest import SPICE_PREFIX
@@ -300,6 +300,50 @@ def test_a_path_in_another_frame_alone_is_a_rotated_path() -> None:
     assert isinstance(path, RotatedPath)
     assert event.frame is SpiceFrame('IAU_EARTH').wayframe
     assert event.pos.norm().vals == pytest.approx([1.e5, 1.e5], rel=1.e-12)
+
+
+def test_a_path_relative_to_itself_is_zero_in_another_frame() -> None:
+    """A path measured from itself has no offset, whatever frame it is expressed in.
+
+    The result must not be the path's own offset from its origin, rotated.
+    """
+
+    fixed = LinearPath((Vector3((1.e5, 0., 0.)), Vector3.ZERO), 0., 'SSB',
+                       path_id='TEST_FIXED_SELF')
+    tilted = Rotation(0.1, 2, Frame.J2000, frame_id='TEST_TILTED_SELF')
+
+    event = fixed.wrt(fixed, tilted).event_at_time(TIME)
+
+    assert event.origin == fixed.waypoint
+    assert event.pos == Vector3.ZERO
+
+
+def test_a_spice_path_in_a_non_spice_frame_keeps_its_origin() -> None:
+    """A SpicePath from a body other than the SSB, in a non-SPICE frame, stays relative
+    to that body: its state is the J2000 state rotated into the frame.
+    """
+
+    SpicePath('EARTH', 'SSB')
+    SpicePath('MOON', 'EARTH')
+    tilted = Rotation(0.1, 2, Frame.J2000, frame_id='TEST_TILTED')
+
+    event = Path.as_path('MOON').wrt('EARTH', tilted).event_at_time(TIME)
+
+    matrix = tilted.transform_at_time(0.).matrix.vals     # a fixed rotation
+    state = np.array([cspyce.spkez(301, t, 'J2000', 'NONE', 399)[0] for t in (0., 1000.)])
+    assert event.origin == Path.as_path('EARTH').waypoint
+    assert np.abs(event.pos.vals - state[:, :3] @ matrix.T).max() < 1.e-8
+
+
+def test_a_null_path_in_another_frame_keeps_the_frame_through_pickle() -> None:
+    """Unpickling a NullPath restores the frame it was expressed in, not its default."""
+
+    cspyce.furnsh(SPICE_PREFIX.retrieve('pck00010.tpc'))
+    path = NullPath(SpicePath('SUN', 'SSB'), SpiceFrame('IAU_EARTH'))
+
+    restored = pickle.loads(pickle.dumps(path))
+
+    assert restored.frame.wayframe is path.frame.wayframe
 
 
 def test_a_description_names_the_frame_when_it_is_not_the_origin_frame() -> None:
