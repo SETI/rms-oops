@@ -17,8 +17,8 @@ from oops.path                     import Path
 from oops.path.spicepath           import SpicePath
 
 # Galileo's scan platform is defined by a Type 1 C kernel. Its frame definition and its
-# spacecraft clock are all these tests need; none of them evaluates a transform, so no C
-# kernel is required.
+# spacecraft clock are all that the tests of construction and lookup need; the tests that
+# evaluate a transform also furnish the C kernel named by CK_KERNEL below.
 GALILEO_KERNELS = ['General/LSK/naif0012.tls',
                    'Galileo/SCLK/mk00062a.tsc',
                    'Galileo/FK/gll_v0.tf']
@@ -124,7 +124,8 @@ def test_get_rejects_a_reference_that_is_not_a_spice_frame(galileo_kernels) -> N
 
 
 # The C kernel covering Galileo's scan platform in November 1996. Evaluating a transform
-# needs it; the tests above do not.
+# needs it; the tests above do not. Its pointing instances are 36400 ticks (about five
+# minutes) apart.
 CK_KERNEL = 'Galileo/CK/ckc03b_plt.bc'
 
 
@@ -456,6 +457,37 @@ def test_a_spice_frame_relative_to_the_frame_inverts_its_transform(inverse_times
     assert np.abs(xform.matrix.vals - expected).max() < 1.e-15
 
 
+# Seconds from a pointing instance to a time 36 and 48 ticks away: inside and just beyond
+# the frame's tolerance of 40 ticks
+INSIDE_TOLERANCE = 0.3
+BEYOND_TOLERANCE = 0.4
+
+
+def test_the_inverse_reaches_a_time_inside_the_frame_tolerance(inverse_times) -> None:
+    """The inverse finds the pointing instance from a time inside the frame's tolerance.
+
+    A single time is used, so the query cannot take the shortcut for an array of nearly
+    equal times.
+    """
+
+    time = inverse_times[0] - OFF_INSTANCE + INSIDE_TOLERANCE
+
+    xform = Frame.J2000.wrt(FRAME).transform_at_time(Scalar(time))
+
+    expected = _cmatrices([time])[0].T
+    assert np.abs(xform.matrix.vals - expected).max() < 1.e-15
+
+
+def test_the_inverse_fails_just_beyond_the_frame_tolerance(inverse_times) -> None:
+    """The inverse uses the frame's own tolerance, so a time just beyond it finds nothing.
+    """
+
+    time = inverse_times[0] - OFF_INSTANCE + BEYOND_TOLERANCE
+
+    with pytest.raises(OSError, match='CKINSUFFDATA'):
+        Frame.J2000.wrt(FRAME).transform_at_time(Scalar(time))
+
+
 @pytest.fixture
 def earth_times(core_kernels, inverse_times):
     """The times just off the pointing, with the planetary ephemeris and Earth defined.
@@ -467,6 +499,7 @@ def earth_times(core_kernels, inverse_times):
     # Both fixtures clear the registries, so make sure the frame survived the second
     SpiceType1Frame.get(FRAME, TICKS)
     SpicePath('EARTH', 'SSB')
+    SpicePath('MOON', 'EARTH')
 
     yield inverse_times
 
@@ -482,6 +515,20 @@ def _earth_from_ssb(times: list[float]) -> np.ndarray:
     """
 
     return np.array([cspyce.spkez(399, time, 'J2000', 'NONE', 0)[0][:3]
+                     for time in times])
+
+
+def _moon_from_earth(times: list[float]) -> np.ndarray:
+    """The J2000 state of the Moon relative to the Earth, straight from spkez.
+
+    Parameters:
+        times (list[float]): Times in seconds TDB.
+
+    Returns:
+        numpy.ndarray: One six-element state per time.
+    """
+
+    return np.array([cspyce.spkez(301, time, 'J2000', 'NONE', 399)[0]
                      for time in times])
 
 
@@ -504,5 +551,23 @@ def test_the_ssb_in_the_frame_is_rotated_by_the_c_matrix(earth_times) -> None:
     expected = -np.einsum('kij,kj->ki', _cmatrices(earth_times),
                           _earth_from_ssb(earth_times))
     assert np.abs(event.pos.vals - expected).max() < 1.e-6
+
+
+def test_a_spice_path_from_another_body_keeps_its_origin(earth_times) -> None:
+    """A SpicePath relative to a body other than the SSB stays relative to that body.
+
+    The position and the velocity are the J2000 state rotated by the C matrix; the frame
+    reports no rotation rate, so the velocity needs no other term.
+    """
+
+    event = Path.as_path('MOON').wrt('EARTH', FRAME).event_at_time(Scalar(earth_times))
+
+    cmatrices = _cmatrices(earth_times)
+    state = _moon_from_earth(earth_times)
+    expected_pos = np.einsum('kij,kj->ki', cmatrices, state[:, :3])
+    expected_vel = np.einsum('kij,kj->ki', cmatrices, state[:, 3:])
+    assert event.origin == Path.as_path('EARTH').waypoint
+    assert np.abs(event.pos.vals - expected_pos).max() < 1.e-8
+    assert np.abs(event.vel.vals - expected_vel).max() < 1.e-12
 
 ##########################################################################################

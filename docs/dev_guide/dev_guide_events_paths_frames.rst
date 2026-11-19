@@ -153,9 +153,11 @@ corrections) and :class:`~oops.frame.QuickFrame`.
 the SPICE frame system. A :class:`~oops.frame.SpiceType1Frame` cannot be reached that
 way: a type 1 C-kernel holds discrete pointing with no angular velocity, which only
 ``ckgp``, given a tick tolerance, can evaluate. The class therefore sets
-``_ONLY_SELF_EVALUATED = True``, and a shortcut toward such a frame inverts the frame's
-own transform, while a :class:`~oops.path.SpicePath` asked for in that frame is computed
-in J2000 and then rotated.
+``_ONLY_SELF_EVALUATED = True``. A shortcut from J2000 or from another SPICE frame toward
+such a frame inverts the frame's own transform. A :class:`~oops.path.SpicePath` asked for
+in that frame is computed in J2000, relative to the requested origin, and then rotated by
+the frame's transform. A SPICE frame or path constructed directly on such a frame still
+goes to the SPICE frame system and fails.
 
 The photon solvers
 ------------------

@@ -625,12 +625,11 @@ class Path(Mutable):
                 return new_path
             return RotatedPath(new_path, frame)
 
-        # If the Path and origin match, just rotate
+        # A Path relative to itself is zero in any frame. This must not be a RotatedPath of
+        # the waypoint, which would rotate the waypoint's own definition, i.e., its offset
+        # from its origin, rather than a zero offset.
         if waypoint == origin:
-            if frame == origin._frame:
-                return NullPath(waypoint, frame=frame)
-            else:
-                return RotatedPath(waypoint, frame=frame)
+            return NullPath(waypoint, frame=frame)
 
         # Find the linked Path using the J2000 frame
         key = (waypoint, origin._waypoint, Frame.J2000)
@@ -758,11 +757,11 @@ class NullPath(Path):
         return f'NullPath({self.string_id})'
 
     def __getstate__(self):
-        return (self._waypoint,)
+        return (self._waypoint, self._frame)
 
     def __setstate__(self, state):
-        (path,) = state
-        self.__init__(path)
+        (path, frame) = state
+        self.__init__(path, frame)
 
     def event_at_time(self, time, *, quick=False):
         """An Event corresponding to a specified time on this path.
