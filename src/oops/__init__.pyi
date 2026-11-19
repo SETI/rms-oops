@@ -11,8 +11,10 @@ exactly: every public name, its parameters, which of them are keyword-only, and 
 defaults. Types are given where they are unambiguous and are `Any` elsewhere.
 """
 
+import pathlib
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, Self
+from filecache import FCPath
 from numpy import ndarray
 from polymath import (Boolean, Matrix, Matrix3, Pair, Quaternion, Qube, Scalar, Vector,
                       Vector3)
@@ -61,12 +63,21 @@ __all__ = ['cadence', 'calibration', 'fov', 'gravity', 'frame', 'observation', '
            'C_INVERSE', 'RPD', 'DPR', 'SPR', 'RPS', 'SPD', 'AU', 'PI', 'TWOPI', 'HALFPI',
            'Boolean', 'Matrix', 'Matrix3', 'Pair', 'Quaternion', 'Qube', 'Scalar',
            'Vector', 'Vector3', 'OopsException', 'OopsIndexError', 'OopsKeyError',
-           'OopsRuntimeError', 'OopsTypeError', 'OopsValueError']
+           'OopsRuntimeError', 'OopsSpiceError', 'OopsTypeError', 'OopsValueError']
 
 class OopsException(Exception): ...
 class OopsIndexError(IndexError, OopsException): ...
 class OopsKeyError(KeyError, OopsException): ...
 class OopsRuntimeError(RuntimeError, OopsException): ...
+class OopsSpiceError(RuntimeError, OopsException):
+    spice_code: str | None
+    filepath: str | pathlib.Path | FCPath | None
+    def __init__(self, message: str, *, spice_code: str | None = None,
+                 filepath: str | pathlib.Path | FCPath | None = None) -> None: ...
+    @classmethod
+    def from_spice_error(cls, exc: BaseException, *, description: str,
+                         time: float | None = None,
+                         filepath: str | pathlib.Path | FCPath | None = None) -> Self: ...
 class OopsTypeError(TypeError, OopsException): ...
 class OopsValueError(ValueError, OopsException): ...
 

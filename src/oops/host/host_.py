@@ -28,7 +28,24 @@ ObsArray: TypeAlias = (np.ndarray[tuple[int, ...], np.dtype[np.object_]]
 
 
 class Host:
-    """Superclass of all host modules."""
+    """Superclass of all host modules.
+
+    When a host builds an observation whose pointing comes from SPICE, it checks at load
+    time, in its ``from_file``, that the SPICE kernels can supply that pointing at the
+    time of the observation. If they cannot, because no C-kernel record covers the time or
+    no frame connection can be made, the host raises :class:`~oops.OopsSpiceError`, built
+    with :meth:`~oops.OopsSpiceError.from_spice_error` from the exception that cspyce
+    raised and raised ``from`` it. That is the only exception a host raises for missing
+    SPICE pointing: it never lets the cspyce exception escape, and it never raises
+    :class:`~oops.OopsSpiceError` for a failure that is not about SPICE data.
+
+    A host does not check SPICE, and does not raise :class:`~oops.OopsSpiceError`, when
+    the caller supplies the pointing: when ``from_file`` is given a `frame` override,
+    whether a :class:`~oops.frame.Cmatrix` or any other :class:`~oops.Frame`, or when the
+    caller chooses a pointing source that is not SPICE, through an option of the host. A
+    host's ``from_index`` does not check, and does not leave out a row for missing
+    pointing.
+    """
 
     _HOSTS = []     # A list of all registered Host subclasses.
     _LOOKUP = {}    # name -> subclass
@@ -64,7 +81,8 @@ class Host:
                 the observation.
             path (str | Path, optional): Override for the Path of the observer.
             frame (str | Frame, optional): Override for the Frame of the observing
-                instrument.
+                instrument. When it is given, the host does not check that SPICE can
+                supply the pointing.
             cadence (Cadence, optional): Override for the Cadence of the observation.
             fov (FOV, optional): Override for the default FOV of the observing instrument.
             calibrations (Calibration | list[Calibration], optional): Override for the
@@ -107,6 +125,9 @@ class Host:
             UnknownHostError: If `filepath` is not associated with any registered Host
                 subclass.
             OopsValueError: If a value in `pds3_options` is invalid.
+            OopsSpiceError: If the observation's pointing comes from SPICE and the SPICE
+                kernels cannot supply it at the time of the observation. Never raised when
+                `frame` is given or when the pointing does not come from SPICE.
         """
 
         # Set the default Pds3Label options to method='fast', sources=True

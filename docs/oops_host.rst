@@ -16,6 +16,12 @@ does the same for each row of a PDS3 index. The subpackage also provides
 which hosts use to read image arrays, and the :class:`~oops.host.HostError` exceptions
 that report a file a host cannot read.
 
+A host that cannot obtain an observation's pointing from the SPICE kernels raises
+:class:`~oops.OopsSpiceError`, which carries the SPICE error code and the file being
+read. It does not check the kernels, and so does not raise that exception, when the
+caller supplies the pointing, either as a ``frame`` override or by choosing a pointing
+source other than SPICE. The rule is given in full under :class:`~oops.host.Host`.
+
 .. automodule:: oops.host
     :member-order: bysource
     :members:
