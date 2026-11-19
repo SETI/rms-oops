@@ -708,10 +708,12 @@ class SpiceFrame(Frame):
 
         # Get the SpiceFrame to the selected ancestor. The SPICE frame system cannot
         # evaluate a frame relative to a type 1 C kernel frame, so in that case invert the
-        # ancestor's own transform relative to this frame. That transform comes from ckgp
-        # and always has zero omega, so this frame's omega_type has nothing to select: a
-        # tabulated omega does not exist, and a numerical one would differentiate across
-        # discrete pointing instances.
+        # ancestor's own transform relative to this frame. That transform comes from ckgp,
+        # which returns no rate, so zero omega is reported whatever this frame's
+        # omega_type requests, even where this frame has a rate of its own (such as a
+        # body frame from a PCK) or where another C kernel covering the epoch has one.
+        # A numerical omega would differentiate across discrete pointing instances.
+        # The missing rate of a rotating frame is tracked in #245.
         if ancestor._ONLY_SELF_EVALUATED:
             spice_frame = ReversedFrame(ancestor._get_shortcut(self._wayframe))
         else:

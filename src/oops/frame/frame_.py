@@ -119,10 +119,12 @@ class Frame(Mutable):
     # True for a frame that only its own `transform_at_time` can evaluate, because the
     # SPICE frame system (sxform, pxform, spkez) cannot reach it at an arbitrary time.
     # SpiceType1Frame sets it: a type 1 C kernel holds discrete pointing with no angular
-    # velocity. Four shortcuts check it: J2000Frame._get_shortcut and
-    # SpiceFrame._get_shortcut return the inverse of the frame's own transform, and
-    # SpicePath._get_shortcut and SSBPath._get_shortcut compute the state in J2000 and
-    # leave the rotation into the frame to a LinkedPath or RotatedPath. A SpiceFrame or
+    # velocity. Four shortcuts check it. J2000Frame._get_shortcut and
+    # SpiceFrame._get_shortcut return the inverse of the frame's own transform.
+    # SpicePath._get_shortcut computes the state in the frame's reference (J2000 for a
+    # registered SpiceType1Frame) and links the frame's own transform after it.
+    # SSBPath._get_shortcut declines such a frame, leaving the request to the general
+    # route in Path._wrt, which rotates the state into the frame. A SpiceFrame or
     # SpicePath constructed directly with such a frame as its reference or frame, a
     # SpiceType1Frame relative to another one, and a SPICE frame whose own kernel
     # definition passes through a type 1 C kernel are not handled.

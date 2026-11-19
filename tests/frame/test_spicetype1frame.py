@@ -488,6 +488,19 @@ def test_the_inverse_fails_just_beyond_the_frame_tolerance(inverse_times) -> Non
         Frame.J2000.wrt(FRAME).transform_at_time(Scalar(time))
 
 
+def test_a_spice_frame_fails_just_beyond_the_frame_tolerance(inverse_times) -> None:
+    """Another SpiceFrame relative to the frame uses the frame's own tolerance as well.
+
+    The test of a time 12 ticks off the pointing above shows that a time inside the
+    tolerance succeeds through this connection.
+    """
+
+    time = inverse_times[0] - OFF_INSTANCE + BEYOND_TOLERANCE
+
+    with pytest.raises(OSError, match='CKINSUFFDATA'):
+        SpiceFrame.get('B1950').wrt(FRAME).transform_at_time(Scalar(time))
+
+
 @pytest.fixture
 def earth_times(core_kernels, inverse_times):
     """The times just off the pointing, with the planetary ephemeris and Earth defined.
