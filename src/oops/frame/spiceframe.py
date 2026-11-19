@@ -11,7 +11,8 @@ import cspyce
 from polymath              import Matrix3, Quaternion, Scalar, Vector3
 from oops._exceptions      import (OopsIndexError, OopsKeyError, OopsTypeError,
                                    OopsValueError)
-from oops.frame            import Frame, J2000Frame, LinkedFrame, NullFrame
+from oops.frame            import (Frame, J2000Frame, LinkedFrame, NullFrame,
+                                   ReversedFrame)
 from oops.frame.quickframe import QuickFrame
 from oops.transform        import Transform
 
@@ -695,7 +696,9 @@ class SpiceFrame(Frame):
 
         Returns:
             Frame: This Frame relative to `reference`, connected through the nearest
-            SpiceFrame ancestor of `reference`.
+            SpiceFrame ancestor of `reference`. If that ancestor is a
+            :class:`~oops.frame.SpiceType1Frame`, the connection is a ReversedFrame of
+            the ancestor relative to this Frame.
         """
 
         # Find the first SpiceFrame (or J2000) that's an ancestor of the reference
@@ -703,9 +706,14 @@ class SpiceFrame(Frame):
         while not isinstance(ancestor, (SpiceFrame, J2000Frame)):
             ancestor = ancestor._reference
 
-        # Get the SpiceFrame to the selected ancestor
-        spice_frame = SpiceFrame.get(self, ancestor, omega_type=self._omega_type,
-                                     omega_dt=self._omega_dt)
+        # Get the SpiceFrame to the selected ancestor. The SPICE frame system cannot
+        # evaluate a frame relative to a type 1 C kernel frame, so in that case invert the
+        # ancestor's own transform relative to this frame.
+        if ancestor._ONLY_SELF_EVALUATED:
+            spice_frame = ReversedFrame(ancestor._get_shortcut(self._wayframe))
+        else:
+            spice_frame = SpiceFrame.get(self, ancestor, omega_type=self._omega_type,
+                                         omega_dt=self._omega_dt)
 
         # Maybe we're done
         if ancestor == reference:

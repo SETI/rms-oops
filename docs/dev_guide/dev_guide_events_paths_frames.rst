@@ -149,6 +149,14 @@ how a camera pointed at a target is built), :class:`~oops.frame.TrackerFrame`,
 :class:`~oops.frame.Navigation` and :class:`~oops.frame.FrameShift` (Fittable pointing
 corrections) and :class:`~oops.frame.QuickFrame`.
 
+``wrt`` connects one SPICE frame to another through a shortcut that hands both names to
+the SPICE frame system. A :class:`~oops.frame.SpiceType1Frame` cannot be reached that
+way: a type 1 C-kernel holds discrete pointing with no angular velocity, which only
+``ckgp``, given a tick tolerance, can evaluate. The class therefore sets
+``_ONLY_SELF_EVALUATED = True``, and a shortcut toward such a frame inverts the frame's
+own transform, while a :class:`~oops.path.SpicePath` asked for in that frame is computed
+in J2000 and then rotated.
+
 The photon solvers
 ------------------
 

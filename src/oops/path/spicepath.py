@@ -361,7 +361,8 @@ class SpicePath(Path):
 
         Returns:
             Path: This Path relative to `origin` and `frame`, connected through the
-            nearest SpicePath ancestor of `origin`.
+            nearest SpicePath ancestor of `origin` and the nearest ancestor of `frame`
+            that the SPICE frame system can evaluate.
         """
 
         # Find the first SpicePath that's an ancestor of the origin
@@ -369,9 +370,11 @@ class SpicePath(Path):
         while not isinstance(ancestor_origin, (SpicePath, SSBPath)):
             ancestor_origin = ancestor_origin._origin
 
-        # Find the first SpiceFrame that's an ancestor of the frame
+        # Find the first SpiceFrame that's an ancestor of the frame. spkez cannot rotate
+        # into a type 1 C kernel frame, so pass over one; the link below applies it.
         ancestor_frame = frame
-        while not isinstance(ancestor_frame, (SpiceFrame, J2000Frame)):
+        while (not isinstance(ancestor_frame, (SpiceFrame, J2000Frame))
+               or ancestor_frame._ONLY_SELF_EVALUATED):
             ancestor_frame = ancestor_frame._reference
 
         # Get the SpicePath to the ancestor origin and frame

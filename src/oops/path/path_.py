@@ -869,8 +869,10 @@ class SSBPath(NullPath):
             Path | None: The "shortcut" Path if it could be constructed.
         """
 
+        # spkez cannot rotate into a type 1 C kernel frame, so no shortcut reaches one
         if (isinstance(origin, Frame._SpicePath)
-                and isinstance(frame, (SpiceFrame, J2000Frame))):
+                and isinstance(frame, (SpiceFrame, J2000Frame))
+                and not frame._ONLY_SELF_EVALUATED):
             return Path._SpicePath.get('SSB', origin, frame)
 
         return None

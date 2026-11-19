@@ -116,6 +116,14 @@ class Frame(Mutable):
     # shadow it and leave part of the hierarchy still taking shortcuts.
     _USE_SHORTCUTS = True
 
+    # True for a frame that only its own `transform_at_time` can evaluate, because the
+    # SPICE frame system (sxform, pxform, spkez) cannot reach it at an arbitrary time.
+    # SpiceType1Frame sets it: a type 1 C kernel holds discrete pointing with no angular
+    # velocity. A shortcut that would hand such a frame to the frame system uses the
+    # frame's own transform instead: inverted for another frame relative to it, or
+    # applied after the fact to a SpicePath computed in J2000.
+    _ONLY_SELF_EVALUATED = False
+
     ######################################################################################
     # Serialization support
     ######################################################################################
@@ -812,10 +820,16 @@ class J2000Frame(NullFrame):
 
         Returns:
             Frame | None: The "shortcut" SpiceFrame if `reference` is a SpiceFrame; None
-            otherwise.
+            otherwise. If `reference` is a :class:`~oops.frame.SpiceType1Frame`, the
+            shortcut is a ReversedFrame of it instead.
         """
 
         if isinstance(reference, Frame._SpiceFrame):
+            # The SPICE frame system cannot evaluate J2000 relative to a type 1 C kernel
+            # frame, so invert that frame's own transform
+            if reference._ONLY_SELF_EVALUATED:
+                return ReversedFrame(reference._get_shortcut(self))
+
             return Frame._SpiceFrame.get('J2000', reference)
 
         return None
