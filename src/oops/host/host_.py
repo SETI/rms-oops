@@ -4,6 +4,7 @@
 
 import numbers
 import pathlib
+from collections import Counter
 from typing import TypeAlias
 
 import numpy as np
@@ -22,6 +23,10 @@ from oops.path        import PathShift
 
 from ._errors import (HostFormatError, HostIndexError, PdsHostError, UnknownHostError,
                       VicarHostError, WrongHostError)
+
+# The number of unpaired or repeated paths that an error message about pairing the rows of
+# an index and its supplement lists
+_PATHS_IN_MESSAGE = 3
 
 ObsArray: TypeAlias = (np.ndarray[tuple[int, ...], np.dtype[np.object_]]
                        | tuple[Observation | None, ...])
@@ -607,47 +612,76 @@ class Host:
 
     @classmethod
     def _read_index_rows(cls, filepath, *, supplement=None, require_supplement=True,
-                         validate=None, pds3_options=None, label=None):
+                         validate=None, file_key=None, supplement_key=None,
+                         prefer_supplement=False, pds3_options=None, label=None):
         """Read the index rows and return one dictionary per row, with supplementary index
         content merged.
+
+        Each row of the index is merged with the row of the supplement that describes the
+        same file. When the two tables list the same files in the same order, the rows are
+        paired by position. Otherwise, each index row is paired with the supplement row
+        that names the same file, and then every index row must have exactly one such
+        supplement row, every supplement row must belong to an index row, and no file may
+        be listed twice in either table. Paths are compared without regard to case, to
+        empty or "." components (as in a leading "/" or "./" or a doubled slash), or to
+        the extension of the file name, so that a row naming a product's label and a row
+        naming its data file match. Without a file key, as when the tables do not both
+        have the default columns, the rows are paired by position.
 
         Parameters:
             filepath (str | pathlib.Path | FCPath): Path to the index label.
             supplement (str | pathlib.Path | FCPath | object, optional): The path to the
-                PDS label of a supplemental index file, if any. If specified, this file
-                must have the same records in the same order as the table described by
-                `filepath`. Use the sentinel value `Host.SUPPLEMENT` to read the file in
-                the directory of `filepath` whose name matches except that "_index" is
-                replaced by "_supplemental_index" in upper or lower case; that file must
-                exist.
+                PDS label of a supplemental index file, if any. Use the sentinel value
+                `Host.SUPPLEMENT` to read the file in the directory of `filepath` whose
+                name matches except that "_index" is replaced by "_supplemental_index" in
+                upper or lower case; that file must exist.
             require_supplement (bool, optional): If True and `supplement` is specified,
                 the supplement file must exist. If False, a supplement file that is
                 missing, or that cannot be named because the name of `filepath` contains
                 no "_index", is ignored.
             validate (str | list[str] | collections.abc.Callable, optional): The
                 mechanism to use to verify that each pair of rows from `filepath` and
-                `supplement` match. If a string or list of strings, it identifies column
-                names that the two row dictionaries must share. (Tests of strings are
-                case-insensitive and they need not match exactly, provided one string
-                falls inside the other.) Alternatively, a function with the signature
-                ``(dict[str, Any], dict[str, Any]) -> bool`` that receives the row
-                dictionaries from each file and returns True if the rows match and either
-                returns False or raises an exception if they do not match. If
-                unspecified, the common column names of the two indices are used.
+                `supplement` match, once they have been paired. If a string or list of
+                strings, it identifies column names that the two row dictionaries must
+                share. (Tests of strings are case-insensitive and they need not match
+                exactly, provided one string falls inside the other.) Alternatively, a
+                function with the signature ``(dict[str, Any], dict[str, Any]) -> bool``
+                that receives the row dictionaries from each file and returns True if the
+                rows match and either returns False or raises an exception if they do
+                not match. If unspecified, the common column names of the two indices are
+                used.
+            file_key (str | tuple[str, ...] | collections.abc.Callable, optional): How
+                a row of the index names its file: a column name; a tuple of column
+                names, whose values are joined with "/", such as ``("VOLUME_ID",
+                "PATH_NAME", "FILE_NAME")``; or a function with the signature
+                ``(dict[str, Any]) -> str`` that returns the path from a row dictionary.
+                If unspecified, the key is FILE_SPECIFICATION_NAME, preceded by VOLUME_ID
+                or else VOLUME_NAME if both tables have that column, provided that both
+                tables have FILE_SPECIFICATION_NAME.
+            supplement_key (str | tuple[str, ...] | collections.abc.Callable, optional):
+                How a row of the supplement names its file, in the same forms as
+                `file_key`. If unspecified, `file_key` applies to both tables.
+            prefer_supplement (bool, optional): True to keep the supplement's value of a
+                column that both tables have; False to keep the index's.
             pds3_options (dict[str, Any], optional): Any keyword arguments and their
                 values to be passed to the :class:`~pdsparser.Pds3Label` parser.
             label (Pds3Label, optional): The PDS label of `filepath` if it has already
                 been read.
 
         Returns:
-            list[dict[str, Any]]: One dictionary per row.
+            list[dict[str, Any]]: One dictionary per row of the index, in its order.
 
         Raises:
-            HostIndexError: If `supplement` does not have the same records in the same
-                order as `filepath`, if no columns can be used for cross-validation of
-                the index and supplement, or if `supplement` is `Host.SUPPLEMENT`,
-                `require_supplement` is True, and the name of `filepath` contains no
-                "_index"; also if either file cannot be interpreted as an index table.
+            HostIndexError: If the two tables cannot be paired: rows paired by position
+                in tables with different record counts; an index row that no supplement
+                row names; a supplement row that names no index row; a file that either
+                table lists more than once while the rows are paired by file; or a key
+                column that a table does not have. The message names the first few
+                cases and both files. Also if a pair of rows fails `validate`, if no
+                columns can be used for cross-validation of the index and supplement, if
+                `supplement` is `Host.SUPPLEMENT`, `require_supplement` is True, and the
+                name of `filepath` contains no "_index", or if either file cannot be
+                interpreted as an index table.
             OopsValueError: If a value in `pds3_options` is invalid.
             OSError: If `filepath` or `supplement` does not exist or cannot be read.
             PdsHostError: If `filepath` or `supplement` uses invalid PDS label syntax.
@@ -737,18 +771,32 @@ class Host:
                 raise
             return row_dicts
 
-        # Merge the supplement
+        # Pair each index row with its supplement row
         supp_dicts = supp_table.dicts_by_row()
-        if len(supp_dicts) != len(row_dicts):
-            raise HostIndexError('index files have different record counts: '
-                                 f'{filepath}, {supplement}')
+        files = f'{filepath}, {supplement}'
+        if file_key is None:
+            file_key = Host._default_file_key(row_table.get_keys(),
+                                              supp_table.get_keys())
+        if supplement_key is None:
+            supplement_key = file_key
 
-        # Make sure records are in the same order
+        if file_key is None:
+            if len(supp_dicts) != len(row_dicts):
+                raise HostIndexError(f'index files have different record counts: {files}')
+        else:
+            row_paths = Host._file_paths(row_dicts, file_key, 'index', filepath)
+            supp_paths = Host._file_paths(supp_dicts, supplement_key, 'supplement',
+                                          supplement)
+            if ([Host._path_key(path) for path in row_paths]
+                    != [Host._path_key(path) for path in supp_paths]):
+                supp_dicts = Host._pair_by_file(row_paths, supp_paths, supp_dicts,
+                                                files=files)
+
+        # Check each pair
         if validate is None:
             validate = list(set(row_table.get_keys()) & set(supp_table.get_keys()))
             if not validate:
-                raise HostIndexError('index files have no columns in common: '
-                                     f'{filepath}, {supplement}')
+                raise HostIndexError(f'index files have no columns in common: {files}')
         elif isinstance(validate, str):
             validate = [validate]
         if isinstance(validate, (list, tuple)):
@@ -759,19 +807,136 @@ class Host:
                 status = validate(row_dict, supp_dicts[i])
             except Exception as err:
                 raise HostIndexError(str(err)
-                                     + (f'\nindex file mismatch at record [{i}]: '
-                                        f'{filepath}, {supplement}')) from err
+                                     + f'\nindex file mismatch at record [{i}]: '
+                                       f'{files}') from err
             if not status:
-                raise HostIndexError(f'index file mismatch at record [{i}]: '
-                                     f'{filepath}, {supplement}')
+                raise HostIndexError(f'index file mismatch at record [{i}]: {files}')
 
         # Merge dictionaries
-        for i, row_dict in enumerate(row_dicts):
-            dict_ = supp_dicts[i].copy()
-            dict_.update(row_dict)
-            row_dicts[i] = dict_
+        if prefer_supplement:
+            return [row_dict | supp_dict
+                    for (row_dict, supp_dict) in zip(row_dicts, supp_dicts)]
+        return [supp_dict | row_dict
+                for (row_dict, supp_dict) in zip(row_dicts, supp_dicts)]
 
-        return row_dicts
+    @staticmethod
+    def _default_file_key(row_names, supp_names):
+        """The default columns that name the file of a row of an index and a supplement.
+
+        Parameters:
+            row_names (list[str]): The column names of the index.
+            supp_names (list[str]): The column names of the supplement.
+
+        Returns:
+            tuple[str, ...] | None: FILE_SPECIFICATION_NAME, preceded by VOLUME_ID or else
+            VOLUME_NAME if both tables have that column; None if the tables do not both
+            have FILE_SPECIFICATION_NAME.
+        """
+
+        shared = set(row_names) & set(supp_names)
+        if 'FILE_SPECIFICATION_NAME' not in shared:
+            return None
+        for volume in ('VOLUME_ID', 'VOLUME_NAME'):
+            if volume in shared:
+                return (volume, 'FILE_SPECIFICATION_NAME')
+        return ('FILE_SPECIFICATION_NAME',)
+
+    @staticmethod
+    def _file_paths(row_dicts, file_key, kind, filepath):
+        """The path of the file that each row of a table names, as the table gives it.
+
+        Parameters:
+            row_dicts (list[dict[str, Any]]): The rows of the table.
+            file_key (str | tuple[str, ...] | collections.abc.Callable): A column name,
+                a tuple of column names whose values are joined with "/", or a function
+                that returns the path from a row dictionary.
+            kind (str): "index" or "supplement", for error messages.
+            filepath (FCPath): The path to the table, for error messages.
+
+        Returns:
+            list[str]: The path for each row.
+
+        Raises:
+            HostIndexError: If the table does not have a key column.
+        """
+
+        if callable(file_key):
+            return [file_key(row_dict) for row_dict in row_dicts]
+
+        names = (file_key,) if isinstance(file_key, str) else tuple(file_key)
+        if row_dicts:
+            missing = [name for name in names if name not in row_dicts[0]]
+            if missing:
+                raise HostIndexError(f'{kind} has no column {missing[0]}: {filepath}')
+        return ['/'.join(str(row_dict[name]) for name in names) for row_dict in row_dicts]
+
+    @staticmethod
+    def _path_key(path):
+        """The form of a path in which an index and its supplement are compared.
+
+        Parameters:
+            path (str): A path as a table gives it.
+
+        Returns:
+            str: The path in upper case, without empty or "." components or the extension
+            of the file name.
+        """
+
+        parts = [part for part in path.strip().upper().split('/')
+                 if part not in ('', '.')]
+        if parts:
+            parts[-1] = parts[-1].rpartition('.')[0] or parts[-1]
+        return '/'.join(parts)
+
+    @staticmethod
+    def _pair_by_file(row_paths, supp_paths, supp_dicts, *, files):
+        """The supplement rows reordered to match the index rows, file by file.
+
+        Parameters:
+            row_paths (list[str]): The path named by each index row.
+            supp_paths (list[str]): The path named by each supplement row.
+            supp_dicts (list[dict[str, Any]]): The supplement rows.
+            files (str): The paths to the index and the supplement, for error messages.
+
+        Returns:
+            list[dict[str, Any]]: The supplement row for each index row, in index order.
+
+        Raises:
+            HostIndexError: If a file is listed more than once in either table, if an
+                index row has no supplement row, or if a supplement row names no index
+                row. The message lists the first few such paths, as the table gives them.
+        """
+
+        def report(problem, paths):
+            """The message for a problem with the given paths."""
+
+            return f'{problem} ({len(paths)}): {paths[:_PATHS_IN_MESSAGE]}; {files}'
+
+        row_keys = [Host._path_key(path) for path in row_paths]
+        supp_keys = [Host._path_key(path) for path in supp_paths]
+
+        for (kind, keys, paths) in (('index', row_keys, row_paths),
+                                    ('supplement', supp_keys, supp_paths)):
+            counts = Counter(keys)
+            repeated = list({key: path for (key, path) in zip(keys, paths)
+                             if counts[key] > 1}.values())
+            if repeated:
+                raise HostIndexError(report(f'{kind} lists a file more than once',
+                                            repeated))
+
+        supp_by_key = dict(zip(supp_keys, supp_dicts))
+        unpaired = [path for (key, path) in zip(row_keys, row_paths)
+                    if key not in supp_by_key]
+        if unpaired:
+            raise HostIndexError(report('no supplement row for an index row', unpaired))
+
+        row_key_set = set(row_keys)
+        extra = [path for (key, path) in zip(supp_keys, supp_paths)
+                 if key not in row_key_set]
+        if extra:
+            raise HostIndexError(report('no index row for a supplement row', extra))
+
+        return [supp_by_key[key] for key in row_keys]
 
     @staticmethod
     def _filter_index_rows(row_dicts, filter):

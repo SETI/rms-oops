@@ -17,6 +17,17 @@ reaches that row. The subpackage also provides :func:`~oops.host.read_pds3_image
 and :func:`~oops.host.get_fits_image_hdu`, which hosts use to read image arrays, and the
 :class:`~oops.host.HostError` exceptions that report a file a host cannot read.
 
+Many indexes have a supplemental index, a second table with more columns for the same
+products, whose columns are merged into each row. When the two tables list the same files
+in the same order, each index row is merged with the supplement row in the same position.
+When they list them in different orders, as many archive volumes do, each index row is
+merged with the supplement row that names the same file. Paths are compared without
+regard to case, to a leading "/" or "./", or to the extension, so a row that names a
+product's label matches a row that names its data file. The call raises
+:class:`~oops.host.HostIndexError` if an index row has no supplement row, if a supplement
+row belongs to no index row, or, when the rows are paired by file, if either table lists a
+file twice. The error names the first few such files and both tables.
+
 A host that cannot obtain an observation's pointing from the SPICE kernels raises
 :class:`~oops.OopsSpiceError`, which carries the SPICE error code and the file being
 read. It does not check the kernels, and so does not raise that exception, when the
