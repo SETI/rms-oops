@@ -162,24 +162,30 @@ class Host:
                    parallel=None, **kwargs):
         """An iterator over the Observations of a data file index, one for each row.
 
-        The host is identified, and the index is read and filtered, when this method is
-        called; each row's observation is built only when the iteration reaches it.
+        The host is identified when this method is called, from the index label or else
+        from the first row of the index, and the host's own ``from_index`` then reads,
+        pairs, and filters the rows of the index and its supplement; each row's
+        observation is built only when the iteration reaches it. Besides the exceptions
+        listed here, the call raises any that the host's ``from_index`` documents.
 
         Parameters:
             filepath (str | pathlib.Path | FCPath): The full path to the PDS label of a
                 data file index.
             supplement (str | pathlib.Path | FCPath | object, optional): The path to the
-                PDS label of a supplemental index file, if any. If specified, this file
-                must have the same records in the same order as the table described by
-                `filepath`. Use the sentinel value `Host.SUPPLEMENT` to read the file in
-                the directory of `filepath` whose name matches except that "_index" is
-                replaced by "_supplemental_index" in upper or lower case, if that file
-                exists.
+                PDS label of a supplemental index file, if any, whose columns are merged
+                into each row. Each index row is merged with the supplement row for the
+                same file: by position when the two tables list the same files in the
+                same order, and otherwise by the file that each row names. Use the
+                sentinel value `Host.SUPPLEMENT` to read the file in the directory of
+                `filepath` whose name matches except that "_index" is replaced by
+                "_supplemental_index" in upper or lower case. The host determines
+                whether the supplement must exist and how a pair of rows is checked.
             label (Pds3Label, optional): The PDS label of `filepath` if it has already
                 been read.
             row_dicts (list[dict[str, Any]], optional): A list of dictionaries, one per
                 row of the index, if `filepath` and `supplement` have already been read.
-                If provided, `supplement` is ignored.
+                If provided, they are passed to the host, which does not read
+                `supplement`.
             pds3_options (dict[str, Any], optional): Any keyword arguments and their
                 values to be passed to the :class:`~pdsparser.Pds3Label` parser.
             filter (dict[str, Any], optional): A dictionary of index column names and
@@ -225,7 +231,7 @@ class Host:
                 time, different frame and FOV) relative to which this Observation has a
                 fixed offset. Note that no more than one of `parallel` and `tracker` can
                 be specified.
-            **kwargs: Additional keyword arguments, ignored here except as noted below.
+            **kwargs: Additional keyword arguments, passed to the host's ``from_index``.
 
         Returns:
             collections.abc.Iterator[Observation | ObsArray | None]: The host's
@@ -237,8 +243,10 @@ class Host:
         Raises:
             OopsValueError: If a value in `pds3_options` is invalid.
             HostIndexError: If `filepath` or `supplement` cannot be interpreted as an
-                index table, or if `supplement` does not have the same records in the same
-                order as `filepath`.
+                index table, or if the rows of the two tables cannot be paired: an index
+                row that no supplement row names, a supplement row that names no index
+                row, a file listed twice in either table while the rows are paired by
+                file, or a pair of rows that fails the host's check.
             OSError: If `filepath` or `supplement` does not exist or cannot be read.
             PdsHostError: If `filepath` uses invalid PDS label syntax.
             UnknownHostError: If `filepath` is not associated with any registered Host
@@ -247,44 +255,42 @@ class Host:
 
         filepath = FCPath(filepath)
 
-        # Set default PDS3 options to method='fast', sources=True
-        pds3_options = Host._pds3_options_with_defaults(pds3_options)
-
         if label is None:
             try:
-                label = Pds3Label(filepath, **pds3_options)
+                label = Pds3Label(filepath,
+                                  **Host._pds3_options_with_defaults(pds3_options))
             except PdsError as err:
                 raise PdsHostError(str(err)) from err
             except (TypeError, ValueError) as err:
                 raise OopsValueError(str(err)) from err
 
-        # Read and filter the rows
-        if row_dicts is None:
-            row_dicts = Host._read_index_rows(filepath, supplement=supplement,
-                                              require_supplement=False,
-                                              pds3_options=pds3_options, label=label)
-        row_dicts = Host._filter_index_rows(row_dicts, filter)
-
         # Determine which host is represented by the index. A host whose detector returns
-        # None can only be identified from the content of a row.
+        # None can only be identified from the content of a row; the index is read for
+        # that, without its supplement, at most once.
+        detection_rows = row_dicts
         for host in Host._HOSTS:
             status = host._detect_in_index(label)
             if status is None:
-                if row_dicts and host._detect_in_row(row_dicts[0]):
+                if detection_rows is None:
+                    detection_rows = Host._read_index_rows(filepath,
+                                                           pds3_options=pds3_options,
+                                                           label=label)
+                if detection_rows and host._detect_in_row(detection_rows[0]):
                     break
             elif status:
                 break
         else:
             raise UnknownHostError(f'unknown host in index {filepath}')
 
-        # Process the host-specific index
-        # Because `row_dicts` is filled, `supplement` is ignored
-        return host.from_index(filepath, row_dicts=row_dicts, select=select,
-                               target=target, lightsource=lightsource, path=path,
-                               frame=frame, cadence=cadence, fov=fov,
-                               calibrations=calibrations, timeshift=timeshift,
-                               navigation=navigation, tracker=tracker, parallel=parallel,
-                               **kwargs)
+        # The host reads, pairs and filters the rows itself, because only the host knows
+        # how its supplement is matched to its index
+        return host.from_index(filepath, supplement=supplement, label=label,
+                               row_dicts=row_dicts, pds3_options=pds3_options,
+                               filter=filter, select=select, target=target,
+                               lightsource=lightsource, path=path, frame=frame,
+                               cadence=cadence, fov=fov, calibrations=calibrations,
+                               timeshift=timeshift, navigation=navigation,
+                               tracker=tracker, parallel=parallel, **kwargs)
 
     ######################################################################################
     # Detectors requiring overrides

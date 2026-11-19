@@ -49,8 +49,19 @@ class _IndexHost(Host):
         return True
 
     @staticmethod
-    def from_index(filepath: Any, *, row_dicts: list[dict[str, Any]],
+    def from_index(filepath: Any, *, supplement: Any = Host.SUPPLEMENT,
+                   label: Any = None, row_dicts: list[dict[str, Any]] | None = None,
+                   pds3_options: dict[str, Any] | None = None,
+                   filter: dict[str, Any] | None = None,  # noqa: A002
                    **kwargs: Any) -> Iterator[str]:
+        if row_dicts is None:
+            row_dicts = _IndexHost._read_index_rows(filepath, supplement=supplement,
+                                                    require_supplement=False,
+                                                    validate='NAME',
+                                                    pds3_options=pds3_options,
+                                                    label=label)
+        row_dicts = Host._filter_index_rows(row_dicts, filter)
+
         def build() -> Iterator[str]:
             for row_dict in row_dicts:
                 _IndexHost.built.append(row_dict['NAME'])
@@ -81,6 +92,19 @@ def test_from_index_returns_the_hosts_iterator_unconsumed(index_label: Path) -> 
     assert next(result) == 'B'
     assert _IndexHost.built == ['B']
     assert list(result) == ['C']
+
+
+def test_from_index_leaves_the_supplement_to_the_host(index_label: Path) -> None:
+    """The host reads and checks the supplement, so a column that the two tables write
+    differently fails only the default check, which the host does not use."""
+
+    supplement = index_label.with_name('supplement.lbl')
+    supplement.with_suffix('.tab').write_bytes(b'A,9\r\nB,8\r\nC,7\r\n')
+    supplement.write_text(INDEX_LABEL.replace('index.tab', 'supplement.tab'))
+
+    result = Host.from_index(index_label, supplement=supplement)
+
+    assert list(result) == ['A', 'B', 'C']
 
 
 def test_from_index_raises_an_argument_error_at_call_time(index_label: Path) -> None:
