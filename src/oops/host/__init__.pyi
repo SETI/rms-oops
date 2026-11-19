@@ -15,6 +15,7 @@ The detectors and support methods that a Host subclass overrides or calls, such 
 """
 
 import pathlib
+from collections.abc import Iterator
 from typing import Any, TypeAlias
 
 from astropy.io.fits import HDUList, ImageHDU, PrimaryHDU
@@ -75,7 +76,7 @@ class Host:
         timeshift: tuple[float, str] | None = None,
         navigation: tuple[float, ...] | None = None, tracker: str | None = None,
         parallel: Observation | None = None,
-        **kwargs: Any) -> list[Observation | ObsArray | None]: ...
+        **kwargs: Any) -> Iterator[Observation | ObsArray | None]: ...
 
 def get_fits_image_hdu(hdulist: HDUList,
     index: int | str | None = None) -> PrimaryHDU | ImageHDU: ...

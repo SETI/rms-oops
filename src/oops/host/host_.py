@@ -43,6 +43,14 @@ class Host:
     the caller supplies the pointing: when ``from_file`` is given a `frame` override,
     whether a :class:`~oops.frame.Cmatrix` or any other :class:`~oops.Frame`, or when the
     caller chooses a pointing source that is not SPICE, through an option of the host.
+
+    A host's ``from_index`` returns an iterator that yields one entry per filtered row of
+    the index, in index order, and builds each row's observation only when the iteration
+    reaches that row, so an error in building one row is raised there. Everything else is
+    done by the call itself, so that a bad call fails at once: the checks of the
+    arguments, the reading and checking of the index label, its table and any supplement,
+    and the filtering of the rows. ``from_index`` is therefore an ordinary function that
+    does that work and then returns a generator, never a generator function.
     """
 
     _HOSTS = []     # A list of all registered Host subclasses.
@@ -147,7 +155,10 @@ class Host:
                    lightsource=None, path=None, frame=None, cadence=None, fov=None,
                    calibrations=None, timeshift=None, navigation=None, tracker=None,
                    parallel=None, **kwargs):
-        """A list of Observations, one for each row of a data file index.
+        """An iterator over the Observations of a data file index, one for each row.
+
+        The host is identified, and the index is read and filtered, when this method is
+        called; each row's observation is built only when the iteration reaches it.
 
         Parameters:
             filepath (str | pathlib.Path | FCPath): The full path to the PDS label of a
@@ -170,7 +181,7 @@ class Host:
                 their values or a set or tuple of values. If provided, only rows of the
                 index in which each named column equals the value, falls in the set of
                 values, or falls in a range defined by a tuple of two values, will be
-                included in the returned list.
+                included.
             select (int | slice | str | tuple[int | slice | str, ...]): An index, slice,
                 or tuple of indices and slices to apply to the returned array of
                 Observation objects. For example, if the file contains two Observations
@@ -212,9 +223,11 @@ class Host:
             **kwargs: Additional keyword arguments, ignored here except as noted below.
 
         Returns:
-            list[Observation | ObsArray | None]: The list of Observations or tuples
-            or arrays of Observations for each filtered row of the index file. None where
-            a selected Observation is absent from that row.
+            collections.abc.Iterator[Observation | ObsArray | None]: The host's
+            iterator, which yields the Observation, or the tuple or array of Observations,
+            for each filtered row of the index file, in index order. It yields None where
+            a selected Observation is absent from that row. Wrap it in ``list()`` to build
+            every row at once.
 
         Raises:
             OopsValueError: If a value in `pds3_options` is invalid.

@@ -11,10 +11,11 @@ part of ``oops``: each mission's hosts are a separate package, such as
 
 :meth:`~oops.host.Host.from_file` identifies the host of a data file from its PDS3
 label, VICAR header, FITS header or file name, and :meth:`~oops.host.Host.from_index`
-does the same for each row of a PDS3 index. The subpackage also provides
-:func:`~oops.host.read_pds3_image_array` and :func:`~oops.host.get_fits_image_hdu`,
-which hosts use to read image arrays, and the :class:`~oops.host.HostError` exceptions
-that report a file a host cannot read.
+does the same for each row of a PDS3 index. ``from_index`` returns an iterator: it reads
+and filters the index at once, and builds each row's observation when the iteration
+reaches that row. The subpackage also provides :func:`~oops.host.read_pds3_image_array`
+and :func:`~oops.host.get_fits_image_hdu`, which hosts use to read image arrays, and the
+:class:`~oops.host.HostError` exceptions that report a file a host cannot read.
 
 A host that cannot obtain an observation's pointing from the SPICE kernels raises
 :class:`~oops.OopsSpiceError`, which carries the SPICE error code and the file being
