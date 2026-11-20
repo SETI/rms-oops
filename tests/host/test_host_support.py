@@ -16,12 +16,6 @@ from oops.frame   import SpiceErrorFrame
 from oops.host    import PDS3_NULL_TEXTS, Host, is_pds3_null
 
 
-class _Named(Host):
-    """A host whose class name appears in messages."""
-
-    NAME = 'named'
-
-
 @pytest.mark.parametrize(('name', 'expected'),
                          [('VOL_0001_index.lbl', 'VOL_0001_supplemental_index.lbl'),
                           ('VOL_0001_INDEX.LBL', 'VOL_0001_SUPPLEMENTAL_INDEX.LBL')],
@@ -44,12 +38,6 @@ def test_an_index_without_index_in_its_name_has_no_supplement() -> None:
 def test_the_volumes_directory_follows_the_location_of_the_index(index: str,
                                                                  expected: str) -> None:
     assert Host._volumes_directory(index) == FCPath(expected)
-
-
-def test_an_unexpected_keyword_raises_naming_the_class_and_method() -> None:
-    with pytest.raises(OopsTypeError, match="unexpected keyword argument for "
-                                            "_Named.from_index: 'supplementary'"):
-        _Named._check_keywords('from_index', {'supplementary': 1})
 
 
 def test_select_must_be_none_for_one_observation_per_row() -> None:

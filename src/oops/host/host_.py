@@ -171,7 +171,8 @@ class Host:
                 be specified.
             **kwargs:
                 Any other instrument-specific parameters, passed to the host's
-                ``from_file``.
+                ``from_file``. A keyword that the host's ``from_file`` does not take
+                raises TypeError.
 
         Returns:
             Observation | ObsArray | None: An Observation or a tuple or array of
@@ -196,8 +197,14 @@ class Host:
                 `frame` is given or when the pointing does not come from SPICE.
         """
 
+        # A FITS file that is opened to identify it is closed again; the host reads it
         if isinstance(filepath, (str, pathlib.Path, FCPath)):
-            host = Host._identify_host(filepath, pds3_options=pds3_options)
+            (host, parsed) = Host._identify_and_parse(
+                filepath, hosts=Host._HOSTS, formats='PVFO', astrometry=True,
+                pds3_options=Host._pds3_options_with_defaults(pds3_options),
+                pds3_fallback=True, dispatch=True)
+            if isinstance(parsed, pyfits.HDUList):
+                parsed.close()
         else:
             host = Host._identify_parsed(filepath)
         return host.from_file(filepath, pds3_options=pds3_options, select=select,
@@ -305,6 +312,7 @@ class Host:
                 fixed offset. Note that no more than one of `parallel` and `tracker` can
                 be specified.
             **kwargs: Additional keyword arguments, passed to the host's ``from_index``.
+                A keyword that the host's ``from_index`` does not take raises TypeError.
 
         Returns:
             collections.abc.Iterator[Observation | ObsArray | None]: The host's
@@ -611,44 +619,6 @@ class Host:
         if Host._one_host([host for (host, _) in found], what) is None:
             return None
         return found[0]
-
-    @staticmethod
-    def _identify_host(filepath, *, pds3_options=None):
-        """Identify the host module associated with a given data file or label.
-
-        A VICAR file is identified from its header alone. A FITS file that is opened to
-        identify it is closed again.
-
-        Parameters:
-            filepath (str | pathlib.Path | FCPath): The path to the data file or its
-                detached label in PDS3 or PDS4 format.
-            pds3_options (dict[str, Any], optional): Any keyword arguments and their
-                values to be passed to the :class:`~pdsparser.Pds3Label` parser.
-
-        Returns:
-            type: The Host subclass associated with `filepath`.
-
-        Raises:
-            UnknownHostError: If `filepath` is not associated with any registered Host
-                subclass.
-            AmbiguousHostError: If more than one registered Host subclass claims
-                `filepath`.
-            HostFormatError: If `filepath` has invalid syntax for format. Note that
-                subclass :class:`~PdsHostError` is returned for PDS-formatted files and
-                :class:`~VicarHostError` is returned for VICAR files.
-            OSError: If `filepath` does not exist or cannot be read.
-            OopsValueError: If a value in `pds3_options` is invalid.
-        """
-
-        # Check every registered host and every defined file format
-        pds3_options = Host._pds3_options_with_defaults(pds3_options)
-        (host, parsed) = Host._identify_and_parse(filepath, hosts=Host._HOSTS,
-                                                  formats='PVFO', astrometry=True,
-                                                  pds3_options=pds3_options,
-                                                  pds3_fallback=True, dispatch=True)
-        if isinstance(parsed, pyfits.HDUList):
-            parsed.close()
-        return host
 
     @staticmethod
     def _identify_parsed(content):
@@ -1470,27 +1440,6 @@ class Host:
         if directory.parent.parent.name.lower() == 'metadata':
             return directory.parent.parent.parent / 'volumes' / directory.parent.name
         return directory
-
-    @classmethod
-    def _check_keywords(cls, method, kwargs):
-        """Raise OopsTypeError for a keyword argument that a method does not take.
-
-        A host's ``from_file`` and ``from_index`` take `**kwargs` and call this method
-        with it, so that a mistaken keyword, such as "supplementary", is refused instead
-        of being ignored.
-
-        Parameters:
-            method (str): The name of the calling method, for the message.
-            kwargs (dict[str, Any]): The keyword arguments that the method does not take.
-
-        Raises:
-            OopsTypeError: If `kwargs` is not empty. The message reads "unexpected keyword
-                argument for <class>.<method>: '<name>'".
-        """
-
-        if kwargs:
-            raise OopsTypeError(f'unexpected keyword argument for {cls.__name__}.'
-                                f'{method}: {next(iter(kwargs))!r}')
 
     @staticmethod
     def _check_select(select, *, names=None, unit=None):
