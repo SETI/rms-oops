@@ -10,7 +10,6 @@ import pytest
 from filecache import FCPath
 from pdsparser import Pds3Label
 
-from polymath     import Scalar
 from oops         import Frame, OopsSpiceError, OopsTypeError, OopsValueError
 from oops.cadence import SnapCadence
 from oops.frame   import SpiceErrorFrame
@@ -73,85 +72,11 @@ def test_a_valid_select_passes() -> None:
     assert Host._check_select((slice(None), 'ir', 0), names={'IR': 0}) is None
 
 ##########################################################################################
-# The time of the pointing check after the overrides
+# A frame that SPICE cannot supply, under the overrides that evaluate the frame
 ##########################################################################################
 
 OWN_CADENCE = SnapCadence(100., 10.)        # midtime 105
-NO_OVERRIDES: dict[str, Any] = {'cadence': None, 'timeshift': None}
 
-
-class _RecordingFrame(Frame):
-    """A frame that records each time at which it is evaluated."""
-
-    def __init__(self) -> None:
-        self.times: list[float] = []
-        self._reference = Frame.J2000
-        self._origin = None
-        self._shape = ()
-        self._register()
-
-    def transform_at_time(self, time: Any, *, quick: Any = None) -> Any:
-        self.times.append(float(Scalar.as_scalar(time).vals))
-        return Frame.J2000.transform_at_time(time)
-
-
-def test_without_overrides_the_pointing_time_is_the_midtime() -> None:
-    assert Host._pointing_time(OWN_CADENCE, NO_OVERRIDES) == 105.
-
-
-def test_a_cadence_override_gives_its_midtime() -> None:
-    overrides = NO_OVERRIDES | {'cadence': SnapCadence(200., 4.)}
-    assert Host._pointing_time(OWN_CADENCE, overrides) == 202.
-
-
-@pytest.mark.parametrize(('letters', 'expected'),
-                         [('T', 108.), ('t', 108.), ('F', 108.), ('f', 108.),
-                          ('TF', 111.), ('FT', 111.), ('PF', 108.), ('P', 105.)])
-def test_a_timeshift_moves_the_pointing_time(letters: str, expected: float) -> None:
-    overrides = NO_OVERRIDES | {'timeshift': (3., letters)}
-    assert Host._pointing_time(OWN_CADENCE, overrides) == expected
-
-
-@pytest.mark.parametrize('letters', ['T', 'F', 'TF', 'FT', 'PF', 'P', 'tf'])
-def test_the_pointing_time_is_where_the_frame_is_evaluated(letters: str) -> None:
-    """The overrides are applied, and the frame they give is evaluated at the midtime of
-    the cadence they give, as an observation evaluates it."""
-
-    camera = _RecordingFrame()
-    params = {'cadence': OWN_CADENCE, 'frame': camera, 'path': 'SSB'}
-    Host._apply_overrides(params, None, timeshift=(3., letters))
-    params['frame'].transform_at_time(params['cadence'].midtime)
-
-    assert camera.times == [Host._pointing_time(OWN_CADENCE,
-                                                {'timeshift': (3., letters)})]
-
-
-def test_overrides_that_are_not_given_count_as_none() -> None:
-    assert Host._pointing_time(OWN_CADENCE, {}) == 105.
-
-
-@pytest.mark.parametrize(('tracker', 'letters'),
-                         [('start', 'F'), ('midtime', 'T'), ('end', 'TF')])
-def test_the_pointing_time_is_where_the_tracker_evaluates_the_frame(tracker: str,
-                                                                    letters: str) -> None:
-    """A TrackerFrame evaluates the frame once, when it is built, at its epoch."""
-
-    camera = _RecordingFrame()
-    params = {'cadence': OWN_CADENCE, 'frame': camera, 'path': 'SSB', 'target': 'NONE'}
-    overrides = {'timeshift': (3., letters), 'tracker': tracker}
-    Host._apply_overrides(params, None, **overrides)
-
-    assert camera.times == [Host._pointing_time(OWN_CADENCE, overrides)]
-
-
-def test_an_unknown_tracker_is_refused_by_the_pointing_time() -> None:
-    with pytest.raises(OopsValueError, match="invalid tracker, should be \"start\", "
-                                             "\"midtime\", or \"end\": 'middle'"):
-        Host._pointing_time(OWN_CADENCE, {'tracker': 'middle'})
-
-##########################################################################################
-# A frame that SPICE cannot supply, under the overrides that evaluate the frame
-##########################################################################################
 
 def _spice_error_frame() -> SpiceErrorFrame:
     try:

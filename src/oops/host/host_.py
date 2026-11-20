@@ -54,7 +54,8 @@ class Host:
     :class:`~oops.OopsSpiceError` whenever it is evaluated. The support method
     ``_check_spice_frame`` serves both cases: with ``defer=False`` it raises the error,
     for ``from_file``; with ``defer=True`` it returns the stand-in frame, for
-    ``from_index``.
+    ``from_index``. It checks the frame as the observation will evaluate it once the
+    overrides are applied, at the time and relative to the frame that they give.
 
     A host does not check SPICE, and does not raise :class:`~oops.OopsSpiceError`, when
     the caller supplies the pointing: when ``from_file`` is given a `frame` override,
@@ -1626,12 +1627,7 @@ class Host:
 
         # Apply an optional time shift
         if timeshift is not None:
-            dt, letters = timeshift
-            letters = letters.upper()
-            if not letters:
-                raise OopsValueError('the timeshift must specify one or more of T/P/F')
-            if set(letters) - set('TPF'):
-                raise OopsValueError(f'invalid timeshift letters: {letters}')
+            dt, letters = Host._timeshift_letters(timeshift)
             arg = None
             for letter in letters:
                 attr = Host._TIMESHIFT_ATTR[letter]
@@ -1645,10 +1641,8 @@ class Host:
         # once, here. A frame that the SPICE kernels cannot supply, such as the
         # SpiceErrorFrame of an index row, is left as it is, so that it raises
         # OopsSpiceError when the observation uses it, as it would without the override.
+        Host._check_frame_overrides(tracker, parallel)
         if parallel is not None:
-            if tracker is not None:
-                raise OopsValueError('parallel and tracker cannot both be specified')
-
             time = params['cadence'].midtime
             frame = Frame.as_frame(params['frame'])
             try:
@@ -1727,28 +1721,97 @@ class Host:
         return True
 
     @staticmethod
-    def _check_spice_frame(frame, time, *, description, filepath=None, defer=False):
-        """Check that the SPICE kernels can supply a Frame at a time.
+    def _timeshift_letters(timeshift):
+        """The time shift and the letters of a `timeshift` override, checked.
 
-        A host calls this method for an observation whose pointing comes from SPICE. Its
-        ``from_file`` calls it with `defer` False, so that missing pointing raises at load
-        time; its ``from_index`` calls it with `defer` True and gives the observation the
-        Frame returned, so that the row is still built and the error is raised when the
-        pointing is used.
+        Parameters:
+            timeshift (tuple[float, str]): The override: the time shift in seconds and
+                one or more of the letters "T", "P", and "F", in either case.
 
-        The Frame is evaluated relative to J2000, so every Frame in its chain of
-        references is checked, as for a Cmatrix whose reference is a SPICE frame. An
-        exception counts as missing SPICE data only if it is of a class that cspyce raises
-        (LookupError, OSError, RuntimeError, or ValueError) and its text contains a SPICE
-        short error such as "SPICE(CKINSUFFDATA)", the rule of
+        Returns:
+            tuple[float, str]: The time shift and the letters in upper case.
+
+        Raises:
+            OopsValueError: If the letters are empty or include any other letter.
+        """
+
+        (dt, letters) = timeshift
+        letters = letters.upper()
+        if not letters:
+            raise OopsValueError('the timeshift must specify one or more of T/P/F')
+        if set(letters) - set('TPF'):
+            raise OopsValueError(f'invalid timeshift letters: {letters}')
+        return (dt, letters)
+
+    @staticmethod
+    def _check_frame_overrides(tracker, parallel):
+        """Raise OopsValueError if both the `tracker` and `parallel` overrides are given.
+
+        Parameters:
+            tracker (str | None): The `tracker` override.
+            parallel (Observation | None): The `parallel` override.
+
+        Raises:
+            OopsValueError: If neither is None.
+        """
+
+        if parallel is not None and tracker is not None:
+            raise OopsValueError('parallel and tracker cannot both be specified')
+
+    @staticmethod
+    def _check_spice_frame(frame, cadence, overrides, *, description, filepath=None,
+                           defer=False):
+        """Check that the SPICE kernels can supply a Frame as an observation will
+        evaluate it once the overrides are applied.
+
+        A host calls this method for an observation whose pointing comes from SPICE,
+        before it calls :meth:`~oops.host.Host._apply_overrides`. Its ``from_file`` calls
+        it with `defer` False, so that missing pointing raises at load time; its
+        ``from_index`` calls it with `defer` True and gives the observation the Frame
+        returned, so that the row is still built and the error is raised when the
+        pointing is used. A :class:`~oops.frame.SpiceErrorFrame` returned stands in for
+        `frame` itself, and the host gives it to
+        :meth:`~oops.host.Host._apply_overrides` in place of `frame`.
+
+        The overrides can wrap the Frame and move the time at which it is evaluated, so
+        the check builds the Frame and the time as the overrides will:
+
+        - The time is the midtime of the `cadence` override if one is given, otherwise of
+          `cadence`, moved by a `timeshift` whose letters include "T".
+        - A `timeshift` whose letters include "F" wraps the Frame in a
+          :class:`~oops.frame.FrameShift`. A FrameShift shifts the time at which its own
+          Frame is evaluated relative to that Frame's reference; the chain from that
+          reference to J2000 is evaluated at the observation's time. So for a SPICE frame
+          whose reference is J2000, the C kernels are read at the shifted time, and for
+          a fixed rotation over a SPICE frame, such as a camera frame that flips the axes
+          of the SPICE frame, they are read at the observation's time.
+        - With a `tracker` override, the Frame is evaluated relative to J2000 once, when
+          the tracking frame is built, at the start, midtime, or end that the override
+          selects.
+        - With a `parallel` override, the Frame is evaluated relative to the parallel
+          observation's frame once, at the midtime, so a SPICE frame that both frames
+          share is never evaluated for this observation. If that evaluation fails but
+          the Frame can be evaluated relative to J2000, the failure belongs to the
+          parallel observation's frame, which the override raises when it is applied,
+          and `frame` is returned.
+        - In every other case, the Frame is evaluated relative to J2000 at the time, so
+          every Frame in its chain of references is checked, as for a Cmatrix whose
+          reference is a SPICE frame.
+
+        An exception counts as missing SPICE data only if it is of a class that cspyce
+        raises (LookupError, OSError, RuntimeError, or ValueError) and its text contains
+        a SPICE short error such as "SPICE(CKINSUFFDATA)", the rule of
         :meth:`~oops.OopsSpiceError.is_spice_error`; any other exception propagates
         unchanged.
 
         Parameters:
             frame (Frame | str): The Frame, or the ID of a registered Frame, that the
-                observation uses.
-            time (float): The time in seconds TDB at which to evaluate the Frame, such as
-                the midtime of the observation.
+                observation uses before the overrides.
+            cadence (Cadence): The cadence of the observation before the overrides.
+            overrides (dict[str, Any]): The standard overrides by name, as a host's
+                ``from_file`` or ``from_index`` receives them. Only "cadence",
+                "timeshift", "tracker", and "parallel" are read; a missing key counts as
+                None.
             description (str): What could not be obtained, such as "no Cassini ISS NAC
                 pointing", for the message of the error.
             filepath (str | pathlib.Path | FCPath, optional): The file of the observation,
@@ -1758,75 +1821,107 @@ class Host:
                 the Frame; False to raise :class:`~oops.OopsSpiceError`.
 
         Returns:
-            Frame | str: `frame` itself if it can be evaluated at `time`; otherwise, if
+            Frame | str: `frame` itself if the observation can evaluate it; otherwise, if
             `defer` is True, a :class:`~oops.frame.SpiceErrorFrame` that raises
             :class:`~oops.OopsSpiceError` whenever it is evaluated.
 
         Raises:
             KeyError: If `frame` is the ID of a Frame that is not registered.
             OopsSpiceError: If `defer` is False and the SPICE kernels cannot supply
-                `frame` at `time`. It is built with
+                `frame` as the observation will evaluate it. It is built with
                 :meth:`~oops.OopsSpiceError.from_spice_error`, so its message reads
-                "<description> at <time> for <filepath>: <SPICE code>", and its cause is
-                the exception that cspyce raised.
+                "<description> at <time> for <filepath>: <SPICE code>", in which the time
+                is the observation's time at which the Frame is evaluated, without the
+                seconds of an "F" time shift, and its cause is the exception that cspyce
+                raised.
+            OopsValueError: If the `timeshift` letters are invalid, the `tracker` override
+                is not "start", "midtime", or "end", or both `tracker` and `parallel` are
+                given; :meth:`~oops.host.Host._apply_overrides` raises the same errors.
         """
 
         # A Frame ID that is not registered is the caller's error, not missing SPICE data
-        resolved = Frame.as_frame(frame)
+        (shifted, reference, time) = Host._pointing_probe(Frame.as_frame(frame), cadence,
+                                                          overrides)
+        err = Host._spice_failure(shifted, reference, time)
+        if err is not None and reference is not Frame.J2000:
+            err = Host._spice_failure(shifted, Frame.J2000, time)
+
+        if err is None:
+            return frame
+        if defer:
+            return SpiceErrorFrame(err, description=description, filepath=filepath)
+        raise OopsSpiceError.from_spice_error(err, description=description, time=time,
+                                              filepath=filepath) from err
+
+    @staticmethod
+    def _pointing_probe(frame, cadence, overrides):
+        """The Frame, reference, and time at which an observation will evaluate its
+        pointing once the overrides are applied.
+
+        Parameters:
+            frame (Frame): The Frame of the observation before the overrides.
+            cadence (Cadence): The cadence of the observation before the overrides.
+            overrides (dict[str, Any]): The standard overrides by name; see
+                :meth:`~oops.host.Host._check_spice_frame`.
+
+        Returns:
+            tuple[Frame, Frame, float | Scalar]: `frame`, wrapped in a
+            :class:`~oops.frame.FrameShift` for a `timeshift` whose letters include "F";
+            the Frame relative to which the observation evaluates it, which is the
+            `parallel` observation's frame if that override is given and J2000
+            otherwise; and the time in seconds TDB.
+
+        Raises:
+            OopsValueError: If the `timeshift` letters are invalid, the `tracker` override
+                is not "start", "midtime", or "end", or both `tracker` and `parallel` are
+                given.
+        """
+
+        # The cadence and the Frame are wrapped as _apply_overrides wraps them
+        cadence = overrides.get('cadence') or cadence
+        timeshift = overrides.get('timeshift')
+        if timeshift is not None:
+            (dt, letters) = Host._timeshift_letters(timeshift)
+            if 'T' in letters:
+                cadence = TimeShift(dt, cadence)
+            if 'F' in letters:
+                frame = FrameShift(dt, frame)
+
+        tracker = overrides.get('tracker')
+        parallel = overrides.get('parallel')
+        Host._check_frame_overrides(tracker, parallel)
+        if parallel is not None:
+            return (frame, Frame.as_frame(parallel.frame), cadence.midtime)
+        if tracker is not None:
+            return (frame, Frame.J2000, Host._tracker_epoch(cadence, tracker))
+        return (frame, Frame.J2000, cadence.midtime)
+
+    @staticmethod
+    def _spice_failure(frame, reference, time):
+        """The exception that reports missing SPICE data when a Frame is evaluated.
+
+        Parameters:
+            frame (Frame): The Frame.
+            reference (Frame): The Frame relative to which `frame` is evaluated.
+            time (float | Scalar): The time in seconds TDB.
+
+        Returns:
+            Exception | None: The exception raised by evaluating `frame` relative to
+            `reference` at `time`, if :meth:`~oops.OopsSpiceError.is_spice_error` counts
+            it as missing SPICE data; None if the evaluation succeeds.
+
+        Raises:
+            Exception: Any exception of the evaluation that is not about SPICE data,
+                unchanged.
+        """
+
         try:
-            resolved.wrt(Frame.J2000).transform_at_time(time)
+            frame.wrt(reference).transform_at_time(time)
         except OopsSpiceError.CSPYCE_ERRORS as err:
             if not OopsSpiceError.is_spice_error(err):
                 raise
-            if defer:
-                return SpiceErrorFrame(err, description=description, filepath=filepath)
-            raise OopsSpiceError.from_spice_error(err, description=description,
-                                                  time=time, filepath=filepath) from err
-        return frame
-
-    @staticmethod
-    def _pointing_time(cadence, overrides):
-        """The time at which an observation will evaluate its frame, once the overrides
-        are applied.
-
-        A host checks the pointing with :meth:`~oops.host.Host._check_spice_frame` before
-        it calls :meth:`~oops.host.Host._apply_overrides`, because the overrides can wrap
-        the frame, so it checks at the time that this method gives. That is the midtime
-        of the `cadence` override if one is given, otherwise of `cadence`. With a
-        `tracker` override, it is instead the start, midtime, or end of that cadence, as
-        the override selects, because the frame is evaluated once, at that time, when the
-        tracking frame is built. A `timeshift` override adds its seconds once if its
-        letters include "T", which moves the observation's times, and once more if they
-        include "F", which makes the frame be evaluated that many seconds after the
-        observation's time. The letters are read in either case, as
-        :meth:`~oops.host.Host._apply_overrides` reads them. A "P" leaves the time as it
-        is.
-
-        Parameters:
-            cadence (Cadence): The cadence of the observation before the overrides.
-            overrides (dict[str, Any]): The standard overrides by name, as a host's
-                ``from_file`` or ``from_index`` receives them. Only "cadence",
-                "timeshift", "tracker", and "parallel" are read; a missing key counts as
-                None.
-
-        Returns:
-            float: The time in seconds TDB.
-
-        Raises:
-            OopsValueError: If the `tracker` override is not "start", "midtime", or
-                "end".
-        """
-
-        cadence = overrides.get('cadence') or cadence
-        time = cadence.midtime
-        tracker = overrides.get('tracker')
-        if tracker is not None and overrides.get('parallel') is None:
-            time = Host._tracker_epoch(cadence, tracker)
-        timeshift = overrides.get('timeshift')
-        if timeshift is not None:
-            letters = str(timeshift[1]).upper()
-            time += timeshift[0] * (('T' in letters) + ('F' in letters))
-        return time
+            return err
+        return None
 
     @staticmethod
     def _index_file_path(volumes, row_dict, *, volume_column='VOLUME_ID',

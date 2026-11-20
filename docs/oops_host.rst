@@ -180,13 +180,24 @@ row gives an observation, and a row whose pointing SPICE cannot supply gets a
 :class:`~oops.frame.SpiceErrorFrame` in place of its pointing. That frame raises
 :class:`~oops.OopsSpiceError` whenever it is used. The ``tracker`` and ``parallel``
 overrides evaluate the frame once, when the observation is built. They leave a frame of
-this kind as it is, so the error is still raised only when the pointing is used. A host
-checks the kernels at the time at which the observation evaluates its frame: its
-midtime, or for ``tracker`` the start, midtime, or end that the override selects, moved
-by any time shift. A host does not check the kernels, and
-so does not raise that exception, when the caller supplies the pointing, either as a
-``frame`` override or by choosing a pointing source other than SPICE. The rule is given in
-full under :class:`~oops.host.Host`.
+this kind as it is, so the error is still raised only when the pointing is used.
+
+A host checks the kernels for the frame as the observation will use it once the
+overrides are applied. The frame is checked at the observation's midtime, or for
+``tracker`` at the start, midtime, or end that the override selects, after any time
+shift of the observation's times. For ``parallel``, the frame is checked at the midtime
+relative to the parallel observation's frame, because the override evaluates it there
+once, when the observation is built. A time shift of the frame moves only the time at
+which the observation's own frame is evaluated relative to the frame it is defined in.
+Where the frame from the C kernels is the observation's own frame, the kernels are read
+at the shifted time. Where the observation's frame is a fixed rotation of that frame, as
+for a camera frame that flips the axes of the frame from the C kernels, the kernels are
+read at the observation's time, and the time shift does not change the pointing that
+the kernels give.
+
+A host does not check the kernels, and so does not raise that exception, when the
+caller supplies the pointing, either as a ``frame`` override or by choosing a pointing
+source other than SPICE. The rule is given in full under :class:`~oops.host.Host`.
 
 API reference
 -------------
