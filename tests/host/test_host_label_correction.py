@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from filecache import FCPath
 
-from oops.host import Host, PdsHostError
+from oops.host import AmbiguousHostError, Host, PdsHostError
 from tests.host._tables import write_table
 
 # A line of plain text outside any comment, which no PDS3 parser can read
@@ -169,6 +169,30 @@ def test_the_dispatcher_gives_an_index_to_the_host_whose_correction_reads_it(
     monkeypatch.setattr(Host, '_HOSTS', [_Plain, _Useless, _Fixing])
     rows = Host.from_index(_with_stray_line(_index(tmp_path)))
     assert [row['NAME'] for row in rows] == ['A', 'B']
+
+
+class _FixingToo(_Fixing):
+    """A second host whose correction removes STRAY_LINE."""
+
+    NAME = 'fixing_too'
+
+
+def test_a_label_that_the_corrections_of_several_hosts_read_is_ambiguous(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Host, '_HOSTS', [_Fixing, _Plain, _FixingToo])
+    with pytest.raises(AmbiguousHostError,
+                       match=r'^PDS3 label .*image\.lbl is claimed by more than one '
+                             r'host: fixing, fixing_too$'):
+        Host.from_file(_product_label(tmp_path))
+
+
+def test_an_index_that_the_corrections_of_several_hosts_read_is_ambiguous(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Host, '_HOSTS', [_Fixing, _Plain, _FixingToo])
+    with pytest.raises(AmbiguousHostError,
+                       match=r'^index .*vol_index\.lbl is claimed by more than one host: '
+                             r'fixing, fixing_too$'):
+        Host.from_index(_with_stray_line(_index(tmp_path)))
 
 
 class _Renaming(Host):

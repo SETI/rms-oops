@@ -2,8 +2,9 @@
 # oops/host/__init__.py
 ##########################################################################################
 
-from ._errors       import (HostError, HostFormatError, HostIndexError, PdsHostError,
-                            UnknownHostError, VicarHostError, WrongHostError)
+from ._errors       import (AmbiguousHostError, HostError, HostFormatError,
+                            HostIndexError, PdsHostError, UnknownHostError,
+                            VicarHostError, WrongHostError)
 from .              import _pds3_support, host_
 from .host_         import Host
 from ._fits_support import get_fits_image_hdu
@@ -24,7 +25,7 @@ PDS3_NULL_TEXTS = _pds3_support.PDS3_NULL_TEXTS
 
 __all__ = ['Host', 'ObsArray', 'PDS3_NULL_TEXTS', 'get_fits_image_hdu', 'is_pds3_null',
            'read_pds3_image_array',
-           'HostError', 'HostFormatError', 'HostIndexError', 'PdsHostError',
-           'UnknownHostError', 'VicarHostError', 'WrongHostError']
+           'AmbiguousHostError', 'HostError', 'HostFormatError', 'HostIndexError',
+           'PdsHostError', 'UnknownHostError', 'VicarHostError', 'WrongHostError']
 
 ##########################################################################################

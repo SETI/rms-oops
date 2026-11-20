@@ -19,13 +19,19 @@ The result is therefore the same as calling the host class directly. To identify
 label, it parses the label as it is in the file, trying the "fast" parser, then "strict",
 then "loose". A parser that reports a syntax error, or a value it cannot convert, such as
 a time with an hour of 25, is followed by the next. A label that none of them can read is
-offered to each host's correction of label text, described below, and goes to the first
-host whose correction makes it readable and that recognizes it. If there is no such
-host, the file goes to the host that recognizes it by its path. If no host does, the
-error gives the path of the label and each parser's message. A file that has already
-been parsed, as a PDS3 label, a VICAR label or image, or a FITS HDU list, is identified
-from that content and passed to the host as it is. Any other argument raises
-:class:`~oops.OopsTypeError`.
+offered to each host's correction of label text, described below, and goes to the host
+whose correction makes it readable and that recognizes it. If there is no such host, the
+file goes to the host that recognizes it by its path. If no host does, the error gives
+the path of the label and each parser's message. A file that has already been parsed, as
+a PDS3 label, a VICAR label or image, or a FITS HDU list, is identified from that content
+and passed to the host as it is. Any other argument raises :class:`~oops.OopsTypeError`.
+
+Every registered host is asked about the file, and exactly one must claim it. A file that
+two or more hosts claim raises :class:`~oops.host.AmbiguousHostError`, whose message names
+those hosts, so that two packages that both recognize a file are found out and neither
+one is chosen by the order in which they were imported. The same holds for an index,
+whether it is claimed from its label, from its first row, or through the hosts'
+corrections of label text.
 
 Correcting label text
 ---------------------
@@ -66,8 +72,8 @@ It identifies the host from the index label, which is parsed with one parser, "f
 unless the options select another. If the label does not say which instrument the index
 describes, the first row is read to find out, and only that row. An index label that the
 parser cannot read is offered to each host's correction of label text, as a product label
-is, and goes to the first host whose correction makes it readable and that recognizes
-the corrected label.
+is, and goes to the host whose correction makes it readable and that recognizes the
+corrected label.
 
 The host's own ``from_index`` then reads the index a few rows at a time as the iteration
 proceeds, and builds each row's observation when the iteration reaches it. An index of
@@ -102,6 +108,8 @@ Errors while reading an index
 
 These are raised by the call itself:
 
+- :class:`~oops.host.UnknownHostError` for an index that no host claims, and
+  :class:`~oops.host.AmbiguousHostError` for one that more than one host claims.
 - :class:`~oops.host.PdsHostError` for a label that cannot be parsed, and
   :class:`~oops.OopsValueError` for an invalid option of the label parser or for a value
   in the index label that the parser cannot convert, such as day 366 of a year that has

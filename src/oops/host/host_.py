@@ -24,8 +24,8 @@ from oops.observation import Observation
 from oops.path        import PathShift
 
 from .        import _index_rows
-from ._errors import (HostFormatError, HostIndexError, PdsHostError, UnknownHostError,
-                      VicarHostError, WrongHostError)
+from ._errors import (AmbiguousHostError, HostFormatError, HostIndexError, PdsHostError,
+                      UnknownHostError, VicarHostError, WrongHostError)
 
 # The methods of the PDS3 label parser, in the order in which Host.from_file() tries them
 # to identify the host of a label: "fast" reads most labels quickly, "strict" reads every
@@ -107,16 +107,17 @@ class Host:
         order "fast", "strict", and "loose". A method that reports a syntax error, or a
         value it cannot convert, such as a time with an hour of 25, is followed by the
         next. If none of them can parse the label, it is offered to each registered
-        host's correction of label text (its ``_correct_label_text``), and the first host
-        whose correction makes it readable and that recognizes it is chosen. If there is
-        no such host, each registered host is asked whether it recognizes the file by its
+        host's correction of label text (its ``_correct_label_text``), and the host whose
+        correction makes it readable and that recognizes it is chosen. If there is no
+        such host, each registered host is asked whether it recognizes the file by its
         path, as for a file that is not in a standard format. A VICAR file is identified
         from its header alone, without reading its array. Content that has already been
-        parsed, a :class:`~pdsparser.Pds3Label`, a
-        :class:`~vicar.VicarLabel` or :class:`~vicar.VicarImage`, or an
-        :class:`~astropy.io.fits.HDUList`, is identified from that content and handed to
-        the host as it is. Besides the exceptions listed here, the call raises any that
-        the host's ``from_file`` documents.
+        parsed, a :class:`~pdsparser.Pds3Label`, a :class:`~vicar.VicarLabel` or
+        :class:`~vicar.VicarImage`, or an :class:`~astropy.io.fits.HDUList`, is
+        identified from that content and handed to the host as it is. Every registered
+        host is asked at each step, and a file that more than one host claims at the same
+        step is refused. Besides the exceptions listed here, the call raises any that the
+        host's ``from_file`` documents.
 
         Parameters:
             filepath (str | pathlib.Path | FCPath | Pds3Label | VicarLabel | VicarImage |
@@ -178,6 +179,8 @@ class Host:
             absent.
 
         Raises:
+            AmbiguousHostError: If more than one registered Host subclass claims
+                `filepath`. The message names each of them.
             HostFormatError: If `filepath` has invalid syntax or uses an unsupported
                 option. Note that subclass :class:`~PdsHostError` is raised for a PDS3
                 syntax error and :class:`~VicarHostError` is raised for a VICAR syntax
@@ -219,9 +222,11 @@ class Host:
         row of the index is read, and only that row, and offered to each host that could
         not tell from the label. If the parser cannot read the label, the label is
         offered to each host's correction of label text (its ``_correct_label_text``),
-        and the first host whose correction makes it readable and that recognizes the
-        corrected label gets the call. If no host's correction helps,
-        :class:`~oops.host.PdsHostError` is raised.
+        and the host whose correction makes it readable and that recognizes the corrected
+        label gets the call. If no host's correction helps,
+        :class:`~oops.host.PdsHostError` is raised. An index that more than one host
+        claims, from its label, from its first row, or through their corrections, is
+        refused.
 
         The host's own ``from_index`` then reads the rows of the index and its supplement
         as the iteration proceeds, a few rows at a time, and builds each row's
@@ -333,6 +338,9 @@ class Host:
                 the label.
             UnknownHostError: If `filepath` is not associated with any registered Host
                 subclass.
+            AmbiguousHostError: If more than one registered Host subclass claims the
+                index, from its label, from its first row, or through its correction of
+                label text. The message names each of them.
         """
 
         filepath = FCPath(filepath)
@@ -351,7 +359,8 @@ class Host:
                 found = Host._host_from_correction(
                     Host._HOSTS, '_detect_in_index',
                     lambda correct: Host._parse_index_label(filepath, options,
-                                                            correct=correct))
+                                                            correct=correct),
+                    f'index {filepath}')
                 if found is None:
                     raise
                 (host, label) = (found[0], None)
@@ -363,8 +372,8 @@ class Host:
         # once and offered to each of those hosts.
         if host is None:
             status = {host: host._detect_in_index(label) for host in Host._HOSTS}
-            claimed = [host for host in Host._HOSTS if status[host]]
-            host = claimed[0] if claimed else None
+            host = Host._one_host([host for host in Host._HOSTS if status[host]],
+                                  f'index {filepath}')
 
         if host is None:
             undecided = [host for host in Host._HOSTS if status[host] is None]
@@ -376,11 +385,11 @@ class Host:
                 first = _index_rows.first_row(table, filepath)
             else:
                 (first, row_dicts) = Host._peek(row_dicts)
-            found = [host for host in undecided
-                     if first is not None and host._detect_in_row(first)]
-            if not found:
+            host = Host._one_host([host for host in undecided
+                                   if first is not None and host._detect_in_row(first)],
+                                  f'first row of the index {filepath}')
+            if host is None:
                 raise UnknownHostError(f'unknown host in index {filepath}')
-            host = found[0]
 
         # A host with a correction of label text parses the label itself, so that it
         # reads the label as its own from_index would
@@ -513,8 +522,8 @@ class Host:
         The method also receives labels of other hosts. When
         :meth:`~oops.host.Host.from_file` or :meth:`~oops.host.Host.from_index` meets a
         label that no parser method can read, it offers the label to each registered
-        host's correction in turn, and gives the file to the first host whose correction
-        makes the label readable and that then recognizes it. A correction must
+        host's correction in turn, and gives the file to the host whose correction makes
+        the label readable and that then recognizes it. A correction must
         therefore change only the text that has the defect it repairs, and return any
         other text as it is. It should not raise. In that offer, a correction that raises
         an exception counts as no help, and the next host is tried. When the host reads
@@ -559,14 +568,14 @@ class Host:
     ######################################################################################
 
     @staticmethod
-    def _host_from_correction(hosts, detector, parse):
-        """The first of some hosts whose correction of label text makes a label readable
-        and that then recognizes the corrected label.
+    def _host_from_correction(hosts, detector, parse, what):
+        """The host whose correction of label text makes a label readable and that then
+        recognizes the corrected label.
 
-        Each host's :meth:`~oops.host.Host._correct_label_text` is tried in turn; a host
-        that keeps the default is skipped. If a correction raises an exception, or the
-        text it returns cannot be parsed, that host is passed over, so that one host's
-        correction cannot keep another host from being found.
+        Each host's :meth:`~oops.host.Host._correct_label_text` is tried; a host that
+        keeps the default is skipped. If a correction raises an exception, or the text it
+        returns cannot be parsed, that host is passed over, so that one host's correction
+        cannot keep another host from being found.
 
         Parameters:
             hosts (list[type]): The Host subclasses to consider, in order.
@@ -575,12 +584,19 @@ class Host:
             parse (collections.abc.Callable): A function with the signature
                 ``(collections.abc.Callable) -> Pds3Label`` that parses the label with the
                 correction it is given.
+            what (str): The label, for the message of the error, such as "index
+                <filepath>".
 
         Returns:
             tuple[type, Pds3Label] | None: The Host subclass and the label as its
             correction gives it; None if no host's correction helps.
+
+        Raises:
+            AmbiguousHostError: If the corrections of more than one host make the label
+                readable and those hosts recognize it.
         """
 
+        found = []
         for host in hosts:
             correct = host._label_corrector()
             if correct is None:
@@ -590,8 +606,11 @@ class Host:
             except Exception:   # nosec B112 -- any failure means this host did not help
                 continue
             if getattr(host, detector)(label):
-                return (host, label)
-        return None
+                found.append((host, label))
+
+        if Host._one_host([host for (host, _) in found], what) is None:
+            return None
+        return found[0]
 
     @staticmethod
     def _identify_host(filepath, *, pds3_options=None):
@@ -612,6 +631,8 @@ class Host:
         Raises:
             UnknownHostError: If `filepath` is not associated with any registered Host
                 subclass.
+            AmbiguousHostError: If more than one registered Host subclass claims
+                `filepath`.
             HostFormatError: If `filepath` has invalid syntax for format. Note that
                 subclass :class:`~PdsHostError` is returned for PDS-formatted files and
                 :class:`~VicarHostError` is returned for VICAR files.
@@ -642,6 +663,8 @@ class Host:
         Raises:
             OopsTypeError: If `content` is not one of the parsed forms listed above.
             UnknownHostError: If no registered Host subclass recognizes `content`.
+            AmbiguousHostError: If more than one registered Host subclass recognizes
+                `content`.
         """
 
         if isinstance(content, Pds3Label):
@@ -656,10 +679,11 @@ class Host:
                                 f'VicarLabel, VicarImage, or HDUList), not '
                                 f'{type(content).__name__}')
 
-        for host in Host._HOSTS:
-            if getattr(host, detector)(content):
-                return host
-        raise UnknownHostError(f'unrecognized host in parsed {kind}')
+        host = Host._one_host([host for host in Host._HOSTS
+                               if getattr(host, detector)(content)], f'parsed {kind}')
+        if host is None:
+            raise UnknownHostError(f'unrecognized host in parsed {kind}')
+        return host
 
     @classmethod
     def _read_fileinfo(cls, fileinfo, *, formats, astrometry=False, pds3_options=None,
@@ -766,6 +790,8 @@ class Host:
                 Host subclasses.
             WrongHostError: If `filepath` is not associated with a single specified Host
                 subclass.
+            AmbiguousHostError: If more than one of the listed Host subclasses claims
+                `filepath`. A FITS file is closed before it is raised.
         """
 
         def identify_pds3(kind):
@@ -785,19 +811,22 @@ class Host:
                         hosts, '_detect_in_pds3',
                         lambda correct: Host._parse_pds3(filepath, pds3_options,
                                                          fallback=pds3_fallback,
-                                                         correct=correct))
+                                                         correct=correct),
+                        f'{kind} {filepath}')
                     if found:
                         return found
                 if pds3_fallback and 'O' in formats:
-                    for host in hosts:
-                        if (hasattr(host, '_detect_in_file')
-                                and host._detect_in_file(filepath)):
-                            return host, filepath
+                    host = Host._one_host([host for host in hosts
+                                           if host._detect_in_file(filepath)],
+                                          f'{kind} {filepath}')
+                    if host is not None:
+                        return host, filepath
                 raise
-            for host in hosts:
-                if hasattr(host, '_detect_in_pds3') and host._detect_in_pds3(label):
-                    return host, label
-            raise Host._no_host_error(hosts, kind, filepath)
+            host = Host._one_host([host for host in hosts if host._detect_in_pds3(label)],
+                                  f'{kind} {filepath}')
+            if host is None:
+                raise Host._no_host_error(hosts, kind, filepath)
+            return host, label
 
         filepath = FCPath(filepath)
         suffix = filepath.suffix.lower()
@@ -814,12 +843,13 @@ class Host:
                 hdulist = pyfits.open(local_path)
             except OSError as err:
                 raise HostFormatError(f'not a valid FITS file: {filepath}') from err
-            else:
-                for host in hosts:
-                    if hasattr(host, '_detect_in_fits') and host._detect_in_fits(hdulist):
-                        return host, hdulist
+            claimants = [host for host in hosts if host._detect_in_fits(hdulist)]
+            if len(claimants) != 1:
                 hdulist.close()
+            host = Host._one_host(claimants, f'FITS file {filepath}')
+            if host is None:
                 raise Host._no_host_error(hosts, 'FITS file', filepath)
+            return host, hdulist
 
         # Handle a VICAR file
         if 'V' in formats and VicarLabel.is_vicar_file(filepath):
@@ -831,11 +861,11 @@ class Host:
                     vic.filepath = filepath     # from_file does not record the path
             except VicarError as err:
                 raise VicarHostError(str(err)) from err
-            else:
-                for host in hosts:
-                    if hasattr(host, '_detect_in_vicar') and host._detect_in_vicar(vic):
-                        return host, vic
+            host = Host._one_host([host for host in hosts if host._detect_in_vicar(vic)],
+                                  f'VICAR file {filepath}')
+            if host is None:
                 raise Host._no_host_error(hosts, 'VICAR file', filepath)
+            return host, vic
 
         # Handle an attached PDS3 label
         if 'P' in formats and is_pds3_file(filepath):
@@ -843,9 +873,11 @@ class Host:
 
         # Handle another file format
         if 'O' in formats:
-            for host in hosts:
-                if hasattr(host, '_detect_in_file') and host._detect_in_file(filepath):
-                    return host, filepath
+            host = Host._one_host([host for host in hosts
+                                   if host._detect_in_file(filepath)],
+                                  f'file {filepath}')
+            if host is not None:
+                return host, filepath
 
         raise Host._no_host_error(hosts, 'file', filepath)
 
@@ -1032,6 +1064,29 @@ class Host:
         if len(hosts) == 1:
             return WrongHostError(f'not a {hosts[0].NAME} {kind}: {filepath}')
         return UnknownHostError(f'unrecognized host in {kind}: {filepath}')
+
+    @staticmethod
+    def _one_host(claimants, what):
+        """The one Host subclass that claims a file, if any does.
+
+        Parameters:
+            claimants (list[type]): The Host subclasses that claim the file, in the order
+                in which they were registered.
+            what (str): The file, for the message, such as "PDS3 label <filepath>".
+
+        Returns:
+            type | None: The one Host subclass in `claimants`; None if it is empty.
+
+        Raises:
+            AmbiguousHostError: If `claimants` holds more than one Host subclass. The
+                message reads "<what> is claimed by more than one host: <name>, <name>",
+                with the :attr:`~oops.host.Host.NAME` of each.
+        """
+
+        if len(claimants) > 1:
+            names = ', '.join(host.NAME for host in claimants)
+            raise AmbiguousHostError(f'{what} is claimed by more than one host: {names}')
+        return claimants[0] if claimants else None
 
     _TIMESHIFT_CLASS = {'T': TimeShift, 'P': PathShift, 'F': FrameShift}
     _TIMESHIFT_ATTR = {'T': 'cadence', 'P': 'path', 'F': 'frame'}

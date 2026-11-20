@@ -84,7 +84,8 @@ def test_the_default_file_key_is_the_file_specification_name_alone(
 
 def test_the_default_check_compares_the_volume_of_rows_that_give_one_file(
         tmp_path: Path) -> None:
-    label = _tables(tmp_path, {'VOLUME_ID': ['V1'], 'FILE_SPECIFICATION_NAME': _files('A')},
+    label = _tables(tmp_path,
+                    {'VOLUME_ID': ['V1'], 'FILE_SPECIFICATION_NAME': _files('A')},
                     {'VOLUME_ID': ['V2'], 'FILE_SPECIFICATION_NAME': _files('A')})
     rows = _ByPosition._index_rows(label)
 

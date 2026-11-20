@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 
 from oops         import OopsValueError
-from oops.host    import Host, PdsHostError
+from oops.host    import AmbiguousHostError, Host, PdsHostError
 
 INDEX_LABEL = """PDS_VERSION_ID = PDS3
 RECORD_TYPE = FIXED_LENGTH
@@ -157,6 +157,38 @@ def test_a_host_that_recognizes_the_label_is_found_before_any_row_is_read(
 
     with pytest.raises(FileNotFoundError, match='index.tab'):
         next(result)
+
+
+class _IndexHostToo(_IndexHost):
+    """A second host that claims every index."""
+
+    NAME = 'index_host_too'
+
+
+class _RowHostToo(_RowHost):
+    """A second host that can be identified only from the first row of an index."""
+
+    NAME = 'row_host_too'
+
+
+def test_an_index_whose_label_several_hosts_claim_is_ambiguous(
+        index_label: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Host, '_HOSTS', [_IndexHost, _RowHost, _IndexHostToo])
+
+    with pytest.raises(AmbiguousHostError,
+                       match=r'^index .*index\.lbl is claimed by more than one host: '
+                             r'index_host, index_host_too$'):
+        Host.from_index(index_label)
+
+
+def test_an_index_whose_first_row_several_hosts_claim_is_ambiguous(
+        index_label: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Host, '_HOSTS', [_RowHost, _RowHostToo])
+
+    with pytest.raises(AmbiguousHostError,
+                       match=r'^first row of the index .*index\.lbl is claimed by more '
+                             r'than one host: row_host, row_host_too$'):
+        Host.from_index(index_label)
 
 
 def test_rows_given_by_the_caller_keep_the_row_read_to_find_the_host(
