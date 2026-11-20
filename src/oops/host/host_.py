@@ -112,7 +112,9 @@ class Host:
         result is the one the host class gives when it is called directly. To identify
         the host, a PDS3 label is parsed with the method that `pds3_options` selects,
         "fast" by default, and then with each later method in the order "fast", "strict",
-        and "loose". If none of them can parse it, each registered host is asked whether
+        and "loose"; a method that reports a syntax error, or a value it cannot convert,
+        such as a time with an hour of 25, is followed by the next. If none of them can
+        parse it, each registered host is asked whether
         it recognizes the file by its path, as for a file that is not in a standard
         format. A VICAR file is identified from its header alone, without reading its
         array. Content that has already been parsed, a :class:`~pdsparser.Pds3Label`, a
@@ -549,10 +551,15 @@ class Host:
         raise UnknownHostError(f'unrecognized host in parsed {kind}')
 
     @classmethod
-    def _read_fileinfo(cls, fileinfo, *, formats, astrometry=False, pds3_options=None):
+    def _read_fileinfo(cls, fileinfo, *, formats, astrometry=False, pds3_options=None,
+                       pds3_fallback=False):
         """Read and parse the file content for this class in PDS3, VICAR, or FITS format.
 
-        This is a support method for the `from_file` methods of the Host subclasses.
+        This is a support method for the `from_file` methods of the Host subclasses. With
+        `pds3_fallback` True, a PDS3 label that the requested method of the parser cannot
+        read is parsed again with each later method of "fast", "strict", and "loose", as
+        described for :meth:`~oops.host.Host._parse_pds3`; a host then needs no loop of
+        its own over the methods.
 
         Parameters:
             fileinfo (str | pathlib.Path | FCPath | Pds3Label | VicarLabel | HDUList): The
@@ -565,6 +572,9 @@ class Host:
                 in the Observation.
             pds3_options (dict[str, Any], optional): Any keyword arguments and their
                 values to be passed to the :class:`~pdsparser.Pds3Label` parser.
+            pds3_fallback (bool, optional): True to try each later method of the PDS3
+                parser when the requested one cannot read a label; False to use the
+                requested method alone.
 
         Returns:
             Pds3Label | VicarLabel | VicarImage | HDUList | FCPath: The parsed file
@@ -575,8 +585,11 @@ class Host:
         Raises:
             HostFormatError: If `fileinfo` has invalid syntax for format. Note that
                 subclass :class:`~PdsHostError` is returned for PDS-formatted files and
-                :class:`~VicarHostError` is returned for VICAR files.
-            OopsValueError: If the value in `pds3_options` is invalid.
+                :class:`~VicarHostError` is returned for VICAR files. The message of a
+                :class:`~PdsHostError` names the label and, with `pds3_fallback`, gives
+                the error of each method tried.
+            OopsValueError: If the value in `pds3_options` is invalid, as described for
+                :meth:`~oops.host.Host._parse_pds3`.
             OSError: If the file does not exist or cannot be read.
             WrongHostError: If `fileinfo` is not associated with this Host subclass.
         """
@@ -588,7 +601,8 @@ class Host:
         # Parse the file if it's in a standard format
         _, parsed = Host._identify_and_parse(fileinfo, hosts=[cls],
                                              formats=formats, astrometry=astrometry,
-                                             pds3_options=pds3_options)
+                                             pds3_options=pds3_options,
+                                             pds3_fallback=pds3_fallback)
         return parsed
 
     @staticmethod
@@ -596,7 +610,9 @@ class Host:
                             pds3_options=None, pds3_fallback=False):
         """Interpret the filepath and identify the associated host module.
 
-        Also return the parsed file content for PDS3, VICAR, and FITS formats.
+        Also return the parsed file content for PDS3, VICAR, and FITS formats. A FITS file
+        that none of the hosts recognizes is closed before the error is raised; one that a
+        host recognizes is returned open, and the caller closes it.
 
         Parameters:
             filepath (str | pathlib.Path | FCPath): The path to the data file or its
@@ -670,6 +686,7 @@ class Host:
                 for host in hosts:
                     if hasattr(host, '_detect_in_fits') and host._detect_in_fits(hdulist):
                         return host, hdulist
+                hdulist.close()
                 raise Host._no_host_error(hosts, 'FITS file', filepath)
 
         # Handle a VICAR file
@@ -704,6 +721,15 @@ class Host:
     def _parse_pds3(filepath, pds3_options, *, fallback):
         """The parsed PDS3 label of a file.
 
+        With `fallback` True and a method of "fast", "strict", or "loose" in
+        `pds3_options`, that method is tried first and each later one in turn. A method
+        fails if it raises a syntax error, or a ValueError for a value it cannot convert,
+        as the fast method does for a time with an hour of 25 or for day 366 of a year
+        that has 365 days; the next method is then tried. A TypeError, which is how the
+        parser rejects a keyword it does not accept, ends the attempts at once. With any
+        other method, or with `fallback` False, the label is parsed once, and a
+        ValueError means an invalid option.
+
         Parameters:
             filepath (FCPath): The path to the label or to a file with an attached label.
             pds3_options (dict[str, Any]): The keyword arguments of the
@@ -716,28 +742,43 @@ class Host:
             Pds3Label: The parsed label.
 
         Raises:
-            OopsValueError: If a value in `pds3_options` is invalid.
+            OopsValueError: If `pds3_options` holds a keyword that the parser does not
+                accept; or, when the label is parsed only once, if a value in
+                `pds3_options` is invalid or the parser raises a ValueError for a value in
+                the label.
             OSError: If `filepath` does not exist or cannot be read.
-            PdsHostError: If no method that is tried can parse the label. The message is
-                that of the first method.
+            PdsHostError: If no method that is tried can parse the label. The message has
+                the form "cannot parse the PDS3 label <filepath>: <error>" for one
+                attempt, and gives each method's error, as in "method fast: <error>;
+                method strict: <error>; method loose: <error>", for several.
         """
 
-        attempts = [pds3_options]
         method = pds3_options.get('method')
-        if fallback and method in _PDS3_METHODS:
+        fallback = fallback and method in _PDS3_METHODS
+        attempts = [pds3_options]
+        if fallback:
             attempts = [pds3_options | {'method': later}
                         for later in _PDS3_METHODS[_PDS3_METHODS.index(method):]]
 
-        first_error = None
+        errors = []         # (method, exception) of each method that failed
         for options in attempts:
             try:
                 return Pds3Label(filepath, **options)
             except PdsError as err:
-                first_error = first_error or err
-            except (TypeError, ValueError) as err:
+                errors.append((options.get('method'), err))
+            except TypeError as err:
                 raise OopsValueError(str(err)) from err
+            except ValueError as err:
+                if not fallback:
+                    raise OopsValueError(str(err)) from err
+                errors.append((options['method'], err))
 
-        raise PdsHostError(str(first_error)) from first_error
+        if len(errors) == 1:
+            reasons = str(errors[0][1])
+        else:
+            reasons = '; '.join(f'method {name}: {err}' for (name, err) in errors)
+        raise PdsHostError(f'cannot parse the PDS3 label {filepath}: '
+                           f'{reasons}') from errors[0][1]
 
     @staticmethod
     def _no_host_error(hosts, kind, filepath):
@@ -1031,13 +1072,14 @@ class Host:
         Raises:
             OopsValueError: If a value in `pds3_options` is invalid.
             OSError: If `filepath` does not exist or cannot be read.
-            PdsHostError: If the label uses invalid PDS3 syntax.
+            PdsHostError: If the label uses invalid PDS3 syntax. The message has the form
+                "cannot parse the PDS3 label <filepath>: <parser's message>".
         """
 
         try:
             return Pds3Label(filepath, **pds3_options)
         except PdsError as err:
-            raise PdsHostError(str(err)) from err
+            raise PdsHostError(f'cannot parse the PDS3 label {filepath}: {err}') from err
         except (TypeError, ValueError) as err:
             raise OopsValueError(str(err)) from err
 

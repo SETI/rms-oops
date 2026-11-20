@@ -11,7 +11,7 @@ from astropy.io import fits
 from pdsparser import Pds3Label
 from vicar import VicarImage
 
-from oops      import OopsTypeError
+from oops      import OopsTypeError, OopsValueError
 from oops.host import Host, PdsHostError, UnknownHostError
 
 # The fast parser cannot read a quoted value that starts on the line after its "=" and
@@ -26,6 +26,20 @@ END
 # No parser can read an unterminated quoted value
 UNPARSEABLE_LABEL = """PDS_VERSION_ID = PDS3
 DESCRIPTION = "unterminated
+END
+"""
+
+# The fast parser raises a ValueError for day 366 of a year that has 365 days; the strict
+# parser reads it
+DAY_366_LABEL = """PDS_VERSION_ID = PDS3
+PRODUCT_CREATION_TIME = 2005-366T00:00:00
+END
+"""
+
+# The fast parser raises a ValueError for an hour of 25; the strict and loose parsers
+# report a syntax error
+HOUR_25_LABEL = """PDS_VERSION_ID = PDS3
+START_TIME = 2005-01-01T25:00:00
 END
 """
 
@@ -117,6 +131,69 @@ def test_a_label_that_only_a_later_parser_reads_is_identified(tmp_path: Path) ->
     """A label that the fast parser cannot read is identified with the strict parser."""
 
     assert Host.from_file(_label(tmp_path, FAST_FAILS_LABEL)) == 'observation'
+
+
+@pytest.mark.usefixtures('hosts')
+def test_a_label_value_that_only_a_later_parser_reads_is_identified(
+        tmp_path: Path) -> None:
+    """A ValueError from the fast parser means that method failed, so strict is tried."""
+
+    assert Host.from_file(_label(tmp_path, DAY_366_LABEL)) == 'observation'
+
+
+def test_the_fallback_reads_a_value_that_the_fast_parser_cannot_convert(
+        tmp_path: Path) -> None:
+    label = Host._parse_pds3(_label(tmp_path, DAY_366_LABEL), {'method': 'fast'},
+                             fallback=True)
+    assert label['PRODUCT_CREATION_TIME_fmt'] == '2005-366T00:00:00'
+
+
+def test_the_fallback_message_gives_the_error_of_every_method(tmp_path: Path) -> None:
+    with pytest.raises(PdsHostError,
+                       match=r'^cannot parse the PDS3 label .*image\.lbl: '
+                             r'method fast: hour >= 24; method strict: .+; '
+                             r'method loose: .+$'):
+        Host._parse_pds3(_label(tmp_path, HOUR_25_LABEL), {'method': 'fast'},
+                         fallback=True)
+
+
+def test_the_fallback_starts_at_the_requested_method(tmp_path: Path) -> None:
+    with pytest.raises(PdsHostError, match=r'image\.lbl: method strict: .+; '
+                                           r'method loose: [^;]+$'):
+        Host._parse_pds3(_label(tmp_path, HOUR_25_LABEL), {'method': 'strict'},
+                         fallback=True)
+
+
+def test_an_unknown_option_is_an_argument_error_with_the_fallback(tmp_path: Path) -> None:
+    with pytest.raises(OopsValueError, match='unexpected keyword argument'):
+        Host._parse_pds3(_label(tmp_path, DAY_366_LABEL), {'method': 'fast', 'nope': 1},
+                         fallback=True)
+
+
+def test_an_unknown_method_is_an_argument_error_with_the_fallback(tmp_path: Path) -> None:
+    with pytest.raises(OopsValueError, match="invalid method: 'bogus'"):
+        Host._parse_pds3(_label(tmp_path, DAY_366_LABEL), {'method': 'bogus'},
+                         fallback=True)
+
+
+def test_without_the_fallback_a_value_error_is_an_argument_error(tmp_path: Path) -> None:
+    with pytest.raises(OopsValueError, match='day number cannot exceed'):
+        Host._parse_pds3(_label(tmp_path, DAY_366_LABEL), {'method': 'fast'},
+                         fallback=False)
+
+
+def test_without_the_fallback_the_message_names_the_label(tmp_path: Path) -> None:
+    with pytest.raises(PdsHostError, match=r'^cannot parse the PDS3 label .*image\.lbl: '
+                                           r'(?!method)'):
+        Host._parse_pds3(_label(tmp_path, UNPARSEABLE_LABEL), {'method': 'strict'},
+                         fallback=False)
+
+
+def test_read_fileinfo_parses_with_the_fallback_when_asked(tmp_path: Path) -> None:
+    parsed = _FileHost._read_fileinfo(_label(tmp_path, DAY_366_LABEL), formats='P',
+                                      pds3_options={'method': 'fast'},
+                                      pds3_fallback=True)
+    assert parsed['PRODUCT_CREATION_TIME_fmt'] == '2005-366T00:00:00'
 
 
 @pytest.mark.usefixtures('hosts')

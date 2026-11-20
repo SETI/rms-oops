@@ -16,8 +16,11 @@ Reading a file
 label, VICAR header, FITS header, or file name, and passes the file's path, with every
 other argument as given, to that host's own ``from_file``, which reads the file itself.
 The result is therefore the same as calling the host class directly. To identify a PDS3
-label, it tries the "fast" parser, then "strict", then "loose". A label that none of them
-can read goes to the host that recognizes it by its path, if there is one. A file that
+label, it tries the "fast" parser, then "strict", then "loose". A parser that reports a
+syntax error, or a value it cannot convert, such as a time with an hour of 25, is followed
+by the next. A label that none of them can read goes to the host that recognizes it by
+its path, if there is one; otherwise the error names the label and gives each parser's
+message. A file that
 has already been parsed, as a PDS3 label, a VICAR label or image, or a FITS HDU list, is
 identified from that content and passed to the host as it is. Any other argument raises
 :class:`~oops.OopsTypeError`.

@@ -48,14 +48,15 @@ def open_table(filepath, *, label=None, pds3_method='fast'):
         HostIndexError: If the label does not describe a table that can be read, as when
             it lacks the object that its table pointer refers to.
         OSError: If the label does not exist or cannot be read.
-        PdsHostError: If the label uses invalid PDS3 syntax.
+        PdsHostError: If the label uses invalid PDS3 syntax. The message has the form
+            "cannot parse the PDS3 label <filepath>: <parser's message>".
     """
 
     try:
         return PdsTable(filepath, label_contents=label, label_method=pds3_method,
                         defer_load=True)
     except PdsError as err:
-        raise PdsHostError(str(err)) from err
+        raise PdsHostError(f'cannot parse the PDS3 label {filepath}: {err}') from err
     except KeyError as err:
         # An item that the table reader needs is not in the label, such as the object
         # that a pointer refers to (^INDEX_TABLE in a label whose table object is TABLE)

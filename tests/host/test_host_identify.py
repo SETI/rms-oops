@@ -8,10 +8,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 from astropy.io import fits
+from filecache  import FCPath
 from vicar      import VicarImage
 
-from oops.host import (Host, HostFormatError, HostIndexError, UnknownHostError,
-                       WrongHostError)
+from oops.host import (Host, HostFormatError, HostIndexError, PdsHostError,
+                       UnknownHostError, WrongHostError)
 
 INDEX_LABEL = """PDS_VERSION_ID = PDS3
 RECORD_TYPE = FIXED_LENGTH
@@ -134,6 +135,45 @@ def test_an_unreadable_fits_file_is_a_format_error(tmp_path: Path) -> None:
     filepath.write_bytes(b'not a FITS file')
     with pytest.raises(HostFormatError, match='not a valid FITS file'):
         Host._identify_and_parse(filepath, hosts=[_HostA])
+
+
+def test_a_fits_file_that_no_host_claims_is_closed(tmp_path: Path,
+                                                   monkeypatch: pytest.MonkeyPatch) -> None:
+    opened: list[fits.HDUList] = []
+    real_open = fits.open
+
+    def recording_open(*args: object, **kwargs: object) -> fits.HDUList:
+        hdulist = real_open(*args, **kwargs)
+        opened.append(hdulist)
+        return hdulist
+
+    monkeypatch.setattr(fits, 'open', recording_open)
+    with pytest.raises(WrongHostError):
+        Host._identify_and_parse(_write_fits(tmp_path), hosts=[_HostA])
+
+    assert opened[0]._file.closed
+
+##########################################################################################
+# A label that cannot be parsed is named in the error
+##########################################################################################
+
+def test_an_index_label_that_cannot_be_parsed_is_named(tmp_path: Path) -> None:
+    label = tmp_path / 'vol_index.lbl'
+    label.write_text('PDS_VERSION_ID = PDS3\nRECORD_TYPE\nEND\n')
+    with pytest.raises(PdsHostError,
+                       match=r'^cannot parse the PDS3 label .*vol_index\.lbl: '
+                             r'missing "=" at RECORD_TYPE'):
+        Host._parse_index_label(FCPath(label), {'method': 'fast'})
+
+
+def test_a_supplement_label_that_cannot_be_parsed_is_named(tmp_path: Path) -> None:
+    label = _write_index(tmp_path, 'vol_index')
+    (tmp_path / 'vol_supplemental_index.lbl').write_text(
+        'PDS_VERSION_ID = PDS3\nRECORD_TYPE\nEND\n')
+    with pytest.raises(PdsHostError,
+                       match=r'^cannot parse the PDS3 label '
+                             r'.*vol_supplemental_index\.lbl: missing "=" at RECORD_TYPE'):
+        Host._index_rows(label)
 
 ##########################################################################################
 # The supplemental index is optional unless required
