@@ -15,24 +15,16 @@ dependencies = [
   "numpy",
   "Pillow",
   "pyparsing",
-  # 3.0.0 is the first release that rms-vicar can read images through; it also has
-  # FCPath.absolute() and get_local_path(create_parents=False), which oops.host uses.
   "rms-filecache>=3.0.0",
   "rms-fpzip",
   "rms-interval",
   "rms-julian",
-  # 2.4.0 adds PdsError, which oops.host raises and catches, and the "_list" keys of
-  # Pds3Label.as_dict, which preserve the order of a braced set such as CUT_OUT_WINDOW;
-  # 2.4.1 is the minimum of rms-pdstable 1.2.0.
   "rms-pdsparser>=2.4.1",
-  # 1.2.0 adds PdsTable(defer_load=True) and iter_dicts, which read an index table one
-  # row at a time.
   "rms-pdstable>=1.2.0",
   "rms-polymath>=2.1.1",
   "rms-solar",
   "rms-tabulation",
   "rms-vax",
-  # 1.3.0 adds VicarLabel.is_vicar_file, which oops uses to identify VICAR files.
   "rms-vicar>=1.3.0",
   "scipy"
 ]
