@@ -4,10 +4,11 @@
 
 from typing import Any
 
+import numpy as np
 import pytest
 
 from oops       import Frame, OopsSpiceError
-from oops.frame import SpiceErrorFrame
+from oops.frame import Cmatrix, SpiceErrorFrame
 from oops.host  import Host
 
 SPICE_TEXT = 'SPICE(CKINSUFFDATA) -- Insufficient data for frame -82360'
@@ -59,5 +60,23 @@ def test_an_unregistered_frame_id_is_not_a_spice_error() -> None:
 def test_an_error_that_cspyce_does_not_raise_propagates() -> None:
     with pytest.raises(TypeError, match='not about SPICE'):
         _check(_FailingFrame(TypeError('not about SPICE')))
+
+
+def test_an_error_without_a_spice_code_propagates() -> None:
+    """A ValueError is of a class that cspyce raises, but without a SPICE code in its text
+    it is not about SPICE data."""
+
+    with pytest.raises(ValueError, match='not about SPICE'):
+        _check(_FailingFrame(ValueError('not about SPICE')), defer=True)
+
+
+def test_a_frame_whose_reference_spice_cannot_supply_raises() -> None:
+    """A Cmatrix transforms from its reference without evaluating it, so the check must
+    evaluate the frame relative to J2000."""
+
+    frame = Cmatrix(np.eye(3), reference=_FailingFrame(RuntimeError(SPICE_TEXT)))
+
+    with pytest.raises(OopsSpiceError, match=r'SPICE\(CKINSUFFDATA\)$'):
+        _check(frame)
 
 ##########################################################################################

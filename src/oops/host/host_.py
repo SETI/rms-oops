@@ -14,7 +14,8 @@ from filecache  import FCPath
 from pdsparser  import Pds3Label, PdsError, is_pds3_file
 from vicar      import VicarError, VicarImage, VicarLabel
 
-from oops._exceptions import OopsIndexError, OopsSpiceError, OopsTypeError, OopsValueError
+from oops._exceptions import (_SPICE_CODE, OopsIndexError, OopsSpiceError, OopsTypeError,
+                              OopsValueError)
 from oops.body        import Body
 from oops.cadence     import TimeShift
 from oops.frame       import (Cmatrix, Frame, FrameShift, Navigation, SpiceErrorFrame,
@@ -1280,6 +1281,13 @@ class Host:
         Frame returned, so that the row is still built and the error is raised when the
         pointing is used.
 
+        The Frame is evaluated relative to J2000, so every Frame in its chain of
+        references is checked, as for a Cmatrix whose reference is a SPICE frame. An
+        exception counts as missing SPICE data only if it is of a class that cspyce raises
+        (LookupError, OSError, RuntimeError, or ValueError) and its text contains a SPICE
+        short error such as "SPICE(CKINSUFFDATA)"; any other exception propagates
+        unchanged.
+
         Parameters:
             frame (Frame | str): The Frame, or the ID of a registered Frame, that the
                 observation uses.
@@ -1310,8 +1318,10 @@ class Host:
         # A Frame ID that is not registered is the caller's error, not missing SPICE data
         resolved = Frame.as_frame(frame)
         try:
-            resolved.transform_at_time(time)
+            resolved.wrt(Frame.J2000).transform_at_time(time)
         except _SPICE_ERRORS as err:
+            if not _SPICE_CODE.search(str(err)):
+                raise
             if defer:
                 return SpiceErrorFrame(err, description=description, filepath=filepath)
             raise OopsSpiceError.from_spice_error(err, description=description,
