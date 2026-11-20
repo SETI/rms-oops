@@ -57,7 +57,7 @@ class Host:
         lightsource: LightSource | None = None, path: str | Path | None = None,
         frame: str | Frame | None = None, cadence: Cadence | None = None,
         fov: FOV | None = None,
-        calibrations: Calibration | list[Calibration] | None = ...,
+        calibrations: Calibration | list[Calibration] | None = None,
         timeshift: tuple[float, str] | None = None,
         navigation: tuple[float, ...] | None = None, tracker: str | None = None,
         parallel: Observation | None = None,

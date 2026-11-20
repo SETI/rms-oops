@@ -164,6 +164,16 @@ def test_a_missing_required_supplement_is_not_found(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError, match='vol_supplemental_index.lbl'):
         Host._read_index_rows(label, supplement=Host.SUPPLEMENT)
 
+
+def test_a_pointer_to_no_object_is_an_index_error(tmp_path: Path) -> None:
+    """A table pointer that names no object of the label is reported as an invalid
+    index table, never as a bare KeyError."""
+
+    label = _write_index(tmp_path, 'INDEX')
+    label.write_text(label.read_text().replace('OBJECT = INDEX_TABLE', 'OBJECT = TABLE'))
+    with pytest.raises(HostIndexError, match="label lacks 'INDEX_TABLE'"):
+        Host._read_index_rows(label)
+
 ##########################################################################################
 # One host gives WrongHostError; several give UnknownHostError
 ##########################################################################################

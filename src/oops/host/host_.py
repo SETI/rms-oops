@@ -14,10 +14,11 @@ from pdsparser  import Pds3Label, PdsError, is_pds3_file
 from pdstable   import PdsTable
 from vicar      import VicarError, VicarImage, VicarLabel
 
-from oops._exceptions import OopsIndexError, OopsTypeError, OopsValueError
+from oops._exceptions import OopsIndexError, OopsSpiceError, OopsTypeError, OopsValueError
 from oops.body        import Body
 from oops.cadence     import TimeShift
-from oops.frame       import Cmatrix, Frame, FrameShift, Navigation, TrackerFrame
+from oops.frame       import (Cmatrix, Frame, FrameShift, Navigation, SpiceErrorFrame,
+                              TrackerFrame)
 from oops.observation import Observation
 from oops.path        import PathShift
 
@@ -27,6 +28,15 @@ from ._errors import (HostFormatError, HostIndexError, PdsHostError, UnknownHost
 # The number of unpaired or repeated paths that an error message about pairing the rows of
 # an index and its supplement lists
 _PATHS_IN_MESSAGE = 3
+
+# The methods of the PDS3 label parser, in the order in which Host.from_file() tries them
+# to identify the host of a label: "fast" reads most labels quickly, "strict" reads every
+# valid label, and "loose" also reads some invalid ones
+_PDS3_METHODS = ('fast', 'strict', 'loose')
+
+# The classes of the exceptions that cspyce raises when the SPICE kernels cannot supply
+# what a query asks for; see the comment above OopsSpiceError in oops/_exceptions.py
+_SPICE_ERRORS = (LookupError, OSError, RuntimeError, ValueError)
 
 ObsArray: TypeAlias = (np.ndarray[tuple[int, ...], np.dtype[np.object_]]
                        | tuple[Observation | None, ...])
@@ -43,6 +53,13 @@ class Host:
     raised and raised ``from`` it. That is the only exception a host raises for missing
     SPICE pointing: it never lets the cspyce exception escape, and it never raises
     :class:`~oops.OopsSpiceError` for a failure that is not about SPICE data.
+
+    A host's ``from_index`` raises no exception for missing pointing and drops no row for
+    it. It gives such an observation a :class:`~oops.frame.SpiceErrorFrame` in place of
+    its pointing, which raises :class:`~oops.OopsSpiceError` whenever the frame is
+    evaluated. The support method ``_check_spice_frame`` does both: with ``defer=False``
+    it raises the error, for ``from_file``; with ``defer=True`` it returns the stand-in
+    frame, for ``from_index``.
 
     A host does not check SPICE, and does not raise :class:`~oops.OopsSpiceError`, when
     the caller supplies the pointing: when ``from_file`` is given a `frame` override,
@@ -67,9 +84,21 @@ class Host:
     @staticmethod
     def from_file(filepath, *, pds3_options=None, select=None, astrometry=False,
                   target=None, lightsource=None, path=None, frame=None, cadence=None,
-                  fov=None, calibrations=[], timeshift=None, navigation=None,
+                  fov=None, calibrations=None, timeshift=None, navigation=None,
                   tracker=None, parallel=None, **kwargs):
         """One or more Observation objects derived from a given data file.
+
+        The host is identified when this method is called, from the file's PDS3 label,
+        VICAR header, FITS header or name, and the host's own ``from_file`` then reads the
+        file from `filepath`, with the caller's `pds3_options` and overrides, so the result
+        is the one the host class gives when it is called directly. To identify the host,
+        a PDS3 label is parsed with the method that `pds3_options` names, "fast" by
+        default, and then with each later method in the order "fast", "strict", "loose";
+        if none of them can parse it, each registered host is asked whether it recognizes
+        the file by its path, as for a file in no standard format. A VICAR file is
+        identified from its header alone, without reading its array. Besides the
+        exceptions listed here, the call raises any that the host's ``from_file``
+        documents.
 
         Parameters:
             filepath (str | pathlib.Path | FCPath): The path to the data file or its
@@ -97,7 +126,8 @@ class Host:
             cadence (Cadence, optional): Override for the Cadence of the observation.
             fov (FOV, optional): Override for the default FOV of the observing instrument.
             calibrations (Calibration | list[Calibration], optional): Override for the
-                calibration or list of calibrations.
+                calibration or list of calibrations. If it is not given, the host's own
+                calibration applies.
             timeshift (tuple[float, str], optional): Assign a Fittable time shift to one
                 or more attributes of the Observation. The first item is the initial time
                 shift in seconds. The second item is a string indicating which attributes
@@ -120,7 +150,8 @@ class Host:
                 fixed offset. Note that no more than one of `parallel` and `tracker` can
                 be specified.
             **kwargs:
-                Any other instrument-specific parameters, as needed.
+                Any other instrument-specific parameters, passed to the host's
+                ``from_file``.
 
         Returns:
             Observation | ObsArray | None: An Observation or a tuple or array of
@@ -141,12 +172,8 @@ class Host:
                 `frame` is given or when the pointing does not come from SPICE.
         """
 
-        # Set the default Pds3Label options to method='fast', sources=True
-        pds3_options = Host._pds3_options_with_defaults(pds3_options)
-
-        host, fileinfo = Host._identify_host(filepath, astrometry=astrometry,
-                                             pds3_options=pds3_options)
-        return host.from_file(fileinfo, pds3_options=pds3_options, select=select,
+        host = Host._identify_host(filepath, pds3_options=pds3_options)
+        return host.from_file(filepath, pds3_options=pds3_options, select=select,
                               astrometry=astrometry, target=target,
                               lightsource=lightsource, path=path,
                               frame=frame, cadence=cadence, fov=fov,
@@ -165,8 +192,11 @@ class Host:
         The host is identified when this method is called, from the index label or else
         from the first row of the index, and the host's own ``from_index`` then reads,
         pairs, and filters the rows of the index and its supplement; each row's
-        observation is built only when the iteration reaches it. Besides the exceptions
-        listed here, the call raises any that the host's ``from_index`` documents.
+        observation is built only when the iteration reaches it. Every argument, the
+        overrides included, is passed to the host's ``from_index`` as given, so the
+        result is the one the host class gives when it is called directly. Besides the
+        exceptions listed here, the call raises any that the host's ``from_index``
+        documents.
 
         Parameters:
             filepath (str | pathlib.Path | FCPath): The full path to the PDS label of a
@@ -205,11 +235,13 @@ class Host:
                 every observation.
             path (str | Path, optional): Override for the Path of the observer.
             frame (str | Frame, optional): Override for the Frame of the observing
-                instrument.
+                instrument. When it is given, the host does not check that SPICE can
+                supply the pointing.
             cadence (Cadence, optional): Override for the Cadence of the observation.
             fov (FOV, optional): Override for the default FOV of the observing instrument.
             calibrations (Calibration | list[Calibration], optional): Override for the
-                calibration or list of calibrations.
+                calibration or list of calibrations. If it is not given, the host's own
+                calibration applies.
             timeshift (tuple[float, str], optional): Assign a Fittable time shift to one
                 or more attributes of the Observation. The first item is the initial time
                 shift in seconds. The second item is a string indicating which attributes
@@ -241,9 +273,13 @@ class Host:
             every row at once.
 
         Raises:
-            OopsValueError: If a value in `pds3_options` is invalid.
+            OopsValueError: If a value in `pds3_options` is invalid, or if `filter` names
+                a column that the index does not have.
+            OopsTypeError: If a range in `filter` cannot be compared with the values of
+                its column.
             HostIndexError: If `filepath` or `supplement` cannot be interpreted as an
-                index table, or if the rows of the two tables cannot be paired: an index
+                index table, as when the label lacks the object that its table pointer
+                names, or if the rows of the two tables cannot be paired: an index
                 row that no supplement row names, a supplement row that names no index
                 row, a file listed twice in either table while the rows are paired by
                 file, or a pair of rows that fails the host's check.
@@ -412,25 +448,20 @@ class Host:
     ######################################################################################
 
     @staticmethod
-    def _identify_host(filepath, *, astrometry=False, pds3_options=None):
+    def _identify_host(filepath, *, pds3_options=None):
         """Identify the host module associated with a given data file or label.
 
-        Also return the parsed file content for PDS3, VICAR, and FITS formats.
+        A VICAR file is identified from its header alone. A FITS file that is opened to
+        identify it is closed again.
 
         Parameters:
             filepath (str | pathlib.Path | FCPath): The path to the data file or its
                 detached label in PDS3 or PDS4 format.
-            astrometry (bool, optional): True to specify that the returned Observations
-                will only be used for timing and astrometry. In this case, no data arrays
-                are read and returned in the Observation.
             pds3_options (dict[str, Any], optional): Any keyword arguments and their
                 values to be passed to the :class:`~pdsparser.Pds3Label` parser.
 
         Returns:
-            tuple[type, (Pds3Label | VicarLabel | VicarImage | HDUList | FCPath)]:
-            The Host subclass associated with the `filepath`, followed by the parsed
-            content of its label, if any. If the file is not in a standard format, the
-            second returned item is None.
+            type: The Host subclass associated with `filepath`.
 
         Raises:
             UnknownHostError: If `filepath` is not associated with any registered Host
@@ -443,8 +474,14 @@ class Host:
         """
 
         # Check every registered host and every defined file format
-        return Host._identify_and_parse(filepath, hosts=Host._HOSTS, formats='PVFO',
-                                        pds3_options=pds3_options, astrometry=astrometry)
+        pds3_options = Host._pds3_options_with_defaults(pds3_options)
+        (host, parsed) = Host._identify_and_parse(filepath, hosts=Host._HOSTS,
+                                                  formats='PVFO', astrometry=True,
+                                                  pds3_options=pds3_options,
+                                                  pds3_fallback=True)
+        if isinstance(parsed, pyfits.HDUList):
+            parsed.close()
+        return host
 
     @classmethod
     def _read_fileinfo(cls, fileinfo, *, formats, astrometry=False, pds3_options=None):
@@ -491,7 +528,7 @@ class Host:
 
     @staticmethod
     def _identify_and_parse(filepath, hosts, *, formats='PVFO', astrometry=False,
-                            pds3_options=None):
+                            pds3_options=None, pds3_fallback=False):
         """Interpret the filepath and identify the associated host module.
 
         Also return the parsed file content for PDS3, VICAR, and FITS formats.
@@ -507,6 +544,11 @@ class Host:
                 are read and returned in the Observation.
             pds3_options (dict[str, Any], optional): Any keyword arguments and their
                 values to be passed to the :class:`~pdsparser.Pds3Label` parser.
+            pds3_fallback (bool, optional): True to parse a PDS3 label with each method
+                after the one that `pds3_options` names, in the order "fast", "strict",
+                "loose", when that one fails, and, if `formats` includes 'O' and no method
+                can parse it, to ask each host whether it recognizes the file by its path;
+                False to parse it with the named method alone.
 
         Returns:
             tuple[type, (Pds3Label | VicarLabel | VicarImage | HDUList | FCPath)]:
@@ -526,23 +568,31 @@ class Host:
                 subclass.
         """
 
+        def identify_pds3(kind):
+            """The host and parsed label of a PDS3 file, or the host and the path of a
+            label that no method can parse but a host recognizes by its path."""
+
+            try:
+                label = Host._parse_pds3(filepath, pds3_options, fallback=pds3_fallback)
+            except PdsHostError:
+                if pds3_fallback and 'O' in formats:
+                    for host in hosts:
+                        if (hasattr(host, '_detect_in_file')
+                                and host._detect_in_file(filepath)):
+                            return host, filepath
+                raise
+            for host in hosts:
+                if hasattr(host, '_detect_in_pds3') and host._detect_in_pds3(label):
+                    return host, label
+            raise Host._no_host_error(hosts, kind, filepath)
+
         filepath = FCPath(filepath)
         suffix = filepath.suffix.lower()
         pds3_options = pds3_options or {}
 
         # Handle a detached PDS3 label
         if 'P' in formats and suffix == '.lbl':
-            try:
-                label = Pds3Label(filepath, **pds3_options)
-            except PdsError as err:
-                raise PdsHostError(str(err)) from err
-            except (TypeError, ValueError) as err:
-                raise OopsValueError(str(err)) from err
-            else:
-                for host in hosts:
-                    if hasattr(host, '_detect_in_pds3') and host._detect_in_pds3(label):
-                        return host, label
-                raise Host._no_host_error(hosts, 'PDS3 label', filepath)
+            return identify_pds3('PDS3 label')
 
         # Handle a FITS file
         if 'F' in formats and suffix in ('.fits', '.fit'):
@@ -575,17 +625,7 @@ class Host:
 
         # Handle an attached PDS3 label
         if 'P' in formats and is_pds3_file(filepath):
-            try:
-                label = Pds3Label(filepath, **pds3_options)
-            except PdsError as err:
-                raise PdsHostError(str(err)) from err
-            except (TypeError, ValueError) as err:
-                raise OopsValueError(str(err)) from err
-            else:
-                for host in hosts:
-                    if hasattr(host, '_detect_in_pds3') and host._detect_in_pds3(label):
-                        return host, label
-                raise Host._no_host_error(hosts, 'PDS3 file', filepath)
+            return identify_pds3('PDS3 file')
 
         # Handle another file format
         if 'O' in formats:
@@ -594,6 +634,45 @@ class Host:
                     return host, filepath
 
         raise Host._no_host_error(hosts, 'file', filepath)
+
+    @staticmethod
+    def _parse_pds3(filepath, pds3_options, *, fallback):
+        """The parsed PDS3 label of a file.
+
+        Parameters:
+            filepath (FCPath): The path to the label or to a file with an attached label.
+            pds3_options (dict[str, Any]): The keyword arguments of the
+                :class:`~pdsparser.Pds3Label` parser.
+            fallback (bool): True to try each method after the one that `pds3_options`
+                names, in the order "fast", "strict", "loose", when that one fails; False
+                to parse the label with `pds3_options` alone.
+
+        Returns:
+            Pds3Label: The parsed label.
+
+        Raises:
+            OopsValueError: If a value in `pds3_options` is invalid.
+            OSError: If `filepath` does not exist or cannot be read.
+            PdsHostError: If no method that is tried can parse the label. The message is
+                that of the first method.
+        """
+
+        attempts = [pds3_options]
+        method = pds3_options.get('method')
+        if fallback and method in _PDS3_METHODS:
+            attempts = [pds3_options | {'method': later}
+                        for later in _PDS3_METHODS[_PDS3_METHODS.index(method):]]
+
+        first_error = None
+        for options in attempts:
+            try:
+                return Pds3Label(filepath, **options)
+            except PdsError as err:
+                first_error = first_error or err
+            except (TypeError, ValueError) as err:
+                raise OopsValueError(str(err)) from err
+
+        raise PdsHostError(str(first_error)) from first_error
 
     @staticmethod
     def _no_host_error(hosts, kind, filepath):
@@ -702,6 +781,12 @@ class Host:
                                  label_method=pds3_method)
             except PdsError as err:
                 raise PdsHostError(str(err)) from err
+            except KeyError as err:
+                # An item that the table reader needs is not in the label, such as the
+                # object that a pointer names (^INDEX_TABLE in a label whose table
+                # object is named TABLE)
+                raise HostIndexError(f'invalid index table {filepath}: the label lacks '
+                                     f'{err}') from err
             except (TypeError, ValueError) as err:
                 # The options were already validated when the label was parsed, so the
                 # problem lies in the table itself
@@ -1000,22 +1085,44 @@ class Host:
                 values, or falls in a range defined by a tuple of two values, will be
                 included in the returned list.
 
+        A row that lacks a named column, as when a host leaves out a column whose value
+        the archive marks as missing, does not pass the filter.
+
         Returns:
             list[dict[str, Any]]: The rows of `row_dicts` that pass the filter; a new list
             unless `filter` is empty, in which case `row_dicts` itself.
+
+        Raises:
+            OopsValueError: If `filter` names a column that no row has.
+            OopsTypeError: If a range in `filter` cannot be compared with a value of its
+                column.
         """
 
         # Apply filter if any
         if not filter:
             return row_dicts
 
+        for key in filter:
+            if row_dicts and not any(key in row_dict for row_dict in row_dicts):
+                raise OopsValueError(f'filter names a column that the index does not '
+                                     f'have: {key!r}')
+
         filtered = []
         for row_dict in row_dicts:
             include = True
             for key, values in filter.items():
+                if key not in row_dict:
+                    include = False
+                    break
                 value = row_dict[key]
                 if isinstance(values, tuple) and len(values) == 2:
-                    if value < values[0] or value > values[1]:
+                    try:
+                        outside = value < values[0] or value > values[1]
+                    except TypeError as err:
+                        message = (f'filter range {values!r} cannot be compared with '
+                                   f'column {key!r} value {value!r}')
+                        raise OopsTypeError(message) from err
+                    if outside:
                         include = False
                         break
                 elif isinstance(values, (set, frozenset, list, tuple)):
@@ -1041,10 +1148,19 @@ class Host:
         The subclass's constructor should call this method to handle the standard override
         parameters. Other input parameters are ignored.
 
+        It also names the file in `params`. For a pathlib.Path or FCPath, `filepath` is
+        the path as given, `basename` is its file name, `image_url` is its absolute form, and
+        `abspath` is the local path of the file, resolved, if the file is on the local
+        file system or is already in the local cache of a remote file; otherwise
+        `abspath` is left out. No directory is ever created. For a string, which is taken
+        to be a path as an index row gives it, `filepath` and `basename` alone are set.
+        For None, no file is named.
+
         Parameters:
             params (dict): The dictionary of inputs to the Observation constructor before
                 any overrides have been applied.
-            filepath (str | pathlib.Path | FCPath): Path to the file.
+            filepath (str | pathlib.Path | FCPath | None): Path to the file; None if no
+                path is known, as for content that was parsed from text.
             target (str | Body, optional): Override for the default target Body of the
                 observation. Use "NONE" for inertial pointing, indicating that no Solar
                 System body was tracked.
@@ -1087,14 +1203,20 @@ class Host:
             OopsValueError: If an input parameter is invalid.
         """
 
-        # Fill in the file/URL info
-        params['filepath'] = filepath
-        if isinstance(filepath, str):   # for from_index()
-            params['basename'] = filepath.rpartition('/')[-1]
-        else:
-            params['basename'] = filepath.name
-            params['abspath'] = filepath.get_local_path().resolve()
-            params['image_url'] = filepath.absolute().as_posix()
+        # Fill in the file/URL info. A string is a path as an index row gives it, which
+        # names no file that can be found from here. The local path is found without
+        # creating its parent directories, and is given only if the file is there.
+        if filepath is not None:
+            params['filepath'] = filepath
+            if isinstance(filepath, str):
+                params['basename'] = filepath.rpartition('/')[-1]
+            else:
+                fcpath = FCPath(filepath)
+                params['basename'] = fcpath.name
+                local_path = fcpath.get_local_path(create_parents=False)
+                if local_path.exists():
+                    params['abspath'] = local_path.resolve()
+                params['image_url'] = fcpath.absolute().as_posix()
 
         # Override certain standard attributes
         for key in ('target', 'lightsource', 'path', 'frame', 'cadence', 'fov',
@@ -1153,6 +1275,54 @@ class Host:
             params['frame'] = Navigation(navigation, params['frame'])
 
         return params
+
+    @staticmethod
+    def _check_spice_frame(frame, time, *, description, filepath=None, defer=False):
+        """Check that the SPICE kernels can supply a Frame at a time.
+
+        A host calls this method for an observation whose pointing comes from SPICE. Its
+        ``from_file`` calls it with `defer` False, so that missing pointing raises at load
+        time; its ``from_index`` calls it with `defer` True and gives the observation the
+        Frame returned, so that the row is still built and the error is raised when the
+        pointing is used.
+
+        Parameters:
+            frame (Frame | str): The Frame, or the ID of a registered Frame, that the
+                observation uses.
+            time (float): The time in seconds TDB at which to evaluate the Frame, such as
+                the midtime of the observation.
+            description (str): What could not be obtained, such as "no Cassini ISS NAC
+                pointing", for the message of the error.
+            filepath (str | pathlib.Path | FCPath, optional): The file of the observation,
+                for the message of the error.
+            defer (bool, optional): True to return a
+                :class:`~oops.frame.SpiceErrorFrame` if the SPICE kernels cannot supply
+                the Frame; False to raise :class:`~oops.OopsSpiceError`.
+
+        Returns:
+            Frame | str: `frame` itself if it can be evaluated at `time`; otherwise, if
+            `defer` is True, a :class:`~oops.frame.SpiceErrorFrame` that raises
+            :class:`~oops.OopsSpiceError` whenever it is evaluated.
+
+        Raises:
+            KeyError: If `frame` is the ID of a Frame that is not registered.
+            OopsSpiceError: If `defer` is False and the SPICE kernels cannot supply
+                `frame` at `time`. It is built with
+                :meth:`~oops.OopsSpiceError.from_spice_error`, so its message reads
+                "<description> at <time> for <filepath>: <SPICE code>", and its cause is
+                the exception that cspyce raised.
+        """
+
+        # A Frame ID that is not registered is the caller's error, not missing SPICE data
+        resolved = Frame.as_frame(frame)
+        try:
+            resolved.transform_at_time(time)
+        except _SPICE_ERRORS as err:
+            if defer:
+                return SpiceErrorFrame(err, description=description, filepath=filepath)
+            raise OopsSpiceError.from_spice_error(err, description=description,
+                                                  time=time, filepath=filepath) from err
+        return frame
 
     @staticmethod
     def _apply_select(observations, select, names=None):
