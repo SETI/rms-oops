@@ -16,15 +16,16 @@ Reading a file
 label, VICAR header, FITS header, or file name, and passes the file's path, with every
 other argument as given, to that host's own ``from_file``, which reads the file itself.
 The result is therefore the same as calling the host class directly. To identify a PDS3
-label, it tries the "fast" parser, then "strict", then "loose". A parser that reports a
-syntax error, or a value it cannot convert, such as a time with an hour of 25, is followed
-by the next. A label that none of them can read is offered to each host's correction of
-label text, described below, and goes to the first host whose correction makes it
-readable and that recognizes it; failing that, to the host that recognizes it by its
-path, if there is one; otherwise the error names the label and gives each parser's
-message. A file that has already been parsed, as a PDS3 label, a VICAR label or image,
-or a FITS HDU list, is identified from that content and passed to the host as it is. Any
-other argument raises :class:`~oops.OopsTypeError`.
+label, it parses the label as it is in the file, trying the "fast" parser, then "strict",
+then "loose". A parser that reports a syntax error, or a value it cannot convert, such as
+a time with an hour of 25, is followed by the next. A label that none of them can read is
+offered to each host's correction of label text, described below, and goes to the first
+host whose correction makes it readable and that recognizes it. If there is no such
+host, the file goes to the host that recognizes it by its path. If no host does, the
+error gives the path of the label and each parser's message. A file that has already
+been parsed, as a PDS3 label, a VICAR label or image, or a FITS HDU list, is identified
+from that content and passed to the host as it is. Any other argument raises
+:class:`~oops.OopsTypeError`.
 
 Correcting label text
 ---------------------
@@ -39,10 +40,15 @@ that the host reads and the labels of its index and supplement, and the path tel
 apart where that matters.
 
 Every oops method that parses a label for the host calls it before any parser runs. The
-corrected text is parsed in place of the file's; the parsed label keeps the path of the
+corrected text is parsed in place of the file's. The parsed label keeps the path of the
 file, so that its pointers are found beside it, and an index table is still read from its
-own file. For a host that keeps the default, the labels are parsed from their files as
-they always are.
+own file. For a host that keeps the default, the labels are parsed from their files.
+
+The correction also sees the labels of other hosts. When a file or an index is being
+identified and no parser can read its label, the label is offered to every host's
+correction in turn. A correction should therefore change only the text that has the
+defect it repairs, return any other text as it is, and not raise an exception. If one
+does raise, that host is passed over, and the next host's correction is tried.
 
 The subpackage also provides :func:`~oops.host.read_pds3_image_array` and
 :func:`~oops.host.get_fits_image_hdu`, which hosts use to read image arrays;
@@ -56,18 +62,25 @@ Reading an index
 :meth:`~oops.host.Host.from_index` reads a PDS3 index table and returns an iterator over
 its observations, one for each row. The call itself reads only the labels of the index
 and of its supplement, so a mistake in the arguments or in a label is reported at once.
-It identifies the host from the index label. If the label does not say which instrument
-the index describes, the first row is read to find out, and only that row. A host that
-reads only the Ring-Moon Systems Node metadata indexes recognizes a volume's own index
-from its label, so that the index is refused before any row is read. An index label that
-no parser can read is offered to each host's correction of label text, as a product
-label is, and goes to the first host whose correction makes it readable and that
-recognizes the corrected label. The host's own
-``from_index`` then reads the index a few rows at a time as the iteration proceeds, and
-builds each row's observation when the iteration reaches it. An index of any size is read
-in this way while only a few rows are held in memory. An observation that the caller has
-finished with is freed, together with its camera frame, so the memory a pass over the
-index uses stays the same from the first row to the last.
+It identifies the host from the index label, which is parsed with one parser, "fast"
+unless the options select another. If the label does not say which instrument the index
+describes, the first row is read to find out, and only that row. An index label that the
+parser cannot read is offered to each host's correction of label text, as a product label
+is, and goes to the first host whose correction makes it readable and that recognizes
+the corrected label.
+
+A volume keeps its own index in a directory named "index", in either case. A host that
+reads only the Ring-Moon Systems Node metadata indexes refuses a volume's own index with
+:class:`~oops.host.HostIndexError` before any row is read. If no host
+recognizes the label of such an index, the first row is read only for the hosts that
+might read it, and if every host is of the kind that reads only the metadata indexes, the
+index is refused at once.
+
+The host's own ``from_index`` then reads the index a few rows at a time as the iteration
+proceeds, and builds each row's observation when the iteration reaches it. An index of
+any size is read in this way while only a few rows are held in memory. An observation
+that the caller has finished with is freed, together with its camera frame, so the memory
+a pass over the index uses stays the same from the first row to the last.
 
 Many indexes have a supplemental index, a second table with more columns for the same
 products, whose columns are merged into each row. How the two tables are paired is fixed
@@ -88,9 +101,10 @@ rows is also checked, by default by comparing the columns that both tables have.
 
 A ``filter`` selects rows by the values of their columns, and each row is tested as it is
 read. A ``filter`` that uses a column that neither table has raises
-:class:`~oops.OopsValueError` at once. When the caller gives the rows themselves, as a
-list, the check is made against the first row at once; given as an iterator, whose rows
-are not known until they are read, the first row is checked when the iteration reads it.
+:class:`~oops.OopsValueError` at once. When the caller gives the rows themselves as a list
+or another sequence, the check is made against the first row at once. When the rows are
+given as an iterator, whose rows are not known until they are read, the first row is
+checked when the iteration reads it.
 A row that lacks a filtered column is left out.
 
 Errors while reading an index
@@ -99,12 +113,15 @@ Errors while reading an index
 These are raised by the call itself:
 
 - :class:`~oops.host.PdsHostError` for a label that cannot be parsed, and
-  :class:`~oops.OopsValueError` for an invalid option of the label parser.
+  :class:`~oops.OopsValueError` for an invalid option of the label parser or for a value
+  in the index label that the parser cannot convert, such as day 366 of a year that has
+  365 days.
 - :class:`~oops.host.HostIndexError` for a label that does not describe a table that can
   be read, as when it lacks the object that its table pointer refers to, and for a
   supplement or file column that the host needs and that a table lacks.
-- :class:`~oops.host.HostIndexError` for a volume's own index, from a host that reads
-  only the Ring-Moon Systems Node metadata indexes.
+- :class:`~oops.host.HostIndexError` for a volume's own index, when the host that
+  recognizes it, or every host that might read it, reads only the Ring-Moon Systems Node
+  metadata indexes.
 - :class:`~oops.OopsValueError` for a ``filter`` column that neither table has.
 - :class:`FileNotFoundError` for a label that does not exist, including a supplement that
   the host requires.
@@ -161,7 +178,12 @@ A host that cannot obtain an observation's pointing from the SPICE kernels raise
 read. ``from_file`` raises it when it builds the observation. In ``from_index``, every
 row gives an observation, and a row whose pointing SPICE cannot supply gets a
 :class:`~oops.frame.SpiceErrorFrame` in place of its pointing. That frame raises
-:class:`~oops.OopsSpiceError` whenever it is used. A host does not check the kernels, and
+:class:`~oops.OopsSpiceError` whenever it is used. The ``tracker`` and ``parallel``
+overrides evaluate the frame once, when the observation is built. They leave a frame of
+this kind as it is, so the error is still raised only when the pointing is used. A host
+checks the kernels at the time at which the observation evaluates its frame: its
+midtime, or for ``tracker`` the start, midtime, or end that the override selects, moved
+by any time shift. A host does not check the kernels, and
 so does not raise that exception, when the caller supplies the pointing, either as a
 ``frame`` override or by choosing a pointing source other than SPICE. The rule is given in
 full under :class:`~oops.host.Host`.

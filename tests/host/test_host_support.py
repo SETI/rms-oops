@@ -3,6 +3,7 @@
 ##########################################################################################
 
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -10,8 +11,9 @@ from filecache import FCPath
 from pdsparser import Pds3Label
 
 from polymath     import Scalar
-from oops         import Frame, OopsTypeError, OopsValueError
+from oops         import Frame, OopsSpiceError, OopsTypeError, OopsValueError
 from oops.cadence import SnapCadence
+from oops.frame   import SpiceErrorFrame
 from oops.host    import PDS3_NULL_TEXTS, Host, HostIndexError, is_pds3_null
 
 
@@ -127,6 +129,58 @@ def test_the_pointing_time_is_where_the_frame_is_evaluated(letters: str) -> None
 def test_overrides_that_are_not_given_count_as_none() -> None:
     assert Host._pointing_time(OWN_CADENCE, {}) == 105.
 
+
+@pytest.mark.parametrize(('tracker', 'letters'),
+                         [('start', 'F'), ('midtime', 'T'), ('end', 'TF')])
+def test_the_pointing_time_is_where_the_tracker_evaluates_the_frame(tracker: str,
+                                                                    letters: str) -> None:
+    """A TrackerFrame evaluates the frame once, when it is built, at its epoch."""
+
+    camera = _RecordingFrame()
+    params = {'cadence': OWN_CADENCE, 'frame': camera, 'path': 'SSB', 'target': 'NONE'}
+    overrides = {'timeshift': (3., letters), 'tracker': tracker}
+    Host._apply_overrides(params, None, **overrides)
+
+    assert camera.times == [Host._pointing_time(OWN_CADENCE, overrides)]
+
+
+def test_an_unknown_tracker_is_refused_by_the_pointing_time() -> None:
+    with pytest.raises(OopsValueError, match="invalid tracker, should be \"start\", "
+                                             "\"midtime\", or \"end\": 'middle'"):
+        Host._pointing_time(OWN_CADENCE, {'tracker': 'middle'})
+
+##########################################################################################
+# A frame that SPICE cannot supply, under the overrides that evaluate the frame
+##########################################################################################
+
+def _spice_error_frame() -> SpiceErrorFrame:
+    try:
+        raise RuntimeError('SPICE(CKINSUFFDATA) -- no pointing')
+    except RuntimeError as err:
+        return SpiceErrorFrame(err, description='no test pointing')
+
+
+def test_a_spice_error_frame_still_raises_when_used_after_a_tracker() -> None:
+    params = {'cadence': OWN_CADENCE, 'frame': _spice_error_frame(), 'path': 'SSB',
+              'target': 'NONE'}
+    Host._apply_overrides(params, None, tracker='start', navigation=(0., 0.))
+    with pytest.raises(OopsSpiceError, match='no test pointing'):
+        Frame.as_frame(params['frame']).wrt(Frame.J2000).transform_at_time(105.)
+
+
+def test_a_spice_error_frame_still_raises_when_used_after_a_parallel() -> None:
+    params = {'cadence': OWN_CADENCE, 'frame': _spice_error_frame(), 'path': 'SSB'}
+    Host._apply_overrides(params, None, parallel=SimpleNamespace(frame=Frame.J2000))
+    with pytest.raises(OopsSpiceError, match='no test pointing'):
+        Frame.as_frame(params['frame']).wrt(Frame.J2000).transform_at_time(105.)
+
+
+def test_a_parallel_frame_that_spice_cannot_supply_raises_at_once() -> None:
+    params = {'cadence': OWN_CADENCE, 'frame': Frame.J2000, 'path': 'SSB'}
+    parallel = SimpleNamespace(frame=_spice_error_frame())
+    with pytest.raises(OopsSpiceError, match='no test pointing'):
+        Host._apply_overrides(params, None, parallel=parallel)
+
 ##########################################################################################
 # PDS3 placeholder text
 ##########################################################################################
@@ -184,6 +238,12 @@ def test_a_given_index_label_is_returned_without_reading_the_file(tmp_path: Path
     label = Pds3Label('PDS_VERSION_ID = PDS3\nEND\n')
     assert _MetadataReader._read_index_label(tmp_path / 'missing.lbl',
                                              label=label) is label
+
+
+def test_a_volumes_own_index_is_refused_when_its_label_is_given(tmp_path: Path) -> None:
+    label = Pds3Label('PDS_VERSION_ID = PDS3\nEND\n')
+    with pytest.raises(HostIndexError, match='metadata_reader reads the Ring-Moon'):
+        _MetadataReader._read_index_label(tmp_path / 'INDEX' / 'INDEX.LBL', label=label)
 
 
 def test_a_volumes_own_index_is_refused_before_its_label_is_read(tmp_path: Path) -> None:

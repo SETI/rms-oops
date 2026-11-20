@@ -135,7 +135,10 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 # `-n auto` is deliberately absent: under xdist the Galileo SSI gold master
 # C0368369200R fails, because the gold master tests share the Body registry and the
-# QuickPath/QuickFrame caches with whatever else lands on the same worker.
+# QuickPath/QuickFrame caches with whatever else lands on the same worker. For the same
+# reason, a run with a fixed number of workers needs `--dist=loadfile`: the default
+# scheduling splits a module across workers, and a module-scoped fixture then registers
+# its frames on one worker while the module's tests run on another.
 # `filterwarnings = ["error"]` is absent for the same reason it always was: the spicedb
 # tests raise a RuntimeWarning for a kernel that is missing from the resource tree, and
 # the legacy modules still emit NumPy warnings. Both belong here once those are fixed.

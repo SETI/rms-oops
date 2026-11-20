@@ -247,8 +247,8 @@ def column_validator(names):
     Returns:
         collections.abc.Callable: A function of an index row and a supplement row that
         returns True if every named column has the same value in both, and otherwise
-        raises HostIndexError naming the column. Two strings are the same if either one,
-        in upper case, contains the other.
+        raises HostIndexError, whose message gives the column. Two strings are the same
+        if either one, in upper case, contains the other.
     """
 
     def validator(index_row, supplement_row):

@@ -20,7 +20,8 @@ PDS3_NULL_TEXTS = frozenset({'UNK', 'UNKNOWN', 'N/A', 'NULL', 'NOT APPLICABLE', 
 
 
 def is_pds3_null(value):
-    """True if a value from a PDS3 label, an index, or a VICAR header stands for no value.
+    """True if a value from a PDS3 label, an index, or a VICAR header stands for a missing
+    value.
 
     A host uses this to leave out the items whose value is a placeholder. The numeric
     fill values, such as -999, differ from one data set to another and are left to the

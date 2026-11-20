@@ -106,16 +106,17 @@ class Host:
         VICAR header, FITS header, or name. The host's own ``from_file`` then reads the
         file from `filepath`, with the caller's `pds3_options` and overrides, so the
         result is the one the host class gives when it is called directly. To identify
-        the host, a PDS3 label is parsed with the method that `pds3_options` selects,
-        "fast" by default, and then with each later method in the order "fast", "strict",
-        and "loose"; a method that reports a syntax error, or a value it cannot convert,
-        such as a time with an hour of 25, is followed by the next. If none of them can
-        parse it, the label is offered to each registered host's correction of label text
-        (its ``_correct_label_text``), and the first host whose
-        correction makes it readable and that recognizes it is chosen; failing that,
-        each registered host is asked whether it recognizes the file by its path, as for
-        a file that is not in a standard format. A VICAR file is identified from its header alone, without reading its
-        array. Content that has already been parsed, a :class:`~pdsparser.Pds3Label`, a
+        the host, a PDS3 label is parsed as it is in the file, with the method that
+        `pds3_options` selects, "fast" by default, and then with each later method in the
+        order "fast", "strict", and "loose". A method that reports a syntax error, or a
+        value it cannot convert, such as a time with an hour of 25, is followed by the
+        next. If none of them can parse the label, it is offered to each registered
+        host's correction of label text (its ``_correct_label_text``), and the first host
+        whose correction makes it readable and that recognizes it is chosen. If there is
+        no such host, each registered host is asked whether it recognizes the file by its
+        path, as for a file that is not in a standard format. A VICAR file is identified
+        from its header alone, without reading its array. Content that has already been
+        parsed, a :class:`~pdsparser.Pds3Label`, a
         :class:`~vicar.VicarLabel` or :class:`~vicar.VicarImage`, or an
         :class:`~astropy.io.fits.HDUList`, is identified from that content and handed to
         the host as it is. Besides the exceptions listed here, the call raises any that
@@ -216,20 +217,32 @@ class Host:
                    parallel=None, **kwargs):
         """An iterator over the Observations of a data file index, one for each row.
 
-        The host is identified when this method is called. Every registered host is first
-        asked whether it recognizes the index label. If none does, the first row of the
-        index is read, and only that row, and offered to each host that could not tell
-        from the label. A label that no parser method can read is offered to each host's
-        correction of label text (its ``_correct_label_text``), and
-        the first host whose correction makes it readable and that recognizes the
-        corrected label gets the call; otherwise :class:`~oops.host.PdsHostError` is
-        raised. The host's own ``from_index`` then reads the rows of the
-        index and its supplement as the iteration proceeds, a few rows at a time, and
-        builds each row's observation when the iteration reaches it. Every argument, the
-        overrides included, is passed to the host's ``from_index`` as given, so the
-        result is the one the host class gives when it is called directly. Besides the
-        exceptions listed here, the call raises any that the host's ``from_index``
-        documents.
+        The host is identified when this method is called. The index label is parsed
+        with the method that `pds3_options` selects, "fast" by default, and every
+        registered host is asked whether it recognizes the label. If none does, the first
+        row of the index is read, and only that row, and offered to each host that could
+        not tell from the label. If the parser cannot read the label, the label is
+        offered to each host's correction of label text (its ``_correct_label_text``),
+        and the first host whose correction makes it readable and that recognizes the
+        corrected label gets the call. If no host's correction helps,
+        :class:`~oops.host.PdsHostError` is raised.
+
+        An index in a directory named "index", in either case, is where a volume keeps
+        its own index. A host that reads only the Ring-Moon Systems Node metadata indexes
+        refuses such an index with :class:`~oops.host.HostIndexError`, and that refusal
+        is made here, before any row is read. If no host recognizes the label of such an
+        index, no row is read for a host that reads only the metadata indexes, and if
+        every host that might read it is of that kind, :class:`~oops.host.HostIndexError`
+        is raised at once.
+
+        The host's own ``from_index`` then reads the rows of the index and its supplement
+        as the iteration proceeds, a few rows at a time, and builds each row's
+        observation when the iteration reaches it. Every argument, the overrides
+        included, is passed to the host's ``from_index`` as given, so the result is the
+        one the host class gives when it is called directly. The label that was parsed
+        here is passed on to a host that has no correction of label text, so that the
+        label is parsed only once. Besides the exceptions listed here, the call raises
+        any that the host's ``from_index`` documents.
 
         Parameters:
             filepath (str | pathlib.Path | FCPath): The full path to the PDS label of a
@@ -308,15 +321,20 @@ class Host:
             every row at once.
 
         Raises:
-            OopsValueError: If a value in `pds3_options` is invalid, or if `filter` uses a
-                column that the index does not have. With `row_dicts` given, `filter` is
+            OopsValueError: If a value in `pds3_options` is invalid, if the parser cannot
+                convert a value in the index label, such as day 366 of a year that has
+                365 days, or if `filter` uses a column that the index does not have.
+                With `row_dicts` given, `filter` is
                 checked against the first row: at call time if `row_dicts` is a sequence,
                 and when the iteration reads the first row if it is an iterator.
             OopsTypeError: When the iteration reaches a row whose value cannot be compared
                 with a range in `filter`.
             HostIndexError: If the label of `filepath` or `supplement` does not describe a
                 table that can be read, as when it lacks the object that its table pointer
-                names. Also raised during the iteration, at the row where the two tables
+                refers to. Also raised, before any row is read, if `filepath` is a
+                volume's own index and the host that recognizes it, or every host that
+                might read it, reads only the Ring-Moon Systems Node metadata indexes.
+                Also raised during the iteration, at the row where the two tables
                 cannot be paired, where a table file ends before its label says, or at the
                 first of the ten rows read with a row longer than the label's row length,
                 as listed for the support method ``_index_rows``. A value that cannot be
@@ -326,26 +344,32 @@ class Host:
                 be read; when the iteration starts, if a table file does not exist or
                 cannot be read.
             PdsHostError: If `filepath` uses invalid PDS label syntax and no host's
-                correction of label text makes it readable. The message names the label.
+                correction of label text makes it readable. The message gives the path of
+                the label.
             UnknownHostError: If `filepath` is not associated with any registered Host
                 subclass.
         """
 
         filepath = FCPath(filepath)
         options = Host._pds3_options_with_defaults(pds3_options)
+        given_label = label
 
-        # A label that cannot be parsed is offered to each host's correction of label
+        # If the label cannot be parsed, it is offered to each host's correction of label
         # text. The first host whose correction makes it readable and that recognizes it
-        # gets the call, with no label, and parses it again with its own correction; with
+        # gets the call, and parses the label again with its own correction. If there is
         # no such host, the parser's error is raised.
         host = None
         if label is None:
             try:
                 label = Host._parse_index_label(filepath, options)
             except PdsHostError:
-                host = Host._index_host_from_correction(filepath, options)
-                if host is None:
+                found = Host._host_from_correction(
+                    Host._HOSTS, '_detect_in_index',
+                    lambda correct: Host._parse_index_label(filepath, options,
+                                                            correct=correct))
+                if found is None:
                     raise
+                (host, label) = (found[0], None)
 
         # Determine which host is represented by the index. Every host is asked about the
         # label first, so that a host that recognizes it is found without reading a row.
@@ -359,6 +383,18 @@ class Host:
 
         if host is None:
             undecided = [host for host in Host._HOSTS if status[host] is None]
+
+            # A host that reads only the metadata indexes would refuse a volume's own
+            # index, so no row is read for it
+            if undecided and Host._is_volume_index(filepath):
+                undecided = [host for host in undecided
+                             if host.METADATA_INDEX_EXAMPLE is None]
+                if not undecided:
+                    raise HostIndexError(f'the registered hosts that might read this '
+                                         f'index read only the Ring-Moon Systems Node '
+                                         f'metadata indexes, not a volume\'s own index: '
+                                         f'{filepath}')
+
             if not undecided:
                 raise UnknownHostError(f'unknown host in index {filepath}')
             if row_dicts is None:
@@ -372,6 +408,15 @@ class Host:
             if not found:
                 raise UnknownHostError(f'unknown host in index {filepath}')
             host = found[0]
+
+        # The chosen host refuses a volume's own index here too, so that the refusal never
+        # depends on how its from_index reads the rows
+        host._refuse_volume_index(filepath)
+
+        # A host with a correction of label text parses the label itself, so that it
+        # reads the label as its own from_index would
+        if host._label_corrector() is not None:
+            label = given_label
 
         # The host reads, pairs and filters the rows itself, through _index_rows(),
         # because only the host knows how its supplement is matched to its index
@@ -490,16 +535,24 @@ class Host:
         runs: :meth:`~oops.host.Host._read_fileinfo` for a detached or attached product
         label, and :meth:`~oops.host.Host._read_index_label` and
         :meth:`~oops.host.Host._index_rows` for the labels of an index and its
-        supplement. The corrected text is parsed in place of the file's, and the parsed
-        label keeps the path of the file, so that its pointers are found beside it; an
-        index table is still read from its own file. :meth:`~oops.host.Host.from_file`
-        and :meth:`~oops.host.Host.from_index` offer a label that no parser method can
-        read to each registered host's correction in turn, and give the file to the
-        first host whose correction makes the label readable and that then recognizes
-        it.
+        supplement. :meth:`~oops.host.Host.from_index` passes a host that overrides this
+        method no label of its own, so the host parses the label with its correction.
+        The corrected text is parsed in place of the file's, and the parsed label keeps
+        the path of the file, so that its pointers are found beside it. An index table
+        is still read from its own file.
+
+        The method also receives labels of other hosts. When
+        :meth:`~oops.host.Host.from_file` or :meth:`~oops.host.Host.from_index` meets a
+        label that no parser method can read, it offers the label to each registered
+        host's correction in turn, and gives the file to the first host whose correction
+        makes the label readable and that then recognizes it. A correction must
+        therefore change only the text that has the defect it repairs, and return any
+        other text as it is. It should not raise. In that offer, a correction that raises
+        an exception counts as no help, and the next host is tried. When the host reads
+        its own file, the exception propagates to the caller.
 
         The default returns `text` unchanged, and a host that keeps it has its labels
-        parsed from their files exactly as before.
+        parsed from their files.
 
         Parameters:
             text (str): The text of the label, up to its END statement for an attached
@@ -537,29 +590,38 @@ class Host:
     ######################################################################################
 
     @staticmethod
-    def _index_host_from_correction(filepath, pds3_options):
-        """The first registered host whose correction of label text makes an index label
-        readable and that then recognizes the label.
+    def _host_from_correction(hosts, detector, parse):
+        """The first of some hosts whose correction of label text makes a label readable
+        and that then recognizes the corrected label.
+
+        Each host's :meth:`~oops.host.Host._correct_label_text` is tried in turn; a host
+        that keeps the default is skipped. If a correction raises an exception, or the
+        text it returns cannot be parsed, that host is passed over, so that one host's
+        correction cannot keep another host from being found.
 
         Parameters:
-            filepath (FCPath): The path to the index label.
-            pds3_options (dict[str, Any]): The keyword arguments of the
-                :class:`~pdsparser.Pds3Label` parser.
+            hosts (list[type]): The Host subclasses to consider, in order.
+            detector (str): The name of the method that recognizes the label, either
+                "_detect_in_pds3" or "_detect_in_index".
+            parse (collections.abc.Callable): A function with the signature
+                ``(collections.abc.Callable) -> Pds3Label`` that parses the label with the
+                correction it is given.
 
         Returns:
-            type | None: The Host subclass; None if there is no such host.
+            tuple[type, Pds3Label] | None: The Host subclass and the label as its
+            correction gives it; None if no host's correction helps.
         """
 
-        for host in Host._HOSTS:
+        for host in hosts:
             correct = host._label_corrector()
             if correct is None:
                 continue
             try:
-                label = Host._parse_index_label(filepath, pds3_options, correct=correct)
-            except PdsHostError:
+                label = parse(correct)
+            except Exception:   # nosec B112 -- any failure means this host did not help
                 continue
-            if host._detect_in_index(label):
-                return host
+            if getattr(host, detector)(label):
+                return (host, label)
         return None
 
     @staticmethod
@@ -593,7 +655,7 @@ class Host:
         (host, parsed) = Host._identify_and_parse(filepath, hosts=Host._HOSTS,
                                                   formats='PVFO', astrometry=True,
                                                   pds3_options=pds3_options,
-                                                  pds3_fallback=True)
+                                                  pds3_fallback=True, dispatch=True)
         if isinstance(parsed, pyfits.HDUList):
             parsed.close()
         return host
@@ -639,7 +701,9 @@ class Host:
         `pds3_fallback` True, a PDS3 label that the requested method of the parser cannot
         read is parsed again with each later method of "fast", "strict", and "loose", as
         described for :meth:`~oops.host.Host._parse_pds3`, so one call takes the place of
-        a host's own loop over the methods.
+        a host's own loop over the methods. If `pds3_options` gives no method, every
+        method is tried, starting with "fast". The label text is first corrected by this
+        host's :meth:`~oops.host.Host._correct_label_text`.
 
         Parameters:
             fileinfo (str | pathlib.Path | FCPath | Pds3Label | VicarLabel | HDUList): The
@@ -666,8 +730,8 @@ class Host:
             HostFormatError: If `fileinfo` has invalid syntax for format. Note that
                 subclass :class:`~PdsHostError` is returned for PDS-formatted files and
                 :class:`~VicarHostError` is returned for VICAR files. The message of a
-                :class:`~PdsHostError` names the label and, with `pds3_fallback`, gives
-                the error of each method tried.
+                :class:`~PdsHostError` gives the path of the label and, with
+                `pds3_fallback`, the error of each method tried.
             OopsValueError: If the value in `pds3_options` is invalid, as described for
                 :meth:`~oops.host.Host._parse_pds3`.
             OSError: If the file does not exist or cannot be read.
@@ -687,7 +751,7 @@ class Host:
 
     @staticmethod
     def _identify_and_parse(filepath, hosts, *, formats='PVFO', astrometry=False,
-                            pds3_options=None, pds3_fallback=False):
+                            pds3_options=None, pds3_fallback=False, dispatch=False):
         """Interpret the filepath and identify the associated host module.
 
         Also return the parsed file content for PDS3, VICAR, and FITS formats. A FITS file
@@ -706,13 +770,16 @@ class Host:
             pds3_options (dict[str, Any], optional): Any keyword arguments and their
                 values to be passed to the :class:`~pdsparser.Pds3Label` parser.
             pds3_fallback (bool, optional): True to parse a PDS3 label with each method
-                after the one that `pds3_options` names, in the order "fast", "strict",
+                after the one that `pds3_options` selects, in the order "fast", "strict",
                 "loose", when that one fails, and, if `formats` includes 'O' and no method
                 can parse it, to ask each host whether it recognizes the file by its path;
-                False to parse it with the named method alone. Either way, a single host
-                in `hosts` has the label text corrected with its
-                :meth:`~oops.host.Host._correct_label_text` before it is parsed, and with
-                several, a label that cannot be parsed is offered to each one's correction.
+                False to parse it with the selected method alone.
+            dispatch (bool, optional): True when `hosts` are the registered hosts among
+                which the host of the file is to be found: the label is parsed as it is,
+                and a label that cannot be parsed is offered to each host's
+                :meth:`~oops.host.Host._correct_label_text` in turn. False when `hosts`
+                holds the one host that reads the file: its correction is applied to the
+                label text before the label is parsed.
 
         Returns:
             tuple[type, (Pds3Label | VicarLabel | VicarImage | HDUList | FCPath)]:
@@ -736,24 +803,22 @@ class Host:
             """The host and parsed label of a PDS3 file, or the host and the path of a
             label that no method can parse but a host recognizes by its path."""
 
-            # A single host corrects the label text with its own correction. Among several,
-            # a label that cannot be parsed is offered to each host's correction in turn.
-            correct = hosts[0]._label_corrector() if len(hosts) == 1 else None
+            # A host that reads its own file corrects the label text before parsing it.
+            # Identification among the registered hosts parses the label as it is, and
+            # offers a label that cannot be parsed to each host's correction in turn.
+            correct = None if dispatch else hosts[0]._label_corrector()
             try:
                 label = Host._parse_pds3(filepath, pds3_options, fallback=pds3_fallback,
                                          correct=correct)
             except PdsHostError:
-                for host in (hosts if len(hosts) > 1 else []):
-                    correct = host._label_corrector()
-                    if correct is None:
-                        continue
-                    try:
-                        label = Host._parse_pds3(filepath, pds3_options,
-                                                 fallback=pds3_fallback, correct=correct)
-                    except PdsHostError:
-                        continue
-                    if host._detect_in_pds3(label):
-                        return host, label
+                if dispatch:
+                    found = Host._host_from_correction(
+                        hosts, '_detect_in_pds3',
+                        lambda correct: Host._parse_pds3(filepath, pds3_options,
+                                                         fallback=pds3_fallback,
+                                                         correct=correct))
+                    if found:
+                        return found
                 if pds3_fallback and 'O' in formats:
                     for host in hosts:
                         if (hasattr(host, '_detect_in_file')
@@ -820,7 +885,8 @@ class Host:
         """The parsed PDS3 label of a file.
 
         With `fallback` True and a method of "fast", "strict", or "loose" in
-        `pds3_options`, that method is tried first and each later one in turn. A method
+        `pds3_options`, that method is tried first and each later one in turn; with no
+        method in `pds3_options`, every one is tried, starting with "fast". A method
         fails if it raises a syntax error, or a ValueError for a value it cannot convert,
         as the fast method does for a time with an hour of 25 or for day 366 of a year
         that has 365 days; the next method is then tried. A TypeError, which is how the
@@ -830,7 +896,8 @@ class Host:
 
         With `correct`, the label's text is read and corrected once, before any method
         runs, and every method parses the corrected text, as described for
-        :meth:`~oops.host.Host._correct_label_text`.
+        :meth:`~oops.host.Host._correct_label_text`. If the text cannot be read, as for
+        an attached label that lacks its END statement, PdsHostError is raised.
 
         Parameters:
             filepath (FCPath): The path to the label or to a file with an attached label.
@@ -853,13 +920,18 @@ class Host:
                 `pds3_options` is invalid or the parser raises a ValueError for a value in
                 the label.
             OSError: If `filepath` does not exist or cannot be read.
-            PdsHostError: If no method that is tried can parse the label. The message has
-                the form "cannot parse the PDS3 label <filepath>: <error>" for one
-                attempt, and gives each method's error, as in "method fast: <error>;
-                method strict: <error>; method loose: <error>", for several.
+            PdsHostError: If no method that is tried can parse the label, or if the text
+                of the label cannot be read for `correct`. The message has the form
+                "cannot parse the PDS3 label <filepath>: <error>" for one attempt, and
+                gives each method's error, as in "method fast: <error>; method strict:
+                <error>; method loose: <error>", for several. The exception is raised
+                from the error of the first method tried.
         """
 
         method = pds3_options.get('method')
+        if fallback and method is None:
+            method = _PDS3_METHODS[0]
+            pds3_options = pds3_options | {'method': method}
         fallback = fallback and method in _PDS3_METHODS
         (source, pds3_options) = Host._pds3_source(filepath, pds3_options, correct)
         attempts = [pds3_options]
@@ -913,43 +985,51 @@ class Host:
                 None for none.
 
         Returns:
-            tuple[FCPath | list[str], dict[str, Any]]: `filepath` and `pds3_options` if
-            `correct` is None or leaves the text unchanged; otherwise the lines of
-            the corrected text, and the options with the directory of `filepath` first
-            among the directories searched for a ".FMT" file, as the parser searches it
-            for a label read from a file.
+            tuple[FCPath | str, dict[str, Any]]: `filepath` and `pds3_options` if
+            `correct` is None; otherwise the corrected text, and the options with the
+            directory of `filepath` first among the directories searched for a ".FMT"
+            file, as the parser searches it for a label read from a file. The text is
+            read as the parser reads it from the file and is parsed in place of the
+            file even when the correction leaves it unchanged, so the file is read once.
 
         Raises:
             OSError: If the file does not exist or cannot be read.
+            PdsHostError: If the text of the label cannot be read, as for an attached
+                label that lacks its END statement, or if `correct` raises a PDS3 parser
+                error.
         """
 
         if correct is None:
             return (filepath, pds3_options)
 
-        if pds3_options.get('method') == 'compound':
-            text = FCPath(filepath).read_text(encoding='latin-1')
-        elif pds3_options.get('vax'):
-            text = read_vax_binary_label(filepath)
-        else:
-            text = read_label(filepath)
+        try:
+            if pds3_options.get('method') == 'compound':
+                text = FCPath(filepath).read_text(encoding='latin-1')
+            elif pds3_options.get('vax'):
+                text = read_vax_binary_label(filepath)
+            else:
+                text = read_label(filepath)
+            corrected = correct(text, filepath)
+        except PdsError as err:
+            raise PdsHostError(f'cannot parse the PDS3 label {filepath}: {err}') from err
 
-        corrected = correct(text, filepath)
-        if corrected == text:
-            return (filepath, pds3_options)
+        # The parser takes a string that has no line terminator for the path of a file
+        if '\n' not in corrected:
+            corrected += '\n'
 
         fmt_dirs = pds3_options.get('fmt_dirs', [])
         fmt_dirs = [fmt_dirs] if isinstance(fmt_dirs, (str, pathlib.Path, FCPath)) \
             else list(fmt_dirs)
         options = pds3_options | {'fmt_dirs': [filepath.parent, *fmt_dirs]}
         options.pop('vax', None)        # the text has been read already
-        return (corrected.split('\n'), options)
+        return (corrected, options)
 
     @staticmethod
     def _pds3_label(source, filepath, pds3_options):
         """A PDS3 label parsed from its file or from corrected text.
 
         Parameters:
-            source (FCPath | list[str]): The file, or the lines of the corrected text, as
+            source (FCPath | str): The file, or the corrected text, as
                 :meth:`_pds3_source` gives them.
             filepath (FCPath): The path to the file that holds the label.
             pds3_options (dict[str, Any]): The keyword arguments of the
@@ -1049,7 +1129,8 @@ class Host:
                 the index already merged with the supplement. If they are given, the
                 iteration filters each one as it reaches it, and the tables are not read.
             pds3_options (dict[str, Any], optional): Any keyword arguments and their
-                values to be passed to the :class:`~pdsparser.Pds3Label` parser.
+                values to be passed to the :class:`~pdsparser.Pds3Label` parser for the
+                index label. The supplement's label is parsed with their method alone.
             filter (dict[str, Any], optional): Column names, each with a value, a set,
                 list, or tuple of values, or a tuple of two values that bound a range. A
                 row is yielded only if every column it lists equals the value, is one of
@@ -1057,10 +1138,10 @@ class Host:
                 one of the columns is left out.
             validate (str | list[str] | collections.abc.Callable, optional): The check of
                 each pair of rows. A column name or a list or tuple of them gives columns
-                whose values the two rows must share; two
-                strings are the same if either one, in upper case, contains the other. An
-                empty list or tuple, such as ``validate=()``, skips the comparison of
-                columns, so the only check is the pairing's comparison of the files. A function with the
+                whose values the two rows must share. Two strings are the same if either
+                one, in upper case, contains the other. An empty list or tuple, such as
+                ``validate=()``, skips the comparison of columns, so the only check is the
+                pairing's comparison of the files. A function with the
                 signature ``(dict[str, Any], dict[str, Any]) -> bool`` receives the index
                 row and the supplement row and returns True if they match; it either
                 returns False or raises an exception if they do not. If unspecified, the
@@ -1160,12 +1241,15 @@ class Host:
         elif supplement:
             supplement_path = FCPath(supplement)
 
+        # The supplement's label is parsed with the parser method alone, after the host's
+        # correction of label text if it has one
         supp_table = None
         if supplement_path is not None:
             correct = cls._label_corrector()
             try:
                 supp_label = (None if correct is None else
-                              Host._parse_index_label(supplement_path, options,
+                              Host._parse_index_label(supplement_path,
+                                                      {'method': method},
                                                       correct=correct))
                 supp_table = _index_rows.open_table(supplement_path, label=supp_label,
                                                     pds3_method=method)
@@ -1259,17 +1343,30 @@ class Host:
             filepath (FCPath): The path to the index label.
 
         Raises:
-            HostIndexError: If the host sets :attr:`~oops.host.Host.METADATA_INDEX_EXAMPLE`
-                and `filepath` is in a directory named "index" in either case, which is
-                where a volume keeps its own index.
+            HostIndexError: If the host sets
+                :attr:`~oops.host.Host.METADATA_INDEX_EXAMPLE` and `filepath` is in a
+                directory named "index" in either case, which is where a volume keeps
+                its own index.
         """
 
         # A volume's own index lacks the supplement and gives its files in its own way
-        if (cls.METADATA_INDEX_EXAMPLE is not None
-                and filepath.parent.name.lower() == 'index'):
+        if cls.METADATA_INDEX_EXAMPLE is not None and Host._is_volume_index(filepath):
             raise HostIndexError(f'{cls.NAME} reads the Ring-Moon Systems Node metadata '
                                  f'index, such as "{cls.METADATA_INDEX_EXAMPLE}", not a '
                                  f'volume\'s own index: {filepath}')
+
+    @staticmethod
+    def _is_volume_index(filepath):
+        """True if an index is in the place where a volume keeps its own index.
+
+        Parameters:
+            filepath (FCPath): The path to the index label.
+
+        Returns:
+            bool: True if `filepath` is in a directory named "index" in either case.
+        """
+
+        return FCPath(filepath).parent.name.lower() == 'index'
 
     @classmethod
     def _read_index_label(cls, filepath, *, label=None, pds3_options=None):
@@ -1278,8 +1375,10 @@ class Host:
         A host's ``from_index`` that needs the index label, for example to decide how to
         read the table, calls this method first and passes the label it returns to
         :meth:`~oops.host.Host._index_rows` as `label`, so that the label is parsed only
-        once. A volume's own index is refused first, before the file is read, as
-        :meth:`~oops.host.Host._index_rows` refuses it.
+        once. A volume's own index is refused first, before the file is read and whether
+        or not `label` is given, as :meth:`~oops.host.Host._index_rows` refuses it. The
+        label is parsed with one method of the parser, after this host's correction of
+        label text; no later method is tried if that one fails.
 
         Parameters:
             filepath (str | pathlib.Path | FCPath): The path to the index label.
@@ -1294,12 +1393,15 @@ class Host:
             label of `filepath`.
 
         Raises:
-            HostIndexError: If the host sets :attr:`~oops.host.Host.METADATA_INDEX_EXAMPLE`
-                and `filepath` is in a directory named "index" in either case.
-            OopsValueError: If a value in `pds3_options` is invalid.
+            HostIndexError: If the host sets
+                :attr:`~oops.host.Host.METADATA_INDEX_EXAMPLE` and `filepath` is in a
+                directory named "index" in either case.
+            OopsValueError: If a value in `pds3_options` is invalid, or if the parser
+                cannot convert a value in the label, such as day 366 of a year that has
+                365 days.
             OSError: If the label does not exist or cannot be read.
-            PdsHostError: If the label uses invalid PDS3 syntax. The message names the
-                label.
+            PdsHostError: If the label uses invalid PDS3 syntax. The message gives the
+                path of the label.
         """
 
         filepath = FCPath(filepath)
@@ -1327,11 +1429,12 @@ class Host:
             Pds3Label: The label, whose `filepath` is `filepath`.
 
         Raises:
-            OopsValueError: If a value in `pds3_options` is invalid.
+            OopsValueError: If a value in `pds3_options` is invalid, or if the parser
+                cannot convert a value in the label.
             OSError: If `filepath` does not exist or cannot be read.
-            PdsHostError: If the label, as corrected, uses invalid PDS3 syntax. The
-                message has the form "cannot parse the PDS3 label <filepath>: <parser's
-                message>".
+            PdsHostError: If the label, as corrected, uses invalid PDS3 syntax, or if its
+                text cannot be read for `correct`. The message has the form "cannot parse
+                the PDS3 label <filepath>: <parser's message>".
         """
 
         filepath = FCPath(filepath)
@@ -1538,23 +1641,26 @@ class Host:
                 else:               # subsequent time shifts are linked to the first
                     params[attr] = Host._TIMESHIFT_CLASS[letter](arg, params[attr])
 
-        # Apply frame adjustments
+        # Apply frame adjustments. The parallel and tracker overrides evaluate the frame
+        # once, here. A frame that the SPICE kernels cannot supply, such as the
+        # SpiceErrorFrame of an index row, is left as it is, so that it raises
+        # OopsSpiceError when the observation uses it, as it would without the override.
         if parallel is not None:
             if tracker is not None:
                 raise OopsValueError('parallel and tracker cannot both be specified')
 
-            frame = Frame.as_frame(params['frame']).wrt(parallel.frame)
-            xform = frame.transform_at_time(params['cadence'].midtime)
-            params['frame'] = Cmatrix(xform.matrix, reference=parallel.frame)
+            time = params['cadence'].midtime
+            frame = Frame.as_frame(params['frame'])
+            try:
+                xform = frame.wrt(parallel.frame).transform_at_time(time)
+            except OopsSpiceError:
+                if Host._evaluates(frame, time):
+                    raise                   # the parallel observation's frame failed
+            else:
+                params['frame'] = Cmatrix(xform.matrix, reference=parallel.frame)
 
         elif tracker is not None:
-            try:
-                tfrac = {'start': 0., 'midtime': 0.5, 'end': 1.}[tracker]
-            except KeyError:
-                raise OopsValueError('invalid tracker, should be "start", "midtime", or '
-                                     f'"end": {tracker!r}')
-            times = params['cadence'].time
-            epoch = times[0] + tfrac * (times[1] - times[0])
+            epoch = Host._tracker_epoch(params['cadence'], tracker)
 
             # Convert body to path or None
             target = params['target']
@@ -1563,15 +1669,62 @@ class Host:
             else:
                 target_path = Body.as_body(target).path
 
-            params['frame'] = TrackerFrame(params['frame'],
-                                           target=target_path,
-                                           observer=params['path'],
-                                           epoch=epoch)
+            # Only the frame is evaluated when a TrackerFrame is built
+            try:
+                params['frame'] = TrackerFrame(params['frame'],
+                                               target=target_path,
+                                               observer=params['path'],
+                                               epoch=epoch)
+            except OopsSpiceError:
+                pass
 
         if navigation is not None:
             params['frame'] = Navigation(navigation, params['frame'])
 
         return params
+
+    @staticmethod
+    def _tracker_epoch(cadence, tracker):
+        """The time at which a `tracker` override holds the target's position fixed.
+
+        Parameters:
+            cadence (Cadence): The cadence of the observation, after any `cadence` and
+                `timeshift` overrides.
+            tracker (str): "start", "midtime", or "end".
+
+        Returns:
+            float | Scalar: The start, midtime, or end of `cadence`.
+
+        Raises:
+            OopsValueError: If `tracker` is not one of the three values.
+        """
+
+        try:
+            tfrac = {'start': 0., 'midtime': 0.5, 'end': 1.}[tracker]
+        except (KeyError, TypeError):
+            raise OopsValueError('invalid tracker, should be "start", "midtime", or '
+                                 f'"end": {tracker!r}') from None
+        times = cadence.time
+        return times[0] + tfrac * (times[1] - times[0])
+
+    @staticmethod
+    def _evaluates(frame, time):
+        """False if the SPICE kernels cannot supply a Frame at a time.
+
+        Parameters:
+            frame (Frame): The Frame.
+            time (float): The time in seconds TDB.
+
+        Returns:
+            bool: False if evaluating `frame` relative to J2000 at `time` raises
+            :class:`~oops.OopsSpiceError`; True otherwise.
+        """
+
+        try:
+            frame.wrt(Frame.J2000).transform_at_time(time)
+        except OopsSpiceError:
+            return False
+        return True
 
     @staticmethod
     def _check_spice_frame(frame, time, *, description, filepath=None, defer=False):
@@ -1639,24 +1792,36 @@ class Host:
         A host checks the pointing with :meth:`~oops.host.Host._check_spice_frame` before
         it calls :meth:`~oops.host.Host._apply_overrides`, because the overrides can wrap
         the frame, so it checks at the time that this method gives. That is the midtime
-        of the `cadence` override if one is given, otherwise of `cadence`. A `timeshift`
-        override adds its seconds once if its letters include "T", which moves the
-        observation's times, and once more if they include "F", which makes the frame be
-        evaluated that many seconds after the observation's time; the letters are read
-        in either case, as :meth:`~oops.host.Host._apply_overrides` reads them. A "P"
-        leaves the time as it is.
+        of the `cadence` override if one is given, otherwise of `cadence`. With a
+        `tracker` override, it is instead the start, midtime, or end of that cadence, as
+        the override selects, because the frame is evaluated once, at that time, when the
+        tracking frame is built. A `timeshift` override adds its seconds once if its
+        letters include "T", which moves the observation's times, and once more if they
+        include "F", which makes the frame be evaluated that many seconds after the
+        observation's time. The letters are read in either case, as
+        :meth:`~oops.host.Host._apply_overrides` reads them. A "P" leaves the time as it
+        is.
 
         Parameters:
             cadence (Cadence): The cadence of the observation before the overrides.
             overrides (dict[str, Any]): The standard overrides by name, as a host's
-                ``from_file`` or ``from_index`` receives them. Only "cadence" and
-                "timeshift" are read; a missing key counts as None.
+                ``from_file`` or ``from_index`` receives them. Only "cadence",
+                "timeshift", "tracker", and "parallel" are read; a missing key counts as
+                None.
 
         Returns:
             float: The time in seconds TDB.
+
+        Raises:
+            OopsValueError: If the `tracker` override is not "start", "midtime", or
+                "end".
         """
 
-        time = (overrides.get('cadence') or cadence).midtime
+        cadence = overrides.get('cadence') or cadence
+        time = cadence.midtime
+        tracker = overrides.get('tracker')
+        if tracker is not None and overrides.get('parallel') is None:
+            time = Host._tracker_epoch(cadence, tracker)
         timeshift = overrides.get('timeshift')
         if timeshift is not None:
             letters = str(timeshift[1]).upper()

@@ -36,6 +36,12 @@ PRODUCT_CREATION_TIME = 2005-366T00:00:00
 END
 """
 
+# Only the fast parser reads an unquoted value that holds a blank
+FAST_ONLY_LABEL = """PDS_VERSION_ID = PDS3
+TARGET_NAME = SATURN RINGS
+END
+"""
+
 # The fast parser raises a ValueError for an hour of 25; the strict and loose parsers
 # report a syntax error
 HOUR_25_LABEL = """PDS_VERSION_ID = PDS3
@@ -194,6 +200,21 @@ def test_read_fileinfo_parses_with_the_fallback_when_asked(tmp_path: Path) -> No
                                       pds3_options={'method': 'fast'},
                                       pds3_fallback=True)
     assert parsed['PRODUCT_CREATION_TIME_fmt'] == '2005-366T00:00:00'
+
+
+@pytest.mark.parametrize('options', [None, {}], ids=['none', 'empty'])
+def test_read_fileinfo_tries_every_method_when_the_options_give_none(
+        tmp_path: Path, options: dict[str, Any] | None) -> None:
+    parsed = _FileHost._read_fileinfo(_label(tmp_path, FAST_ONLY_LABEL), formats='P',
+                                      pds3_options=options, pds3_fallback=True)
+    assert parsed['TARGET_NAME'] == 'SATURN RINGS'
+
+
+def test_the_fallback_error_comes_from_the_first_method_tried(tmp_path: Path) -> None:
+    with pytest.raises(PdsHostError) as raised:
+        Host._parse_pds3(_label(tmp_path, HOUR_25_LABEL), {'method': 'fast'},
+                         fallback=True)
+    assert f'method fast: {raised.value.__cause__};' in str(raised.value)
 
 
 @pytest.mark.usefixtures('hosts')
