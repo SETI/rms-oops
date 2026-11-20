@@ -363,21 +363,6 @@ def test_a_key_column_a_table_lacks_raises_at_call_time(tmp_path: Path) -> None:
         _ByFile._index_rows(label, file_key='FILE_NAME')
 
 
-def test_a_volumes_own_index_is_refused_when_the_host_reads_metadata_indexes(
-        tmp_path: Path) -> None:
-    (tmp_path / 'INDEX').mkdir()
-    label = write_table(tmp_path / 'INDEX', 'INDEX', {'NAME': ['A']})
-
-    class _MetadataHost(_ByPosition):
-        METADATA_INDEX_EXAMPLE = 'VOL_0001_index.lbl'
-
-    with pytest.raises(HostIndexError, match='by-position reads the Ring-Moon Systems '
-                                             'Node metadata index, such as '
-                                             '"VOL_0001_index.lbl", not a volume\'s own '
-                                             'index'):
-        _MetadataHost._index_rows(label, supplement=None)
-
-
 ##########################################################################################
 # Filtering
 ##########################################################################################

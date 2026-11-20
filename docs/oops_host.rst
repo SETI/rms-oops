@@ -69,13 +69,6 @@ parser cannot read is offered to each host's correction of label text, as a prod
 is, and goes to the first host whose correction makes it readable and that recognizes
 the corrected label.
 
-A volume keeps its own index in a directory named "index", in either case. A host that
-reads only the Ring-Moon Systems Node metadata indexes refuses a volume's own index with
-:class:`~oops.host.HostIndexError` before any row is read. If no host
-recognizes the label of such an index, the first row is read only for the hosts that
-might read it, and if every host is of the kind that reads only the metadata indexes, the
-index is refused at once.
-
 The host's own ``from_index`` then reads the index a few rows at a time as the iteration
 proceeds, and builds each row's observation when the iteration reaches it. An index of
 any size is read in this way while only a few rows are held in memory. An observation
@@ -119,9 +112,6 @@ These are raised by the call itself:
 - :class:`~oops.host.HostIndexError` for a label that does not describe a table that can
   be read, as when it lacks the object that its table pointer refers to, and for a
   supplement or file column that the host needs and that a table lacks.
-- :class:`~oops.host.HostIndexError` for a volume's own index, when the host that
-  recognizes it, or every host that might read it, reads only the Ring-Moon Systems Node
-  metadata indexes.
 - :class:`~oops.OopsValueError` for a ``filter`` column that neither table has.
 - :class:`FileNotFoundError` for a label that does not exist, including a supplement that
   the host requires.

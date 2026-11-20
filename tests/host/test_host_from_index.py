@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 
 from oops         import OopsValueError
-from oops.host    import Host, HostIndexError, PdsHostError
+from oops.host    import Host, PdsHostError
 
 INDEX_LABEL = """PDS_VERSION_ID = PDS3
 RECORD_TYPE = FIXED_LENGTH
@@ -167,115 +167,12 @@ def test_rows_given_by_the_caller_keep_the_row_read_to_find_the_host(
     assert list(Host.from_index(index_label, row_dicts=given)) == ['A', 'B']
 
 ##########################################################################################
-# A volume's own index, and a label that cannot be parsed
+# A label that cannot be parsed
 ##########################################################################################
-
-class _MetadataHost(Host):
-    """A host that reads only metadata indexes and recognizes a volume's own index from
-    its label."""
-
-    NAME = 'metadata_host'
-    METADATA_INDEX_EXAMPLE = 'VOL_0001_index.lbl'
-
-    @staticmethod
-    def _detect_in_index(label: object) -> bool:
-        return True
-
-    @staticmethod
-    def from_index(filepath: Any, *, label: Any = None,
-                   **kwargs: Any) -> Iterator[dict[str, Any]]:
-        return _MetadataHost._index_rows(filepath, supplement=None, label=label)
-
-
-def test_a_volume_index_is_refused_without_reading_a_row(
-        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """The first host could tell only from a row, and the table file is missing, so
-    reading a row would raise FileNotFoundError."""
-
-    monkeypatch.setattr(Host, '_HOSTS', [_RowHost, _MetadataHost])
-    directory = tmp_path / 'VOL_0001' / 'INDEX'
-    directory.mkdir(parents=True)
-    label = directory / 'INDEX.LBL'
-    label.write_text(INDEX_LABEL)
-
-    with pytest.raises(HostIndexError, match='metadata_host reads the Ring-Moon Systems '
-                                             'Node metadata index'):
-        Host.from_index(label)
-
-
-class _RowMetadataHost(Host):
-    """A host that reads only metadata indexes and can be identified only from a row."""
-
-    NAME = 'row_metadata_host'
-    METADATA_INDEX_EXAMPLE = 'VOL_0001_index.lbl'
-
-    @staticmethod
-    def _detect_in_index(label: object) -> None:
-        return None
-
-    @staticmethod
-    def _detect_in_row(row_dict: dict[str, Any]) -> bool:
-        return True
-
-    @staticmethod
-    def from_index(filepath: Any, *, label: Any = None,
-                   **kwargs: Any) -> Iterator[dict[str, Any]]:
-        return _RowMetadataHost._index_rows(filepath, supplement=None, label=label)
-
-
-def _volume_index(tmp_path: Path, *, table: bool) -> Path:
-    """The label of a volume's own index, in its INDEX directory, with or without its
-    table file."""
-
-    directory = tmp_path / 'VOL_0001' / 'INDEX'
-    directory.mkdir(parents=True)
-    if table:
-        (directory / 'index.tab').write_bytes(b'A,1\r\nB,2\r\nC,3\r\n')
-    label = directory / 'INDEX.LBL'
-    label.write_text(INDEX_LABEL)
-    return label
-
-
-class _EagerMetadataHost(_MetadataHost):
-    """A host that reads only metadata indexes and whose from_index reads before it
-    checks anything."""
-
-    NAME = 'eager_metadata_host'
-
-    @staticmethod
-    def from_index(filepath: Any, **kwargs: Any) -> Iterator[dict[str, Any]]:
-        raise AssertionError('the host was given a volume index')
-
-
-def test_the_dispatcher_refuses_a_volume_index_for_the_host_that_claims_it(
-        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(Host, '_HOSTS', [_EagerMetadataHost])
-    with pytest.raises(HostIndexError, match='eager_metadata_host reads the Ring-Moon '
-                                             'Systems Node metadata index'):
-        Host.from_index(_volume_index(tmp_path, table=False))
-
-
-def test_a_volume_index_that_no_host_claims_is_refused_without_reading_a_row(
-        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """The table file is missing, so reading a row would raise FileNotFoundError."""
-
-    monkeypatch.setattr(Host, '_HOSTS', [_RowMetadataHost])
-    message = (r'^the registered hosts that might read this index read only the Ring-Moon '
-               r'Systems Node metadata indexes, not a volume\'s own index: .*INDEX\.LBL$')
-    with pytest.raises(HostIndexError, match=message):
-        Host.from_index(_volume_index(tmp_path, table=False))
-
-
-def test_a_volume_index_is_offered_by_row_to_a_host_that_reads_any_index(
-        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(Host, '_HOSTS', [_RowMetadataHost, _RowHost])
-    monkeypatch.setattr(_IndexHost, 'built', [])
-    assert list(Host.from_index(_volume_index(tmp_path, table=True))) == ['A', 'B', 'C']
-
 
 def test_a_label_that_cannot_be_parsed_and_no_host_claims_raises(
         index_label: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(Host, '_HOSTS', [_IndexHost, _MetadataHost])
+    monkeypatch.setattr(Host, '_HOSTS', [_IndexHost, _RowHost])
     index_label.write_text('PDS_VERSION_ID = PDS3\nRECORD_TYPE\nEND\n')
 
     with pytest.raises(PdsHostError, match=r'cannot parse the PDS3 label .*index\.lbl'):

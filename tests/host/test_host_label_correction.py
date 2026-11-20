@@ -12,8 +12,7 @@ from filecache import FCPath
 from oops.host import Host, PdsHostError
 from tests.host._tables import write_table
 
-# A line of plain text outside any comment, which no PDS3 parser can read, as in the label
-# of a Cassini VIMS volume's own index
+# A line of plain text outside any comment, which no PDS3 parser can read
 STRAY_LINE = 'For full definitions of index fields, please refer to the handbook.'
 
 

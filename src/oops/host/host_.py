@@ -89,11 +89,6 @@ class Host:
     #: row for the same file. Each host sets it from a survey of its instrument's indexes.
     MERGE_SUPPLEMENT_BY_FILE = False
 
-    #: For a host that reads only the Ring-Moon Systems Node metadata indexes, the name
-    #: of one, such as "COISS_2001_index.lbl", for the message that refuses a volume's own
-    #: index; None for a host that reads any index.
-    METADATA_INDEX_EXAMPLE = None
-
     SUPPLEMENT = object()  # Sentinel so from_index() searches for a supplemental index
 
     @staticmethod
@@ -228,14 +223,6 @@ class Host:
         corrected label gets the call. If no host's correction helps,
         :class:`~oops.host.PdsHostError` is raised.
 
-        An index in a directory named "index", in either case, is where a volume keeps
-        its own index. A host that reads only the Ring-Moon Systems Node metadata indexes
-        refuses such an index with :class:`~oops.host.HostIndexError`, and that refusal
-        is made here, before any row is read. If no host recognizes the label of such an
-        index, no row is read for a host that reads only the metadata indexes, and if
-        every host that might read it is of that kind, :class:`~oops.host.HostIndexError`
-        is raised at once.
-
         The host's own ``from_index`` then reads the rows of the index and its supplement
         as the iteration proceeds, a few rows at a time, and builds each row's
         observation when the iteration reaches it. Every argument, the overrides
@@ -332,10 +319,7 @@ class Host:
                 with a range in `filter`.
             HostIndexError: If the label of `filepath` or `supplement` does not describe a
                 table that can be read, as when it lacks the object that its table pointer
-                refers to. Also raised, before any row is read, if `filepath` is a
-                volume's own index and the host that recognizes it, or every host that
-                might read it, reads only the Ring-Moon Systems Node metadata indexes.
-                Also raised during the iteration, at the row where the two tables
+                refers to. Also raised during the iteration, at the row where the two tables
                 cannot be paired, where a table file ends before its label says, or at the
                 first of the ten rows read with a row longer than the label's row length,
                 as listed for the support method ``_index_rows``. A value that cannot be
@@ -384,18 +368,6 @@ class Host:
 
         if host is None:
             undecided = [host for host in Host._HOSTS if status[host] is None]
-
-            # A host that reads only the metadata indexes would refuse a volume's own
-            # index, so no row is read for it
-            if undecided and Host._is_volume_index(filepath):
-                undecided = [host for host in undecided
-                             if host.METADATA_INDEX_EXAMPLE is None]
-                if not undecided:
-                    raise HostIndexError(f'the registered hosts that might read this '
-                                         f'index read only the Ring-Moon Systems Node '
-                                         f'metadata indexes, not a volume\'s own index: '
-                                         f'{filepath}')
-
             if not undecided:
                 raise UnknownHostError(f'unknown host in index {filepath}')
             if row_dicts is None:
@@ -409,10 +381,6 @@ class Host:
             if not found:
                 raise UnknownHostError(f'unknown host in index {filepath}')
             host = found[0]
-
-        # The chosen host refuses a volume's own index here too, so that the refusal never
-        # depends on how its from_index reads the rows
-        host._refuse_volume_index(filepath)
 
         # A host with a correction of label text parses the label itself, so that it
         # reads the label as its own from_index would
@@ -1079,10 +1047,8 @@ class Host:
         This is the support method with which a host's ``from_index`` reads its index;
         the host builds one observation from each row that the iterator yields.
 
-        The call itself reads only labels. It refuses a volume's own index if the host
-        sets :attr:`~oops.host.Host.METADATA_INDEX_EXAMPLE`, reads the labels of the index
-        and the supplement, checks that the index belongs to this host, and checks the
-        columns that `filter`, `validate`, and the file keys use against the labels. If
+        The call itself reads only labels. It reads the labels of the index and the
+        supplement, checks that the index belongs to this host, and checks the columns that `filter`, `validate`, and the file keys use against the labels. If
         the index label cannot tell whether the index belongs to this host, the first row
         is read for that, and only that row.
 
@@ -1169,10 +1135,8 @@ class Host:
             supplement row.
 
         Raises:
-            HostIndexError: At call time: if the host sets
-                :attr:`~oops.host.Host.METADATA_INDEX_EXAMPLE` and the index is in a
-                directory named "index" in either case, which is where a volume keeps its
-                own index; if either label does not describe a table that can be read; if
+            HostIndexError: At call time: if either label does not describe a table that
+                can be read; if
                 `supplement` is `Host.SUPPLEMENT`, `require_supplement` is True, and
                 :meth:`~oops.host.Host._supplement_path` returns None; if a table lacks a
                 column of its file key or of `validate`; if `validate` is unspecified and
@@ -1209,7 +1173,6 @@ class Host:
         """
 
         filepath = FCPath(filepath)
-        cls._refuse_volume_index(filepath)
 
         # Rows given by the caller are filtered as they are reached
         if row_dicts is not None:
@@ -1337,48 +1300,13 @@ class Host:
         return filepath.with_name(supp_name)
 
     @classmethod
-    def _refuse_volume_index(cls, filepath):
-        """Refuse a volume's own index if this host reads only the metadata indexes.
-
-        Parameters:
-            filepath (FCPath): The path to the index label.
-
-        Raises:
-            HostIndexError: If the host sets
-                :attr:`~oops.host.Host.METADATA_INDEX_EXAMPLE` and `filepath` is in a
-                directory named "index" in either case, which is where a volume keeps
-                its own index.
-        """
-
-        # A volume's own index lacks the supplement and gives its files in its own way
-        if cls.METADATA_INDEX_EXAMPLE is not None and Host._is_volume_index(filepath):
-            raise HostIndexError(f'{cls.NAME} reads the Ring-Moon Systems Node metadata '
-                                 f'index, such as "{cls.METADATA_INDEX_EXAMPLE}", not a '
-                                 f'volume\'s own index: {filepath}')
-
-    @staticmethod
-    def _is_volume_index(filepath):
-        """True if an index is in the place where a volume keeps its own index.
-
-        Parameters:
-            filepath (FCPath): The path to the index label.
-
-        Returns:
-            bool: True if `filepath` is in a directory named "index" in either case.
-        """
-
-        return FCPath(filepath).parent.name.lower() == 'index'
-
-    @classmethod
     def _read_index_label(cls, filepath, *, label=None, pds3_options=None):
         """The label of an index that this host reads, parsed once.
 
         A host's ``from_index`` that needs the index label, for example to decide how to
         read the table, calls this method first and passes the label it returns to
         :meth:`~oops.host.Host._index_rows` as `label`, so that the label is parsed only
-        once. A volume's own index is refused first, before the file is read and whether
-        or not `label` is given, as :meth:`~oops.host.Host._index_rows` refuses it. The
-        label is parsed with one method of the parser, after this host's correction of
+        once. The label is parsed with one method of the parser, after this host's correction of
         label text; no later method is tried if that one fails.
 
         Parameters:
@@ -1394,9 +1322,6 @@ class Host:
             label of `filepath`.
 
         Raises:
-            HostIndexError: If the host sets
-                :attr:`~oops.host.Host.METADATA_INDEX_EXAMPLE` and `filepath` is in a
-                directory named "index" in either case.
             OopsValueError: If a value in `pds3_options` is invalid, or if the parser
                 cannot convert a value in the label, such as day 366 of a year that has
                 365 days.
@@ -1406,7 +1331,6 @@ class Host:
         """
 
         filepath = FCPath(filepath)
-        cls._refuse_volume_index(filepath)
         if label is not None:
             return label
         return Host._parse_index_label(filepath,

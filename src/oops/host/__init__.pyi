@@ -53,7 +53,6 @@ class VicarHostError(HostFormatError, VicarError): ...
 class Host:
     NAME: str
     MERGE_SUPPLEMENT_BY_FILE: bool
-    METADATA_INDEX_EXAMPLE: str | None
     SUPPLEMENT: object
     @staticmethod
     def from_file(filepath: str | pathlib.Path | FCPath | Pds3Label | VicarLabel

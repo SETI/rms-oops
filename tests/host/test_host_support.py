@@ -13,7 +13,7 @@ from pdsparser import Pds3Label
 from oops         import Frame, OopsSpiceError, OopsTypeError, OopsValueError
 from oops.cadence import SnapCadence
 from oops.frame   import SpiceErrorFrame
-from oops.host    import PDS3_NULL_TEXTS, Host, HostIndexError, is_pds3_null
+from oops.host    import PDS3_NULL_TEXTS, Host, is_pds3_null
 
 
 class _Named(Host):
@@ -145,37 +145,21 @@ def test_the_file_of_a_row_can_come_from_other_columns() -> None:
 # Reading an index label
 ##########################################################################################
 
-class _MetadataReader(Host):
-    """A host that reads only the metadata indexes."""
+class _Reader(Host):
+    """A host that reads an index label."""
 
-    NAME = 'metadata_reader'
-    METADATA_INDEX_EXAMPLE = 'VOL_0001_index.lbl'
+    NAME = 'reader'
 
 
 def test_the_index_label_is_parsed(tmp_path: Path) -> None:
     filepath = tmp_path / 'VOL_0001_index.lbl'
     filepath.write_text('PDS_VERSION_ID = PDS3\nRECORD_TYPE = FIXED_LENGTH\nEND\n')
-    label = _MetadataReader._read_index_label(filepath)
+    label = _Reader._read_index_label(filepath)
     assert label['RECORD_TYPE'] == 'FIXED_LENGTH'
 
 
 def test_a_given_index_label_is_returned_without_reading_the_file(tmp_path: Path) -> None:
     label = Pds3Label('PDS_VERSION_ID = PDS3\nEND\n')
-    assert _MetadataReader._read_index_label(tmp_path / 'missing.lbl',
-                                             label=label) is label
-
-
-def test_a_volumes_own_index_is_refused_when_its_label_is_given(tmp_path: Path) -> None:
-    label = Pds3Label('PDS_VERSION_ID = PDS3\nEND\n')
-    with pytest.raises(HostIndexError, match='metadata_reader reads the Ring-Moon'):
-        _MetadataReader._read_index_label(tmp_path / 'INDEX' / 'INDEX.LBL', label=label)
-
-
-def test_a_volumes_own_index_is_refused_before_its_label_is_read(tmp_path: Path) -> None:
-    with pytest.raises(HostIndexError, match='metadata_reader reads the Ring-Moon Systems '
-                                             'Node metadata index, such as '
-                                             '"VOL_0001_index.lbl", not a volume\'s own '
-                                             'index: .*missing.lbl'):
-        _MetadataReader._read_index_label(tmp_path / 'INDEX' / 'missing.lbl')
+    assert _Reader._read_index_label(tmp_path / 'missing.lbl', label=label) is label
 
 ##########################################################################################
