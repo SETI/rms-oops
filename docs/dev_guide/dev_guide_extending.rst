@@ -18,6 +18,8 @@ Put the class in ``src/oops/path/<name>.py``, lowercase with no separators. Inhe
     # oops/path/linearpath.py
     ##########################################################################################
 
+    import weakref
+
     from polymath   import Qube, Scalar, Vector3
     from oops.event import Event
     from oops.frame import Frame
@@ -27,7 +29,7 @@ Put the class in ``src/oops/path/<name>.py``, lowercase with no separators. Inhe
     class LinearPath(Path):
         """A Path subclass describing linear motion relative to another Path and Frame."""
 
-        _WAYPOINTS = {}
+        _WAYPOINTS = weakref.WeakValueDictionary()
 
         def __init__(self, pos, epoch, origin, *, frame=None, path_id=None):
             """Constructor for a LinearPath.
@@ -73,7 +75,9 @@ Put the class in ``src/oops/path/<name>.py``, lowercase with no separators. Inhe
 Notes on the pattern:
 
 * ``_WAYPOINTS`` and ``_waypoint_key`` make instances with equal parameters share one
-  registered waypoint. Omit both if every instance should be its own waypoint.
+  waypoint. Omit both if every instance should be its own waypoint. The pool is a
+  ``weakref.WeakValueDictionary`` so that it lets go of a waypoint once nothing else uses
+  it; a plain dictionary would keep every unregistered path ever built.
 * ``__getstate__`` returns the constructor arguments as a tuple so that pickling and
   :meth:`~oops.Fittable.copy` can rebuild the object; a registered class ends the tuple
   with ``self.stripped_id``, which ``copy`` drops so the copy stays unregistered.
@@ -96,7 +100,8 @@ Identical in structure, in ``src/oops/frame/<name>.py``. Inherit :class:`~oops.F
 set ``_reference`` (a wayframe), ``_origin`` (a waypoint, or ``None`` for an inertial
 frame) and ``_shape``, call ``_register(frame_id)`` and ``refresh()``, and implement
 ``transform_at_time``, which returns a :class:`~oops.Transform`. A class sharing
-wayframes declares ``_WAYFRAMES = {}`` and ``_wayframe_key``; a time-varying frame sets
+wayframes declares ``_WAYFRAMES = weakref.WeakValueDictionary()`` and
+``_wayframe_key``; a time-varying frame sets
 ``_USE_QUICKFRAMES = True``; the module ends with
 ``Frame._FRAME_SUBCLASSES.append(<Class>)``. :class:`~oops.frame.SpinFrame` is the
 smallest complete model:

@@ -2,6 +2,8 @@
 # oops/path/coordpath.py
 ##########################################################################################
 
+import weakref
+
 from polymath        import Qube, Scalar
 from oops.event      import Event
 from oops.path.path_ import Path
@@ -10,7 +12,7 @@ from oops.path.path_ import Path
 class CoordPath(Path):
     """A Path subclass defined by fixed coordinates on a specified Surface."""
 
-    _WAYPOINTS = {}
+    _WAYPOINTS = weakref.WeakValueDictionary()
 
     def __init__(self, surface, coords, *, obs=None, path_id=None):
         """Constructor for a CoordPath.

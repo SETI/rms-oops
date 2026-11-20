@@ -2,6 +2,8 @@
 # oops/frame/poleframe.py
 ##########################################################################################
 
+import weakref
+
 from polymath       import Matrix3, Qube, Scalar, Vector3
 from oops._cache    import _Cache
 from oops.frame     import Frame
@@ -17,7 +19,7 @@ class PoleFrame(Frame):
     ascending node of the ring plane. This frame is recommended for Neptune in particular.
     """
 
-    _WAYFRAMES = {}
+    _WAYFRAMES = weakref.WeakValueDictionary()
     _USE_QUICKFRAMES = True     # always a slowly-changing frame
 
     def __init__(self, frame, pole, *, retrograde=False, aries=False, frame_id=None,
