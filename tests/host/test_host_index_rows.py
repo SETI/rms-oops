@@ -1,121 +1,415 @@
 ##########################################################################################
-# tests/host/test_host_index_rows.py: pairing the rows of an index and its supplement
+# tests/host/test_host_index_rows.py: Host._index_rows reads, pairs and filters lazily
 ##########################################################################################
 
+from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 
-from oops.host import Host, HostIndexError
+from oops      import OopsTypeError, OopsValueError
+from oops.host import Host, HostIndexError, WrongHostError, _index_rows
+from tests.host._tables import write_table
 
 
-def _write_table(directory: Path, stem: str, columns: dict[str, list[str]]) -> Path:
-    """Write an ASCII table of character columns and its detached label; return the label.
+class _ByPosition(Host):
+    """A host whose index and supplement list the same files in the same order."""
 
-    Parameters:
-        directory: The directory to write into.
-        stem: The file name without its extension.
-        columns: The values of each column, by column name.
-    """
+    NAME = 'by-position'
+    MERGE_SUPPLEMENT_BY_FILE = False
 
-    names = list(columns)
-    widths = [max(len(value) for value in columns[name]) for name in names]
-    nrows = len(columns[names[0]])
-    row_bytes = sum(widths) + len(widths) - 1 + 2
-    lines = [','.join(columns[name][i].ljust(width) for name, width in zip(names, widths))
-             for i in range(nrows)]
-    (directory / f'{stem}.tab').write_bytes(''.join(line + '\r\n'
-                                                    for line in lines).encode())
-
-    start = 1
-    objects = []
-    for name, width in zip(names, widths):
-        objects += ['  OBJECT = COLUMN', f'    NAME = {name}',
-                    '    DATA_TYPE = CHARACTER', f'    START_BYTE = {start}',
-                    f'    BYTES = {width}', '  END_OBJECT = COLUMN']
-        start += width + 1
-    label = ['PDS_VERSION_ID = PDS3', 'RECORD_TYPE = FIXED_LENGTH',
-             f'RECORD_BYTES = {row_bytes}', f'FILE_RECORDS = {nrows}',
-             f'^INDEX_TABLE = "{stem}.tab"', 'OBJECT = INDEX_TABLE',
-             '  INTERCHANGE_FORMAT = ASCII', f'  ROWS = {nrows}',
-             f'  ROW_BYTES = {row_bytes}', f'  COLUMNS = {len(names)}',
-             *objects, 'END_OBJECT = INDEX_TABLE', 'END', '']
-    filepath = directory / f'{stem}.lbl'
-    filepath.write_text('\n'.join(label))
-    return filepath
+    @staticmethod
+    def _detect_in_index(label: object) -> bool:
+        return True
 
 
-def _read(directory: Path, index: dict[str, list[str]], supplement: dict[str, list[str]],
-          **kwargs: object) -> list[dict[str, object]]:
-    """Write an index and its supplement and return the rows that pair them."""
+class _ByFile(Host):
+    """A host whose supplement may list the files in another order."""
 
-    label = _write_table(directory, 'vol_index', index)
-    _write_table(directory, 'vol_supplemental_index', supplement)
-    return Host._read_index_rows(label, supplement=Host.SUPPLEMENT, **kwargs)
+    NAME = 'by-file'
+    MERGE_SUPPLEMENT_BY_FILE = True
 
+    @staticmethod
+    def _detect_in_index(label: object) -> bool:
+        return True
+
+
+def _tables(directory: Path, index: dict[str, list[str]],
+            supplement: dict[str, list[str]]) -> Path:
+    """Write an index and its supplement; return the index label."""
+
+    write_table(directory, 'vol_supplemental_index', supplement)
+    return write_table(directory, 'vol_index', index)
+
+
+def _files(names: str) -> list[str]:
+    """One file name per letter, such as ["A.LBL", "B.LBL"] for "AB"."""
+
+    return [name + '.LBL' for name in names]
+
+
+def _pairs(rows: Iterator[dict[str, Any]]) -> list[tuple[Any, Any]]:
+    """The NUM and VAL of each row."""
+
+    return [(row['NUM'], row['VAL']) for row in rows]
+
+
+##########################################################################################
+# Pairing by position
+##########################################################################################
 
 def test_rows_in_the_same_order_pair_by_position(tmp_path: Path) -> None:
-    rows = _read(tmp_path, {'FILE_SPECIFICATION_NAME': ['A.LBL', 'B.LBL'],
-                            'NUM': ['1', '2']},
-                 {'FILE_SPECIFICATION_NAME': ['A.LBL', 'B.LBL'], 'VAL': ['a', 'b']})
-    assert [(row['NUM'], row['VAL']) for row in rows] == [('1', 'a'), ('2', 'b')]
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('AB'),
+                               'NUM': ['1', '2']},
+                    {'FILE_SPECIFICATION_NAME': _files('AB'), 'VAL': ['a', 'b']})
+
+    assert _pairs(_ByPosition._index_rows(label)) == [('1', 'a'), ('2', 'b')]
 
 
-def test_rows_in_another_order_pair_by_file(tmp_path: Path) -> None:
-    """The supplement's paths differ from the index's in case, leading "/" and "./", the
-    volume, given by another column, and the extension."""
+def test_pairing_by_position_raises_at_the_first_row_whose_files_differ(
+        tmp_path: Path) -> None:
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('ABC'),
+                               'NUM': ['1', '2', '3']},
+                    {'FILE_SPECIFICATION_NAME': _files('ACB'), 'VAL': ['a', 'c', 'b']})
+    rows = _ByPosition._index_rows(label)
 
-    rows = _read(tmp_path, {'FILE_NAME': ['/VOL/DATA/A.QUB', '/VOL/DATA/B.QUB',
-                                          '/VOL/DATA/C.QUB'],
-                            'NUM': ['1', '2', '3']},
-                 {'VOLUME_ID': ['vol', 'vol', 'vol'],
-                  'FILE_SPECIFICATION_NAME': ['./data/c.lbl', 'data/a.lbl', 'data/b.lbl'],
-                  'VAL': ['c', 'a', 'b']},
-                 file_key='FILE_NAME',
-                 supplement_key=('VOLUME_ID', 'FILE_SPECIFICATION_NAME'),
-                 validate=lambda indx, supp: True)
-    assert [(row['NUM'], row['VAL']) for row in rows] == [('1', 'a'), ('2', 'b'),
-                                                         ('3', 'c')]
+    assert next(rows)['VAL'] == 'a'
+    with pytest.raises(HostIndexError, match=r"index row 1 gives 'B.LBL' but the "
+                                             r"supplement row in the same position "
+                                             r"gives 'C.LBL'"):
+        next(rows)
 
 
-@pytest.mark.parametrize('order', [[0, 1], [1, 0]], ids=['same-order', 'reversed'])
+def test_pairing_by_position_raises_where_the_supplement_ends(tmp_path: Path) -> None:
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('AB'),
+                               'NUM': ['1', '2']},
+                    {'FILE_SPECIFICATION_NAME': _files('A'), 'VAL': ['a']})
+    rows = _ByPosition._index_rows(label)
+
+    assert next(rows)['VAL'] == 'a'
+    with pytest.raises(HostIndexError, match='the supplement ends before index row 1'):
+        next(rows)
+
+
+def test_pairing_by_position_raises_after_the_index_for_extra_supplement_rows(
+        tmp_path: Path) -> None:
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('A'), 'NUM': ['1']},
+                    {'FILE_SPECIFICATION_NAME': _files('AB'), 'VAL': ['a', 'b']})
+    rows = _ByPosition._index_rows(label)
+
+    assert next(rows)['VAL'] == 'a'
+    with pytest.raises(HostIndexError, match='the supplement has more rows than the '
+                                             'index'):
+        next(rows)
+
+
+def test_a_pair_that_fails_validation_raises_at_its_row(tmp_path: Path) -> None:
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('AB'),
+                               'NAME': ['x', 'y']},
+                    {'FILE_SPECIFICATION_NAME': _files('AB'), 'NAME': ['x', 'z']})
+    rows = _ByPosition._index_rows(label)
+
+    assert next(rows)['NAME'] == 'x'
+    with pytest.raises(HostIndexError, match="NAME value mismatch: 'y', 'z'\nindex row "
+                                             "1 does not match its supplement row"):
+        next(rows)
+
+
+@pytest.mark.parametrize('host', [_ByPosition, _ByFile], ids=['by-position', 'by-file'])
 def test_default_validation_accepts_a_label_and_its_data_file(tmp_path: Path,
-                                                              order: list[int]) -> None:
-    """The index names each data file and the supplement its label."""
+                                                              host: type[Host]) -> None:
+    """The index gives each data file and the supplement its label."""
 
-    labels = ['DATA/A.LBL', 'DATA/B.LBL']
-    rows = _read(tmp_path, {'FILE_SPECIFICATION_NAME': ['DATA/A.QUB', 'DATA/B.QUB'],
-                            'NUM': ['1', '2']},
-                 {'FILE_SPECIFICATION_NAME': [labels[i] for i in order],
-                  'VAL': [['a', 'b'][i] for i in order]})
-    assert [(row['NUM'], row['VAL']) for row in rows] == [('1', 'a'), ('2', 'b')]
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': ['DATA/A.QUB', 'DATA/B.QUB'],
+                               'NUM': ['1', '2']},
+                    {'FILE_SPECIFICATION_NAME': ['DATA/A.LBL', 'DATA/B.LBL'],
+                     'VAL': ['a', 'b']})
 
-
-def test_an_index_row_without_a_supplement_row_raises(tmp_path: Path) -> None:
-    with pytest.raises(HostIndexError,
-                       match=r"no supplement row for an index row \(1\): \['B.LBL'\]"):
-        _read(tmp_path, {'FILE_SPECIFICATION_NAME': ['A.LBL', 'B.LBL'],
-                         'NUM': ['1', '2']},
-              {'FILE_SPECIFICATION_NAME': ['C.LBL', 'A.LBL'], 'VAL': ['c', 'a']})
-
-
-def test_a_file_listed_twice_raises(tmp_path: Path) -> None:
-    with pytest.raises(HostIndexError,
-                       match=r"supplement lists a file more than once \(1\): "
-                             r"\['A.LBL'\]"):
-        _read(tmp_path, {'FILE_SPECIFICATION_NAME': ['B.LBL', 'A.LBL'],
-                         'NUM': ['1', '2']},
-              {'FILE_SPECIFICATION_NAME': ['A.LBL', 'A.LBL'], 'VAL': ['a', 'b']})
+    assert _pairs(host._index_rows(label)) == [('1', 'a'), ('2', 'b')]
 
 
 @pytest.mark.parametrize(('prefer_supplement', 'expected'),
                          [(False, ['i1', 'i2']), (True, ['s1', 's2'])])
 def test_prefer_supplement_chooses_the_value_of_a_shared_column(
         tmp_path: Path, prefer_supplement: bool, expected: list[str]) -> None:
-    rows = _read(tmp_path, {'FILE_SPECIFICATION_NAME': ['A.LBL', 'B.LBL'],
-                            'NAME': ['i1', 'i2']},
-                 {'FILE_SPECIFICATION_NAME': ['B.LBL', 'A.LBL'], 'NAME': ['s2', 's1']},
-                 validate='FILE_SPECIFICATION_NAME', prefer_supplement=prefer_supplement)
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('AB'),
+                               'NAME': ['i1', 'i2']},
+                    {'FILE_SPECIFICATION_NAME': _files('AB'), 'NAME': ['s1', 's2']})
+
+    rows = _ByPosition._index_rows(label, validate=lambda indx, supp: True,
+                                   prefer_supplement=prefer_supplement)
+
+    assert [row['NAME'] for row in rows] == expected
+
+
+##########################################################################################
+# Pairing by file
+##########################################################################################
+
+def test_rows_in_another_order_pair_by_file(tmp_path: Path) -> None:
+    """The supplement's paths differ from the index's in case, leading "/" and "./", the
+    volume, given by another column, and the extension."""
+
+    label = _tables(tmp_path, {'FILE_NAME': ['/VOL/DATA/A.QUB', '/VOL/DATA/B.QUB',
+                                             '/VOL/DATA/C.QUB'],
+                               'NUM': ['1', '2', '3']},
+                    {'VOLUME_ID': ['vol', 'vol', 'vol'],
+                     'FILE_SPECIFICATION_NAME': ['./data/c.lbl', 'data/a.lbl',
+                                                 'data/b.lbl'],
+                     'VAL': ['c', 'a', 'b']})
+
+    rows = _ByFile._index_rows(label, file_key='FILE_NAME',
+                               supplement_key=('VOLUME_ID', 'FILE_SPECIFICATION_NAME'),
+                               validate=lambda indx, supp: True)
+
+    assert _pairs(rows) == [('1', 'a'), ('2', 'b'), ('3', 'c')]
+
+
+def test_pairing_by_file_holds_only_the_rows_read_ahead() -> None:
+    """A supplement whose rows are 3 places out of order holds at most 3 rows."""
+
+    k = 3
+    index = [{'F': f'{i}.LBL', 'NUM': i} for i in range(12)]
+    order = [block + k - j for block in range(0, 12, k + 1) for j in range(k + 1)]
+    supplement = [{'F': f'{i}.LBL', 'VAL': i} for i in order]
+    read = []
+
+    def supplement_rows() -> Iterator[dict[str, Any]]:
+        for row in supplement:
+            read.append(row)
+            yield row
+
+    held = []
+    rows = _index_rows.pair_by_file(iter(index), supplement_rows(), file_key='F',
+                                    supplement_key='F', validate=None,
+                                    prefer_supplement=False, files='index, supplement')
+    for (i, row) in enumerate(rows):
+        assert row['VAL'] == row['NUM']
+        held.append(len(read) - (i + 1))
+
+    assert max(held) == k
+
+
+def test_pairing_by_file_raises_for_an_index_row_without_a_partner(
+        tmp_path: Path) -> None:
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('AB'),
+                               'NUM': ['1', '2']},
+                    {'FILE_SPECIFICATION_NAME': _files('CA'), 'VAL': ['c', 'a']})
+    rows = _ByFile._index_rows(label)
+
+    assert next(rows)['VAL'] == 'a'
+    with pytest.raises(HostIndexError, match="the supplement does not list the file of "
+                                             "index row 1, 'B.LBL'"):
+        next(rows)
+
+
+def test_pairing_by_file_reports_an_index_row_that_repeats_a_file_as_unpaired(
+        tmp_path: Path) -> None:
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('ABA'),
+                               'NUM': ['1', '2', '3']},
+                    {'FILE_SPECIFICATION_NAME': _files('BAC'), 'VAL': ['b', 'a', 'c']})
+    rows = _ByFile._index_rows(label)
+
+    assert _pairs(next(rows) for _ in range(2)) == [('1', 'a'), ('2', 'b')]
+    with pytest.raises(HostIndexError, match="index row 2, 'A.LBL', or lists it fewer "
+                                             "times than the index"):
+        next(rows)
+
+
+def test_pairing_by_file_raises_at_a_repeated_supplement_row_while_the_first_is_held(
+        tmp_path: Path) -> None:
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('CA'),
+                               'NUM': ['1', '2']},
+                    {'FILE_SPECIFICATION_NAME': _files('AAC'), 'VAL': ['a', 'x', 'c']})
+    rows = _ByFile._index_rows(label)
+
+    with pytest.raises(HostIndexError, match="the supplement gives 'A.LBL' a second "
+                                             "time, at row 1"):
+        next(rows)
+
+
+def test_pairing_by_file_raises_after_the_index_for_unpaired_supplement_rows(
+        tmp_path: Path) -> None:
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('AB'),
+                               'NUM': ['1', '2']},
+                    {'FILE_SPECIFICATION_NAME': _files('CBA'), 'VAL': ['c', 'b', 'a']})
+    rows = _ByFile._index_rows(label)
+
+    assert _pairs(next(rows) for _ in range(2)) == [('1', 'a'), ('2', 'b')]
+    with pytest.raises(HostIndexError, match=r"the supplement lists files that the "
+                                             r"index does not, or lists them more "
+                                             r"times, such as \['C.LBL'\]"):
+        next(rows)
+
+
+def test_pairing_by_file_needs_a_file_key(tmp_path: Path) -> None:
+    label = _tables(tmp_path, {'NUM': ['1']}, {'NUM': ['1'], 'VAL': ['a']})
+
+    with pytest.raises(HostIndexError, match='are paired by file, but the tables lack '
+                                             'FILE_SPECIFICATION_NAME'):
+        _ByFile._index_rows(label)
+
+
+##########################################################################################
+# What the call reads, and what the iteration reads
+##########################################################################################
+
+def test_the_call_reads_no_table_data(tmp_path: Path) -> None:
+    """With both table files missing, the call succeeds; the iteration fails."""
+
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('A'), 'NUM': ['1']},
+                    {'FILE_SPECIFICATION_NAME': _files('A'), 'VAL': ['a']})
+    for table in tmp_path.glob('*.tab'):
+        table.unlink()
+
+    rows = _ByPosition._index_rows(label, filter={'VAL': 'a'})
+
+    with pytest.raises(FileNotFoundError, match='vol_index.tab'):
+        next(rows)
+
+
+def test_the_chunks_before_a_malformed_row_are_yielded(tmp_path: Path) -> None:
+    """The first row of the second chunk is malformed."""
+
+    names = [f'R{i:02d}' for i in range(_index_rows.CHUNK_ROWS + 1)]
+    label = write_table(tmp_path, 'vol_index', {'NAME': names})
+    table = tmp_path / 'vol_index.tab'
+    table.write_bytes(table.read_bytes().replace(names[-1].encode(), b'XXXX'))
+    rows = _ByPosition._index_rows(label, supplement=None)
+
+    assert [next(rows)['NAME'] for _ in names[:-1]] == names[:-1]
+    with pytest.raises(HostIndexError, match='invalid index table'):
+        next(rows)
+
+
+def test_rows_before_the_end_of_a_short_table_are_yielded(tmp_path: Path) -> None:
+    """The label says five rows and the file holds two."""
+
+    label = write_table(tmp_path, 'vol_index', {'NAME': ['A', 'B']}, label_rows=5)
+    rows = _ByPosition._index_rows(label, supplement=None)
+
+    assert [row['NAME'] for row in (next(rows), next(rows))] == ['A', 'B']
+    with pytest.raises(HostIndexError, match='row count mismatch'):
+        next(rows)
+
+
+def test_a_host_identified_from_a_row_reads_only_the_first_row(tmp_path: Path) -> None:
+    """The label says three rows and the file holds one, and the call still succeeds."""
+
+    class _RowHost(Host):
+        NAME = 'row-host'
+
+        @staticmethod
+        def _detect_in_row(row_dict: dict[str, Any]) -> bool:
+            return bool(row_dict['NAME'] == 'A')
+
+    label = write_table(tmp_path, 'vol_index', {'NAME': ['A']}, label_rows=3)
+
+    rows = _RowHost._index_rows(label, supplement=None)
+
+    assert next(rows)['NAME'] == 'A'
+
+
+def test_an_index_of_another_host_raises_at_call_time(tmp_path: Path) -> None:
+    label = write_table(tmp_path, 'vol_index', {'NAME': ['A']})
+
+    class _NoHost(Host):
+        NAME = 'no-host'
+
+    with pytest.raises(WrongHostError, match='not a no-host index'):
+        _NoHost._index_rows(label, supplement=None)
+
+
+##########################################################################################
+# Checks at call time
+##########################################################################################
+
+def test_a_filter_column_neither_table_has_raises_at_call_time(tmp_path: Path) -> None:
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('A'), 'NUM': ['1']},
+                    {'FILE_SPECIFICATION_NAME': _files('A'), 'VAL': ['a']})
+
+    with pytest.raises(OopsValueError, match="'NOPE'"):
+        _ByPosition._index_rows(label, filter={'NOPE': 1})
+
+
+def test_a_validation_column_a_table_lacks_raises_at_call_time(tmp_path: Path) -> None:
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('A'), 'NUM': ['1']},
+                    {'FILE_SPECIFICATION_NAME': _files('A'), 'VAL': ['a']})
+
+    with pytest.raises(HostIndexError, match='supplement lacks the column NUM'):
+        _ByPosition._index_rows(label, validate='NUM')
+
+
+def test_a_key_column_a_table_lacks_raises_at_call_time(tmp_path: Path) -> None:
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('A'), 'NUM': ['1']},
+                    {'FILE_SPECIFICATION_NAME': _files('A'), 'VAL': ['a']})
+
+    with pytest.raises(HostIndexError, match='index lacks the column FILE_NAME'):
+        _ByFile._index_rows(label, file_key='FILE_NAME')
+
+
+def test_a_volumes_own_index_is_refused_when_the_host_reads_metadata_indexes(
+        tmp_path: Path) -> None:
+    (tmp_path / 'INDEX').mkdir()
+    label = write_table(tmp_path / 'INDEX', 'INDEX', {'NAME': ['A']})
+
+    class _MetadataHost(_ByPosition):
+        METADATA_INDEX_EXAMPLE = 'VOL_0001_index.lbl'
+
+    with pytest.raises(HostIndexError, match='by-position reads the Ring-Moon Systems '
+                                             'Node metadata index, such as '
+                                             '"VOL_0001_index.lbl", not a volume\'s own '
+                                             'index'):
+        _MetadataHost._index_rows(label, supplement=None)
+
+
+##########################################################################################
+# Filtering
+##########################################################################################
+
+ROWS: list[dict[str, Any]] = [{'NAME': 'A', 'NUM': 1}, {'NAME': 'B', 'NUM': 2},
+                              {'NAME': 'C'}]
+
+
+def test_given_rows_are_filtered_as_they_are_reached() -> None:
+    """A row that lacks a column, as when its value is missing, fails the filter."""
+
+    seen = []
+
+    def given() -> Iterator[dict[str, Any]]:
+        for row in ROWS:
+            seen.append(row['NAME'])
+            yield row
+
+    rows = _ByPosition._index_rows('vol_index.lbl', row_dicts=given(),
+                                   filter={'NUM': (2, 9)})
+
+    assert next(rows)['NAME'] == 'B'
+    assert seen == ['A', 'B']
+
+
+def test_an_unknown_column_of_given_rows_raises_at_call_time() -> None:
+    with pytest.raises(OopsValueError, match="'NOPE'"):
+        _ByPosition._index_rows('vol_index.lbl', row_dicts=ROWS, filter={'NOPE': 1})
+
+
+def test_a_range_that_cannot_be_compared_raises_at_its_row() -> None:
+    rows = _ByPosition._index_rows('vol_index.lbl', row_dicts=ROWS,
+                                   filter={'NUM': ('a', 'z')})
+
+    with pytest.raises(OopsTypeError, match="column 'NUM' value 1"):
+        next(rows)
+
+
+@pytest.mark.parametrize(('filter_', 'expected'),
+                         [({'NUM': 2}, ['B']), ({'NAME': {'A', 'C'}}, ['A', 'C']),
+                          ({'NAME': 'A', 'NUM': (2, 3)}, [])],
+                         ids=['value', 'set', 'both-columns'])
+def test_a_filter_keeps_the_rows_that_match(filter_: dict[str, Any],
+                                            expected: list[str]) -> None:
+    rows = _ByPosition._index_rows('vol_index.lbl', row_dicts=ROWS, filter=filter_)
+
     assert [row['NAME'] for row in rows] == expected
 
 ##########################################################################################

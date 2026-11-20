@@ -45,7 +45,7 @@ class _IndexHost(Host):
     built: list[str] = []
 
     @staticmethod
-    def _detect_in_index(label: object) -> bool:
+    def _detect_in_index(label: object) -> bool | None:
         return True
 
     @staticmethod
@@ -54,19 +54,30 @@ class _IndexHost(Host):
                    pds3_options: dict[str, Any] | None = None,
                    filter: dict[str, Any] | None = None,  # noqa: A002
                    **kwargs: Any) -> Iterator[str]:
-        if row_dicts is None:
-            row_dicts = _IndexHost._read_index_rows(filepath, supplement=supplement,
-                                                    require_supplement=False,
-                                                    validate='NAME',
-                                                    pds3_options=pds3_options,
-                                                    label=label)
-        row_dicts = Host._filter_index_rows(row_dicts, filter)
+        rows = _IndexHost._index_rows(filepath, supplement=supplement,
+                                      require_supplement=False, label=label,
+                                      row_dicts=row_dicts, validate='NAME',
+                                      pds3_options=pds3_options, filter=filter)
 
         def build() -> Iterator[str]:
-            for row_dict in row_dicts:
+            for row_dict in rows:
                 _IndexHost.built.append(row_dict['NAME'])
                 yield row_dict['NAME']
         return build()
+
+
+class _RowHost(_IndexHost):
+    """A host that can be identified only from the first row of an index."""
+
+    NAME = 'row_host'
+
+    @staticmethod
+    def _detect_in_index(label: object) -> None:
+        return None
+
+    @staticmethod
+    def _detect_in_row(row_dict: dict[str, Any]) -> bool:
+        return bool(row_dict['NAME'] == 'A')
 
 
 @pytest.fixture
@@ -119,5 +130,26 @@ def test_from_index_raises_an_argument_error_at_call_time(index_label: Path) -> 
 
     with pytest.raises(OopsValueError, match='method'):
         Host.from_index(index_label, pds3_options={'method': 'bogus'})
+
+
+def test_a_host_identified_from_a_row_is_found_from_the_first_row_alone(
+        index_label: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The label says three rows and the file holds one, and the host is still found."""
+
+    monkeypatch.setattr(Host, '_HOSTS', [_RowHost])
+    table = index_label.with_name('index.tab')
+    table.write_bytes(b'A,1\r\n')
+
+    result = Host.from_index(index_label)
+
+    assert next(result) == 'A'
+
+
+def test_rows_given_by_the_caller_keep_the_row_read_to_find_the_host(
+        index_label: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Host, '_HOSTS', [_RowHost])
+    given = iter([{'NAME': 'A'}, {'NAME': 'B'}])
+
+    assert list(Host.from_index(index_label, row_dicts=given)) == ['A', 'B']
 
 ##########################################################################################

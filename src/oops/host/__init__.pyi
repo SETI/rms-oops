@@ -15,7 +15,7 @@ The detectors and support methods that a Host subclass overrides or calls, such 
 """
 
 import pathlib
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from typing import Any, TypeAlias
 
 from astropy.io.fits import HDUList, ImageHDU, PrimaryHDU
@@ -48,6 +48,8 @@ class VicarHostError(HostFormatError, VicarError): ...
 
 class Host:
     NAME: str
+    MERGE_SUPPLEMENT_BY_FILE: bool
+    METADATA_INDEX_EXAMPLE: str | None
     SUPPLEMENT: object
     @staticmethod
     def from_file(filepath: str | pathlib.Path | FCPath, *,
@@ -65,7 +67,8 @@ class Host:
     @staticmethod
     def from_index(filepath: str | pathlib.Path | FCPath, *,
         supplement: str | pathlib.Path | FCPath | object | None = ...,
-        label: Pds3Label | None = None, row_dicts: list[dict[str, Any]] | None = None,
+        label: Pds3Label | None = None,
+        row_dicts: Iterable[dict[str, Any]] | None = None,
         pds3_options: dict[str, Any] | None = None,
         filter: dict[str, Any] | None = None,
         select: int | slice | str | tuple[int | slice | str, ...] | None = None,

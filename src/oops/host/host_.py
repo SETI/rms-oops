@@ -2,16 +2,16 @@
 # oops/host/host_.py
 ##########################################################################################
 
+import itertools
 import numbers
 import pathlib
-from collections import Counter
+from collections.abc import Sequence
 from typing import TypeAlias
 
 import numpy as np
 from astropy.io import fits as pyfits
 from filecache  import FCPath
 from pdsparser  import Pds3Label, PdsError, is_pds3_file
-from pdstable   import PdsTable
 from vicar      import VicarError, VicarImage, VicarLabel
 
 from oops._exceptions import OopsIndexError, OopsSpiceError, OopsTypeError, OopsValueError
@@ -22,12 +22,9 @@ from oops.frame       import (Cmatrix, Frame, FrameShift, Navigation, SpiceError
 from oops.observation import Observation
 from oops.path        import PathShift
 
+from .        import _index_rows
 from ._errors import (HostFormatError, HostIndexError, PdsHostError, UnknownHostError,
                       VicarHostError, WrongHostError)
-
-# The number of unpaired or repeated paths that an error message about pairing the rows of
-# an index and its supplement lists
-_PATHS_IN_MESSAGE = 3
 
 # The methods of the PDS3 label parser, in the order in which Host.from_file() tries them
 # to identify the host of a label: "fast" reads most labels quickly, "strict" reads every
@@ -37,6 +34,9 @@ _PDS3_METHODS = ('fast', 'strict', 'loose')
 # The classes of the exceptions that cspyce raises when the SPICE kernels cannot supply
 # what a query asks for; see the comment above OopsSpiceError in oops/_exceptions.py
 _SPICE_ERRORS = (LookupError, OSError, RuntimeError, ValueError)
+
+# The marker for a row that has not been read
+_NOT_READ = object()
 
 ObsArray: TypeAlias = (np.ndarray[tuple[int, ...], np.dtype[np.object_]]
                        | tuple[Observation | None, ...])
@@ -54,12 +54,13 @@ class Host:
     SPICE pointing: it never lets the cspyce exception escape, and it never raises
     :class:`~oops.OopsSpiceError` for a failure that is not about SPICE data.
 
-    A host's ``from_index`` raises no exception for missing pointing and drops no row for
-    it. It gives such an observation a :class:`~oops.frame.SpiceErrorFrame` in place of
-    its pointing, which raises :class:`~oops.OopsSpiceError` whenever the frame is
-    evaluated. The support method ``_check_spice_frame`` does both: with ``defer=False``
-    it raises the error, for ``from_file``; with ``defer=True`` it returns the stand-in
-    frame, for ``from_index``.
+    In a host's ``from_index``, every row of the index gives an observation, whether or
+    not SPICE can supply its pointing. Where SPICE cannot, the observation gets a
+    :class:`~oops.frame.SpiceErrorFrame` in place of its pointing, and that frame raises
+    :class:`~oops.OopsSpiceError` whenever it is evaluated. The support method
+    ``_check_spice_frame`` serves both cases: with ``defer=False`` it raises the error,
+    for ``from_file``; with ``defer=True`` it returns the stand-in frame, for
+    ``from_index``.
 
     A host does not check SPICE, and does not raise :class:`~oops.OopsSpiceError`, when
     the caller supplies the pointing: when ``from_file`` is given a `frame` override,
@@ -67,17 +68,36 @@ class Host:
     caller chooses a pointing source that is not SPICE, through an option of the host.
 
     A host's ``from_index`` returns an iterator that yields one entry per filtered row of
-    the index, in index order, and builds each row's observation only when the iteration
-    reaches that row, so an error in building one row is raised there. Everything else is
-    done by the call itself, so that a bad call fails at once: the checks of the
-    arguments, the reading and checking of the index label, its table and any supplement,
-    and the filtering of the rows. ``from_index`` is therefore an ordinary function that
-    does that work and then returns a generator, never a generator function.
+    the index, in index order. The call itself checks the arguments and reads the labels
+    of the index and its supplement, so that a bad call fails at once. The rows are read
+    as the iteration proceeds, a few at a time, the supplement along with the index, and
+    each row's observation is built when the iteration reaches that row. An error in a
+    row is therefore raised when the iteration reaches it. The support method
+    ``_index_rows`` does the reading, pairing, and filtering, so ``from_index`` is an
+    ordinary function that calls it and returns a generator over its rows.
+
+    How a host's index and supplement are paired is fixed by the host, through the class
+    attribute :attr:`~oops.host.Host.MERGE_SUPPLEMENT_BY_FILE`, from a survey of that
+    instrument's indexes. Nothing at run time chooses the mode.
     """
 
     _HOSTS = []     # A list of all registered Host subclasses.
     _LOOKUP = {}    # name -> subclass
-    NAME = 'none'   # Each subclass must define
+
+    #: The name of the host, such as "Cassini ISS", for messages. Each subclass defines
+    #: it.
+    NAME = 'none'
+
+    #: False if every index of the host lists the same files in the same order as its
+    #: supplement, so that their rows are paired by position; True if a supplement may
+    #: list them in another order, so that each index row is paired with the supplement
+    #: row for the same file. Each host sets it from a survey of its instrument's indexes.
+    MERGE_SUPPLEMENT_BY_FILE = False
+
+    #: For a host that reads only the Ring-Moon Systems Node metadata indexes, the name
+    #: of one, such as "COISS_2001_index.lbl", for the message that refuses a volume's own
+    #: index; None for a host that reads any index.
+    METADATA_INDEX_EXAMPLE = None
 
     SUPPLEMENT = object()  # Sentinel so from_index() searches for a supplemental index
 
@@ -89,16 +109,16 @@ class Host:
         """One or more Observation objects derived from a given data file.
 
         The host is identified when this method is called, from the file's PDS3 label,
-        VICAR header, FITS header or name, and the host's own ``from_file`` then reads the
-        file from `filepath`, with the caller's `pds3_options` and overrides, so the result
-        is the one the host class gives when it is called directly. To identify the host,
-        a PDS3 label is parsed with the method that `pds3_options` names, "fast" by
-        default, and then with each later method in the order "fast", "strict", "loose";
-        if none of them can parse it, each registered host is asked whether it recognizes
-        the file by its path, as for a file in no standard format. A VICAR file is
-        identified from its header alone, without reading its array. Besides the
-        exceptions listed here, the call raises any that the host's ``from_file``
-        documents.
+        VICAR header, FITS header, or name. The host's own ``from_file`` then reads the
+        file from `filepath`, with the caller's `pds3_options` and overrides, so the
+        result is the one the host class gives when it is called directly. To identify
+        the host, a PDS3 label is parsed with the method that `pds3_options` selects,
+        "fast" by default, and then with each later method in the order "fast", "strict",
+        and "loose". If none of them can parse it, each registered host is asked whether
+        it recognizes the file by its path, as for a file that is not in a standard
+        format. A VICAR file is identified from its header alone, without reading its
+        array. Besides the exceptions listed here, the call raises any that the host's
+        ``from_file`` documents.
 
         Parameters:
             filepath (str | pathlib.Path | FCPath): The path to the data file or its
@@ -189,10 +209,11 @@ class Host:
                    parallel=None, **kwargs):
         """An iterator over the Observations of a data file index, one for each row.
 
-        The host is identified when this method is called, from the index label or else
-        from the first row of the index, and the host's own ``from_index`` then reads,
-        pairs, and filters the rows of the index and its supplement; each row's
-        observation is built only when the iteration reaches it. Every argument, the
+        The host is identified when this method is called, from the index label. If the
+        label does not say, the host is identified from the first row of the index, and
+        only that row is read. The host's own ``from_index`` then reads the rows of the
+        index and its supplement as the iteration proceeds, a few rows at a time, and
+        builds each row's observation when the iteration reaches it. Every argument, the
         overrides included, is passed to the host's ``from_index`` as given, so the
         result is the one the host class gives when it is called directly. Besides the
         exceptions listed here, the call raises any that the host's ``from_index``
@@ -204,18 +225,20 @@ class Host:
             supplement (str | pathlib.Path | FCPath | object, optional): The path to the
                 PDS label of a supplemental index file, if any, whose columns are merged
                 into each row. Each index row is merged with the supplement row for the
-                same file: by position when the two tables list the same files in the
-                same order, and otherwise by the file that each row names. Use the
-                sentinel value `Host.SUPPLEMENT` to read the file in the directory of
-                `filepath` whose name matches except that "_index" is replaced by
-                "_supplemental_index" in upper or lower case. The host determines
-                whether the supplement must exist and how a pair of rows is checked.
+                same file, paired by position or by file as the host's
+                :attr:`~oops.host.Host.MERGE_SUPPLEMENT_BY_FILE` says. Use the sentinel
+                value `Host.SUPPLEMENT` to read the file in the directory of `filepath`
+                whose name matches except that "_index" is replaced by
+                "_supplemental_index" in upper or lower case. The host determines whether
+                the supplement must exist and how a pair of rows is checked.
             label (Pds3Label, optional): The PDS label of `filepath` if it has already
                 been read.
-            row_dicts (list[dict[str, Any]], optional): A list of dictionaries, one per
-                row of the index, if `filepath` and `supplement` have already been read.
-                If provided, they are passed to the host, which does not read
-                `supplement`.
+            row_dicts (collections.abc.Iterable[dict[str, Any]], optional): The rows of
+                the index, one dictionary per row, if `filepath` and `supplement` have
+                already been read. If provided, they are passed to the host, which
+                iterates over them in place of reading the tables. If the host must be
+                identified from a row, the first one is read for that and still passed
+                on.
             pds3_options (dict[str, Any], optional): Any keyword arguments and their
                 values to be passed to the :class:`~pdsparser.Pds3Label` parser.
             filter (dict[str, Any], optional): A dictionary of index column names and
@@ -273,53 +296,51 @@ class Host:
             every row at once.
 
         Raises:
-            OopsValueError: If a value in `pds3_options` is invalid, or if `filter` names
-                a column that the index does not have.
-            OopsTypeError: If a range in `filter` cannot be compared with the values of
-                its column.
-            HostIndexError: If `filepath` or `supplement` cannot be interpreted as an
-                index table, as when the label lacks the object that its table pointer
-                names, or if the rows of the two tables cannot be paired: an index
-                row that no supplement row names, a supplement row that names no index
-                row, a file listed twice in either table while the rows are paired by
-                file, or a pair of rows that fails the host's check.
-            OSError: If `filepath` or `supplement` does not exist or cannot be read.
+            OopsValueError: If a value in `pds3_options` is invalid, or if `filter` uses a
+                column that the index does not have.
+            OopsTypeError: When the iteration reaches a row whose value cannot be compared
+                with a range in `filter`.
+            HostIndexError: If the label of `filepath` or `supplement` does not describe a
+                table that can be read, as when it lacks the object that its table pointer
+                names. Also raised during the iteration, at the row where the two tables
+                cannot be paired or a row does not match its label, as listed for the
+                support method ``_index_rows``.
+            OSError: If the label of `filepath` or `supplement` does not exist or cannot
+                be read; when the iteration starts, if a table file does not exist or
+                cannot be read.
             PdsHostError: If `filepath` uses invalid PDS label syntax.
             UnknownHostError: If `filepath` is not associated with any registered Host
                 subclass.
         """
 
         filepath = FCPath(filepath)
-
+        options = Host._pds3_options_with_defaults(pds3_options)
         if label is None:
-            try:
-                label = Pds3Label(filepath,
-                                  **Host._pds3_options_with_defaults(pds3_options))
-            except PdsError as err:
-                raise PdsHostError(str(err)) from err
-            except (TypeError, ValueError) as err:
-                raise OopsValueError(str(err)) from err
+            label = Host._parse_index_label(filepath, options)
 
         # Determine which host is represented by the index. A host whose detector returns
-        # None can only be identified from the content of a row; the index is read for
-        # that, without its supplement, at most once.
-        detection_rows = row_dicts
+        # None can only be identified from the content of a row; the first row of the
+        # index, and that row alone, is read for that, at most once.
+        first = _NOT_READ
         for host in Host._HOSTS:
             status = host._detect_in_index(label)
             if status is None:
-                if detection_rows is None:
-                    detection_rows = Host._read_index_rows(filepath,
-                                                           pds3_options=pds3_options,
-                                                           label=label)
-                if detection_rows and host._detect_in_row(detection_rows[0]):
+                if first is _NOT_READ:
+                    if row_dicts is None:
+                        table = _index_rows.open_table(filepath, label=label,
+                                                       pds3_method=options['method'])
+                        first = _index_rows.first_row(table, filepath)
+                    else:
+                        (first, row_dicts) = Host._peek(row_dicts)
+                if first is not None and host._detect_in_row(first):
                     break
             elif status:
                 break
         else:
             raise UnknownHostError(f'unknown host in index {filepath}')
 
-        # The host reads, pairs and filters the rows itself, because only the host knows
-        # how its supplement is matched to its index
+        # The host reads, pairs and filters the rows itself, through _index_rows(),
+        # because only the host knows how its supplement is matched to its index
         return host.from_index(filepath, supplement=supplement, label=label,
                                row_dicts=row_dicts, pds3_options=pds3_options,
                                filter=filter, select=select, target=target,
@@ -696,449 +717,378 @@ class Host:
     _TIMESHIFT_ATTR = {'T': 'cadence', 'P': 'path', 'F': 'frame'}
 
     @classmethod
-    def _read_index_rows(cls, filepath, *, supplement=None, require_supplement=True,
-                         validate=None, file_key=None, supplement_key=None,
-                         prefer_supplement=False, pds3_options=None, label=None):
-        """Read the index rows and return one dictionary per row, with supplementary index
-        content merged.
+    def _index_rows(cls, filepath, *, supplement=SUPPLEMENT, require_supplement=True,
+                    label=None, row_dicts=None, pds3_options=None, filter=None,
+                    validate=None, file_key=None, supplement_key=None,
+                    prefer_supplement=False):
+        """An iterator over the rows of an index, each merged with its supplement row and
+        filtered, which reads the rows as the iteration proceeds.
 
-        Each row of the index is merged with the row of the supplement that describes the
-        same file. When the two tables list the same files in the same order, the rows are
-        paired by position. Otherwise, each index row is paired with the supplement row
-        that names the same file, and then every index row must have exactly one such
-        supplement row, every supplement row must belong to an index row, and no file may
-        be listed twice in either table. Paths are compared without regard to case, to
-        empty or "." components (as in a leading "/" or "./" or a doubled slash), or to
-        the extension of the file name, so that a row naming a product's label and a row
-        naming its data file match. Without a file key, as when the tables do not both
-        have the default columns, the rows are paired by position.
+        This is the support method with which a host's ``from_index`` reads its index;
+        the host builds one observation from each row that the iterator yields.
+
+        The call itself reads only labels. It refuses a volume's own index if the host
+        sets :attr:`~oops.host.Host.METADATA_INDEX_EXAMPLE`, reads the labels of the index
+        and the supplement, checks that the index belongs to this host, and checks the
+        columns that `filter`, `validate`, and the file keys use against the labels. If
+        the index label cannot tell whether the index belongs to this host, the first row
+        is read for that, and only that row.
+
+        The iteration then reads the index ten rows at a time. How each index row is
+        paired with its supplement row is fixed by the host's
+        :attr:`~oops.host.Host.MERGE_SUPPLEMENT_BY_FILE`:
+
+        - False, pairing by position: the supplement is read in step with the index. At
+          each row, if both tables have a file key, the file that the index row gives
+          must be the file that the supplement row gives.
+        - True, pairing by file: the supplement is read ahead only as far as the partner
+          of the current index row, the row that gives the same file. A supplement row
+          read before its partner is held until the partner is reached and then
+          released, so a supplement whose rows are k places out of order holds at most k
+          rows. An index row whose file the supplement does not list is found only when
+          the whole supplement has been read.
+
+        Paths are compared without regard to case, to empty or "." components (as in a
+        leading "/" or "./" or a doubled slash), or to the extension of the file name,
+        so that a row that gives a product's label and a row that gives its data file
+        match. Each pair is then checked with `validate`, merged, and tested against
+        `filter`. Rows are counted from 0 in the messages of errors.
 
         Parameters:
             filepath (str | pathlib.Path | FCPath): Path to the index label.
-            supplement (str | pathlib.Path | FCPath | object, optional): The path to the
-                PDS label of a supplemental index file, if any. Use the sentinel value
-                `Host.SUPPLEMENT` to read the file in the directory of `filepath` whose
-                name matches except that "_index" is replaced by "_supplemental_index" in
-                upper or lower case; that file must exist.
-            require_supplement (bool, optional): If True and `supplement` is specified,
-                the supplement file must exist. If False, a supplement file that is
-                missing, or that cannot be named because the name of `filepath` contains
-                no "_index", is ignored.
-            validate (str | list[str] | collections.abc.Callable, optional): The
-                mechanism to use to verify that each pair of rows from `filepath` and
-                `supplement` match, once they have been paired. If a string or list of
-                strings, it identifies column names that the two row dictionaries must
-                share. (Tests of strings are case-insensitive and they need not match
-                exactly, provided one string falls inside the other.) Alternatively, a
-                function with the signature ``(dict[str, Any], dict[str, Any]) -> bool``
-                that receives the row dictionaries from each file and returns True if the
-                rows match and either returns False or raises an exception if they do
-                not match. If unspecified, the column names the two tables share are used,
-                except those of the file key, which the pairing compares as paths.
+            supplement (str | pathlib.Path | FCPath | object | None, optional): The path
+                to the PDS label of the supplemental index; None to read the index alone.
+                Use the sentinel value `Host.SUPPLEMENT` to read the file that
+                :meth:`~oops.host.Host._supplement_path` returns.
+            require_supplement (bool, optional): True if the supplement file must exist;
+                False to read the index alone if the supplement file is missing, or if
+                `supplement` is `Host.SUPPLEMENT` and
+                :meth:`~oops.host.Host._supplement_path` returns None.
+            label (Pds3Label | dict[str, Any], optional): The content of the label of
+                `filepath`, if it has already been read; a host may pass a dictionary
+                that it has changed, such as one with wider columns.
+            row_dicts (collections.abc.Iterable[dict[str, Any]], optional): The rows of
+                the index already merged with the supplement. If they are given, the
+                iteration filters each one as it reaches it, and the tables are not read.
+            pds3_options (dict[str, Any], optional): Any keyword arguments and their
+                values to be passed to the :class:`~pdsparser.Pds3Label` parser.
+            filter (dict[str, Any], optional): Column names, each with a value, a set,
+                list, or tuple of values, or a tuple of two values that bound a range. A
+                row is yielded only if every column it lists equals the value, is one of
+                the values, or lies within the range, bounds included. A row that lacks
+                one of the columns is left out.
+            validate (str | list[str] | collections.abc.Callable, optional): The check of
+                each pair of rows. A column name or a list of them gives columns whose
+                values the two rows must share; two strings are the same if either one,
+                in upper case, contains the other. A function with the signature
+                ``(dict[str, Any], dict[str, Any]) -> bool`` receives the index row and
+                the supplement row and returns True if they match; it either returns
+                False or raises an exception if they do not. If unspecified, the columns
+                that the two tables share are compared, except those of the file keys,
+                which the pairing compares as paths.
             file_key (str | tuple[str, ...] | collections.abc.Callable, optional): How
-                a row of the index names its file: a column name; a tuple of column
+                a row of the index gives its file: a column name; a tuple of column
                 names, whose values are joined with "/", such as ``("VOLUME_ID",
                 "PATH_NAME", "FILE_NAME")``; or a function with the signature
                 ``(dict[str, Any]) -> str`` that returns the path from a row dictionary.
                 If unspecified, the key is FILE_SPECIFICATION_NAME, preceded by VOLUME_ID
                 or else VOLUME_NAME if both tables have that column, provided that both
-                tables have FILE_SPECIFICATION_NAME.
+                tables have FILE_SPECIFICATION_NAME. If they do not, rows paired by
+                position are paired without comparing their files.
             supplement_key (str | tuple[str, ...] | collections.abc.Callable, optional):
-                How a row of the supplement names its file, in the same forms as
+                How a row of the supplement gives its file, in the same forms as
                 `file_key`. If unspecified, `file_key` applies to both tables.
             prefer_supplement (bool, optional): True to keep the supplement's value of a
                 column that both tables have; False to keep the index's.
-            pds3_options (dict[str, Any], optional): Any keyword arguments and their
-                values to be passed to the :class:`~pdsparser.Pds3Label` parser.
-            label (Pds3Label, optional): The PDS label of `filepath` if it has already
-                been read.
 
         Returns:
-            list[dict[str, Any]]: One dictionary per row of the index, in its order.
+            collections.abc.Iterator[dict[str, Any]]: One dictionary for each row of the
+            index that passes `filter`, in index order, with the columns of its
+            supplement row.
 
         Raises:
-            HostIndexError: If the two tables cannot be paired: rows paired by position
-                in tables with different record counts; an index row that no supplement
-                row names; a supplement row that names no index row; a file that either
-                table lists more than once while the rows are paired by file; or a key
-                column that a table does not have. The message names the first few
-                cases and both files. Also if a pair of rows fails `validate`, if no
-                columns can be used for cross-validation of the index and supplement, if
-                `supplement` is `Host.SUPPLEMENT`, `require_supplement` is True, and the
-                name of `filepath` contains no "_index", or if either file cannot be
-                interpreted as an index table.
-            OopsValueError: If a value in `pds3_options` is invalid.
-            OSError: If `filepath` or `supplement` does not exist or cannot be read.
-            PdsHostError: If `filepath` or `supplement` uses invalid PDS label syntax.
-            WrongHostError: If `filepath` is not associated with this Host subclass.
+            HostIndexError: At call time: if the host sets
+                :attr:`~oops.host.Host.METADATA_INDEX_EXAMPLE` and the index is in a
+                directory named "index" in either case, which is where a volume keeps its
+                own index; if either label does not describe a table that can be read; if
+                `supplement` is `Host.SUPPLEMENT`, `require_supplement` is True, and
+                :meth:`~oops.host.Host._supplement_path` returns None; if a table lacks a
+                column of its file key or of `validate`; if `validate` is unspecified and
+                the two tables do not share any column; or if
+                :attr:`~oops.host.Host.MERGE_SUPPLEMENT_BY_FILE` is True, `file_key` is
+                unspecified, and the tables lack FILE_SPECIFICATION_NAME. During the
+                iteration, at the row concerned: an index row whose file is not the file
+                of the supplement row in the same position (pairing by position); an
+                index row for which the supplement lacks a row, which with pairing by file
+                is raised once the whole supplement has been read; a supplement row that
+                repeats the file of a row that is still held (pairing by file); a pair of
+                rows that fails `validate`; a row that the table file does not hold; a row
+                that does not match the label, which also holds back the rows read with
+                it, ten at a time. After the last index
+                row: a supplement row that was not paired with an index row, or a table
+                file that holds more rows than its label says. With pairing by file, a
+                file that the index lists more times than the supplement is reported as
+                an index row for which the supplement lacks a row, and a file that the
+                supplement lists more times than the index as a supplement row that was
+                not paired; only the rows read ahead are kept, so the memory used does
+                not grow with the length of the index.
+            OopsValueError: At call time, if a value in `pds3_options` is invalid, or if
+                `filter` uses a column that neither table has. If `row_dicts` is given,
+                `filter` is checked against the first row, at call time if `row_dicts`
+                is a sequence and otherwise when the first row is read.
+            OopsTypeError: When the iteration reaches a row whose value cannot be compared
+                with a range in `filter`.
+            OSError: At call time, if a label does not exist or cannot be read, or if the
+                supplement's label is missing and `require_supplement` is True. When the
+                iteration starts, if a table file does not exist or cannot be read.
+            PdsHostError: At call time, if a label uses invalid PDS3 syntax.
+            WrongHostError: At call time, if the index does not belong to this host.
         """
 
-        def read_table(filepath, label_contents=None, *, pds3_method='fast'):
-            """Read a PDS3 table, converting its errors to Host errors."""
-
-            try:
-                table = PdsTable(filepath, label_contents=label_contents,
-                                 label_method=pds3_method)
-            except PdsError as err:
-                raise PdsHostError(str(err)) from err
-            except KeyError as err:
-                # An item that the table reader needs is not in the label, such as the
-                # object that a pointer names (^INDEX_TABLE in a label whose table
-                # object is named TABLE)
-                raise HostIndexError(f'invalid index table {filepath}: the label lacks '
-                                     f'{err}') from err
-            except (TypeError, ValueError) as err:
-                # The options were already validated when the label was parsed, so the
-                # problem lies in the table itself
-                raise HostIndexError(f'invalid index table {filepath}: {err}') from err
-            return table
-
-        def column_validator_func(names):
-            """Return a function that tests the rows based on a list of column names."""
-
-            if not names:
-                raise HostIndexError('a list of column names is needed for validation')
-
-            def column_validator(indx_dict, supp_dict):
-                for name in names:
-                    indx_val = indx_dict[name]
-                    supp_val = supp_dict[name]
-                    if indx_val == supp_val:
-                        continue
-                    if isinstance(indx_val, str) and isinstance(supp_val, str):
-                        indx_upper = indx_val.upper()
-                        supp_upper = supp_val.upper()
-                        if supp_upper in indx_upper or indx_upper in supp_upper:
-                            continue
-                    raise HostIndexError(f'{name} value mismatch: {indx_val!r}, '
-                                         f'{supp_val!r}')
-                return True
-            return column_validator
-
-        # Read the index
         filepath = FCPath(filepath)
-        pds3_options = Host._pds3_options_with_defaults(pds3_options)
-        pds3_method = pds3_options['method']
+
+        # A volume's own index lacks the supplement and gives its files in its own way
+        if (cls.METADATA_INDEX_EXAMPLE is not None
+                and filepath.parent.name.lower() == 'index'):
+            raise HostIndexError(f'{cls.NAME} reads the Ring-Moon Systems Node metadata '
+                                 f'index, such as "{cls.METADATA_INDEX_EXAMPLE}", not a '
+                                 f'volume\'s own index: {filepath}')
+
+        # Rows given by the caller are filtered as they are reached
+        if row_dicts is not None:
+            names = None
+            if filter and isinstance(row_dicts, Sequence) and row_dicts:
+                names = row_dicts[0]
+                _index_rows.check_filter(filter, names)
+            return _index_rows.filtered(row_dicts, filter, names)
+
+        # Read the index label and check the host
+        options = Host._pds3_options_with_defaults(pds3_options)
+        method = options['method']
         if label is None:
-            try:
-                label = Pds3Label(filepath, **pds3_options)
-            except PdsError as err:
-                raise PdsHostError(str(err)) from err
-            except (TypeError, ValueError) as err:
-                raise OopsValueError(str(err)) from err
-
-        row_table = read_table(filepath, label_contents=label, pds3_method=pds3_method)
-        row_dicts = row_table.dicts_by_row()
-
-        # Check the host; Host itself accepts any index, because Host.from_index()
-        # identifies the host after reading the rows
+            label = Host._parse_index_label(filepath, options)
+        index = _index_rows.open_table(filepath, label=label, pds3_method=method)
+        index_names = _index_rows.column_names(index)
         if cls is not Host:
             status = cls._detect_in_index(label)
             if status is None:
-                status = bool(row_dicts) and cls._detect_in_row(row_dicts[0])
+                row = _index_rows.first_row(index, filepath)
+                status = row is not None and cls._detect_in_row(row)
             if not status:
                 raise WrongHostError(f'not a {cls.NAME} index: {filepath}')
 
-        if not supplement:
-            return row_dicts
-
-        # Look for supplemental index
+        # Read the supplement label
+        supplement_path = None
         if supplement is Host.SUPPLEMENT:
-            supp_name = (filepath.name.replace('_index', '_supplemental_index')
-                                      .replace('_INDEX', '_SUPPLEMENTAL_INDEX'))
-            if supp_name == filepath.name:
+            supplement_path = cls._supplement_path(filepath)
+            if supplement_path is None and require_supplement:
+                raise HostIndexError(f'supplemental index required for {filepath}')
+        elif supplement:
+            supplement_path = FCPath(supplement)
+
+        supp_table = None
+        if supplement_path is not None:
+            try:
+                supp_table = _index_rows.open_table(supplement_path, pds3_method=method)
+            except FileNotFoundError:
                 if require_supplement:
-                    raise HostIndexError(f'supplemental index required for {filepath}')
-                return row_dicts
-            supplement = filepath.with_name(supp_name)
-        else:
-            supplement = FCPath(supplement)
+                    raise
 
-        # Read the supplemental index
-        try:
-            supp_table = read_table(supplement, pds3_method=pds3_method)
-        except FileNotFoundError:
-            if require_supplement:
-                raise
-            return row_dicts
+        if supp_table is None:
+            _index_rows.check_filter(filter, index_names)
+            return _index_rows.filtered(_index_rows.stream_rows(index, filepath), filter,
+                                        index_names)
 
-        # Pair each index row with its supplement row
-        supp_dicts = supp_table.dicts_by_row()
-        files = f'{filepath}, {supplement}'
+        # Check the columns of the file keys, the validation and the filter
+        supp_names = _index_rows.column_names(supp_table)
+        files = f'{filepath}, {supplement_path}'
         if file_key is None:
-            file_key = Host._default_file_key(row_table.get_keys(),
-                                              supp_table.get_keys())
+            file_key = _index_rows.default_file_key(index.get_keys(),
+                                                    supp_table.get_keys())
         if supplement_key is None:
             supplement_key = file_key
-
         if file_key is None:
-            if len(supp_dicts) != len(row_dicts):
-                raise HostIndexError(f'index files have different record counts: {files}')
+            if cls.MERGE_SUPPLEMENT_BY_FILE:
+                raise HostIndexError(f'the rows of a {cls.NAME} index and its supplement '
+                                     f'are paired by file, but the tables lack '
+                                     f'FILE_SPECIFICATION_NAME: {files}')
         else:
-            row_paths = Host._file_paths(row_dicts, file_key, 'index', filepath)
-            supp_paths = Host._file_paths(supp_dicts, supplement_key, 'supplement',
-                                          supplement)
-            if ([Host._path_key(path) for path in row_paths]
-                    != [Host._path_key(path) for path in supp_paths]):
-                supp_dicts = Host._pair_by_file(row_paths, supp_paths, supp_dicts,
-                                                files=files)
+            _index_rows.check_key_columns(file_key, index_names, 'index', filepath)
+            _index_rows.check_key_columns(supplement_key, supp_names, 'supplement',
+                                          supplement_path)
 
-        # Check each pair. By default, the columns that name the file are left out,
-        # because the pairing has compared them already, as paths, and the two tables may
-        # name the same product by its label and by its data file.
+        # By default, the columns of the file keys are left out of the check, because the
+        # pairing compares them already, as paths, and the two tables may give the same
+        # product by its label and by its data file
         if validate is None:
-            shared = set(row_table.get_keys()) & set(supp_table.get_keys())
+            shared = set(index.get_keys()) & set(supp_table.get_keys())
             if not shared:
-                raise HostIndexError(f'index files have no columns in common: {files}')
-            validate = sorted(shared - Host._key_columns(file_key, supplement_key))
-            if not validate:
-                return Host._merge_rows(row_dicts, supp_dicts,
-                                        prefer_supplement=prefer_supplement)
-        elif isinstance(validate, str):
-            validate = [validate]
-        if isinstance(validate, (list, tuple)):
-            validate = column_validator_func(validate)
+                raise HostIndexError(f'the index and the supplement do not share any '
+                                     f'column: {files}')
+            columns = sorted(shared - _index_rows.key_columns(file_key, supplement_key))
+            validate = _index_rows.column_validator(columns) if columns else None
+        elif isinstance(validate, (str, list, tuple)):
+            columns = [validate] if isinstance(validate, str) else list(validate)
+            if not columns:
+                raise HostIndexError('a list of column names is needed for validation')
+            for (kind, names, path) in (('index', index_names, filepath),
+                                        ('supplement', supp_names, supplement_path)):
+                for column in columns:
+                    if column not in names:
+                        raise HostIndexError(f'the {kind} lacks the column {column} to '
+                                             f'compare: {path}')
+            validate = _index_rows.column_validator(columns)
 
-        for i, row_dict in enumerate(row_dicts):
-            try:
-                status = validate(row_dict, supp_dicts[i])
-            except Exception as err:
-                raise HostIndexError(str(err)
-                                     + f'\nindex file mismatch at record [{i}]: '
-                                       f'{files}') from err
-            if not status:
-                raise HostIndexError(f'index file mismatch at record [{i}]: {files}')
+        names = index_names | supp_names
+        _index_rows.check_filter(filter, names)
 
-        return Host._merge_rows(row_dicts, supp_dicts,
-                                prefer_supplement=prefer_supplement)
+        pair = (_index_rows.pair_by_file if cls.MERGE_SUPPLEMENT_BY_FILE
+                else _index_rows.pair_by_position)
+        rows = pair(_index_rows.stream_rows(index, filepath),
+                    _index_rows.stream_rows(supp_table, supplement_path),
+                    file_key=file_key, supplement_key=supplement_key, validate=validate,
+                    prefer_supplement=prefer_supplement, files=files)
+        return _index_rows.filtered(rows, filter, names)
 
-    @staticmethod
-    def _key_columns(file_key, supplement_key):
-        """The names of the columns that make up the file keys of two tables.
+    @classmethod
+    def _supplement_path(cls, filepath):
+        """The supplemental index that belongs beside an index.
 
-        Parameters:
-            file_key (str | tuple[str, ...] | collections.abc.Callable | None): The key of
-                the index.
-            supplement_key (str | tuple[str, ...] | collections.abc.Callable | None): The
-                key of the supplement.
-
-        Returns:
-            set[str]: Every column named by either key; a function names none.
-        """
-
-        names = set()
-        for key in (file_key, supplement_key):
-            if isinstance(key, str):
-                names.add(key)
-            elif isinstance(key, (list, tuple)):
-                names.update(key)
-        return names
-
-    @staticmethod
-    def _merge_rows(row_dicts, supp_dicts, *, prefer_supplement):
-        """Each index row merged with its paired supplement row.
+        A host whose supplements are named in another way overrides this method.
 
         Parameters:
-            row_dicts (list[dict[str, Any]]): The index rows.
-            supp_dicts (list[dict[str, Any]]): The supplement row for each index row.
-            prefer_supplement (bool): True to keep the supplement's value of a column that
-                both tables have; False to keep the index's.
+            filepath (FCPath): The path to the index label.
 
         Returns:
-            list[dict[str, Any]]: The merged rows, in index order.
+            FCPath | None: The file in the directory of `filepath` whose name matches
+            except that "_index" is replaced by "_supplemental_index", in lower or upper
+            case; None if the name of `filepath` contains neither "_index" nor "_INDEX".
         """
 
-        if prefer_supplement:
-            return [row_dict | supp_dict
-                    for (row_dict, supp_dict) in zip(row_dicts, supp_dicts, strict=True)]
-        return [supp_dict | row_dict
-                for (row_dict, supp_dict) in zip(row_dicts, supp_dicts, strict=True)]
-
-    @staticmethod
-    def _default_file_key(row_names, supp_names):
-        """The default columns that name the file of a row of an index and a supplement.
-
-        Parameters:
-            row_names (list[str]): The column names of the index.
-            supp_names (list[str]): The column names of the supplement.
-
-        Returns:
-            tuple[str, ...] | None: FILE_SPECIFICATION_NAME, preceded by VOLUME_ID or else
-            VOLUME_NAME if both tables have that column; None if the tables do not both
-            have FILE_SPECIFICATION_NAME.
-        """
-
-        shared = set(row_names) & set(supp_names)
-        if 'FILE_SPECIFICATION_NAME' not in shared:
+        name = filepath.name
+        supp_name = (name.replace('_index', '_supplemental_index')
+                         .replace('_INDEX', '_SUPPLEMENTAL_INDEX'))
+        if supp_name == name:
             return None
-        for volume in ('VOLUME_ID', 'VOLUME_NAME'):
-            if volume in shared:
-                return (volume, 'FILE_SPECIFICATION_NAME')
-        return ('FILE_SPECIFICATION_NAME',)
+        return filepath.with_name(supp_name)
 
     @staticmethod
-    def _file_paths(row_dicts, file_key, kind, filepath):
-        """The path of the file that each row of a table names, as the table gives it.
+    def _parse_index_label(filepath, pds3_options):
+        """The parsed label of an index.
 
         Parameters:
-            row_dicts (list[dict[str, Any]]): The rows of the table.
-            file_key (str | tuple[str, ...] | collections.abc.Callable): A column name,
-                a tuple of column names whose values are joined with "/", or a function
-                that returns the path from a row dictionary.
-            kind (str): "index" or "supplement", for error messages.
-            filepath (FCPath): The path to the table, for error messages.
+            filepath (FCPath): The path to the label.
+            pds3_options (dict[str, Any]): The keyword arguments of the
+                :class:`~pdsparser.Pds3Label` parser.
 
         Returns:
-            list[str]: The path for each row.
+            Pds3Label: The label.
 
         Raises:
-            HostIndexError: If the table does not have a key column.
+            OopsValueError: If a value in `pds3_options` is invalid.
+            OSError: If `filepath` does not exist or cannot be read.
+            PdsHostError: If the label uses invalid PDS3 syntax.
         """
 
-        if callable(file_key):
-            return [file_key(row_dict) for row_dict in row_dicts]
-
-        names = (file_key,) if isinstance(file_key, str) else tuple(file_key)
-        if row_dicts:
-            missing = [name for name in names if name not in row_dicts[0]]
-            if missing:
-                raise HostIndexError(f'{kind} has no column {missing[0]}: {filepath}')
-        return ['/'.join(str(row_dict[name]) for name in names) for row_dict in row_dicts]
+        try:
+            return Pds3Label(filepath, **pds3_options)
+        except PdsError as err:
+            raise PdsHostError(str(err)) from err
+        except (TypeError, ValueError) as err:
+            raise OopsValueError(str(err)) from err
 
     @staticmethod
-    def _path_key(path):
-        """The form of a path in which an index and its supplement are compared.
+    def _peek(rows):
+        """The first of some rows, and the rows with that one still first.
 
         Parameters:
-            path (str): A path as a table gives it.
+            rows (collections.abc.Iterable[dict[str, Any]]): The rows.
 
         Returns:
-            str: The path in upper case, without empty or "." components or the extension
-            of the file name.
+            tuple[dict[str, Any] | None, collections.abc.Iterable[dict[str, Any]]]: The
+            first row, or None if there are none; and the rows: `rows` itself if it is a
+            sequence, otherwise an iterator that yields the first row and then the rest.
         """
 
-        parts = [part for part in path.strip().upper().split('/')
-                 if part not in ('', '.')]
-        if parts:
-            parts[-1] = parts[-1].rpartition('.')[0] or parts[-1]
-        return '/'.join(parts)
+        if isinstance(rows, Sequence):
+            return (rows[0] if rows else None, rows)
+        rows = iter(rows)
+        first = next(rows, None)
+        if first is None:
+            return (None, rows)
+        return (first, itertools.chain([first], rows))
 
     @staticmethod
-    def _pair_by_file(row_paths, supp_paths, supp_dicts, *, files):
-        """The supplement rows reordered to match the index rows, file by file.
+    def _volumes_directory(index_path):
+        """The directory that holds the volume directories whose files an index lists.
 
         Parameters:
-            row_paths (list[str]): The path named by each index row.
-            supp_paths (list[str]): The path named by each supplement row.
-            supp_dicts (list[dict[str, Any]]): The supplement rows.
-            files (str): The paths to the index and the supplement, for error messages.
+            index_path (str | pathlib.Path | FCPath): The index file or its PDS3 label.
 
         Returns:
-            list[dict[str, Any]]: The supplement row for each index row, in index order.
+            FCPath: For an index in a Ring-Moon Systems Node metadata tree, such as
+            ".../metadata/GO_0xxx/GO_0017/GO_0017_index.lbl", the matching volume series
+            directory, ".../volumes/GO_0xxx"; for an index anywhere else, the index's own
+            directory. The name "metadata" is matched in either case.
+        """
+
+        directory = FCPath(index_path).parent
+        if directory.parent.parent.name.lower() == 'metadata':
+            return directory.parent.parent.parent / 'volumes' / directory.parent.name
+        return directory
+
+    @classmethod
+    def _check_keywords(cls, method, kwargs):
+        """Raise OopsTypeError for a keyword argument that a method does not take.
+
+        A host's ``from_file`` and ``from_index`` take `**kwargs` and call this method
+        with it, so that a mistaken keyword, such as "supplementary", is refused instead
+        of being ignored.
+
+        Parameters:
+            method (str): The name of the calling method, for the message.
+            kwargs (dict[str, Any]): The keyword arguments that the method does not take.
 
         Raises:
-            HostIndexError: If a file is listed more than once in either table, if an
-                index row has no supplement row, or if a supplement row names no index
-                row. The message lists the first few such paths, as the table gives them.
+            OopsTypeError: If `kwargs` is not empty. The message reads "unexpected keyword
+                argument for <class>.<method>: '<name>'".
         """
 
-        def report(problem, paths):
-            """The message for a problem with the given paths."""
-
-            return f'{problem} ({len(paths)}): {paths[:_PATHS_IN_MESSAGE]}; {files}'
-
-        row_keys = [Host._path_key(path) for path in row_paths]
-        supp_keys = [Host._path_key(path) for path in supp_paths]
-
-        for (kind, keys, paths) in (('index', row_keys, row_paths),
-                                    ('supplement', supp_keys, supp_paths)):
-            counts = Counter(keys)
-            repeated = list({key: path for (key, path) in zip(keys, paths)
-                             if counts[key] > 1}.values())
-            if repeated:
-                raise HostIndexError(report(f'{kind} lists a file more than once',
-                                            repeated))
-
-        supp_by_key = dict(zip(supp_keys, supp_dicts))
-        unpaired = [path for (key, path) in zip(row_keys, row_paths)
-                    if key not in supp_by_key]
-        if unpaired:
-            raise HostIndexError(report('no supplement row for an index row', unpaired))
-
-        row_key_set = set(row_keys)
-        extra = [path for (key, path) in zip(supp_keys, supp_paths)
-                 if key not in row_key_set]
-        if extra:
-            raise HostIndexError(report('no index row for a supplement row', extra))
-
-        return [supp_by_key[key] for key in row_keys]
+        if kwargs:
+            raise OopsTypeError(f'unexpected keyword argument for {cls.__name__}.'
+                                f'{method}: {next(iter(kwargs))!r}')
 
     @staticmethod
-    def _filter_index_rows(row_dicts, filter):
-        """Filter the rows of the index.
+    def _check_select(select, *, names=None, unit=None):
+        """Raise the error that a `select` argument would raise, before anything is read.
 
         Parameters:
-            row_dicts (list[dict[str, Any]]): The index content, one dictionary per row.
-            filter (dict[str, Any], optional): A dictionary of index column names and
-                their values or a set or tuple of values. If provided, only rows of the
-                index in which each named column equals the value, falls in the set of
-                values, or falls in a range defined by a tuple of two values, will be
-                included in the returned list.
-
-        A row that lacks a named column, as when a host leaves out a column whose value
-        the archive marks as missing, does not pass the filter.
-
-        Returns:
-            list[dict[str, Any]]: The rows of `row_dicts` that pass the filter; a new list
-            unless `filter` is empty, in which case `row_dicts` itself.
+            select (Any): The `select` argument of a ``from_file`` or ``from_index``.
+            names (dict[str, int], optional): The names that `select` may use, in upper
+                case.
+            unit (str, optional): For a host whose file or index row is always one
+                observation, what that observation comes from, such as "row of a Cassini
+                ISS index", for the message; `select` must then be None.
 
         Raises:
-            OopsValueError: If `filter` names a column that no row has.
-            OopsTypeError: If a range in `filter` cannot be compared with a value of its
-                column.
+            OopsTypeError: If `select`, or an item of a tuple, is not an int, a slice, or
+                a str.
+            OopsValueError: If `unit` is given and `select` is not None, or if a string in
+                `select` is not one of `names`.
         """
 
-        # Apply filter if any
-        if not filter:
-            return row_dicts
-
-        for key in filter:
-            if row_dicts and not any(key in row_dict for row_dict in row_dicts):
-                raise OopsValueError(f'filter names a column that the index does not '
-                                     f'have: {key!r}')
-
-        filtered = []
-        for row_dict in row_dicts:
-            include = True
-            for key, values in filter.items():
-                if key not in row_dict:
-                    include = False
-                    break
-                value = row_dict[key]
-                if isinstance(values, tuple) and len(values) == 2:
-                    try:
-                        outside = value < values[0] or value > values[1]
-                    except TypeError as err:
-                        message = (f'filter range {values!r} cannot be compared with '
-                                   f'column {key!r} value {value!r}')
-                        raise OopsTypeError(message) from err
-                    if outside:
-                        include = False
-                        break
-                elif isinstance(values, (set, frozenset, list, tuple)):
-                    if value not in values:
-                        include = False
-                        break
-
-                # A single value; "in" would do a substring match on strings
-                elif value != values:
-                    include = False
-                    break
-
-            if include:
-                filtered.append(row_dict)
-
-        return filtered
+        if select is None:
+            return
+        if unit is not None:
+            raise OopsValueError(f'each {unit} is one observation; select must be None, '
+                                 f'not {select!r}')
+        for item in (select if isinstance(select, tuple) else (select,)):
+            if isinstance(item, str):
+                if item.upper() not in (names or {}):
+                    raise OopsValueError(f'unrecognized select name: {item!r}')
+            elif (isinstance(item, bool)
+                  or not isinstance(item, (numbers.Integral, slice))):
+                raise OopsTypeError(f'invalid select: {select!r}')
 
     @staticmethod
     def _apply_overrides(params, filepath, *, timeshift=None, navigation=None,
@@ -1148,13 +1098,14 @@ class Host:
         The subclass's constructor should call this method to handle the standard override
         parameters. Other input parameters are ignored.
 
-        It also names the file in `params`. For a pathlib.Path or FCPath, `filepath` is
-        the path as given, `basename` is its file name, `image_url` is its absolute form, and
-        `abspath` is the local path of the file, resolved, if the file is on the local
-        file system or is already in the local cache of a remote file; otherwise
-        `abspath` is left out. No directory is ever created. For a string, which is taken
-        to be a path as an index row gives it, `filepath` and `basename` alone are set.
-        For None, no file is named.
+        It also puts the file's path subfields in `params`. For a pathlib.Path or FCPath,
+        `filepath` is the path as given, `basename` is its file name, `image_url` is its
+        absolute form, and `abspath` is the local path of the file, resolved, if the file
+        is on the local file system or is already in the local cache of a remote file;
+        otherwise `abspath` is left out. The local path is only looked up, so the file
+        system is left as it is. For a string, which is taken to be a path as an index row
+        gives it, `filepath` and `basename` alone are set. For None, the path subfields
+        are left out.
 
         Parameters:
             params (dict): The dictionary of inputs to the Observation constructor before
@@ -1203,8 +1154,8 @@ class Host:
             OopsValueError: If an input parameter is invalid.
         """
 
-        # Fill in the file/URL info. A string is a path as an index row gives it, which
-        # names no file that can be found from here. The local path is found without
+        # Fill in the file/URL info. A string is a path as an index row gives it, relative
+        # to a volume that cannot be found from here. The local path is found without
         # creating its parent directories, and is given only if the file is there.
         if filepath is not None:
             params['filepath'] = filepath

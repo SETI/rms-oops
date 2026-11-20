@@ -141,28 +141,28 @@ def test_an_unreadable_fits_file_is_a_format_error(tmp_path: Path) -> None:
 
 def test_an_index_without_index_in_its_name_needs_no_supplement(tmp_path: Path) -> None:
     label = _write_index(tmp_path, 'INDEX')
-    rows = Host._read_index_rows(label, supplement=Host.SUPPLEMENT,
-                                 require_supplement=False)
+    rows = Host._index_rows(label, supplement=Host.SUPPLEMENT,
+                            require_supplement=False)
     assert [row['NUM'] for row in rows] == [1, 2]
 
 
 def test_a_required_supplement_needs_index_in_the_name(tmp_path: Path) -> None:
     label = _write_index(tmp_path, 'INDEX')
     with pytest.raises(HostIndexError, match='supplemental index required'):
-        Host._read_index_rows(label, supplement=Host.SUPPLEMENT)
+        Host._index_rows(label, supplement=Host.SUPPLEMENT)
 
 
 def test_a_missing_optional_supplement_is_skipped(tmp_path: Path) -> None:
     label = _write_index(tmp_path, 'vol_index')
-    rows = Host._read_index_rows(label, supplement=Host.SUPPLEMENT,
-                                 require_supplement=False)
+    rows = Host._index_rows(label, supplement=Host.SUPPLEMENT,
+                            require_supplement=False)
     assert [row['NUM'] for row in rows] == [1, 2]
 
 
 def test_a_missing_required_supplement_is_not_found(tmp_path: Path) -> None:
     label = _write_index(tmp_path, 'vol_index')
     with pytest.raises(FileNotFoundError, match='vol_supplemental_index.lbl'):
-        Host._read_index_rows(label, supplement=Host.SUPPLEMENT)
+        Host._index_rows(label, supplement=Host.SUPPLEMENT)
 
 
 def test_a_pointer_to_no_object_is_an_index_error(tmp_path: Path) -> None:
@@ -172,7 +172,7 @@ def test_a_pointer_to_no_object_is_an_index_error(tmp_path: Path) -> None:
     label = _write_index(tmp_path, 'INDEX')
     label.write_text(label.read_text().replace('OBJECT = INDEX_TABLE', 'OBJECT = TABLE'))
     with pytest.raises(HostIndexError, match="label lacks 'INDEX_TABLE'"):
-        Host._read_index_rows(label)
+        Host._index_rows(label)
 
 ##########################################################################################
 # One host gives WrongHostError; several give UnknownHostError
