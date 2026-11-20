@@ -35,9 +35,6 @@ _PDS3_METHODS = ('fast', 'strict', 'loose')
 # what a query asks for; see the comment above OopsSpiceError in oops/_exceptions.py
 _SPICE_ERRORS = (LookupError, OSError, RuntimeError, ValueError)
 
-# The marker for a row that has not been read
-_NOT_READ = object()
-
 ObsArray: TypeAlias = (np.ndarray[tuple[int, ...], np.dtype[np.object_]]
                        | tuple[Observation | None, ...])
 
@@ -218,9 +215,10 @@ class Host:
                    parallel=None, **kwargs):
         """An iterator over the Observations of a data file index, one for each row.
 
-        The host is identified when this method is called, from the index label. If the
-        label does not say, the host is identified from the first row of the index, and
-        only that row is read. The host's own ``from_index`` then reads the rows of the
+        The host is identified when this method is called. Every registered host is first
+        asked whether it recognizes the index label. If none does, the first row of the
+        index is read, and only that row, and offered to each host that could not tell
+        from the label. The host's own ``from_index`` then reads the rows of the
         index and its supplement as the iteration proceeds, a few rows at a time, and
         builds each row's observation when the iteration reaches it. Every argument, the
         overrides included, is passed to the host's ``from_index`` as given, so the
@@ -327,24 +325,28 @@ class Host:
         if label is None:
             label = Host._parse_index_label(filepath, options)
 
-        # Determine which host is represented by the index. A host whose detector returns
-        # None can only be identified from the content of a row; the first row of the
-        # index, and that row alone, is read for that, at most once.
-        first = _NOT_READ
-        for host in Host._HOSTS:
-            status = host._detect_in_index(label)
-            if status is None:
-                if first is _NOT_READ:
-                    if row_dicts is None:
-                        table = _index_rows.open_table(filepath, label=label,
-                                                       pds3_method=options['method'])
-                        first = _index_rows.first_row(table, filepath)
-                    else:
-                        (first, row_dicts) = Host._peek(row_dicts)
-                if first is not None and host._detect_in_row(first):
-                    break
-            elif status:
-                break
+        # Determine which host is represented by the index. Every host is asked about the
+        # label first, so that a host that recognizes it is found without reading a row.
+        # A host whose detector returns None can only be identified from the content of
+        # a row; if no host claims the label, the first row, and that row alone, is read
+        # once and offered to each of those hosts.
+        status = {host: host._detect_in_index(label) for host in Host._HOSTS}
+        claimed = [host for host in Host._HOSTS if status[host]]
+        undecided = [host for host in Host._HOSTS if status[host] is None]
+        if claimed:
+            host = claimed[0]
+        elif undecided:
+            if row_dicts is None:
+                table = _index_rows.open_table(filepath, label=label,
+                                               pds3_method=options['method'])
+                first = _index_rows.first_row(table, filepath)
+            else:
+                (first, row_dicts) = Host._peek(row_dicts)
+            found = [host for host in undecided
+                     if first is not None and host._detect_in_row(first)]
+            if not found:
+                raise UnknownHostError(f'unknown host in index {filepath}')
+            host = found[0]
         else:
             raise UnknownHostError(f'unknown host in index {filepath}')
 

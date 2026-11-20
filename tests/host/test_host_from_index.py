@@ -145,6 +145,20 @@ def test_a_host_identified_from_a_row_is_found_from_the_first_row_alone(
     assert next(result) == 'A'
 
 
+def test_a_host_that_recognizes_the_label_is_found_before_any_row_is_read(
+        index_label: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The first host can tell only from a row, and the table file is missing, so the
+    second host is found from the label alone."""
+
+    monkeypatch.setattr(Host, '_HOSTS', [_RowHost, _IndexHost])
+    index_label.with_name('index.tab').unlink()
+
+    result = Host.from_index(index_label)
+
+    with pytest.raises(FileNotFoundError, match='index.tab'):
+        next(result)
+
+
 def test_rows_given_by_the_caller_keep_the_row_read_to_find_the_host(
         index_label: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(Host, '_HOSTS', [_RowHost])
