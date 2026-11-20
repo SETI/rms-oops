@@ -22,7 +22,7 @@ from ._errors import HostIndexError, PdsHostError
 # COVIMS_0999 with its supplement took 26.8 s at 1,000 rows, 30.2 s at 100, 43.2 s at 20,
 # and 59.7 s at 10; reading the index alone one row at a time took 198 s. A host takes
 # about 1.5 ms to build an observation from a row, so 10 rows adds about 5% to that, and
-# a malformed row holds back at most the 9 rows read with it.
+# a row longer than the label says holds back at most the 9 rows read with it.
 CHUNK_ROWS = 10
 
 # The number of paths that an error message about unused supplement rows lists
@@ -82,9 +82,12 @@ def stream_rows(table, filepath, chunk_rows=None):
         gives it.
 
     Raises:
-        HostIndexError: When the iteration reaches a row that the table file does not
-            hold, or a row that does not match the label's description, or when the file
-            holds more rows than its label says, after the last row.
+        HostIndexError: When the iteration reaches the end of a file that holds fewer
+            rows than its label says, after every row it holds; at the first row of a
+            chunk that holds a row longer than the label's row length; or, after the last
+            row, when the file holds more rows than its label says. A value that cannot be
+            read as its column's number only makes PdsTable issue a UserWarning, and the
+            row is yielded with the value as a string.
         OSError: When the iteration starts, if the table file does not exist or cannot be
             read.
     """
@@ -111,7 +114,7 @@ def first_row(table, filepath):
         dict[str, Any] | None: The first row; None if the table has no rows.
 
     Raises:
-        HostIndexError: If the first row does not match the label's description.
+        HostIndexError: If the first row is longer than the label's row length.
         OSError: If the table file does not exist or cannot be read.
     """
 

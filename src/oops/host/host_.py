@@ -14,8 +14,7 @@ from filecache  import FCPath
 from pdsparser  import Pds3Label, PdsError, is_pds3_file
 from vicar      import VicarError, VicarImage, VicarLabel
 
-from oops._exceptions import (_SPICE_CODE, OopsIndexError, OopsSpiceError, OopsTypeError,
-                              OopsValueError)
+from oops._exceptions import OopsIndexError, OopsSpiceError, OopsTypeError, OopsValueError
 from oops.body        import Body
 from oops.cadence     import TimeShift
 from oops.frame       import (Cmatrix, Frame, FrameShift, Navigation, SpiceErrorFrame,
@@ -31,10 +30,6 @@ from ._errors import (HostFormatError, HostIndexError, PdsHostError, UnknownHost
 # to identify the host of a label: "fast" reads most labels quickly, "strict" reads every
 # valid label, and "loose" also reads some invalid ones
 _PDS3_METHODS = ('fast', 'strict', 'loose')
-
-# The classes of the exceptions that cspyce raises when the SPICE kernels cannot supply
-# what a query asks for; see the comment above OopsSpiceError in oops/_exceptions.py
-_SPICE_ERRORS = (LookupError, OSError, RuntimeError, ValueError)
 
 ObsArray: TypeAlias = (np.ndarray[tuple[int, ...], np.dtype[np.object_]]
                        | tuple[Observation | None, ...])
@@ -219,9 +214,13 @@ class Host:
         """An iterator over the Observations of a data file index, one for each row.
 
         The host is identified when this method is called. Every registered host is first
-        asked whether it recognizes the index label. If none does, the first row of the
-        index is read, and only that row, and offered to each host that could not tell
-        from the label. The host's own ``from_index`` then reads the rows of the
+        asked whether it recognizes the index label. If none does, every host is asked
+        whether it recognizes the path of the index, as a host does for a volume's own
+        index that it refuses. If none does, the first row of the index is read, and only
+        that row, and offered to each host that could not tell from the label. A label
+        that cannot be parsed is given to the first host that recognizes its path, and
+        otherwise raises :class:`~oops.host.PdsHostError`. The host's own ``from_index``
+        then reads the rows of the
         index and its supplement as the iteration proceeds, a few rows at a time, and
         builds each row's observation when the iteration reaches it. Every argument, the
         overrides included, is passed to the host's ``from_index`` as given, so the
@@ -307,38 +306,59 @@ class Host:
 
         Raises:
             OopsValueError: If a value in `pds3_options` is invalid, or if `filter` uses a
-                column that the index does not have.
+                column that the index does not have. With `row_dicts` given, `filter` is
+                checked against the first row: at call time if `row_dicts` is a sequence,
+                and when the iteration reads the first row if it is an iterator.
             OopsTypeError: When the iteration reaches a row whose value cannot be compared
                 with a range in `filter`.
             HostIndexError: If the label of `filepath` or `supplement` does not describe a
                 table that can be read, as when it lacks the object that its table pointer
                 names. Also raised during the iteration, at the row where the two tables
-                cannot be paired or a row does not match its label, as listed for the
-                support method ``_index_rows``.
+                cannot be paired, where a table file ends before its label says, or at the
+                first of the ten rows read with a row longer than the label's row length,
+                as listed for the support method ``_index_rows``. A value that cannot be
+                read as its column's number is not an error of the table; see
+                ``_index_rows``.
             OSError: If the label of `filepath` or `supplement` does not exist or cannot
                 be read; when the iteration starts, if a table file does not exist or
                 cannot be read.
-            PdsHostError: If `filepath` uses invalid PDS label syntax.
+            PdsHostError: If `filepath` uses invalid PDS label syntax and no host
+                recognizes its path. The message names the label.
             UnknownHostError: If `filepath` is not associated with any registered Host
                 subclass.
         """
 
         filepath = FCPath(filepath)
         options = Host._pds3_options_with_defaults(pds3_options)
+
+        # A label that cannot be parsed goes to the first host that recognizes the index
+        # by its path, whose own from_index then refuses it or reports the error; with no
+        # such host, the parser's error is raised
+        host = None
         if label is None:
-            label = Host._parse_index_label(filepath, options)
+            try:
+                label = Host._parse_index_label(filepath, options)
+            except PdsHostError:
+                host = Host._index_host_from_path(filepath)
+                if host is None:
+                    raise
 
         # Determine which host is represented by the index. Every host is asked about the
         # label first, so that a host that recognizes it is found without reading a row.
-        # A host whose detector returns None can only be identified from the content of
-        # a row; if no host claims the label, the first row, and that row alone, is read
-        # once and offered to each of those hosts.
-        status = {host: host._detect_in_index(label) for host in Host._HOSTS}
-        claimed = [host for host in Host._HOSTS if status[host]]
-        undecided = [host for host in Host._HOSTS if status[host] is None]
-        if claimed:
-            host = claimed[0]
-        elif undecided:
+        # If none does, every host is asked about the path, which is how a host knows a
+        # volume's own index that it refuses. A host whose detector returns None can only
+        # be identified from the content of a row; if no host claims the label or the
+        # path, the first row, and that row alone, is read once and offered to each of
+        # those hosts.
+        if host is None:
+            status = {host: host._detect_in_index(label) for host in Host._HOSTS}
+            claimed = [host for host in Host._HOSTS if status[host]]
+            host = claimed[0] if claimed else Host._index_host_from_path(filepath)
+
+        if host is None:
+            undecided = [host for host in Host._HOSTS if status[host] is None]
+            if not undecided:
+                raise UnknownHostError(f'unknown host in index {filepath}')
             if row_dicts is None:
                 table = _index_rows.open_table(filepath, label=label,
                                                pds3_method=options['method'])
@@ -350,8 +370,6 @@ class Host:
             if not found:
                 raise UnknownHostError(f'unknown host in index {filepath}')
             host = found[0]
-        else:
-            raise UnknownHostError(f'unknown host in index {filepath}')
 
         # The host reads, pairs and filters the rows itself, through _index_rows(),
         # because only the host knows how its supplement is matched to its index
@@ -460,6 +478,28 @@ class Host:
         return None
 
     @staticmethod
+    def _detect_in_index_path(filepath):
+        """True if the path of an index shows that the index belongs to this host.
+
+        :meth:`~oops.host.Host.from_index` asks every host this question when no host
+        recognizes the index label, and when the label cannot be parsed, before it reads
+        a row. A host that sets :attr:`~oops.host.Host.METADATA_INDEX_EXAMPLE` overrides
+        it to recognize the path of a volume's own index, such as one under a directory
+        of the host's volumes, so that the host's ``from_index`` refuses that index
+        before any row is read and whether or not its label can be parsed. The default
+        returns None.
+
+        Parameters:
+            filepath (FCPath): The path to the index label.
+
+        Returns:
+            bool | None: True if `filepath` is an index of this host; False or None if the
+            path does not show it.
+        """
+
+        return None
+
+    @staticmethod
     def _detect_in_row(row_dict):
         """True if the given row of an index file refers to this host or instrument.
 
@@ -481,6 +521,22 @@ class Host:
     ######################################################################################
     # Support methods not to be overridden
     ######################################################################################
+
+    @staticmethod
+    def _index_host_from_path(filepath):
+        """The first registered host whose :meth:`_detect_in_index_path` claims an index.
+
+        Parameters:
+            filepath (FCPath): The path to the index label.
+
+        Returns:
+            type | None: The Host subclass; None if no host claims the path.
+        """
+
+        for host in Host._HOSTS:
+            if host._detect_in_index_path(filepath):
+                return host
+        return None
 
     @staticmethod
     def _identify_host(filepath, *, pds3_options=None):
@@ -558,8 +614,8 @@ class Host:
         This is a support method for the `from_file` methods of the Host subclasses. With
         `pds3_fallback` True, a PDS3 label that the requested method of the parser cannot
         read is parsed again with each later method of "fast", "strict", and "loose", as
-        described for :meth:`~oops.host.Host._parse_pds3`; a host then needs no loop of
-        its own over the methods.
+        described for :meth:`~oops.host.Host._parse_pds3`, so one call takes the place of
+        a host's own loop over the methods.
 
         Parameters:
             fileinfo (str | pathlib.Path | FCPath | Pds3Label | VicarLabel | HDUList): The
@@ -839,6 +895,13 @@ class Host:
         match. Each pair is then checked with `validate`, merged, and tested against
         `filter`. Rows are counted from 0 in the messages of errors.
 
+        The tables are not checked beyond the errors listed below. A value that cannot be
+        read as the number its column describes makes ``PdsTable`` issue a UserWarning and
+        give the value as a string, with its "_mask" entry True, and the row is yielded
+        with it; the host may then raise a ValueError or TypeError when it converts the
+        value, or a pairing error if the value is part of a file key. A row shorter than
+        the label's row length is read as it is.
+
         Parameters:
             filepath (str | pathlib.Path | FCPath): Path to the index label.
             supplement (str | pathlib.Path | FCPath | object | None, optional): The path
@@ -863,14 +926,16 @@ class Host:
                 the values, or lies within the range, bounds included. A row that lacks
                 one of the columns is left out.
             validate (str | list[str] | collections.abc.Callable, optional): The check of
-                each pair of rows. A column name or a list of them gives columns whose
-                values the two rows must share; two strings are the same if either one,
-                in upper case, contains the other. A function with the signature
-                ``(dict[str, Any], dict[str, Any]) -> bool`` receives the index row and
-                the supplement row and returns True if they match; it either returns
-                False or raises an exception if they do not. If unspecified, the columns
-                that the two tables share are compared, except those of the file keys,
-                which the pairing compares as paths.
+                each pair of rows. A column name or a list or tuple of them gives columns
+                whose values the two rows must share; two
+                strings are the same if either one, in upper case, contains the other. An
+                empty list or tuple, such as ``validate=()``, skips the comparison of
+                columns, so the only check is the pairing's comparison of the files. A function with the
+                signature ``(dict[str, Any], dict[str, Any]) -> bool`` receives the index
+                row and the supplement row and returns True if they match; it either
+                returns False or raises an exception if they do not. If unspecified, the
+                columns that the two tables share are compared, except those of the file
+                keys, which the pairing compares as paths.
             file_key (str | tuple[str, ...] | collections.abc.Callable, optional): How
                 a row of the index gives its file: a column name; a tuple of column
                 names, whose values are joined with "/", such as ``("VOLUME_ID",
@@ -907,9 +972,10 @@ class Host:
                 index row for which the supplement lacks a row, which with pairing by file
                 is raised once the whole supplement has been read; a supplement row that
                 repeats the file of a row that is still held (pairing by file); a pair of
-                rows that fails `validate`; a row that the table file does not hold; a row
-                that does not match the label, which also holds back the rows read with
-                it, ten at a time. After the last index
+                rows that fails `validate`; the end of a table file that holds fewer rows
+                than its label says, after every row it holds; a row longer than the
+                label's row length, raised at the first of the ten rows read with it, none
+                of which is yielded. After the last index
                 row: a supplement row that was not paired with an index row, or a table
                 file that holds more rows than its label says. With pairing by file, a
                 file that the index lists more times than the supplement is reported as
@@ -931,13 +997,7 @@ class Host:
         """
 
         filepath = FCPath(filepath)
-
-        # A volume's own index lacks the supplement and gives its files in its own way
-        if (cls.METADATA_INDEX_EXAMPLE is not None
-                and filepath.parent.name.lower() == 'index'):
-            raise HostIndexError(f'{cls.NAME} reads the Ring-Moon Systems Node metadata '
-                                 f'index, such as "{cls.METADATA_INDEX_EXAMPLE}", not a '
-                                 f'volume\'s own index: {filepath}')
+        cls._refuse_volume_index(filepath)
 
         # Rows given by the caller are filtered as they are reached
         if row_dicts is not None:
@@ -950,8 +1010,7 @@ class Host:
         # Read the index label and check the host
         options = Host._pds3_options_with_defaults(pds3_options)
         method = options['method']
-        if label is None:
-            label = Host._parse_index_label(filepath, options)
+        label = cls._read_index_label(filepath, label=label, pds3_options=options)
         index = _index_rows.open_table(filepath, label=label, pds3_method=method)
         index_names = _index_rows.column_names(index)
         if cls is not Host:
@@ -1012,10 +1071,10 @@ class Host:
                                      f'column: {files}')
             columns = sorted(shared - _index_rows.key_columns(file_key, supplement_key))
             validate = _index_rows.column_validator(columns) if columns else None
+        elif isinstance(validate, (list, tuple)) and not validate:
+            validate = None         # the pairing's comparison of the files is the check
         elif isinstance(validate, (str, list, tuple)):
             columns = [validate] if isinstance(validate, str) else list(validate)
-            if not columns:
-                raise HostIndexError('a list of column names is needed for validation')
             for (kind, names, path) in (('index', index_names, filepath),
                                         ('supplement', supp_names, supplement_path)):
                 for column in columns:
@@ -1056,6 +1115,64 @@ class Host:
         if supp_name == name:
             return None
         return filepath.with_name(supp_name)
+
+    @classmethod
+    def _refuse_volume_index(cls, filepath):
+        """Refuse a volume's own index if this host reads only the metadata indexes.
+
+        Parameters:
+            filepath (FCPath): The path to the index label.
+
+        Raises:
+            HostIndexError: If the host sets :attr:`~oops.host.Host.METADATA_INDEX_EXAMPLE`
+                and `filepath` is in a directory named "index" in either case, which is
+                where a volume keeps its own index.
+        """
+
+        # A volume's own index lacks the supplement and gives its files in its own way
+        if (cls.METADATA_INDEX_EXAMPLE is not None
+                and filepath.parent.name.lower() == 'index'):
+            raise HostIndexError(f'{cls.NAME} reads the Ring-Moon Systems Node metadata '
+                                 f'index, such as "{cls.METADATA_INDEX_EXAMPLE}", not a '
+                                 f'volume\'s own index: {filepath}')
+
+    @classmethod
+    def _read_index_label(cls, filepath, *, label=None, pds3_options=None):
+        """The label of an index that this host reads, parsed once.
+
+        A host's ``from_index`` that needs the index label, for example to decide how to
+        read the table, calls this method first and passes the label it returns to
+        :meth:`~oops.host.Host._index_rows` as `label`, so that the label is parsed only
+        once. A volume's own index is refused first, before the file is read, as
+        :meth:`~oops.host.Host._index_rows` refuses it.
+
+        Parameters:
+            filepath (str | pathlib.Path | FCPath): The path to the index label.
+            label (Pds3Label | dict[str, Any], optional): The label, if it has already
+                been read; it is returned as it is.
+            pds3_options (dict[str, Any], optional): Any keyword arguments and their
+                values to be passed to the :class:`~pdsparser.Pds3Label` parser; the
+                method is "fast" unless they give another.
+
+        Returns:
+            Pds3Label | dict[str, Any]: `label` if it is given; otherwise, the parsed
+            label of `filepath`.
+
+        Raises:
+            HostIndexError: If the host sets :attr:`~oops.host.Host.METADATA_INDEX_EXAMPLE`
+                and `filepath` is in a directory named "index" in either case.
+            OopsValueError: If a value in `pds3_options` is invalid.
+            OSError: If the label does not exist or cannot be read.
+            PdsHostError: If the label uses invalid PDS3 syntax. The message names the
+                label.
+        """
+
+        filepath = FCPath(filepath)
+        cls._refuse_volume_index(filepath)
+        if label is not None:
+            return label
+        return Host._parse_index_label(filepath,
+                                       Host._pds3_options_with_defaults(pds3_options))
 
     @staticmethod
     def _parse_index_label(filepath, pds3_options):
@@ -1327,7 +1444,8 @@ class Host:
         references is checked, as for a Cmatrix whose reference is a SPICE frame. An
         exception counts as missing SPICE data only if it is of a class that cspyce raises
         (LookupError, OSError, RuntimeError, or ValueError) and its text contains a SPICE
-        short error such as "SPICE(CKINSUFFDATA)"; any other exception propagates
+        short error such as "SPICE(CKINSUFFDATA)", the rule of
+        :meth:`~oops.OopsSpiceError.is_spice_error`; any other exception propagates
         unchanged.
 
         Parameters:
@@ -1361,14 +1479,40 @@ class Host:
         resolved = Frame.as_frame(frame)
         try:
             resolved.wrt(Frame.J2000).transform_at_time(time)
-        except _SPICE_ERRORS as err:
-            if not _SPICE_CODE.search(str(err)):
+        except OopsSpiceError.CSPYCE_ERRORS as err:
+            if not OopsSpiceError.is_spice_error(err):
                 raise
             if defer:
                 return SpiceErrorFrame(err, description=description, filepath=filepath)
             raise OopsSpiceError.from_spice_error(err, description=description,
                                                   time=time, filepath=filepath) from err
         return frame
+
+    @staticmethod
+    def _override_midtime(cadence, overrides):
+        """The midtime that an observation will have once the overrides are applied.
+
+        A host checks the pointing with :meth:`~oops.host.Host._check_spice_frame` before
+        it calls :meth:`~oops.host.Host._apply_overrides`, because the overrides can wrap
+        the frame, so it checks at the time that this method gives: the midtime of the
+        `cadence` override if one is given, otherwise of `cadence`, plus the seconds of a
+        `timeshift` override whose letters include "T" in either case.
+
+        Parameters:
+            cadence (Cadence): The cadence of the observation before the overrides.
+            overrides (dict[str, Any]): The standard overrides by name, as a host's
+                ``from_file`` or ``from_index`` receives them. Only "cadence" and
+                "timeshift" are read; a missing key counts as None.
+
+        Returns:
+            float: The midtime in seconds TDB.
+        """
+
+        midtime = (overrides.get('cadence') or cadence).midtime
+        timeshift = overrides.get('timeshift')
+        if timeshift is not None and 'T' in str(timeshift[1]).upper():
+            midtime += timeshift[0]
+        return midtime
 
     @staticmethod
     def _apply_select(observations, select, names=None):

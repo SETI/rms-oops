@@ -72,4 +72,31 @@ def test_text_without_a_code_gives_none() -> None:
     assert error.spice_code is None
     assert str(error) == DESCRIPTION
 
+
+@pytest.mark.parametrize('error', [OSError(CKGP_MESSAGE), RuntimeError(CKGP_MESSAGE),
+                                   ValueError(CKGP_MESSAGE), KeyError(CKGP_MESSAGE)],
+                         ids=['OSError', 'RuntimeError', 'ValueError', 'KeyError'])
+def test_a_cspyce_class_with_a_spice_code_is_a_spice_error(error: Exception) -> None:
+    assert OopsSpiceError.is_spice_error(error)
+
+
+def test_a_cspyce_class_without_a_spice_code_is_not_a_spice_error() -> None:
+    assert not OopsSpiceError.is_spice_error(ValueError('count is in no partition'))
+
+
+def test_another_class_with_a_spice_code_is_not_a_spice_error() -> None:
+    assert not OopsSpiceError.is_spice_error(TypeError(CKGP_MESSAGE))
+
+
+def test_a_raised_cspyce_error_is_a_spice_error() -> None:
+    with pytest.raises(KeyError) as info:
+        cspyce.pxform('J2000', 'NOT_A_FRAME_OF_ANY_KERNEL', 0.)
+
+    assert OopsSpiceError.is_spice_error(info.value)
+
+
+def test_the_cspyce_classes_catch_every_spice_error() -> None:
+    assert OopsSpiceError.CSPYCE_ERRORS == (LookupError, OSError, RuntimeError,
+                                            ValueError)
+
 ##########################################################################################

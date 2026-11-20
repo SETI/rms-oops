@@ -2,11 +2,16 @@
 # tests/host/test_host_support.py: the argument checks and index paths of Host
 ##########################################################################################
 
+from pathlib import Path
+from typing import Any
+
 import pytest
 from filecache import FCPath
+from pdsparser import Pds3Label
 
-from oops      import OopsTypeError, OopsValueError
-from oops.host import Host
+from oops         import OopsTypeError, OopsValueError
+from oops.cadence import SnapCadence
+from oops.host    import Host, HostIndexError
 
 
 class _Named(Host):
@@ -63,5 +68,67 @@ def test_select_of_another_type_raises() -> None:
 
 def test_a_valid_select_passes() -> None:
     assert Host._check_select((slice(None), 'ir', 0), names={'IR': 0}) is None
+
+##########################################################################################
+# The midtime of the pointing check after the overrides
+##########################################################################################
+
+OWN_CADENCE = SnapCadence(100., 10.)        # midtime 105
+NO_OVERRIDES: dict[str, Any] = {'cadence': None, 'timeshift': None}
+
+
+def test_without_overrides_the_midtime_is_the_cadences() -> None:
+    assert Host._override_midtime(OWN_CADENCE, NO_OVERRIDES) == 105.
+
+
+def test_a_cadence_override_gives_its_midtime() -> None:
+    overrides = NO_OVERRIDES | {'cadence': SnapCadence(200., 4.)}
+    assert Host._override_midtime(OWN_CADENCE, overrides) == 202.
+
+
+@pytest.mark.parametrize('letters', ['T', 'pt'])
+def test_a_timeshift_of_the_cadence_moves_the_midtime(letters: str) -> None:
+    overrides = NO_OVERRIDES | {'timeshift': (3., letters)}
+    assert Host._override_midtime(OWN_CADENCE, overrides) == 108.
+
+
+def test_a_timeshift_of_the_frame_alone_leaves_the_midtime() -> None:
+    overrides = NO_OVERRIDES | {'timeshift': (3., 'F')}
+    assert Host._override_midtime(OWN_CADENCE, overrides) == 105.
+
+
+def test_overrides_that_are_not_given_count_as_none() -> None:
+    assert Host._override_midtime(OWN_CADENCE, {}) == 105.
+
+##########################################################################################
+# Reading an index label
+##########################################################################################
+
+class _MetadataReader(Host):
+    """A host that reads only the metadata indexes."""
+
+    NAME = 'metadata_reader'
+    METADATA_INDEX_EXAMPLE = 'VOL_0001_index.lbl'
+
+
+def test_the_index_label_is_parsed(tmp_path: Path) -> None:
+    filepath = tmp_path / 'VOL_0001_index.lbl'
+    filepath.write_text('PDS_VERSION_ID = PDS3\nRECORD_TYPE = FIXED_LENGTH\nEND\n')
+    label = _MetadataReader._read_index_label(filepath)
+    assert label['RECORD_TYPE'] == 'FIXED_LENGTH'
+
+
+def test_a_given_index_label_is_returned_without_reading_the_file(tmp_path: Path) -> None:
+    label = Pds3Label('PDS_VERSION_ID = PDS3\nEND\n')
+    assert _MetadataReader._read_index_label(tmp_path / 'missing.lbl',
+                                             label=label) is label
+
+
+def test_a_volumes_own_index_is_refused_before_its_label_is_read(tmp_path: Path) -> None:
+    with pytest.raises(HostIndexError, match='metadata_reader reads the Ring-Moon Systems '
+                                             'Node metadata index, such as '
+                                             '"VOL_0001_index.lbl", not a volume\'s own '
+                                             'index: .*missing.lbl'):
+        _MetadataReader._read_index_label(tmp_path / 'INDEX' / 'missing.lbl')
 
 ##########################################################################################

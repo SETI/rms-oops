@@ -116,6 +116,20 @@ def test_a_pair_that_fails_validation_raises_at_its_row(tmp_path: Path) -> None:
         next(rows)
 
 
+@pytest.mark.parametrize('validate', [(), []], ids=['tuple', 'list'])
+def test_an_empty_validation_compares_only_the_files(tmp_path: Path,
+                                                     validate: tuple[str, ...] | list[str]
+                                                     ) -> None:
+    """The NAME columns differ, and only the files are compared."""
+
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('AB'),
+                               'NAME': ['x', 'y']},
+                    {'FILE_SPECIFICATION_NAME': _files('AB'), 'NAME': ['x', 'z']})
+
+    assert [row['NAME'] for row in _ByPosition._index_rows(label, validate=validate)] \
+        == ['x', 'y']
+
+
 @pytest.mark.parametrize('host', [_ByPosition, _ByFile], ids=['by-position', 'by-file'])
 def test_default_validation_accepts_a_label_and_its_data_file(tmp_path: Path,
                                                               host: type[Host]) -> None:
@@ -392,6 +406,16 @@ def test_given_rows_are_filtered_as_they_are_reached() -> None:
 def test_an_unknown_column_of_given_rows_raises_at_call_time() -> None:
     with pytest.raises(OopsValueError, match="'NOPE'"):
         _ByPosition._index_rows('vol_index.lbl', row_dicts=ROWS, filter={'NOPE': 1})
+
+
+def test_an_unknown_column_of_an_iterator_of_rows_raises_at_the_first_row() -> None:
+    """The call returns, because the columns are not known until a row is read."""
+
+    rows = _ByPosition._index_rows('vol_index.lbl', row_dicts=iter(ROWS),
+                                   filter={'NOPE': 1})
+
+    with pytest.raises(OopsValueError, match="'NOPE'"):
+        next(rows)
 
 
 def test_a_range_that_cannot_be_compared_raises_at_its_row() -> None:

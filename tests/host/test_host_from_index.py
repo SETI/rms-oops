@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 
 from oops         import OopsValueError
-from oops.host    import Host
+from oops.host    import Host, HostIndexError, PdsHostError
 
 INDEX_LABEL = """PDS_VERSION_ID = PDS3
 RECORD_TYPE = FIXED_LENGTH
@@ -165,5 +165,79 @@ def test_rows_given_by_the_caller_keep_the_row_read_to_find_the_host(
     given = iter([{'NAME': 'A'}, {'NAME': 'B'}])
 
     assert list(Host.from_index(index_label, row_dicts=given)) == ['A', 'B']
+
+##########################################################################################
+# A host that recognizes an index by its path
+##########################################################################################
+
+class _PathHost(Host):
+    """A host of the VOL volumes that reads only metadata indexes, cannot tell from an
+    index label, and recognizes its indexes by their path."""
+
+    NAME = 'path_host'
+    METADATA_INDEX_EXAMPLE = 'VOL_0001_index.lbl'
+
+    @staticmethod
+    def _detect_in_index(label: object) -> None:
+        return None
+
+    @staticmethod
+    def _detect_in_row(row_dict: dict[str, Any]) -> bool:
+        return False
+
+    @staticmethod
+    def _detect_in_index_path(filepath: object) -> bool | None:
+        return 'VOL_0001' in str(filepath) or None
+
+    @staticmethod
+    def from_index(filepath: Any, *, label: Any = None,
+                   row_dicts: list[dict[str, Any]] | None = None,
+                   **kwargs: Any) -> Iterator[dict[str, Any]]:
+        return _PathHost._index_rows(filepath, supplement=None, label=label,
+                                     row_dicts=row_dicts)
+
+
+def _volume_index(tmp_path: Path, text: str) -> Path:
+    """Write a label as a volume's own index, VOL_0001/INDEX/INDEX.LBL, without its
+    table."""
+
+    directory = tmp_path / 'VOL_0001' / 'INDEX'
+    directory.mkdir(parents=True)
+    label = directory / 'INDEX.LBL'
+    label.write_text(text)
+    return label
+
+
+def test_a_volume_index_is_refused_without_reading_a_row(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The table file is missing, so reading a row would raise FileNotFoundError."""
+
+    monkeypatch.setattr(Host, '_HOSTS', [_RowHost, _PathHost])
+    label = _volume_index(tmp_path, INDEX_LABEL)
+
+    with pytest.raises(HostIndexError, match="path_host reads the Ring-Moon Systems Node "
+                                             "metadata index"):
+        Host.from_index(label)
+
+
+def test_a_volume_index_whose_label_cannot_be_parsed_is_refused(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Host, '_HOSTS', [_IndexHost, _PathHost])
+    label = _volume_index(tmp_path, INDEX_LABEL.replace('END_OBJECT = INDEX_TABLE',
+                                                        'Plain text, not PDS3.\n'
+                                                        'END_OBJECT = INDEX_TABLE'))
+
+    with pytest.raises(HostIndexError, match="path_host reads the Ring-Moon Systems Node "
+                                             "metadata index"):
+        Host.from_index(label)
+
+
+def test_a_label_that_cannot_be_parsed_and_no_host_claims_raises(
+        index_label: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Host, '_HOSTS', [_IndexHost, _PathHost])
+    index_label.write_text('PDS_VERSION_ID = PDS3\nRECORD_TYPE\nEND\n')
+
+    with pytest.raises(PdsHostError, match=r'cannot parse the PDS3 label .*index\.lbl'):
+        Host.from_index(index_label)
 
 ##########################################################################################

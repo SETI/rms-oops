@@ -52,11 +52,14 @@ class OopsSpiceError(RuntimeError, OopsException):
 
     Build it with :meth:`from_spice_error` from the exception that cspyce raised, so that
     every caller produces the same message form, and raise it ``from`` that exception so
-    that the full SPICE text remains available as its cause::
+    that the full SPICE text remains available as its cause. :meth:`is_spice_error` tells
+    a SPICE error from another exception of the classes that cspyce raises::
 
         try:
             frame.transform_at_time(time)
-        except (LookupError, OSError, RuntimeError, ValueError) as err:
+        except OopsSpiceError.CSPYCE_ERRORS as err:
+            if not OopsSpiceError.is_spice_error(err):
+                raise
             raise OopsSpiceError.from_spice_error(err, description='no NAC pointing',
                                                   time=time, filepath=path) from err
 
@@ -75,11 +78,47 @@ class OopsSpiceError(RuntimeError, OopsException):
             a file.
     """
 
+    #: The classes of the exceptions that cspyce raises for a SPICE error. Under its
+    #: default "EXCEPTION" error action cspyce raises subclasses of LookupError, OSError,
+    #: and ValueError, and under its "RUNTIME" error action RuntimeError. Catch these,
+    #: then call :meth:`is_spice_error` to tell a SPICE error from another exception of
+    #: the same classes.
+    CSPYCE_ERRORS = (LookupError, OSError, RuntimeError, ValueError)
+
     def __init__(self, message, *, spice_code=None, filepath=None):
 
         super().__init__(message)
         self.spice_code = spice_code
         self.filepath = filepath
+
+    @staticmethod
+    def is_spice_error(exc):
+        """True if an exception reports that the SPICE kernels cannot supply something.
+
+        This is the rule by which oops, and the hosts, decide that a failure is missing
+        SPICE data, which they report as :class:`OopsSpiceError`, rather than another
+        error, which they let propagate::
+
+            try:
+                frame.transform_at_time(time)
+            except OopsSpiceError.CSPYCE_ERRORS as err:
+                if not OopsSpiceError.is_spice_error(err):
+                    raise
+                raise OopsSpiceError.from_spice_error(err, description='no pointing',
+                                                      time=time) from err
+
+        Parameters:
+            exc (BaseException): The exception.
+
+        Returns:
+            bool: True if `exc` is an instance of one of :attr:`CSPYCE_ERRORS` and its
+            string conversion contains a SPICE short error, text of the form
+            "SPICE(NAME)" in which NAME consists of uppercase letters, digits, and
+            underscores, such as "SPICE(CKINSUFFDATA)"; False otherwise.
+        """
+
+        return (isinstance(exc, OopsSpiceError.CSPYCE_ERRORS)
+                and _SPICE_CODE.search(str(exc)) is not None)
 
     @classmethod
     def from_spice_error(cls, exc, *, description, time=None, filepath=None):

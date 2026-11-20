@@ -36,7 +36,11 @@ Reading an index
 its observations, one for each row. The call itself reads only the labels of the index
 and of its supplement, so a mistake in the arguments or in a label is reported at once.
 It identifies the host from the index label. If the label does not say which instrument
-the index describes, the first row is read to find out, and only that row. The host's own
+the index describes, the host is identified from the path of the index if a host
+recognizes it there, and otherwise from the first row, which is the only row read for
+this. A host that reads only the Ring-Moon Systems Node metadata indexes recognizes a
+volume's own index from its path and refuses it before any row is read, even when the
+label of that index cannot be parsed. The host's own
 ``from_index`` then reads the index a few rows at a time as the iteration proceeds, and
 builds each row's observation when the iteration reaches it. An index of any size is read
 in this way while only a few rows are held in memory. An observation that the caller has
@@ -62,7 +66,10 @@ rows is also checked, by default by comparing the columns that both tables have.
 
 A ``filter`` selects rows by the values of their columns, and each row is tested as it is
 read. A ``filter`` that uses a column that neither table has raises
-:class:`~oops.OopsValueError` at once. A row that lacks a filtered column is left out.
+:class:`~oops.OopsValueError` at once. When the caller gives the rows themselves, as a
+list, the check is made against the first row at once; given as an iterator, whose rows
+are not known until they are read, the first row is checked when the iteration reads it.
+A row that lacks a filtered column is left out.
 
 Errors while reading an index
 -----------------------------
@@ -84,9 +91,12 @@ These are raised during the iteration, when it reaches the row concerned, after 
 earlier row has been yielded:
 
 - :class:`FileNotFoundError` when the iteration starts, if a table file does not exist.
-- :class:`~oops.host.HostIndexError` for a row that the table file does not hold or that
-  does not match the label's description of the table. The rows are read ten at a time,
-  so a row that does not match the label also holds back the rows read with it.
+- :class:`~oops.host.HostIndexError` for a table file that holds fewer rows than its
+  label says, after every row that the file holds has been yielded.
+- :class:`~oops.host.HostIndexError` for a row that is longer than the label's row
+  length. The rows are read ten at a time, so the error is raised when the iteration
+  reaches the first row of those ten, and the rows read with the long one are not
+  yielded.
 - :class:`~oops.host.HostIndexError` for a pair of rows that describe different files, a
   pair that fails the host's check, or an index row for which the supplement lacks a row.
   When the rows are paired by file, a missing supplement row is found only after the
@@ -102,6 +112,14 @@ earlier row has been yielded:
 - Any error that the host raises when it builds an observation from a row.
 
 The iteration ends at the first error.
+
+The index tables are not checked beyond this. A value that cannot be read as the number
+its column describes, such as a letter in a numeric column, makes the table reader issue
+a warning and give the value as text, marked as masked; the row is yielded with it, and
+the host may then
+raise a ``ValueError`` or ``TypeError`` when it converts the value, or a pairing error if
+the value is part of a file name. A row that is shorter than the label's row length is
+read as it is.
 
 File subfields
 --------------
