@@ -3,14 +3,43 @@
 ##########################################################################################
 
 import gc
+import weakref
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from typing import Any
+
+import pytest
 
 from polymath   import Matrix3, Vector3
 from oops.frame import Cmatrix, Frame, Navigation, SpiceErrorFrame
 
 # Enough Frames that a cache keeping each one would be seen to grow
 COUNT = 40
+
+
+def _subclasses(cls: type) -> Iterator[type]:
+    """Every subclass of `cls`, at any depth."""
+
+    subclasses: list[type] = cls.__subclasses__()
+    for subclass in subclasses:
+        yield subclass
+        yield from _subclasses(subclass)
+
+
+# The Frame classes of oops that keep a pool of wayframes of their own
+POOLED_FRAME_CLASSES = sorted({cls for cls in _subclasses(Frame)
+                               if cls.__module__.startswith('oops.')
+                               and '_WAYFRAMES' in vars(cls)},
+                              key=lambda cls: cls.__name__)
+
+
+@pytest.fixture(autouse=True)
+def _registry_copy(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Give each test its own copy of the Frame registry and cache, so that the IDs it
+    registers are gone when it ends."""
+
+    monkeypatch.setattr(Frame, '_FRAME_REGISTRY', dict(Frame._FRAME_REGISTRY))
+    monkeypatch.setattr(Frame, '_FRAME_CACHE', dict(Frame._FRAME_CACHE))
 
 
 def _matrix(k: int) -> Matrix3:
@@ -89,5 +118,33 @@ def test_a_frame_identical_to_a_registered_one_shares_its_wayframe() -> None:
 def test_an_unregistered_frame_gives_the_same_frame_wrt_j2000_twice() -> None:
     frame = Navigation((1e-4, 0., 0.), Cmatrix(_matrix(4000)))
     assert frame.wrt(Frame.J2000) is frame.wrt(Frame.J2000)
+
+
+def test_every_frame_class_with_a_pool_is_found() -> None:
+    assert {Cmatrix, Navigation} <= set(POOLED_FRAME_CLASSES)
+
+
+@pytest.mark.parametrize('cls', POOLED_FRAME_CLASSES, ids=lambda cls: cls.__name__)
+def test_every_pool_of_wayframes_holds_its_frames_weakly(cls: type) -> None:
+    assert isinstance(vars(cls)['_WAYFRAMES'], weakref.WeakValueDictionary)
+
+
+class _VanishingPool(weakref.WeakValueDictionary[Any, Any]):
+    """A pool whose entry the garbage collector frees between the test for the key and
+    the read that follows it."""
+
+    def __contains__(self, key: object) -> bool:
+        return True
+
+    def __getitem__(self, key: Any) -> Any:
+        raise KeyError(key)
+
+
+def test_a_frame_is_reregistered_when_a_pool_entry_is_freed_during_the_lookup(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Cmatrix, '_WAYFRAMES', _VanishingPool())
+    frame = Cmatrix(_matrix(5000))
+    frame._reregister()
+    assert frame.wayframe is frame
 
 ##########################################################################################

@@ -454,7 +454,7 @@ class Frame(Mutable):
         else:
             self._frame_id = None
 
-            # A new wayframe without an ID keeps its cache entries itself
+            # A new wayframe that has no ID keeps its cache entries itself
             if self._wayframe is self:
                 self._local_cache = {}
 
@@ -490,8 +490,10 @@ class Frame(Mutable):
         if not hasattr(type(self), '_WAYFRAMES'):
             return
 
-        # Remove the definition from the cache under the old key
-        if self._key in self._WAYFRAMES and self._WAYFRAMES[self._key] is self:
+        # Remove the definition from the cache under the old key. A single get() reads the
+        # pool, because the garbage collector can free an entry between a test for the
+        # key and a read of it.
+        if self._WAYFRAMES.get(self._key) is self:
             del self._WAYFRAMES[self._key]
 
         # Add the definition to the cache under the new key
