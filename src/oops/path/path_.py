@@ -391,7 +391,7 @@ class Path(Mutable):
         else:
             self._path_id = None
 
-            # A new waypoint without an ID keeps its cache entries itself
+            # A new waypoint that has no ID keeps its cache entries itself
             if self._waypoint is self:
                 self._local_cache = {}
 
@@ -429,8 +429,10 @@ class Path(Mutable):
         if not hasattr(type(self), '_WAYPOINTS'):
             return
 
-        # Remove the definition from the cache under the old key
-        if self._key in self._WAYPOINTS and self._WAYPOINTS[self._key] is self:
+        # Remove the definition from the cache under the old key. A single get() reads the
+        # pool, because the garbage collector can free an entry between a test for the
+        # key and a read of it.
+        if self._WAYPOINTS.get(self._key) is self:
             del self._WAYPOINTS[self._key]
 
         # Add the definition to the cache under the new key

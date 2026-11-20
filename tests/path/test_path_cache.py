@@ -3,15 +3,44 @@
 ##########################################################################################
 
 import gc
+import weakref
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from typing import Any
+
+import pytest
 
 from polymath   import Matrix3, Vector3
 from oops.frame import Cmatrix, Frame
-from oops.path  import FixedPath, Path
+from oops.path  import FixedPath, LinearPath, Path, PathShift
 
 # Enough Paths that a cache keeping each one would be seen to grow
 COUNT = 40
+
+
+def _subclasses(cls: type) -> Iterator[type]:
+    """Every subclass of `cls`, at any depth."""
+
+    subclasses: list[type] = cls.__subclasses__()
+    for subclass in subclasses:
+        yield subclass
+        yield from _subclasses(subclass)
+
+
+# The Path classes of oops that keep a pool of waypoints of their own
+POOLED_PATH_CLASSES = sorted({cls for cls in _subclasses(Path)
+                              if cls.__module__.startswith('oops.')
+                              and '_WAYPOINTS' in vars(cls)},
+                             key=lambda cls: cls.__name__)
+
+
+@pytest.fixture(autouse=True)
+def _registry_copy(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Give each test its own copy of the Path registry and cache, so that the IDs it
+    registers are gone when it ends."""
+
+    monkeypatch.setattr(Path, '_PATH_REGISTRY', dict(Path._PATH_REGISTRY))
+    monkeypatch.setattr(Path, '_PATH_CACHE', dict(Path._PATH_CACHE))
 
 
 def _position(k: int) -> Vector3:
@@ -85,5 +114,33 @@ def test_an_unregistered_path_gives_the_same_path_wrt_the_ssb_twice() -> None:
     origin = FixedPath(_position(4000), Path.SSB, Frame.J2000)
     path = FixedPath(_position(0), origin, Frame.J2000)
     assert path.wrt(Path.SSB) is path.wrt(Path.SSB)
+
+
+def test_every_path_class_with_a_pool_is_found() -> None:
+    assert {FixedPath, LinearPath, PathShift} <= set(POOLED_PATH_CLASSES)
+
+
+@pytest.mark.parametrize('cls', POOLED_PATH_CLASSES, ids=lambda cls: cls.__name__)
+def test_every_pool_of_waypoints_holds_its_paths_weakly(cls: type) -> None:
+    assert isinstance(vars(cls)['_WAYPOINTS'], weakref.WeakValueDictionary)
+
+
+class _VanishingPool(weakref.WeakValueDictionary[Any, Any]):
+    """A pool whose entry the garbage collector frees between the test for the key and
+    the read that follows it."""
+
+    def __contains__(self, key: object) -> bool:
+        return True
+
+    def __getitem__(self, key: Any) -> Any:
+        raise KeyError(key)
+
+
+def test_a_path_is_reregistered_when_a_pool_entry_is_freed_during_the_lookup(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(FixedPath, '_WAYPOINTS', _VanishingPool())
+    path = FixedPath(_position(5000), Path.SSB, Frame.J2000)
+    path._reregister()
+    assert path.waypoint is path
 
 ##########################################################################################
