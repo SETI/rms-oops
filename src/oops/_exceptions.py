@@ -71,7 +71,8 @@ class OopsSpiceError(RuntimeError, OopsException):
         spice_code (str | None): The SPICE short error, such as "SPICE(CKINSUFFDATA)", or
             None if it is not known.
         filepath (str | pathlib.Path | FCPath | None): The file whose processing needed
-            the SPICE data, or None if no file is involved or it is not known.
+            the SPICE data, or None if the file is not known or the query is not about
+            a file.
     """
 
     def __init__(self, message, *, spice_code=None, filepath=None):
@@ -90,8 +91,8 @@ class OopsSpiceError(RuntimeError, OopsException):
         three decimal places of seconds, such as "2010-01-01T00:00:00.000".
 
         The SPICE short error is the first text of the form "SPICE(NAME)", in which NAME
-        consists of uppercase letters, digits and underscores, in the string conversion of
-        `exc`. Each exception raised by cspyce opens with one. If `exc` has none, the
+        consists of uppercase letters, digits, and underscores, in the string conversion
+        of `exc`. Each exception raised by cspyce opens with one. If `exc` lacks one, the
         `spice_code` attribute is None and the message ends after the time or the file.
 
         The exception is returned, not raised; the caller raises it ``from`` `exc`.

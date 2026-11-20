@@ -70,7 +70,7 @@ class SpiceErrorFrame(Frame):
             quick (dict | bool, optional): Ignored.
 
         Raises:
-            OopsSpiceError: Always. Its message names `time` if `time` is a single,
+            OopsSpiceError: Always. Its message gives `time` if `time` is a single,
                 unmasked value, and its cause is the exception that the SPICE query
                 raised.
         """
