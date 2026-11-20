@@ -95,8 +95,7 @@ read. A ``filter`` that uses a column that neither table has raises
 :class:`~oops.OopsValueError` at once. When the caller gives the rows themselves as a list
 or another sequence, the check is made against the first row at once. When the rows are
 given as an iterator, whose rows are not known until they are read, the first row is
-checked when the iteration reads it.
-A row that lacks a filtered column is left out.
+checked when the iteration reads it. A row that lacks a filtered column is left out.
 
 Errors while reading an index
 -----------------------------
@@ -143,10 +142,9 @@ The iteration ends at the first error.
 The index tables are not checked beyond this. A value that cannot be read as the number
 its column describes, such as a letter in a numeric column, makes the table reader issue
 a warning and give the value as text, marked as masked; the row is yielded with it, and
-the host may then
-raise a ``ValueError`` or ``TypeError`` when it converts the value, or a pairing error if
-the value is part of a file name. A row that is shorter than the label's row length is
-read as it is.
+the host may then raise a ``ValueError`` or ``TypeError`` when it converts the value, or a
+pairing error if the value is part of a file name. A row that is shorter than the label's
+row length is read as it is.
 
 File subfields
 --------------

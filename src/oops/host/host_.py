@@ -311,20 +311,20 @@ class Host:
         Raises:
             OopsValueError: If a value in `pds3_options` is invalid, if the parser cannot
                 convert a value in the index label, such as day 366 of a year that has
-                365 days, or if `filter` uses a column that the index does not have.
-                With `row_dicts` given, `filter` is
-                checked against the first row: at call time if `row_dicts` is a sequence,
-                and when the iteration reads the first row if it is an iterator.
+                365 days, or if `filter` uses a column that the index does not have. With
+                `row_dicts` given, `filter` is checked against the first row: at call time
+                if `row_dicts` is a sequence, and when the iteration reads the first row
+                if it is an iterator.
             OopsTypeError: When the iteration reaches a row whose value cannot be compared
                 with a range in `filter`.
             HostIndexError: If the label of `filepath` or `supplement` does not describe a
                 table that can be read, as when it lacks the object that its table pointer
-                refers to. Also raised during the iteration, at the row where the two tables
-                cannot be paired, where a table file ends before its label says, or at the
-                first of the 100 rows read with a row longer than the label's row length,
-                as listed for the support method ``_index_rows``. A value that cannot be
-                read as its column's number is not an error of the table; see
-                ``_index_rows``.
+                refers to. Also raised during the iteration, at the row where the two
+                tables cannot be paired, where a table file ends before its label says,
+                or at the first of the 100 rows read with a row longer than the label's
+                row length, as listed for the support method ``_index_rows``. A value
+                that cannot be read as its column's number is not an error of the table;
+                see ``_index_rows``.
             OSError: If the label of `filepath` or `supplement` does not exist or cannot
                 be read; when the iteration starts, if a table file does not exist or
                 cannot be read.
@@ -1048,9 +1048,10 @@ class Host:
         the host builds one observation from each row that the iterator yields.
 
         The call itself reads only labels. It reads the labels of the index and the
-        supplement, checks that the index belongs to this host, and checks the columns that `filter`, `validate`, and the file keys use against the labels. If
-        the index label cannot tell whether the index belongs to this host, the first row
-        is read for that, and only that row.
+        supplement, checks that the index belongs to this host, and checks the columns
+        that `filter`, `validate`, and the file keys use against the labels. If the index
+        label cannot tell whether the index belongs to this host, the first row is read
+        for that, and only that row.
 
         The iteration then reads the index 100 rows at a time. How each index row is
         paired with its supplement row is fixed by the host's
@@ -1108,12 +1109,12 @@ class Host:
                 whose values the two rows must share. Two strings are the same if either
                 one, in upper case, contains the other. An empty list or tuple, such as
                 ``validate=()``, skips the comparison of columns, so the only check is the
-                pairing's comparison of the files. A function with the
-                signature ``(dict[str, Any], dict[str, Any]) -> bool`` receives the index
-                row and the supplement row and returns True if they match; it either
-                returns False or raises an exception if they do not. If unspecified, the
-                columns that the two tables share are compared, except those of the file
-                keys, which the pairing compares as paths.
+                pairing's comparison of the files. A function with the signature
+                ``(dict[str, Any], dict[str, Any]) -> bool`` receives the index row and
+                the supplement row and returns True if they match; it either returns
+                False or raises an exception if they do not. If unspecified, the columns
+                that the two tables share are compared, except those of the file keys,
+                which the pairing compares as paths.
             file_key (str | tuple[str, ...] | collections.abc.Callable, optional): How
                 a row of the index gives its file: a column name; a tuple of column
                 names, whose values are joined with "/", such as ``("VOLUME_ID",
@@ -1138,29 +1139,28 @@ class Host:
 
         Raises:
             HostIndexError: At call time: if either label does not describe a table that
-                can be read; if
-                `supplement` is `Host.SUPPLEMENT`, `require_supplement` is True, and
-                :meth:`~oops.host.Host._supplement_path` returns None; if a table lacks a
-                column of its file key or of `validate`; if `validate` is unspecified and
-                the two tables do not share any column; or if
+                can be read; if `supplement` is `Host.SUPPLEMENT`, `require_supplement` is
+                True, and :meth:`~oops.host.Host._supplement_path` returns None; if a
+                table lacks a column of its file key or of `validate`; if `validate` is
+                unspecified and the two tables do not share any column; or if
                 :attr:`~oops.host.Host.MERGE_SUPPLEMENT_BY_FILE` is True, `file_key` is
                 unspecified, and the tables lack FILE_SPECIFICATION_NAME. During the
                 iteration, at the row concerned: an index row whose file is not the file
-                of the supplement row in the same position (pairing by position); an
-                index row for which the supplement lacks a row, which with pairing by file
-                is raised once the whole supplement has been read; a supplement row that
+                of the supplement row in the same position (pairing by position); an index
+                row for which the supplement lacks a row, which with pairing by file is
+                raised once the whole supplement has been read; a supplement row that
                 repeats the file of a row that is still held (pairing by file); a pair of
                 rows that fails `validate`; the end of a table file that holds fewer rows
                 than its label says, after every row it holds; a row longer than the
                 label's row length, raised at the first of the 100 rows read with it, none
-                of which is yielded. After the last index
-                row: a supplement row that was not paired with an index row, or a table
-                file that holds more rows than its label says. With pairing by file, a
-                file that the index lists more times than the supplement is reported as
-                an index row for which the supplement lacks a row, and a file that the
-                supplement lists more times than the index as a supplement row that was
-                not paired; only the rows read ahead are kept, so the memory used does
-                not grow with the length of the index.
+                of which is yielded. After the last index row: a supplement row that was
+                not paired with an index row, or a table file that holds more rows than
+                its label says. With pairing by file, a file that the index lists more
+                times than the supplement is reported as an index row for which the
+                supplement lacks a row, and a file that the supplement lists more times
+                than the index as a supplement row that was not paired; only the rows
+                read ahead are kept, so the memory used does not grow with the length of
+                the index.
             OopsValueError: At call time, if a value in `pds3_options` is invalid, or if
                 `filter` uses a column that neither table has. If `row_dicts` is given,
                 `filter` is checked against the first row, at call time if `row_dicts`
@@ -1311,8 +1311,8 @@ class Host:
         A host's ``from_index`` that needs the index label, for example to decide how to
         read the table, calls this method first and passes the label it returns to
         :meth:`~oops.host.Host._index_rows` as `label`, so that the label is parsed only
-        once. The label is parsed with one method of the parser, after this host's correction of
-        label text; no later method is tried if that one fails.
+        once. The label is parsed with one method of the parser, after this host's
+        correction of label text; no later method is tried if that one fails.
 
         Parameters:
             filepath (str | pathlib.Path | FCPath): The path to the index label.
