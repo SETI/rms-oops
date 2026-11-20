@@ -1119,10 +1119,12 @@ class Host:
                 names, whose values are joined with "/", such as ``("VOLUME_ID",
                 "PATH_NAME", "FILE_NAME")``; or a function with the signature
                 ``(dict[str, Any]) -> str`` that returns the path from a row dictionary.
-                If unspecified, the key is FILE_SPECIFICATION_NAME, preceded by VOLUME_ID
-                or else VOLUME_NAME if both tables have that column, provided that both
-                tables have FILE_SPECIFICATION_NAME. If they do not, rows paired by
-                position are paired without comparing their files.
+                If unspecified, the key is FILE_SPECIFICATION_NAME, provided that both
+                tables have it. If they do not, rows paired by position are paired
+                without comparing their files. A host whose tables can list one file in
+                more than one volume, as a cumulative index can, and that pairs them by
+                file, gives a key that includes the volume, such as ``("VOLUME_ID",
+                "FILE_SPECIFICATION_NAME")``.
             supplement_key (str | tuple[str, ...] | collections.abc.Callable, optional):
                 How a row of the supplement gives its file, in the same forms as
                 `file_key`. If unspecified, `file_key` applies to both tables.
@@ -1228,10 +1230,10 @@ class Host:
 
         # Check the columns of the file keys, the validation and the filter
         supp_names = _index_rows.column_names(supp_table)
+        shared = set(index.get_keys()) & set(supp_table.get_keys())
         files = f'{filepath}, {supplement_path}'
-        if file_key is None:
-            file_key = _index_rows.default_file_key(index.get_keys(),
-                                                    supp_table.get_keys())
+        if file_key is None and 'FILE_SPECIFICATION_NAME' in shared:
+            file_key = 'FILE_SPECIFICATION_NAME'
         if supplement_key is None:
             supplement_key = file_key
         if file_key is None:
@@ -1248,7 +1250,6 @@ class Host:
         # pairing compares them already, as paths, and the two tables may give the same
         # product by its label and by its data file
         if validate is None:
-            shared = set(index.get_keys()) & set(supp_table.get_keys())
             if not shared:
                 raise HostIndexError(f'the index and the supplement do not share any '
                                      f'column: {files}')

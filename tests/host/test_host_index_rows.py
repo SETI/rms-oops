@@ -67,6 +67,31 @@ def test_rows_in_the_same_order_pair_by_position(tmp_path: Path) -> None:
     assert _pairs(_ByPosition._index_rows(label)) == [('1', 'a'), ('2', 'b')]
 
 
+def test_the_default_file_key_is_the_file_specification_name_alone(
+        tmp_path: Path) -> None:
+    """Both tables have VOLUME_ID, and the message gives the file without it."""
+
+    label = _tables(tmp_path, {'VOLUME_ID': ['V', 'V'],
+                               'FILE_SPECIFICATION_NAME': _files('AB')},
+                    {'VOLUME_ID': ['V', 'V'],
+                     'FILE_SPECIFICATION_NAME': _files('AC')})
+    rows = _ByPosition._index_rows(label)
+
+    next(rows)
+    with pytest.raises(HostIndexError, match="index row 1 gives 'B.LBL' but"):
+        next(rows)
+
+
+def test_the_default_check_compares_the_volume_of_rows_that_give_one_file(
+        tmp_path: Path) -> None:
+    label = _tables(tmp_path, {'VOLUME_ID': ['V1'], 'FILE_SPECIFICATION_NAME': _files('A')},
+                    {'VOLUME_ID': ['V2'], 'FILE_SPECIFICATION_NAME': _files('A')})
+    rows = _ByPosition._index_rows(label)
+
+    with pytest.raises(HostIndexError, match="VOLUME_ID value mismatch: 'V1', 'V2'"):
+        next(rows)
+
+
 def test_pairing_by_position_raises_at_the_first_row_whose_files_differ(
         tmp_path: Path) -> None:
     label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('ABC'),

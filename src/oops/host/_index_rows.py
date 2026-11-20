@@ -143,29 +143,6 @@ def column_names(table):
     return names | {name + '_mask' for name in names}
 
 
-def default_file_key(index_names, supplement_names):
-    """The default columns that give the file of a row of an index and a supplement.
-
-    Parameters:
-        index_names (collections.abc.Iterable[str]): The column names of the index.
-        supplement_names (collections.abc.Iterable[str]): The column names of the
-            supplement.
-
-    Returns:
-        tuple[str, ...] | None: FILE_SPECIFICATION_NAME, preceded by VOLUME_ID or else
-        VOLUME_NAME if both tables have that column; None if the tables do not both have
-        FILE_SPECIFICATION_NAME.
-    """
-
-    shared = set(index_names) & set(supplement_names)
-    if 'FILE_SPECIFICATION_NAME' not in shared:
-        return None
-    for volume in ('VOLUME_ID', 'VOLUME_NAME'):
-        if volume in shared:
-            return (volume, 'FILE_SPECIFICATION_NAME')
-    return ('FILE_SPECIFICATION_NAME',)
-
-
 def key_columns(*keys):
     """The names of the columns that make up one or more file keys.
 
