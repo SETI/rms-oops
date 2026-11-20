@@ -11,7 +11,9 @@ exactly: every public name, its parameters, which of them are keyword-only, and 
 defaults. Types are given where they are unambiguous and are `Any` elsewhere.
 
 The detectors and support methods that a Host subclass overrides or calls, such as
-`_register` and `_detect_in_pds3`, are private and are not published here.
+`_register`, `_detect_in_pds3`, and `_correct_label_text` (the hook through which a host
+corrects the text of its labels before any parser reads them), are private and are not
+published here.
 """
 
 import pathlib

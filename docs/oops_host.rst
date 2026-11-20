@@ -18,12 +18,31 @@ other argument as given, to that host's own ``from_file``, which reads the file 
 The result is therefore the same as calling the host class directly. To identify a PDS3
 label, it tries the "fast" parser, then "strict", then "loose". A parser that reports a
 syntax error, or a value it cannot convert, such as a time with an hour of 25, is followed
-by the next. A label that none of them can read goes to the host that recognizes it by
-its path, if there is one; otherwise the error names the label and gives each parser's
-message. A file that
-has already been parsed, as a PDS3 label, a VICAR label or image, or a FITS HDU list, is
-identified from that content and passed to the host as it is. Any other argument raises
-:class:`~oops.OopsTypeError`.
+by the next. A label that none of them can read is offered to each host's correction of
+label text, described below, and goes to the first host whose correction makes it
+readable and that recognizes it; failing that, to the host that recognizes it by its
+path, if there is one; otherwise the error names the label and gives each parser's
+message. A file that has already been parsed, as a PDS3 label, a VICAR label or image,
+or a FITS HDU list, is identified from that content and passed to the host as it is. Any
+other argument raises :class:`~oops.OopsTypeError`.
+
+Correcting label text
+---------------------
+
+Some labels in the archives hold text that the PDS3 parser cannot read, such as a line
+of plain prose outside any comment, or that it reads wrongly. The oops readers leave the
+repairs that one data set needs to its host, which overrides the class method
+``_correct_label_text(text, filepath)``, which receives the text of a label, up to its
+END statement for an attached label, and the path of its file, and returns the corrected
+text. The default returns the text unchanged. The same method serves the product labels
+that the host reads and the labels of its index and supplement, and the path tells them
+apart where that matters.
+
+Every oops method that parses a label for the host calls it before any parser runs. The
+corrected text is parsed in place of the file's; the parsed label keeps the path of the
+file, so that its pointers are found beside it, and an index table is still read from its
+own file. For a host that keeps the default, the labels are parsed from their files as
+they always are.
 
 The subpackage also provides :func:`~oops.host.read_pds3_image_array` and
 :func:`~oops.host.get_fits_image_hdu`, which hosts use to read image arrays;
@@ -38,11 +57,12 @@ Reading an index
 its observations, one for each row. The call itself reads only the labels of the index
 and of its supplement, so a mistake in the arguments or in a label is reported at once.
 It identifies the host from the index label. If the label does not say which instrument
-the index describes, the host is identified from the path of the index if a host
-recognizes it there, and otherwise from the first row, which is the only row read for
-this. A host that reads only the Ring-Moon Systems Node metadata indexes recognizes a
-volume's own index from its path and refuses it before any row is read, even when the
-label of that index cannot be parsed. The host's own
+the index describes, the first row is read to find out, and only that row. A host that
+reads only the Ring-Moon Systems Node metadata indexes recognizes a volume's own index
+from its label, so that the index is refused before any row is read. An index label that
+no parser can read is offered to each host's correction of label text, as a product
+label is, and goes to the first host whose correction makes it readable and that
+recognizes the corrected label. The host's own
 ``from_index`` then reads the index a few rows at a time as the iteration proceeds, and
 builds each row's observation when the iteration reaches it. An index of any size is read
 in this way while only a few rows are held in memory. An observation that the caller has
