@@ -1489,14 +1489,19 @@ class Host:
         return frame
 
     @staticmethod
-    def _override_midtime(cadence, overrides):
-        """The midtime that an observation will have once the overrides are applied.
+    def _pointing_time(cadence, overrides):
+        """The time at which an observation will evaluate its frame, once the overrides
+        are applied.
 
         A host checks the pointing with :meth:`~oops.host.Host._check_spice_frame` before
         it calls :meth:`~oops.host.Host._apply_overrides`, because the overrides can wrap
-        the frame, so it checks at the time that this method gives: the midtime of the
-        `cadence` override if one is given, otherwise of `cadence`, plus the seconds of a
-        `timeshift` override whose letters include "T" in either case.
+        the frame, so it checks at the time that this method gives. That is the midtime
+        of the `cadence` override if one is given, otherwise of `cadence`. A `timeshift`
+        override adds its seconds once if its letters include "T", which moves the
+        observation's times, and once more if they include "F", which makes the frame be
+        evaluated that many seconds after the observation's time; the letters are read
+        in either case, as :meth:`~oops.host.Host._apply_overrides` reads them. A "P"
+        leaves the time as it is.
 
         Parameters:
             cadence (Cadence): The cadence of the observation before the overrides.
@@ -1505,14 +1510,38 @@ class Host:
                 "timeshift" are read; a missing key counts as None.
 
         Returns:
-            float: The midtime in seconds TDB.
+            float: The time in seconds TDB.
         """
 
-        midtime = (overrides.get('cadence') or cadence).midtime
+        time = (overrides.get('cadence') or cadence).midtime
         timeshift = overrides.get('timeshift')
-        if timeshift is not None and 'T' in str(timeshift[1]).upper():
-            midtime += timeshift[0]
-        return midtime
+        if timeshift is not None:
+            letters = str(timeshift[1]).upper()
+            time += timeshift[0] * (('T' in letters) + ('F' in letters))
+        return time
+
+    @staticmethod
+    def _index_file_path(volumes, row_dict, *, volume_column='VOLUME_ID',
+                         file_column='FILE_SPECIFICATION_NAME'):
+        """The path to the file that a row of an index lists.
+
+        The file is given relative to the root directory of its volume, and the volume by
+        its name. Leading and trailing blanks of both values are ignored.
+
+        Parameters:
+            volumes (FCPath): The directory that holds the volume directories, as
+                :meth:`~oops.host.Host._volumes_directory` gives it.
+            row_dict (dict[str, Any]): The row.
+            volume_column (str, optional): The column that gives the volume's name.
+            file_column (str, optional): The column that gives the file's path within its
+                volume.
+
+        Returns:
+            FCPath: `volumes` / the volume name / the file's path.
+        """
+
+        return (volumes / str(row_dict[volume_column]).strip()
+                / str(row_dict[file_column]).strip())
 
     @staticmethod
     def _apply_select(observations, select, names=None):

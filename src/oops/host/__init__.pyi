@@ -32,11 +32,13 @@ from oops.lightsource import LightSource
 from oops.observation import Observation
 from oops.path import Path
 
-__all__ = ['Host', 'ObsArray', 'get_fits_image_hdu', 'read_pds3_image_array',
+__all__ = ['Host', 'ObsArray', 'PDS3_NULL_TEXTS', 'get_fits_image_hdu', 'is_pds3_null',
+           'read_pds3_image_array',
            'HostError', 'HostFormatError', 'HostIndexError', 'PdsHostError',
            'UnknownHostError', 'VicarHostError', 'WrongHostError']
 
 ObsArray: TypeAlias = ndarray | tuple[Observation | None, ...]
+PDS3_NULL_TEXTS: frozenset[str]
 
 class HostError(ValueError): ...
 class UnknownHostError(HostError): ...
@@ -85,5 +87,6 @@ class Host:
 def get_fits_image_hdu(hdulist: HDUList,
     index: int | str | None = None) -> PrimaryHDU | ImageHDU: ...
 def read_pds3_image_array(label: Pds3Label, index: int | str = 0) -> ndarray: ...
+def is_pds3_null(value: Any) -> bool: ...
 
 ##########################################################################################

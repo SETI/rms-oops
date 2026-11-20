@@ -26,7 +26,9 @@ identified from that content and passed to the host as it is. Any other argument
 :class:`~oops.OopsTypeError`.
 
 The subpackage also provides :func:`~oops.host.read_pds3_image_array` and
-:func:`~oops.host.get_fits_image_hdu`, which hosts use to read image arrays, and the
+:func:`~oops.host.get_fits_image_hdu`, which hosts use to read image arrays;
+:func:`~oops.host.is_pds3_null` and :data:`~oops.host.PDS3_NULL_TEXTS`, which tell a
+placeholder such as "UNK" or "N/A" from a value; and the
 :class:`~oops.host.HostError` exceptions that report a file a host cannot read.
 
 Reading an index

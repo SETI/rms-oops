@@ -9,9 +9,10 @@ import pytest
 from filecache import FCPath
 from pdsparser import Pds3Label
 
-from oops         import OopsTypeError, OopsValueError
+from polymath     import Scalar
+from oops         import Frame, OopsTypeError, OopsValueError
 from oops.cadence import SnapCadence
-from oops.host    import Host, HostIndexError
+from oops.host    import PDS3_NULL_TEXTS, Host, HostIndexError, is_pds3_null
 
 
 class _Named(Host):
@@ -70,35 +71,96 @@ def test_a_valid_select_passes() -> None:
     assert Host._check_select((slice(None), 'ir', 0), names={'IR': 0}) is None
 
 ##########################################################################################
-# The midtime of the pointing check after the overrides
+# The time of the pointing check after the overrides
 ##########################################################################################
 
 OWN_CADENCE = SnapCadence(100., 10.)        # midtime 105
 NO_OVERRIDES: dict[str, Any] = {'cadence': None, 'timeshift': None}
 
 
-def test_without_overrides_the_midtime_is_the_cadences() -> None:
-    assert Host._override_midtime(OWN_CADENCE, NO_OVERRIDES) == 105.
+class _RecordingFrame(Frame):
+    """A frame that records each time at which it is evaluated."""
+
+    def __init__(self) -> None:
+        self.times: list[float] = []
+        self._reference = Frame.J2000
+        self._origin = None
+        self._shape = ()
+        self._register()
+
+    def transform_at_time(self, time: Any, *, quick: Any = None) -> Any:
+        self.times.append(float(Scalar.as_scalar(time).vals))
+        return Frame.J2000.transform_at_time(time)
+
+
+def test_without_overrides_the_pointing_time_is_the_midtime() -> None:
+    assert Host._pointing_time(OWN_CADENCE, NO_OVERRIDES) == 105.
 
 
 def test_a_cadence_override_gives_its_midtime() -> None:
     overrides = NO_OVERRIDES | {'cadence': SnapCadence(200., 4.)}
-    assert Host._override_midtime(OWN_CADENCE, overrides) == 202.
+    assert Host._pointing_time(OWN_CADENCE, overrides) == 202.
 
 
-@pytest.mark.parametrize('letters', ['T', 'pt'])
-def test_a_timeshift_of_the_cadence_moves_the_midtime(letters: str) -> None:
+@pytest.mark.parametrize(('letters', 'expected'),
+                         [('T', 108.), ('t', 108.), ('F', 108.), ('f', 108.),
+                          ('TF', 111.), ('FT', 111.), ('PF', 108.), ('P', 105.)])
+def test_a_timeshift_moves_the_pointing_time(letters: str, expected: float) -> None:
     overrides = NO_OVERRIDES | {'timeshift': (3., letters)}
-    assert Host._override_midtime(OWN_CADENCE, overrides) == 108.
+    assert Host._pointing_time(OWN_CADENCE, overrides) == expected
 
 
-def test_a_timeshift_of_the_frame_alone_leaves_the_midtime() -> None:
-    overrides = NO_OVERRIDES | {'timeshift': (3., 'F')}
-    assert Host._override_midtime(OWN_CADENCE, overrides) == 105.
+@pytest.mark.parametrize('letters', ['T', 'F', 'TF', 'FT', 'PF', 'P', 'tf'])
+def test_the_pointing_time_is_where_the_frame_is_evaluated(letters: str) -> None:
+    """The overrides are applied, and the frame they give is evaluated at the midtime of
+    the cadence they give, as an observation evaluates it."""
+
+    camera = _RecordingFrame()
+    params = {'cadence': OWN_CADENCE, 'frame': camera, 'path': 'SSB'}
+    Host._apply_overrides(params, None, timeshift=(3., letters))
+    params['frame'].transform_at_time(params['cadence'].midtime)
+
+    assert camera.times == [Host._pointing_time(OWN_CADENCE,
+                                                {'timeshift': (3., letters)})]
 
 
 def test_overrides_that_are_not_given_count_as_none() -> None:
-    assert Host._override_midtime(OWN_CADENCE, {}) == 105.
+    assert Host._pointing_time(OWN_CADENCE, {}) == 105.
+
+##########################################################################################
+# PDS3 placeholder text
+##########################################################################################
+
+@pytest.mark.parametrize('value', ['UNK', 'unknown', ' N/A ', 'NULL', 'Not Applicable',
+                                   '---', '', '  ', None, ['UNK', 'N/A'], ('NULL',)])
+def test_a_placeholder_is_a_pds3_null(value: Any) -> None:
+    assert is_pds3_null(value)
+
+
+@pytest.mark.parametrize('value', ['UNKN', 'JUPITER', 0, -999., [], ['UNK', 'IO'],
+                                   'N/A/B'])
+def test_a_value_is_not_a_pds3_null(value: Any) -> None:
+    assert not is_pds3_null(value)
+
+
+def test_the_placeholder_texts_are_published() -> None:
+    assert PDS3_NULL_TEXTS == frozenset({'UNK', 'UNKNOWN', 'N/A', 'NULL',
+                                         'NOT APPLICABLE', '---', ''})
+
+##########################################################################################
+# The file of an index row
+##########################################################################################
+
+def test_the_file_of_a_row_is_in_its_volume() -> None:
+    row = {'VOLUME_ID': 'COISS_2001 ', 'FILE_SPECIFICATION_NAME': ' data/N1.LBL'}
+    assert Host._index_file_path(FCPath('/h/volumes/COISS_2xxx'), row) == \
+        FCPath('/h/volumes/COISS_2xxx/COISS_2001/data/N1.LBL')
+
+
+def test_the_file_of_a_row_can_come_from_other_columns() -> None:
+    row = {'VOLUME_NAME': 'VGISS_6109', 'PATH': 'DATA/C1.IMG'}
+    assert Host._index_file_path(FCPath('/v'), row, volume_column='VOLUME_NAME',
+                                 file_column='PATH') == FCPath('/v/VGISS_6109/DATA/C1.IMG')
 
 ##########################################################################################
 # Reading an index label
