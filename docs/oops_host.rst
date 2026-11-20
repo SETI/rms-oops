@@ -159,10 +159,13 @@ File subfields
 
 Each observation gives its file in four subfields: ``filepath``, the path as given;
 ``basename``, the file name; ``image_url``, the absolute path or URL; and ``abspath``, the
-path of the file on the local disk. ``abspath`` is present only when the file is there:
-a local file that exists, or a remote file that is already in the local cache. Building
-an observation never creates a directory, so reading an index whose data files are not
-on the local disk leaves the disk unchanged.
+path of the file on the local disk. ``abspath`` is present only when the host retrieved
+the image file while building the observation, to read its array, and it is then the
+local path that the file was read from. A remote file that exists on its server has no
+local copy until it has been retrieved, and a local cache can be cleared at any time, so
+no other path is known to exist. An observation built for astrometry alone, which does
+not read the array, and an observation built from an index row have no ``abspath``.
+Reading an index never creates a directory or retrieves a data file.
 
 Pointing from SPICE
 -------------------

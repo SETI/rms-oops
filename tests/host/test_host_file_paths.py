@@ -14,10 +14,10 @@ from oops.host import Host
 URL = 'https://rms-test.invalid/volume/data/image.img'
 
 
-def _paths(filepath: Any) -> dict[str, Any]:
+def _paths(filepath: Any, **kwargs: Any) -> dict[str, Any]:
     """The parameters that Host._apply_overrides sets to name a file."""
 
-    return Host._apply_overrides({}, filepath)
+    return Host._apply_overrides({}, filepath, **kwargs)
 
 
 def _remote(tmp_path: Path) -> FCPath:
@@ -27,28 +27,21 @@ def _remote(tmp_path: Path) -> FCPath:
     return FCPath(URL, filecache=cache)
 
 
-def test_a_local_file_has_its_resolved_path_as_abspath(tmp_path: Path) -> None:
+def test_an_existing_local_file_has_no_abspath_unless_it_is_given(tmp_path: Path) -> None:
     filepath = tmp_path / 'image.img'
     filepath.write_bytes(b'')
 
-    assert _paths(FCPath(filepath))['abspath'] == filepath.resolve()
+    assert 'abspath' not in _paths(FCPath(filepath))
 
 
-def test_a_missing_local_file_has_no_abspath(tmp_path: Path) -> None:
-    assert 'abspath' not in _paths(FCPath(tmp_path / 'volume' / 'image.img'))
+def test_a_cached_remote_file_has_no_abspath_unless_it_is_given(tmp_path: Path) -> None:
+    filepath = _remote(tmp_path)
+    cast(Path, filepath.get_local_path()).write_bytes(b'')
+
+    assert 'abspath' not in _paths(filepath)
 
 
-def test_a_missing_local_file_creates_no_directory(tmp_path: Path) -> None:
-    _paths(FCPath(tmp_path / 'volume' / 'image.img'))
-
-    assert not (tmp_path / 'volume').exists()
-
-
-def test_an_uncached_remote_file_has_no_abspath(tmp_path: Path) -> None:
-    assert 'abspath' not in _paths(_remote(tmp_path))
-
-
-def test_an_uncached_remote_file_creates_no_cache_directory(tmp_path: Path) -> None:
+def test_a_remote_file_creates_no_cache_directory(tmp_path: Path) -> None:
     filepath = _remote(tmp_path)
     _paths(filepath)
 
@@ -56,12 +49,11 @@ def test_an_uncached_remote_file_creates_no_cache_directory(tmp_path: Path) -> N
     assert not local_path.parent.exists()
 
 
-def test_a_cached_remote_file_has_its_cache_path_as_abspath(tmp_path: Path) -> None:
-    filepath = _remote(tmp_path)
-    local_path = cast(Path, filepath.get_local_path())
-    local_path.write_bytes(b'')
+def test_the_abspath_given_is_set_resolved(tmp_path: Path) -> None:
+    local_path = tmp_path / 'cache' / '..' / 'image.img'
 
-    assert _paths(filepath)['abspath'] == local_path.resolve()
+    assert _paths(_remote(tmp_path), abspath=local_path)['abspath'] == \
+        (tmp_path / 'image.img').resolve()
 
 
 def test_a_remote_file_has_its_url_as_image_url(tmp_path: Path) -> None:

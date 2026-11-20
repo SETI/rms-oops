@@ -1474,27 +1474,35 @@ class Host:
                 raise OopsTypeError(f'invalid select: {select!r}')
 
     @staticmethod
-    def _apply_overrides(params, filepath, *, timeshift=None, navigation=None,
-                         tracker=None, parallel=None, **kwargs):
+    def _apply_overrides(params, filepath, *, abspath=None, timeshift=None,
+                         navigation=None, tracker=None, parallel=None, **kwargs):
         """Apply overrides to the Observation constructor's input parameters.
 
         The subclass's constructor should call this method to handle the standard override
         parameters. Other input parameters are ignored.
 
         It also puts the file's path subfields in `params`. For a pathlib.Path or FCPath,
-        `filepath` is the path as given, `basename` is its file name, `image_url` is its
-        absolute form, and `abspath` is the local path of the file, resolved, if the file
-        is on the local file system or is already in the local cache of a remote file;
-        otherwise `abspath` is left out. The local path is only looked up, so the file
-        system is left as it is. For a string, which is taken to be a path as an index row
-        gives it, `filepath` and `basename` alone are set. For None, the path subfields
-        are left out.
+        `filepath` is the path as given, `basename` is its file name, and `image_url` is
+        its absolute form. For a string, which is taken to be a path as an index row gives
+        it, `filepath` and `basename` alone are set. For None, those subfields are left
+        out. The file system is not consulted, so nothing is created or retrieved.
+
+        `abspath` is set only from the `abspath` argument. A remote file that exists on
+        its server has no local path until it has been retrieved, and a local cache can
+        be cleared at any time, so only a host that has retrieved the image file in this
+        call, to read its array, knows a local path that exists. Such a host passes the
+        path that :meth:`filecache.FCPath.retrieve` returned, or the path of the local
+        file that it read. A read that does not retrieve the image file, such as one for
+        astrometry only or the build of an observation from an index row, passes none,
+        and the observation then has no `abspath`.
 
         Parameters:
             params (dict): The dictionary of inputs to the Observation constructor before
                 any overrides have been applied.
             filepath (str | pathlib.Path | FCPath | None): Path to the file; None if no
                 path is known, as for content that was parsed from text.
+            abspath (str | pathlib.Path, optional): The local path of the image file, if
+                it was retrieved in this call; it is stored resolved as `abspath`.
             target (str | Body, optional): Override for the default target Body of the
                 observation. Use "NONE" for inertial pointing, indicating that no Solar
                 System body was tracked.
@@ -1538,8 +1546,7 @@ class Host:
         """
 
         # Fill in the file/URL info. A string is a path as an index row gives it, relative
-        # to a volume that cannot be found from here. The local path is found without
-        # creating its parent directories, and is given only if the file is there.
+        # to a volume that cannot be found from here.
         if filepath is not None:
             params['filepath'] = filepath
             if isinstance(filepath, str):
@@ -1547,10 +1554,9 @@ class Host:
             else:
                 fcpath = FCPath(filepath)
                 params['basename'] = fcpath.name
-                local_path = fcpath.get_local_path(create_parents=False)
-                if local_path.exists():
-                    params['abspath'] = local_path.resolve()
                 params['image_url'] = fcpath.absolute().as_posix()
+        if abspath is not None:
+            params['abspath'] = pathlib.Path(abspath).resolve()
 
         # Override certain standard attributes
         for key in ('target', 'lightsource', 'path', 'frame', 'cadence', 'fov',
