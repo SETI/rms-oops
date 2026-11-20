@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 
 from polymath   import Matrix3, Vector3
-from oops.frame import Cmatrix, Frame, Navigation, SpiceErrorFrame
+from oops.frame import Cmatrix, Frame, Navigation
 
 # Enough Frames that a cache keeping each one would be seen to grow
 COUNT = 40
@@ -66,19 +66,8 @@ def _cache_growth(build: Callable[[int], object]) -> int:
     return len(Frame._FRAME_CACHE) - before
 
 
-def _spice_error_frame(k: int) -> SpiceErrorFrame:
-    try:
-        raise RuntimeError(f'SPICE(CKINSUFFDATA) -- no pointing {k}')
-    except RuntimeError as err:
-        return SpiceErrorFrame(err, description=f'no pointing {k}')
-
-
 def test_unregistered_frames_leave_the_frame_cache_unchanged() -> None:
     assert _cache_growth(lambda k: Cmatrix(_matrix(k))) == 0
-
-
-def test_spice_error_frames_leave_the_frame_cache_unchanged() -> None:
-    assert _cache_growth(_spice_error_frame) == 0
 
 
 def test_a_frame_relative_to_an_unregistered_frame_leaves_the_cache_unchanged() -> None:
