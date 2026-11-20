@@ -7,9 +7,12 @@ from typing import Any
 
 import numpy as np
 import pytest
+from astropy.io import fits
+from pdsparser import Pds3Label
 from vicar import VicarImage
 
-from oops.host import Host, PdsHostError
+from oops      import OopsTypeError
+from oops.host import Host, PdsHostError, UnknownHostError
 
 # The fast parser cannot read a quoted value that starts on the line after its "=" and
 # continues onto another line; the strict parser can
@@ -146,5 +149,33 @@ def test_a_vicar_file_is_identified_without_reading_its_array(
     monkeypatch.setattr(VicarImage, 'from_file', no_array_read)
 
     assert Host.from_file(filepath) == 'observation'
+
+
+@pytest.mark.usefixtures('hosts')
+@pytest.mark.parametrize('kind', ['pds3', 'vicar'])
+def test_parsed_content_is_handed_to_the_host_that_recognizes_it(tmp_path: Path,
+                                                                 kind: str) -> None:
+    if kind == 'pds3':
+        content: Any = Pds3Label(_label(tmp_path, 'PDS_VERSION_ID = PDS3\nEND\n'))
+    else:
+        content = VicarImage.from_array(np.zeros((2, 2), dtype=np.uint8))
+
+    Host.from_file(content)
+
+    assert _FileHost.calls[0][0] is content
+
+
+@pytest.mark.usefixtures('hosts')
+def test_parsed_content_that_no_host_recognizes_raises() -> None:
+    hdulist = fits.HDUList([fits.PrimaryHDU()])
+
+    with pytest.raises(UnknownHostError, match='unrecognized host in parsed FITS file'):
+        Host.from_file(hdulist)
+
+
+@pytest.mark.usefixtures('hosts')
+def test_an_argument_that_is_neither_a_path_nor_parsed_content_raises() -> None:
+    with pytest.raises(OopsTypeError, match='needs a path .* not int'):
+        Host.from_file(17)
 
 ##########################################################################################

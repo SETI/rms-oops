@@ -117,12 +117,16 @@ class Host:
         and "loose". If none of them can parse it, each registered host is asked whether
         it recognizes the file by its path, as for a file that is not in a standard
         format. A VICAR file is identified from its header alone, without reading its
-        array. Besides the exceptions listed here, the call raises any that the host's
-        ``from_file`` documents.
+        array. Content that has already been parsed, a :class:`~pdsparser.Pds3Label`, a
+        :class:`~vicar.VicarLabel` or :class:`~vicar.VicarImage`, or an
+        :class:`~astropy.io.fits.HDUList`, is identified from that content and handed to
+        the host as it is. Besides the exceptions listed here, the call raises any that
+        the host's ``from_file`` documents.
 
         Parameters:
-            filepath (str | pathlib.Path | FCPath): The path to the data file or its
-                detached label in PDS3 or PDS4 format.
+            filepath (str | pathlib.Path | FCPath | Pds3Label | VicarLabel | VicarImage |
+                HDUList): The path to the data file or its detached label in PDS3 or PDS4
+                format, or its parsed content.
             pds3_options (dict[str, Any], optional): Any keyword arguments and their
                 values to be passed to the :class:`~pdsparser.Pds3Label` parser.
             select (int | slice | str | tuple[int | slice | str, ...]): An index, slice,
@@ -186,13 +190,18 @@ class Host:
             OSError: If `filepath` does not exist or cannot be read.
             UnknownHostError: If `filepath` is not associated with any registered Host
                 subclass.
+            OopsTypeError: If `filepath` is neither a path nor one of the parsed forms
+                listed above.
             OopsValueError: If a value in `pds3_options` is invalid.
             OopsSpiceError: If the observation's pointing comes from SPICE and the SPICE
                 kernels cannot supply it at the time of the observation. Never raised when
                 `frame` is given or when the pointing does not come from SPICE.
         """
 
-        host = Host._identify_host(filepath, pds3_options=pds3_options)
+        if isinstance(filepath, (str, pathlib.Path, FCPath)):
+            host = Host._identify_host(filepath, pds3_options=pds3_options)
+        else:
+            host = Host._identify_parsed(filepath)
         return host.from_file(filepath, pds3_options=pds3_options, select=select,
                               astrometry=astrometry, target=target,
                               lightsource=lightsource, path=path,
@@ -503,6 +512,38 @@ class Host:
         if isinstance(parsed, pyfits.HDUList):
             parsed.close()
         return host
+
+    @staticmethod
+    def _identify_parsed(content):
+        """Identify the host module associated with the parsed content of a file.
+
+        Parameters:
+            content (Pds3Label | VicarLabel | VicarImage | HDUList): The parsed content.
+
+        Returns:
+            type: The Host subclass whose detector recognizes `content`.
+
+        Raises:
+            OopsTypeError: If `content` is not one of the parsed forms listed above.
+            UnknownHostError: If no registered Host subclass recognizes `content`.
+        """
+
+        if isinstance(content, Pds3Label):
+            (kind, detector) = ('PDS3 label', '_detect_in_pds3')
+        elif isinstance(content, (VicarLabel, VicarImage)):
+            (kind, detector) = ('VICAR file', '_detect_in_vicar')
+        elif isinstance(content, pyfits.HDUList):
+            (kind, detector) = ('FITS file', '_detect_in_fits')
+        else:
+            raise OopsTypeError(f'Host.from_file needs a path (str, pathlib.Path, or '
+                                f'FCPath) or the parsed content of a file (Pds3Label, '
+                                f'VicarLabel, VicarImage, or HDUList), not '
+                                f'{type(content).__name__}')
+
+        for host in Host._HOSTS:
+            if getattr(host, detector)(content):
+                return host
+        raise UnknownHostError(f'unrecognized host in parsed {kind}')
 
     @classmethod
     def _read_fileinfo(cls, fileinfo, *, formats, astrometry=False, pds3_options=None):

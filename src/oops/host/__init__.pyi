@@ -22,7 +22,7 @@ from astropy.io.fits import HDUList, ImageHDU, PrimaryHDU
 from filecache import FCPath
 from numpy import ndarray
 from pdsparser import Pds3Label, PdsError
-from vicar import VicarError
+from vicar import VicarError, VicarImage, VicarLabel
 from oops import Body
 from oops.cadence import Cadence
 from oops.calibration import Calibration
@@ -52,7 +52,8 @@ class Host:
     METADATA_INDEX_EXAMPLE: str | None
     SUPPLEMENT: object
     @staticmethod
-    def from_file(filepath: str | pathlib.Path | FCPath, *,
+    def from_file(filepath: str | pathlib.Path | FCPath | Pds3Label | VicarLabel
+        | VicarImage | HDUList, *,
         pds3_options: dict[str, Any] | None = None,
         select: int | slice | str | tuple[int | slice | str, ...] | None = None,
         astrometry: bool = False, target: str | Body | None = None,
