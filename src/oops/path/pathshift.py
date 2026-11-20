@@ -2,6 +2,7 @@
 # oops/path/pathshift.py
 ##########################################################################################
 
+import weakref
 from typing import TYPE_CHECKING
 
 from polymath        import Scalar
@@ -17,7 +18,7 @@ if TYPE_CHECKING:                       # annotations only; not needed at run ti
 class PathShift(Path, Fittable):
     """A Path subclass defined by a time shift along another Path."""
 
-    _WAYPOINTS = {}
+    _WAYPOINTS = weakref.WeakValueDictionary()
 
     def __init__(self, arg, /, path, *, path_id=None, freeze=False):
         """Constructor for a PathShift.

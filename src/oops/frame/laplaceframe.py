@@ -2,6 +2,8 @@
 # oops/frame/laplaceframe.py
 ##########################################################################################
 
+import weakref
+
 from polymath       import Matrix3, Qube, Scalar, Vector3
 from oops._cache    import _Cache
 from oops.frame     import Frame
@@ -22,7 +24,7 @@ class LaplaceFrame(Frame):
     descending node for the orbits of the inner moons.
     """
 
-    _WAYFRAMES = {}
+    _WAYFRAMES = weakref.WeakValueDictionary()
     _USE_QUICKFRAMES = True     # always a slowly-changing frame
 
     def __init__(self, orbit, tilt=0., *, frame_id=None, cache_size=100):

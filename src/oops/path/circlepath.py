@@ -2,6 +2,8 @@
 # oops/path/circlepath.py
 ##########################################################################################
 
+import weakref
+
 from polymath          import Qube, Scalar, Vector3
 from oops.event        import Event
 from oops.frame.frame_ import Frame
@@ -14,7 +16,7 @@ class CirclePath(Path):
     The orientation of the circle is defined by the *z*-axis of the given Frame.
     """
 
-    _WAYPOINTS = {}
+    _WAYPOINTS = weakref.WeakValueDictionary()
 
     def __init__(self, radius, lon, rate, epoch, origin, *, frame=None, path_id=None):
         """Constructor for a CirclePath.

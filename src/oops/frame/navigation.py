@@ -2,6 +2,8 @@
 # oops/frame/navigation.py
 ##########################################################################################
 
+import weakref
+
 import numpy as np
 
 from polymath         import Matrix3, Vector3
@@ -17,7 +19,7 @@ class Navigation(Frame, Fittable):
     The offset is defined by two or three rotation angles.
     """
 
-    _WAYFRAMES = {}
+    _WAYFRAMES = weakref.WeakValueDictionary()
 
     def __init__(self, arg, /, reference, *, freeze=False, frame_id=None, _matrix=None):
         """Constructor for a Navigation.
