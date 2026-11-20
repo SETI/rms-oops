@@ -121,8 +121,8 @@ earlier row has been yielded:
 - :class:`~oops.host.HostIndexError` for a table file that holds fewer rows than its
   label says, after every row that the file holds has been yielded.
 - :class:`~oops.host.HostIndexError` for a row that is longer than the label's row
-  length. The rows are read ten at a time, so the error is raised when the iteration
-  reaches the first row of those ten, and the rows read with the long one are not
+  length. The rows are read 100 at a time, so the error is raised when the iteration
+  reaches the first row of those 100, and the rows read with the long one are not
   yielded.
 - :class:`~oops.host.HostIndexError` for a pair of rows that describe different files, a
   pair that fails the host's check, or an index row for which the supplement lacks a row.

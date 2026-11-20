@@ -286,10 +286,10 @@ def test_the_call_reads_no_table_data(tmp_path: Path) -> None:
 def test_the_chunks_before_a_malformed_row_are_yielded(tmp_path: Path) -> None:
     """The first row of the second chunk is malformed."""
 
-    names = [f'R{i:02d}' for i in range(_index_rows.CHUNK_ROWS + 1)]
+    names = [f'R{i:04d}' for i in range(_index_rows.CHUNK_ROWS + 1)]
     label = write_table(tmp_path, 'vol_index', {'NAME': names})
     table = tmp_path / 'vol_index.tab'
-    table.write_bytes(table.read_bytes().replace(names[-1].encode(), b'XXXX'))
+    table.write_bytes(table.read_bytes().replace(names[-1].encode(), b'XXXXXX'))
     rows = _ByPosition._index_rows(label, supplement=None)
 
     assert [next(rows)['NAME'] for _ in names[:-1]] == names[:-1]

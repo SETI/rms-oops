@@ -321,7 +321,7 @@ class Host:
                 table that can be read, as when it lacks the object that its table pointer
                 refers to. Also raised during the iteration, at the row where the two tables
                 cannot be paired, where a table file ends before its label says, or at the
-                first of the ten rows read with a row longer than the label's row length,
+                first of the 100 rows read with a row longer than the label's row length,
                 as listed for the support method ``_index_rows``. A value that cannot be
                 read as its column's number is not an error of the table; see
                 ``_index_rows``.
@@ -1052,7 +1052,7 @@ class Host:
         the index label cannot tell whether the index belongs to this host, the first row
         is read for that, and only that row.
 
-        The iteration then reads the index ten rows at a time. How each index row is
+        The iteration then reads the index 100 rows at a time. How each index row is
         paired with its supplement row is fixed by the host's
         :attr:`~oops.host.Host.MERGE_SUPPLEMENT_BY_FILE`:
 
@@ -1150,7 +1150,7 @@ class Host:
                 repeats the file of a row that is still held (pairing by file); a pair of
                 rows that fails `validate`; the end of a table file that holds fewer rows
                 than its label says, after every row it holds; a row longer than the
-                label's row length, raised at the first of the ten rows read with it, none
+                label's row length, raised at the first of the 100 rows read with it, none
                 of which is yielded. After the last index
                 row: a supplement row that was not paired with an index row, or a table
                 file that holds more rows than its label says. With pairing by file, a

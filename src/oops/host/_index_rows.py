@@ -21,9 +21,10 @@ from ._errors import HostIndexError, PdsHostError
 # The number of rows that PdsTable reads and parses at a time. Pairing the 464,752 rows of
 # COVIMS_0999 with its supplement took 26.8 s at 1,000 rows, 30.2 s at 100, 43.2 s at 20,
 # and 59.7 s at 10; reading the index alone one row at a time took 198 s. A host takes
-# about 1.5 ms to build an observation from a row, so 10 rows adds about 5% to that, and
-# a row longer than the label says holds back at most the 9 rows read with it.
-CHUNK_ROWS = 10
+# about 1.5 ms to build an observation from a row, so 100 rows instead of 1,000 adds about
+# 0.5% to the time of a pass, and a row longer than the label says holds back at most the
+# 99 rows read with it.
+CHUNK_ROWS = 100
 
 # The number of paths that an error message about unused supplement rows lists
 _PATHS_IN_MESSAGE = 3
