@@ -162,24 +162,6 @@ def key_columns(*keys):
     return names
 
 
-def check_key_columns(key, names, kind, filepath):
-    """Raise HostIndexError if a table lacks a column of its file key.
-
-    Parameters:
-        key (str | tuple[str, ...] | collections.abc.Callable): The file key.
-        names (set[str]): The keys of the table's row dictionaries.
-        kind (str): "index" or "supplement", for the message.
-        filepath (FCPath): The path to the table's label, for the message.
-
-    Raises:
-        HostIndexError: If the table lacks a column that `key` lists.
-    """
-
-    for name in sorted(key_columns(key)):
-        if name not in names:
-            raise HostIndexError(f'the {kind} lacks the column {name}: {filepath}')
-
-
 def row_path(row, key):
     """The path of the file that a row gives, as the table writes it.
 

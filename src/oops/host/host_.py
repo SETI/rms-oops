@@ -1242,9 +1242,13 @@ class Host:
                                      f'are paired by file, but the tables lack '
                                      f'FILE_SPECIFICATION_NAME: {files}')
         else:
-            _index_rows.check_key_columns(file_key, index_names, 'index', filepath)
-            _index_rows.check_key_columns(supplement_key, supp_names, 'supplement',
-                                          supplement_path)
+            for (kind, key, names, path) in (('index', file_key, index_names, filepath),
+                                             ('supplement', supplement_key, supp_names,
+                                              supplement_path)):
+                for name in sorted(_index_rows.key_columns(key)):
+                    if name not in names:
+                        raise HostIndexError(f'the {kind} lacks the column {name}: '
+                                             f'{path}')
 
         # By default, the columns of the file keys are left out of the check, because the
         # pairing compares them already, as paths, and the two tables may give the same
