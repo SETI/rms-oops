@@ -9,7 +9,9 @@ from filecache import FCPath, FileCache
 
 from oops.host import Host
 
-URL = 'gs://bucket/volume/data/image.img'
+# A URL that nothing can retrieve and that needs no cloud credentials, so that the tests
+# depend on neither the network nor the account of the machine that runs them
+URL = 'https://rms-test.invalid/volume/data/image.img'
 
 
 def _paths(filepath: Any) -> dict[str, Any]:
