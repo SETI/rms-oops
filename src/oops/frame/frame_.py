@@ -7,7 +7,7 @@ import re
 from typing import TYPE_CHECKING
 
 from polymath         import Matrix3, Qube, Scalar, Vector3
-from oops._cache      import _Cache, _cache_for
+from oops._cache      import _Cache
 from oops._exceptions import OopsValueError
 from oops.config      import PICKLE_CONFIG
 from oops.mutable     import Mutable
@@ -362,29 +362,6 @@ class Frame(Mutable):
     _FRAME_CACHE = {}       # wayframe or (wayframe, reference) -> linked "wrt" frame
     _FRAME_SUBCLASSES = []  # list of all subclasses of Frame
 
-    # A wayframe created without an ID replaces this with a dictionary of its own, which
-    # holds the cache entries whose keys include it in place of _FRAME_CACHE; see
-    # _cache_for(). The entries are then freed with the Frame, so a stream of unregistered
-    # Frames leaves the process-wide caches as they were. Each subclass's pool of
-    # wayframes (_WAYFRAMES) is a WeakValueDictionary for the same reason: it gives an
-    # existing Frame for an identical definition only while that Frame is in use.
-    _local_cache = None
-
-    @staticmethod
-    def _cache_for(key):
-        """The dictionary that holds the entry for a key of the Frame cache.
-
-        Parameters:
-            key (Frame | tuple[Frame, Frame]): A wayframe, or a wayframe and a reference
-                wayframe.
-
-        Returns:
-            dict: The dictionary of the first wayframe in `key` that was created without
-            an ID; otherwise, the process-wide `_FRAME_CACHE`.
-        """
-
-        return _cache_for(key, Frame._FRAME_CACHE)
-
     @staticmethod
     def _reset_caches() -> None:
         """Reset the caches to their initial states. Mainly useful for debugging."""
@@ -454,19 +431,13 @@ class Frame(Mutable):
         else:
             self._frame_id = None
 
-            # A new wayframe that has no ID keeps its cache entries itself
-            if self._wayframe is self:
-                self._local_cache = {}
-
         # Update the Frame cache
         self._reference = self._reference._wayframe     # make sure this is a wayframe
-        cache = Frame._cache_for(self._wayframe)
-        if self._wayframe in cache:
-            self._wrt_j2000 = cache[self._wayframe]._wrt_j2000
+        if self._wayframe in Frame._FRAME_CACHE:
+            self._wrt_j2000 = Frame._FRAME_CACHE[self._wayframe]._wrt_j2000
         else:
-            cache[self._wayframe] = self
-            key = (self._wayframe, self._reference)
-            Frame._cache_for(key)[key] = self
+            Frame._FRAME_CACHE[self._wayframe] = self
+            Frame._FRAME_CACHE[self._wayframe, self._reference] = self
 
             # Follow this frame's ancestry and cache a LinkedFrame at each step
             frame = self
@@ -490,10 +461,8 @@ class Frame(Mutable):
         if not hasattr(type(self), '_WAYFRAMES'):
             return
 
-        # Remove the definition from the cache under the old key. A single get() reads the
-        # pool, because the garbage collector can free an entry between a test for the
-        # key and a read of it.
-        if self._WAYFRAMES.get(self._key) is self:
+        # Remove the definition from the cache under the old key
+        if self._key in self._WAYFRAMES and self._WAYFRAMES[self._key] is self:
             del self._WAYFRAMES[self._key]
 
         # Add the definition to the cache under the new key
@@ -603,22 +572,20 @@ class Frame(Mutable):
 
         # If this Frame was already cached, return it
         key = (wayframe, reference._wayframe)
-        cache = Frame._cache_for(key)
-        if key in cache:
-            return cache[key]
+        if key in Frame._FRAME_CACHE:
+            return Frame._FRAME_CACHE[key]
 
         # See if there's a shortcut
         if use_shortcuts and Frame._USE_SHORTCUTS and hasattr(self, '_get_shortcut'):
             shortcut = self._get_shortcut(reference)
             if shortcut:
-                cache[key] = shortcut
+                Frame._FRAME_CACHE[key] = shortcut
                 return shortcut
 
         # Check for a reversal
         reversed_key = (reference._wayframe, wayframe)
-        reversed_cache = Frame._cache_for(reversed_key)
-        if reversed_key in reversed_cache:
-            return ReversedFrame(reversed_cache[reversed_key])
+        if reversed_key in Frame._FRAME_CACHE:
+            return ReversedFrame(Frame._FRAME_CACHE[reversed_key])
 
         # Check for a null transform
         if wayframe is reference:
@@ -725,9 +692,8 @@ class NullFrame(Frame):
         self._is_inertial = frame.is_inertial
 
         key = (self._wayframe, self._wayframe)
-        cache = Frame._cache_for(key)
-        if key not in cache:
-            cache[key] = self
+        if key not in Frame._FRAME_CACHE:
+            Frame._FRAME_CACHE[key] = self
 
     def __str__(self):
         return f'NullFrame({self.string_id})'
@@ -902,9 +868,8 @@ class LinkedFrame(Frame):
         self._wrt_j2000 = None
 
         key = (self._wayframe, self._reference)
-        cache = Frame._cache_for(key)
-        if key not in cache:
-            cache[key] = self
+        if key not in Frame._FRAME_CACHE:
+            Frame._FRAME_CACHE[key] = self
 
     def __getstate__(self):
         return (self._frame, self._parent)
@@ -1001,9 +966,8 @@ class ReversedFrame(Frame):
         self._frame_id  = frame._reference._frame_id
 
         key = (self._wayframe, self._reference)
-        cache = Frame._cache_for(key)
-        if key not in cache:
-            cache[key] = self
+        if key not in Frame._FRAME_CACHE:
+            Frame._FRAME_CACHE[key] = self
 
     def __getstate__(self):
         return (self._frame,)

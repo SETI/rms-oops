@@ -5,7 +5,7 @@
 import re
 
 from polymath              import Qube, Vector3
-from oops._cache           import _Cache, _cache_for
+from oops._cache           import _Cache
 from oops._exceptions      import OopsValueError
 from oops.config           import PICKLE_CONFIG
 from oops.event            import Event
@@ -300,31 +300,6 @@ class Path(Mutable):
                             #       -> linked "wrt" path
     _PATH_SUBCLASSES = []   # list of all subclasses of Path
 
-    # A waypoint created without an ID replaces this with a dictionary of its own, which
-    # holds the cache entries whose keys include it in place of _PATH_CACHE; see
-    # _cache_for(). The entries are then freed with the Path, so a stream of unregistered
-    # Paths leaves the process-wide caches as they were. A key that includes a wayframe
-    # created without an ID is kept in that Frame's dictionary in the same way. Each
-    # subclass's pool of waypoints (_WAYPOINTS) is a WeakValueDictionary for the same
-    # reason: it gives an existing Path for an identical definition only while that Path
-    # is in use.
-    _local_cache = None
-
-    @staticmethod
-    def _cache_for(key):
-        """The dictionary that holds the entry for a key of the Path cache.
-
-        Parameters:
-            key (Path | tuple[Path, Path] | tuple[Path, Path, Frame]): A waypoint; a
-                waypoint and an origin waypoint; or these and a wayframe.
-
-        Returns:
-            dict: The dictionary of the first waypoint or wayframe in `key` that was
-            created without an ID; otherwise, the process-wide `_PATH_CACHE`.
-        """
-
-        return _cache_for(key, Path._PATH_CACHE)
-
     @staticmethod
     def _reset_caches():
         """Reset the caches to their initial states. Mainly useful for debugging."""
@@ -391,21 +366,15 @@ class Path(Mutable):
         else:
             self._path_id = None
 
-            # A new waypoint that has no ID keeps its cache entries itself
-            if self._waypoint is self:
-                self._local_cache = {}
-
         # Update the Path cache
         self._origin = self._origin._waypoint       # make sure it's a waypoint
         self._frame = self._frame._wayframe
-        cache = Path._cache_for(self._waypoint)
-        if self._waypoint in cache:
-            self._wrt_ssb = cache[self._waypoint].wrt_ssb
+        if self._waypoint in Path._PATH_CACHE:
+            self._wrt_ssb = Path._PATH_CACHE[self._waypoint].wrt_ssb
         else:
-            for key in (self._waypoint,
-                        (self._waypoint, self._origin),
-                        (self._waypoint, self._origin, self._frame)):
-                Path._cache_for(key)[key] = self
+            Path._PATH_CACHE[self._waypoint] = self
+            Path._PATH_CACHE[self._waypoint, self._origin] = self
+            Path._PATH_CACHE[self._waypoint, self._origin, self._frame] = self
 
             # Follow this path's ancestry and register a LinkedPath at each step
             path = self
@@ -429,10 +398,8 @@ class Path(Mutable):
         if not hasattr(type(self), '_WAYPOINTS'):
             return
 
-        # Remove the definition from the cache under the old key. A single get() reads the
-        # pool, because the garbage collector can free an entry between a test for the
-        # key and a read of it.
-        if self._WAYPOINTS.get(self._key) is self:
+        # Remove the definition from the cache under the old key
+        if self._key in self._WAYPOINTS and self._WAYPOINTS[self._key] is self:
             del self._WAYPOINTS[self._key]
 
         # Add the definition to the cache under the new key
@@ -638,24 +605,22 @@ class Path(Mutable):
 
         # If this Path was already cached, return it
         key = (waypoint, origin, frame)
-        cache = Path._cache_for(key)
-        if key in cache:
-            return cache[key]
+        if key in Path._PATH_CACHE:
+            return Path._PATH_CACHE[key]
 
         # See if there's a shortcut
         if use_shortcuts and Path._USE_SHORTCUTS:
             shortcut = self._get_shortcut(origin, frame)
             if shortcut:
-                cache[key] = shortcut
+                Path._PATH_CACHE[key] = shortcut
                 return shortcut
 
         # Check for a reversal. Without this, linking a Path to one of its own descendants
         # would recurse forever, because the loop below only ever walks this Path's
         # ancestry and the ancestry of a root such as the SSB never advances.
         reversed_key = (origin, waypoint)
-        reversed_cache = Path._cache_for(reversed_key)
-        if reversed_key in reversed_cache:
-            new_path = ReversedPath(reversed_cache[reversed_key])
+        if reversed_key in Path._PATH_CACHE:
+            new_path = ReversedPath(Path._PATH_CACHE[reversed_key])
             if new_path._frame == frame:
                 return new_path
             return RotatedPath(new_path, frame)
@@ -669,9 +634,8 @@ class Path(Mutable):
 
         # Find the linked Path using the J2000 frame
         key = (waypoint, origin._waypoint, Frame.J2000)
-        cache = Path._cache_for(key)
-        if key in cache:
-            new_path = cache[key]
+        if key in Path._PATH_CACHE:
+            new_path = Path._PATH_CACHE[key]
         else:
             # Otherwise, link through this Path's origin
             origin_path = self._origin._wrt(origin, Frame.J2000,
@@ -787,9 +751,8 @@ class NullPath(Path):
         self._primary  = self
 
         key = (self._waypoint, self._waypoint, self._frame)
-        cache = Path._cache_for(key)
-        if key not in cache:
-            cache[key] = self
+        if key not in Path._PATH_CACHE:
+            Path._PATH_CACHE[key] = self
 
     def __str__(self):
         return f'NullPath({self.string_id})'
@@ -959,9 +922,8 @@ class LinkedPath(Path):
 
         for key in [(self._waypoint, self._origin),
                     (self._waypoint, self._origin, self._frame)]:
-            cache = Path._cache_for(key)
-            if key not in cache:
-                cache[key] = self
+            if key not in Path._PATH_CACHE:
+                Path._PATH_CACHE[key] = self
 
     def __getstate__(self):
         return (self._path, self._parent)
@@ -1044,9 +1006,8 @@ class RelativePath(Path):
 
         for key in [(self._waypoint, self._origin),
                     (self._waypoint, self._origin, self._frame)]:
-            cache = Path._cache_for(key)
-            if key not in cache:
-                cache[key] = self
+            if key not in Path._PATH_CACHE:
+                Path._PATH_CACHE[key] = self
 
     def __getstate__(self):
         return (self._path, self._new_origin)
@@ -1107,9 +1068,8 @@ class ReversedPath(Path):
         self._wrt_ssb  = None
 
         key = (self._waypoint, self._origin, self._frame)
-        cache = Path._cache_for(key)
-        if key not in cache:
-            cache[key] = self
+        if key not in Path._PATH_CACHE:
+            Path._PATH_CACHE[key] = self
 
     def __getstate__(self):
         return (self._path,)
@@ -1175,9 +1135,8 @@ class RotatedPath(Path):
 
         for key in [(self._waypoint, self._origin),
                     (self._waypoint, self._origin, self._frame)]:
-            cache = Path._cache_for(key)
-            if key not in cache:
-                cache[key] = self
+            if key not in Path._PATH_CACHE:
+                Path._PATH_CACHE[key] = self
 
     def __getstate__(self):
         return (self._path, self._rotation)

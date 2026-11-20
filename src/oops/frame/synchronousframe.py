@@ -2,8 +2,6 @@
 # oops/frame/synchronousframe.py
 ##########################################################################################
 
-import weakref
-
 from polymath         import Matrix3
 from oops._exceptions import OopsValueError
 from oops.frame       import Frame
@@ -20,7 +18,7 @@ class SynchronousFrame(Frame):
     (incorrectly) rotate at a slightly non-uniform rate if the orbit has eccentricity.
     """
 
-    _WAYFRAMES = weakref.WeakValueDictionary()
+    _WAYFRAMES = {}
 
     def __init__(self, orbit_path, planet_path=None, *, frame_id=None):
         """Constructor for a SynchronousFrame.

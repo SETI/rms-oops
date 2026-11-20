@@ -2,8 +2,6 @@
 # oops/frame/ringframe.py
 ##########################################################################################
 
-import weakref
-
 from polymath       import Matrix3, Qube, Scalar, Vector3
 from oops._cache    import _Cache
 from oops.frame     import Frame
@@ -17,7 +15,7 @@ class RingFrame(Frame):
     frame.
     """
 
-    _WAYFRAMES = weakref.WeakValueDictionary()
+    _WAYFRAMES = {}
 
     def __init__(self, frame, epoch=None, *, aries=False, retrograde=False, frame_id=None,
                  cache_size=100):

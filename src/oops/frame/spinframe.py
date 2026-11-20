@@ -2,8 +2,6 @@
 # oops/frame/spinframe.py
 ##########################################################################################
 
-import weakref
-
 import numpy as np
 
 from polymath       import Matrix3, Qube, Scalar, Vector3
@@ -18,7 +16,7 @@ class SpinFrame(Frame):
     therefore be used as a component of another Frame.
     """
 
-    _WAYFRAMES = weakref.WeakValueDictionary()
+    _WAYFRAMES = {}
     # _USE_QUICKFRAMES is False because rotation might be rapid and the calculation is
     # already fairly quick.
 

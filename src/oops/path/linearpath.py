@@ -2,8 +2,6 @@
 # oops/path/linearpath.py
 ##########################################################################################
 
-import weakref
-
 from polymath          import Qube, Scalar, Vector3
 from oops.event        import Event
 from oops.frame.frame_ import Frame
@@ -13,7 +11,7 @@ from oops.path.path_   import Path
 class LinearPath(Path):
     """A Path subclass describing linear motion relative to another Path and Frame."""
 
-    _WAYPOINTS = weakref.WeakValueDictionary()
+    _WAYPOINTS = {}
 
     def __init__(self, pos, epoch, origin, *, frame=None, path_id=None):
         """Constructor for a LinearPath.

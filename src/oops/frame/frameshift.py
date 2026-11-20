@@ -2,7 +2,6 @@
 # oops/frame/frameshift.py
 ##########################################################################################
 
-import weakref
 from typing import TYPE_CHECKING
 
 from polymath      import Scalar
@@ -18,7 +17,7 @@ if TYPE_CHECKING:                       # `oops.cadence`, `oops.path` import thi
 class FrameShift(Frame, Fittable):
     """A Frame subclass defined by a time shift of another Frame."""
 
-    _WAYFRAMES = weakref.WeakValueDictionary()
+    _WAYFRAMES = {}
 
     def __init__(self, arg, /, frame, *, frame_id=None, freeze=False):
         """Constructor for a FrameShift.

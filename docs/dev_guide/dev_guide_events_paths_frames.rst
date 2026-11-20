@@ -93,21 +93,13 @@ A subclass constructor must set ``_origin`` (a waypoint), ``_frame`` (a wayframe
 gives the path its ``path_id``, files it in ``Path._PATH_REGISTRY`` and its *waypoint*,
 the canonical registered instance that events and surfaces refer to. A class that wants
 instances with the same parameters to share one waypoint declares a class-level
-``_WAYPOINTS = weakref.WeakValueDictionary()`` and implements ``_waypoint_key``; a class
-without one makes every instance its own waypoint. The dictionary holds each waypoint
-only while something else refers to it, so a new path takes an existing waypoint only
-while that waypoint is in use. A duplicate ID gets a numeric suffix. The static methods
-``as_path``, ``as_primary_path`` and ``as_waypoint`` accept a path or an ID and raise
-``KeyError`` for an ID that is not registered.
+``_WAYPOINTS = {}`` dictionary and implements ``_waypoint_key``; a class without one
+makes every instance its own waypoint. A duplicate ID gets a numeric suffix. The static
+methods ``as_path``, ``as_primary_path`` and ``as_waypoint`` accept a path or an ID and
+raise ``KeyError`` for an ID that is not registered.
 
 ``Path._PATH_CACHE`` holds the linked paths that ``wrt`` derives, so that repeated
-requests for the same origin and frame pair share one object. It holds only the entries
-whose keys are made of registered waypoints and wayframes. A waypoint or wayframe created
-without an ID keeps the entries that involve it in its own dictionary, ``_local_cache``,
-and ``Path._cache_for(key)`` returns the dictionary that holds a key. Those entries are
-freed with the path or frame, so building one observation after another, each with its
-own unregistered camera frame, leaves the process-wide caches the same size.
-``Path._reset_caches()``
+requests for the same origin and frame pair share one object. ``Path._reset_caches()``
 clears the registry and the cache and re-seeds them with ``Path.SSB``. Subclasses append
 themselves to ``Path._PATH_SUBCLASSES`` so that the reset can clear each class's own
 waypoint dictionary. A class whose events vary with time and are expensive sets
@@ -140,11 +132,9 @@ interpolated across. ``node_at_time`` is optional as well.
 
 The registration machinery mirrors the path's: the constructor sets ``_reference``,
 ``_origin`` and ``_shape``, then calls ``_register(frame_id)`` and ``refresh()``; a class
-sharing *wayframes* declares ``_WAYFRAMES = weakref.WeakValueDictionary()`` and
-``_wayframe_key``; the class appends itself to ``Frame._FRAME_SUBCLASSES``;
-``Frame._reset_caches()`` re-seeds ``Frame.J2000``. ``Frame._FRAME_CACHE`` holds the
-entries of registered wayframes only, and ``Frame._cache_for(key)`` finds the dictionary
-of an unregistered one, as for paths. A frame whose own transform varies with time sets
+sharing *wayframes* declares ``_WAYFRAMES = {}`` and ``_wayframe_key``; the class appends
+itself to ``Frame._FRAME_SUBCLASSES``; ``Frame._reset_caches()`` re-seeds
+``Frame.J2000``. A frame whose own transform varies with time sets
 ``_USE_QUICKFRAMES = True``.
 
 The concrete frames are :class:`~oops.frame.SpiceFrame` (a C-kernel or PCK frame, always

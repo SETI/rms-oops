@@ -2,8 +2,6 @@
 # oops/frame/cmatrix.py
 ##########################################################################################
 
-import weakref
-
 import numpy as np
 
 from polymath       import Matrix3, Qube, Scalar, Vector3
@@ -20,7 +18,7 @@ class Cmatrix(Frame):
     points downward.
     """
 
-    _WAYFRAMES = weakref.WeakValueDictionary()
+    _WAYFRAMES = {}
 
     def __init__(self, cmatrix, reference=None, *, frame_id=None):
         """Constructor for a Cmatrix.

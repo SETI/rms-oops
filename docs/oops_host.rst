@@ -71,9 +71,7 @@ the corrected label.
 
 The host's own ``from_index`` then reads the index a few rows at a time as the iteration
 proceeds, and builds each row's observation when the iteration reaches it. An index of
-any size is read in this way while only a few rows are held in memory. An observation
-that the caller has finished with is freed, together with its camera frame, so the memory
-a pass over the index uses stays the same from the first row to the last.
+any size is read in this way while only a few rows are held in memory.
 
 Many indexes have a supplemental index, a second table with more columns for the same
 products, whose columns are merged into each row. How the two tables are paired is fixed

@@ -2,8 +2,6 @@
 # oops/path/multipath.py
 ##########################################################################################
 
-import weakref
-
 import numpy as np
 
 from polymath          import Qube, Scalar, Vector3
@@ -16,7 +14,7 @@ from oops.path.path_   import Path
 class MultiPath(Path):
     """A Path subclass that gathers a set of Paths into a single 1-D Path."""
 
-    _WAYPOINTS = weakref.WeakValueDictionary()
+    _WAYPOINTS = {}
 
     def __init__(self, paths, origin=None, frame=None, *, path_id=None):
         """Constructor for a MultiPath.

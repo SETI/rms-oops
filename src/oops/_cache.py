@@ -142,32 +142,4 @@ class _Cache(Oops):
                 for (_, k, _) in extras:
                     del self._dict[k]
 
-
-def _cache_for(key, shared):
-    """The dictionary that holds the entry for a key of the Frame or Path cache.
-
-    The keys of `Frame._FRAME_CACHE` and `Path._PATH_CACHE` are a wayframe or waypoint, or
-    a tuple of them. A wayframe or waypoint that was created without an ID carries a
-    dictionary of its own in its `_local_cache` attribute, and every entry whose key
-    includes it is kept there, so that the entry is freed with it. Every other entry is
-    kept in the process-wide dictionary. A stream of unregistered Frames and Paths, such
-    as the camera frames of observations built one at a time, therefore leaves the
-    process-wide dictionaries as they were.
-
-    Parameters:
-        key (Frame | Path | tuple[Frame | Path, ...]): The key of the entry.
-        shared (dict): The process-wide dictionary, `Frame._FRAME_CACHE` or
-            `Path._PATH_CACHE`.
-
-    Returns:
-        dict: The `_local_cache` of the first item of `key` that has one; otherwise,
-        `shared`.
-    """
-
-    for item in (key if isinstance(key, tuple) else (key,)):
-        if item._local_cache is not None:
-            return item._local_cache
-
-    return shared
-
 ##########################################################################################

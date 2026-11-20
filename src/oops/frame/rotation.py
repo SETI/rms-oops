@@ -2,8 +2,6 @@
 # oops/frame/rotation.py
 ##########################################################################################
 
-import weakref
-
 import numpy as np
 
 from polymath       import Matrix3, Qube, Scalar, Vector3
@@ -15,7 +13,7 @@ from oops.transform import Transform
 class Rotation(Frame, Fittable):
     """A Frame subclass describing a fixed rotation about one axis of another Frame."""
 
-    _WAYFRAMES = weakref.WeakValueDictionary()
+    _WAYFRAMES = {}
     _XYZDICT = {'X': 0, 'Y': 1, 'Z': 2, 'x': 0, 'y': 1, 'z': 2, 0: 0, 1: 1, 2: 2}
 
     def __init__(self, arg, /, axis, reference, *, freeze=False, frame_id=None):

@@ -2,8 +2,6 @@
 # oops/frame/postargframe.py
 ##########################################################################################
 
-import weakref
-
 import numpy as np
 
 from polymath       import Matrix3, Vector3
@@ -18,7 +16,7 @@ class PosTargFrame(Frame):
     this frame.
     """
 
-    _WAYFRAMES = weakref.WeakValueDictionary()
+    _WAYFRAMES = {}
 
     def __init__(self, xpos, ypos, reference, *, frame_id=None):
         """Constructor for a PosTargFrame.

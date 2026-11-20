@@ -3,7 +3,6 @@
 ##########################################################################################
 
 import numbers
-import weakref
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 
@@ -20,7 +19,7 @@ from oops.transform        import Transform
 class SpiceFrame(Frame):
     """A Frame subclass defined within the SPICE toolkit."""
 
-    _WAYFRAMES = weakref.WeakValueDictionary()  # frame_key -> wayframe
+    _WAYFRAMES = {}         # frame_key -> wayframe
     _FOR_NAME = {}          # SPICE frame name -> first defined SpiceFrame
     _FRAME_LOOKUP = {}      # (name, reference name, omega_type, omega_dt) -> SpiceFrame
 

@@ -3,7 +3,6 @@
 ##########################################################################################
 
 import numbers
-import weakref
 import numpy as np
 
 import cspyce
@@ -21,7 +20,7 @@ from oops.path.quickpath   import QuickPath
 class SpicePath(Path):
     """A Path subclass that returns information based on a SPICE SP kernel."""
 
-    _WAYPOINTS = weakref.WeakValueDictionary()
+    _WAYPOINTS = {}
     _FOR_CODE = {}              # SPICE path code -> SpicePath
     _USE_QUICKPATHS = True      # Overrides default to enable QuickPaths
 
@@ -337,9 +336,8 @@ class SpicePath(Path):
             # Use the Path we need if it is already registered
             waypoint = SpicePath._FOR_CODE[code]
             key = (waypoint, origin, frame)
-            cache = Path._cache_for(key)
-            if key in cache:
-                result = cache[key]
+            if key in Path._PATH_CACHE:
+                result = Path._PATH_CACHE[key]
             else:
                 # Otherwise, construct a new SpicePath for this code, origin, and frame
                 result = SpicePath(code, origin, frame, path_id=path_id)

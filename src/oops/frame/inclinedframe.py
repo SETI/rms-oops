@@ -2,8 +2,6 @@
 # oops/frame/inclinedframe.py
 ##########################################################################################
 
-import weakref
-
 from polymath             import Qube, Scalar
 from oops.frame           import Frame
 from oops.frame.rotation  import Rotation
@@ -19,7 +17,7 @@ class InclinedFrame(Frame):
     that Frame's equator to the ascending node, and thence along the ascending node.
     """
 
-    _WAYFRAMES = weakref.WeakValueDictionary()
+    _WAYFRAMES = {}
 
     _USE_QUICKFRAMES = True     # nodal precession is always slow
 
