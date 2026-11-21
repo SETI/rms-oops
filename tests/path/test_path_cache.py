@@ -12,7 +12,7 @@ import pytest
 
 from polymath   import Matrix3, Vector3
 from oops.frame import Cmatrix, Frame
-from oops.path  import FixedPath, LinearPath, Path, PathShift
+from oops.path  import FixedPath, LinearPath, NullPath, Path, PathShift
 
 # Enough Paths that a cache keeping each one would be seen to grow
 COUNT = 40
@@ -87,6 +87,14 @@ def test_a_path_relative_to_an_unregistered_path_leaves_the_cache_unchanged() ->
 
 def test_a_path_in_an_unregistered_frame_leaves_the_cache_unchanged() -> None:
     assert _cache_growth(lambda k: Path.SSB.wrt(Path.SSB, Cmatrix(_matrix(k)))) == 0
+
+
+def test_a_null_path_in_a_frame_sharing_a_wayframe_leaves_the_cache_unchanged() -> None:
+    # Each Frame built in the loop repeats the definition of this one and shares its
+    # wayframe, which stays in use until the test ends
+    wayframe = Cmatrix(_matrix(6000))
+    assert Cmatrix(_matrix(6000)).wayframe is wayframe
+    assert _cache_growth(lambda k: NullPath(Path.SSB, Cmatrix(_matrix(6000)))) == 0
 
 
 def test_unregistered_paths_leave_the_pool_of_waypoints_unchanged() -> None:

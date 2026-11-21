@@ -776,8 +776,10 @@ class NullPath(Path):
             KeyError: If `path` is an ID string that has not been registered.
         """
 
+        # The Frame is held by its wayframe, as every other Path holds its Frame, so that
+        # Frames sharing one definition share one cache entry
         path = Path.as_path(path)
-        frame = frame and Frame.as_frame(frame) or path._frame
+        frame = frame and Frame.as_wayframe(frame) or path._frame
 
         self._waypoint = path._waypoint
         self._origin   = path._waypoint
