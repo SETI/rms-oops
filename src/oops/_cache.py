@@ -148,11 +148,13 @@ def _cache_for(key, shared):
 
     The keys of `Frame._FRAME_CACHE` and `Path._PATH_CACHE` are a wayframe or waypoint, or
     a tuple of them. A wayframe or waypoint that was created without an ID carries a
-    dictionary of its own in its `_local_cache` attribute, and every entry whose key
-    includes it is kept there, so that the entry is freed with it. Every other entry is
-    kept in the process-wide dictionary. A stream of unregistered Frames and Paths, such
-    as the camera frames of observations built one at a time, therefore leaves the
-    process-wide dictionaries as they were.
+    dictionary of its own in its `_local_cache` attribute. An entry whose key includes one
+    or more of them is kept in the dictionary of the first of them in the key, its owner,
+    so that the entry is freed with its owner; until then, the entry holds the rest of its
+    key and its value. Every other entry is kept in the process-wide dictionary. A stream
+    of unregistered Frames and Paths over registered ones, such as the camera frames of
+    observations built one at a time, therefore leaves the process-wide dictionaries as
+    they were.
 
     Parameters:
         key (Frame | Path | tuple[Frame | Path, ...]): The key of the entry.

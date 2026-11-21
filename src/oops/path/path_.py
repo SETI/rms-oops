@@ -301,13 +301,14 @@ class Path(Mutable):
     _PATH_SUBCLASSES = []   # list of all subclasses of Path
 
     # A waypoint created without an ID replaces this with a dictionary of its own, which
-    # holds the cache entries whose keys include it in place of _PATH_CACHE; see
-    # _cache_for(). The entries are then freed with the Path, so a stream of unregistered
-    # Paths leaves the process-wide caches as they were. A key that includes a wayframe
-    # created without an ID is kept in that Frame's dictionary in the same way. Each
-    # subclass's pool of waypoints (_WAYPOINTS) is a WeakValueDictionary for the same
-    # reason: it gives an existing Path for an identical definition only while that Path
-    # is in use.
+    # holds, in place of _PATH_CACHE, the cache entries whose keys have it as their first
+    # unregistered member; see _cache_for(). The entries are then freed with the Path, so
+    # a stream of unregistered Paths over registered ones leaves the process-wide caches
+    # as they were. A key whose first unregistered member is a wayframe is kept in that
+    # Frame's dictionary in the same way. Each subclass's pool of waypoints (_WAYPOINTS)
+    # is a WeakValueDictionary for the same reason: it gives an existing Path for an
+    # identical definition only while that Path is in use. Its keys hold the Paths and
+    # Frames of the definition strongly.
     _local_cache = None
 
     @staticmethod

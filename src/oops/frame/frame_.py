@@ -363,11 +363,13 @@ class Frame(Mutable):
     _FRAME_SUBCLASSES = []  # list of all subclasses of Frame
 
     # A wayframe created without an ID replaces this with a dictionary of its own, which
-    # holds the cache entries whose keys include it in place of _FRAME_CACHE; see
-    # _cache_for(). The entries are then freed with the Frame, so a stream of unregistered
-    # Frames leaves the process-wide caches as they were. Each subclass's pool of
-    # wayframes (_WAYFRAMES) is a WeakValueDictionary for the same reason: it gives an
-    # existing Frame for an identical definition only while that Frame is in use.
+    # holds, in place of _FRAME_CACHE, the cache entries whose keys have it as their first
+    # unregistered member; see _cache_for(). The entries are then freed with the Frame,
+    # so a stream of unregistered Frames over registered ones leaves the process-wide
+    # caches as they were. Each subclass's pool of wayframes (_WAYFRAMES) is a
+    # WeakValueDictionary for the same reason: it gives an existing Frame for an identical
+    # definition only while that Frame is in use. Its keys hold the Frames of the
+    # definition strongly.
     _local_cache = None
 
     @staticmethod

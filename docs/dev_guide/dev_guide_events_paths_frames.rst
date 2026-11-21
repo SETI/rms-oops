@@ -102,13 +102,17 @@ while that waypoint is in use. A duplicate ID gets a numeric suffix. The static 
 
 ``Path._PATH_CACHE`` holds the linked paths that ``wrt`` derives, so that repeated
 requests for the same origin and frame pair share one object. It holds only the entries
-whose keys are made of registered waypoints and wayframes. A waypoint or wayframe created
-without an ID keeps the entries that involve it in its own dictionary, ``_local_cache``,
-and ``Path._cache_for(key)`` returns the dictionary that holds a key. Those entries are
-freed with the path or frame, so building one observation after another, each with its
-own unregistered camera frame, leaves the process-wide caches the same size.
-``Path._reset_caches()``
-clears the registry and the cache and re-seeds them with ``Path.SSB``. Subclasses append
+whose keys are made of registered waypoints and wayframes. Every other entry belongs to
+one owner, the first waypoint or wayframe in its key that was created without an ID,
+which keeps the entry in its own dictionary, ``_local_cache``; ``Path._cache_for(key)``
+returns the dictionary that holds a key. The entry is freed with its owner, and until
+then it holds the rest of its key and its value. Building one observation after another,
+each with its own unregistered camera frame over a registered frame, therefore leaves the
+process-wide caches the same size. The keys of a pool of waypoints or wayframes hold the
+objects of the definition strongly, so a pooled path or frame defined over another one
+created without an ID, such as a ``Cmatrix`` whose reference is an unregistered frame,
+stays alive once ``wrt`` has related the two. ``Path._reset_caches()`` clears the
+registry and the cache and re-seeds them with ``Path.SSB``. Subclasses append
 themselves to ``Path._PATH_SUBCLASSES`` so that the reset can clear each class's own
 waypoint dictionary. A class whose events vary with time and are expensive sets
 ``_USE_QUICKPATHS = True`` so that ``quick_path`` can interpolate it.
