@@ -93,14 +93,33 @@ A subclass constructor must set ``_origin`` (a waypoint), ``_frame`` (a wayframe
 gives the path its ``path_id``, files it in ``Path._PATH_REGISTRY`` and its *waypoint*,
 the canonical registered instance that events and surfaces refer to. A class that wants
 instances with the same parameters to share one waypoint declares a class-level
-``_WAYPOINTS = {}`` dictionary and implements ``_waypoint_key``; a class without one
-makes every instance its own waypoint. A duplicate ID gets a numeric suffix. The static
-methods ``as_path``, ``as_primary_path`` and ``as_waypoint`` accept a path or an ID and
-raise ``KeyError`` for an ID that is not registered.
+``_WAYPOINTS = weakref.WeakValueDictionary()`` and implements ``_waypoint_key``; a class
+without one makes every instance its own waypoint. The dictionary holds each waypoint
+only while something else refers to it, so a new path takes an existing waypoint only
+while that waypoint is in use. A duplicate ID gets a numeric suffix. The static methods
+``as_path``, ``as_primary_path`` and ``as_waypoint`` accept a path or an ID and raise
+``KeyError`` for an ID that is not registered.
 
 ``Path._PATH_CACHE`` holds the linked paths that ``wrt`` derives, so that repeated
-requests for the same origin and frame pair share one object. ``Path._reset_caches()``
-clears the registry and the cache and re-seeds them with ``Path.SSB``. Subclasses append
+requests for the same origin and frame pair share one object. It holds only the entries
+whose keys are made of registered waypoints and wayframes. Every other entry belongs to
+one owner, the first waypoint or wayframe in its key that has no ID, which keeps the
+entry in its own dictionary, ``_local_cache``; ``Path._cache_for(key)`` returns the
+dictionary that holds a key. The entry is freed with its owner, and until then it holds
+the rest of its key and its value. A waypoint or wayframe created without an ID is given
+one when a registered path or frame of the same definition shares it, and from then on it
+lives as long as the registry; ``_give_up_local_cache`` then moves each of its entries to
+the owner that ``_cache_for`` selects, or to the process-wide cache when the key has no
+other member without an ID. Because a key of ``Path._PATH_CACHE`` ends with a wayframe,
+a wayframe's dictionary can hold path entries as well as frame entries; each entry goes
+back to the process-wide cache of its own kind, chosen by the first member of its key.
+Building one observation after another, each with its own
+unregistered camera frame over a registered frame, therefore leaves the process-wide
+caches the same size. The keys of a pool of waypoints or wayframes hold the
+objects of the definition strongly, so a pooled path or frame defined over another one
+created without an ID, such as a ``Cmatrix`` whose reference is an unregistered frame,
+stays alive once ``wrt`` has related the two. ``Path._reset_caches()`` clears the
+registry and the cache and re-seeds them with ``Path.SSB``. Subclasses append
 themselves to ``Path._PATH_SUBCLASSES`` so that the reset can clear each class's own
 waypoint dictionary. A class whose events vary with time and are expensive sets
 ``_USE_QUICKPATHS = True`` so that ``quick_path`` can interpolate it.
@@ -132,9 +151,11 @@ interpolated across. ``node_at_time`` is optional as well.
 
 The registration machinery mirrors the path's: the constructor sets ``_reference``,
 ``_origin`` and ``_shape``, then calls ``_register(frame_id)`` and ``refresh()``; a class
-sharing *wayframes* declares ``_WAYFRAMES = {}`` and ``_wayframe_key``; the class appends
-itself to ``Frame._FRAME_SUBCLASSES``; ``Frame._reset_caches()`` re-seeds
-``Frame.J2000``. A frame whose own transform varies with time sets
+sharing *wayframes* declares ``_WAYFRAMES = weakref.WeakValueDictionary()`` and
+``_wayframe_key``; the class appends itself to ``Frame._FRAME_SUBCLASSES``;
+``Frame._reset_caches()`` re-seeds ``Frame.J2000``. ``Frame._FRAME_CACHE`` holds the
+entries of registered wayframes only, and ``Frame._cache_for(key)`` finds the dictionary
+of an unregistered one, as for paths. A frame whose own transform varies with time sets
 ``_USE_QUICKFRAMES = True``.
 
 The concrete frames are :class:`~oops.frame.SpiceFrame` (a C-kernel or PCK frame, always

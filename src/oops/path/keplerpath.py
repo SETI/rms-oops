@@ -2,6 +2,8 @@
 # oops/path/keplerpath.py
 ##########################################################################################
 
+import weakref
+
 import numpy as np
 
 from polymath          import Scalar, Vector3, Matrix3
@@ -38,7 +40,7 @@ class KeplerPath(Path, Fittable):
     nine orbital elements.
     """
 
-    _WAYPOINTS = {}
+    _WAYPOINTS = weakref.WeakValueDictionary()
     _USE_QUICKPATHS = True      # orbital elements are costly to evaluate
 
     def __init__(self, body, epoch, elements=None, observer=None, *, wobbles=(),

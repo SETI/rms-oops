@@ -329,7 +329,12 @@ Several layers cache, and all of them share objects rather than copying:
   holds direct references to the waypoints and wayframes that were current when it was
   built; after a reset, a lookup by ID returns their replacements, so a cache built before
   the reset is stale. The backplane tests keep one solar system for the whole package for
-  this reason.
+  this reason. Registered paths and frames are kept for the life of the process. A
+  link-cache entry whose key includes an unregistered path or frame lives on the first
+  such path or frame in the key, and the per-class pools of waypoints and wayframes hold
+  their members weakly, so an unregistered path or frame defined over registered ones is
+  freed once nothing uses it. A pool's keys hold the objects of a definition strongly, so
+  one defined over another unregistered path or frame can outlive its users.
 * ``QuickPath`` and ``QuickFrame`` interpolate a path or frame over a time window and are
   cached on the path or frame itself (up to ``quickpath_cache_size`` of them, from
   :class:`~oops.config.QUICK`). They are used whenever ``quick`` is ``None`` or a

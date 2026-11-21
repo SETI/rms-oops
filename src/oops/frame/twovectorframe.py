@@ -2,6 +2,8 @@
 # oops/frame/twovectorframe.py
 ##########################################################################################
 
+import weakref
+
 from polymath       import Matrix3, Qube, Scalar, Vector3
 from oops.frame     import Frame
 from oops.transform import Transform
@@ -14,7 +16,7 @@ class TwoVectorFrame(Frame):
     second vector points in the half-plane of another axis.
     """
 
-    _WAYFRAMES = {}
+    _WAYFRAMES = weakref.WeakValueDictionary()
     _XYZDICT = {'X': 0, 'Y': 1, 'Z': 2, 'x': 0, 'y': 1, 'z': 2, 0: 0, 1: 1, 2: 2}
 
     def __init__(self, reference, vector1, axis1, vector2, axis2, *, frame_id=None):

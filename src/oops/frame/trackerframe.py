@@ -2,6 +2,8 @@
 # oops/frame/trackerframe.py
 ##########################################################################################
 
+import weakref
+
 from polymath       import Qube, Scalar, Vector3, Matrix3
 from oops._cache    import _Cache
 from oops.frame     import Frame
@@ -23,7 +25,7 @@ class TrackerFrame(Frame):
     at the epoch, fixed relative to J2000, so that the pointing is inertial.
     """
 
-    _WAYFRAMES = {}
+    _WAYFRAMES = weakref.WeakValueDictionary()
     _USE_QUICKFRAMES = True     # always a slowly-changing frame
 
     def __init__(self, frame, target, observer, epoch, *, frame_id=None,

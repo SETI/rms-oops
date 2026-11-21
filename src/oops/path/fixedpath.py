@@ -2,6 +2,8 @@
 # oops/path/fixedpath.py
 ##########################################################################################
 
+import weakref
+
 from polymath          import Qube, Vector3
 from oops.event        import Event
 from oops.frame.frame_ import Frame
@@ -12,7 +14,7 @@ class FixedPath(Path):
     """A Path at fixed coordinates relative to another Path and Frame.
     """
 
-    _WAYPOINTS = {}
+    _WAYPOINTS = weakref.WeakValueDictionary()
 
     def __init__(self, pos, origin, frame=None, *, path_id=None):
         """Constructor for a FixedPath.

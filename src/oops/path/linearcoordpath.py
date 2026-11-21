@@ -2,6 +2,8 @@
 # oops/path/linearcoordpath.py
 ##########################################################################################
 
+import weakref
+
 from polymath        import Qube, Scalar
 from oops.event      import Event
 from oops.path.path_ import Path
@@ -11,7 +13,7 @@ class LinearCoordPath(Path):
     """A Path whose coordinates change linearly on a specified Surface.
     """
 
-    _WAYPOINTS = {}
+    _WAYPOINTS = weakref.WeakValueDictionary()
 
     def __init__(self, surface, coords, coords_dot, epoch, *, obs=None, path_id=None):
         """Constructor for a LinearCoordPath.
