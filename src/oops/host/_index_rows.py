@@ -268,12 +268,14 @@ def passes_filter(row, filter):
             return False
         value = row[key]
         if isinstance(values, tuple) and len(values) == 2:
+            # Tested as inside rather than outside, so that a NaN, which compares false
+            # with every bound, fails
             try:
-                outside = value < values[0] or value > values[1]
+                inside = values[0] <= value <= values[1]
             except TypeError as err:
                 raise OopsTypeError(f'filter range {values!r} cannot be compared with '
                                     f'column {key!r} value {value!r}') from err
-            if outside:
+            if not inside:
                 return False
         elif isinstance(values, (set, frozenset, list, tuple)):
             if value not in values:

@@ -2,6 +2,7 @@
 # tests/host/test_host_index_rows.py: Host._index_rows reads, pairs and filters lazily
 ##########################################################################################
 
+import math
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -482,6 +483,20 @@ def test_a_range_that_cannot_be_compared_raises_at_its_row() -> None:
 
     with pytest.raises(OopsTypeError, match="column 'NUM' value 1"):
         next(rows)
+
+
+def test_a_range_includes_both_of_its_bounds() -> None:
+    rows = _ByPosition._index_rows('vol_index.lbl', row_dicts=ROWS[:2],
+                                   filter={'NUM': (1, 2)})
+
+    assert [row['NAME'] for row in rows] == ['A', 'B']
+
+
+def test_a_range_excludes_a_value_that_is_not_a_number() -> None:
+    rows = _ByPosition._index_rows('vol_index.lbl', row_dicts=[{'NUM': math.nan}],
+                                   filter={'NUM': (0, 1)})
+
+    assert list(rows) == []
 
 
 @pytest.mark.parametrize(('filter_', 'expected'),
