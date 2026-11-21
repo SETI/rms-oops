@@ -1186,8 +1186,9 @@ class Host:
                 times than the supplement is reported as an index row for which the
                 supplement lacks a row, and a file that the supplement lists more times
                 than the index as a supplement row that was not paired; only the rows
-                read ahead are kept, so the memory used does not grow with the length of
-                the index.
+                read ahead of their index rows are kept, so the memory used depends on
+                how far out of order the two tables are; a supplement in the reverse order
+                of its index holds all but one of its rows before the first pair.
             OopsValueError: At call time, if a value in `pds3_options` is invalid, or if
                 `filter` uses a column that neither table has. If `row_dicts` is given,
                 `filter` is checked against the first row, at call time if `row_dicts`

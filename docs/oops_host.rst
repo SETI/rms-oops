@@ -77,7 +77,8 @@ corrected label.
 
 The host's own ``from_index`` then reads the index a few rows at a time as the iteration
 proceeds, and builds each row's observation when the iteration reaches it. An index of
-any size is read in this way while only a few rows are held in memory.
+any size is read in this way while only a few rows are held in memory, together with
+any supplement rows that are read before their index rows, as described below.
 
 Many indexes have a supplemental index, a second table with more columns for the same
 products, whose columns are merged into each row. How the two tables are paired is fixed
@@ -90,7 +91,10 @@ for each host, from a survey of that instrument's indexes:
 - If some supplements list the products in another order, each index row is paired with
   the supplement row for the same file. The supplement is read ahead only as far as that
   row, and a supplement row that is read early is held until its index row is reached.
-  Because the rows are seldom far out of order, few rows are held at any time.
+  The number of rows held depends on how far out of order the two tables are, and in
+  the worst case, a supplement in the reverse order of its index, every supplement row
+  but one is held before the first pair is made. The rows are seldom far out of order:
+  for the cumulative Cassini VIMS index, with 464,752 rows, the most held at once is 885.
 
 Each row gives its file in the column FILE_SPECIFICATION_NAME, unless the host names
 other columns for one table or both. If a table lacks a column that gives its file, the
