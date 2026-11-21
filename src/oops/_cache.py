@@ -173,7 +173,7 @@ def _cache_for(key, shared):
     return shared
 
 
-def _give_up_local_cache(owner, shared):
+def _give_up_local_cache(owner):
     """Move the cache entries of a wayframe or waypoint that has been given an ID.
 
     A wayframe or waypoint created without an ID is given one when a registered Frame or
@@ -183,10 +183,13 @@ def _give_up_local_cache(owner, shared):
     no ID, or else the process-wide dictionary. An entry whose key
     includes an unregistered Frame is therefore still freed with that Frame.
 
+    A wayframe's dictionary can hold entries of the Path cache as well as of the Frame
+    cache, because a key of the Path cache ends with a wayframe. The process-wide
+    dictionary of each entry is therefore chosen by the first member of its key:
+    `Path._PATH_CACHE` for a waypoint and `Frame._FRAME_CACHE` for a wayframe.
+
     Parameters:
         owner (Frame | Path): The wayframe or waypoint that has been given an ID.
-        shared (dict): The process-wide dictionary, `Frame._FRAME_CACHE` or
-            `Path._PATH_CACHE`.
     """
 
     entries = owner._local_cache
@@ -195,6 +198,11 @@ def _give_up_local_cache(owner, shared):
 
     owner._local_cache = None
     for key, value in entries.items():
+        first = key[0] if isinstance(key, tuple) else key
+        if isinstance(first, _Cache._Path):
+            shared = _Cache._Path._PATH_CACHE
+        else:
+            shared = _Cache._Frame._FRAME_CACHE
         _cache_for(key, shared).setdefault(key, value)
 
 ##########################################################################################

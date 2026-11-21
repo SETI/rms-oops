@@ -450,7 +450,7 @@ class Frame(Mutable):
             self._frame_id = frame_id
             if not self._wayframe._frame_id:
                 self._wayframe._frame_id = frame_id
-                _give_up_local_cache(self._wayframe, Frame._FRAME_CACHE)
+                _give_up_local_cache(self._wayframe)
 
             # Register under this unique ID
             Frame._FRAME_REGISTRY[frame_id] = self

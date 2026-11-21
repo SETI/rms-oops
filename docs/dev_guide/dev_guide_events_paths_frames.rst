@@ -110,7 +110,10 @@ the rest of its key and its value. A waypoint or wayframe created without an ID 
 one when a registered path or frame of the same definition shares it, and from then on it
 lives as long as the registry; ``_give_up_local_cache`` then moves each of its entries to
 the owner that ``_cache_for`` selects, or to the process-wide cache when the key has no
-other member without an ID. Building one observation after another, each with its own
+other member without an ID. Because a key of ``Path._PATH_CACHE`` ends with a wayframe,
+a wayframe's dictionary can hold path entries as well as frame entries; each entry goes
+back to the process-wide cache of its own kind, chosen by the first member of its key.
+Building one observation after another, each with its own
 unregistered camera frame over a registered frame, therefore leaves the process-wide
 caches the same size. The keys of a pool of waypoints or wayframes hold the
 objects of the definition strongly, so a pooled path or frame defined over another one

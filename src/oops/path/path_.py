@@ -386,7 +386,7 @@ class Path(Mutable):
             self._path_id = path_id
             if not self._waypoint._path_id:
                 self._waypoint._path_id = path_id
-                _give_up_local_cache(self._waypoint, Path._PATH_CACHE)
+                _give_up_local_cache(self._waypoint)
 
             # Register under this unique ID
             Path._PATH_REGISTRY[path_id] = self

@@ -36,11 +36,13 @@ POOLED_PATH_CLASSES = sorted({cls for cls in _subclasses(Path)
 
 @pytest.fixture(autouse=True)
 def _registry_copy(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Give each test its own copy of the Path registry and cache, so that the IDs it
-    registers are gone when it ends."""
+    """Give each test its own copy of the Path and Frame registries and caches, so that
+    the IDs it registers are gone when it ends."""
 
     monkeypatch.setattr(Path, '_PATH_REGISTRY', dict(Path._PATH_REGISTRY))
     monkeypatch.setattr(Path, '_PATH_CACHE', dict(Path._PATH_CACHE))
+    monkeypatch.setattr(Frame, '_FRAME_REGISTRY', dict(Frame._FRAME_REGISTRY))
+    monkeypatch.setattr(Frame, '_FRAME_CACHE', dict(Frame._FRAME_CACHE))
 
 
 def _position(k: int) -> Vector3:
@@ -131,6 +133,17 @@ def test_a_waypoint_given_an_id_later_frees_the_frames_used_with_it() -> None:
     del frame
     gc.collect()
     assert sum(ref() is not None for ref in refs) == 0
+
+
+def test_a_wayframe_given_an_id_later_keeps_the_paths_cached_in_it() -> None:
+    # The Path relative to the SSB in the unregistered Frame is cached by that Frame
+    # until the second Frame shares its wayframe and gives it an ID; the Path is then
+    # looked up again in the process-wide Path cache
+    path = FixedPath(_position(8000), Path.SSB, Frame.J2000, path_id='TEST_PATH_CACHE_PATH')
+    frame = Cmatrix(_matrix(8000))
+    linked = path.wrt(Path.SSB, frame)
+    Cmatrix(_matrix(8000), frame_id='TEST_PATH_CACHE_FRAME')
+    assert path.wrt(Path.SSB, frame) is linked
 
 
 def test_an_unregistered_path_gives_the_same_path_wrt_the_ssb_twice() -> None:
