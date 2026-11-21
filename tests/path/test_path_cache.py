@@ -118,6 +118,21 @@ def test_a_path_identical_to_a_registered_one_shares_its_waypoint() -> None:
     assert path.waypoint.path_id == 'TEST_PATH_CACHE_ID'
 
 
+def test_a_waypoint_given_an_id_later_frees_the_frames_used_with_it() -> None:
+    # The second Path shares the first one's waypoint and gives it an ID, so the waypoint
+    # stays alive through the registry from then on
+    first = FixedPath(_position(7000), Path.SSB, Frame.J2000)
+    FixedPath(_position(7000), Path.SSB, Frame.J2000, path_id='TEST_PATH_CACHE_GIVEN_AN_ID')
+    refs = []
+    for k in range(COUNT):
+        frame = Cmatrix(_matrix(k))
+        first.wrt(Path.SSB, frame)
+        refs.append(weakref.ref(frame))
+    del frame
+    gc.collect()
+    assert sum(ref() is not None for ref in refs) == 0
+
+
 def test_an_unregistered_path_gives_the_same_path_wrt_the_ssb_twice() -> None:
     origin = FixedPath(_position(4000), Path.SSB, Frame.J2000)
     path = FixedPath(_position(0), origin, Frame.J2000)

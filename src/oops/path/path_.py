@@ -5,7 +5,7 @@
 import re
 
 from polymath              import Qube, Vector3
-from oops._cache           import _Cache, _cache_for
+from oops._cache           import _Cache, _cache_for, _give_up_local_cache
 from oops._exceptions      import OopsValueError
 from oops.config           import PICKLE_CONFIG
 from oops.event            import Event
@@ -302,13 +302,14 @@ class Path(Mutable):
 
     # A waypoint created without an ID replaces this with a dictionary of its own, which
     # holds, in place of _PATH_CACHE, the cache entries whose keys have it as their first
-    # unregistered member; see _cache_for(). The entries are then freed with the Path, so
-    # a stream of unregistered Paths over registered ones leaves the process-wide caches
-    # as they were. A key whose first unregistered member is a wayframe is kept in that
-    # Frame's dictionary in the same way. Each subclass's pool of waypoints (_WAYPOINTS)
-    # is a WeakValueDictionary for the same reason: it gives an existing Path for an
-    # identical definition only while that Path is in use. Its keys hold the Paths and
-    # Frames of the definition strongly.
+    # unregistered member; see _cache_for(). A waypoint that a registered Path shares
+    # later gives these entries up; see _give_up_local_cache(). The entries are otherwise
+    # freed with the Path, so a stream of unregistered Paths over registered ones leaves
+    # the process-wide caches as they were. A key whose first unregistered member is a
+    # wayframe is kept in that Frame's dictionary in the same way. Each subclass's pool of
+    # waypoints (_WAYPOINTS) is a WeakValueDictionary for the same reason: it gives an
+    # existing Path for an identical definition only while that Path is in use. Its keys
+    # hold the Paths and Frames of the definition strongly.
     _local_cache = None
 
     @staticmethod
@@ -320,8 +321,8 @@ class Path(Mutable):
                 waypoint and an origin waypoint; or these and a wayframe.
 
         Returns:
-            dict: The dictionary of the first waypoint or wayframe in `key` that was
-            created without an ID; otherwise, the process-wide `_PATH_CACHE`.
+            dict: The dictionary of the first waypoint or wayframe in `key` that has no
+            ID; otherwise, the process-wide `_PATH_CACHE`.
         """
 
         return _cache_for(key, Path._PATH_CACHE)
@@ -385,6 +386,7 @@ class Path(Mutable):
             self._path_id = path_id
             if not self._waypoint._path_id:
                 self._waypoint._path_id = path_id
+                _give_up_local_cache(self._waypoint, Path._PATH_CACHE)
 
             # Register under this unique ID
             Path._PATH_REGISTRY[path_id] = self

@@ -104,6 +104,21 @@ def test_a_frame_identical_to_a_registered_one_shares_its_wayframe() -> None:
     assert Cmatrix(_matrix(3000)).wayframe.frame_id == 'TEST_FRAME_CACHE_ID'
 
 
+def test_a_wayframe_given_an_id_later_frees_the_frames_related_to_it() -> None:
+    # The second Frame shares the first one's wayframe and gives it an ID, so the
+    # wayframe stays alive through the registry from then on
+    first = Cmatrix(_matrix(7000))
+    Cmatrix(_matrix(7000), frame_id='TEST_FRAME_CACHE_GIVEN_AN_ID')
+    refs = []
+    for k in range(COUNT):
+        frame = Cmatrix(_matrix(k))
+        first.wrt(frame)
+        refs.append(weakref.ref(frame))
+    del frame
+    gc.collect()
+    assert sum(ref() is not None for ref in refs) == 0
+
+
 def test_an_unregistered_frame_gives_the_same_frame_wrt_j2000_twice() -> None:
     frame = Navigation((1e-4, 0., 0.), Cmatrix(_matrix(4000)))
     assert frame.wrt(Frame.J2000) is frame.wrt(Frame.J2000)

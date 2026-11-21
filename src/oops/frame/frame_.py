@@ -7,7 +7,7 @@ import re
 from typing import TYPE_CHECKING
 
 from polymath         import Matrix3, Qube, Scalar, Vector3
-from oops._cache      import _Cache, _cache_for
+from oops._cache      import _Cache, _cache_for, _give_up_local_cache
 from oops._exceptions import OopsValueError
 from oops.config      import PICKLE_CONFIG
 from oops.mutable     import Mutable
@@ -364,12 +364,13 @@ class Frame(Mutable):
 
     # A wayframe created without an ID replaces this with a dictionary of its own, which
     # holds, in place of _FRAME_CACHE, the cache entries whose keys have it as their first
-    # unregistered member; see _cache_for(). The entries are then freed with the Frame,
-    # so a stream of unregistered Frames over registered ones leaves the process-wide
-    # caches as they were. Each subclass's pool of wayframes (_WAYFRAMES) is a
-    # WeakValueDictionary for the same reason: it gives an existing Frame for an identical
-    # definition only while that Frame is in use. Its keys hold the Frames of the
-    # definition strongly.
+    # unregistered member; see _cache_for(). A wayframe that a registered Frame shares
+    # later gives these entries up; see _give_up_local_cache(). The entries are otherwise
+    # freed with the Frame, so a stream of unregistered Frames over registered ones leaves
+    # the process-wide caches as they were. Each subclass's pool of wayframes (_WAYFRAMES)
+    # is a WeakValueDictionary for the same reason: it gives an existing Frame for an
+    # identical definition only while that Frame is in use. Its keys hold the Frames of
+    # the definition strongly.
     _local_cache = None
 
     @staticmethod
@@ -381,8 +382,8 @@ class Frame(Mutable):
                 wayframe.
 
         Returns:
-            dict: The dictionary of the first wayframe in `key` that was created without
-            an ID; otherwise, the process-wide `_FRAME_CACHE`.
+            dict: The dictionary of the first wayframe in `key` that has no ID;
+            otherwise, the process-wide `_FRAME_CACHE`.
         """
 
         return _cache_for(key, Frame._FRAME_CACHE)
@@ -449,6 +450,7 @@ class Frame(Mutable):
             self._frame_id = frame_id
             if not self._wayframe._frame_id:
                 self._wayframe._frame_id = frame_id
+                _give_up_local_cache(self._wayframe, Frame._FRAME_CACHE)
 
             # Register under this unique ID
             Frame._FRAME_REGISTRY[frame_id] = self

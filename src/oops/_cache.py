@@ -148,13 +148,13 @@ def _cache_for(key, shared):
 
     The keys of `Frame._FRAME_CACHE` and `Path._PATH_CACHE` are a wayframe or waypoint, or
     a tuple of them. A wayframe or waypoint that was created without an ID carries a
-    dictionary of its own in its `_local_cache` attribute. An entry whose key includes one
-    or more of them is kept in the dictionary of the first of them in the key, its owner,
-    so that the entry is freed with its owner; until then, the entry holds the rest of its
-    key and its value. Every other entry is kept in the process-wide dictionary. A stream
-    of unregistered Frames and Paths over registered ones, such as the camera frames of
-    observations built one at a time, therefore leaves the process-wide dictionaries as
-    they were.
+    dictionary of its own in its `_local_cache` attribute until it is given an ID; see
+    `_give_up_local_cache`. An entry whose key includes one or more of them is kept
+    in the dictionary of the first of them in the key, its owner, so that the entry is
+    freed with its owner; until then, the entry holds the rest of its key and its value.
+    Every other entry is kept in the process-wide dictionary. A stream of unregistered
+    Frames and Paths over registered ones, such as the camera frames of observations built
+    one at a time, therefore leaves the process-wide dictionaries as they were.
 
     Parameters:
         key (Frame | Path | tuple[Frame | Path, ...]): The key of the entry.
@@ -171,5 +171,30 @@ def _cache_for(key, shared):
             return item._local_cache
 
     return shared
+
+
+def _give_up_local_cache(owner, shared):
+    """Move the cache entries of a wayframe or waypoint that has been given an ID.
+
+    A wayframe or waypoint created without an ID is given one when a registered Frame or
+    Path shares it, and it then stays alive through the registry. It stops keeping cache
+    entries itself, and each of its entries moves to the dictionary that `_cache_for`
+    selects for the entry's key from then on: that of the next member of the key that has
+    no ID, or else the process-wide dictionary. An entry whose key
+    includes an unregistered Frame is therefore still freed with that Frame.
+
+    Parameters:
+        owner (Frame | Path): The wayframe or waypoint that has been given an ID.
+        shared (dict): The process-wide dictionary, `Frame._FRAME_CACHE` or
+            `Path._PATH_CACHE`.
+    """
+
+    entries = owner._local_cache
+    if entries is None:
+        return
+
+    owner._local_cache = None
+    for key, value in entries.items():
+        _cache_for(key, shared).setdefault(key, value)
 
 ##########################################################################################

@@ -103,12 +103,16 @@ while that waypoint is in use. A duplicate ID gets a numeric suffix. The static 
 ``Path._PATH_CACHE`` holds the linked paths that ``wrt`` derives, so that repeated
 requests for the same origin and frame pair share one object. It holds only the entries
 whose keys are made of registered waypoints and wayframes. Every other entry belongs to
-one owner, the first waypoint or wayframe in its key that was created without an ID,
-which keeps the entry in its own dictionary, ``_local_cache``; ``Path._cache_for(key)``
-returns the dictionary that holds a key. The entry is freed with its owner, and until
-then it holds the rest of its key and its value. Building one observation after another,
-each with its own unregistered camera frame over a registered frame, therefore leaves the
-process-wide caches the same size. The keys of a pool of waypoints or wayframes hold the
+one owner, the first waypoint or wayframe in its key that has no ID, which keeps the
+entry in its own dictionary, ``_local_cache``; ``Path._cache_for(key)`` returns the
+dictionary that holds a key. The entry is freed with its owner, and until then it holds
+the rest of its key and its value. A waypoint or wayframe created without an ID is given
+one when a registered path or frame of the same definition shares it, and from then on it
+lives as long as the registry; ``_give_up_local_cache`` then moves each of its entries to
+the owner that ``_cache_for`` selects, or to the process-wide cache when the key has no
+other member without an ID. Building one observation after another, each with its own
+unregistered camera frame over a registered frame, therefore leaves the process-wide
+caches the same size. The keys of a pool of waypoints or wayframes hold the
 objects of the definition strongly, so a pooled path or frame defined over another one
 created without an ID, such as a ``Cmatrix`` whose reference is an unregistered frame,
 stays alive once ``wrt`` has related the two. ``Path._reset_caches()`` clears the
