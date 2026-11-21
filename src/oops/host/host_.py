@@ -1542,6 +1542,12 @@ class Host:
             dict: The `params` dictionary, modified in place.
 
         Raises:
+            OopsSpiceError: If the SPICE kernels cannot supply the frame of the `parallel`
+                observation at the midtime; its cause is the exception that the SPICE
+                query raised. A frame of this observation that raises OopsSpiceError,
+                such as a :class:`~oops.frame.SpiceErrorFrame`, is left as it is by the
+                `parallel` and `tracker` overrides, and an OopsSpiceError of the target's
+                position under `tracker` propagates.
             OopsValueError: If an input parameter is invalid.
         """
 
@@ -1586,9 +1592,16 @@ class Host:
             frame = Frame.as_frame(params['frame'])
             try:
                 xform = frame.wrt(parallel.frame).transform_at_time(time)
-            except OopsSpiceError:
-                if Host._evaluates(frame, time):
-                    raise                   # the parallel observation's frame failed
+            except OopsSpiceError.CSPYCE_ERRORS as err:
+                spice_error = isinstance(err, OopsSpiceError)
+                if not spice_error and not OopsSpiceError.is_spice_error(err):
+                    raise
+                if Host._evaluates(frame, time):    # the parallel frame failed
+                    if spice_error:
+                        raise
+                    raise OopsSpiceError.from_spice_error(
+                        err, description='no pointing for the parallel observation',
+                        time=time, filepath=filepath) from err
             else:
                 params['frame'] = Cmatrix(xform.matrix, reference=parallel.frame)
 
@@ -1602,14 +1615,15 @@ class Host:
             else:
                 target_path = Body.as_body(target).path
 
-            # Only the frame is evaluated when a TrackerFrame is built
+            # A TrackerFrame evaluates the target's position, then the frame, when it is
+            # built. Only a failure of the frame itself leaves the frame as it is.
+            frame = Frame.as_frame(params['frame'])
             try:
-                params['frame'] = TrackerFrame(params['frame'],
-                                               target=target_path,
-                                               observer=params['path'],
-                                               epoch=epoch)
+                params['frame'] = TrackerFrame(frame, target=target_path,
+                                               observer=params['path'], epoch=epoch)
             except OopsSpiceError:
-                pass
+                if Host._evaluates(frame, epoch):
+                    raise                   # the target's position failed
 
         if navigation is not None:
             params['frame'] = Navigation(navigation, params['frame'])
@@ -1731,8 +1745,8 @@ class Host:
           observation's frame once, at the midtime, so a SPICE frame that both frames
           share is never evaluated for this observation. If that evaluation fails but
           the Frame can be evaluated relative to J2000, the failure belongs to the
-          parallel observation's frame, which the override raises when it is applied,
-          and `frame` is returned.
+          parallel observation's frame, for which the override raises
+          :class:`~oops.OopsSpiceError` when it is applied, and `frame` is returned.
         - In every other case, the Frame is evaluated relative to J2000 at the time, so
           every Frame in its chain of references is checked, as for a Cmatrix whose
           reference is a SPICE frame.

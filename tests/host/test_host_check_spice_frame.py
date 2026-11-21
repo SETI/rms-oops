@@ -251,6 +251,20 @@ def test_a_parallel_frame_that_spice_cannot_supply_is_left_to_the_override() -> 
     assert _check(camera, {'parallel': parallel}) is camera
 
 
+def test_the_override_reports_a_parallel_frame_spice_cannot_supply() -> None:
+    """The exception that the parallel observation's frame raises is reported as an
+    OopsSpiceError, whose cause it is."""
+
+    params = {'cadence': CADENCE, 'frame': _camera(), 'path': 'SSB'}
+    parallel = SimpleNamespace(frame=Cmatrix(np.eye(3), reference=_CKFrame(end=105.)))
+
+    with pytest.raises(OopsSpiceError, match=r'^no pointing for the parallel observation '
+                                             r'at .* for image\.img: '
+                                             r'SPICE\(CKINSUFFDATA\)$') as info:
+        Host._apply_overrides(params, 'image.img', parallel=parallel)
+    assert str(info.value.__cause__) == SPICE_TEXT
+
+
 def test_the_message_gives_the_time_of_the_observation() -> None:
     """The midtime after a cadence time shift; a frame time shift is not added."""
 

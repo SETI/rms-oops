@@ -185,7 +185,10 @@ row gives an observation, and a row whose pointing SPICE cannot supply gets a
 :class:`~oops.frame.SpiceErrorFrame` in place of its pointing. That frame raises
 :class:`~oops.OopsSpiceError` whenever it is used. The ``tracker`` and ``parallel``
 overrides evaluate the frame once, when the observation is built. They leave a frame of
-this kind as it is, so the error is still raised only when the pointing is used.
+this kind as it is, so the error is still raised only when the pointing is used. If the
+SPICE kernels cannot supply the frame of the parallel observation, ``parallel`` raises
+:class:`~oops.OopsSpiceError` when the observation is built, and if they cannot supply
+the position of the target, ``tracker`` raises the error of that query then.
 
 A host checks the kernels for the frame as the observation will use it once the
 overrides are applied. The frame is checked at the observation's midtime, or for

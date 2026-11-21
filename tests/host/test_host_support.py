@@ -10,10 +10,12 @@ import pytest
 from filecache import FCPath
 from pdsparser import Pds3Label
 
-from oops         import Frame, OopsSpiceError, OopsTypeError, OopsValueError
+from polymath     import Vector3
+from oops         import Body, Frame, OopsSpiceError, OopsTypeError, OopsValueError
 from oops.cadence import SnapCadence
 from oops.frame   import SpiceErrorFrame
 from oops.host    import PDS3_NULL_TEXTS, Host, is_pds3_null
+from oops.path    import LinearPath
 
 
 @pytest.mark.parametrize(('name', 'expected'),
@@ -79,6 +81,17 @@ def test_a_spice_error_frame_still_raises_when_used_after_a_tracker() -> None:
     Host._apply_overrides(params, None, tracker='start', navigation=(0., 0.))
     with pytest.raises(OopsSpiceError, match='no test pointing'):
         Frame.as_frame(params['frame']).wrt(Frame.J2000).transform_at_time(105.)
+
+
+def test_a_tracker_target_that_spice_cannot_supply_raises() -> None:
+    """The tracking frame evaluates the target's path before the frame, so a failure of
+    the target is not taken for missing pointing of the frame."""
+
+    path = LinearPath(Vector3((1.e6, 0., 0.)), 0., 'SSB', frame=_spice_error_frame())
+    params = {'cadence': OWN_CADENCE, 'frame': Frame.J2000, 'path': 'SSB',
+              'target': Body('TRACKER_TEST_TARGET', path, 'J2000')}
+    with pytest.raises(OopsSpiceError, match='no test pointing'):
+        Host._apply_overrides(params, None, tracker='start')
 
 
 def test_a_spice_error_frame_still_raises_when_used_after_a_parallel() -> None:
