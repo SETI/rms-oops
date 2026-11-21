@@ -135,7 +135,24 @@ class _Case(NamedTuple):
 
 
 INF = math.inf
-PARALLEL = SimpleNamespace(frame=Cmatrix(np.eye(3), reference=_CKFrame()))
+
+# Stands for a parallel observation in CASES; each test builds its own, because the tests
+# of other modules reset the Frame caches, and a Frame built when this module is imported
+# would lose its cache entries
+PARALLEL = 'parallel observation'
+
+
+def _parallel() -> SimpleNamespace:
+    """A parallel observation whose frame the C kernels always supply."""
+
+    return SimpleNamespace(frame=Cmatrix(np.eye(3), reference=_CKFrame()))
+
+
+def _overrides(case: _Case) -> dict[str, Any]:
+    """The overrides of a case, with a parallel observation built for PARALLEL."""
+
+    return {key: _parallel() if value is PARALLEL else value
+            for (key, value) in case.overrides.items()}
 
 CASES = {
     'midtime covered': _Case(True, {}, -INF, 106., False),
@@ -179,7 +196,7 @@ def _case_frame(case: _Case) -> Frame:
 
 def _check_fails(case: _Case) -> bool:
     try:
-        _check(_case_frame(case), case.overrides)
+        _check(_case_frame(case), _overrides(case))
     except OopsSpiceError:
         return True
     return False
@@ -192,7 +209,7 @@ def _observation_fails(case: _Case) -> bool:
     params = {'cadence': CADENCE, 'frame': _case_frame(case), 'path': 'SSB',
               'target': 'NONE'}
     try:
-        Host._apply_overrides(params, None, **case.overrides)
+        Host._apply_overrides(params, None, **_overrides(case))
         frame = Frame.as_frame(params['frame'])
         frame.wrt(Frame.J2000).transform_at_time(params['cadence'].midtime)
     except RuntimeError:
@@ -261,7 +278,7 @@ def test_a_deferred_frame_still_raises_after_the_overrides() -> None:
 def test_parallel_and_tracker_together_are_refused() -> None:
     with pytest.raises(OopsValueError, match='parallel and tracker cannot both be '
                                              'specified'):
-        _check(_camera(), {'parallel': PARALLEL, 'tracker': 'start'})
+        _check(_camera(), {'parallel': _parallel(), 'tracker': 'start'})
 
 
 def test_unknown_timeshift_letters_are_refused() -> None:

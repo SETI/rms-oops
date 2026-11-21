@@ -1491,10 +1491,10 @@ class Host:
         its server has no local path until it has been retrieved, and a local cache can
         be cleared at any time, so only a host that has retrieved the image file in this
         call, to read its array, knows a local path that exists. Such a host passes the
-        path that :meth:`filecache.FCPath.retrieve` returned, or the path of the local
-        file that it read. A read that does not retrieve the image file, such as one for
-        astrometry only or the build of an observation from an index row, passes none,
-        and the observation then has no `abspath`.
+        path that ``FCPath.retrieve()`` returned, or the path of the local file that it
+        read. A read that does not retrieve the image file, such as one for astrometry
+        only or the build of an observation from an index row, passes none, and the
+        observation then has no `abspath`.
 
         Parameters:
             params (dict): The dictionary of inputs to the Observation constructor before
