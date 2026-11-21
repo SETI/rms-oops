@@ -54,6 +54,8 @@ order. The concrete subclasses of each abstract base are documented on their own
 
 .. autoclass:: oops.OopsRuntimeError
 
+.. autoclass:: oops.OopsSpiceError
+
 .. autoclass:: oops.OopsTypeError
 
 .. autoclass:: oops.OopsValueError

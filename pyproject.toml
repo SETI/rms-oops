@@ -15,19 +15,16 @@ dependencies = [
   "numpy",
   "Pillow",
   "pyparsing",
-  "rms-filecache>=2.0.3",
+  "rms-filecache>=3.0.0",
   "rms-fpzip",
   "rms-interval",
   "rms-julian",
-  # 2.4.0 adds PdsError, which oops.host raises and catches, and the "_list" keys of
-  # Pds3Label.as_dict, which preserve the order of a braced set such as CUT_OUT_WINDOW.
-  "rms-pdsparser>=2.4.0",
-  "rms-pdstable",
+  "rms-pdsparser>=2.4.1",
+  "rms-pdstable>=1.2.0",
   "rms-polymath>=2.1.1",
   "rms-solar",
   "rms-tabulation",
   "rms-vax",
-  # 1.3.0 adds VicarLabel.is_vicar_file, which oops uses to identify VICAR files.
   "rms-vicar>=1.3.0",
   "scipy"
 ]
@@ -130,7 +127,10 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 # `-n auto` is deliberately absent: under xdist the Galileo SSI gold master
 # C0368369200R fails, because the gold master tests share the Body registry and the
-# QuickPath/QuickFrame caches with whatever else lands on the same worker.
+# QuickPath/QuickFrame caches with whatever else lands on the same worker. For the same
+# reason, a run with a fixed number of workers needs `--dist=loadfile`: the default
+# scheduling splits a module across workers, and a module-scoped fixture then registers
+# its frames on one worker while the module's tests run on another.
 # `filterwarnings = ["error"]` is absent for the same reason it always was: the spicedb
 # tests raise a RuntimeWarning for a kernel that is missing from the resource tree, and
 # the legacy modules still emit NumPy warnings. Both belong here once those are fixed.

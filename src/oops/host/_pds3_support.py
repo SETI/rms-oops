@@ -9,7 +9,40 @@ import vax
 from oops._exceptions import OopsIndexError, OopsKeyError
 from ._errors import HostFormatError, PdsHostError
 
-__all__ = ['read_pds3_image_array']
+__all__ = ['PDS3_NULL_TEXTS', 'is_pds3_null', 'read_pds3_image_array']
+
+# The texts that stand for a missing value in a PDS3 label, an index, or a VICAR header:
+# the PDS3 null constants UNK, N/A, and NULL, and the other placeholders that the archives
+# write, UNKNOWN, NOT APPLICABLE (the READOUTMODE of many Galileo SSI VICAR headers),
+# "---", and an empty string. Each is in upper case, without padding.
+PDS3_NULL_TEXTS = frozenset({'UNK', 'UNKNOWN', 'N/A', 'NULL', 'NOT APPLICABLE', '---',
+                             ''})
+
+
+def is_pds3_null(value):
+    """True if a value from a PDS3 label, an index, or a VICAR header stands for a missing
+    value.
+
+    A host uses this to leave out the items whose value is a placeholder. The numeric
+    fill values, such as -999, differ from one data set to another and are left to the
+    host.
+
+    Parameters:
+        value (Any): The value.
+
+    Returns:
+        bool: True for None; for a string that, in upper case and without leading or
+        trailing blanks, is one of :data:`~oops.host.PDS3_NULL_TEXTS`; and for a non-empty
+        list or tuple of nothing but these. False for anything else, numbers included.
+    """
+
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return value.strip().upper() in PDS3_NULL_TEXTS
+    if isinstance(value, (list, tuple)):
+        return len(value) > 0 and all(is_pds3_null(item) for item in value)
+    return False
 
 
 def read_pds3_image_array(label, index=0):

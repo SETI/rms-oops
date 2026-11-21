@@ -147,7 +147,9 @@ is obtained), :class:`~oops.frame.Cmatrix`, :class:`~oops.frame.SpinFrame`,
 how a camera pointed at a target is built), :class:`~oops.frame.TrackerFrame`,
 :class:`~oops.frame.PosTargFrame`, :class:`~oops.frame.SpiceType1Frame`,
 :class:`~oops.frame.Navigation` and :class:`~oops.frame.FrameShift` (Fittable pointing
-corrections) and :class:`~oops.frame.QuickFrame`.
+corrections), :class:`~oops.frame.QuickFrame`, and :class:`~oops.frame.SpiceErrorFrame`,
+which stands in for pointing that the SPICE kernels cannot supply and raises
+:class:`~oops.OopsSpiceError` when it is evaluated.
 
 The photon solvers
 ------------------

@@ -5,8 +5,8 @@
 from pdsparser  import PdsError
 from vicar      import VicarError
 
-__all__ = ['HostError', 'HostFormatError', 'HostIndexError', 'PdsHostError',
-           'UnknownHostError', 'VicarHostError', 'WrongHostError']
+__all__ = ['AmbiguousHostError', 'HostError', 'HostFormatError', 'HostIndexError',
+           'PdsHostError', 'UnknownHostError', 'VicarHostError', 'WrongHostError']
 
 
 class HostError(ValueError):
@@ -16,6 +16,11 @@ class HostError(ValueError):
 
 class UnknownHostError(HostError):
     """If a data file is not associated with any registered Host subclass."""
+    pass
+
+
+class AmbiguousHostError(HostError):
+    """If a data file or index is claimed by more than one registered Host subclass."""
     pass
 
 

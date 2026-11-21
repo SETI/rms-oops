@@ -8,10 +8,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 from astropy.io import fits
+from filecache  import FCPath
 from vicar      import VicarImage
 
-from oops.host import (Host, HostFormatError, HostIndexError, UnknownHostError,
-                       WrongHostError)
+from oops.host import (AmbiguousHostError, Host, HostFormatError, HostIndexError,
+                       PdsHostError, UnknownHostError, WrongHostError)
 
 INDEX_LABEL = """PDS_VERSION_ID = PDS3
 RECORD_TYPE = FIXED_LENGTH
@@ -71,6 +72,34 @@ class _HostB(_HostA):
     """A second unregistered host that recognizes no file."""
 
     NAME = 'host_b'
+
+
+class _ClaimsAll(Host):
+    """An unregistered host that recognizes every file."""
+
+    NAME = 'claims_all'
+
+    @staticmethod
+    def _detect_in_pds3(label: object) -> bool:
+        return True
+
+    @staticmethod
+    def _detect_in_fits(hdulist: object) -> bool:
+        return True
+
+    @staticmethod
+    def _detect_in_vicar(vic: object) -> bool:
+        return True
+
+    @staticmethod
+    def _detect_in_file(filepath: object) -> bool:
+        return True
+
+
+class _ClaimsAllToo(_ClaimsAll):
+    """A second unregistered host that recognizes every file."""
+
+    NAME = 'claims_all_too'
 
 
 def _write_index(directory: Path, stem: str) -> Path:
@@ -135,34 +164,83 @@ def test_an_unreadable_fits_file_is_a_format_error(tmp_path: Path) -> None:
     with pytest.raises(HostFormatError, match='not a valid FITS file'):
         Host._identify_and_parse(filepath, hosts=[_HostA])
 
+
+def test_a_fits_file_that_no_host_claims_is_closed(tmp_path: Path,
+                                                   monkeypatch: pytest.MonkeyPatch) -> None:
+    opened: list[fits.HDUList] = []
+    real_open = fits.open
+
+    def recording_open(*args: object, **kwargs: object) -> fits.HDUList:
+        hdulist = real_open(*args, **kwargs)
+        opened.append(hdulist)
+        return hdulist
+
+    monkeypatch.setattr(fits, 'open', recording_open)
+    with pytest.raises(WrongHostError):
+        Host._identify_and_parse(_write_fits(tmp_path), hosts=[_HostA])
+
+    assert opened[0]._file.closed
+
+##########################################################################################
+# A label that cannot be parsed is named in the error
+##########################################################################################
+
+def test_an_index_label_that_cannot_be_parsed_is_named(tmp_path: Path) -> None:
+    label = tmp_path / 'vol_index.lbl'
+    label.write_text('PDS_VERSION_ID = PDS3\nRECORD_TYPE\nEND\n')
+    with pytest.raises(PdsHostError,
+                       match=r'^cannot parse the PDS3 label .*vol_index\.lbl: '
+                             r'missing "=" at RECORD_TYPE'):
+        Host._parse_index_label(FCPath(label), {'method': 'fast'})
+
+
+def test_a_supplement_label_that_cannot_be_parsed_is_named(tmp_path: Path) -> None:
+    label = _write_index(tmp_path, 'vol_index')
+    (tmp_path / 'vol_supplemental_index.lbl').write_text(
+        'PDS_VERSION_ID = PDS3\nRECORD_TYPE\nEND\n')
+    with pytest.raises(PdsHostError,
+                       match=r'^cannot parse the PDS3 label '
+                             r'.*vol_supplemental_index\.lbl: missing "=" at RECORD_TYPE'):
+        Host._index_rows(label)
+
 ##########################################################################################
 # The supplemental index is optional unless required
 ##########################################################################################
 
 def test_an_index_without_index_in_its_name_needs_no_supplement(tmp_path: Path) -> None:
     label = _write_index(tmp_path, 'INDEX')
-    rows = Host._read_index_rows(label, supplement=Host.SUPPLEMENT,
-                                 require_supplement=False)
+    rows = Host._index_rows(label, supplement=Host.SUPPLEMENT,
+                            require_supplement=False)
     assert [row['NUM'] for row in rows] == [1, 2]
 
 
 def test_a_required_supplement_needs_index_in_the_name(tmp_path: Path) -> None:
     label = _write_index(tmp_path, 'INDEX')
     with pytest.raises(HostIndexError, match='supplemental index required'):
-        Host._read_index_rows(label, supplement=Host.SUPPLEMENT)
+        Host._index_rows(label, supplement=Host.SUPPLEMENT)
 
 
 def test_a_missing_optional_supplement_is_skipped(tmp_path: Path) -> None:
     label = _write_index(tmp_path, 'vol_index')
-    rows = Host._read_index_rows(label, supplement=Host.SUPPLEMENT,
-                                 require_supplement=False)
+    rows = Host._index_rows(label, supplement=Host.SUPPLEMENT,
+                            require_supplement=False)
     assert [row['NUM'] for row in rows] == [1, 2]
 
 
 def test_a_missing_required_supplement_is_not_found(tmp_path: Path) -> None:
     label = _write_index(tmp_path, 'vol_index')
     with pytest.raises(FileNotFoundError, match='vol_supplemental_index.lbl'):
-        Host._read_index_rows(label, supplement=Host.SUPPLEMENT)
+        Host._index_rows(label, supplement=Host.SUPPLEMENT)
+
+
+def test_a_pointer_to_no_object_is_an_index_error(tmp_path: Path) -> None:
+    """A table pointer that names no object of the label is reported as an invalid
+    index table, never as a bare KeyError."""
+
+    label = _write_index(tmp_path, 'INDEX')
+    label.write_text(label.read_text().replace('OBJECT = INDEX_TABLE', 'OBJECT = TABLE'))
+    with pytest.raises(HostIndexError, match="label lacks 'INDEX_TABLE'"):
+        Host._index_rows(label)
 
 ##########################################################################################
 # One host gives WrongHostError; several give UnknownHostError
@@ -182,6 +260,52 @@ def test_a_file_rejected_by_several_hosts_is_an_unknown_host(
     filepath = writer(tmp_path)
     with pytest.raises(UnknownHostError, match=f'unrecognized host in {kind}: '):
         Host._identify_and_parse(filepath, hosts=[_HostA, _HostB])
+
+
+@pytest.mark.parametrize(('writer', 'kind'), FILE_WRITERS)
+def test_a_file_claimed_by_several_hosts_is_ambiguous(
+        tmp_path: Path, writer: Callable[[Path], Path], kind: str) -> None:
+    filepath = writer(tmp_path)
+    with pytest.raises(AmbiguousHostError,
+                       match=f'^{kind} .*image.* is claimed by more than one host: '
+                             f'claims_all, claims_all_too$'):
+        Host._identify_and_parse(filepath, hosts=[_ClaimsAll, _HostA, _ClaimsAllToo],
+                                 dispatch=True)
+
+
+def test_a_label_no_parser_reads_claimed_by_path_by_several_hosts_is_ambiguous(
+        tmp_path: Path) -> None:
+    label = tmp_path / 'image.lbl'
+    label.write_text('PDS_VERSION_ID = PDS3\nRECORD_TYPE\nEND\n')
+    with pytest.raises(AmbiguousHostError, match='claims_all, claims_all_too$'):
+        Host._identify_and_parse(label, hosts=[_ClaimsAll, _ClaimsAllToo],
+                                 pds3_fallback=True, dispatch=True)
+
+
+def test_a_fits_file_claimed_by_several_hosts_is_closed(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    opened: list[fits.HDUList] = []
+    real_open = fits.open
+
+    def recording_open(*args: object, **kwargs: object) -> fits.HDUList:
+        hdulist = real_open(*args, **kwargs)
+        opened.append(hdulist)
+        return hdulist
+
+    monkeypatch.setattr(fits, 'open', recording_open)
+    with pytest.raises(AmbiguousHostError):
+        Host._identify_and_parse(_write_fits(tmp_path), hosts=[_ClaimsAll, _ClaimsAllToo])
+
+    assert opened[0]._file.closed
+
+
+def test_parsed_content_claimed_by_several_hosts_is_ambiguous(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Host, '_HOSTS', [_ClaimsAll, _ClaimsAllToo])
+    with pytest.raises(AmbiguousHostError,
+                       match='^parsed FITS file is claimed by more than one host: '
+                             'claims_all, claims_all_too$'):
+        Host._identify_parsed(fits.HDUList([fits.PrimaryHDU()]))
 
 
 def test_read_fileinfo_considers_only_its_own_host(tmp_path: Path) -> None:
