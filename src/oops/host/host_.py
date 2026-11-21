@@ -152,8 +152,8 @@ class Host:
                 or more attributes of the Observation. The first item is the initial time
                 shift in seconds. The second item is a string indicating which attributes
                 are to be time-shifted: "T" for the start/stop time, "P" for the path,
-                and/or "F" for the frame. If multiple letters are given, the time shifts
-                are coupled to whichever attribute is listed first.
+                and/or "F" for the frame, each at most once. If multiple letters are
+                given, the time shifts are coupled to whichever attribute is listed first.
             navigation (tuple[float, ...], optional): Two or three rotation angles in
                 radians to apply to the frame in order to align the calculated geometry
                 with the observed geometry. In this case, a fittable Navigation frame
@@ -294,8 +294,8 @@ class Host:
                 or more attributes of the Observation. The first item is the initial time
                 shift in seconds. The second item is a string indicating which attributes
                 are to be time-shifted: "T" for the start/stop time, "P" for the path,
-                and/or "F" for the frame. If multiple letters are given, the time shifts
-                are coupled to whichever attribute is listed first.
+                and/or "F" for the frame, each at most once. If multiple letters are
+                given, the time shifts are coupled to whichever attribute is listed first.
             navigation (tuple[float, ...], optional): Two or three rotation angles in
                 radians to apply to the frame in order to align the calculated geometry
                 with the observed geometry. In this case, a fittable Navigation frame
@@ -1519,8 +1519,8 @@ class Host:
                 or more attributes of the Observation. The first item is the initial time
                 shift in seconds. The second item is a string indicating which attributes
                 are to be time-shifted: "T" for the start/stop time, "P" for the path,
-                and/or "F" for the frame. If multiple letters are given, the time shifts
-                are coupled to whichever attribute is listed first.
+                and/or "F" for the frame, each at most once. If multiple letters are
+                given, the time shifts are coupled to whichever attribute is listed first.
             navigation (tuple[float, ...], optional): Two or three rotation angles in
                 radians to apply to the frame in order to align the calculated geometry
                 with the observed geometry. In this case, a fittable Navigation frame
@@ -1685,7 +1685,8 @@ class Host:
             tuple[float, str]: The time shift and the letters in upper case.
 
         Raises:
-            OopsValueError: If the letters are empty or include any other letter.
+            OopsValueError: If the letters are empty, include any other letter, or repeat
+                a letter.
         """
 
         (dt, letters) = timeshift
@@ -1694,6 +1695,8 @@ class Host:
             raise OopsValueError('the timeshift must specify one or more of T/P/F')
         if set(letters) - set('TPF'):
             raise OopsValueError(f'invalid timeshift letters: {letters}')
+        if len(set(letters)) < len(letters):
+            raise OopsValueError(f'repeated timeshift letters: {letters}')
         return (dt, letters)
 
     @staticmethod

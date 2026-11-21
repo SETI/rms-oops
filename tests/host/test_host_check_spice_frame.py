@@ -300,6 +300,13 @@ def test_unknown_timeshift_letters_are_refused() -> None:
         _check(_camera(), {'timeshift': (3., 'tx')})
 
 
+def test_repeated_timeshift_letters_are_refused() -> None:
+    """The override would shift the times twice, coupled to one fittable time shift."""
+
+    with pytest.raises(OopsValueError, match='repeated timeshift letters: TFT'):
+        _check(_camera(), {'timeshift': (3., 'tft')})
+
+
 def test_an_unknown_tracker_is_refused() -> None:
     with pytest.raises(OopsValueError, match="invalid tracker, should be \"start\", "
                                              "\"midtime\", or \"end\": 'middle'"):
