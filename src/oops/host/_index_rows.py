@@ -147,10 +147,10 @@ def key_columns(*keys):
     """The names of the columns that make up one or more file keys.
 
     Parameters:
-        *keys (str | tuple[str, ...] | collections.abc.Callable | None): The keys.
+        *keys (str | tuple[str, ...] | collections.abc.Callable): The keys.
 
     Returns:
-        set[str]: Every column that a key lists; a function or None lists none.
+        set[str]: Every column that a key lists; a function lists none.
     """
 
     names = set()
@@ -368,9 +368,9 @@ def pair_by_position(index_rows, supplement_rows, *, file_key, supplement_key, v
     Parameters:
         index_rows (collections.abc.Iterator[dict[str, Any]]): The index rows.
         supplement_rows (collections.abc.Iterator[dict[str, Any]]): The supplement rows.
-        file_key (str | tuple[str, ...] | collections.abc.Callable | None): How an index
-            row gives its file; None to compare no paths.
-        supplement_key (str | tuple[str, ...] | collections.abc.Callable | None): How a
+        file_key (str | tuple[str, ...] | collections.abc.Callable): How an index row
+            gives its file.
+        supplement_key (str | tuple[str, ...] | collections.abc.Callable): How a
             supplement row gives its file.
         validate (collections.abc.Callable | None): The check of each pair; None for none.
         prefer_supplement (bool): True to keep the supplement's value of a column that
@@ -391,14 +391,13 @@ def pair_by_position(index_rows, supplement_rows, *, file_key, supplement_key, v
         supplement_row = next(supplement_rows, _END)
         if supplement_row is _END:
             raise HostIndexError(f'the supplement ends before index row {i}: {files}')
-        if file_key is not None:
-            index_path = row_path(index_row, file_key)
-            supplement_path = row_path(supplement_row, supplement_key)
-            if path_key(index_path) != path_key(supplement_path):
-                raise HostIndexError(f'index row {i} gives {index_path!r} but the '
-                                     f'supplement row in the same position gives '
-                                     f'{supplement_path!r}; the rows of this host\'s '
-                                     f'tables are paired by position: {files}')
+        index_path = row_path(index_row, file_key)
+        supplement_path = row_path(supplement_row, supplement_key)
+        if path_key(index_path) != path_key(supplement_path):
+            raise HostIndexError(f'index row {i} gives {index_path!r} but the '
+                                 f'supplement row in the same position gives '
+                                 f'{supplement_path!r}; the rows of this host\'s '
+                                 f'tables are paired by position: {files}')
         _check_pair(validate, index_row, supplement_row, i, files)
         yield _merge(index_row, supplement_row, prefer_supplement)
 

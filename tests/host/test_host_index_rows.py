@@ -82,6 +82,61 @@ def test_the_default_file_key_is_the_file_specification_name_alone(
         next(rows)
 
 
+@pytest.mark.parametrize('host', [_ByPosition, _ByFile], ids=['by-position', 'by-file'])
+def test_an_index_without_the_default_file_key_raises_at_call_time(
+        tmp_path: Path, host: type[Host]) -> None:
+    """The table files are deleted, so the error comes from the labels alone."""
+
+    label = _tables(tmp_path, {'FILE_NAME': _files('A'), 'NUM': ['1']},
+                    {'FILE_SPECIFICATION_NAME': _files('A'), 'NUM': ['1']})
+    for table in tmp_path.glob('*.tab'):
+        table.unlink()
+
+    with pytest.raises(HostIndexError, match='the index lacks the column '
+                                             'FILE_SPECIFICATION_NAME of the default '
+                                             'file key: .*vol_index.lbl'):
+        host._index_rows(label, validate=())
+
+
+@pytest.mark.parametrize('host', [_ByPosition, _ByFile], ids=['by-position', 'by-file'])
+def test_a_supplement_without_the_default_file_key_raises_at_call_time(
+        tmp_path: Path, host: type[Host]) -> None:
+    """The table files are deleted, so the error comes from the labels alone."""
+
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('A'), 'NUM': ['1']},
+                    {'FILE_NAME': _files('A'), 'NUM': ['1']})
+    for table in tmp_path.glob('*.tab'):
+        table.unlink()
+
+    with pytest.raises(HostIndexError, match='the supplement lacks the column '
+                                             'FILE_SPECIFICATION_NAME of the default '
+                                             'file key: .*vol_supplemental_index.lbl'):
+        host._index_rows(label, validate=())
+
+
+def test_a_file_key_of_the_host_pairs_tables_without_the_default_column(
+        tmp_path: Path) -> None:
+    label = _tables(tmp_path, {'FILE_NAME': _files('AB'), 'NUM': ['1', '2']},
+                    {'FILE_NAME': _files('AC'), 'VAL': ['a', 'c']})
+    rows = _ByPosition._index_rows(label, file_key='FILE_NAME', validate=())
+
+    assert next(rows)['VAL'] == 'a'
+    with pytest.raises(HostIndexError, match="index row 1 gives 'B.LBL' but"):
+        next(rows)
+
+
+def test_a_supplement_key_of_the_host_pairs_a_supplement_without_the_default_column(
+        tmp_path: Path) -> None:
+    label = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('AB'),
+                               'NUM': ['1', '2']},
+                    {'FILE_NAME': _files('AC'), 'VAL': ['a', 'c']})
+    rows = _ByPosition._index_rows(label, supplement_key='FILE_NAME', validate=())
+
+    assert next(rows)['VAL'] == 'a'
+    with pytest.raises(HostIndexError, match="index row 1 gives 'B.LBL' but"):
+        next(rows)
+
+
 def test_the_default_check_compares_the_volume_of_rows_that_give_one_file(
         tmp_path: Path) -> None:
     label = _tables(tmp_path,
@@ -281,14 +336,6 @@ def test_pairing_by_file_raises_after_the_index_for_unpaired_supplement_rows(
                                              r"index does not, or lists them more "
                                              r"times, such as \['C.LBL'\]"):
         next(rows)
-
-
-def test_pairing_by_file_needs_a_file_key(tmp_path: Path) -> None:
-    label = _tables(tmp_path, {'NUM': ['1']}, {'NUM': ['1'], 'VAL': ['a']})
-
-    with pytest.raises(HostIndexError, match='are paired by file, but the tables lack '
-                                             'FILE_SPECIFICATION_NAME'):
-        _ByFile._index_rows(label)
 
 
 ##########################################################################################

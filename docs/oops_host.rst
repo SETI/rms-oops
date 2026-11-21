@@ -92,9 +92,13 @@ for each host, from a survey of that instrument's indexes:
   row, and a supplement row that is read early is held until its index row is reached.
   Because the rows are seldom far out of order, few rows are held at any time.
 
-Paths are compared without regard to case, to a leading "/" or "./", or to the extension,
-so a row that gives a product's label matches a row that gives its data file. Each pair of
-rows is also checked, by default by comparing the columns that both tables have.
+Each row gives its file in the column FILE_SPECIFICATION_NAME, unless the host names
+other columns for one table or both. If a table lacks a column that gives its file, the
+call raises :class:`~oops.host.HostIndexError`, naming the table and the column, before
+any row is read, so the files of every pair are compared. Paths are compared without
+regard to case, to a leading "/" or "./", or to the extension, so a row that gives a
+product's label matches a row that gives its data file. Each pair of rows is also checked,
+by default by comparing the columns that both tables have.
 
 A ``filter`` selects rows by the values of their columns, and each row is tested as it is
 read. A ``filter`` that uses a column that neither table has raises

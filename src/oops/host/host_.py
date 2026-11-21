@@ -1083,8 +1083,8 @@ class Host:
         :attr:`~oops.host.Host.MERGE_SUPPLEMENT_BY_FILE`:
 
         - False, pairing by position: the supplement is read in step with the index. At
-          each row, if both tables have a file key, the file that the index row gives
-          must be the file that the supplement row gives.
+          each row, the file that the index row gives must be the file that the
+          supplement row gives.
         - True, pairing by file: the supplement is read ahead only as far as the partner
           of the current index row, the row that gives the same file. A supplement row
           read before its partner is held until the partner is reached and then
@@ -1145,15 +1145,18 @@ class Host:
                 names, whose values are joined with "/", such as ``("VOLUME_ID",
                 "PATH_NAME", "FILE_NAME")``; or a function with the signature
                 ``(dict[str, Any]) -> str`` that returns the path from a row dictionary.
-                If unspecified, the key is FILE_SPECIFICATION_NAME, provided that both
-                tables have it. If they do not, rows paired by position are paired
-                without comparing their files. A host whose tables can list one file in
+                If unspecified, the key is FILE_SPECIFICATION_NAME, and a table that
+                lacks that column raises HostIndexError at call time, so the files of
+                every pair are compared. A host whose tables give the file in other
+                columns passes its own key. A host whose tables can list one file in
                 more than one volume, as a cumulative index can, and that pairs them by
                 file, gives a key that includes the volume, such as ``("VOLUME_ID",
                 "FILE_SPECIFICATION_NAME")``.
             supplement_key (str | tuple[str, ...] | collections.abc.Callable, optional):
                 How a row of the supplement gives its file, in the same forms as
-                `file_key`. If unspecified, `file_key` applies to both tables.
+                `file_key`. If unspecified, the key of the index applies to both tables:
+                `file_key`, or FILE_SPECIFICATION_NAME if `file_key` is also
+                unspecified.
             prefer_supplement (bool, optional): True to keep the supplement's value of a
                 column that both tables have; False to keep the index's.
 
@@ -1166,10 +1169,9 @@ class Host:
             HostIndexError: At call time: if either label does not describe a table that
                 can be read; if `supplement` is `Host.SUPPLEMENT`, `require_supplement` is
                 True, and :meth:`~oops.host.Host._supplement_path` returns None; if a
-                table lacks a column of its file key or of `validate`; if `validate` is
-                unspecified and the two tables do not share any column; or if
-                :attr:`~oops.host.Host.MERGE_SUPPLEMENT_BY_FILE` is True, `file_key` is
-                unspecified, and the tables lack FILE_SPECIFICATION_NAME. During the
+                table lacks a column of its file key, including FILE_SPECIFICATION_NAME
+                when the key is unspecified, or a column of `validate`; or if `validate`
+                is unspecified and the two tables do not share any column. During the
                 iteration, at the row concerned: an index row whose file is not the file
                 of the supplement row in the same position (pairing by position); an index
                 row for which the supplement lacks a row, which with pairing by file is
@@ -1257,23 +1259,20 @@ class Host:
         supp_names = _index_rows.column_names(supp_table)
         shared = set(index.get_keys()) & set(supp_table.get_keys())
         files = f'{filepath}, {supplement_path}'
-        if file_key is None and 'FILE_SPECIFICATION_NAME' in shared:
+        index_default = file_key is None
+        supp_default = file_key is None and supplement_key is None
+        if file_key is None:
             file_key = 'FILE_SPECIFICATION_NAME'
         if supplement_key is None:
             supplement_key = file_key
-        if file_key is None:
-            if cls.MERGE_SUPPLEMENT_BY_FILE:
-                raise HostIndexError(f'the rows of a {cls.NAME} index and its supplement '
-                                     f'are paired by file, but the tables lack '
-                                     f'FILE_SPECIFICATION_NAME: {files}')
-        else:
-            for (kind, key, names, path) in (('index', file_key, index_names, filepath),
-                                             ('supplement', supplement_key, supp_names,
-                                              supplement_path)):
-                for name in sorted(_index_rows.key_columns(key)):
-                    if name not in names:
-                        raise HostIndexError(f'the {kind} lacks the column {name}: '
-                                             f'{path}')
+        for (kind, key, default, names, path) in (
+                ('index', file_key, index_default, index_names, filepath),
+                ('supplement', supplement_key, supp_default, supp_names, supplement_path)):
+            for name in sorted(_index_rows.key_columns(key)):
+                if name not in names:
+                    which = ' of the default file key' if default else ''
+                    raise HostIndexError(f'the {kind} lacks the column {name}{which}: '
+                                         f'{path}')
 
         # By default, the columns of the file keys are left out of the check, because the
         # pairing compares them already, as paths, and the two tables may give the same

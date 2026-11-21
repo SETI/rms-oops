@@ -56,7 +56,7 @@ class _IndexHost(Host):
                    **kwargs: Any) -> Iterator[str]:
         rows = _IndexHost._index_rows(filepath, supplement=supplement,
                                       require_supplement=False, label=label,
-                                      row_dicts=row_dicts, validate='NAME',
+                                      row_dicts=row_dicts, file_key='NAME', validate=(),
                                       pds3_options=pds3_options, filter=filter)
 
         def build() -> Iterator[str]:
