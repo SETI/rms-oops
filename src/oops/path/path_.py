@@ -1178,11 +1178,14 @@ class RotatedPath(Path):
         self._primary  = self
         self._wrt_ssb  = None
 
-        for key in [(self._waypoint, self._origin),
-                    (self._waypoint, self._origin, self._frame)]:
-            cache = Path._cache_for(key)
-            if key not in cache:
-                cache[key] = self
+        # Cached only under the key that names its frame. The key of the waypoint and
+        # origin alone is read by the reversal in _wrt(), which treats the state as being
+        # in the frame of the origin; it would also keep the frame alive with the
+        # registered waypoint and origin.
+        key = (self._waypoint, self._origin, self._frame)
+        cache = Path._cache_for(key)
+        if key not in cache:
+            cache[key] = self
 
     def __getstate__(self):
         return (self._path, self._rotation)

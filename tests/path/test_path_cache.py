@@ -146,6 +146,32 @@ def test_a_wayframe_given_an_id_later_keeps_the_paths_cached_in_it() -> None:
     assert path.wrt(Path.SSB, frame) is linked
 
 
+def test_the_ssb_relative_to_a_registered_path_frees_the_frame_it_is_given() -> None:
+    # The SSB relative to the registered Path is that Path reversed and then rotated into
+    # the unregistered Frame
+    path = FixedPath(_position(9000), Path.SSB, Frame.J2000, path_id='TEST_PATH_CACHE_FREE')
+    refs = []
+    for k in range(COUNT):
+        frame = Cmatrix(_matrix(k))
+        Path.SSB.wrt(path, frame)
+        refs.append(weakref.ref(frame))
+    del frame
+    gc.collect()
+    assert sum(ref() is not None for ref in refs) == 0
+
+
+def test_a_path_rotated_into_one_frame_is_not_reused_for_another() -> None:
+    # The SSB relative to the registered Path in the first Frame is a rotated Path. The
+    # reverse request in the second Frame must not reverse that rotated Path as though
+    # its state were in the frame of the registered Path.
+    path = FixedPath(_position(9100), Path.SSB, Frame.J2000, path_id='TEST_PATH_CACHE_ROT')
+    Path.SSB.wrt(path, Cmatrix(_matrix(9101)))
+    frame = Cmatrix(_matrix(9102))
+    expected = frame.transform_at_time(0.).rotate(_position(9100))
+    result = path.wrt(Path.SSB, frame).event_at_time(0.).pos
+    assert (result - expected).norm().vals < 1e-6
+
+
 def test_an_unregistered_path_gives_the_same_path_wrt_the_ssb_twice() -> None:
     origin = FixedPath(_position(4000), Path.SSB, Frame.J2000)
     path = FixedPath(_position(0), origin, Frame.J2000)
