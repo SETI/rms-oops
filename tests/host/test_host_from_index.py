@@ -132,6 +132,38 @@ def test_from_index_raises_an_argument_error_at_call_time(index_label: Path) -> 
         Host.from_index(index_label, pds3_options={'method': 'bogus'})
 
 
+class _LazyHost(_IndexHost):
+    """A host whose from_index does not read any file until the iteration starts."""
+
+    NAME = 'lazy_host'
+
+    @staticmethod
+    def from_index(filepath: Any, **kwargs: Any) -> Iterator[str]:
+        yield from _IndexHost.from_index(filepath, **kwargs)
+
+
+def test_from_index_checks_the_options_when_the_label_is_given(
+        index_label: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The call does not parse the label, and the host does not read any file until the
+    iteration starts, but the call still refuses the unknown option."""
+
+    monkeypatch.setattr(Host, '_HOSTS', [_LazyHost])
+    label = Host._read_index_label(index_label)
+
+    with pytest.raises(OopsValueError, match="unexpected keyword argument 'bogus_option'$"):
+        Host.from_index(index_label, label=label, pds3_options={'bogus_option': 1})
+
+
+def test_from_index_does_not_check_the_options_of_given_rows(index_label: Path) -> None:
+    """With the rows given, the tables are not read, so the options are not checked."""
+
+    label = Host._read_index_label(index_label)
+    rows = Host.from_index(index_label, label=label, row_dicts=[{'NAME': 'A'}],
+                           pds3_options={'method': 'bogus'})
+
+    assert list(rows) == ['A']
+
+
 def test_a_host_identified_from_a_row_is_found_from_the_first_row_alone(
         index_label: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The label says three rows and the file holds one, and the host is still found."""

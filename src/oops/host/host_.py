@@ -32,6 +32,10 @@ from ._errors import (AmbiguousHostError, HostFormatError, HostIndexError, PdsHo
 # valid label, and "loose" also reads some invalid ones
 _PDS3_METHODS = ('fast', 'strict', 'loose')
 
+# A label of one statement, which every method of the PDS3 label parser can read; parsing
+# it checks the parser's options without reading a file
+_PDS3_OPTIONS_LABEL = 'PDS_VERSION_ID = PDS3\nEND\n'
+
 ObsArray: TypeAlias = (np.ndarray[tuple[int, ...], np.dtype[np.object_]]
                        | tuple[Observation | None, ...])
 
@@ -265,7 +269,10 @@ class Host:
                 identified from a row, the first one is read for that and still passed
                 on.
             pds3_options (dict[str, Any], optional): Any keyword arguments and their
-                values to be passed to the :class:`~pdsparser.Pds3Label` parser.
+                values to be passed to the :class:`~pdsparser.Pds3Label` parser. Unless
+                `row_dicts` is given, they are checked when this method is called,
+                whether or not `label` is given, and every label that is parsed, the
+                index label and the supplement's alike, is parsed with them.
             filter (dict[str, Any], optional): A dictionary of index column names and
                 their values or a set or tuple of values. If provided, only rows of the
                 index in which each named column equals the value, falls in the set of
@@ -322,12 +329,13 @@ class Host:
             every row at once.
 
         Raises:
-            OopsValueError: If a value in `pds3_options` is invalid, if the parser cannot
-                convert a value in the index label, such as day 366 of a year that has
-                365 days, or if `filter` uses a column that the index does not have. With
-                `row_dicts` given, `filter` is checked against the first row: at call time
-                if `row_dicts` is a sequence, and when the iteration reads the first row
-                if it is an iterator.
+            OopsValueError: If `pds3_options` holds an invalid value, such as an unknown
+                method, or a keyword that the parser does not accept, as described for
+                `pds3_options`; if the parser cannot convert a value in the index label,
+                such as day 366 of a year that has 365 days; or if `filter` uses a column
+                that the index does not have. With `row_dicts` given, `filter` is checked
+                against the first row: at call time if `row_dicts` is a sequence, and when
+                the iteration reads the first row if it is an iterator.
             OopsTypeError: When the iteration reaches a row whose value cannot be compared
                 with a range in `filter`.
             HostIndexError: If the label of `filepath` or `supplement` does not describe a
@@ -354,6 +362,12 @@ class Host:
         filepath = FCPath(filepath)
         options = Host._pds3_options_with_defaults(pds3_options)
         given_label = label
+
+        # The PDS3 options are checked before any file is read, whether or not a label is
+        # parsed below. Rows given by the caller are not read from the tables, so the
+        # options are not checked for them.
+        if row_dicts is None:
+            Host._check_pds3_options(options)
 
         # If the label cannot be parsed, it is offered to each host's correction of label
         # text. The first host whose correction makes it readable and that recognizes it
@@ -388,8 +402,7 @@ class Host:
             if not undecided:
                 raise UnknownHostError(f'unknown host in index {filepath}')
             if row_dicts is None:
-                table = _index_rows.open_table(filepath, label=label,
-                                               pds3_method=options['method'])
+                table = _index_rows.open_table(filepath, label)
                 first = _index_rows.first_row(table, filepath)
             else:
                 (first, row_dicts) = Host._peek(row_dicts)
@@ -1072,11 +1085,11 @@ class Host:
         This is the support method with which a host's ``from_index`` reads its index;
         the host builds one observation from each row that the iterator yields.
 
-        The call itself reads only labels. It reads the labels of the index and the
-        supplement, checks that the index belongs to this host, and checks the columns
-        that `filter`, `validate`, and the file keys use against the labels. If the index
-        label cannot tell whether the index belongs to this host, the first row is read
-        for that, and only that row.
+        The call itself reads only labels. It checks `pds3_options`, reads the labels of
+        the index and the supplement, checks that the index belongs to this host, and
+        checks the columns that `filter`, `validate`, and the file keys use against the
+        labels. If the index label cannot tell whether the index belongs to this host,
+        the first row is read for that, and only that row.
 
         The iteration then reads the index 100 rows at a time. How each index row is
         paired with its supplement row is fixed by the host's
@@ -1122,8 +1135,11 @@ class Host:
                 the index already merged with the supplement. If they are given, the
                 iteration filters each one as it reaches it, and the tables are not read.
             pds3_options (dict[str, Any], optional): Any keyword arguments and their
-                values to be passed to the :class:`~pdsparser.Pds3Label` parser for the
-                index label. The supplement's label is parsed with their method alone.
+                values to be passed to the :class:`~pdsparser.Pds3Label` parser. Unless
+                `row_dicts` is given, they are checked at call time, whether or not
+                `label` is given, and the labels of the index and the supplement are
+                both parsed with them. With `row_dicts`, the labels are not read and the
+                options are not checked.
             filter (dict[str, Any], optional): Column names, each with a value, a set,
                 list, or tuple of values, or a tuple of two values that bound a range. A
                 row is yielded only if every column it lists equals the value, is one of
@@ -1189,10 +1205,13 @@ class Host:
                 read ahead of their index rows are kept, so the memory used depends on
                 how far out of order the two tables are; a supplement in the reverse order
                 of its index holds all but one of its rows before the first pair.
-            OopsValueError: At call time, if a value in `pds3_options` is invalid, or if
-                `filter` uses a column that neither table has. If `row_dicts` is given,
-                `filter` is checked against the first row, at call time if `row_dicts`
-                is a sequence and otherwise when the first row is read.
+            OopsValueError: At call time, if `pds3_options` holds an invalid value, such
+                as an unknown method, or a keyword that the parser does not accept, as
+                described for `pds3_options`; if the parser cannot convert a value in a
+                label; or if `filter` uses a column that neither table has. If
+                `row_dicts` is given, `filter` is checked against the first row, at call
+                time if `row_dicts` is a sequence and otherwise when the first row is
+                read.
             OopsTypeError: When the iteration reaches a row whose value cannot be compared
                 with a range in `filter`.
             OSError: At call time, if a label does not exist or cannot be read, or if the
@@ -1212,11 +1231,14 @@ class Host:
                 _index_rows.check_filter(filter, names)
             return _index_rows.filtered(row_dicts, filter, names)
 
-        # Read the index label and check the host
+        # Check the PDS3 options, with which every label below is parsed, even if none is,
+        # as when the index label is given and there is no supplement
         options = Host._pds3_options_with_defaults(pds3_options)
-        method = options['method']
+        Host._check_pds3_options(options)
+
+        # Read the index label and check the host
         label = cls._read_index_label(filepath, label=label, pds3_options=options)
-        index = _index_rows.open_table(filepath, label=label, pds3_method=method)
+        index = _index_rows.open_table(filepath, label)
         index_names = _index_rows.column_names(index)
         if cls is not Host:
             status = cls._detect_in_index(label)
@@ -1235,18 +1257,14 @@ class Host:
         elif supplement:
             supplement_path = FCPath(supplement)
 
-        # The supplement's label is parsed with the parser method alone, after the host's
-        # correction of label text if it has one
+        # The supplement's label is parsed with the same options as the index label, after
+        # the host's correction of label text if it has one
         supp_table = None
         if supplement_path is not None:
-            correct = cls._label_corrector()
             try:
-                supp_label = (None if correct is None else
-                              Host._parse_index_label(supplement_path,
-                                                      {'method': method},
-                                                      correct=correct))
-                supp_table = _index_rows.open_table(supplement_path, label=supp_label,
-                                                    pds3_method=method)
+                supp_label = Host._parse_index_label(supplement_path, options,
+                                                     correct=cls._label_corrector())
+                supp_table = _index_rows.open_table(supplement_path, supp_label)
             except FileNotFoundError:
                 if require_supplement:
                     raise
@@ -1398,6 +1416,28 @@ class Host:
             return Host._pds3_label(source, filepath, options)
         except PdsError as err:
             raise PdsHostError(f'cannot parse the PDS3 label {filepath}: {err}') from err
+        except (TypeError, ValueError) as err:
+            raise OopsValueError(str(err)) from err
+
+    @staticmethod
+    def _check_pds3_options(pds3_options):
+        """Check the options of the PDS3 parser without reading a label.
+
+        The parser checks them, as it does whenever it parses a label: a label of one
+        statement, which every method can read, is parsed with them, and the parser's
+        error is raised as :meth:`~oops.host.Host._parse_index_label` raises it.
+
+        Parameters:
+            pds3_options (dict[str, Any]): The keyword arguments of the
+                :class:`~pdsparser.Pds3Label` parser.
+
+        Raises:
+            OopsValueError: If `pds3_options` holds an invalid value, such as an unknown
+                method, or a keyword that the parser does not accept.
+        """
+
+        try:
+            Pds3Label(_PDS3_OPTIONS_LABEL, **pds3_options)
         except (TypeError, ValueError) as err:
             raise OopsValueError(str(err)) from err
 

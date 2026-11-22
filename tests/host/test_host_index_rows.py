@@ -438,6 +438,53 @@ def test_a_key_column_a_table_lacks_raises_at_call_time(tmp_path: Path) -> None:
 
 
 ##########################################################################################
+# The PDS3 options
+##########################################################################################
+
+@pytest.mark.parametrize(('options', 'message'),
+                         [({'method': 'bogus'}, "^invalid method: 'bogus'$"),
+                          ({'bogus_option': 1},
+                           "unexpected keyword argument 'bogus_option'$")],
+                         ids=['invalid-method', 'unknown-option'])
+def test_the_options_are_checked_at_call_time_when_the_label_is_given(
+        tmp_path: Path, options: dict[str, Any], message: str) -> None:
+    """The index label is not parsed, and the call refuses the options before it parses
+    the supplement's label."""
+
+    index = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('A'), 'NUM': ['1']},
+                    {'FILE_SPECIFICATION_NAME': _files('A'), 'VAL': ['a']})
+    label = _ByPosition._read_index_label(index)
+
+    with pytest.raises(OopsValueError, match=message):
+        _ByPosition._index_rows(index, label=label, pds3_options=options)
+
+
+def test_the_options_are_checked_at_call_time_when_no_label_is_parsed(
+        tmp_path: Path) -> None:
+    """The index label is given and there is no supplement, so the call does not parse
+    any label."""
+
+    index = write_table(tmp_path, 'vol_index', {'FILE_SPECIFICATION_NAME': _files('A')})
+    label = _ByPosition._read_index_label(index)
+
+    with pytest.raises(OopsValueError, match="^invalid method: 'bogus'$"):
+        _ByPosition._index_rows(index, supplement=None, label=label,
+                                pds3_options={'method': 'bogus'})
+
+
+def test_the_supplement_label_is_parsed_with_the_callers_options(tmp_path: Path) -> None:
+    """The caller's repair renames the supplement's column VAL."""
+
+    index = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('A'), 'NUM': ['1']},
+                    {'FILE_SPECIFICATION_NAME': _files('A'), 'VAL': ['a']})
+    options = {'method': 'fast', 'repairs': ('NAME = VAL', 'NAME = RENAMED')}
+
+    rows = _ByPosition._index_rows(index, pds3_options=options)
+
+    assert [row['RENAMED'] for row in rows] == ['a']
+
+
+##########################################################################################
 # Filtering
 ##########################################################################################
 

@@ -11,12 +11,11 @@ memory.
 import itertools
 
 import numpy as np
-from pdsparser import PdsError
-from pdstable  import PdsTable
+from pdstable import PdsTable
 
 from oops._exceptions import OopsTypeError, OopsValueError
 
-from ._errors import HostIndexError, PdsHostError
+from ._errors import HostIndexError
 
 # The number of rows that PdsTable reads and parses at a time. Pairing the 464,752 rows of
 # COVIMS_0999 with its supplement took 26.8 s at 1,000 rows, 30.2 s at 100, 43.2 s at 20,
@@ -33,14 +32,12 @@ _PATHS_IN_MESSAGE = 3
 _END = object()
 
 
-def open_table(filepath, *, label=None, pds3_method='fast'):
-    """A PDS3 table whose label has been read and whose rows have not.
+def open_table(filepath, label):
+    """A PDS3 table whose label has been parsed and whose rows have not been read.
 
     Parameters:
         filepath (FCPath): The path to the label of the table.
-        label (Pds3Label | dict[str, Any], optional): The content of the label, if it
-            has already been read.
-        pds3_method (str, optional): The method of the PDS3 label parser.
+        label (Pds3Label | dict[str, Any]): The parsed content of the label.
 
     Returns:
         PdsTable: The table, created with ``defer_load=True``.
@@ -48,24 +45,18 @@ def open_table(filepath, *, label=None, pds3_method='fast'):
     Raises:
         HostIndexError: If the label does not describe a table that can be read, as when
             it lacks the object that its table pointer refers to.
-        OSError: If the label does not exist or cannot be read.
-        PdsHostError: If the label uses invalid PDS3 syntax. The message has the form
-            "cannot parse the PDS3 label <filepath>: <parser's message>".
     """
 
     try:
-        return PdsTable(filepath, label_contents=label, label_method=pds3_method,
-                        defer_load=True)
-    except PdsError as err:
-        raise PdsHostError(f'cannot parse the PDS3 label {filepath}: {err}') from err
+        return PdsTable(filepath, label_contents=label, defer_load=True)
     except KeyError as err:
         # An item that the table reader needs is not in the label, such as the object
         # that a pointer refers to (^INDEX_TABLE in a label whose table object is TABLE)
         raise HostIndexError(f'invalid index table {filepath}: the label lacks '
                              f'{err}') from err
     except (TypeError, ValueError) as err:
-        # The PDS3 options were checked when the label was parsed, so the problem lies in
-        # the description of the table
+        # The label has been parsed already, with PDS3 options that were checked first,
+        # so the problem lies in the description of the table
         raise HostIndexError(f'invalid index table {filepath}: {err}') from err
 
 

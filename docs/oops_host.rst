@@ -68,12 +68,13 @@ Reading an index
 :meth:`~oops.host.Host.from_index` reads a PDS3 index table and returns an iterator over
 its observations, one for each row. The call itself reads only the labels of the index
 and of its supplement, so a mistake in the arguments or in a label is reported at once.
-It identifies the host from the index label, which is parsed with one parser, "fast"
-unless the options select another. If the label does not say which instrument the index
-describes, the first row is read to find out, and only that row. An index label that the
-parser cannot read is offered to each host's correction of label text, as a product label
-is, and goes to the host whose correction makes it readable and that recognizes the
-corrected label.
+The options of the label parser are checked even when the caller passes the index label
+already parsed, and the supplement's label is parsed with the same options. It identifies
+the host from the index label, which is parsed with one parser, "fast" unless the options
+select another. If the label does not say which instrument the index describes, the first
+row is read to find out, and only that row. An index label that the parser cannot read is
+offered to each host's correction of label text, as a product label is, and goes to the
+host whose correction makes it readable and that recognizes the corrected label.
 
 The host's own ``from_index`` then reads the index a few rows at a time as the iteration
 proceeds, and builds each row's observation when the iteration reaches it. An index of
