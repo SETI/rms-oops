@@ -144,10 +144,9 @@ def test_a_supplement_label_is_parsed_after_the_correction(tmp_path: Path) -> No
     assert [row['VAL'] for row in _Fixing._index_rows(index)] == ['a']
 
 
-def test_a_supplement_label_is_parsed_with_the_callers_options(tmp_path: Path) -> None:
-    """The caller's repair, which renames the supplement's column, applies to the
-    supplement's label as well as the index label, as it does for a host without a
-    correction."""
+def test_a_supplement_label_is_parsed_with_the_parser_method_only(tmp_path: Path) -> None:
+    """The caller's repair, which renames the supplement's column, applies to the index
+    label only, as it does for a host without a correction."""
 
     index = write_table(tmp_path, 'vol_index', {'FILE_SPECIFICATION_NAME': ['A.LBL'],
                                                 'NUM': ['1']})
@@ -155,8 +154,8 @@ def test_a_supplement_label_is_parsed_with_the_callers_options(tmp_path: Path) -
                 {'FILE_SPECIFICATION_NAME': ['A.LBL'], 'VAL': ['a']})
     options = {'method': 'fast', 'repairs': ('NAME = VAL', 'NAME = RENAMED')}
 
-    assert [row['RENAMED'] for row in _Fixing._index_rows(index, pds3_options=options)] \
-        == ['a']
+    assert [row['VAL'] for row in _Fixing._index_rows(index, pds3_options=options)] == \
+        ['a']
 
 
 def test_the_dispatcher_gives_a_label_to_the_host_whose_correction_reads_it(

@@ -447,13 +447,19 @@ def test_a_key_column_a_table_lacks_raises_at_call_time(tmp_path: Path) -> None:
                            "unexpected keyword argument 'bogus_option'$")],
                          ids=['invalid-method', 'unknown-option'])
 def test_the_options_are_checked_at_call_time_when_the_label_is_given(
-        tmp_path: Path, options: dict[str, Any], message: str) -> None:
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, options: dict[str, Any],
+        message: str) -> None:
     """The index label is not parsed, and the call refuses the options before it parses
-    the supplement's label."""
+    the supplement's label: parsing any label fails the test."""
 
     index = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('A'), 'NUM': ['1']},
                     {'FILE_SPECIFICATION_NAME': _files('A'), 'VAL': ['a']})
     label = _ByPosition._read_index_label(index)
+
+    def parse(filepath: Any, *args: Any, **kwargs: Any) -> None:
+        pytest.fail(f'the label {filepath} was parsed')
+
+    monkeypatch.setattr(Host, '_parse_index_label', staticmethod(parse))
 
     with pytest.raises(OopsValueError, match=message):
         _ByPosition._index_rows(index, label=label, pds3_options=options)
@@ -472,8 +478,23 @@ def test_the_options_are_checked_at_call_time_when_no_label_is_parsed(
                                 pds3_options={'method': 'bogus'})
 
 
-def test_the_supplement_label_is_parsed_with_the_callers_options(tmp_path: Path) -> None:
-    """The caller's repair renames the supplement's column VAL."""
+def test_a_repair_that_the_index_label_needs_is_accepted(tmp_path: Path) -> None:
+    """The index label lacks the END_OBJECT of its table, and the caller's repair, which
+    adds it, would leave a label of one statement unbalanced."""
+
+    index = write_table(tmp_path, 'vol_index', {'FILE_SPECIFICATION_NAME': _files('AB')})
+    index.write_text(index.read_text().replace('END_OBJECT = INDEX_TABLE\n', ''))
+    options = {'repairs': (r'\nEND\s*$', '\nEND_OBJECT = INDEX_TABLE\nEND\n')}
+
+    rows = _ByPosition._index_rows(index, supplement=None, pds3_options=options)
+
+    assert [row['FILE_SPECIFICATION_NAME'] for row in rows] == _files('AB')
+
+
+def test_the_supplement_label_is_parsed_with_the_parser_method_only(
+        tmp_path: Path) -> None:
+    """The caller's repair, which renames the supplement's column VAL, applies to the
+    index label only."""
 
     index = _tables(tmp_path, {'FILE_SPECIFICATION_NAME': _files('A'), 'NUM': ['1']},
                     {'FILE_SPECIFICATION_NAME': _files('A'), 'VAL': ['a']})
@@ -481,7 +502,34 @@ def test_the_supplement_label_is_parsed_with_the_callers_options(tmp_path: Path)
 
     rows = _ByPosition._index_rows(index, pds3_options=options)
 
-    assert [row['RENAMED'] for row in rows] == ['a']
+    assert [row['VAL'] for row in rows] == ['a']
+
+
+@pytest.mark.parametrize(('repairs', 'message'),
+                         [('ab', "^invalid repairs: 'ab': "),
+                          (('ZZZQ',), r"^invalid repairs: \('ZZZQ',\): "),
+                          (('(', 'x'), r"^invalid repairs: \('\(', 'x'\): missing \)"),
+                          (('ZZZQ', r'\2'), '^invalid repairs: .*: invalid group reference')],
+                         ids=['text', 'one-item', 'invalid-pattern', 'invalid-group'])
+def test_an_invalid_repair_raises_an_argument_error(tmp_path: Path, repairs: Any,
+                                                    message: str) -> None:
+    """The label is parsed, and no repair matches its text."""
+
+    index = write_table(tmp_path, 'vol_index', {'FILE_SPECIFICATION_NAME': _files('A')})
+
+    with pytest.raises(OopsValueError, match=message):
+        _ByPosition._read_index_label(index, pds3_options={'repairs': repairs})
+
+
+def test_an_invalid_fmt_dirs_raises_an_argument_error(tmp_path: Path) -> None:
+    """The index label is given and there is no supplement, so no label is parsed."""
+
+    index = write_table(tmp_path, 'vol_index', {'FILE_SPECIFICATION_NAME': _files('A')})
+    label = _ByPosition._read_index_label(index)
+
+    with pytest.raises(OopsValueError, match='^invalid fmt_dirs: None$'):
+        _ByPosition._index_rows(index, supplement=None, label=label,
+                                pds3_options={'fmt_dirs': None})
 
 
 ##########################################################################################

@@ -5,6 +5,7 @@
 import itertools
 import numbers
 import pathlib
+import re
 from collections.abc import Sequence
 from typing import TypeAlias
 
@@ -35,6 +36,10 @@ _PDS3_METHODS = ('fast', 'strict', 'loose')
 # A label of one statement, which every method of the PDS3 label parser can read; parsing
 # it checks the parser's options without reading a file
 _PDS3_OPTIONS_LABEL = 'PDS_VERSION_ID = PDS3\nEND\n'
+
+# The options of the PDS3 label parser that change the text before it is parsed. They are
+# left out of the parse of _PDS3_OPTIONS_LABEL, which a valid repair could make unreadable
+_PDS3_TEXT_OPTIONS = ('repairs', 'expand', 'fmt_dirs')
 
 ObsArray: TypeAlias = (np.ndarray[tuple[int, ...], np.dtype[np.object_]]
                        | tuple[Observation | None, ...])
@@ -271,8 +276,8 @@ class Host:
             pds3_options (dict[str, Any], optional): Any keyword arguments and their
                 values to be passed to the :class:`~pdsparser.Pds3Label` parser. Unless
                 `row_dicts` is given, they are checked when this method is called,
-                whether or not `label` is given, and every label that is parsed, the
-                index label and the supplement's alike, is parsed with them.
+                whether or not `label` is given. The index label is parsed with all of
+                them, and the supplement's label with their method alone.
             filter (dict[str, Any], optional): A dictionary of index column names and
                 their values or a set or tuple of values. If provided, only rows of the
                 index in which each named column equals the value, falls in the set of
@@ -330,12 +335,13 @@ class Host:
 
         Raises:
             OopsValueError: If `pds3_options` holds an invalid value, such as an unknown
-                method, or a keyword that the parser does not accept, as described for
-                `pds3_options`; if the parser cannot convert a value in the index label,
-                such as day 366 of a year that has 365 days; or if `filter` uses a column
-                that the index does not have. With `row_dicts` given, `filter` is checked
-                against the first row: at call time if `row_dicts` is a sequence, and when
-                the iteration reads the first row if it is an iterator.
+                method, a keyword that the parser does not accept, or a repair that
+                :func:`re.sub` refuses, at call time unless `row_dicts` is given; if the
+                parser cannot convert a value in the index label or the supplement's
+                label, such as day 366 of a year that has 365 days; or if `filter` uses a
+                column that the index does not have. With `row_dicts` given, `filter` is
+                checked against the first row: at call time if `row_dicts` is a sequence,
+                and when the iteration reads the first row if it is an iterator.
             OopsTypeError: When the iteration reaches a row whose value cannot be compared
                 with a range in `filter`.
             HostIndexError: If the label of `filepath` or `supplement` does not describe a
@@ -1137,9 +1143,10 @@ class Host:
             pds3_options (dict[str, Any], optional): Any keyword arguments and their
                 values to be passed to the :class:`~pdsparser.Pds3Label` parser. Unless
                 `row_dicts` is given, they are checked at call time, whether or not
-                `label` is given, and the labels of the index and the supplement are
-                both parsed with them. With `row_dicts`, the labels are not read and the
-                options are not checked.
+                `label` is given. The index label is parsed with all of them, and the
+                supplement's label with their method alone, because the others, such as
+                a repair, are written for the index label. With `row_dicts`, the labels
+                are not read and the options are not checked.
             filter (dict[str, Any], optional): Column names, each with a value, a set,
                 list, or tuple of values, or a tuple of two values that bound a range. A
                 row is yielded only if every column it lists equals the value, is one of
@@ -1206,12 +1213,12 @@ class Host:
                 how far out of order the two tables are; a supplement in the reverse order
                 of its index holds all but one of its rows before the first pair.
             OopsValueError: At call time, if `pds3_options` holds an invalid value, such
-                as an unknown method, or a keyword that the parser does not accept, as
-                described for `pds3_options`; if the parser cannot convert a value in a
-                label; or if `filter` uses a column that neither table has. If
-                `row_dicts` is given, `filter` is checked against the first row, at call
-                time if `row_dicts` is a sequence and otherwise when the first row is
-                read.
+                as an unknown method, a keyword that the parser does not accept, or a
+                repair that :func:`re.sub` refuses; if the parser cannot convert a value
+                in a label; or if `filter` uses a column that neither table has. If
+                `row_dicts` is given, `pds3_options` is not checked, and `filter` is
+                checked against the first row, at call time if `row_dicts` is a sequence
+                and otherwise when the first row is read.
             OopsTypeError: When the iteration reaches a row whose value cannot be compared
                 with a range in `filter`.
             OSError: At call time, if a label does not exist or cannot be read, or if the
@@ -1231,8 +1238,8 @@ class Host:
                 _index_rows.check_filter(filter, names)
             return _index_rows.filtered(row_dicts, filter, names)
 
-        # Check the PDS3 options, with which every label below is parsed, even if none is,
-        # as when the index label is given and there is no supplement
+        # Check the PDS3 options at call time, even if no label is parsed below, as when
+        # the index label is given and there is no supplement
         options = Host._pds3_options_with_defaults(pds3_options)
         Host._check_pds3_options(options)
 
@@ -1257,12 +1264,14 @@ class Host:
         elif supplement:
             supplement_path = FCPath(supplement)
 
-        # The supplement's label is parsed with the same options as the index label, after
-        # the host's correction of label text if it has one
+        # The supplement's label is parsed with the parser method alone, after the host's
+        # correction of label text if it has one. The caller's other options, such as a
+        # repair, are written for the index label and could break another file's
         supp_table = None
         if supplement_path is not None:
             try:
-                supp_label = Host._parse_index_label(supplement_path, options,
+                supp_label = Host._parse_index_label(supplement_path,
+                                                     {'method': options['method']},
                                                      correct=cls._label_corrector())
                 supp_table = _index_rows.open_table(supplement_path, supp_label)
             except FileNotFoundError:
@@ -1402,14 +1411,17 @@ class Host:
             Pds3Label: The label, whose `filepath` is `filepath`.
 
         Raises:
-            OopsValueError: If a value in `pds3_options` is invalid, or if the parser
-                cannot convert a value in the label.
+            OopsValueError: If `pds3_options` holds an invalid value, as
+                :meth:`~oops.host.Host._check_pds3_options` describes, which is checked
+                before the label is read; or if the parser cannot convert a value in the
+                label.
             OSError: If `filepath` does not exist or cannot be read.
             PdsHostError: If the label, as corrected, uses invalid PDS3 syntax, or if its
                 text cannot be read for `correct`. The message has the form "cannot parse
                 the PDS3 label <filepath>: <parser's message>".
         """
 
+        Host._check_pds3_options(pds3_options)
         filepath = FCPath(filepath)
         (source, options) = Host._pds3_source(filepath, pds3_options, correct)
         try:
@@ -1423,9 +1435,14 @@ class Host:
     def _check_pds3_options(pds3_options):
         """Check the options of the PDS3 parser without reading a label.
 
-        The parser checks them, as it does whenever it parses a label: a label of one
-        statement, which every method can read, is parsed with them, and the parser's
-        error is raised as :meth:`~oops.host.Host._parse_index_label` raises it.
+        The parser checks the method, and that it accepts each keyword: a label of one
+        statement, which every method can read, is parsed with the options other than
+        "repairs", "expand", and "fmt_dirs", which change the text of a label, so that
+        a valid repair cannot make that label unreadable. The parser does not check
+        "repairs" or "fmt_dirs" before it uses them, so they are checked here: "repairs"
+        must be a tuple of a pattern and a replacement that :func:`re.sub` accepts, or a
+        list of such tuples, and "fmt_dirs" a directory, or a list or tuple of
+        directories, each given as a str, a :class:`pathlib.Path`, or an FCPath.
 
         Parameters:
             pds3_options (dict[str, Any]): The keyword arguments of the
@@ -1433,13 +1450,36 @@ class Host:
 
         Raises:
             OopsValueError: If `pds3_options` holds an invalid value, such as an unknown
-                method, or a keyword that the parser does not accept.
+                method, a keyword that the parser does not accept, a repair that is not
+                a pattern and a replacement, a pattern or replacement that
+                :func:`re.sub` refuses, or a "fmt_dirs" that is not a directory or a
+                list or tuple of directories.
         """
 
         try:
-            Pds3Label(_PDS3_OPTIONS_LABEL, **pds3_options)
+            Pds3Label(_PDS3_OPTIONS_LABEL, **{key: value
+                                              for (key, value) in pds3_options.items()
+                                              if key not in _PDS3_TEXT_OPTIONS})
         except (TypeError, ValueError) as err:
             raise OopsValueError(str(err)) from err
+
+        # The parser takes a single repair as a tuple, and otherwise iterates over them.
+        # re.sub checks the pattern and the replacement even where the pattern matches
+        # nothing, as in an empty string
+        repairs = pds3_options.get('repairs', [])
+        each = [repairs] if isinstance(repairs, tuple) else repairs
+        try:
+            for (pattern, replacement) in each:
+                re.compile(pattern).sub(replacement, '')
+        except (TypeError, ValueError, re.error) as err:
+            raise OopsValueError(f'invalid repairs: {repairs!r}: {err}') from err
+
+        directories = (str, pathlib.Path, FCPath)
+        fmt_dirs = pds3_options.get('fmt_dirs', [])
+        if not (isinstance(fmt_dirs, directories)
+                or (isinstance(fmt_dirs, (list, tuple))
+                    and all(isinstance(fmt_dir, directories) for fmt_dir in fmt_dirs))):
+            raise OopsValueError(f'invalid fmt_dirs: {fmt_dirs!r}')
 
     @staticmethod
     def _peek(rows):

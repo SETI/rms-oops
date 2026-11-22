@@ -149,9 +149,21 @@ def test_from_index_checks_the_options_when_the_label_is_given(
 
     monkeypatch.setattr(Host, '_HOSTS', [_LazyHost])
     label = Host._read_index_label(index_label)
+    message = "unexpected keyword argument 'bogus_option'$"
 
-    with pytest.raises(OopsValueError, match="unexpected keyword argument 'bogus_option'$"):
+    with pytest.raises(OopsValueError, match=message):
         Host.from_index(index_label, label=label, pds3_options={'bogus_option': 1})
+
+
+def test_from_index_accepts_a_repair_that_the_index_label_needs(
+        index_label: Path) -> None:
+    """The index label lacks the END_OBJECT of its table, and the caller's repair, which
+    adds it, would leave a label of one statement unbalanced."""
+
+    index_label.write_text(INDEX_LABEL.replace('END_OBJECT = INDEX_TABLE\n', ''))
+    options = {'repairs': (r'\nEND\s*$', '\nEND_OBJECT = INDEX_TABLE\nEND\n')}
+
+    assert list(Host.from_index(index_label, pds3_options=options)) == ['A', 'B', 'C']
 
 
 def test_from_index_does_not_check_the_options_of_given_rows(index_label: Path) -> None:
