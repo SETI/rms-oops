@@ -11,10 +11,6 @@ exactly: every public name, its parameters, which of them are keyword-only, and 
 defaults. Types are given where they are unambiguous and are `Any` elsewhere.
 """
 
-import pathlib
-from typing import NoReturn
-
-from filecache import FCPath
 from oops.path import KeplerPath as KeplerPath, PathShift as PathShift
 from oops import Fittable as Fittable, Path as Path, Transform as Transform
 from oops.cadence import TimeShift as TimeShift
@@ -28,9 +24,9 @@ from oops.mutable import Mutable as Mutable
 
 __all__ = ['Frame', 'NullFrame', 'J2000Frame', 'LinkedFrame', 'ReversedFrame', 'Cmatrix',
            'FrameShift', 'InclinedFrame', 'LaplaceFrame', 'Navigation', 'PoleFrame',
-           'PosTargFrame', 'QuickFrame', 'RingFrame', 'Rotation', 'SpiceErrorFrame',
-           'SpiceFrame', 'SpiceType1Frame', 'SpinFrame', 'SynchronousFrame',
-           'TrackerFrame', 'TwoVectorFrame']
+           'PosTargFrame', 'QuickFrame', 'RingFrame', 'Rotation', 'SpiceFrame',
+           'SpiceType1Frame', 'SpinFrame', 'SynchronousFrame', 'TrackerFrame',
+           'TwoVectorFrame']
 
 class Frame(Mutable):
     @property
@@ -206,18 +202,6 @@ class Rotation(Frame, Fittable):
     def params(self) -> tuple[float, ...]: ...
     def transform_at_time(self,
         time: ScalarLike, *, quick: dict | bool | None = False) -> Transform: ...
-
-class SpiceErrorFrame(Frame):
-    def __init__(self, cause: BaseException, *, description: str,
-        filepath: str | pathlib.Path | FCPath | None = None) -> None: ...
-    @property
-    def cause(self) -> BaseException: ...
-    @property
-    def description(self) -> str: ...
-    @property
-    def filepath(self) -> str | pathlib.Path | FCPath | None: ...
-    def transform_at_time(self, time: ScalarLike, *,
-        quick: dict | bool | None = None) -> NoReturn: ...
 
 class SpiceFrame(Frame):
     def __init__(self, spice_frame: str | int, reference: SpiceFrame | str | None = None,

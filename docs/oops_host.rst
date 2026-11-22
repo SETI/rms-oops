@@ -184,19 +184,15 @@ Reading an index never creates a directory or retrieves a data file.
 Pointing from SPICE
 -------------------
 
-A host that cannot obtain an observation's pointing from the SPICE kernels raises
-:class:`~oops.OopsSpiceError`, which carries the SPICE error code and the file being
-read. ``from_file`` raises it when it builds the observation. In ``from_index``, every
-row gives an observation, and a row whose pointing SPICE cannot supply gets a
-:class:`~oops.frame.SpiceErrorFrame` in place of its pointing. That frame raises
-:class:`~oops.OopsSpiceError` whenever it is used. The ``tracker`` and ``parallel``
-overrides evaluate the frame once, when the observation is built. They leave a frame of
-this kind as it is, so the error is still raised only when the pointing is used. If the
-SPICE kernels cannot supply the frame of the parallel observation, ``parallel`` raises
-:class:`~oops.OopsSpiceError` when the observation is built, and if they cannot supply
-the position of the target, ``tracker`` raises the error of that query then.
+When the SPICE kernels cannot supply an observation's pointing, a host's ``from_file``
+raises :class:`~oops.OopsSpiceError` as it builds the observation. The exception carries
+the SPICE error code and the file being read.
 
-A host checks the kernels for the frame as the observation will use it once the
+``from_index`` does not check the pointing. Every row gives an observation, and for a row
+whose pointing the C kernels lack, the failure comes when its frame is evaluated, with
+the error that SPICE reports.
+
+``from_file`` checks the kernels for the frame as the observation will use it once the
 overrides are applied. The frame is checked at the observation's midtime, or for
 ``tracker`` at the start, midtime, or end that the override selects, after any time
 shift of the observation's times. For ``parallel``, the frame is checked at the midtime

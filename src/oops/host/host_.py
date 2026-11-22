@@ -19,8 +19,7 @@ from vicar      import VicarError, VicarImage, VicarLabel
 from oops._exceptions import OopsIndexError, OopsSpiceError, OopsTypeError, OopsValueError
 from oops.body        import Body
 from oops.cadence     import TimeShift
-from oops.frame       import (Cmatrix, Frame, FrameShift, Navigation, SpiceErrorFrame,
-                              TrackerFrame)
+from oops.frame       import Cmatrix, Frame, FrameShift, Navigation, TrackerFrame
 from oops.observation import Observation
 from oops.path        import PathShift
 
@@ -57,14 +56,13 @@ class Host:
     SPICE pointing: it never lets the cspyce exception escape, and it never raises
     :class:`~oops.OopsSpiceError` for a failure that is not about SPICE data.
 
-    In a host's ``from_index``, every row of the index gives an observation, whether or
-    not SPICE can supply its pointing. Where SPICE cannot, the observation gets a
-    :class:`~oops.frame.SpiceErrorFrame` in place of its pointing, and that frame raises
-    :class:`~oops.OopsSpiceError` whenever it is evaluated. The support method
-    ``_check_spice_frame`` serves both cases: with ``defer=False`` it raises the error,
-    for ``from_file``; with ``defer=True`` it returns the stand-in frame, for
-    ``from_index``. It checks the frame as the observation will evaluate it once the
-    overrides are applied, at the time and relative to the frame that they give.
+    The support method ``_check_spice_frame`` is that check. It checks the frame as the
+    observation will evaluate it once the overrides are applied, at the time and relative
+    to the frame that they give.
+
+    A host's ``from_index`` does not check the pointing. Every row of the index gives an
+    observation with the instrument's frame from SPICE, and for a row whose pointing the
+    C kernels lack, evaluating that frame raises the exception of the failed SPICE query.
 
     A host does not check SPICE, and does not raise :class:`~oops.OopsSpiceError`, when
     the caller supplies the pointing: when ``from_file`` is given a `frame` override,
@@ -129,9 +127,9 @@ class Host:
         host's ``from_file`` documents.
 
         Parameters:
-            filepath (str | pathlib.Path | FCPath | Pds3Label | VicarLabel | VicarImage |
-                HDUList): The path to the data file or its detached label in PDS3 or PDS4
-                format, or its parsed content.
+            filepath (str | pathlib.Path | FCPath | Pds3Label | VicarLabel | VicarImage | HDUList):
+                The path to the data file or its detached label in PDS3 or PDS4 format, or
+                its parsed content.
             pds3_options (dict[str, Any], optional): Any keyword arguments and their
                 values to be passed to the :class:`~pdsparser.Pds3Label` parser.
             select (int | slice | str | tuple[int | slice | str, ...]): An index, slice,
@@ -295,8 +293,7 @@ class Host:
                 every observation.
             path (str | Path, optional): Override for the Path of the observer.
             frame (str | Frame, optional): Override for the Frame of the observing
-                instrument. When it is given, the host does not check that SPICE can
-                supply the pointing.
+                instrument.
             cadence (Cadence, optional): Override for the Cadence of the observation.
             fov (FOV, optional): Override for the default FOV of the observing instrument.
             calibrations (Calibration | list[Calibration], optional): Override for the
@@ -1622,12 +1619,6 @@ class Host:
             dict: The `params` dictionary, modified in place.
 
         Raises:
-            OopsSpiceError: If the SPICE kernels cannot supply the frame of the `parallel`
-                observation at the midtime; its cause is the exception that the SPICE
-                query raised. A frame of this observation that raises OopsSpiceError,
-                such as a :class:`~oops.frame.SpiceErrorFrame`, is left as it is by the
-                `parallel` and `tracker` overrides, and an OopsSpiceError of the target's
-                position under `tracker` propagates.
             OopsValueError: If an input parameter is invalid.
         """
 
@@ -1662,28 +1653,12 @@ class Host:
                 else:               # subsequent time shifts are linked to the first
                     params[attr] = Host._TIMESHIFT_CLASS[letter](arg, params[attr])
 
-        # Apply frame adjustments. The parallel and tracker overrides evaluate the frame
-        # once, here. A frame that the SPICE kernels cannot supply, such as the
-        # SpiceErrorFrame of an index row, is left as it is, so that it raises
-        # OopsSpiceError when the observation uses it, as it would without the override.
+        # Apply frame adjustments
         Host._check_frame_overrides(tracker, parallel)
         if parallel is not None:
-            time = params['cadence'].midtime
-            frame = Frame.as_frame(params['frame'])
-            try:
-                xform = frame.wrt(parallel.frame).transform_at_time(time)
-            except OopsSpiceError.CSPYCE_ERRORS as err:
-                spice_error = isinstance(err, OopsSpiceError)
-                if not spice_error and not OopsSpiceError.is_spice_error(err):
-                    raise
-                if Host._evaluates(frame, time):    # the parallel frame failed
-                    if spice_error:
-                        raise
-                    raise OopsSpiceError.from_spice_error(
-                        err, description='no pointing for the parallel observation',
-                        time=time, filepath=filepath) from err
-            else:
-                params['frame'] = Cmatrix(xform.matrix, reference=parallel.frame)
+            frame = Frame.as_frame(params['frame']).wrt(parallel.frame)
+            xform = frame.transform_at_time(params['cadence'].midtime)
+            params['frame'] = Cmatrix(xform.matrix, reference=parallel.frame)
 
         elif tracker is not None:
             epoch = Host._tracker_epoch(params['cadence'], tracker)
@@ -1695,15 +1670,8 @@ class Host:
             else:
                 target_path = Body.as_body(target).path
 
-            # A TrackerFrame evaluates the target's position, then the frame, when it is
-            # built. Only a failure of the frame itself leaves the frame as it is.
-            frame = Frame.as_frame(params['frame'])
-            try:
-                params['frame'] = TrackerFrame(frame, target=target_path,
-                                               observer=params['path'], epoch=epoch)
-            except OopsSpiceError:
-                if Host._evaluates(frame, epoch):
-                    raise                   # the target's position failed
+            params['frame'] = TrackerFrame(params['frame'], target=target_path,
+                                           observer=params['path'], epoch=epoch)
 
         if navigation is not None:
             params['frame'] = Navigation(navigation, params['frame'])
@@ -1733,25 +1701,6 @@ class Host:
                                  f'"end": {tracker!r}') from None
         times = cadence.time
         return times[0] + tfrac * (times[1] - times[0])
-
-    @staticmethod
-    def _evaluates(frame, time):
-        """False if the SPICE kernels cannot supply a Frame at a time.
-
-        Parameters:
-            frame (Frame): The Frame.
-            time (float): The time in seconds TDB.
-
-        Returns:
-            bool: False if evaluating `frame` relative to J2000 at `time` raises
-            :class:`~oops.OopsSpiceError`; True otherwise.
-        """
-
-        try:
-            frame.wrt(Frame.J2000).transform_at_time(time)
-        except OopsSpiceError:
-            return False
-        return True
 
     @staticmethod
     def _timeshift_letters(timeshift):
@@ -1795,19 +1744,13 @@ class Host:
             raise OopsValueError('parallel and tracker cannot both be specified')
 
     @staticmethod
-    def _check_spice_frame(frame, cadence, overrides, *, description, filepath=None,
-                           defer=False):
+    def _check_spice_frame(frame, cadence, overrides, *, description, filepath=None):
         """Check that the SPICE kernels can supply a Frame as an observation will
         evaluate it once the overrides are applied.
 
-        A host calls this method for an observation whose pointing comes from SPICE,
-        before it calls :meth:`~oops.host.Host._apply_overrides`. Its ``from_file`` calls
-        it with `defer` False, so that missing pointing raises at load time; its
-        ``from_index`` calls it with `defer` True and gives the observation the Frame
-        returned, so that the row is still built and the error is raised when the
-        pointing is used. A :class:`~oops.frame.SpiceErrorFrame` returned stands in for
-        `frame` itself, and the host gives it to
-        :meth:`~oops.host.Host._apply_overrides` in place of `frame`.
+        A host's ``from_file`` calls this method for an observation whose pointing comes
+        from SPICE, before it calls :meth:`~oops.host.Host._apply_overrides`, so that
+        missing pointing raises at load time.
 
         The overrides can wrap the Frame and move the time at which it is evaluated, so
         the check builds the Frame and the time as the overrides will:
@@ -1826,10 +1769,8 @@ class Host:
           selects.
         - With a `parallel` override, the Frame is evaluated relative to the parallel
           observation's frame once, at the midtime, so a SPICE frame that both frames
-          share is never evaluated for this observation. If that evaluation fails but
-          the Frame can be evaluated relative to J2000, the failure belongs to the
-          parallel observation's frame, for which the override raises
-          :class:`~oops.OopsSpiceError` when it is applied, and `frame` is returned.
+          share is never evaluated for this observation. A failure of either frame
+          raises.
         - In every other case, the Frame is evaluated relative to J2000 at the time, so
           every Frame in its chain of references is checked, as for a Cmatrix whose
           reference is a SPICE frame.
@@ -1845,26 +1786,17 @@ class Host:
                 observation uses before the overrides.
             cadence (Cadence): The cadence of the observation before the overrides.
             overrides (dict[str, Any]): The standard overrides by name, as a host's
-                ``from_file`` or ``from_index`` receives them. Only "cadence",
-                "timeshift", "tracker", and "parallel" are read; a missing key counts as
-                None.
+                ``from_file`` receives them. Only "cadence", "timeshift", "tracker", and
+                "parallel" are read; a missing key counts as None.
             description (str): What could not be obtained, such as "no Cassini ISS NAC
                 pointing", for the message of the error.
             filepath (str | pathlib.Path | FCPath, optional): The file of the observation,
                 for the message of the error.
-            defer (bool, optional): True to return a
-                :class:`~oops.frame.SpiceErrorFrame` if the SPICE kernels cannot supply
-                the Frame; False to raise :class:`~oops.OopsSpiceError`.
-
-        Returns:
-            Frame | str: `frame` itself if the observation can evaluate it; otherwise, if
-            `defer` is True, a :class:`~oops.frame.SpiceErrorFrame` that raises
-            :class:`~oops.OopsSpiceError` whenever it is evaluated.
 
         Raises:
             KeyError: If `frame` is the ID of a Frame that is not registered.
-            OopsSpiceError: If `defer` is False and the SPICE kernels cannot supply
-                `frame` as the observation will evaluate it. It is built with
+            OopsSpiceError: If the SPICE kernels cannot supply `frame` as the observation
+                will evaluate it. It is built with
                 :meth:`~oops.OopsSpiceError.from_spice_error`, so its message reads
                 "<description> at <time> for <filepath>: <SPICE code>", in which the time
                 is the observation's time at which the Frame is evaluated, without the
@@ -1878,16 +1810,13 @@ class Host:
         # A Frame ID that is not registered is the caller's error, not missing SPICE data
         (shifted, reference, time) = Host._pointing_probe(Frame.as_frame(frame), cadence,
                                                           overrides)
-        err = Host._spice_failure(shifted, reference, time)
-        if err is not None and reference is not Frame.J2000:
-            err = Host._spice_failure(shifted, Frame.J2000, time)
-
-        if err is None:
-            return frame
-        if defer:
-            return SpiceErrorFrame(err, description=description, filepath=filepath)
-        raise OopsSpiceError.from_spice_error(err, description=description, time=time,
-                                              filepath=filepath) from err
+        try:
+            shifted.wrt(reference).transform_at_time(time)
+        except OopsSpiceError.CSPYCE_ERRORS as err:
+            if not OopsSpiceError.is_spice_error(err):
+                raise
+            raise OopsSpiceError.from_spice_error(err, description=description, time=time,
+                                                  filepath=filepath) from err
 
     @staticmethod
     def _pointing_probe(frame, cadence, overrides):
@@ -1931,33 +1860,6 @@ class Host:
         if tracker is not None:
             return (frame, Frame.J2000, Host._tracker_epoch(cadence, tracker))
         return (frame, Frame.J2000, cadence.midtime)
-
-    @staticmethod
-    def _spice_failure(frame, reference, time):
-        """The exception that reports missing SPICE data when a Frame is evaluated.
-
-        Parameters:
-            frame (Frame): The Frame.
-            reference (Frame): The Frame relative to which `frame` is evaluated.
-            time (float | Scalar): The time in seconds TDB.
-
-        Returns:
-            Exception | None: The exception raised by evaluating `frame` relative to
-            `reference` at `time`, if :meth:`~oops.OopsSpiceError.is_spice_error` counts
-            it as missing SPICE data; None if the evaluation succeeds.
-
-        Raises:
-            Exception: Any exception of the evaluation that is not about SPICE data,
-                unchanged.
-        """
-
-        try:
-            frame.wrt(reference).transform_at_time(time)
-        except OopsSpiceError.CSPYCE_ERRORS as err:
-            if not OopsSpiceError.is_spice_error(err):
-                raise
-            return err
-        return None
 
     @staticmethod
     def _index_file_path(volumes, row_dict, *, volume_column='VOLUME_ID',

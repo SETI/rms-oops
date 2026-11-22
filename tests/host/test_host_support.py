@@ -3,19 +3,14 @@
 ##########################################################################################
 
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 
 import pytest
 from filecache import FCPath
 from pdsparser import Pds3Label
 
-from polymath     import Vector3
-from oops         import Body, Frame, OopsSpiceError, OopsTypeError, OopsValueError
-from oops.cadence import SnapCadence
-from oops.frame   import SpiceErrorFrame
-from oops.host    import PDS3_NULL_TEXTS, Host, is_pds3_null
-from oops.path    import LinearPath
+from oops      import OopsTypeError, OopsValueError
+from oops.host import PDS3_NULL_TEXTS, Host, is_pds3_null
 
 
 @pytest.mark.parametrize(('name', 'expected'),
@@ -60,52 +55,6 @@ def test_select_of_another_type_raises() -> None:
 
 def test_a_valid_select_passes() -> None:
     assert Host._check_select((slice(None), 'ir', 0), names={'IR': 0}) is None
-
-##########################################################################################
-# A frame that SPICE cannot supply, under the overrides that evaluate the frame
-##########################################################################################
-
-OWN_CADENCE = SnapCadence(100., 10.)        # midtime 105
-
-
-def _spice_error_frame() -> SpiceErrorFrame:
-    try:
-        raise RuntimeError('SPICE(CKINSUFFDATA) -- no pointing')
-    except RuntimeError as err:
-        return SpiceErrorFrame(err, description='no test pointing')
-
-
-def test_a_spice_error_frame_still_raises_when_used_after_a_tracker() -> None:
-    params = {'cadence': OWN_CADENCE, 'frame': _spice_error_frame(), 'path': 'SSB',
-              'target': 'NONE'}
-    Host._apply_overrides(params, None, tracker='start', navigation=(0., 0.))
-    with pytest.raises(OopsSpiceError, match='no test pointing'):
-        Frame.as_frame(params['frame']).wrt(Frame.J2000).transform_at_time(105.)
-
-
-def test_a_tracker_target_that_spice_cannot_supply_raises() -> None:
-    """The tracking frame evaluates the target's path before the frame, so a failure of
-    the target is not taken for missing pointing of the frame."""
-
-    path = LinearPath(Vector3((1.e6, 0., 0.)), 0., 'SSB', frame=_spice_error_frame())
-    params = {'cadence': OWN_CADENCE, 'frame': Frame.J2000, 'path': 'SSB',
-              'target': Body('TRACKER_TEST_TARGET', path, 'J2000')}
-    with pytest.raises(OopsSpiceError, match='no test pointing'):
-        Host._apply_overrides(params, None, tracker='start')
-
-
-def test_a_spice_error_frame_still_raises_when_used_after_a_parallel() -> None:
-    params = {'cadence': OWN_CADENCE, 'frame': _spice_error_frame(), 'path': 'SSB'}
-    Host._apply_overrides(params, None, parallel=SimpleNamespace(frame=Frame.J2000))
-    with pytest.raises(OopsSpiceError, match='no test pointing'):
-        Frame.as_frame(params['frame']).wrt(Frame.J2000).transform_at_time(105.)
-
-
-def test_a_parallel_frame_that_spice_cannot_supply_raises_at_once() -> None:
-    params = {'cadence': OWN_CADENCE, 'frame': Frame.J2000, 'path': 'SSB'}
-    parallel = SimpleNamespace(frame=_spice_error_frame())
-    with pytest.raises(OopsSpiceError, match='no test pointing'):
-        Host._apply_overrides(params, None, parallel=parallel)
 
 ##########################################################################################
 # PDS3 placeholder text

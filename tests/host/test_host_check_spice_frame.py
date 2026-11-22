@@ -13,7 +13,7 @@ import pytest
 from polymath       import Matrix3, Scalar, Vector3
 from oops           import Frame, OopsSpiceError, OopsValueError
 from oops.cadence   import SnapCadence
-from oops.frame     import Cmatrix, SpiceErrorFrame
+from oops.frame     import Cmatrix
 from oops.host      import Host
 from oops.transform import Transform
 
@@ -70,19 +70,13 @@ def _check(frame: Any, overrides: dict[str, Any] | None = None, **kwargs: Any) -
                                    **kwargs)
 
 
-def test_a_frame_that_spice_supplies_is_returned_unchanged() -> None:
-    assert _check('J2000', defer=True) == 'J2000'
+def test_a_frame_that_spice_supplies_passes() -> None:
+    assert _check('J2000') is None
 
 
 def test_missing_pointing_raises_the_spice_error() -> None:
     with pytest.raises(OopsSpiceError, match=r'for image\.img: SPICE\(CKINSUFFDATA\)$'):
         _check(_FailingFrame(RuntimeError(SPICE_TEXT)))
-
-
-def test_deferred_missing_pointing_gives_a_spice_error_frame() -> None:
-    frame = _check(_FailingFrame(RuntimeError(SPICE_TEXT)), defer=True)
-
-    assert isinstance(frame, SpiceErrorFrame)
 
 
 def test_an_unregistered_frame_id_is_not_a_spice_error() -> None:
@@ -103,7 +97,7 @@ def test_an_error_without_a_spice_code_propagates() -> None:
     it is not about SPICE data."""
 
     with pytest.raises(ValueError, match='not about SPICE'):
-        _check(_FailingFrame(ValueError('not about SPICE')), defer=True)
+        _check(_FailingFrame(ValueError('not about SPICE')))
 
 
 def test_a_frame_whose_reference_spice_cannot_supply_raises() -> None:
@@ -238,31 +232,15 @@ def test_a_camera_with_its_parallel_is_checked_to_their_common_frame() -> None:
     camera = Cmatrix(FLIP, reference=shared)
     parallel = SimpleNamespace(frame=Cmatrix(np.eye(3), reference=shared))
 
-    assert _check(camera, {'parallel': parallel}) is camera
+    assert _check(camera, {'parallel': parallel}) is None
 
 
-def test_a_parallel_frame_that_spice_cannot_supply_is_left_to_the_override() -> None:
-    """The parallel override raises for the parallel observation's own pointing, so the
-    check does not report it as this observation's."""
-
+def test_a_parallel_frame_that_spice_cannot_supply_raises() -> None:
     camera = _camera()
     parallel = SimpleNamespace(frame=Cmatrix(np.eye(3), reference=_CKFrame(end=105.)))
 
-    assert _check(camera, {'parallel': parallel}) is camera
-
-
-def test_the_override_reports_a_parallel_frame_spice_cannot_supply() -> None:
-    """The exception that the parallel observation's frame raises is reported as an
-    OopsSpiceError, whose cause it is."""
-
-    params = {'cadence': CADENCE, 'frame': _camera(), 'path': 'SSB'}
-    parallel = SimpleNamespace(frame=Cmatrix(np.eye(3), reference=_CKFrame(end=105.)))
-
-    with pytest.raises(OopsSpiceError, match=r'^no pointing for the parallel observation '
-                                             r'at .* for image\.img: '
-                                             r'SPICE\(CKINSUFFDATA\)$') as info:
-        Host._apply_overrides(params, 'image.img', parallel=parallel)
-    assert str(info.value.__cause__) == SPICE_TEXT
+    with pytest.raises(OopsSpiceError, match=r'SPICE\(CKINSUFFDATA\)$'):
+        _check(camera, {'parallel': parallel})
 
 
 def test_the_message_gives_the_time_of_the_observation() -> None:
@@ -273,20 +251,6 @@ def test_the_message_gives_the_time_of_the_observation() -> None:
                                                filepath='image.img')
     with pytest.raises(OopsSpiceError, match=f'^{re.escape(str(expected))}$'):
         _check(_CKFrame(end=107.), {'timeshift': (3., 'TF')})
-
-
-def test_a_deferred_frame_is_the_frame_before_the_overrides() -> None:
-    frame = _check(_CKFrame(end=107.), {'timeshift': (3., 'F')}, defer=True)
-
-    assert isinstance(frame, SpiceErrorFrame)
-
-
-def test_a_deferred_frame_still_raises_after_the_overrides() -> None:
-    params = {'cadence': CADENCE, 'path': 'SSB',
-              'frame': _check(_CKFrame(end=107.), {'timeshift': (3., 'F')}, defer=True)}
-    Host._apply_overrides(params, None, timeshift=(3., 'F'))
-    with pytest.raises(OopsSpiceError, match='no NAC pointing'):
-        Frame.as_frame(params['frame']).wrt(Frame.J2000).transform_at_time(105.)
 
 
 def test_parallel_and_tracker_together_are_refused() -> None:

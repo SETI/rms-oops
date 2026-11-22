@@ -15,7 +15,6 @@ from oops.frame.postargframe     import PosTargFrame
 from oops.frame.quickframe       import QuickFrame
 from oops.frame.ringframe        import RingFrame
 from oops.frame.rotation         import Rotation
-from oops.frame.spiceerrorframe  import SpiceErrorFrame
 from oops.frame.spiceframe       import SpiceFrame
 from oops.frame.spicetype1frame  import SpiceType1Frame
 from oops.frame.spinframe        import SpinFrame
@@ -25,8 +24,8 @@ from oops.frame.twovectorframe   import TwoVectorFrame
 
 __all__ = ['Frame', 'NullFrame', 'J2000Frame', 'LinkedFrame', 'ReversedFrame', 'Cmatrix',
            'FrameShift', 'InclinedFrame', 'LaplaceFrame', 'Navigation', 'PoleFrame',
-           'PosTargFrame', 'QuickFrame', 'RingFrame', 'Rotation', 'SpiceErrorFrame',
-           'SpiceFrame', 'SpiceType1Frame', 'SpinFrame', 'SynchronousFrame',
-           'TrackerFrame', 'TwoVectorFrame']
+           'PosTargFrame', 'QuickFrame', 'RingFrame', 'Rotation', 'SpiceFrame',
+           'SpiceType1Frame', 'SpinFrame', 'SynchronousFrame', 'TrackerFrame',
+           'TwoVectorFrame']
 
 ##########################################################################################
