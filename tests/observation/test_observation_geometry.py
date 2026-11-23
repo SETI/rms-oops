@@ -157,6 +157,13 @@ def test_gridless_event_sits_on_the_observer_path(obs: Snapshot) -> None:
     assert obs.gridless_event(obs.meshgrid()).origin == obs.path
 
 
+def test_gridless_event_is_in_j2000_not_the_camera_frame(obs: Snapshot) -> None:
+    """With no line of sight, the event needs no camera frame, and so no pointing."""
+
+    assert obs.frame != Frame.J2000
+    assert obs.gridless_event(obs.meshgrid()).frame == Frame.J2000
+
+
 ##########################################################################################
 # _scalar_from_indices
 ##########################################################################################

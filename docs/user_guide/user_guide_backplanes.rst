@@ -80,7 +80,9 @@ shorthand for ``('SUN<', name)``: illumination from the Sun, dispersed off the s
 toward the observer. Two other sources appear in special cases. ``('SUN>', surface)``
 is an occultation: the source seen through the surface, as in a solar occultation by the
 rings. ``('SUN-', surface)`` is *gridless*: the photon from the body's center rather
-than from each pixel, which gives a single value rather than an array. The methods
+than from each pixel, which gives a single value rather than an array. It depends only
+on the paths of the observer, the body and the Sun, so the gridless backplanes need no
+pointing: they can be evaluated for an observation whose C kernels are missing. The methods
 named ``center_*`` and ``sub_*`` form the gridless key themselves, so
 ``bp.center_phase_angle('SATURN')`` is the phase angle at Saturn's center and
 ``bp.sub_observer_latitude('SATURN')`` the latitude beneath the observer. A third item

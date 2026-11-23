@@ -9,6 +9,7 @@ from polymath import Scalar, Pair
 
 from oops.cadence     import DualCadence, Metronome
 from oops.fov         import FlatFOV
+from oops.frame       import Cmatrix, Frame
 from oops.observation import Pixel
 
 
@@ -240,6 +241,17 @@ def test_pixel_gridless_event():
     # Passing tfrac=None alongside a time is also accepted
     event = obs.gridless_event(meshgrid, tfrac=None, time=Scalar(7.))
     assert event.time == Scalar(7.)
+
+
+def test_pixel_gridless_event_is_in_j2000_not_the_camera_frame():
+    fov = FlatFOV((0.001,0.001), (1,1))
+    cadence = Metronome(tstart=0., tstride=10., texp=10., steps=4)
+    obs = Pixel(axes=('t'), cadence=cadence, fov=fov, path='SSB',
+                frame=Cmatrix([[0,1,0],[1,0,0],[0,0,-1]]))
+
+    # With no line of sight, the event needs no camera frame, and so no pointing
+    assert obs.frame != Frame.J2000
+    assert obs.gridless_event().frame == Frame.J2000
 
 
 def test_pixel_gridless_event_without_a_meshgrid():

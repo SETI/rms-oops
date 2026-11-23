@@ -282,7 +282,8 @@ class Pixel(Observation):
                 mean of all the times.
 
         Returns:
-            Event: The corresponding Event.
+            Event: The corresponding Event, in the J2000 frame rather than the frame
+            of the observation; see :meth:`oops.Observation.gridless_event`.
         """
 
         if time is None:
@@ -294,8 +295,8 @@ class Pixel(Observation):
         if shapeless:
             time = time.mean()
 
-        event = Event(time, Vector3.ZERO, self.path, self.frame)
-
-        return event
+        # A gridless event has no line of sight, so it needs no camera frame; in J2000
+        # it is solved from the paths alone and does not depend on the pointing.
+        return Event(time, Vector3.ZERO, self.path, Frame.J2000)
 
 ##########################################################################################
