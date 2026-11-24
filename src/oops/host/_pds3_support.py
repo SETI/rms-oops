@@ -9,7 +9,34 @@ import vax
 from oops._exceptions import OopsIndexError, OopsKeyError
 from ._errors import HostFormatError, PdsHostError
 
-__all__ = ['read_pds3_image_array']
+__all__ = ['PDS3_NULL_TEXTS', 'is_pds3_null', 'read_pds3_image_array']
+
+# The texts that stand for a missing value: the PDS3 null constants UNK, N/A, and NULL,
+# and the other placeholders that labels and VICAR headers write, UNKNOWN, NOT APPLICABLE,
+# "---", and an empty string. Each is in upper case, without padding.
+PDS3_NULL_TEXTS = frozenset({'UNK', 'N/A', 'NULL', 'UNKNOWN', 'NOT APPLICABLE', '---',
+                             ''})
+
+
+def is_pds3_null(value):
+    """True if a value from a PDS3 label or a VICAR header is a text that stands for a
+    missing value.
+
+    A host uses this to leave out the items whose value is a placeholder, so that every
+    host leaves out the same texts. Numeric fill values, such as -999, differ from one
+    data set to another and are left to each host.
+
+    Parameters:
+        value (Any): The value.
+
+    Returns:
+        bool: True if `value` is a string that, in upper case and without leading or
+        trailing blanks, is one of :data:`~oops.host.PDS3_NULL_TEXTS`; False otherwise,
+        for a string that merely contains one of them and for any value that is not a
+        string.
+    """
+
+    return isinstance(value, str) and value.strip().upper() in PDS3_NULL_TEXTS
 
 
 def read_pds3_image_array(label, index=0):

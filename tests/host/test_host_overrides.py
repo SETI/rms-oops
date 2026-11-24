@@ -1,16 +1,17 @@
 ##########################################################################################
-# tests/host/test_host_overrides.py: The tracker option of Host._apply_overrides
+# tests/host/test_host_overrides.py: The options of Host._apply_overrides
 ##########################################################################################
 
 from collections.abc import Iterator
+from types import SimpleNamespace
 from typing import Any
 
 import numpy as np
 import pytest
 
 from oops         import Body, Frame, Path
-from oops.cadence import SnapCadence
-from oops.frame   import TrackerFrame
+from oops.cadence import SnapCadence, TimeShift
+from oops.frame   import Cmatrix, FrameShift, Navigation, TrackerFrame
 from oops.host    import Host
 
 DAY = 86400.
@@ -51,7 +52,7 @@ def _tracker_frame(target: Any, tracker: str = 'start') -> TrackerFrame:
         TrackerFrame: The frame of the observation after the overrides.
     """
 
-    params = Host._apply_overrides(_params(target), 'dir/file.img', tracker=tracker)
+    params = Host._apply_overrides(_params(target), tracker=tracker)
     frame = params['frame']
     assert isinstance(frame, TrackerFrame)
     return frame
@@ -127,21 +128,20 @@ def test_an_unknown_tracker_option_is_rejected() -> None:
     """A tracker option other than start, midtime and end is an error."""
 
     with pytest.raises(ValueError, match='invalid tracker'):
-        Host._apply_overrides(_params('NONE'), 'dir/file.img', tracker='finish')
+        Host._apply_overrides(_params('NONE'), tracker='finish')
 
 
 def test_an_unknown_target_name_is_rejected() -> None:
     """A target that names no body cannot be tracked."""
 
     with pytest.raises(KeyError, match='NOT_A_BODY'):
-        Host._apply_overrides(_params('NOT_A_BODY'), 'dir/file.img', tracker='start')
+        Host._apply_overrides(_params('NOT_A_BODY'), tracker='start')
 
 
 def test_a_target_override_is_tracked() -> None:
     """The target given as an override, not the default target, is the one tracked."""
 
-    params = Host._apply_overrides(_params('MARS'), 'dir/file.img', target='NONE',
-                                   tracker='start')
+    params = Host._apply_overrides(_params('MARS'), target='NONE', tracker='start')
 
     assert params['target'] == 'NONE'
     assert params['frame']._target_path is None
@@ -150,8 +150,58 @@ def test_a_target_override_is_tracked() -> None:
 def test_without_the_tracker_option_the_frame_is_unchanged() -> None:
     """No TrackerFrame is assigned unless the tracker option is given."""
 
-    params = Host._apply_overrides(_params('NONE'), 'dir/file.img')
+    params = Host._apply_overrides(_params('NONE'))
 
     assert params['frame'] == 'IAU_MARS'
+
+##########################################################################################
+# The other overrides
+##########################################################################################
+
+def test_a_standard_override_replaces_the_default() -> None:
+    params = Host._apply_overrides(_params('NONE'), frame='J2000')
+
+    assert params['frame'] == 'J2000'
+
+
+def test_a_timeshift_couples_later_letters_to_the_first() -> None:
+    params = Host._apply_overrides(_params('NONE'), timeshift=(5., 'tf'))
+
+    assert isinstance(params['cadence'], TimeShift)
+    assert isinstance(params['frame'], FrameShift)
+
+
+@pytest.mark.parametrize(('letters', 'message'),
+                         [('', 'must specify one or more of T/P/F'),
+                          ('TX', 'invalid timeshift letters: TX')],
+                         ids=['empty', 'unknown'])
+def test_invalid_timeshift_letters_are_rejected(letters: str, message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        Host._apply_overrides(_params('NONE'), timeshift=(5., letters))
+
+
+def test_parallel_and_tracker_cannot_both_be_given() -> None:
+    parallel = SimpleNamespace(frame='J2000')
+
+    with pytest.raises(ValueError, match='parallel and tracker cannot both be'):
+        Host._apply_overrides(_params('NONE'), parallel=parallel, tracker='start')
+
+
+def test_a_parallel_observation_fixes_the_frame_relative_to_its_frame() -> None:
+    params = Host._apply_overrides(_params('NONE'),
+                                   parallel=SimpleNamespace(frame='J2000'))
+    frame = params['frame']
+    expected = (Frame.as_frame('IAU_MARS').wrt('J2000')
+                .transform_at_time(TSTART + TEXP / 2.).matrix)
+
+    assert isinstance(frame, Cmatrix)
+    assert np.abs(frame.transform_at_time(TSTART + DAY).matrix.vals
+                  - expected.vals).max() < 1.e-15
+
+
+def test_navigation_wraps_the_frame() -> None:
+    params = Host._apply_overrides(_params('NONE'), navigation=(0., 0.))
+
+    assert isinstance(params['frame'], Navigation)
 
 ##########################################################################################

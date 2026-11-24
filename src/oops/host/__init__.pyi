@@ -11,10 +11,12 @@ exactly: every public name, its parameters, which of them are keyword-only, and 
 defaults. Types are given where they are unambiguous and are `Any` elsewhere.
 
 The detectors and support methods that a Host subclass overrides or calls, such as
-`_register` and `_detect_in_pds3`, are private and are not published here.
+`_register`, `_detect_in_pds3`, `_correct_label_text`, `_index_rows`, and
+`_set_path_attributes`, are private and are not published here.
 """
 
 import pathlib
+from collections.abc import Iterable, Iterator
 from typing import Any, TypeAlias
 
 from astropy.io.fits import HDUList, ImageHDU, PrimaryHDU
@@ -31,11 +33,13 @@ from oops.lightsource import LightSource
 from oops.observation import Observation
 from oops.path import Path
 
-__all__ = ['Host', 'ObsArray', 'get_fits_image_hdu', 'read_pds3_image_array',
+__all__ = ['Host', 'ObsArray', 'PDS3_NULL_TEXTS', 'get_fits_image_hdu', 'is_pds3_null',
+           'read_pds3_image_array',
            'HostError', 'HostFormatError', 'HostIndexError', 'PdsHostError',
            'UnknownHostError', 'VicarHostError', 'WrongHostError']
 
 ObsArray: TypeAlias = ndarray | tuple[Observation | None, ...]
+PDS3_NULL_TEXTS: frozenset[str]
 
 class HostError(ValueError): ...
 class UnknownHostError(HostError): ...
@@ -47,6 +51,9 @@ class VicarHostError(HostFormatError, VicarError): ...
 
 class Host:
     NAME: str
+    MERGE_SUPPLEMENT_BY_FILE: bool
+    INDEX_FILE_KEY: tuple[str, ...]
+    SUPPLEMENT_FILE_KEY: tuple[str, ...]
     SUPPLEMENT: object
     @staticmethod
     def from_file(filepath: str | pathlib.Path | FCPath, *,
@@ -64,7 +71,8 @@ class Host:
     @staticmethod
     def from_index(filepath: str | pathlib.Path | FCPath, *,
         supplement: str | pathlib.Path | FCPath | object | None = ...,
-        label: Pds3Label | None = None, row_dicts: list[dict[str, Any]] | None = None,
+        label: Pds3Label | None = None,
+        row_dicts: Iterable[dict[str, Any]] | None = None,
         pds3_options: dict[str, Any] | None = None,
         filter: dict[str, Any] | None = None,
         select: int | slice | str | tuple[int | slice | str, ...] | None = None,
@@ -75,10 +83,11 @@ class Host:
         timeshift: tuple[float, str] | None = None,
         navigation: tuple[float, ...] | None = None, tracker: str | None = None,
         parallel: Observation | None = None,
-        **kwargs: Any) -> list[Observation | ObsArray | None]: ...
+        **kwargs: Any) -> Iterator[Observation | ObsArray | None]: ...
 
 def get_fits_image_hdu(hdulist: HDUList,
     index: int | str | None = None) -> PrimaryHDU | ImageHDU: ...
 def read_pds3_image_array(label: Pds3Label, index: int | str = 0) -> ndarray: ...
+def is_pds3_null(value: Any) -> bool: ...
 
 ##########################################################################################
