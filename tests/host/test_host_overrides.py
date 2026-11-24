@@ -168,7 +168,10 @@ def test_a_timeshift_couples_later_letters_to_the_first() -> None:
     params = Host._apply_overrides(_params('NONE'), timeshift=(5., 'tf'))
 
     assert isinstance(params['cadence'], TimeShift)
+    assert params['cadence'].dt == 5.
     assert isinstance(params['frame'], FrameShift)
+    assert params['frame'].dt == 5.
+    assert params['frame'].link is params['cadence']
 
 
 @pytest.mark.parametrize(('letters', 'message'),
