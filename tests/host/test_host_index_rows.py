@@ -80,6 +80,14 @@ def _supplement(directory: Path, files: str, *, stem: str = 'vol_supplemental_in
                         **columns})
 
 
+def _declare_null(label: Path, column: str, null: str) -> None:
+    """Make the label declare `null` as the null value of an integer column."""
+
+    text = label.read_text()
+    label.write_text(text.replace(f'    NAME = {column}\n',
+                                  f'    NAME = {column}\n    NULL_CONSTANT = {null}\n'))
+
+
 def _column(rows: Iterator[dict[str, Any]], name: str) -> list[Any]:
     """The value of one column in each row."""
 
@@ -120,10 +128,42 @@ def test_rows_are_read_as_the_iteration_reaches_them(tmp_path: Path) -> None:
 
 
 def test_a_row_keeps_its_mask_flags(tmp_path: Path) -> None:
-    label = _index(tmp_path, 'A')
+    """The mask is True for a value that the label declares null."""
+
+    label = write_table(tmp_path, 'vol_index', {'NUM': ['-999']}, integers=('NUM',))
+    _declare_null(label, 'NUM', '-999')
     row = next(Host._index_rows(label, supplement=None))
 
-    assert 'FILE_SPECIFICATION_NAME_mask' in row
+    assert bool(row['NUM_mask'])
+
+
+def test_the_index_mask_wins_where_both_tables_have_a_column(tmp_path: Path) -> None:
+    """The supplement declares the index's value null, and the index does not."""
+
+    label = write_table(tmp_path, 'vol_index',
+                        {'FILE_NAME': ['A.LBL'], 'NUM': ['-999']}, integers=('NUM',))
+    supplement = write_table(tmp_path, 'vol_supplemental_index',
+                             {'FILE_NAME': ['A.LBL'], 'NUM': ['-999']},
+                             integers=('NUM',))
+    _declare_null(supplement, 'NUM', '-999')
+    row = next(_FileNameKey._index_rows(label, validate=()))
+
+    assert not row['NUM_mask']
+
+
+def test_a_row_that_is_too_long_raises_at_the_first_row_of_its_chunk(
+        tmp_path: Path) -> None:
+    """The long row is row 110, but the error comes where its chunk of 100 begins."""
+
+    label = write_table(tmp_path, 'vol_index', {'NUM': [f'{i:03d}' for i in range(150)]})
+    table = tmp_path / 'vol_index.tab'
+    table.write_bytes(table.read_bytes().replace(b'110\r\n', b'110XY\r\n'))
+    rows = Host._index_rows(label, supplement=None)
+    for _ in range(100):
+        next(rows)
+
+    with pytest.raises(HostIndexError, match='invalid index table .*vol_index.lbl'):
+        next(rows)
 
 
 def test_a_first_row_of_an_empty_table_is_none(tmp_path: Path) -> None:
@@ -337,6 +377,22 @@ def test_the_volume_tells_apart_rows_that_give_one_file(tmp_path: Path) -> None:
     _supplement(tmp_path, 'AA', volumes=['V2', 'V1'], VAL=['two', 'one'])
 
     assert _column(_ByFile._index_rows(label), 'VAL') == ['one', 'two']
+
+
+def test_a_supplement_out_of_order_across_a_chunk_boundary_pairs_by_file(
+        tmp_path: Path) -> None:
+    """The supplement is in reverse order, so its first row pairs with the last."""
+
+    names = [f'DATA/{i:03d}' for i in range(205)]
+    label = write_table(tmp_path, 'vol_index',
+                        {'VOLUME_ID': ['V1'] * 205,
+                         'FILE_SPECIFICATION_NAME': [f'{name}.LBL' for name in names]})
+    write_table(tmp_path, 'vol_supplemental_index',
+                {'VOLUME_ID': ['V1'] * 205,
+                 'FILE_SPECIFICATION_NAME': [f'{name}.IMG' for name in names[::-1]],
+                 'VAL': [name[5:] for name in names[::-1]]})
+
+    assert _column(_ByFile._index_rows(label), 'VAL') == [name[5:] for name in names]
 
 
 def test_a_file_the_supplement_lacks_fails_at_its_index_row(tmp_path: Path) -> None:

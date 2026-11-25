@@ -76,8 +76,9 @@ class Host:
 
         Every registered host is asked whether it recognizes the file, from its PDS3
         label, VICAR header, FITS header, or name, and exactly one must claim it. A PDS3
-        label is parsed for this as it is written, with the "fast" method unless
-        `pds3_options` selects another. If it cannot be parsed, it is offered to the
+        label is parsed for this as it is written, with the "strict" method unless
+        `pds3_options` selects another. If it cannot be parsed, whether for invalid
+        syntax or for a value the parser cannot convert, it is offered to the
         correction of label text of each registered host that has one: a host claims
         the label when its correction makes the label readable and it then recognizes
         the corrected label.
@@ -150,7 +151,8 @@ class Host:
                 option. Note that subclass :class:`~PdsHostError` is raised for a PDS3
                 syntax error and :class:`~VicarHostError` is raised for a VICAR syntax
                 error. A PDS3 label that cannot be parsed raises
-                :class:`~PdsHostError` only if no host's correction of label text makes
+                :class:`~PdsHostError`, or :class:`~oops.OopsValueError` for a value that
+                cannot be converted, only if no host's correction of label text makes
                 it readable and recognizable.
             OSError: If `filepath` does not exist or cannot be read.
             UnknownHostError: If `filepath` is not associated with any registered Host
@@ -158,7 +160,7 @@ class Host:
             OopsValueError: If a value in `pds3_options` is invalid.
         """
 
-        # The host is identified with the default PDS3 options, method="fast" and
+        # The host is identified with the default PDS3 options, method="strict" and
         # sources=True, unless the caller gives others
         host, fileinfo = Host._identify_host(
             filepath, astrometry=astrometry,
@@ -185,7 +187,7 @@ class Host:
         """An iterator over the Observations of a data file index, one for each row.
 
         The host is identified when this method is called. The index label is parsed as
-        it is written, with the "fast" method unless `pds3_options` selects another, and
+        it is written, with the "strict" method unless `pds3_options` selects another, and
         every registered host is asked whether it recognizes the label. If no host does,
         the first row of the index is read, and only that row, and offered to each host
         that could not tell from the label. Exactly one host must claim the index.
@@ -607,7 +609,7 @@ class Host:
 
             try:
                 label = Host._parse_pds3(filepath, pds3_options, correct=correct)
-            except PdsHostError:
+            except (PdsHostError, OopsValueError):
                 if correct is not None:
                     raise
 
@@ -620,7 +622,7 @@ class Host:
                     try:
                         corrected = Host._parse_pds3(filepath, pds3_options,
                                                      correct=corrector)
-                    except PdsHostError:
+                    except (PdsHostError, OopsValueError):
                         continue
                     if host._detect_in_pds3(corrected):
                         found.append((host, corrected))
@@ -906,8 +908,8 @@ class Host:
                 `filter`.
             pds3_options (dict[str, Any], optional): Any keyword arguments and their
                 values to be passed to the :class:`~pdsparser.Pds3Label` parser; the
-                method is "fast" unless they give another. The index label is parsed with
-                all of them, and the supplement's label with their method alone.
+                method is "strict" unless they give another. The index label is parsed
+                with all of them, and the supplement's label with their method alone.
             filter (dict[str, Any], optional): Column names, each with a value, a set,
                 list, or tuple of values, or a tuple of two values that bound a range. A
                 row is yielded only if every column it lists equals the value, is one of
@@ -1065,22 +1067,25 @@ class Host:
         """Set the subfields of an Observation that name its files.
 
         A host calls this method for each observation it builds, after it has read its
-        files.
+        files and, for a file with an image array, after it has inserted the ``data``
+        subfield.
 
         For an observation from a file, `image_path` is the path of the image file, as
-        an FCPath or a :class:`pathlib.Path`, whichever file the caller passed, and
-        `label_path` is the path of the detached PDS3 label if the host read it, and None
-        otherwise. These subfields are set:
+        an FCPath or a :class:`pathlib.Path`, whichever of the two files the caller
+        passed, and `label_path` is the path of the detached PDS3 label if the host read
+        it, and None otherwise. These subfields are set:
 
         - ``filepath``: `image_path` as an FCPath.
         - ``basename``: the name of the image file.
         - ``image_url``: the absolute path or URL of the image file.
         - ``image_abspath``: the path of the image file on the local disk, as a resolved
           :class:`pathlib.Path`, if the host read the image file: that is, if
-          `label_path` is None, because the host then read the image file itself, its
-          header alone counting; or if `obs` has a ``data`` subfield, because the host
-          then read its array. An observation built from a label alone, for astrometry,
-          has no ``image_abspath``.
+          `label_path` is None, because the host then read the image file itself; if
+          `obs` has a ``header_dict`` subfield, because that is present exactly when the
+          host read the label of the image file itself, and reading the header alone
+          counts as reading the file; or if `obs` has a ``data`` subfield, because the
+          host then read the array. An observation built from a detached label alone,
+          for astrometry, has no ``image_abspath``.
         - ``label_url`` and ``label_abspath``: the absolute path or URL of the label, and
           its path on the local disk, if `label_path` is given.
 
@@ -1107,7 +1112,8 @@ class Host:
         obs.insert_subfield('filepath', image_path)
         obs.insert_subfield('basename', image_path.name)
         obs.insert_subfield('image_url', image_path.absolute().as_posix())
-        if label_path is None or 'data' in obs.subfields:
+        if (label_path is None or 'data' in obs.subfields
+                or 'header_dict' in obs.subfields):
             obs.insert_subfield('image_abspath', image_path.get_local_path().resolve())
         if label_path is not None:
             label_path = FCPath(label_path)
@@ -1315,7 +1321,7 @@ class Host:
         """The PDS3 option dictionary with Host-wide defaults."""
 
         options = {} if options is None else options.copy()
-        options.setdefault('method', 'fast')
+        options.setdefault('method', 'strict')
         options.setdefault('sources', True)
         return options
 

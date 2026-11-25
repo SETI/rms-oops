@@ -23,13 +23,15 @@ claim it. A file that two or more hosts claim raises :class:`~oops.host.HostErro
 message names every one of them, so that two packages that both recognize a file are
 found out, and neither is chosen by the order in which they were imported.
 
-A PDS3 label is parsed for this as it is written, with the "fast" method of the parser
-unless the ``pds3_options`` argument selects another. If the label cannot be parsed, it
-is offered to the correction of label text of each registered host that has one, as
-described under `Correcting label text`_. A host claims the label when its correction
-makes the label readable and it then recognizes the corrected label, and two hosts that
-both claim it raise :class:`~oops.host.HostError` as above. If no correction helps, the
-parser's error is raised as :class:`~oops.host.PdsHostError`, with the path of the label.
+A PDS3 label is parsed for this as it is written, with the "strict" method of the parser
+unless the ``pds3_options`` argument selects another. If the label cannot be parsed,
+whether for invalid syntax or for a value that the parser cannot convert, it is offered
+to the correction of label text of each registered host that has one, as described under
+`Correcting label text`_. A host claims the label when its correction makes the label
+readable and it then recognizes the corrected label, and two hosts that both claim it
+raise :class:`~oops.host.HostError` as above. If no correction helps, the parser's first
+error is raised: :class:`~oops.host.PdsHostError`, with the path of the label, for
+invalid syntax, or :class:`~oops.OopsValueError` for a value that cannot be converted.
 
 The host that claims the file then reads it with its own ``from_file``, which receives
 every argument as the caller gave it, ``pds3_options`` included, so the result is the
@@ -48,7 +50,7 @@ indexing wraps the call in ``list()``:
 
     observations = list(Host.from_index('/path/to/COISS_2001_index.lbl'))
 
-The call parses the index label as it is written, with the "fast" method unless
+The call parses the index label as it is written, with the "strict" method unless
 ``pds3_options`` selects another, and asks every registered host whether it recognizes
 the label. A host that cannot tell from the label alone says so, and if no host claims the
 label, the first row of the index is read, and only that row, and offered to each of
@@ -61,8 +63,10 @@ own ``from_index``. A label that the caller passed is handed on, but the label p
 identify the host is not. The host reads the index and its supplement itself, 100 rows at
 a time as the iteration proceeds, and builds each row's observation when the iteration
 reaches that row. An index of any size is read in this way while only a few rows are held
-in memory. An error in a row is raised when the iteration reaches that row, after every
-earlier row has been yielded, and the iteration ends there.
+in memory. An error in a row is raised when the iteration reaches that row, and the
+iteration ends there. The one exception is a row that is too long: rows are read 100 at
+a time, so that error is raised at the first row of the chunk that holds it, and up to 99
+earlier rows of that chunk are never yielded.
 
 Many indexes have a supplemental index: a second table with more columns for the same
 products, whose columns are merged into each row. The ``supplement`` argument names it.
@@ -73,10 +77,10 @@ explicit path is read from whatever directory it names.
 
 Each row is a dictionary of every column's value exactly as the table gives it,
 declared null values included, together with the "_mask" entry of each column, which is
-True where the value is null or could not be read as its column's type. Where the index
-and its supplement both have a column, the row has the index's value. An observation
-built from a row names its file by the relative path that the index gives, as described
-under `File subfields`_.
+True where the value is null, could not be read as its column's type, or lies outside
+the column's VALID_MINIMUM and VALID_MAXIMUM. Where the index and its supplement both
+have a column, the row has the index's value. An observation built from a row names its
+file by the relative path that the index gives, as described under `File subfields`_.
 
 Writing a host
 --------------
@@ -133,9 +137,11 @@ host read it, and None otherwise. The subfields are:
 - ``image_url``: the absolute path or URL of the image file.
 - ``image_abspath``: the path of the image file on the local disk, if the host read the
   image file. It is set when ``label_path`` is None, because the host then read the image
-  file itself, even if only its header, and when the observation has a ``data`` subfield,
-  because the host then read its array. An observation built from a label alone, for
-  astrometry, has no ``image_abspath``, because its image file was never read.
+  file itself; when the observation has a ``header_dict`` subfield, which is present
+  exactly when the host read the label of the image file itself, and reading the header
+  alone counts as reading the file; and when the observation has a ``data`` subfield,
+  because the host then read its array. An observation built from a detached label
+  alone, for astrometry, has no ``image_abspath``, because its image file was never read.
 - ``label_url`` and ``label_abspath``: the absolute path or URL of the label and its path
   on the local disk, when ``label_path`` is given. An observation read from the image
   file alone has neither.

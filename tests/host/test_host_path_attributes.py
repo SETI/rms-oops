@@ -14,10 +14,13 @@ from oops.host        import Host
 from oops.observation import Snapshot
 
 
-def _snapshot(*, data: bool) -> Snapshot:
-    """A minimal observation, with a data array if `data` is True."""
+def _snapshot(*, data: bool, header: bool = False) -> Snapshot:
+    """A minimal observation, with a data array if `data` is True and a header_dict if
+    `header` is True."""
 
-    subfields = {'data': np.zeros((2, 2))} if data else {}
+    subfields: dict[str, object] = {'data': np.zeros((2, 2))} if data else {}
+    if header:
+        subfields['header_dict'] = {}
     return Snapshot(('v', 'u'), cadence=SnapCadence(0., 1.),
                     fov=FlatFOV((1.e-3, 1.e-3), (2, 2)), path='SSB', frame='J2000',
                     **subfields)
@@ -42,21 +45,14 @@ def label(tmp_path: Path) -> Path:
 # An image file passed alone
 ##########################################################################################
 
-def test_an_image_alone_gives_its_path_name_url_and_local_path(image: Path) -> None:
+def test_an_image_alone_gives_its_path_name_url_and_local_path_and_no_label(
+        image: Path) -> None:
     obs = _snapshot(data=False)
     Host._set_path_attributes(obs, image, None)
     expected = {'filepath': FCPath(image), 'basename': 'IMAGE.IMG',
                 'image_url': image.as_posix(), 'image_abspath': image.resolve()}
 
-    assert {key: obs.subfields[key] for key in expected} == expected
-
-
-def test_an_image_alone_gives_no_label_subfields(image: Path) -> None:
-    obs = _snapshot(data=False)
-    Host._set_path_attributes(obs, image, None)
-
-    assert sorted(obs.subfields) == ['basename', 'filepath', 'image_abspath',
-                                     'image_url']
+    assert obs.subfields == expected
 
 ##########################################################################################
 # A label passed
@@ -72,22 +68,25 @@ def test_a_label_gives_the_image_and_label_subfields(image: Path, label: Path) -
     assert {key: obs.subfields[key] for key in expected} == expected
 
 
-def test_a_label_without_the_image_array_gives_no_image_abspath(image: Path,
-                                                                label: Path) -> None:
+def test_a_label_without_the_image_array_gives_the_image_url_but_no_image_abspath(
+        image: Path, label: Path) -> None:
     """For astrometry, the host reads the label and leaves the image file unread."""
 
     obs = _snapshot(data=False)
     Host._set_path_attributes(obs, image, label)
+    expected = {'filepath': FCPath(image), 'basename': 'IMAGE.IMG',
+                'image_url': image.as_posix(), 'label_url': label.as_posix(),
+                'label_abspath': label.resolve()}
 
-    assert 'image_abspath' not in obs.subfields
+    assert obs.subfields == expected
 
 
-def test_a_label_without_the_image_array_still_gives_the_image_url(image: Path,
-                                                                   label: Path) -> None:
-    obs = _snapshot(data=False)
+def test_a_label_with_the_header_of_the_image_file_gives_image_abspath(
+        image: Path, label: Path) -> None:
+    obs = _snapshot(data=False, header=True)
     Host._set_path_attributes(obs, image, label)
 
-    assert obs.image_url == image.as_posix()
+    assert obs.image_abspath == image.resolve()
 
 ##########################################################################################
 # An index row

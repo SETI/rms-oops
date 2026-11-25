@@ -19,6 +19,8 @@ from tests.host._tables import write_table
 LABEL = 'PDS_VERSION_ID = PDS3\nINSTRUMENT_ID = CAM_A\n^IMAGE = "image.img"\nEND\n'
 PROSE = 'a line of prose\n'
 BROKEN_LABEL = LABEL.replace('END\n', PROSE + 'END\n')
+BAD_DAY = '2003-02-30T00:00:00'
+BAD_DAY_LABEL = LABEL.replace('END\n', f'START_TIME = {BAD_DAY}\nEND\n')
 
 RECEIVED: list[tuple[Any, dict[str, Any]]] = []
 
@@ -47,6 +49,16 @@ class _Corrects(_CamA):
     @classmethod
     def _correct_label_text(cls, text: str, filepath: FCPath) -> str:
         return text.replace(PROSE, '')
+
+
+class _CorrectsDay(_CamA):
+    """A host of CAM_A whose correction replaces an impossible date."""
+
+    NAME = 'corrects_day'
+
+    @classmethod
+    def _correct_label_text(cls, text: str, filepath: FCPath) -> str:
+        return text.replace(BAD_DAY, '2003-03-02T00:00:00')
 
 
 class _AlsoCorrects(_Corrects):
@@ -261,6 +273,24 @@ def test_a_corrected_label_keeps_the_path_of_its_file(
     assert label.filepath.as_posix() == filepath.as_posix()
 
 
+def test_a_label_with_an_impossible_date_is_read_by_a_correction(
+        tmp_path: Path, hosts: Callable[..., None]) -> None:
+    hosts(_CorrectsDay)
+    filepath = _write(tmp_path, 'image.lbl', BAD_DAY_LABEL)
+    label = Host.from_file(filepath)
+
+    assert label['START_TIME'].isoformat() == '2003-03-02T00:00:00'
+
+
+def test_a_label_with_an_impossible_date_that_no_correction_reads_is_refused(
+        tmp_path: Path, hosts: Callable[..., None]) -> None:
+    hosts(_CamA, _CorrectsNothing)
+    filepath = _write(tmp_path, 'image.lbl', BAD_DAY_LABEL)
+
+    with pytest.raises(OopsValueError, match='day is out of range for month'):
+        Host.from_file(filepath)
+
+
 def test_a_label_that_two_corrections_read_is_refused(
         tmp_path: Path, hosts: Callable[..., None]) -> None:
     hosts(_Corrects, _CamA, _AlsoCorrects)
@@ -277,7 +307,7 @@ def test_a_label_that_no_correction_reads_raises_the_parse_error(
     filepath = _write(tmp_path, 'image.lbl', BROKEN_LABEL)
 
     with pytest.raises(PdsHostError, match='cannot parse the PDS3 label .*image.lbl: '
-                                           'missing "=" at a line of prose'):
+                                           "Expected 'END', found 'a'"):
         Host.from_file(filepath)
 
 
@@ -348,13 +378,15 @@ def test_a_vax_label_is_read_with_the_vax_reader(
     assert (text, options) == ('VAX TEXT\n', {'fmt_dirs': [FCPath(tmp_path)]})
 
 
-@pytest.mark.parametrize('fmt_dirs', ['extra', ['extra']], ids=['one', 'list'])
-def test_the_label_directory_is_searched_first_for_a_format_file(
-        tmp_path: Path, fmt_dirs: Any) -> None:
-    filepath = FCPath(_write_label(tmp_path))
-    (_, options) = Host._pds3_source(filepath, {'fmt_dirs': fmt_dirs}, _upper)
+def test_a_corrected_label_finds_the_format_file_beside_it(tmp_path: Path) -> None:
+    text = ('PDS_VERSION_ID = PDS3\nOBJECT = TABLE\n  ^STRUCTURE = "COLUMNS.FMT"\n'
+            'END_OBJECT = TABLE\nEND\n')
+    _write(tmp_path, 'COLUMNS.FMT', 'OBJECT = COLUMN\n  NAME = FIRST\n'
+                                    'END_OBJECT = COLUMN\nEND\n')
+    filepath = FCPath(_write(tmp_path, 'image.lbl', text))
+    label = Host._parse_pds3(filepath, {'expand': True}, correct=_upper)
 
-    assert options['fmt_dirs'] == [filepath.parent, 'extra']
+    assert label['TABLE']['FIRST']['NAME'] == 'FIRST'
 
 
 def test_corrected_text_of_one_line_is_still_read_as_text(tmp_path: Path) -> None:
