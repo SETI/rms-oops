@@ -287,7 +287,8 @@ def test_a_label_with_an_impossible_date_that_no_correction_reads_is_refused(
     hosts(_CamA, _CorrectsNothing)
     filepath = _write(tmp_path, 'image.lbl', BAD_DAY_LABEL)
 
-    with pytest.raises(OopsValueError, match='day is out of range for month'):
+    # The message comes from datetime, which words it differently in each Python version
+    with pytest.raises(OopsValueError, match='day .*month'):
         Host.from_file(filepath)
 
 
