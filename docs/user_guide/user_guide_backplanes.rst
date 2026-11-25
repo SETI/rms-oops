@@ -82,7 +82,9 @@ is an occultation: the source seen through the surface, as in a solar occultatio
 rings. ``('SUN-', surface)`` is *gridless*: the photon from the body's center rather
 than from each pixel, which gives a single value rather than an array. It depends only
 on the paths of the observer, the body and the Sun, so the gridless backplanes need no
-pointing: they can be evaluated for an observation whose C kernels are missing. The methods
+pointing: they can be evaluated for an observation whose C kernels are missing. The one
+exception is ``center_coordinate``, the body center's (u,v) position in the field of
+view, which needs to know where the camera points. The methods
 named ``center_*`` and ``sub_*`` form the gridless key themselves, so
 ``bp.center_phase_angle('SATURN')`` is the phase angle at Saturn's center and
 ``bp.sub_observer_latitude('SATURN')`` the latitude beneath the observer. A third item
