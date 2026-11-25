@@ -35,9 +35,13 @@ invalid syntax, or :class:`~oops.OopsValueError` for a value that cannot be conv
 
 The host that claims the file then reads it with its own ``from_file``, which receives
 every argument as the caller gave it, ``pds3_options`` included, so the result is the
-one that calling the host class directly gives. A PDS3 label is handed to the host as its
-path, so that the host parses the label with its own method and correction. A VICAR or
-FITS file is handed over as the content that was read to identify it.
+one that calling the host class directly gives. A PDS3 label or a FITS file is handed to
+the host as its path, so that the host reads it with its own method and, for a label,
+its own correction; a FITS file is opened only to read its header, and it is closed again
+before the host is given the path. A VICAR file is handed over as the content that was
+read to identify it. The ``calibrations`` argument defaults to None, as it does for
+:meth:`~oops.host.Host.from_index`, so the calibrations that the host attaches are kept;
+an empty list removes them.
 
 Reading an index
 ----------------

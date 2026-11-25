@@ -70,7 +70,7 @@ class Host:
     @staticmethod
     def from_file(filepath, *, pds3_options=None, select=None, astrometry=False,
                   target=None, lightsource=None, path=None, frame=None, cadence=None,
-                  fov=None, calibrations=[], timeshift=None, navigation=None,
+                  fov=None, calibrations=None, timeshift=None, navigation=None,
                   tracker=None, parallel=None, **kwargs):
         """One or more Observation objects derived from a given data file.
 
@@ -86,8 +86,9 @@ class Host:
         The host that claims the file then reads it with its own ``from_file``, which is
         given every argument as the caller gave it, `pds3_options` included. A PDS3
         label is passed to it as its path, so that the host parses the label with its
-        own method and correction; a VICAR file or a FITS file is passed as the content
-        that was read to identify it.
+        own method and correction, and so is a FITS file, which is opened only to read its
+        header and is closed again before the host is given the path; a VICAR file is
+        passed as the content that was read to identify it.
 
         Parameters:
             filepath (str | pathlib.Path | FCPath): The path to the data file or its
@@ -114,7 +115,8 @@ class Host:
             cadence (Cadence, optional): Override for the Cadence of the observation.
             fov (FOV, optional): Override for the default FOV of the observing instrument.
             calibrations (Calibration | list[Calibration], optional): Override for the
-                calibration or list of calibrations.
+                calibration or list of calibrations. The default None keeps the
+                calibrations that the host attaches; an empty list removes them.
             timeshift (tuple[float, str], optional): Assign a Fittable time shift to one
                 or more attributes of the Observation. The first item is the initial time
                 shift in seconds. The second item is a string indicating which attributes
@@ -166,8 +168,12 @@ class Host:
             filepath, astrometry=astrometry,
             pds3_options=Host._pds3_options_with_defaults(pds3_options))
 
-        # The host parses a PDS3 label itself, with its own method and correction
+        # The host parses a PDS3 label itself, with its own method and correction, and
+        # reads a FITS file itself, so the file is closed after it identified the host
         if isinstance(fileinfo, Pds3Label):
+            fileinfo = filepath
+        elif isinstance(fileinfo, pyfits.HDUList):
+            fileinfo.close()
             fileinfo = filepath
 
         return host.from_file(fileinfo, pds3_options=pds3_options, select=select,
@@ -652,10 +658,15 @@ class Host:
                 hdulist = pyfits.open(local_path)
             except OSError as err:
                 raise HostFormatError(f'not a valid FITS file: {filepath}') from err
-            host = Host._one_host([host for host in hosts if host._detect_in_fits(hdulist)],
-                                  f'FITS file {filepath}')
-            if host is None:
-                raise Host._no_host_error(hosts, 'FITS file', filepath)
+            try:
+                host = Host._one_host(
+                    [host for host in hosts if host._detect_in_fits(hdulist)],
+                    f'FITS file {filepath}')
+                if host is None:
+                    raise Host._no_host_error(hosts, 'FITS file', filepath)
+            except BaseException:
+                hdulist.close()
+                raise
             return host, hdulist
 
         # Handle a VICAR file

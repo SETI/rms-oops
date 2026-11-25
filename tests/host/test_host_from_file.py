@@ -2,6 +2,8 @@
 # tests/host/test_host_from_file.py: Host.from_file, its claimants, and label corrections
 ##########################################################################################
 
+import gc
+import warnings
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -13,7 +15,7 @@ from filecache  import FCPath
 from vicar      import VicarImage, VicarLabel
 
 from oops      import OopsValueError
-from oops.host import Host, HostError, PdsHostError, host_
+from oops.host import Host, HostError, PdsHostError, WrongHostError, host_
 from tests.host._tables import write_table
 
 LABEL = 'PDS_VERSION_ID = PDS3\nINSTRUMENT_ID = CAM_A\n^IMAGE = "image.img"\nEND\n'
@@ -120,6 +122,23 @@ class _AlsoClaimsAll(_ClaimsAll):
     NAME = 'also_claims_all'
 
 
+class _Calibrating(Host):
+    """A host that claims the label of CAM_A and attaches a calibration by default."""
+
+    NAME = 'calibrating'
+    CALIBRATION = ['attached']
+
+    @staticmethod
+    def _detect_in_pds3(label: Any) -> bool:
+        return True
+
+    @classmethod
+    def from_file(cls, fileinfo: Any, *, calibrations: Any = None,
+                  **kwargs: Any) -> Any:
+        RECEIVED.append((fileinfo, {'calibrations': calibrations}))
+        return cls.CALIBRATION if calibrations is None else calibrations
+
+
 @pytest.fixture
 def hosts(monkeypatch: pytest.MonkeyPatch) -> Callable[..., None]:
     """A function that sets the registered hosts and clears what they received."""
@@ -194,7 +213,7 @@ def test_every_other_argument_is_handed_to_the_host_as_given(
 
     assert kwargs == {'pds3_options': None, 'select': 0, 'astrometry': False,
                       'target': 'SATURN', 'lightsource': None, 'path': None,
-                      'frame': None, 'cadence': None, 'fov': None, 'calibrations': [],
+                      'frame': None, 'cadence': None, 'fov': None, 'calibrations': None,
                       'timeshift': None, 'navigation': None, 'tracker': None,
                       'parallel': None, 'extra': 'x'}
 
@@ -207,12 +226,54 @@ def test_a_vicar_file_is_passed_to_the_host_as_its_content(
     assert isinstance(RECEIVED[0][0], VicarLabel)
 
 
-def test_a_fits_file_is_passed_to_the_host_as_its_content(
+def test_a_fits_file_is_passed_to_the_host_as_the_callers_path(
         tmp_path: Path, hosts: Callable[..., None]) -> None:
     hosts(_ClaimsAll)
-    Host.from_file(_write_fits(tmp_path))
+    filepath = _write_fits(tmp_path)
+    Host.from_file(filepath)
 
-    assert isinstance(RECEIVED[0][0], fits.HDUList)
+    assert RECEIVED[0][0] == filepath
+
+
+def test_a_fits_file_is_closed_when_the_host_is_handed_the_path(
+        tmp_path: Path, hosts: Callable[..., None]) -> None:
+    hosts(_ClaimsAll)
+    filepath = _write_fits(tmp_path)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        Host.from_file(filepath)
+        gc.collect()
+
+    assert [w for w in caught if issubclass(w.category, ResourceWarning)] == []
+
+
+def test_a_fits_file_is_closed_when_no_host_claims_it(
+        tmp_path: Path, hosts: Callable[..., None]) -> None:
+    hosts(_CamA)
+    filepath = _write_fits(tmp_path)
+    with warnings.catch_warnings(record=True) as caught, \
+            pytest.raises(WrongHostError, match='image.fits'):
+        warnings.simplefilter('always')
+        Host.from_file(filepath)
+        gc.collect()
+
+    assert [w for w in caught if issubclass(w.category, ResourceWarning)] == []
+
+
+def test_the_dispatcher_keeps_the_calibration_a_host_attaches(
+        tmp_path: Path, hosts: Callable[..., None]) -> None:
+    hosts(_Calibrating)
+    filepath = _write_label(tmp_path)
+
+    assert _Calibrating.from_file(filepath) == _Calibrating.CALIBRATION
+    assert Host.from_file(filepath) == _Calibrating.CALIBRATION
+
+
+def test_an_empty_calibration_list_removes_the_calibration_a_host_attaches(
+        tmp_path: Path, hosts: Callable[..., None]) -> None:
+    hosts(_Calibrating)
+
+    assert Host.from_file(_write_label(tmp_path), calibrations=[]) == []
 
 
 def test_a_file_of_another_format_is_passed_to_the_host_as_its_path(
