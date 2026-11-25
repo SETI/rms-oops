@@ -935,7 +935,9 @@ class Observation(Mutable):
                 mean of all the times.
 
         Returns:
-            Event: The corresponding Event.
+            Event: The corresponding Event, in the J2000 frame rather than the frame
+            of the observation: an event without directions does not depend on the
+            pointing, and in J2000 it can be solved without it.
         """
 
         if time is None:
@@ -947,7 +949,9 @@ class Observation(Mutable):
         if shapeless:
             time = time.mean()
 
-        return Event(time, Vector3.ZERO, self.path, self.frame)
+        # A gridless event has no line of sight, so it needs no camera frame; in J2000
+        # it is solved from the paths alone and does not depend on the pointing.
+        return Event(time, Vector3.ZERO, self.path, Frame.J2000)
 
     @staticmethod
     def _scalar_from_indices(indices, axis, *, derivs=True):

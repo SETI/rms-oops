@@ -647,7 +647,7 @@ def ring_sub_solar_longitude(self, event_key, reference='node'):
 
 
 def ring_center_incidence_angle(self, event_key, pole='sunward', apparent=True):
-    """Incidence angle of the arriving photons at the ring system center.
+    """Gridless incidence angle of the arriving photons at the ring system center.
 
     Parameters:
         event_key (str | tuple): Key defining the event on the ring system's path.
@@ -675,7 +675,7 @@ def ring_center_incidence_angle(self, event_key, pole='sunward', apparent=True):
 
 
 def ring_center_emission_angle(self, event_key, pole='sunward', apparent=True):
-    """Emission angle of departing photons at the center of the ring system.
+    """Gridless emission angle of departing photons at the ring system center.
 
     By default, angles are measured from the sunward pole, so the emission angle should be
     < pi/2 on the sunlit side and > pi/2 on the dark side of the rings. However,

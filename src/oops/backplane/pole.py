@@ -54,7 +54,7 @@ def pole_clock_angle(self, event_key):
 
 
 def pole_position_angle(self, event_key):
-    """The projected angle of a body's pole vector on the sky.
+    """Gridless projected angle of the body's pole vector on the sky.
 
     The angle is measured from celestial north toward celestial east, that is,
     counterclockwise on the sky.

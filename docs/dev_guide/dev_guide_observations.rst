@@ -113,8 +113,10 @@ The methods the rest of the library calls are ``meshgrid`` (a :class:`~oops.Mesh
 whose *(u,v)* axes sit where the observation's do), ``timegrid`` (the time of every
 sample of that meshgrid), ``event_at_grid`` (an arrival event at the instrument with
 ``neg_arr_ap`` set to each line of sight), ``gridless_event`` (the same without
-directions), ``uv_from_path`` and ``uv_from_ra_and_dec`` (where a target falls in the
-field), ``inventory`` (which bodies are in view, treating each as a sphere, with
+directions, and in J2000 rather than the observation's frame, so that it needs no
+pointing), ``uv_from_path`` and ``uv_from_ra_and_dec`` (where a target falls in the
+field, which does need pointing, as does the gridless ``center_coordinate`` backplane
+built on ``uv_from_path``), ``inventory`` (which bodies are in view, treating each as a sphere, with
 ``return_type='full'`` giving the bounding box, range and resolution of each) and the
 ``parallel_*`` helpers for a co-mounted instrument.
 
