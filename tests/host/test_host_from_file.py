@@ -251,10 +251,10 @@ def test_a_fits_file_is_closed_when_no_host_claims_it(
         tmp_path: Path, hosts: Callable[..., None]) -> None:
     hosts(_CamA)
     filepath = _write_fits(tmp_path)
-    with warnings.catch_warnings(record=True) as caught, \
-            pytest.raises(WrongHostError, match='image.fits'):
+    with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter('always')
-        Host.from_file(filepath)
+        with pytest.raises(WrongHostError, match='image.fits'):
+            Host.from_file(filepath)
         gc.collect()
 
     assert [w for w in caught if issubclass(w.category, ResourceWarning)] == []
