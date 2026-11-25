@@ -15,19 +15,16 @@ dependencies = [
   "numpy",
   "Pillow",
   "pyparsing",
-  "rms-filecache>=2.0.3",
+  "rms-filecache>=3.0.0",
   "rms-fpzip",
   "rms-interval",
   "rms-julian",
-  # 2.4.0 adds PdsError, which oops.host raises and catches, and the "_list" keys of
-  # Pds3Label.as_dict, which preserve the order of a braced set such as CUT_OUT_WINDOW.
-  "rms-pdsparser>=2.4.0",
-  "rms-pdstable",
+  "rms-pdsparser>=2.4.1",
+  "rms-pdstable>=1.2.0",
   "rms-polymath>=2.1.1",
   "rms-solar",
   "rms-tabulation",
   "rms-vax",
-  # 1.3.0 adds VicarLabel.is_vicar_file, which oops uses to identify VICAR files.
   "rms-vicar>=1.3.0",
   "scipy"
 ]

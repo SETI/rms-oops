@@ -4,10 +4,10 @@
 
 from ._errors       import (HostError, HostFormatError, HostIndexError, PdsHostError,
                             UnknownHostError, VicarHostError, WrongHostError)
-from .              import host_
+from .              import _pds3_support, host_
 from .host_         import Host
 from ._fits_support import get_fits_image_hdu
-from ._pds3_support import read_pds3_image_array
+from ._pds3_support import is_pds3_null, read_pds3_image_array
 
 # Assigned rather than imported so that the doc comment, which autodoc reads only from the
 # module it documents, describes the name where it is published.
@@ -16,7 +16,13 @@ from ._pds3_support import read_pds3_image_array
 #: object array of Observations.
 ObsArray = host_.ObsArray
 
-__all__ = ['Host', 'ObsArray', 'get_fits_image_hdu', 'read_pds3_image_array',
+#: The texts that stand for a missing value in a PDS3 label or a VICAR header, in upper
+#: case and without padding: the PDS3 null constants "UNK", "N/A", and "NULL", and the
+#: placeholders "UNKNOWN", "NOT APPLICABLE", "---", and "". See :func:`is_pds3_null`.
+PDS3_NULL_TEXTS = _pds3_support.PDS3_NULL_TEXTS
+
+__all__ = ['Host', 'ObsArray', 'PDS3_NULL_TEXTS', 'get_fits_image_hdu', 'is_pds3_null',
+           'read_pds3_image_array',
            'HostError', 'HostFormatError', 'HostIndexError', 'PdsHostError',
            'UnknownHostError', 'VicarHostError', 'WrongHostError']
 

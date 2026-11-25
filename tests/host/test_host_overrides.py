@@ -51,7 +51,7 @@ def _tracker_frame(target: Any, tracker: str = 'start') -> TrackerFrame:
         TrackerFrame: The frame of the observation after the overrides.
     """
 
-    params = Host._apply_overrides(_params(target), 'dir/file.img', tracker=tracker)
+    params = Host._apply_overrides(_params(target), tracker=tracker)
     frame = params['frame']
     assert isinstance(frame, TrackerFrame)
     return frame
@@ -127,21 +127,20 @@ def test_an_unknown_tracker_option_is_rejected() -> None:
     """A tracker option other than start, midtime and end is an error."""
 
     with pytest.raises(ValueError, match='invalid tracker'):
-        Host._apply_overrides(_params('NONE'), 'dir/file.img', tracker='finish')
+        Host._apply_overrides(_params('NONE'), tracker='finish')
 
 
 def test_an_unknown_target_name_is_rejected() -> None:
     """A target that names no body cannot be tracked."""
 
     with pytest.raises(KeyError, match='NOT_A_BODY'):
-        Host._apply_overrides(_params('NOT_A_BODY'), 'dir/file.img', tracker='start')
+        Host._apply_overrides(_params('NOT_A_BODY'), tracker='start')
 
 
 def test_a_target_override_is_tracked() -> None:
     """The target given as an override, not the default target, is the one tracked."""
 
-    params = Host._apply_overrides(_params('MARS'), 'dir/file.img', target='NONE',
-                                   tracker='start')
+    params = Host._apply_overrides(_params('MARS'), target='NONE', tracker='start')
 
     assert params['target'] == 'NONE'
     assert params['frame']._target_path is None
@@ -150,7 +149,7 @@ def test_a_target_override_is_tracked() -> None:
 def test_without_the_tracker_option_the_frame_is_unchanged() -> None:
     """No TrackerFrame is assigned unless the tracker option is given."""
 
-    params = Host._apply_overrides(_params('NONE'), 'dir/file.img')
+    params = Host._apply_overrides(_params('NONE'))
 
     assert params['frame'] == 'IAU_MARS'
 

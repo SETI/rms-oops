@@ -11,7 +11,7 @@ from astropy.io import fits
 from vicar      import VicarImage
 
 from oops.host import (Host, HostFormatError, HostIndexError, UnknownHostError,
-                       WrongHostError)
+                       VicarHostError, WrongHostError)
 
 INDEX_LABEL = """PDS_VERSION_ID = PDS3
 RECORD_TYPE = FIXED_LENGTH
@@ -136,33 +136,51 @@ def test_an_unreadable_fits_file_is_a_format_error(tmp_path: Path) -> None:
         Host._identify_and_parse(filepath, hosts=[_HostA])
 
 ##########################################################################################
+# A truncated VICAR file is a format error that names the file
+##########################################################################################
+
+def test_a_truncated_vicar_file_is_a_format_error(tmp_path: Path) -> None:
+    filepath = tmp_path / 'short.vic'
+    VicarImage.from_array(np.zeros((8, 8), dtype=np.uint8)).write_file(filepath)
+    filepath.write_bytes(filepath.read_bytes()[:-10])
+    with pytest.raises(VicarHostError, match='short.vic'):
+        Host._identify_and_parse(filepath, hosts=[_HostA])
+
+
+def test_an_unparseable_vicar_header_is_a_format_error(tmp_path: Path) -> None:
+    filepath = tmp_path / 'badlabel.vic'
+    filepath.write_bytes(b"LBLSIZE=40 FORMAT='BYTE' TYPE=")
+    with pytest.raises(VicarHostError, match=r'cannot read VICAR file .*badlabel\.vic: '):
+        Host._identify_and_parse(filepath, hosts=[_HostA])
+
+##########################################################################################
 # The supplemental index is optional unless required
 ##########################################################################################
 
 def test_an_index_without_index_in_its_name_needs_no_supplement(tmp_path: Path) -> None:
     label = _write_index(tmp_path, 'INDEX')
-    rows = Host._read_index_rows(label, supplement=Host.SUPPLEMENT,
-                                 require_supplement=False)
+    rows = Host._index_rows(label, supplement=Host.SUPPLEMENT,
+                             require_supplement=False)
     assert [row['NUM'] for row in rows] == [1, 2]
 
 
 def test_a_required_supplement_needs_index_in_the_name(tmp_path: Path) -> None:
     label = _write_index(tmp_path, 'INDEX')
     with pytest.raises(HostIndexError, match='supplemental index required'):
-        Host._read_index_rows(label, supplement=Host.SUPPLEMENT)
+        Host._index_rows(label, supplement=Host.SUPPLEMENT)
 
 
 def test_a_missing_optional_supplement_is_skipped(tmp_path: Path) -> None:
     label = _write_index(tmp_path, 'vol_index')
-    rows = Host._read_index_rows(label, supplement=Host.SUPPLEMENT,
-                                 require_supplement=False)
+    rows = Host._index_rows(label, supplement=Host.SUPPLEMENT,
+                             require_supplement=False)
     assert [row['NUM'] for row in rows] == [1, 2]
 
 
 def test_a_missing_required_supplement_is_not_found(tmp_path: Path) -> None:
     label = _write_index(tmp_path, 'vol_index')
     with pytest.raises(FileNotFoundError, match='vol_supplemental_index.lbl'):
-        Host._read_index_rows(label, supplement=Host.SUPPLEMENT)
+        Host._index_rows(label, supplement=Host.SUPPLEMENT)
 
 ##########################################################################################
 # One host gives WrongHostError; several give UnknownHostError
@@ -188,5 +206,36 @@ def test_read_fileinfo_considers_only_its_own_host(tmp_path: Path) -> None:
     filepath = _write_vicar(tmp_path)
     with pytest.raises(WrongHostError, match='not a host_a VICAR file: '):
         _HostA._read_fileinfo(filepath, formats='PVFO')
+
+
+def test_read_fileinfo_considers_only_the_formats_it_is_given(tmp_path: Path) -> None:
+    filepath = _write_other(tmp_path)
+    with pytest.raises(WrongHostError, match='not a host_a file: '):
+        _HostA._read_fileinfo(filepath, formats='PVF')
+
+
+@pytest.mark.parametrize('detector', ['_detect_in_pds3', '_detect_in_vicar',
+                                      '_detect_in_fits', '_detect_in_file',
+                                      '_detect_in_row'])
+def test_a_default_detector_recognizes_nothing(detector: str) -> None:
+    assert getattr(Host, detector)(None) is False
+
+##########################################################################################
+# Registration
+##########################################################################################
+
+def test_a_registered_host_is_listed_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Host, '_HOSTS', [])
+    monkeypatch.setattr(Host, '_LOOKUP', {})
+    _HostA._register()
+    _HostA._register()
+
+    assert Host._HOSTS == [_HostA]
+    assert Host._LOOKUP == {'host_a': _HostA}
+
+
+def test_only_a_host_subclass_can_be_registered() -> None:
+    with pytest.raises(TypeError, match='not a Host subclass'):
+        Host._register.__func__(object)
 
 ##########################################################################################
