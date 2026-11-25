@@ -13,7 +13,7 @@ from astropy.io import fits as pyfits
 from filecache  import FCPath
 from pdsparser  import (Pds3Label, PdsError, is_pds3_file, read_label,
                         read_vax_binary_label)
-from vicar      import VicarError, VicarImage, VicarLabel
+from vicar      import VicarImage, VicarLabel
 
 from oops._exceptions import OopsIndexError, OopsTypeError, OopsValueError
 from oops.body        import Body
@@ -681,9 +681,7 @@ class Host:
                 else:
                     vic = VicarImage.from_file(filepath, strict=False)
                     vic.filepath = filepath     # from_file does not record the path
-            except VicarError as err:
-                raise VicarHostError(str(err)) from err
-            except ValueError as err:   # as for a truncated array
+            except ValueError as err:   # a VicarError, or a truncated array
                 raise VicarHostError(f'cannot read VICAR file {filepath}: {err}') from err
             host = Host._one_host([host for host in hosts if host._detect_in_vicar(vic)],
                                   f'VICAR file {filepath}')

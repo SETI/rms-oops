@@ -146,6 +146,13 @@ def test_a_truncated_vicar_file_is_a_format_error(tmp_path: Path) -> None:
     with pytest.raises(VicarHostError, match='short.vic'):
         Host._identify_and_parse(filepath, hosts=[_HostA])
 
+
+def test_an_unparseable_vicar_header_is_a_format_error(tmp_path: Path) -> None:
+    filepath = tmp_path / 'badlabel.vic'
+    filepath.write_bytes(b"LBLSIZE=40 FORMAT='BYTE' TYPE=")
+    with pytest.raises(VicarHostError, match=r'cannot read VICAR file .*badlabel\.vic: '):
+        Host._identify_and_parse(filepath, hosts=[_HostA])
+
 ##########################################################################################
 # The supplemental index is optional unless required
 ##########################################################################################
