@@ -11,7 +11,7 @@ from astropy.io import fits
 from vicar      import VicarImage
 
 from oops.host import (Host, HostFormatError, HostIndexError, UnknownHostError,
-                       WrongHostError)
+                       VicarHostError, WrongHostError)
 
 INDEX_LABEL = """PDS_VERSION_ID = PDS3
 RECORD_TYPE = FIXED_LENGTH
@@ -133,6 +133,17 @@ def test_an_unreadable_fits_file_is_a_format_error(tmp_path: Path) -> None:
     filepath = tmp_path / 'garbage.fits'
     filepath.write_bytes(b'not a FITS file')
     with pytest.raises(HostFormatError, match='not a valid FITS file'):
+        Host._identify_and_parse(filepath, hosts=[_HostA])
+
+##########################################################################################
+# A truncated VICAR file is a format error that names the file
+##########################################################################################
+
+def test_a_truncated_vicar_file_is_a_format_error(tmp_path: Path) -> None:
+    filepath = tmp_path / 'short.vic'
+    VicarImage.from_array(np.zeros((8, 8), dtype=np.uint8)).write_file(filepath)
+    filepath.write_bytes(filepath.read_bytes()[:-10])
+    with pytest.raises(VicarHostError, match='short.vic'):
         Host._identify_and_parse(filepath, hosts=[_HostA])
 
 ##########################################################################################

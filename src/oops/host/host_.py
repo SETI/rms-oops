@@ -152,10 +152,11 @@ class Host:
             HostFormatError: If `filepath` has invalid syntax or uses an unsupported
                 option. Note that subclass :class:`~PdsHostError` is raised for a PDS3
                 syntax error and :class:`~VicarHostError` is raised for a VICAR syntax
-                error. A PDS3 label that cannot be parsed raises
-                :class:`~PdsHostError`, or :class:`~oops.OopsValueError` for a value that
-                cannot be converted, only if no host's correction of label text makes
-                it readable and recognizable.
+                error, or for a truncated or unreadable VICAR file, naming the file. A
+                PDS3 label that cannot be parsed raises :class:`~PdsHostError`, or
+                :class:`~oops.OopsValueError` for a value that cannot be converted,
+                only if no host's correction of label text makes it readable and
+                recognizable.
             OSError: If `filepath` does not exist or cannot be read.
             UnknownHostError: If `filepath` is not associated with any registered Host
                 subclass.
@@ -507,7 +508,8 @@ class Host:
                 subclass.
             HostFormatError: If `filepath` has invalid syntax for format. Note that
                 subclass :class:`~PdsHostError` is returned for PDS-formatted files and
-                :class:`~VicarHostError` is returned for VICAR files.
+                :class:`~VicarHostError` is returned for VICAR files, including a
+                truncated or unreadable one, naming the file.
             OSError: If `filepath` does not exist or cannot be read.
             OopsValueError: If a value in `pds3_options` is invalid.
         """
@@ -545,7 +547,8 @@ class Host:
         Raises:
             HostFormatError: If `fileinfo` has invalid syntax for format. Note that
                 subclass :class:`~PdsHostError` is returned for PDS-formatted files and
-                :class:`~VicarHostError` is returned for VICAR files.
+                :class:`~VicarHostError` is returned for VICAR files, including a
+                truncated or unreadable one, naming the file.
             OopsValueError: If the value in `pds3_options` is invalid.
             OSError: If the file does not exist or cannot be read.
             WrongHostError: If `fileinfo` is not associated with this Host subclass.
@@ -601,7 +604,8 @@ class Host:
                 The message names each of them.
             HostFormatError: If `filepath` has invalid syntax for its format. Note that
                 subclass :class:`~PdsHostError` is returned for PDS-formatted files and
-                :class:`~VicarHostError` is returned for VICAR files.
+                :class:`~VicarHostError` is returned for VICAR files, including a
+                truncated or unreadable one, naming the file.
             OopsValueError: If the value in `pds3_options` is invalid.
             OSError: If `filepath` does not exist or cannot be read.
             UnknownHostError: If `filepath` is not associated with any of several listed
@@ -679,6 +683,8 @@ class Host:
                     vic.filepath = filepath     # from_file does not record the path
             except VicarError as err:
                 raise VicarHostError(str(err)) from err
+            except ValueError as err:   # as for a truncated array
+                raise VicarHostError(f'cannot read VICAR file {filepath}: {err}') from err
             host = Host._one_host([host for host in hosts if host._detect_in_vicar(vic)],
                                   f'VICAR file {filepath}')
             if host is None:
