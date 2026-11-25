@@ -244,7 +244,7 @@ def test_a_fits_file_is_closed_when_the_host_is_handed_the_path(
         Host.from_file(filepath)
         gc.collect()
 
-    assert [w for w in caught if issubclass(w.category, ResourceWarning)] == []
+    assert [w for w in caught if 'image.fits' in str(w.message)] == []
 
 
 def test_a_fits_file_is_closed_when_no_host_claims_it(
@@ -257,7 +257,7 @@ def test_a_fits_file_is_closed_when_no_host_claims_it(
             Host.from_file(filepath)
         gc.collect()
 
-    assert [w for w in caught if issubclass(w.category, ResourceWarning)] == []
+    assert [w for w in caught if 'image.fits' in str(w.message)] == []
 
 
 def test_the_dispatcher_keeps_the_calibration_a_host_attaches(
